@@ -60,22 +60,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         Instr::Branch { block: dest } => {
             let pos = bin.builder.get_insert_block().unwrap();
 
-            if !blocks.contains_key(dest) {
-                blocks.insert(*dest, create_block(*dest, bin, cfg, function, ns));
-                work.push_back(Work {
-                    block_no: *dest,
-                    vars: w.vars.clone(),
-                });
-            }
-
-            let bb = blocks.get(dest).unwrap();
-
-            for (v, phi) in bb.phis.iter() {
-                phi.add_incoming(&[(&w.vars[v].value, pos)]);
-            }
+            let bb = add_or_retrieve_block(*dest, pos, bin, function, blocks, work, w, cfg, ns);
 
             bin.builder.position_at_end(pos);
-            bin.builder.build_unconditional_branch(bb.bb);
+            bin.builder.build_unconditional_branch(bb);
         }
         Instr::Store { dest, data } => {
             let value_ref = expression(target, bin, data, &w.vars, function, ns);
@@ -92,41 +80,11 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let pos = bin.builder.get_insert_block().unwrap();
 
-            let bb_true = {
-                if !blocks.contains_key(true_) {
-                    blocks.insert(*true_, create_block(*true_, bin, cfg, function, ns));
-                    work.push_back(Work {
-                        block_no: *true_,
-                        vars: w.vars.clone(),
-                    });
-                }
+            let bb_true =
+                add_or_retrieve_block(*true_, pos, bin, function, blocks, work, w, cfg, ns);
 
-                let bb = blocks.get(true_).unwrap();
-
-                for (v, phi) in bb.phis.iter() {
-                    phi.add_incoming(&[(&w.vars[v].value, pos)]);
-                }
-
-                bb.bb
-            };
-
-            let bb_false = {
-                if !blocks.contains_key(false_) {
-                    blocks.insert(*false_, create_block(*false_, bin, cfg, function, ns));
-                    work.push_back(Work {
-                        block_no: *false_,
-                        vars: w.vars.clone(),
-                    });
-                }
-
-                let bb = blocks.get(false_).unwrap();
-
-                for (v, phi) in bb.phis.iter() {
-                    phi.add_incoming(&[(&w.vars[v].value, pos)]);
-                }
-
-                bb.bb
-            };
+            let bb_false =
+                add_or_retrieve_block(*false_, pos, bin, function, blocks, work, w, cfg, ns);
 
             bin.builder.position_at_end(pos);
             bin.builder
@@ -1186,4 +1144,32 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             }
         }
     }
+}
+
+fn add_or_retrieve_block<'a>(
+    block_no: usize,
+    pos: inkwell::basic_block::BasicBlock<'a>,
+    bin: &Binary<'a>,
+    function: FunctionValue,
+    blocks: &mut HashMap<usize, BasicBlock<'a>>,
+    work: &mut VecDeque<Work<'a>>,
+    w: &mut Work<'a>,
+    cfg: &ControlFlowGraph,
+    ns: &Namespace,
+) -> inkwell::basic_block::BasicBlock<'a> {
+    if let std::collections::hash_map::Entry::Vacant(e) = blocks.entry(block_no) {
+        e.insert(create_block(block_no, bin, cfg, function, ns));
+        work.push_back(Work {
+            block_no,
+            vars: w.vars.clone(),
+        });
+    }
+
+    let bb = blocks.get(&block_no).unwrap();
+
+    for (v, phi) in bb.phis.iter() {
+        phi.add_incoming(&[(&w.vars[v].value, pos)]);
+    }
+
+    bb.bb
 }
