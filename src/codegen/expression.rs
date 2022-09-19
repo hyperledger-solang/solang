@@ -1717,6 +1717,58 @@ fn expr_builtin(
 
             Expression::Builtin(*loc, tys.to_vec(), builtin.into(), vec![buf, offset])
         }
+        ast::Builtin::AddMod | ast::Builtin::MulMod => {
+            let arguments: Vec<Expression> = args
+                .iter()
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
+                .collect();
+
+            let temp = vartab.temp_anonymous(&tys[0]);
+            let zero = Expression::NumberLiteral(*loc, tys[0].clone(), BigInt::zero());
+            let cond =
+                Expression::NotEqual(*loc, Box::new(zero.clone()), Box::new(arguments[2].clone()));
+
+            let true_block = cfg.new_basic_block("builtin_call".to_string());
+            let false_block = cfg.new_basic_block("zero".to_string());
+            let end_if = cfg.new_basic_block("end_if".to_string());
+
+            cfg.add(
+                vartab,
+                Instr::BranchCond {
+                    cond,
+                    true_block,
+                    false_block,
+                },
+            );
+
+            cfg.set_basic_block(true_block);
+            vartab.new_dirty_tracker();
+
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: *loc,
+                    res: temp,
+                    expr: Expression::Builtin(*loc, tys.to_vec(), builtin.into(), arguments),
+                },
+            );
+            cfg.add(vartab, Instr::Branch { block: end_if });
+
+            cfg.set_basic_block(false_block);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: *loc,
+                    res: temp,
+                    expr: zero,
+                },
+            );
+            cfg.add(vartab, Instr::Branch { block: end_if });
+
+            cfg.set_phis(end_if, vartab.pop_dirty_tracker());
+            cfg.set_basic_block(end_if);
+            Expression::Variable(*loc, tys[0].clone(), temp)
+        }
         _ => {
             let arguments: Vec<Expression> = args
                 .iter()
