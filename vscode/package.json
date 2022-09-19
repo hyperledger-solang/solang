@@ -4,7 +4,7 @@
 	"description": "Use the solang compiler for syntax highlighting, compiler warnings and errors, and hovers",
 	"publisher": "solang",
 	"author": "Shivam Balikondwar <shivambalikondwar@icloud.com>",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"repository": "github.com/hyperledger/solang",
 	"engines": {
 		"vscode": "^1.43.0"
