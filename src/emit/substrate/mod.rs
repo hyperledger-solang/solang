@@ -176,6 +176,16 @@ impl SubstrateTarget {
     }
 
     fn declare_externals(&self, binary: &Binary) {
+        macro_rules! external {
+            ($name:literal, $fn_type:ident, $( $args:expr ),*) => {
+                binary.module.add_function(
+                    $name,
+                    binary.context.$fn_type().fn_type(&[$($args),*], false),
+                    Some(Linkage::External),
+                );
+            };
+        }
+
         let u8_ptr = binary
             .context
             .i8_type()
