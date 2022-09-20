@@ -108,6 +108,7 @@ pub fn resolve(
         check_inheritance(*contract_no, ns);
 
         substrate_requires_public_functions(*contract_no, ns);
+        substrate_unique_function_names(*contract_no, ns);
     }
 
     // Now we can resolve the initializers
@@ -720,6 +721,21 @@ fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespa
 
         ns.diagnostics
             .push(ast::Diagnostic::error(contract.loc, message));
+    }
+}
+
+/// In substrate, a any function within a contract must have a unique name.
+fn substrate_unique_function_names(contract_no: usize, ns: &mut ast::Namespace) {
+    if !ns.target.is_substrate() || ns.diagnostics.any_errors() {
+        return;
+    }
+
+    let mut functions = HashSet::new();
+    for f in ns.contracts[contract_no].functions.iter() {
+        let func = &ns.functions[*f];
+        if !functions.insert(&func.name) {
+            todo!("{}", &func.name)
+        }
     }
 }
 

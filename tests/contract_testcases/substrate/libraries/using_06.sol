@@ -13,7 +13,4 @@
             function max(uint64 a, uint64 b) internal pure returns (uint64) {
                 return a > b ? a : b;
             }
-            function max(uint64 a) internal pure returns (uint64) {
-                return a;
-            }
         }

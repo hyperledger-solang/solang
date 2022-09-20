@@ -8,7 +8,7 @@
                 return false;
             }
 
-            function foo(int64) public returns (bool) {
+            function bar(int64) public returns (bool) {
                 return false;
             }
         }
