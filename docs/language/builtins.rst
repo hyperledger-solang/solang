@@ -179,10 +179,6 @@ uint64 ``block.slot``
 Parity Substrate
 ~~~~~~~~~~~~~~~~
 
-uint128 ``block.tombstone_deposit``
-    The amount needed for a tombstone. Without it, contracts will disappear
-    completely if the balance runs out.
-
 uint128 ``block.minimum_deposit``
     The minimum amonut needed to create a contract. This does not include
     storage rent.

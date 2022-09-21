@@ -325,19 +325,6 @@ fn block() {
         r##"
         contract bar {
             function test() public {
-                uint128 b = block.tombstone_deposit;
-
-                assert(b == 93_603_701_976_053);
-            }
-        }"##,
-    );
-
-    runtime.function("test", Vec::new());
-
-    let mut runtime = build_solidity(
-        r##"
-        contract bar {
-            function test() public {
                 uint128 b = block.minimum_balance;
 
                 assert(b == 500);
