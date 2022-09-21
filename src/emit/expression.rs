@@ -1607,13 +1607,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.build_return(Some(&ret));
             bin.builder.position_at_end(success_block);
 
-            let quotient = bin
-                .builder
-                .build_load(quotient, "quotient")
-                .into_int_value();
+            let remainder = bin.builder.build_load(rem, "remainder").into_int_value();
 
             bin.builder
-                .build_int_truncate(quotient, res_ty, "quotient")
+                .build_int_truncate(remainder, res_ty, "quotient")
                 .into()
         }
         Expression::Builtin(_, _, Builtin::MulMod, args) => {
@@ -1717,13 +1714,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(success_block);
 
-            let quotient = bin
-                .builder
-                .build_load(quotient, "quotient")
-                .into_int_value();
+            let remainder = bin.builder.build_load(rem, "quotient").into_int_value();
 
             bin.builder
-                .build_int_truncate(quotient, res_ty, "quotient")
+                .build_int_truncate(remainder, res_ty, "quotient")
                 .into()
         }
         Expression::Builtin(_, _, hash @ Builtin::Ripemd160, args)

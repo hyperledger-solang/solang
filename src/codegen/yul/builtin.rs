@@ -74,30 +74,14 @@ pub(crate) fn process_builtin(
         | YulBuiltInFunction::Shl
         | YulBuiltInFunction::Shr
         | YulBuiltInFunction::Sar
-        | YulBuiltInFunction::Exp => {
-            process_binary_arithmetic(loc, builtin_ty, args, contract_no, ns, vartab, cfg, opt)
+        | YulBuiltInFunction::Exp
+        | YulBuiltInFunction::AddMod
+        | YulBuiltInFunction::MulMod => {
+            process_arithmetic(loc, builtin_ty, args, contract_no, ns, vartab, cfg, opt)
         }
 
         YulBuiltInFunction::Byte => {
             byte_builtin(loc, args, contract_no, ns, cfg, vartab, opt)
-        }
-
-        YulBuiltInFunction::AddMod
-        | YulBuiltInFunction::MulMod => {
-            let left = expression(&args[0], contract_no, ns, vartab, cfg, opt);
-            let right = expression(&args[1], contract_no, ns, vartab, cfg, opt);
-            let (left, right) = equalize_types(left, right, ns);
-
-            let main_expr = if matches!(builtin_ty, YulBuiltInFunction::AddMod) {
-                Expression::Add(*loc, left.ty(), false, Box::new(left), Box::new(right))
-            } else {
-                Expression::Multiply(*loc, left.ty(), false, Box::new(left), Box::new(right))
-            };
-
-            let mod_arg = expression(&args[2], contract_no, ns, vartab, cfg, opt);
-            let (mod_left, mod_right) = equalize_types(main_expr, mod_arg, ns);
-            let codegen_expr = Expression::UnsignedModulo(*loc, mod_left.ty(), Box::new(mod_left), Box::new(mod_right.clone()));
-            branch_if_zero(mod_right, codegen_expr, cfg, vartab)
         }
 
         YulBuiltInFunction::SignExtend
@@ -223,8 +207,8 @@ pub(crate) fn process_builtin(
     }
 }
 
-/// Process arithmetic operations with two arguments
-fn process_binary_arithmetic(
+/// Process arithmetic operations
+fn process_arithmetic(
     loc: &pt::Loc,
     builtin_ty: &YulBuiltInFunction,
     args: &[ast::YulExpression],
@@ -302,6 +286,23 @@ fn process_binary_arithmetic(
         }
         YulBuiltInFunction::Sar => {
             Expression::ShiftRight(*loc, left.ty(), Box::new(right), Box::new(left), true)
+        }
+
+        YulBuiltInFunction::AddMod | YulBuiltInFunction::MulMod => {
+            let modulo_operand = expression(&args[2], contract_no, ns, vartab, cfg, opt);
+            let (_, equalized_modulo) = equalize_types(left.clone(), modulo_operand.clone(), ns);
+            let builtin = if builtin_ty == &YulBuiltInFunction::AddMod {
+                Builtin::AddMod
+            } else {
+                Builtin::MulMod
+            };
+            let codegen_expr = Expression::Builtin(
+                *loc,
+                vec![left.ty()],
+                builtin,
+                vec![right, left, equalized_modulo],
+            );
+            branch_if_zero(modulo_operand, codegen_expr, cfg, vartab)
         }
 
         _ => panic!("This is not a binary arithmetic operation!"),

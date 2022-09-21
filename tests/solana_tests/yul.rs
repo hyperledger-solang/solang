@@ -358,3 +358,32 @@ contract testing  {
     b_vec.reverse();
     assert_eq!(b_vec, sender.to_vec());
 }
+
+#[test]
+fn addmod_mulmod() {
+    let mut vm = build_solidity(
+        r#"
+    contract foo {
+        function testMod() public pure returns (uint256 a, uint256 b) {
+            assembly {
+                let x := 115792089237316195423570985008687907853269984665640564039457584007913129639935
+                let y := 115792089237316195423570985008687907853269984665640564039457584007913129639935
+
+                a := mulmod(x, 2, 10)
+                b := addmod(y, 2, 10)
+            }
+
+            return (a, b);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("foo", &[]);
+
+    let returns = vm.function("testMod", &[], &[], None);
+    assert_eq!(
+        returns,
+        vec![Token::Uint(Uint::from(0)), Token::Uint(Uint::from(7)),]
+    );
+}
