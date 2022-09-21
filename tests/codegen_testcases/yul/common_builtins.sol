@@ -21,7 +21,7 @@ contract testing {
             // CHECK: ty:uint256 %temp.11 = uint256 0
             // CHECK: branch block3
             // CHECK: block2: # else
-            // CHECK: ty:uint256 %temp.11 = (unsigned modulo ((arg #0) + (arg #1)) % (arg #2))
+            // CHECK: ty:uint256 %temp.11 = (builtin AddMod ((arg #1), (arg #0), (arg #2)))
             // CHECK: branch block3
             // CHECK: block3: # endif
             // CHECK: # phis: temp.11
@@ -33,7 +33,7 @@ contract testing {
             // CHECK: ty:uint256 %temp.12 = uint256 0
             // CHECK: branch block6
             // CHECK: block5: # else
-            // CHECK: ty:uint256 %temp.12 = (unsigned modulo ((arg #0) * (arg #1)) % (arg #2))
+            // CHECK: ty:uint256 %temp.12 = (builtin MulMod ((arg #1), (arg #0), (arg #2)))
             // CHECK: branch block6
             // CHECK: block6: # endif
             // CHECK: # phis: temp.12
