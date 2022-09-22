@@ -77,7 +77,6 @@ enum SubstrateExternal {
     seal_weight_to_fee,
     seal_gas_left,
     seal_caller,
-    seal_tombstone_deposit,
     seal_deposit_event,
     seal_transfer,
 }
@@ -811,16 +810,6 @@ impl Externals for MockSubstrate {
 
                 Ok(None)
             }
-            Some(SubstrateExternal::seal_tombstone_deposit) => {
-                let dest_ptr: u32 = args.nth_checked(0)?;
-                let len_ptr: u32 = args.nth_checked(1)?;
-
-                let scratch = 93_603_701_976_053u128.to_le_bytes();
-
-                set_seal_value!("seal_tombstone_deposit", dest_ptr, len_ptr, &scratch);
-
-                Ok(None)
-            }
             Some(SubstrateExternal::seal_terminate) => {
                 let account_ptr: u32 = args.nth_checked(0)?;
                 let account_len: u32 = args.nth_checked(1)?;
@@ -928,7 +917,6 @@ impl ModuleImportResolver for MockSubstrate {
             "seal_weight_to_fee" => SubstrateExternal::seal_weight_to_fee,
             "seal_gas_left" => SubstrateExternal::seal_gas_left,
             "seal_caller" => SubstrateExternal::seal_caller,
-            "seal_tombstone_deposit" => SubstrateExternal::seal_tombstone_deposit,
             "seal_deposit_event" => SubstrateExternal::seal_deposit_event,
             "seal_transfer" => SubstrateExternal::seal_transfer,
             _ => {

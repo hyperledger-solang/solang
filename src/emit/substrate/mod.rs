@@ -107,7 +107,6 @@ impl SubstrateTarget {
             "seal_gas_price",
             "seal_gas_left",
             "seal_caller",
-            "seal_tombstone_deposit",
             "seal_terminate",
             "seal_deposit_event",
             "seal_transfer",
@@ -438,15 +437,6 @@ impl SubstrateTarget {
 
         binary.module.add_function(
             "seal_now",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_tombstone_deposit",
             binary
                 .context
                 .void_type()

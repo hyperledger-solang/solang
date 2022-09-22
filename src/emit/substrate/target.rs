@@ -2231,13 +2231,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     ns.value_length as u32 * 8
                 )
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::TombstoneDeposit, _) => {
-                get_seal_value!(
-                    "tombstone_deposit",
-                    "seal_tombstone_deposit",
-                    ns.value_length as u32 * 8
-                )
-            }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Random, args) => {
                 let subject =
                     expression(self, binary, &args[0], vartab, function, ns).into_pointer_value();

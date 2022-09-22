@@ -257,7 +257,6 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::Builtin(loc, _, Builtin::Gasleft, _)
         | Expression::Builtin(loc, _, Builtin::Gasprice, _)
         | Expression::Builtin(loc, _, Builtin::GasLimit, _)
-        | Expression::Builtin(loc, _, Builtin::TombstoneDeposit, _)
         | Expression::Builtin(loc, _, Builtin::MinimumBalance, _)
         | Expression::Builtin(loc, _, Builtin::Balance, _)
         | Expression::Builtin(loc, _, Builtin::Random, _)
