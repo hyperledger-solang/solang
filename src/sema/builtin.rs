@@ -352,7 +352,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 28]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins variables
-static BUILTIN_VARIABLE: Lazy<[Prototype; 16]> = Lazy::new(|| {
+static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::BlockCoinbase,
@@ -429,17 +429,6 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 16]> = Lazy::new(|| {
             ret: vec![Type::Uint(64)],
             target: vec![],
             doc: "Current timestamp in unix epoch (seconds since 1970)",
-            constant: false,
-        },
-        Prototype {
-            builtin: Builtin::TombstoneDeposit,
-            namespace: Some("block"),
-            method: None,
-            name: "tombstone_deposit",
-            params: vec![],
-            ret: vec![Type::Value],
-            target: vec![Target::default_substrate()],
-            doc: "Deposit required for a tombstone",
             constant: false,
         },
         Prototype {

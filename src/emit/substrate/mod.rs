@@ -107,7 +107,6 @@ impl SubstrateTarget {
             "seal_gas_price",
             "seal_gas_left",
             "seal_caller",
-            "seal_tombstone_deposit",
             "seal_terminate",
             "seal_deposit_event",
             "seal_transfer",
@@ -251,14 +250,6 @@ impl SubstrateTarget {
         external!("seal_minimum_balance", void_type, u8_ptr, u32_ptr);
         external!("seal_block_number", void_type, u8_ptr, u32_ptr);
         external!("seal_now", void_type, u8_ptr, u32_ptr);
-        binary.module.add_function(
-            "seal_tombstone_deposit",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
         external!("seal_weight_to_fee", void_type, u64_val, u8_ptr, u32_ptr);
         external!("seal_gas_left", void_type, u8_ptr, u32_ptr);
         external!("seal_caller", void_type, u8_ptr, u32_ptr);
