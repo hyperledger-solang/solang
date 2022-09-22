@@ -8,7 +8,7 @@ use crate::codegen::yul::expression::{expression, process_function_call};
 use crate::codegen::{Expression, Options};
 use crate::sema::ast::{Namespace, RetrieveType, Type};
 use crate::sema::yul::ast;
-use crate::sema::yul::ast::{YulStatement, YulSuffix};
+use crate::sema::yul::ast::{CaseBlock, YulBlock, YulExpression, YulStatement, YulSuffix};
 use num_bigint::BigInt;
 use num_traits::FromPrimitive;
 use solang_parser::pt;
@@ -67,10 +67,23 @@ pub(crate) fn statement(
             opt,
         ),
 
-        YulStatement::Switch { .. } => {
-            // Switch statements should use LLVM switch instruction, which requires changes in emit.
-            unreachable!("Switch statements for yul are not implemented yet");
-        }
+        YulStatement::Switch {
+            condition,
+            cases,
+            default,
+            ..
+        } => resolve_switch(
+            condition,
+            cases,
+            default,
+            loops,
+            contract_no,
+            ns,
+            vartab,
+            cfg,
+            early_return,
+            opt,
+        ),
 
         YulStatement::For {
             loc,
@@ -464,4 +477,68 @@ fn process_for_block(
     cfg.set_phis(next_block, set.clone());
     cfg.set_phis(end_block, set.clone());
     cfg.set_phis(cond_block, set);
+}
+
+/// Generate CFG code for a switch statement
+fn resolve_switch(
+    condition: &YulExpression,
+    cases: &[CaseBlock],
+    default: &Option<YulBlock>,
+    loops: &mut LoopScopes,
+    contract_no: usize,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+    early_return: &Option<Instr>,
+    opt: &Options,
+) {
+    let cond = expression(condition, contract_no, ns, vartab, cfg, opt);
+    let end_switch = cfg.new_basic_block("end_switch".to_string());
+
+    let current_block = cfg.current_block();
+
+    vartab.new_dirty_tracker();
+    let mut cases_cfg: Vec<(Expression, usize)> = Vec::with_capacity(cases.len());
+    for (item_no, item) in cases.iter().enumerate() {
+        let case_cond =
+            expression(&item.condition, contract_no, ns, vartab, cfg, opt).cast(&cond.ty(), ns);
+        let case_block = cfg.new_basic_block(format!("case_{}", item_no));
+        cfg.set_basic_block(case_block);
+        for stmt in &item.block.body {
+            statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+        }
+        if item.block.is_next_reachable() {
+            cfg.add_yul(vartab, Instr::Branch { block: end_switch });
+        }
+        cases_cfg.push((case_cond, case_block));
+    }
+
+    let default_block = if let Some(default_block) = default {
+        let new_block = cfg.new_basic_block("default".to_string());
+        cfg.set_basic_block(new_block);
+        for stmt in &default_block.body {
+            statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+        }
+        if default_block.is_next_reachable() {
+            cfg.add_yul(vartab, Instr::Branch { block: end_switch });
+        }
+        new_block
+    } else {
+        end_switch
+    };
+
+    cfg.set_phis(end_switch, vartab.pop_dirty_tracker());
+
+    cfg.set_basic_block(current_block);
+
+    cfg.add_yul(
+        vartab,
+        Instr::Switch {
+            cond,
+            cases: cases_cfg,
+            default: default_block,
+        },
+    );
+
+    cfg.set_basic_block(end_switch);
 }

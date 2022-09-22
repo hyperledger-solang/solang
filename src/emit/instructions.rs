@@ -9,7 +9,9 @@ use crate::emit::{ReturnCode, TargetRuntime};
 use crate::sema::ast::{Contract, Namespace, RetrieveType, Type};
 use crate::Target;
 use inkwell::types::BasicType;
-use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, CallableValue, FunctionValue};
+use inkwell::values::{
+    BasicMetadataValueEnum, BasicValueEnum, CallableValue, FunctionValue, IntValue,
+};
 use inkwell::{AddressSpace, IntPredicate};
 use num_traits::ToPrimitive;
 use std::collections::{HashMap, VecDeque};
@@ -1143,9 +1145,34 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 );
             }
         }
+        Instr::Switch {
+            cond,
+            cases,
+            default,
+        } => {
+            let pos = bin.builder.get_insert_block().unwrap();
+            let cond = expression(target, bin, cond, &w.vars, function, ns);
+            let cases = cases
+                .iter()
+                .map(|(exp, block_no)| {
+                    let exp = expression(target, bin, exp, &w.vars, function, ns);
+                    let bb = add_or_retrieve_block(
+                        *block_no, pos, bin, function, blocks, work, w, cfg, ns,
+                    );
+                    (exp.into_int_value(), bb)
+                })
+                .collect::<Vec<(IntValue, inkwell::basic_block::BasicBlock)>>();
+
+            let default_bb =
+                add_or_retrieve_block(*default, pos, bin, function, blocks, work, w, cfg, ns);
+            bin.builder.position_at_end(pos);
+            bin.builder
+                .build_switch(cond.into_int_value(), default_bb, cases.as_ref());
+        }
     }
 }
 
+/// Add or retrieve a basic block from the blocks' hashmap
 fn add_or_retrieve_block<'a>(
     block_no: usize,
     pos: inkwell::basic_block::BasicBlock<'a>,

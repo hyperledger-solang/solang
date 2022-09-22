@@ -41,7 +41,6 @@ strict digraph "tests/contract_testcases/solana/yul/yul_switch.sol" {
 	return [label="return\ntests/contract_testcases/solana/yul/yul_switch.sol:16:9-17"]
 	variable [label="variable: y\nuint256\ntests/contract_testcases/solana/yul/yul_switch.sol:16:16-17"]
 	diagnostic [label="found contract 'testTypes'\nlevel Debug\ntests/contract_testcases/solana/yul/yul_switch.sol:1:1-18:2"]
-	diagnostic_44 [label="switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature\nlevel Error\ntests/contract_testcases/solana/yul/yul_switch.sol:6:13-11:14"]
 	contracts -> contract
 	contract -> var [label="variable"]
 	contract -> testAsm [label="function"]
@@ -84,5 +83,4 @@ strict digraph "tests/contract_testcases/solana/yul/yul_switch.sol" {
 	inline_assembly -> return [label="next"]
 	return -> variable [label="expr"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_44 [label="Error"]
 }
