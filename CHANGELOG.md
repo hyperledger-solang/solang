@@ -2,6 +2,13 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## Unreleased
+
+### Added
+- Introduce new sub-command `solang idl` which can be used for generating
+  a Solidity interface file from an Anchor IDL file. This can be used for calling
+  Anchor Contracts on Solana. [seanyoung](https://github.com/seanyoung)
+
 ## v0.1.13 Genoa
 
 ### Changed

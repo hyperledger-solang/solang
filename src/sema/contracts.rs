@@ -302,6 +302,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     let mut variable_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: BTreeMap<String, Vec<(usize, usize)>> = BTreeMap::new();
     let mut diagnostics = Diagnostics::default();
+    let mut selectors: HashMap<Vec<u8>, usize> = HashMap::new();
 
     for base_contract_no in ns.contract_bases(contract_no) {
         // find file number where contract is defined
@@ -627,6 +628,40 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 ns.contracts[contract_no]
                     .virtual_functions
                     .insert(signature, function_no);
+            }
+
+            let selector = cur.selector();
+
+            // On Solana, concrete contracts have selectors of 4 bytes
+            // TODO: this will change with the switch to borsh!
+            if ns.contracts[contract_no].is_concrete() && selector.len() != 4 {
+                diagnostics.push(ast::Diagnostic::error(
+                    cur.loc,
+                    format!(
+                        "function '{}' selector '{}' must be 4 bytes rather than {} bytes",
+                        cur.name,
+                        hex::encode(&selector),
+                        selector.len()
+                    ),
+                ));
+            }
+
+            if let Some(other_func_no) = selectors.get(&selector) {
+                let other = &ns.functions[*other_func_no];
+
+                if other.signature != cur.signature {
+                    diagnostics.push(ast::Diagnostic::error_with_note(
+                        cur.loc,
+                        format!(
+                            "{} '{}' selector is the same as {} '{}'",
+                            cur.ty, cur.name, other.ty, other.name
+                        ),
+                        other.loc,
+                        format!("definition of {} '{}'", other.ty, other.name),
+                    ));
+                }
+            } else {
+                selectors.insert(selector, function_no);
             }
 
             ns.contracts[contract_no]

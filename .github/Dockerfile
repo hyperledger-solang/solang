@@ -1,7 +1,7 @@
 FROM ubuntu:20.04 as builder
 
 LABEL org.opencontainers.image.licenses="Apache-2.0" \
-    org.opencontainers.image.description="CI container for github actions"
+    org.opencontainers.image.description="CI container for Hyperledger Solang github actions"
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y
@@ -33,4 +33,10 @@ RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --default-toolchain 1.59.0
 
 COPY --from=builder /llvm13.0 /llvm13.0/
 
-ENV PATH="/llvm13.0/bin:/root/.cargo/bin:${PATH}"
+ENV PATH="/llvm13.0/bin:/root/.cargo/bin:/root/.local/share/solana/install/active_release/bin:${PATH}"
+
+# Install Solana (x86-64 only, does not work on arm)
+RUN if test `arch` = x86_64; then sh -c "$(curl -sSfL https://release.solana.com/v1.11.10/install)"; fi
+
+# Install Anchor tools
+RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.25.0 anchor-cli

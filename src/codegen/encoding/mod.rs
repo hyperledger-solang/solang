@@ -562,14 +562,9 @@ fn finish_array_loop(for_loop: &ForLoop, vartab: &mut Vartable, cfg: &mut Contro
 
 /// Loads a struct member
 fn load_struct_member(ty: Type, expr: Expression, field: usize) -> Expression {
-    if matches!(ty, Type::Struct(_)) {
-        // We should not dereference a struct.
-        return Expression::StructMember(
-            Loc::Codegen,
-            Type::Ref(Box::new(ty)),
-            Box::new(expr),
-            field,
-        );
+    if ty.is_fixed_reference_type() {
+        // We should not dereference a struct or fixed array
+        return Expression::StructMember(Loc::Codegen, ty, Box::new(expr), field);
     }
 
     Expression::Load(

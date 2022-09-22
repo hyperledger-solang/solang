@@ -869,3 +869,42 @@ fn bytes_arrays() {
     assert_eq!(&decoded.item_2[0], b"12345");
     assert_eq!(&decoded.item_2[1], b"67890");
 }
+
+#[test]
+fn uint8_arrays() {
+    #[derive(Debug, BorshDeserialize)]
+    struct Res {
+        item_2: Vec<u8>,
+        item_3: [u8; 13],
+    }
+
+    let mut vm = build_solidity(
+        r#"
+    struct Sector {
+        uint8[]        mclass;
+        uint8[13]       _calldata;
+    }
+
+    contract Testing {
+        function testBytesArray() public pure returns (bytes memory) {
+            uint8[13] x;
+            for (uint8 i = 0 ; i< 13; i++)
+                x[i] = 19*i;
+            Sector s = Sector(new uint8[](0), x);
+            bytes memory b = abi.encode(s);
+            return b;
+        }
+    }"#,
+    );
+
+    vm.constructor("Testing", &[]);
+    let returns = vm.function("testBytesArray", &[], &[], None);
+    let encoded = returns[0].clone().into_bytes().unwrap();
+    let decoded = Res::try_from_slice(&encoded).unwrap();
+
+    assert!(decoded.item_2.is_empty());
+    assert_eq!(
+        decoded.item_3,
+        [0, 19, 38, 57, 76, 95, 114, 133, 152, 171, 190, 209, 228]
+    );
+}
