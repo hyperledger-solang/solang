@@ -130,14 +130,17 @@ impl StorageSlot for SubstrateTarget {
     fn storage_delete_single_slot<'a>(&self, binary: &Binary<'a>, slot: PointerValue) {
         binary.builder.build_call(
             binary.module.get_function("seal_clear_storage").unwrap(),
-            &[binary
-                .builder
-                .build_pointer_cast(
-                    slot,
-                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "",
-                )
-                .into()],
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary.context.i32_type().const_int(4, false).into(),
+            ],
             "",
         );
     }
