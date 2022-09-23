@@ -248,7 +248,8 @@ pub trait TargetRuntime<'a> {
     fn builtin_function(
         &self,
         binary: &Binary<'a>,
-        func: &Function,
+        function: FunctionValue<'a>,
+        builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
         ns: &Namespace,
     ) -> BasicValueEnum<'a>;

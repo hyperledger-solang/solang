@@ -580,10 +580,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .map(|p| expression(target, bin, p, &w.vars, function, ns).into())
                 .collect::<Vec<BasicMetadataValueEnum>>();
 
-            let func = &ns.functions[*ast_func_no];
+            let callee = &ns.functions[*ast_func_no];
 
             if !res.is_empty() {
-                for v in func.returns.iter() {
+                for v in callee.returns.iter() {
                     parms.push(if ns.target == Target::Solana {
                         bin.build_alloca(function, bin.llvm_var_ty(&v.ty, ns), v.name_as_str())
                             .into()
@@ -595,7 +595,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 }
             }
 
-            let ret = target.builtin_function(bin, func, &parms, ns);
+            let ret = target.builtin_function(bin, function, callee, &parms, ns);
 
             let success = bin.builder.build_int_compare(
                 IntPredicate::EQ,
@@ -615,7 +615,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.position_at_end(success_block);
 
             if !res.is_empty() {
-                for (i, v) in func.returns.iter().enumerate() {
+                for (i, v) in callee.returns.iter().enumerate() {
                     let val = bin
                         .builder
                         .build_load(parms[args.len() + i].into_pointer_value(), v.name_as_str());
