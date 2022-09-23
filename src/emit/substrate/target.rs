@@ -37,6 +37,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     )
                     .into(),
+                binary.context.i32_type().const_int(4, false).into(),
                 binary
                     .builder
                     .build_pointer_cast(
@@ -164,6 +165,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     )
                     .into(),
+                binary.context.i32_type().const_int(4, false).into(),
                 binary
                     .builder
                     .build_pointer_cast(
@@ -604,6 +606,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     )
                     .into(),
+                binary.context.i32_type().const_int(4, false).into(),
                 scratch_buf.into(),
                 length.into(),
             ],
@@ -712,6 +715,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     )
                     .into(),
+                binary.context.i32_type().const_int(4, false).into(),
                 scratch_buf.into(),
                 length.into(),
             ],
@@ -849,6 +853,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     )
                     .into(),
+                binary.context.i32_type().const_int(4, false).into(),
                 scratch_buf.into(),
                 new_length.into(),
             ],

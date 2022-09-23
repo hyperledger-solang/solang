@@ -40,6 +40,7 @@ impl StorageSlot for SubstrateTarget {
                         "",
                     )
                     .into(),
+                binary.context.i32_type().const_int(4, false).into(),
                 binary
                     .builder
                     .build_pointer_cast(
@@ -88,6 +89,7 @@ impl StorageSlot for SubstrateTarget {
                             "",
                         )
                         .into(),
+                    binary.context.i32_type().const_int(4, false).into(),
                     scratch_buf.into(),
                     scratch_len.into(),
                 ],
