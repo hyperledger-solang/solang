@@ -72,7 +72,7 @@ pub(crate) fn statement(
             cases,
             default,
             ..
-        } => resolve_switch(
+        } => switch(
             condition,
             cases,
             default,
@@ -480,7 +480,7 @@ fn process_for_block(
 }
 
 /// Generate CFG code for a switch statement
-fn resolve_switch(
+fn switch(
     condition: &YulExpression,
     cases: &[CaseBlock],
     default: &Option<YulBlock>,

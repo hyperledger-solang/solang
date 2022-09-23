@@ -234,6 +234,20 @@ contract Testing {
             b -= 2;
         }
     }
+
+    function switch_no_case(uint a) public pure returns (uint b) {
+        b = 7;
+        assembly {
+            switch a
+            default {
+                b := 5
+            }
+        }
+
+        if (b == 5) {
+            b -= 1;
+        }
+    }
 }
         "#,
     );
@@ -256,5 +270,8 @@ contract Testing {
     assert_eq!(runtime.vm.output, Val256(U256::from(6)).encode());
 
     runtime.function("switch_no_default", Val256(U256::from(6)).encode());
+    assert_eq!(runtime.vm.output, Val256(U256::from(4)).encode());
+
+    runtime.function("switch_no_case", Val256(U256::from(3)).encode());
     assert_eq!(runtime.vm.output, Val256(U256::from(4)).encode());
 }

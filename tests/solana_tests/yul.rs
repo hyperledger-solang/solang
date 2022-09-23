@@ -392,6 +392,7 @@ fn addmod_mulmod() {
 fn switch_statement() {
     let mut vm = build_solidity(
         r#"
+
 contract Testing {
     function switch_default(uint a) public pure returns (uint b) {
         b = 4;
@@ -427,6 +428,20 @@ contract Testing {
 
         if (b == 5) {
             b -= 2;
+        }
+    }
+
+    function switch_no_case(uint a) public pure returns (uint b) {
+        b = 7;
+        assembly {
+            switch a
+            default {
+                b := 5
+            }
+        }
+
+        if (b == 5) {
+            b -= 1;
         }
     }
 }
@@ -466,5 +481,8 @@ contract Testing {
         &[],
         None,
     );
+    assert_eq!(returns[0], Token::Uint(Uint::from(4)));
+
+    let returns = vm.function("switch_no_case", &[Token::Uint(Uint::from(3))], &[], None);
     assert_eq!(returns[0], Token::Uint(Uint::from(4)));
 }
