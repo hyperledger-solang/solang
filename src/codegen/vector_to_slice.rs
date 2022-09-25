@@ -101,6 +101,7 @@ fn find_writable_vectors(
             | Instr::Nop
             | Instr::Branch { .. }
             | Instr::BranchCond { .. }
+            | Instr::Switch { .. }
             | Instr::PopMemory { .. }
             | Instr::LoadStorage { .. }
             | Instr::SetStorage { .. }

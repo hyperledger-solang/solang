@@ -74,7 +74,6 @@ contract testTypes {
 
 #[test]
 fn correct_switch() {
-    // TODO: switch statements are not yet implemented
     let file = r#"
 contract testTypes {
     function testAsm() public pure {
@@ -101,7 +100,135 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(ns
-        .diagnostics
-        .contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
+    for item in ns.diagnostics.iter() {
+        std::println!("{}", item.message);
+    }
+    assert_eq!(ns.diagnostics.len(), 1);
+    assert_eq!(
+        ns.diagnostics.iter().next().unwrap().message,
+        "found contract 'testTypes'"
+    );
+}
+
+#[test]
+fn repeated_switch_case() {
+    let file = r#"
+contract Testing {
+    function duplicate_cases(uint a) public pure returns (uint b) {
+        assembly {
+            switch a
+            case hex"019a" {
+                b := 5
+            }
+            case 410 {
+                b := 6
+            }
+        }
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract 'Testing'"));
+    assert!(ns.diagnostics.contains_message("duplicate case for switch"));
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].notes.len(), 1);
+    assert_eq!(errors[0].notes[0].message, "repeated case found here");
+
+    let file = r#"
+contract Testing {
+    function duplicate_cases(uint a) public pure returns (uint b) {
+        assembly {
+            switch a
+            case true {
+                b := 5
+            }
+            case 1 {
+                b := 6
+            }
+        }
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract 'Testing'"));
+    assert!(ns.diagnostics.contains_message("duplicate case for switch"));
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].notes.len(), 1);
+    assert_eq!(errors[0].notes[0].message, "repeated case found here");
+
+    let file = r#"
+contract Testing {
+    function duplicate_cases(uint a) public pure returns (uint b) {
+        assembly {
+            switch a
+            case 0 {
+                b := 5
+            }
+            case false {
+                b := 6
+            }
+        }
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract 'Testing'"));
+    assert!(ns.diagnostics.contains_message("duplicate case for switch"));
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].notes.len(), 1);
+    assert_eq!(errors[0].notes[0].message, "repeated case found here");
+
+    let file = r#"
+contract Testing {
+    function duplicate_cases(uint a) public pure returns (uint b) {
+        assembly {
+            switch a
+            case 16705 {
+                b := 5
+            }
+            case "AA" {
+                b := 6
+            }
+        }
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract 'Testing'"));
+    assert!(ns.diagnostics.contains_message("duplicate case for switch"));
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].notes.len(), 1);
+    assert_eq!(errors[0].notes[0].message, "repeated case found here");
+
+    let file = r#"
+contract Testing {
+    function duplicate_cases(uint a) public pure returns (uint b) {
+        assembly {
+            switch a
+            case 16705 {
+                b := 5
+            }
+            case 16705 {
+                b := 6
+            }
+        }
+    }
+}
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 2);
+    assert!(ns.diagnostics.contains_message("found contract 'Testing'"));
+    assert!(ns.diagnostics.contains_message("duplicate case for switch"));
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].notes.len(), 1);
+    assert_eq!(errors[0].notes[0].message, "repeated case found here");
 }

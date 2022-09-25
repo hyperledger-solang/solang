@@ -1056,6 +1056,7 @@ impl CodeLocation for Instr {
                 pt::Loc::File(_, _, _) => source.loc(),
                 _ => destination.loc(),
             },
+            Instr::Switch { cond, .. } => cond.loc(),
             Instr::Branch { .. }
             | Instr::Unreachable
             | Instr::Nop

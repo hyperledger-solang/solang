@@ -164,6 +164,13 @@ impl AvailableExpressionSet {
                 let _ = self.gen_expression(bytes, ave, cst);
             }
 
+            Instr::Switch { cond, cases, .. } => {
+                let _ = self.gen_expression(cond, ave, cst);
+                for (case, _) in cases {
+                    let _ = self.gen_expression(case, ave, cst);
+                }
+            }
+
             Instr::AssertFailure { expr: None }
             | Instr::Unreachable
             | Instr::Nop
@@ -423,6 +430,19 @@ impl AvailableExpressionSet {
                 source: self.regenerate_expression(from, ave, cst).1,
                 destination: self.regenerate_expression(to, ave, cst).1,
                 bytes: self.regenerate_expression(bytes, ave, cst).1,
+            },
+
+            Instr::Switch {
+                cond,
+                cases,
+                default,
+            } => Instr::Switch {
+                cond: self.regenerate_expression(cond, ave, cst).1,
+                cases: cases
+                    .iter()
+                    .map(|(case, goto)| (self.regenerate_expression(case, ave, cst).1, *goto))
+                    .collect::<Vec<(Expression, usize)>>(),
+                default: *default,
             },
 
             Instr::WriteBuffer { buf, offset, value } => Instr::WriteBuffer {
