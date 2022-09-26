@@ -73,6 +73,36 @@ package has `documentation <https://solana-labs.github.io/solana-solidity.js/>`_
 are `some examples <https://solana-labs.github.io/solana-solidity.js/>`_. There is also
 `solang's integration tests <https://github.com/hyperledger/solang/tree/main/integration/solana>`_.
 
+.. _call_anchor:
+
+Calling Anchor Programs from Solidity
+_____________________________________
+
+It is possible to call `Anchor Programs <https://github.com/coral-xyz/anchor>`_
+from Solidity. You first have to generate an interface file from the IDL file using
+the :ref:`idl_command`. Then, import the Solidity file in your Solidity using the
+``import "...";`` syntax. Say you have an anchor program called `solidity_from_idl` with a
+function `idl_defined_function`, you can call it like so:
+
+.. code-block:: solidity
+
+    import "solidity_from_idl.sol";
+    import "solana";
+
+    contract example {
+        function test(addres a, address b) public {
+            // The list of accounts to pass into the Anchor program must be passed
+            // as an array of AccountMeta with the correct writable/signer flags set
+            AccountMeta[2] am = [
+                AccountMeta({pubkey: a, is_writable: true, is_signer: false}),
+                AccountMeta({pubkey: b, is_writable: false, is_signer: false})
+            ];
+
+            // Any return values are decoded automatically
+            int64 res = solidity_from_idl.idl_defined_function{accounts: am}(arg1, arg2);
+        }
+    }
+
 .. _value_transfer:
 
 Transfering native value with a function call

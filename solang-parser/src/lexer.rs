@@ -384,6 +384,11 @@ impl CodeLocation for LexicalError {
     }
 }
 
+/// Is this word a keyword in Solidity
+pub fn is_keyword(word: &str) -> bool {
+    KEYWORDS.contains_key(word)
+}
+
 static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "address" => Token::Address,
     "anonymous" => Token::Anonymous,

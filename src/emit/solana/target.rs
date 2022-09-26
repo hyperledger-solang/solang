@@ -1452,11 +1452,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn builtin_function(
         &self,
         binary: &Binary<'a>,
-        func: &ast::Function,
+        function: FunctionValue<'a>,
+        builtin_func: &ast::Function,
         args: &[BasicMetadataValueEnum<'a>],
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
-        if func.name == "create_program_address" {
+        if builtin_func.name == "create_program_address" {
             let func = binary
                 .module
                 .get_function("sol_create_program_address")
@@ -1483,9 +1484,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             );
 
             // address
-            let address = binary
-                .builder
-                .build_alloca(binary.address_type(ns), "address");
+            let address = binary.build_alloca(function, binary.address_type(ns), "address");
 
             binary
                 .builder
@@ -1506,7 +1505,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .try_as_basic_value()
                 .left()
                 .unwrap()
-        } else if func.name == "try_find_program_address" {
+        } else if builtin_func.name == "try_find_program_address" {
             let func = binary
                 .module
                 .get_function("sol_try_find_program_address")
@@ -1533,9 +1532,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             );
 
             // address
-            let address = binary
-                .builder
-                .build_alloca(binary.address_type(ns), "address");
+            let address = binary.build_alloca(function, binary.address_type(ns), "address");
 
             binary
                 .builder

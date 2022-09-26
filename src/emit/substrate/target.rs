@@ -2426,7 +2426,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn builtin_function(
         &self,
         _binary: &Binary<'a>,
-        _func: &Function,
+        _function: FunctionValue<'a>,
+        _builtin_func: &Function,
         _args: &[BasicMetadataValueEnum<'a>],
         _ns: &Namespace,
     ) -> BasicValueEnum<'a> {

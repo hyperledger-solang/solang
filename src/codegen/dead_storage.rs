@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
+use crate::codegen::reaching_definitions::block_edges;
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, RetrieveType, Type};
 use solang_parser::pt::Loc;
@@ -332,7 +333,7 @@ fn apply_transfers(
 
     debug_assert_eq!(transfers.len(), cfg.blocks[block_no].instr.len());
 
-    // this is done in two paseses. The first pass just deals with variables.
+    // this is done in two passes. The first pass just deals with variables.
     // The second pass deals with storage stores
 
     // for each instruction
@@ -470,37 +471,6 @@ fn apply_transfers(
     assert_eq!(res.len(), cfg.blocks[block_no].instr.len());
 
     block_vars.insert(block_no, res);
-}
-
-fn block_edges(block: &BasicBlock) -> Vec<usize> {
-    let mut out = Vec::new();
-
-    // out cfg has edge as the last instruction in a block; EXCEPT
-    // Instr::AbiDecode() which has an edge when decoding fails
-    for (_, instr) in &block.instr {
-        match instr {
-            Instr::Branch { block } => {
-                out.push(*block);
-            }
-            Instr::BranchCond {
-                true_block,
-                false_block,
-                ..
-            } => {
-                out.push(*true_block);
-                out.push(*false_block);
-            }
-            Instr::AbiDecode {
-                exception_block: Some(block),
-                ..
-            } => {
-                out.push(*block);
-            }
-            _ => (),
-        }
-    }
-
-    out
 }
 
 /// Eliminate dead storage load/store.

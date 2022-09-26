@@ -8,8 +8,11 @@ use crate::sema::yul::block::resolve_yul_block;
 use crate::sema::yul::expression::{check_type, resolve_yul_expression};
 use crate::sema::yul::functions::FunctionsTable;
 use crate::sema::yul::types::verify_type_from_expression;
+use num_bigint::{BigInt, Sign};
+use num_traits::{One, Zero};
 use solang_parser::pt::{CodeLocation, YulSwitchOptions};
 use solang_parser::{diagnostics::Diagnostic, pt};
+use std::collections::HashMap;
 
 /// Resolve switch statement
 /// Returns the resolved block and a bool to indicate if the next statement is reachable.
@@ -40,6 +43,35 @@ pub(crate) fn resolve_switch(
             ns,
         )?;
         next_reachable |= block_reachable;
+    }
+
+    let mut conditions: HashMap<BigInt, pt::Loc> = HashMap::new();
+    for item in &case_blocks {
+        let big_int = match &item.condition {
+            YulExpression::BoolLiteral(_, value, _) => {
+                if *value {
+                    BigInt::one()
+                } else {
+                    BigInt::zero()
+                }
+            }
+            YulExpression::NumberLiteral(_, value, _) => value.clone(),
+            YulExpression::StringLiteral(_, value, _) => BigInt::from_bytes_be(Sign::Plus, value),
+            _ => unreachable!("Switch condition should be a literal"),
+        };
+
+        let repeated_loc = conditions.get(&big_int);
+
+        if let Some(repeated) = repeated_loc {
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                item.condition.loc(),
+                "duplicate case for switch".to_string(),
+                *repeated,
+                "repeated case found here".to_string(),
+            ));
+        } else {
+            conditions.insert(big_int, item.condition.loc());
+        }
     }
 
     if yul_switch.default.is_some() && default_block.is_some() {

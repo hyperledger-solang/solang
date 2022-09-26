@@ -362,8 +362,7 @@ pub fn contract_function(
                 ResolveTo::Unknown,
             ) {
                 Ok(Expression::BytesLiteral(_, _, v)) => {
-                    // TODO: Solana uses different length discriminators
-                    if v.len() != 4 {
+                    if ns.target != Target::Solana && v.len() != 4 {
                         ns.diagnostics.push(Diagnostic::error(
                             selector.loc(),
                             format!("selector is {} bytes, 4 bytes expected", v.len()),

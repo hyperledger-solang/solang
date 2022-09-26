@@ -169,6 +169,11 @@ pub enum Instr {
         destination: Expression,
         bytes: Expression,
     },
+    Switch {
+        cond: Expression,
+        cases: Vec<(Expression, usize)>,
+        default: usize,
+    },
     /// Do nothing
     Nop,
 }
@@ -299,6 +304,13 @@ impl Instr {
                 from.recurse(cx, f);
                 to.recurse(cx, f);
                 bytes.recurse(cx, f);
+            }
+
+            Instr::Switch { cond, cases, .. } => {
+                cond.recurse(cx, f);
+                for (case, _) in cases {
+                    case.recurse(cx, f);
+                }
             }
 
             Instr::AssertFailure { expr: None }
@@ -472,6 +484,11 @@ impl ControlFlowGraph {
             vartab.set_dirty(res);
         }
         self.blocks[self.current].add(InstrOrigin::Yul, ins);
+    }
+
+    /// Retrieve the basic block being processed
+    pub fn current_block(&self) -> usize {
+        self.current
     }
 
     /// Function to modify array length temp by inserting an add/sub instruction in the cfg right after a push/pop instruction.
@@ -1158,6 +1175,26 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, to),
                     self.expr_to_string(contract, ns, bytes)
                 )
+            }
+            Instr::Switch {
+                cond,
+                cases,
+                default,
+            } => {
+                let mut description =
+                    format!("switch {}:", self.expr_to_string(contract, ns, cond),);
+                for item in cases {
+                    description.push_str(
+                        format!(
+                            "\n\t\tcase {}: goto block #{}",
+                            self.expr_to_string(contract, ns, &item.0),
+                            item.1
+                        )
+                        .as_str(),
+                    );
+                }
+                description.push_str(format!("\n\t\tdefault: goto block #{}", default).as_str());
+                description
             }
         }
     }

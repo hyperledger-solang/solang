@@ -89,10 +89,14 @@ fn pda() {
         import 'solana';
 
         contract pda {
-            function create_pda() public returns (address) {
+            function create_pda(bool cond) public returns (address) {
                 address program_id = address"BPFLoaderUpgradeab1e11111111111111111111111";
-
-                return create_program_address(["Talking", "Squirrels"], program_id);
+                address addr = create_program_address(["Talking", "Cats"], program_id);
+                if (cond) {
+                    return create_program_address(["Talking", "Squirrels"], program_id);
+                } else {
+                    return addr;
+                }
             }
 
             function create_pda2(bytes a, bytes b) public returns (address) {
@@ -101,22 +105,38 @@ fn pda() {
                 return create_program_address([a, b], program_id);
             }
 
-            function create_pda2_bump() public returns (address, bytes1) {
+            function create_pda2_bump(bool cond) public returns (address, bytes1) {
                 address program_id = address"BPFLoaderUpgradeab1e11111111111111111111111";
+                (address addr, bytes1 bump) = try_find_program_address(["bar", hex"01234567"], program_id);
 
-                return try_find_program_address(["foo", hex"01234567"], program_id);
+                if (cond) {
+                    return try_find_program_address(["foo", hex"01234567"], program_id);
+                } else {
+                    return (addr, bump);
+                }
             }
         }"#,
     );
 
     vm.constructor("pda", &[]);
 
-    let returns = vm.function("create_pda", &[], &[], None);
+    let returns = vm.function("create_pda", &[Token::Bool(true)], &[], None);
 
     if let Token::FixedBytes(bs) = &returns[0] {
         assert_eq!(
             bs.to_base58(),
             "2fnQrngrQT4SeLcdToJAD96phoEjNL2man2kfRLCASVk"
+        );
+    } else {
+        panic!("{:?} not expected", returns);
+    }
+
+    let returns = vm.function("create_pda", &[Token::Bool(false)], &[], None);
+
+    if let Token::FixedBytes(bs) = &returns[0] {
+        assert_eq!(
+            bs.to_base58(),
+            "7YgSsrAiAEJFqBNujFBRsEossqdpV31byeJLBsZ5QSJE"
         );
     } else {
         panic!("{:?} not expected", returns);
@@ -141,7 +161,7 @@ fn pda() {
         panic!("{:?} not expected", returns);
     }
 
-    let returns = vm.function("create_pda2_bump", &[], &[], None);
+    let returns = vm.function("create_pda2_bump", &[Token::Bool(true)], &[], None);
 
     assert_eq!(returns[1], Token::FixedBytes(vec![255]));
 
@@ -149,6 +169,19 @@ fn pda() {
         assert_eq!(
             bs.to_base58(),
             "DZpR2BwsPVtbXxUUbMx5tK58Ln2T9RUtAshtR2ePqDcu"
+        );
+    } else {
+        panic!("{:?} not expected", returns);
+    }
+
+    let returns = vm.function("create_pda2_bump", &[Token::Bool(false)], &[], None);
+
+    assert_eq!(returns[1], Token::FixedBytes(vec![255]));
+
+    if let Token::FixedBytes(bs) = &returns[0] {
+        assert_eq!(
+            bs.to_base58(),
+            "3Y19WiAiLD8kT8APmtk41NgHEpkYTzx28s1uwAX8LJq4"
         );
     } else {
         panic!("{:?} not expected", returns);
