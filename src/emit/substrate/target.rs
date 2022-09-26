@@ -1801,21 +1801,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.build_call(
             binary.module.get_function("seal_terminate").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        address,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary
-                    .context
-                    .i32_type()
-                    .const_int(ns.address_length as u64, false)
-                    .into(),
-            ],
+            &[binary
+                .builder
+                .build_pointer_cast(
+                    address,
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "",
+                )
+                .into()],
             "terminated",
         );
 
