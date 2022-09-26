@@ -339,7 +339,7 @@ fn string_storage() {
     runtime.function("set_bar", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
+        runtime.store.get(&(runtime.vm.account, [0u8; 4])).unwrap(),
         b"foobar"
     );
 
@@ -461,7 +461,7 @@ fn bytes_storage_subscript() {
     runtime.function("set_index", Arg(1, 0x33).encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
+        runtime.store.get(&(runtime.vm.account, [0u8; 4])).unwrap(),
         &vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)
     );
 
@@ -493,21 +493,21 @@ fn bytes_storage_subscript() {
     runtime.function("or", Arg(1, 0x50).encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
+        runtime.store.get(&(runtime.vm.account, [0u8; 4])).unwrap(),
         &vec!(0xde, 0xfd, 0xca, 0xfe)
     );
 
     runtime.function("and", Arg(3, 0x7f).encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
+        runtime.store.get(&(runtime.vm.account, [0u8; 4])).unwrap(),
         &vec!(0xde, 0xfd, 0xca, 0x7e)
     );
 
     runtime.function("xor", Arg(2, 0xff).encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
+        runtime.store.get(&(runtime.vm.account, [0u8; 4])).unwrap(),
         &vec!(0xde, 0xfd, 0x35, 0x7e)
     );
 }

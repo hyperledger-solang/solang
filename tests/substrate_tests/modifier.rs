@@ -25,7 +25,7 @@ fn chain() {
 
     runtime.constructor(0, Vec::new());
 
-    let slot = [0u8; 32];
+    let slot = [0u8; 4];
 
     assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
@@ -56,7 +56,7 @@ fn chain() {
 
     runtime.constructor(0, Vec::new());
 
-    let slot = [0u8; 32];
+    let slot = [0u8; 4];
 
     assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
@@ -89,7 +89,7 @@ fn chain() {
 
     runtime.constructor(0, Vec::new());
 
-    let slot = [0u8; 32];
+    let slot = [0u8; 4];
 
     assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
@@ -132,7 +132,7 @@ fn chain() {
 
     runtime.constructor(0, Vec::new());
 
-    let slot = [0u8; 32];
+    let slot = [0u8; 4];
 
     assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
@@ -162,7 +162,7 @@ fn chain() {
 
     runtime.constructor(0, Vec::new());
 
-    let slot = [0u8; 32];
+    let slot = [0u8; 4];
 
     assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
 
@@ -199,7 +199,7 @@ fn inherit_modifier() {
 
     runtime.constructor(0, Vec::new());
 
-    let mut slot = [0u8; 32];
+    let mut slot = [0u8; 4];
     slot[0] = 1;
 
     assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
@@ -241,7 +241,7 @@ fn inherit_modifier() {
 
     runtime.constructor(0, Vec::new());
 
-    let mut slot = [0u8; 32];
+    let mut slot = [0u8; 4];
     slot[0] = 1;
 
     assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);

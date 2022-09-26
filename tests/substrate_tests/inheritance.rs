@@ -95,7 +95,7 @@ fn inherit_variables() {
 
     runtime.constructor(0, Vec::new());
 
-    let mut slot = [0u8; 32];
+    let mut slot = [0u8; 4];
 
     assert_eq!(
         runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
@@ -128,7 +128,7 @@ fn inherit_variables() {
     runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 
-    let mut slot = [0u8; 32];
+    let mut slot = [0u8; 4];
 
     assert_eq!(
         runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
@@ -282,7 +282,7 @@ fn test_override() {
 
     runtime.constructor(0, Vec::new());
 
-    let slot = [0u8; 32];
+    let slot = [0u8; 4];
     assert_eq!(
         runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(3)
@@ -291,7 +291,7 @@ fn test_override() {
     runtime.vm.value = 1;
     runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec());
 
-    let slot = [0u8; 32];
+    let slot = [0u8; 4];
 
     assert_eq!(
         runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
@@ -316,7 +316,7 @@ fn test_override() {
 
     runtime.constructor(0, Vec::new());
 
-    let slot = [0u8; 32];
+    let slot = [0u8; 4];
     assert_eq!(
         runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
         &vec!(3)
@@ -324,7 +324,7 @@ fn test_override() {
 
     runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec());
 
-    let slot = [0u8; 32];
+    let slot = [0u8; 4];
 
     assert_eq!(
         runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
