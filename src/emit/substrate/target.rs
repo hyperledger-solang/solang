@@ -26,35 +26,41 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         slot: PointerValue,
         dest: PointerValue,
     ) {
-        binary.builder.build_call(
-            binary.module.get_function("seal_set_storage").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(4, false).into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        dest,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                dest.get_type()
-                    .get_element_type()
-                    .size_of()
-                    .unwrap()
-                    .const_cast(binary.context.i32_type(), false)
-                    .into(),
-            ],
-            "",
-        );
+        binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_set_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    binary.context.i32_type().const_int(4, false).into(),
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            dest,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    dest.get_type()
+                        .get_element_type()
+                        .size_of()
+                        .unwrap()
+                        .const_cast(binary.context.i32_type(), false)
+                        .into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
     }
 
     fn get_storage_extfunc(
@@ -154,50 +160,62 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.position_at_end(set_block);
 
-        binary.builder.build_call(
-            binary.module.get_function("seal_set_storage").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(4, false).into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        data,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                len.into(),
-            ],
-            "",
-        );
+        let _ret = binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_set_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    binary.context.i32_type().const_int(4, false).into(),
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            data,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         binary.builder.build_unconditional_branch(done_storage);
 
         binary.builder.position_at_end(delete_block);
 
-        binary.builder.build_call(
-            binary.module.get_function("seal_clear_storage").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(4, false).into(),
-            ],
-            "",
-        );
+        let _ret = binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_clear_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    binary.context.i32_type().const_int(4, false).into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         binary.builder.build_unconditional_branch(done_storage);
 
@@ -598,23 +616,29 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // set the result
         binary.builder.build_store(offset, val);
 
-        binary.builder.build_call(
-            binary.module.get_function("seal_set_storage").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        slot_ptr,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(4, false).into(),
-                scratch_buf.into(),
-                length.into(),
-            ],
-            "",
-        );
+        binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_set_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    binary.context.i32_type().const_int(4, false).into(),
+                    scratch_buf.into(),
+                    length.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
     }
 
     /// Push a byte onto a bytes string in storage
@@ -707,23 +731,29 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "new_length",
         );
 
-        binary.builder.build_call(
-            binary.module.get_function("seal_set_storage").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        slot_ptr,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(4, false).into(),
-                scratch_buf.into(),
-                length.into(),
-            ],
-            "",
-        );
+        binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_set_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    binary.context.i32_type().const_int(4, false).into(),
+                    scratch_buf.into(),
+                    length.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         val
     }
@@ -845,23 +875,29 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             None
         };
 
-        binary.builder.build_call(
-            binary.module.get_function("seal_set_storage").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        slot_ptr,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(4, false).into(),
-                scratch_buf.into(),
-                new_length.into(),
-            ],
-            "",
-        );
+        binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_set_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    binary.context.i32_type().const_int(4, false).into(),
+                    scratch_buf.into(),
+                    new_length.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         val
     }

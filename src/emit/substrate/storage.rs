@@ -29,30 +29,36 @@ impl StorageSlot for SubstrateTarget {
                 .const_cast(binary.context.i32_type(), false)
         };
 
-        binary.builder.build_call(
-            binary.module.get_function("seal_set_storage").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(4, false).into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        dest,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                dest_size.into(),
-            ],
-            "",
-        );
+        binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_set_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    binary.context.i32_type().const_int(4, false).into(),
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            dest,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    dest_size.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
     }
 
     fn get_storage_address<'a>(
@@ -128,21 +134,27 @@ impl StorageSlot for SubstrateTarget {
     }
 
     fn storage_delete_single_slot<'a>(&self, binary: &Binary<'a>, slot: PointerValue) {
-        binary.builder.build_call(
-            binary.module.get_function("seal_clear_storage").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary.context.i32_type().const_int(4, false).into(),
-            ],
-            "",
-        );
+        binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_clear_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    binary.context.i32_type().const_int(4, false).into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
     }
 
     fn storage_load_slot<'a>(

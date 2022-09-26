@@ -188,7 +188,7 @@ impl Externals for MockSubstrate {
                 Ok(None)
             }
             Some(SubstrateExternal::seal_get_storage) => {
-                assert_eq!(args.len(), 3);
+                assert_eq!(args.len(), 4);
 
                 let key_ptr: u32 = args.nth_checked(0)?;
                 //let key_len: u32 = args.nth_checked(1)?; TODO
