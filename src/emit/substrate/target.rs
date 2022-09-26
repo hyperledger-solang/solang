@@ -1592,12 +1592,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_call(
                 binary.module.get_function("seal_call").unwrap(),
                 &[
+                    binary.context.i32_type().const_zero().into(), // TODO implement flags
                     address.unwrap().into(),
-                    binary
-                        .context
-                        .i32_type()
-                        .const_int(ns.address_length as u64, false)
-                        .into(),
                     gas.into(),
                     binary
                         .builder
@@ -1606,11 +1602,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                             binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "value_transfer",
                         )
-                        .into(),
-                    binary
-                        .context
-                        .i32_type()
-                        .const_int(ns.value_length as u64, false)
                         .into(),
                     payload.into(),
                     payload_len.into(),
