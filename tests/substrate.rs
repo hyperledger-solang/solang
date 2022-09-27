@@ -19,6 +19,9 @@ mod substrate_tests;
 type StorageKey = [u8; 4]; // TODO use ink_primitives crate
 type Account = [u8; 32];
 
+/// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
+const NONE_SENTINEL: RuntimeValue = RuntimeValue::I32(-1);
+
 fn account_new() -> Account {
     let mut rng = rand::thread_rng();
 
@@ -242,7 +245,9 @@ impl Externals for MockSubstrate {
                 println!("seal_clear_storage: {:?}", key);
                 self.store.remove(&(self.vm.account, key));
 
-                Ok(None)
+                // The size of the pre-existing value is returned (if any).
+                // In this mock VM we just always assume that there was no value and return `None`.
+                Ok(Some(NONE_SENTINEL))
             }
             Some(SubstrateExternal::seal_set_storage) => {
                 assert_eq!(args.len(), 4);
@@ -268,7 +273,9 @@ impl Externals for MockSubstrate {
 
                 self.store.insert((self.vm.account, key), data);
 
-                Ok(None)
+                // The size of the pre-existing value is returned (if any).
+                // In this mock VM we just always assume that there was no value and return `None`.
+                Ok(Some(NONE_SENTINEL))
             }
             Some(SubstrateExternal::seal_hash_keccak_256) => {
                 let data_ptr: u32 = args.nth_checked(0)?;
