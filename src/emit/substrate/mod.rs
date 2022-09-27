@@ -23,30 +23,109 @@ pub(super) mod target;
 const SCRATCH_SIZE: u32 = 32 * 1024;
 
 #[macro_export]
-macro_rules! bin_ctx {
+macro_rules! context {
     ($binary:expr) => {
-        let ctx = $binary.context;
-
-        macro_rules! ptr {
-            ($of_type:ident, $val:expr) => {
-                $binary
-                    .builder
-                    .build_pointer_cast($val, ctx.$of_type().ptr_type(AddressSpace::Generic), "")
-                    .into()
+        #[allow(unused_macros)]
+        macro_rules! cast_byte_ptr {
+            ($val:expr) => {
+                $binary.builder.build_pointer_cast(
+                    $val,
+                    $binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "",
+                )
+            };
+            ($val:expr, $ptr_name:literal) => {
+                $binary.builder.build_pointer_cast(
+                    $val,
+                    $binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    $ptr_name,
+                )
             };
         }
 
+        #[allow(unused_macros)]
+        macro_rules! byte_ptr {
+            () => {
+                $binary.context.i8_type().ptr_type(AddressSpace::Generic)
+            };
+        }
+
+        #[allow(unused_macros)]
         macro_rules! cnst {
             ($of_type:ident, $val:expr) => {
-                ctx.$of_type().const_int($val, false).into()
+                $binary.context.$of_type().const_int($val, false)
             };
         }
 
+        #[allow(unused_macros)]
+        macro_rules! i32_cnst {
+            ($val:expr) => {
+                cnst!(i32_type, $val)
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i32_null {
+            () => {
+                $binary.context.i32_type().const_zero()
+            };
+        }
+
+        #[allow(unused_macros)]
         macro_rules! call {
-            ($name:literal, $args:expr) => {
+            ($name:expr, $args:expr) => {
                 $binary
                     .builder
                     .build_call($binary.module.get_function($name).unwrap(), $args, "")
+            };
+            ($name:expr, $args:expr, $call_name:literal) => {
+                $binary.builder.build_call(
+                    $binary.module.get_function($name).unwrap(),
+                    $args,
+                    $call_name,
+                )
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! seal_get_storage {
+            ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
+                call!(
+                    "seal_get_storage",
+                    &[$key_ptr, $key_len, $value_ptr, $value_len]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! seal_set_storage {
+            ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
+                call!(
+                    "seal_set_storage",
+                    &[$key_ptr, $key_len, $value_ptr, $value_len]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! scratch_buf {
+            () => {
+                (
+                    $binary.builder.build_pointer_cast(
+                        $binary.scratch.unwrap().as_pointer_value(),
+                        $binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "scratch_buf",
+                    ),
+                    $binary.scratch_len.unwrap().as_pointer_value(),
+                )
             };
         }
     };
