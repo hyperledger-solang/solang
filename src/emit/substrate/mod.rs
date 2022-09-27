@@ -22,6 +22,36 @@ pub(super) mod target;
 // When using the seal api, we use our own scratch buffer.
 const SCRATCH_SIZE: u32 = 32 * 1024;
 
+#[macro_export]
+macro_rules! bin_ctx {
+    ($binary:expr) => {
+        let ctx = $binary.context;
+
+        macro_rules! ptr {
+            ($of_type:ident, $val:expr) => {
+                $binary
+                    .builder
+                    .build_pointer_cast($val, ctx.$of_type().ptr_type(AddressSpace::Generic), "")
+                    .into()
+            };
+        }
+
+        macro_rules! cnst {
+            ($of_type:ident, $val:expr) => {
+                ctx.$of_type().const_int($val, false).into()
+            };
+        }
+
+        macro_rules! call {
+            ($name:literal, $args:expr) => {
+                $binary
+                    .builder
+                    .build_call($binary.module.get_function($name).unwrap(), $args, "")
+            };
+        }
+    };
+}
+
 pub struct SubstrateTarget {
     unique_strings: HashMap<usize, usize>,
 }
