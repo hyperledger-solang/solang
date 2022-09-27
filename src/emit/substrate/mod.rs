@@ -23,7 +23,7 @@ pub(super) mod target;
 const SCRATCH_SIZE: u32 = 32 * 1024;
 
 #[macro_export]
-macro_rules! context {
+macro_rules! emit_context {
     ($binary:expr) => {
         #[allow(unused_macros)]
         macro_rules! cast_byte_ptr {

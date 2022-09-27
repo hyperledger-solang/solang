@@ -8,7 +8,7 @@ use crate::emit::substrate::{event_id, SubstrateTarget, SCRATCH_SIZE};
 use crate::emit::{TargetRuntime, Variable};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, Type};
-use crate::{codegen, context};
+use crate::{codegen, emit_context};
 use inkwell::types::{BasicType, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, CallableValue, FunctionValue, IntValue,
@@ -26,7 +26,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         slot: PointerValue,
         dest: PointerValue,
     ) {
-        context!(binary);
+        emit_context!(binary);
 
         seal_set_storage!(
             cast_byte_ptr!(slot).into(),
@@ -48,7 +48,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         slot: PointerValue<'a>,
         ns: &ast::Namespace,
     ) -> PointerValue<'a> {
-        context!(binary);
+        emit_context!(binary);
 
         let ty = binary.llvm_type(
             &ast::Type::ExternalFunction {
@@ -102,7 +102,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         slot: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
     ) {
-        context!(binary);
+        emit_context!(binary);
 
         let len = binary.vector_len(dest);
         let data = binary.vector_bytes(dest);
@@ -153,7 +153,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
-        context!(binary);
+        emit_context!(binary);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
         let ty_len = ty.size_of().const_cast(binary.context.i32_type(), false);
@@ -209,7 +209,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
-        context!(binary);
+        emit_context!(binary);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
@@ -292,7 +292,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         slot: IntValue<'a>,
         index: IntValue<'a>,
     ) -> IntValue<'a> {
-        context!(binary);
+        emit_context!(binary);
 
         let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
         binary.builder.build_store(slot_ptr, slot);
@@ -364,7 +364,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         index: IntValue,
         val: IntValue,
     ) {
-        context!(binary);
+        emit_context!(binary);
 
         let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
         binary.builder.build_store(slot_ptr, slot);
@@ -446,7 +446,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         val: Option<BasicValueEnum<'a>>,
         _ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
-        context!(binary);
+        emit_context!(binary);
 
         let val = val.unwrap();
 
@@ -521,7 +521,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         load: bool,
         _ns: &ast::Namespace,
     ) -> Option<BasicValueEnum<'a>> {
-        context!(binary);
+        emit_context!(binary);
 
         let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
         binary.builder.build_store(slot_ptr, slot);
@@ -614,7 +614,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _ty: &ast::Type,
         _ns: &ast::Namespace,
     ) -> IntValue<'a> {
-        context!(binary);
+        emit_context!(binary);
 
         let slot_ptr = binary.builder.build_alloca(slot.get_type(), "slot");
         binary.builder.build_store(slot_ptr, slot);
@@ -651,7 +651,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     fn return_empty_abi(&self, binary: &Binary) {
-        context!(binary);
+        emit_context!(binary);
 
         call!(
             "seal_return",
@@ -666,7 +666,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     fn return_code<'b>(&self, binary: &'b Binary, _ret: IntValue<'b>) {
-        context!(binary);
+        emit_context!(binary);
 
         // we can't return specific errors
         self.assert_failure(binary, byte_ptr!().const_zero().into(), i32_null!().into());
@@ -681,7 +681,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         dest: PointerValue,
         _ns: &ast::Namespace,
     ) {
-        context!(binary);
+        emit_context!(binary);
 
         call!(
             "seal_hash_keccak_256",
@@ -694,7 +694,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
-        context!(binary);
+        emit_context!(binary);
 
         call!(
             "seal_return",
@@ -761,7 +761,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         tys: &[ast::Type],
         ns: &ast::Namespace,
     ) -> PointerValue<'b> {
-        context!(binary);
+        emit_context!(binary);
 
         // first calculate how much memory we need to allocate
         let mut length = i32_null!();
@@ -897,7 +897,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         tys: &[ast::Type],
         ns: &ast::Namespace,
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        context!(binary);
+        emit_context!(binary);
 
         // first calculate how much memory we need to allocate
         let mut length = i32_null!();
@@ -981,7 +981,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
-        context!(binary);
+        emit_context!(binary);
 
         call!(
             "seal_debug_message",
@@ -1004,7 +1004,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _space: Option<IntValue<'b>>,
         ns: &ast::Namespace,
     ) {
-        context!(binary);
+        emit_context!(binary);
 
         let created_contract = &ns.contracts[contract_no];
 
@@ -1174,7 +1174,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _ty: ast::CallTy,
         ns: &ast::Namespace,
     ) {
-        context!(binary);
+        emit_context!(binary);
 
         // balance is a u128
         let value_ptr = binary
@@ -1249,7 +1249,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         value: IntValue<'b>,
         ns: &ast::Namespace,
     ) {
-        context!(binary);
+        emit_context!(binary);
 
         // balance is a u128
         let value_ptr = binary
@@ -1298,7 +1298,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     fn return_data<'b>(&self, binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {
-        context!(binary);
+        emit_context!(binary);
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
@@ -1316,7 +1316,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     /// Substrate value is usually 128 bits
     fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
-        context!(binary);
+        emit_context!(binary);
 
         let value = binary.builder.build_alloca(binary.value_type(ns), "value");
 
@@ -1342,7 +1342,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     /// Terminate execution, destroy contract and send remaining funds to addr
     fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &ast::Namespace) {
-        context!(binary);
+        emit_context!(binary);
 
         let address = binary
             .builder
@@ -1370,7 +1370,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         input_len: IntValue<'b>,
         ns: &ast::Namespace,
     ) -> IntValue<'b> {
-        context!(binary);
+        emit_context!(binary);
 
         let (fname, hashlen) = match hash {
             HashTy::Keccak256 => ("seal_hash_keccak_256", 32),
@@ -1418,7 +1418,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         topic_tys: &[ast::Type],
         ns: &ast::Namespace,
     ) {
-        context!(binary);
+        emit_context!(binary);
 
         let topic_count = topics.len();
         let topic_size = i32_cnst!(if topic_count > 0 {
@@ -1505,7 +1505,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         function: FunctionValue<'b>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
-        context!(binary);
+        emit_context!(binary);
 
         macro_rules! get_seal_value {
             ($name:literal, $func:literal, $width:expr) => {{
