@@ -1017,11 +1017,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         // salt
         let salt_buf =
-            binary.build_alloca(function, binary.context.i8_type().array_type(32), "salt");
+            binary.build_alloca(function, binary.context.i8_type().array_type(36), "salt");
         let salt_buf = binary
             .builder
             .build_pointer_cast(salt_buf, byte_ptr!(), "salt_buf");
-        let salt_len = i32_cnst!(32);
+        let salt_len = i32_cnst!(36);
 
         if let Some(salt) = salt {
             let salt_ty = ast::Type::Uint(256);
@@ -1099,11 +1099,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_store(address_len_ptr, i32_cnst!(ns.address_length as u64));
+            .build_store(address_len_ptr, i32_cnst!(ns.address_length as u64 * 32));
 
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64));
+            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64 * 32));
 
         let ret = call!(
             "seal_instantiate",
@@ -1654,10 +1654,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .builder
                     .build_store(scratch_len, i32_cnst!(ns.address_length as u64));
 
-                binary.builder.build_call(
-                    binary.module.get_function("seal_caller").unwrap(),
+                call!(
+                    "seal_caller",
                     &[scratch_buf.into(), scratch_len.into()],
-                    "caller",
+                    "caller"
                 );
 
                 binary.builder.build_load(
@@ -1697,20 +1697,17 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
-                binary.builder.build_store(scratch_len, i32_cnst!(32));
+                binary.builder.build_store(scratch_len, i32_cnst!(36));
 
-                binary.builder.build_call(
-                    binary.module.get_function("seal_random").unwrap(),
+                call!(
+                    "seal_random",
                     &[
-                        binary
-                            .builder
-                            .build_pointer_cast(subject_data, byte_ptr!(), "subject_data")
-                            .into(),
+                        cast_byte_ptr!(subject_data, "subject_data").into(),
                         binary.builder.build_load(subject_len, "subject_len").into(),
                         scratch_buf.into(),
-                        scratch_len.into(),
+                        scratch_len.into()
                     ],
-                    "random",
+                    "random"
                 );
 
                 binary.builder.build_load(
@@ -1732,10 +1729,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .builder
                     .build_store(scratch_len, i32_cnst!(ns.address_length as u64));
 
-                binary.builder.build_call(
-                    binary.module.get_function("seal_address").unwrap(),
+                call!(
+                    "seal_address",
                     &[scratch_buf.into(), scratch_len.into()],
-                    "address",
+                    "address"
                 );
 
                 binary.builder.build_load(
@@ -1754,10 +1751,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .builder
                     .build_store(scratch_len, i32_cnst!(ns.value_length as u64));
 
-                binary.builder.build_call(
-                    binary.module.get_function("seal_balance").unwrap(),
+                call!(
+                    "seal_balance",
                     &[scratch_buf.into(), scratch_len.into()],
-                    "balance",
+                    "balance"
                 );
 
                 binary.builder.build_load(

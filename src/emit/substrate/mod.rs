@@ -26,24 +26,6 @@ const SCRATCH_SIZE: u32 = 32 * 1024;
 macro_rules! emit_context {
     ($binary:expr) => {
         #[allow(unused_macros)]
-        macro_rules! cast_byte_ptr {
-            ($val:expr) => {
-                $binary.builder.build_pointer_cast(
-                    $val,
-                    $binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "",
-                )
-            };
-            ($val:expr, $ptr_name:literal) => {
-                $binary.builder.build_pointer_cast(
-                    $val,
-                    $binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                    $ptr_name,
-                )
-            };
-        }
-
-        #[allow(unused_macros)]
         macro_rules! byte_ptr {
             () => {
                 $binary.context.i8_type().ptr_type(AddressSpace::Generic)
@@ -68,6 +50,18 @@ macro_rules! emit_context {
         macro_rules! i32_null {
             () => {
                 $binary.context.i32_type().const_zero()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! cast_byte_ptr {
+            ($val:expr) => {
+                $binary.builder.build_pointer_cast($val, byte_ptr!(), "")
+            };
+            ($val:expr, $ptr_name:literal) => {
+                $binary
+                    .builder
+                    .build_pointer_cast($val, byte_ptr!(), $ptr_name)
             };
         }
 
