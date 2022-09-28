@@ -1021,7 +1021,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let salt_buf = binary
             .builder
             .build_pointer_cast(salt_buf, byte_ptr!(), "salt_buf");
-        let salt_len = i32_cnst!(36);
+        let salt_len = i32_cnst!(32);
 
         if let Some(salt) = salt {
             let salt_ty = ast::Type::Uint(256);
@@ -1039,7 +1039,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         } else {
             let (ptr, len) = self.contract_unique_salt(binary, contract_no, ns);
 
-            binary.builder.build_store(scratch_len, salt_len);
+            binary.builder.build_store(scratch_len, i32_cnst!(36));
 
             call!(
                 "seal_random",
