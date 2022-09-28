@@ -107,10 +107,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let len = binary.vector_len(dest);
         let data = binary.vector_bytes(dest);
 
-        let exists =
-            binary
-                .builder
-                .build_int_compare(IntPredicate::NE, len, i32_null!().into(), "exists");
+        let exists = binary
+            .builder
+            .build_int_compare(IntPredicate::NE, len, i32_null!(), "exists");
 
         let delete_block = binary.context.append_basic_block(function, "delete_block");
 
@@ -169,7 +168,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!().into(),
+            i32_null!(),
             "storage_exists",
         );
 
@@ -227,7 +226,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!().into(),
+            i32_null!(),
             "storage_exists",
         );
 
@@ -313,7 +312,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!().into(),
+            i32_null!(),
             "storage_exists",
         );
 
@@ -341,14 +340,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_null!().into());
+        self.assert_failure(binary, byte_ptr!().const_null(), i32_null!());
 
         binary.builder.position_at_end(retrieve_block);
 
         let offset = unsafe {
             binary.builder.build_gep(
                 binary.scratch.unwrap().as_pointer_value(),
-                &[i32_null!().into(), index],
+                &[i32_null!(), index],
                 "data_offset",
             )
         };
@@ -385,7 +384,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!().into(),
+            i32_null!(),
             "storage_exists",
         );
 
@@ -635,7 +634,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!().into(),
+            i32_null!(),
             "storage_exists",
         );
 
@@ -669,7 +668,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         // we can't return specific errors
-        self.assert_failure(binary, byte_ptr!().const_zero().into(), i32_null!().into());
+        self.assert_failure(binary, byte_ptr!().const_zero(), i32_null!());
     }
 
     /// Call the  keccak256 host function
@@ -1129,7 +1128,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let is_success =
             binary
                 .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_null!().into(), "success");
+                .build_int_compare(IntPredicate::EQ, ret, i32_null!(), "success");
 
         if let Some(success) = success {
             // we're in a try statement. This means:
