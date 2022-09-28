@@ -34,7 +34,7 @@ impl StorageSlot for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             cast_byte_ptr!(dest).into(),
             dest_size.into()
         );
@@ -56,7 +56,7 @@ impl StorageSlot for SubstrateTarget {
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -94,7 +94,7 @@ impl StorageSlot for SubstrateTarget {
 
         call!(
             "seal_clear_storage",
-            &[cast_byte_ptr!(slot).into(), i32_cnst!(4).into()]
+            &[cast_byte_ptr!(slot).into(), i32_cnst!(32).into()]
         )
         .try_as_basic_value()
         .left()

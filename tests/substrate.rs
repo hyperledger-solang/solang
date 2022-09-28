@@ -16,7 +16,7 @@ use solang::{compile, Target};
 
 mod substrate_tests;
 
-type StorageKey = [u8; 4]; // TODO use ink_primitives crate
+type StorageKey = [u8; 32];
 type Account = [u8; 32];
 
 /// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
@@ -198,7 +198,7 @@ impl Externals for MockSubstrate {
                 let dest_ptr: u32 = args.nth_checked(2)?;
                 let len_ptr: u32 = args.nth_checked(3)?;
 
-                let mut key: StorageKey = [0; 4];
+                let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key) {
                     panic!("seal_get_storage: {}", e);
@@ -236,7 +236,7 @@ impl Externals for MockSubstrate {
             Some(SubstrateExternal::seal_clear_storage) => {
                 let key_ptr: u32 = args.nth_checked(0)?;
 
-                let mut key: StorageKey = [0; 4];
+                let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key) {
                     panic!("seal_clear_storage: {}", e);
@@ -257,7 +257,7 @@ impl Externals for MockSubstrate {
                 let data_ptr: u32 = args.nth_checked(2)?;
                 let len: u32 = args.nth_checked(3)?;
 
-                let mut key: StorageKey = [0; 4];
+                let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key[..]) {
                     panic!("seal_set_storage: {}", e);

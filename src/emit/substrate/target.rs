@@ -30,7 +30,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             cast_byte_ptr!(dest).into(),
             dest.get_type()
                 .get_element_type()
@@ -79,7 +79,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "seal_get_storage",
             &[
                 cast_byte_ptr!(slot).into(),
-                i32_cnst!(4).into(),
+                i32_cnst!(32).into(),
                 ef.into(),
                 scratch_len.into()
             ]
@@ -126,7 +126,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             cast_byte_ptr!(data).into(),
             len.into()
         );
@@ -137,7 +137,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         call!(
             "seal_clear_storage",
-            &[cast_byte_ptr!(slot).into(), i32_cnst!(4).into()]
+            &[cast_byte_ptr!(slot).into(), i32_cnst!(32).into()]
         );
 
         binary.builder.build_unconditional_branch(done_storage);
@@ -161,7 +161,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -219,7 +219,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -305,7 +305,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -377,7 +377,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -430,7 +430,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             length.into()
         );
@@ -463,7 +463,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -503,7 +503,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             length.into()
         );
@@ -534,7 +534,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -597,7 +597,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             new_length.into()
         );
@@ -627,7 +627,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(4).into(),
+            i32_cnst!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
