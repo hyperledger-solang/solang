@@ -34,7 +34,7 @@ impl StorageSlot for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             cast_byte_ptr!(dest).into(),
             dest_size.into()
         );
@@ -52,11 +52,11 @@ impl StorageSlot for SubstrateTarget {
 
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(ns.address_length as u64));
+            .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -64,7 +64,7 @@ impl StorageSlot for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!(),
+            i32_zero!(),
             "storage_exists",
         );
 
@@ -94,7 +94,7 @@ impl StorageSlot for SubstrateTarget {
 
         call!(
             "seal_clear_storage",
-            &[cast_byte_ptr!(slot).into(), i32_cnst!(32).into()]
+            &[cast_byte_ptr!(slot).into(), i32_const!(32).into()]
         )
         .try_as_basic_value()
         .left()
@@ -146,7 +146,7 @@ impl StorageSlot for SubstrateTarget {
                         |index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let elem = unsafe {
                                 bin.builder
-                                    .build_gep(dest, &[i32_null!(), index], "index_access")
+                                    .build_gep(dest, &[i32_zero!(), index], "index_access")
                             };
 
                             let val =
@@ -212,7 +212,7 @@ impl StorageSlot for SubstrateTarget {
 
                     bin.emit_loop_cond_first_with_int(
                         function,
-                        i32_null!(),
+                        i32_zero!(),
                         size,
                         &mut elem_slot,
                         |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
@@ -261,7 +261,7 @@ impl StorageSlot for SubstrateTarget {
                     let elem = unsafe {
                         bin.builder.build_gep(
                             dest,
-                            &[i32_null!(), i32_cnst!(i as u64)],
+                            &[i32_zero!(), i32_const!(i as u64)],
                             field.name_as_str(),
                         )
                     };

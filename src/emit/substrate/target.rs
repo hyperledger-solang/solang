@@ -30,7 +30,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             cast_byte_ptr!(dest).into(),
             dest.get_type()
                 .get_element_type()
@@ -79,7 +79,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "seal_get_storage",
             &[
                 cast_byte_ptr!(slot).into(),
-                i32_cnst!(32).into(),
+                i32_const!(32).into(),
                 ef.into(),
                 scratch_len.into()
             ]
@@ -109,7 +109,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let exists = binary
             .builder
-            .build_int_compare(IntPredicate::NE, len, i32_null!(), "exists");
+            .build_int_compare(IntPredicate::NE, len, i32_zero!(), "exists");
 
         let delete_block = binary.context.append_basic_block(function, "delete_block");
 
@@ -125,7 +125,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             cast_byte_ptr!(data).into(),
             len.into()
         );
@@ -136,7 +136,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         call!(
             "seal_clear_storage",
-            &[cast_byte_ptr!(slot).into(), i32_cnst!(32).into()]
+            &[cast_byte_ptr!(slot).into(), i32_const!(32).into()]
         );
 
         binary.builder.build_unconditional_branch(done_storage);
@@ -160,7 +160,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -168,7 +168,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!(),
+            i32_zero!(),
             "storage_exists",
         );
 
@@ -214,11 +214,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64));
+            .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -226,7 +226,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!(),
+            i32_zero!(),
             "storage_exists",
         );
 
@@ -254,7 +254,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let loaded_string = call!(
             "vector_new",
-            &[length.into(), i32_cnst!(1).into(), scratch_buf.into()]
+            &[length.into(), i32_const!(1).into(), scratch_buf.into()]
         )
         .try_as_basic_value()
         .left()
@@ -300,11 +300,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64));
+            .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -312,7 +312,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!(),
+            i32_zero!(),
             "storage_exists",
         );
 
@@ -321,7 +321,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_select(
                 exists,
                 binary.builder.build_load(scratch_len, "string_len"),
-                i32_null!().into(),
+                i32_zero!().into(),
                 "string_length",
             )
             .into_int_value();
@@ -340,14 +340,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_null!());
+        self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
         binary.builder.position_at_end(retrieve_block);
 
         let offset = unsafe {
             binary.builder.build_gep(
                 binary.scratch.unwrap().as_pointer_value(),
-                &[i32_null!(), index],
+                &[i32_zero!(), index],
                 "data_offset",
             )
         };
@@ -372,11 +372,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64));
+            .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -384,7 +384,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!(),
+            i32_zero!(),
             "storage_exists",
         );
 
@@ -393,7 +393,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_select(
                 exists,
                 binary.builder.build_load(scratch_len, "string_len"),
-                i32_null!().into(),
+                i32_zero!().into(),
                 "string_length",
             )
             .into_int_value();
@@ -412,14 +412,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_null!());
+        self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
         binary.builder.position_at_end(retrieve_block);
 
         let offset = unsafe {
             binary.builder.build_gep(
                 binary.scratch.unwrap().as_pointer_value(),
-                &[i32_null!(), index],
+                &[i32_zero!(), index],
                 "data_offset",
             )
         };
@@ -429,7 +429,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             length.into()
         );
@@ -458,11 +458,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // trap for us if it does not fit, so we don't have to code this ourselves
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64 - 1));
+            .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64 - 1));
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -470,7 +470,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!(),
+            i32_zero!(),
             "storage_exists",
         );
 
@@ -479,7 +479,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_select(
                 exists,
                 binary.builder.build_load(scratch_len, "string_len"),
-                i32_null!().into(),
+                i32_zero!().into(),
                 "string_length",
             )
             .into_int_value();
@@ -488,7 +488,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let offset = unsafe {
             binary.builder.build_gep(
                 binary.scratch.unwrap().as_pointer_value(),
-                &[i32_null!(), length],
+                &[i32_zero!(), length],
                 "data_offset",
             )
         };
@@ -498,11 +498,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // Set the new length
         let length = binary
             .builder
-            .build_int_add(length, i32_cnst!(1), "new_length");
+            .build_int_add(length, i32_const!(1), "new_length");
 
         seal_set_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             length.into()
         );
@@ -529,11 +529,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64));
+            .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -541,7 +541,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!(),
+            i32_zero!(),
             "storage_exists",
         );
 
@@ -550,7 +550,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_select(
                 exists,
                 binary.builder.build_load(scratch_len, "string_len"),
-                i32_null!().into(),
+                i32_zero!().into(),
                 "string_length",
             )
             .into_int_value();
@@ -558,7 +558,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // do bounds check on index
         let in_range = binary.builder.build_int_compare(
             IntPredicate::NE,
-            i32_null!(),
+            i32_zero!(),
             length,
             "index_in_range",
         );
@@ -571,20 +571,20 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_null!());
+        self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
         binary.builder.position_at_end(retrieve_block);
 
         // Set the new length
         let new_length = binary
             .builder
-            .build_int_sub(length, i32_cnst!(1), "new_length");
+            .build_int_sub(length, i32_const!(1), "new_length");
 
         let val = if load {
             let offset = unsafe {
                 binary.builder.build_gep(
                     binary.scratch.unwrap().as_pointer_value(),
-                    &[i32_null!(), new_length],
+                    &[i32_zero!(), new_length],
                     "data_offset",
                 )
             };
@@ -596,7 +596,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         seal_set_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             new_length.into()
         );
@@ -622,11 +622,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64));
+            .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         let exists = seal_get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
-            i32_cnst!(32).into(),
+            i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
@@ -634,7 +634,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
             exists,
-            i32_null!(),
+            i32_zero!(),
             "storage_exists",
         );
 
@@ -643,7 +643,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_select(
                 exists,
                 binary.builder.build_load(scratch_len, "string_len"),
-                i32_null!().into(),
+                i32_zero!().into(),
                 "string_length",
             )
             .into_int_value()
@@ -655,9 +655,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         call!(
             "seal_return",
             &[
-                i32_null!().into(),
+                i32_zero!().into(),
                 byte_ptr!().const_zero().into(),
-                i32_null!().into()
+                i32_zero!().into()
             ]
         );
 
@@ -668,7 +668,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         // we can't return specific errors
-        self.assert_failure(binary, byte_ptr!().const_zero(), i32_null!());
+        self.assert_failure(binary, byte_ptr!().const_zero(), i32_zero!());
     }
 
     /// Call the  keccak256 host function
@@ -697,7 +697,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         call!(
             "seal_return",
-            &[i32_null!().into(), data.into(), length.into()]
+            &[i32_zero!().into(), data.into(), length.into()]
         );
 
         binary.builder.build_unreachable();
@@ -763,7 +763,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         // first calculate how much memory we need to allocate
-        let mut length = i32_null!();
+        let mut length = i32_zero!();
 
         debug_assert_eq!(packed.len() + args.len(), tys.len());
 
@@ -823,7 +823,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             let data_len = unsafe {
                 binary
                     .builder
-                    .build_gep(v, &[i32_null!(), i32_null!()], "data_len")
+                    .build_gep(v, &[i32_zero!(), i32_zero!()], "data_len")
             };
 
             binary.builder.build_store(data_len, length);
@@ -832,7 +832,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let data_size = unsafe {
             binary
                 .builder
-                .build_gep(v, &[i32_null!(), i32_cnst!(1)], "data_size")
+                .build_gep(v, &[i32_zero!(), i32_const!(1)], "data_size")
         };
 
         binary.builder.build_store(data_size, length);
@@ -840,7 +840,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let data = unsafe {
             binary
                 .builder
-                .build_gep(v, &[i32_null!(), i32_cnst!(2)], "data")
+                .build_gep(v, &[i32_zero!(), i32_const!(2)], "data")
         };
 
         // now encode each of the arguments
@@ -876,7 +876,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             let data_len = unsafe {
                 binary
                     .builder
-                    .build_gep(v, &[i32_null!(), i32_null!()], "data_len")
+                    .build_gep(v, &[i32_zero!(), i32_zero!()], "data_len")
             };
 
             binary.builder.build_store(data_len, length);
@@ -899,7 +899,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         // first calculate how much memory we need to allocate
-        let mut length = i32_null!();
+        let mut length = i32_zero!();
 
         // note that encoded_length overestimates how data we need
         for (i, ty) in tys.iter().enumerate() {
@@ -1020,7 +1020,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let salt_buf = binary
             .builder
             .build_pointer_cast(salt_buf, byte_ptr!(), "salt_buf");
-        let salt_len = i32_cnst!(32);
+        let salt_len = i32_const!(32);
 
         if let Some(salt) = salt {
             let salt_ty = ast::Type::Uint(256);
@@ -1038,7 +1038,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         } else {
             let (ptr, len) = self.contract_unique_salt(binary, contract_no, ns);
 
-            binary.builder.build_store(scratch_len, i32_cnst!(36));
+            binary.builder.build_store(scratch_len, i32_const!(36));
 
             call!(
                 "seal_random",
@@ -1052,7 +1052,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // input
         let (input, input_len) = self.abi_encode(
             binary,
-            Some(i32_cnst!(
+            Some(i32_const!(
                 u32::from_le_bytes(constructor.selector().try_into().unwrap()) as u64
             )),
             false,
@@ -1074,7 +1074,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             binary
                 .builder
-                .build_store(scratch_len, i32_cnst!(ns.value_length as u64));
+                .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
             call!(
                 "seal_minimum_balance",
@@ -1098,11 +1098,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_store(address_len_ptr, i32_cnst!(ns.address_length as u64 * 32));
+            .build_store(address_len_ptr, i32_const!(ns.address_length as u64 * 32));
 
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64 * 32));
+            .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64 * 32));
 
         let ret = call!(
             "seal_instantiate",
@@ -1128,7 +1128,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let is_success =
             binary
                 .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_null!(), "success");
+                .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "success");
 
         if let Some(success) = success {
             // we're in a try statement. This means:
@@ -1185,13 +1185,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64));
+            .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         // do the actual call
         let ret = call!(
             "seal_call",
             &[
-                i32_null!().into(), // TODO implement flags (mostyl used for proxy calls)
+                i32_zero!().into(), // TODO implement flags (mostyl used for proxy calls)
                 address.unwrap().into(),
                 gas.into(),
                 cast_byte_ptr!(value_ptr, "value_transfer").into(),
@@ -1209,7 +1209,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let is_success =
             binary
                 .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_null!(), "success");
+                .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "success");
 
         if let Some(success) = success {
             // we're in a try statement. This means:
@@ -1261,9 +1261,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "seal_transfer",
             &[
                 address.into(),
-                i32_cnst!(ns.address_length as u64).into(),
+                i32_const!(ns.address_length as u64).into(),
                 cast_byte_ptr!(value_ptr, "value_transfer").into(),
-                i32_cnst!(ns.value_length as u64).into()
+                i32_const!(ns.value_length as u64).into()
             ]
         )
         .try_as_basic_value()
@@ -1274,7 +1274,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let is_success =
             binary
                 .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_null!(), "success");
+                .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "success");
 
         if let Some(success) = success {
             // we're in a try statement. This means:
@@ -1290,7 +1290,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             binary.builder.position_at_end(bail_block);
 
-            self.assert_failure(binary, byte_ptr!().const_null(), i32_null!());
+            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
             binary.builder.position_at_end(success_block);
         }
@@ -1305,7 +1305,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         call!(
             "vector_new",
-            &[length.into(), i32_cnst!(1).into(), scratch_buf.into(),]
+            &[length.into(), i32_const!(1).into(), scratch_buf.into(),]
         )
         .try_as_basic_value()
         .left()
@@ -1325,7 +1325,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_store(value_len, i32_cnst!(ns.value_length as u64));
+            .build_store(value_len, i32_const!(ns.value_length as u64));
 
         call!(
             "seal_value_transferred",
@@ -1382,7 +1382,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let res =
             binary
                 .builder
-                .build_array_alloca(binary.context.i8_type(), i32_cnst!(hashlen), "res");
+                .build_array_alloca(binary.context.i8_type(), i32_const!(hashlen), "res");
 
         call!(fname, &[input.into(), input_len.into(), res.into()], "hash");
 
@@ -1397,7 +1397,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             &[
                 res.into(),
                 cast_byte_ptr!(temp).into(),
-                i32_cnst!(hashlen).into()
+                i32_const!(hashlen).into()
             ]
         );
 
@@ -1420,7 +1420,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         let topic_count = topics.len();
-        let topic_size = i32_cnst!(if topic_count > 0 {
+        let topic_size = i32_const!(if topic_count > 0 {
             32 * topic_count as u64 + 1
         } else {
             0
@@ -1443,13 +1443,17 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .const_int(topic_count as u64 * 4, false),
             );
 
-            let mut dest = unsafe { binary.builder.build_gep(topic_buf, &[i32_cnst!(1)], "dest") };
+            let mut dest = unsafe {
+                binary
+                    .builder
+                    .build_gep(topic_buf, &[i32_const!(1)], "dest")
+            };
 
             call!(
                 "__bzero8",
                 &[
                     cast_byte_ptr!(dest, "dest").into(),
-                    i32_cnst!(topic_count as u64 * 4).into()
+                    i32_const!(topic_count as u64 * 4).into()
                 ]
             );
 
@@ -1466,7 +1470,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     &mut data,
                 );
 
-                dest = unsafe { binary.builder.build_gep(dest, &[i32_cnst!(32)], "dest") };
+                dest = unsafe { binary.builder.build_gep(dest, &[i32_const!(32)], "dest") };
             }
 
             topic_buf
@@ -1544,7 +1548,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                             .builder
                             .build_load(binary.calldata_len.as_pointer_value(), "calldata_len")
                             .into(),
-                        i32_cnst!(1).into(),
+                        i32_const!(1).into(),
                         binary
                             .builder
                             .build_int_to_ptr(
@@ -1562,7 +1566,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 let data = unsafe {
                     binary.builder.build_gep(
                         v.into_pointer_value(),
-                        &[i32_null!(), i32_cnst!(2)],
+                        &[i32_zero!(), i32_const!(2)],
                         "",
                     )
                 };
@@ -1572,7 +1576,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 // copy arguments from input buffer
                 binary
                     .builder
-                    .build_store(scratch_len, i32_cnst!(SCRATCH_SIZE as u64));
+                    .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
                 // retrieve the data
                 call!(
@@ -1626,7 +1630,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 binary
                     .builder
-                    .build_store(scratch_len, i32_cnst!(ns.value_length as u64));
+                    .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
                 call!(
                     "seal_weight_to_fee",
@@ -1651,7 +1655,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 binary
                     .builder
-                    .build_store(scratch_len, i32_cnst!(ns.address_length as u64));
+                    .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
                 call!(
                     "seal_caller",
@@ -1685,18 +1689,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 let subject_data = unsafe {
                     binary
                         .builder
-                        .build_gep(subject, &[i32_null!(), i32_cnst!(2)], "subject_data")
+                        .build_gep(subject, &[i32_zero!(), i32_const!(2)], "subject_data")
                 };
 
                 let subject_len = unsafe {
                     binary
                         .builder
-                        .build_gep(subject, &[i32_null!(), i32_null!()], "subject_len")
+                        .build_gep(subject, &[i32_zero!(), i32_zero!()], "subject_len")
                 };
 
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
-                binary.builder.build_store(scratch_len, i32_cnst!(36));
+                binary.builder.build_store(scratch_len, i32_const!(36));
 
                 call!(
                     "seal_random",
@@ -1726,7 +1730,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 binary
                     .builder
-                    .build_store(scratch_len, i32_cnst!(ns.address_length as u64));
+                    .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
                 call!(
                     "seal_address",
@@ -1748,7 +1752,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 binary
                     .builder
-                    .build_store(scratch_len, i32_cnst!(ns.value_length as u64));
+                    .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
                 call!(
                     "seal_balance",

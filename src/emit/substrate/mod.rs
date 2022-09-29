@@ -33,21 +33,14 @@ macro_rules! emit_context {
         }
 
         #[allow(unused_macros)]
-        macro_rules! cnst {
-            ($of_type:ident, $val:expr) => {
-                $binary.context.$of_type().const_int($val, false)
-            };
-        }
-
-        #[allow(unused_macros)]
-        macro_rules! i32_cnst {
+        macro_rules! i32_const {
             ($val:expr) => {
-                cnst!(i32_type, $val)
+                $binary.context.i32_type().const_int($val, false)
             };
         }
 
         #[allow(unused_macros)]
-        macro_rules! i32_null {
+        macro_rules! i32_zero {
             () => {
                 $binary.context.i32_type().const_zero()
             };
