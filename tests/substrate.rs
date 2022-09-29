@@ -194,10 +194,11 @@ impl Externals for MockSubstrate {
                 assert_eq!(args.len(), 4);
 
                 let key_ptr: u32 = args.nth_checked(0)?;
-                //let key_len: u32 = args.nth_checked(1)?; TODO
+                let key_len: u32 = args.nth_checked(1)?;
                 let dest_ptr: u32 = args.nth_checked(2)?;
                 let len_ptr: u32 = args.nth_checked(3)?;
 
+                assert_eq!(key_len, 32);
                 let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key) {
@@ -235,7 +236,9 @@ impl Externals for MockSubstrate {
             }
             Some(SubstrateExternal::seal_clear_storage) => {
                 let key_ptr: u32 = args.nth_checked(0)?;
+                let key_len: u32 = args.nth_checked(1)?;
 
+                assert_eq!(key_len, 32);
                 let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key) {
@@ -255,10 +258,11 @@ impl Externals for MockSubstrate {
                 assert_eq!(args.len(), 4);
 
                 let key_ptr: u32 = args.nth_checked(0)?;
-                //let key_len: u32 = args.nth_checked(1)?;
+                let key_len: u32 = args.nth_checked(1)?;
                 let data_ptr: u32 = args.nth_checked(2)?;
                 let len: u32 = args.nth_checked(3)?;
 
+                assert_eq!(key_len, 32);
                 let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key[..]) {
