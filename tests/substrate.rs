@@ -243,11 +243,13 @@ impl Externals for MockSubstrate {
                 }
 
                 println!("seal_clear_storage: {:?}", key);
-                self.store.remove(&(self.vm.account, key));
+                let pre_existing_len = self
+                    .store
+                    .remove(&(self.vm.account, key))
+                    .map(|e| RuntimeValue::I32(e.len() as i32))
+                    .or(Some(NONE_SENTINEL));
 
-                // The size of the pre-existing value is returned (if any).
-                // In this mock VM we just always assume that there was no value and return `None`.
-                Ok(Some(NONE_SENTINEL))
+                Ok(pre_existing_len)
             }
             Some(SubstrateExternal::seal_set_storage) => {
                 assert_eq!(args.len(), 4);
@@ -271,11 +273,13 @@ impl Externals for MockSubstrate {
                 }
                 println!("seal_set_storage: {:?} = {:?}", key, data);
 
-                self.store.insert((self.vm.account, key), data);
+                let pre_existing_len = self
+                    .store
+                    .insert((self.vm.account, key), data)
+                    .map(|e| RuntimeValue::I32(e.len() as i32))
+                    .or(Some(NONE_SENTINEL));
 
-                // The size of the pre-existing value is returned (if any).
-                // In this mock VM we just always assume that there was no value and return `None`.
-                Ok(Some(NONE_SENTINEL))
+                Ok(pre_existing_len)
             }
             Some(SubstrateExternal::seal_hash_keccak_256) => {
                 let data_ptr: u32 = args.nth_checked(0)?;
