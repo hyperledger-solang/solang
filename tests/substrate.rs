@@ -475,15 +475,16 @@ impl Externals for MockSubstrate {
                 Ok(None)
             }
             Some(SubstrateExternal::seal_call) => {
-                //let flags: u32 = args.nth_checked(0)?; TODO
+                let flags: u32 = args.nth_checked(0)?;
                 let account_ptr: u32 = args.nth_checked(1)?;
-                //let gas: u64 = args.nth_checked(2)?;
+                // Gas usage is ignored in the mock VM
                 let value_ptr: u32 = args.nth_checked(3)?;
                 let input_ptr: u32 = args.nth_checked(4)?;
                 let input_len: u32 = args.nth_checked(5)?;
                 let output_ptr: u32 = args.nth_checked(6)?;
                 let output_len_ptr: u32 = args.nth_checked(7)?;
 
+                assert_eq!(flags, 0); //TODO: Call flags are not yet implemented
                 let mut account = [0u8; 32];
 
                 if let Err(e) = self.vm.memory.get_into(account_ptr, &mut account) {
@@ -596,10 +597,8 @@ impl Externals for MockSubstrate {
             }
             Some(SubstrateExternal::seal_instantiate) => {
                 let codehash_ptr: u32 = args.nth_checked(0)?;
-                //let codehash_len: u32 = args.nth_checked(1)?;
-                //let gas: u64 = args.nth_checked(1)?;
+                // Gas usage is ignored in the mock VM
                 let value_ptr: u32 = args.nth_checked(2)?;
-                //let value_len: u32 = args.nth_checked(4)?;
                 let input_ptr: u32 = args.nth_checked(3)?;
                 let input_len: u32 = args.nth_checked(4)?;
                 let account_ptr: u32 = args.nth_checked(5)?;
