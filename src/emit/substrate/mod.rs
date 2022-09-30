@@ -22,6 +22,102 @@ pub(super) mod target;
 // When using the seal api, we use our own scratch buffer.
 const SCRATCH_SIZE: u32 = 32 * 1024;
 
+#[macro_export]
+macro_rules! emit_context {
+    ($binary:expr) => {
+        #[allow(unused_macros)]
+        macro_rules! byte_ptr {
+            () => {
+                $binary.context.i8_type().ptr_type(AddressSpace::Generic)
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i32_const {
+            ($val:expr) => {
+                $binary.context.i32_type().const_int($val, false)
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! i32_zero {
+            () => {
+                $binary.context.i32_type().const_zero()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! cast_byte_ptr {
+            ($val:expr) => {
+                $binary.builder.build_pointer_cast($val, byte_ptr!(), "")
+            };
+            ($val:expr, $ptr_name:literal) => {
+                $binary
+                    .builder
+                    .build_pointer_cast($val, byte_ptr!(), $ptr_name)
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! call {
+            ($name:expr, $args:expr) => {
+                $binary
+                    .builder
+                    .build_call($binary.module.get_function($name).unwrap(), $args, "")
+            };
+            ($name:expr, $args:expr, $call_name:literal) => {
+                $binary.builder.build_call(
+                    $binary.module.get_function($name).unwrap(),
+                    $args,
+                    $call_name,
+                )
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! seal_get_storage {
+            ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
+                call!(
+                    "seal_get_storage",
+                    &[$key_ptr, $key_len, $value_ptr, $value_len]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! seal_set_storage {
+            ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
+                call!(
+                    "seal_set_storage",
+                    &[$key_ptr, $key_len, $value_ptr, $value_len]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+            };
+        }
+
+        #[allow(unused_macros)]
+        macro_rules! scratch_buf {
+            () => {
+                (
+                    $binary.builder.build_pointer_cast(
+                        $binary.scratch.unwrap().as_pointer_value(),
+                        $binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "scratch_buf",
+                    ),
+                    $binary.scratch_len.unwrap().as_pointer_value(),
+                )
+            };
+        }
+    };
+}
+
 pub struct SubstrateTarget {
     unique_strings: HashMap<usize, usize>,
 }
@@ -175,323 +271,92 @@ impl SubstrateTarget {
     }
 
     fn declare_externals(&self, binary: &Binary) {
-        let u8_ptr = binary
-            .context
-            .i8_type()
-            .ptr_type(AddressSpace::Generic)
-            .into();
-        let u32_val = binary.context.i32_type().into();
-        let u32_ptr = binary
-            .context
-            .i32_type()
-            .ptr_type(AddressSpace::Generic)
-            .into();
-        let u64_val = binary.context.i64_type().into();
+        let ctx = binary.context;
+        let u8_ptr = ctx.i8_type().ptr_type(AddressSpace::Generic).into();
+        let u32_val = ctx.i32_type().into();
+        let u32_ptr = ctx.i32_type().ptr_type(AddressSpace::Generic).into();
+        let u64_val = ctx.i64_type().into();
 
-        binary.module.add_function(
-            "seal_input",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
+        macro_rules! external {
+            ($name:literal, $fn_type:ident, $( $args:expr ),*) => {
+                binary.module.add_function(
+                    $name,
+                    ctx.$fn_type().fn_type(&[$($args),*], false),
+                    Some(Linkage::External),
+                );
+            };
+        }
 
-        binary.module.add_function(
-            "seal_hash_keccak_256",
-            binary.context.void_type().fn_type(
-                &[
-                    binary
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // src_ptr
-                    binary.context.i32_type().into(), // len
-                    binary
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // dest_ptr
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_hash_sha2_256",
-            binary.context.void_type().fn_type(
-                &[
-                    binary
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // src_ptr
-                    binary.context.i32_type().into(), // len
-                    binary
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // dest_ptr
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_hash_blake2_128",
-            binary.context.void_type().fn_type(
-                &[
-                    binary
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // src_ptr
-                    binary.context.i32_type().into(), // len
-                    binary
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // dest_ptr
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_hash_blake2_256",
-            binary.context.void_type().fn_type(
-                &[
-                    binary
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // src_ptr
-                    binary.context.i32_type().into(), // len
-                    binary
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // dest_ptr
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_random",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_val, u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
+        external!("seal_input", void_type, u8_ptr, u32_ptr);
+        external!("seal_hash_keccak_256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("seal_hash_sha2_256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("seal_hash_blake2_128", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("seal_hash_blake2_256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("seal_random", void_type, u8_ptr, u32_val, u8_ptr, u32_ptr);
+        external!(
             "seal_set_storage",
-            binary.context.void_type().fn_type(
-                &[
-                    u8_ptr,  // key_ptr
-                    u8_ptr,  // value_ptr
-                    u32_val, // value_len
-                ],
-                false,
-            ),
-            Some(Linkage::External),
+            i32_type,
+            u8_ptr,
+            u32_val,
+            u8_ptr,
+            u32_val
         );
-
-        binary.module.add_function(
-            "seal_debug_message",
-            binary.context.i32_type().fn_type(
-                &[
-                    u8_ptr,  // string_ptr
-                    u32_val, // string_len
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_clear_storage",
-            binary.context.void_type().fn_type(
-                &[
-                    u8_ptr, // key_ptr
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
+        external!("seal_debug_message", i32_type, u8_ptr, u32_val);
+        external!("seal_clear_storage", i32_type, u8_ptr, u32_val);
+        external!(
             "seal_get_storage",
-            binary
-                .context
-                .i32_type()
-                .fn_type(&[u8_ptr, u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
+            i32_type,
+            u8_ptr,
+            u32_val,
+            u8_ptr,
+            u32_ptr
         );
-
-        binary.module.add_function(
-            "seal_return",
-            binary.context.void_type().fn_type(
-                &[
-                    u32_val, u8_ptr, u32_val, // flags, data ptr, and len
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
+        external!("seal_return", void_type, u32_val, u8_ptr, u32_val);
+        external!(
             "seal_instantiate",
-            binary.context.i32_type().fn_type(
-                &[
-                    u8_ptr, u32_val, // code hash ptr and len
-                    u64_val, // gas
-                    u8_ptr, u32_val, // value ptr and len
-                    u8_ptr, u32_val, // input ptr and len
-                    u8_ptr, u32_ptr, // address ptr and len
-                    u8_ptr, u32_ptr, // output ptr and len
-                    u8_ptr, u32_val, // salt ptr and len
-                ],
-                false,
-            ),
-            Some(Linkage::External),
+            i32_type,
+            u8_ptr,
+            u64_val,
+            u8_ptr,
+            u8_ptr,
+            u32_val,
+            u8_ptr,
+            u32_ptr,
+            u8_ptr,
+            u32_ptr,
+            u8_ptr,
+            u32_val
         );
-
-        binary.module.add_function(
+        external!(
             "seal_call",
-            binary.context.i32_type().fn_type(
-                &[
-                    u8_ptr, u32_val, // address ptr and len
-                    u64_val, // gas
-                    u8_ptr, u32_val, // value ptr and len
-                    u8_ptr, u32_val, // input ptr and len
-                    u8_ptr, u32_ptr, // output ptr and len
-                ],
-                false,
-            ),
-            Some(Linkage::External),
+            i32_type,
+            u32_val,
+            u8_ptr,
+            u64_val,
+            u8_ptr,
+            u8_ptr,
+            u32_val,
+            u8_ptr,
+            u32_ptr
         );
-
-        binary.module.add_function(
-            "seal_transfer",
-            binary.context.i32_type().fn_type(
-                &[
-                    u8_ptr, u32_val, // address ptr and len
-                    u8_ptr, u32_val, // value ptr and len
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_value_transferred",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_address",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_balance",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_minimum_balance",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_block_number",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_now",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_weight_to_fee",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u64_val, u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_gas_left",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_caller",
-            binary
-                .context
-                .void_type()
-                .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "seal_terminate",
-            binary.context.void_type().fn_type(
-                &[
-                    u8_ptr, u32_val, // address ptr and len
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
+        external!("seal_transfer", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
+        external!("seal_value_transferred", void_type, u8_ptr, u32_ptr);
+        external!("seal_address", void_type, u8_ptr, u32_ptr);
+        external!("seal_balance", void_type, u8_ptr, u32_ptr);
+        external!("seal_minimum_balance", void_type, u8_ptr, u32_ptr);
+        external!("seal_block_number", void_type, u8_ptr, u32_ptr);
+        external!("seal_now", void_type, u8_ptr, u32_ptr);
+        external!("seal_weight_to_fee", void_type, u64_val, u8_ptr, u32_ptr);
+        external!("seal_gas_left", void_type, u8_ptr, u32_ptr);
+        external!("seal_caller", void_type, u8_ptr, u32_ptr);
+        external!("seal_terminate", void_type, u8_ptr);
+        external!(
             "seal_deposit_event",
-            binary.context.void_type().fn_type(
-                &[
-                    u8_ptr, u32_val, // topic ptr and len
-                    u8_ptr, u32_val, // data ptr and len
-                ],
-                false,
-            ),
-            Some(Linkage::External),
+            void_type,
+            u8_ptr,
+            u32_val,
+            u8_ptr,
+            u32_val
         );
     }
 

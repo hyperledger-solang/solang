@@ -4,6 +4,7 @@ use crate::emit::binary::Binary;
 use crate::emit::storage::StorageSlot;
 use crate::emit::substrate::SubstrateTarget;
 use crate::emit::TargetRuntime;
+use crate::emit_context;
 use crate::sema::ast::{ArrayLength, Namespace, Type};
 use inkwell::types::BasicType;
 use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, PointerValue};
@@ -13,6 +14,8 @@ use num_traits::{One, ToPrimitive};
 
 impl StorageSlot for SubstrateTarget {
     fn set_storage(&self, binary: &Binary, slot: PointerValue, dest: PointerValue) {
+        emit_context!(binary);
+
         // TODO: check for non-zero
         let dest_ty = dest.get_type().get_element_type();
 
@@ -29,28 +32,11 @@ impl StorageSlot for SubstrateTarget {
                 .const_cast(binary.context.i32_type(), false)
         };
 
-        binary.builder.build_call(
-            binary.module.get_function("seal_set_storage").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        dest,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                dest_size.into(),
-            ],
-            "",
+        seal_set_storage!(
+            cast_byte_ptr!(slot).into(),
+            i32_const!(32).into(),
+            cast_byte_ptr!(dest).into(),
+            dest_size.into()
         );
     }
 
@@ -60,47 +46,25 @@ impl StorageSlot for SubstrateTarget {
         slot: PointerValue<'a>,
         ns: &Namespace,
     ) -> ArrayValue<'a> {
-        let scratch_buf = binary.builder.build_pointer_cast(
-            binary.scratch.unwrap().as_pointer_value(),
-            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-            "scratch_buf",
-        );
-        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+        emit_context!(binary);
 
-        binary.builder.build_store(
-            scratch_len,
-            binary
-                .context
-                .i32_type()
-                .const_int(ns.address_length as u64, false),
-        );
+        let (scratch_buf, scratch_len) = scratch_buf!();
 
-        let exists = binary
+        binary
             .builder
-            .build_call(
-                binary.module.get_function("seal_get_storage").unwrap(),
-                &[
-                    binary
-                        .builder
-                        .build_pointer_cast(
-                            slot,
-                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
-                    scratch_buf.into(),
-                    scratch_len.into(),
-                ],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap();
+            .build_store(scratch_len, i32_const!(ns.address_length as u64));
+
+        let exists = seal_get_storage!(
+            cast_byte_ptr!(slot).into(),
+            i32_const!(32).into(),
+            scratch_buf.into(),
+            scratch_len.into()
+        );
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
-            exists.into_int_value(),
-            binary.context.i32_type().const_zero(),
+            exists,
+            i32_zero!(),
             "storage_exists",
         );
 
@@ -126,18 +90,16 @@ impl StorageSlot for SubstrateTarget {
     }
 
     fn storage_delete_single_slot<'a>(&self, binary: &Binary<'a>, slot: PointerValue) {
-        binary.builder.build_call(
-            binary.module.get_function("seal_clear_storage").unwrap(),
-            &[binary
-                .builder
-                .build_pointer_cast(
-                    slot,
-                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "",
-                )
-                .into()],
-            "",
-        );
+        emit_context!(binary);
+
+        call!(
+            "seal_clear_storage",
+            &[cast_byte_ptr!(slot).into(), i32_const!(32).into()]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
     }
 
     fn storage_load_slot<'a>(
@@ -149,6 +111,8 @@ impl StorageSlot for SubstrateTarget {
         function: FunctionValue,
         ns: &Namespace,
     ) -> BasicValueEnum<'a> {
+        emit_context!(bin);
+
         match ty {
             Type::Ref(ty) => self.storage_load_slot(bin, ty, slot, slot_ptr, function, ns),
             Type::Array(elem_ty, dim) => {
@@ -162,13 +126,7 @@ impl StorageSlot for SubstrateTarget {
                     );
 
                     let ty = ty.array_deref();
-                    let new = bin
-                        .builder
-                        .build_call(
-                            bin.module.get_function("__malloc").unwrap(),
-                            &[size.into()],
-                            "",
-                        )
+                    let new = call!("__malloc", &[size.into()])
                         .try_as_basic_value()
                         .left()
                         .unwrap()
@@ -187,11 +145,8 @@ impl StorageSlot for SubstrateTarget {
                         slot,
                         |index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let elem = unsafe {
-                                bin.builder.build_gep(
-                                    dest,
-                                    &[bin.context.i32_type().const_zero(), index],
-                                    "index_access",
-                                )
+                                bin.builder
+                                    .build_gep(dest, &[i32_zero!(), index], "index_access")
                             };
 
                             let val =
@@ -232,13 +187,7 @@ impl StorageSlot for SubstrateTarget {
                         "invalid",
                     );
 
-                    let dest = bin
-                        .builder
-                        .build_call(
-                            bin.module.get_function("vector_new").unwrap(),
-                            &[size.into(), elem_size.into(), init.into()],
-                            "",
-                        )
+                    let dest = call!("vector_new", &[size.into(), elem_size.into(), init.into()])
                         .try_as_basic_value()
                         .left()
                         .unwrap()
@@ -263,7 +212,7 @@ impl StorageSlot for SubstrateTarget {
 
                     bin.emit_loop_cond_first_with_int(
                         function,
-                        bin.context.i32_type().const_zero(),
+                        i32_zero!(),
                         size,
                         &mut elem_slot,
                         |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
@@ -294,13 +243,7 @@ impl StorageSlot for SubstrateTarget {
                     "size_of",
                 );
 
-                let new = bin
-                    .builder
-                    .build_call(
-                        bin.module.get_function("__malloc").unwrap(),
-                        &[size.into()],
-                        "",
-                    )
+                let new = call!("__malloc", &[size.into()])
                     .try_as_basic_value()
                     .left()
                     .unwrap()
@@ -318,10 +261,7 @@ impl StorageSlot for SubstrateTarget {
                     let elem = unsafe {
                         bin.builder.build_gep(
                             dest,
-                            &[
-                                bin.context.i32_type().const_zero(),
-                                bin.context.i32_type().const_int(i as u64, false),
-                            ],
+                            &[i32_zero!(), i32_const!(i as u64)],
                             field.name_as_str(),
                         )
                     };
