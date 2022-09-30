@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{HashMap, HashSet};
-
-use solang_parser::pt;
-
-use crate::sema::ast::{self, Namespace};
+use crate::sema::ast::Namespace;
 use crate::Target;
 
 pub mod ethereum;
@@ -44,40 +40,13 @@ pub fn generate_abi(
     }
 }
 
-/// Given a contract number, check for duplicated names in all public and external functions.
-/// Returns a map of functions which should be mangled, together with their mangled names.
-pub fn mangle(contract_no: usize, ns: &ast::Namespace) -> HashMap<usize, String> {
-    let mut all_names = HashSet::new();
-    ns.contracts[contract_no]
-        .all_functions
-        .keys()
-        .map(|no| (*no, &ns.functions[*no]))
-        .filter(|(_, function)| match (&function.visibility, function.ty) {
-            (pt::Visibility::Public(_) | pt::Visibility::External(_), pt::FunctionTy::Function) => {
-                !all_names.insert(&function.name)
-            }
-            _ => false,
-        })
-        .map(|(no, function)| (no, mangle_signature(&function.signature)))
-        .collect()
-}
-
-/// Since overloading is only possible for different signatures, this should yield distinct names.
-pub fn mangle_signature(signature: &str) -> String {
-    signature
-        .trim()
-        .replace("(", "_")
-        .replace(")", "")
-        .replace(",", "_")
-        .into()
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::abi::mangle_signature;
-
-    #[test]
-    fn signature_mangling() {
-        assert_eq!(mangle_signature("foo(int256,bool)"), "foo_int256_bool");
-    }
-}
+//#[cfg(test)]
+//mod tests {
+//    use crate::abi::mangle_signature;
+//
+//    #[test]
+//    fn signature_mangling() {
+//        assert_eq!(mangle_signature("foo(int256,bool)"), "foo_int256_bool");
+//    }
+//}
+//

@@ -268,6 +268,8 @@ pub struct Function {
     pub symtable: Symtable,
     // What events are emitted by the body of this function
     pub emits_events: Vec<usize>,
+    // For overloaded functions this is the mangled (unique) name.
+    pub abi_name: String,
 }
 
 /// This trait provides a single interface for fetching paramenters, returns and the symbol table
@@ -319,6 +321,9 @@ impl Function {
             Some(pt::Mutability::Constant(loc)) => Mutability::View(loc),
         };
 
+        // The ABI name will stay the same unless for overloaded functions
+        let abi_name = name.clone();
+
         Function {
             tags,
             loc,
@@ -340,6 +345,7 @@ impl Function {
             body: Vec::new(),
             symtable: Symtable::new(),
             emits_events: Vec::new(),
+            abi_name,
         }
     }
 
@@ -391,6 +397,15 @@ impl Function {
         } else {
             format!("{} {}", self.ty, self.name)
         }
+    }
+
+    pub fn mangle_name(&mut self) {
+        self.abi_name = self
+            .signature
+            .trim()
+            .replace('(', "_")
+            .replace(')', "")
+            .replace(',', "_")
     }
 }
 

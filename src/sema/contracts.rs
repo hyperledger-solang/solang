@@ -106,8 +106,8 @@ pub fn resolve(
     // Now we have all the declarations, we can handle base contracts
     for (contract_no, _) in contracts {
         check_inheritance(*contract_no, ns);
-
         substrate_requires_public_functions(*contract_no, ns);
+        mangle_function_names(*contract_no, ns);
     }
 
     // Now we can resolve the initializers
@@ -731,6 +731,46 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     }
 
     ns.diagnostics.extend(diagnostics);
+}
+
+/// Given a contract number, check for duplicated names in all public and external functions.
+/// Updates the functions `abi_name` with the mangled name for overloaded functions.
+pub fn mangle_function_names(contract_no: usize, ns: &mut ast::Namespace) {
+    let mut all_names = HashMap::new();
+    let mangled: HashSet<usize> = ns.contracts[contract_no]
+        .all_functions
+        .keys()
+        .filter_map(|f| {
+            let function = &ns.functions[*f];
+            match (&function.visibility, &function.ty) {
+                (
+                    pt::Visibility::Public(_) | pt::Visibility::External(_),
+                    pt::FunctionTy::Function,
+                ) => all_names
+                    .insert(function.name.clone(), *f)
+                    .map(|other| [*f, other]),
+                _ => None,
+            }
+        })
+        .flatten()
+        .collect();
+
+    for f in mangled {
+        let f = &mut ns.functions[f];
+        f.mangle_name();
+        if let Some(offender) = all_names.get(&f.abi_name) {
+            let message = format!(
+                "mangling the symbol of overloaded function '{}' with signature '{}' results in a new symbol '{}' but this symbol already exists",
+                &f.name, &f.signature, &f.abi_name
+            );
+            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                f.loc,
+                message,
+                ns.functions[*offender].loc,
+                "this function declaration conflicts with mangled name".into(),
+            ));
+        }
+    }
 }
 
 /// A contract on substrate requires at least one public message

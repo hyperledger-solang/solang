@@ -11,8 +11,6 @@ use serde_json::{Map, Value};
 use solang_parser::pt;
 use std::convert::TryInto;
 
-use super::mangle;
-
 #[derive(Deserialize, Serialize)]
 pub struct Abi {
     storage: Storage,
@@ -428,7 +426,6 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
         });
     }
 
-    let mangled = mangle(contract_no, ns);
     let messages = ns.contracts[contract_no]
         .all_functions
         .keys()
@@ -441,19 +438,19 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
                 }
             }
 
-            Some((function_no, func))
+            Some(func)
         })
-        .filter(|(_, f)| match f.visibility {
+        .filter(|f| match f.visibility {
             pt::Visibility::Public(_) | pt::Visibility::External(_) => {
                 f.ty == pt::FunctionTy::Function
             }
             _ => false,
         })
-        .map(|(function_no, f)| {
+        .map(|f| {
             let payable = matches!(f.mutability, ast::Mutability::Payable(_));
 
             Message {
-                name: mangled.get(function_no).unwrap_or(&f.name).into(),
+                name: f.abi_name.to_owned(),
                 mutates: matches!(
                     f.mutability,
                     ast::Mutability::Payable(_) | ast::Mutability::Nonpayable(_)
