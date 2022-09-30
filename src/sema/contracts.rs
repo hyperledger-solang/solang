@@ -735,6 +735,9 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
 
 /// Given a contract number, check for duplicated names in all public and external functions.
 /// Updates the functions `abi_name` with the mangled name for overloaded functions.
+///
+/// Note: In sema we do not care about the function name too much.
+/// The mangled name is consumed later by the ABI generation.
 pub fn mangle_function_names(contract_no: usize, ns: &mut ast::Namespace) {
     let mut all_names = HashMap::new();
     let mangled: HashSet<usize> = ns.contracts[contract_no]
