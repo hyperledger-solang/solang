@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/solana/shift_struct_member.sol" {
 	uq144x112 [label="name:uq144x112\ncontract: FixedPoint\ntests/contract_testcases/solana/shift_struct_member.sol:4:12-21\nfield name:_x ty:uint256"]
 	uq112x112 [label="name:uq112x112\ncontract: FixedPoint\ntests/contract_testcases/solana/shift_struct_member.sol:8:12-21\nfield name:_x ty:uint224"]
-	contract [label="contract FixedPoint\ntests/contract_testcases/solana/shift_struct_member.sol:1:66-21:2"]
+	contract [label="contract FixedPoint\ntests/contract_testcases/solana/shift_struct_member.sol:2:1-21:2"]
 	decode [label="function decode\ncontract: FixedPoint\ntests/contract_testcases/solana/shift_struct_member.sol:13:5-75\nsignature decode((uint224))\nvisibility internal\nmutability pure"]
 	parameters [label="parameters\nstruct FixedPoint.uq112x112 self"]
 	returns [label="returns\nuint112 "]
@@ -24,7 +24,7 @@ strict digraph "tests/contract_testcases/solana/shift_struct_member.sol" {
 	variable_24 [label="variable: self\nstruct FixedPoint.uq144x112\ntests/contract_testcases/solana/shift_struct_member.sol:19:24-28"]
 	zero_ext_25 [label="zero extend uint256\ntests/contract_testcases/solana/shift_struct_member.sol:19:24-38"]
 	number_literal_26 [label="uint8 literal: 112\ntests/contract_testcases/solana/shift_struct_member.sol:19:35-38"]
-	diagnostic [label="found library 'FixedPoint'\nlevel Debug\ntests/contract_testcases/solana/shift_struct_member.sol:1:66-21:2"]
+	diagnostic [label="found library 'FixedPoint'\nlevel Debug\ntests/contract_testcases/solana/shift_struct_member.sol:2:1-21:2"]
 	structs -> uq144x112
 	structs -> uq112x112
 	contracts -> contract

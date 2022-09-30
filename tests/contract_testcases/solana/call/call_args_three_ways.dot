@@ -21,7 +21,7 @@ strict digraph "tests/contract_testcases/solana/call/call_args_three_ways.sol" {
 	call_external_function_20 [label="call external function\ntests/contract_testcases/solana/call/call_args_three_ways.sol:12:3-23"]
 	external_function_21 [label="function() external payable returns (void)\nD.func\ntests/contract_testcases/solana/call/call_args_three_ways.sol:12:3-23"]
 	variable_22 [label="variable: d\ncontract D\ntests/contract_testcases/solana/call/call_args_three_ways.sol:12:4-5"]
-	contract_23 [label="contract D\ntests/contract_testcases/solana/call/call_args_three_ways.sol:15:1-19:2"]
+	contract_23 [label="contract D\ntests/contract_testcases/solana/call/call_args_three_ways.sol:16:1-19:2"]
 	node_24 [label="constructor \ncontract: D\ntests/contract_testcases/solana/call/call_args_three_ways.sol:17:2-23\nsignature ()\nvisibility public\nmutability payable"]
 	func [label="function func\ncontract: D\ntests/contract_testcases/solana/call/call_args_three_ways.sol:18:2-32\nsignature func()\nvisibility public\nmutability payable"]
 	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/call/call_args_three_ways.sol:1:1-14:2"]
@@ -31,7 +31,7 @@ strict digraph "tests/contract_testcases/solana/call/call_args_three_ways.sol" {
 	diagnostic_31 [label="Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer\nlevel Error\ntests/contract_testcases/solana/call/call_args_three_ways.sol:10:10-18"]
 	diagnostic_32 [label="Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer\nlevel Error\ntests/contract_testcases/solana/call/call_args_three_ways.sol:11:12-20"]
 	diagnostic_33 [label="Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer\nlevel Error\ntests/contract_testcases/solana/call/call_args_three_ways.sol:12:11-19"]
-	diagnostic_34 [label="found contract 'D'\nlevel Debug\ntests/contract_testcases/solana/call/call_args_three_ways.sol:15:1-19:2"]
+	diagnostic_34 [label="found contract 'D'\nlevel Debug\ntests/contract_testcases/solana/call/call_args_three_ways.sol:16:1-19:2"]
 	contracts -> contract
 	contract -> f [label="function"]
 	f -> var_decl [label="body"]
