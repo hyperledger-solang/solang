@@ -50,23 +50,15 @@ impl File {
 
     /// Convert an offset to line and column number, based zero
     pub fn offset_to_line_column(&self, loc: usize) -> (usize, usize) {
-        let mut line_no = 0;
-        let mut col_no = loc;
+        let line_no = self
+            .line_starts
+            .partition_point(|line_start| loc >= *line_start);
 
-        // Here we do a linear scan. It should be possible to do binary search
-        for l in &self.line_starts {
-            if loc < *l {
-                break;
-            }
-
-            col_no = loc - l;
-
-            line_no += 1;
-
-            if loc == *l {
-                break;
-            }
-        }
+        let col_no = if line_no > 0 {
+            loc - self.line_starts[line_no - 1]
+        } else {
+            loc
+        };
 
         (line_no, col_no)
     }
