@@ -39,14 +39,3 @@ pub fn generate_abi(
         }
     }
 }
-
-//#[cfg(test)]
-//mod tests {
-//    use crate::abi::mangle_signature;
-//
-//    #[test]
-//    fn signature_mangling() {
-//        assert_eq!(mangle_signature("foo(int256,bool)"), "foo_int256_bool");
-//    }
-//}
-//

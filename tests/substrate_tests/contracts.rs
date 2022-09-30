@@ -238,3 +238,31 @@ fn issue666() {
 
     assert!(runtime.vm.output.is_empty());
 }
+
+#[test]
+fn mangle_function_names_in_abi() {
+    let runtime = build_solidity(
+        r##"
+        contract Foo {
+            function f() public pure {}
+            function f(bool foo) public pure {}
+            function f(uint foo) public pure {}
+        }"##,
+    );
+
+    let messages: Vec<String> = runtime
+        .programs
+        .get(0)
+        .unwrap()
+        .abi
+        .spec
+        .messages
+        .iter()
+        .map(|m| m.name.clone())
+        .collect();
+
+    assert!(messages.contains(&"f_".to_string()));
+    assert!(messages.contains(&"f_bool".to_string()));
+    assert!(messages.contains(&"f_uint256".to_string()));
+    assert!(!messages.contains(&"f".to_string()));
+}
