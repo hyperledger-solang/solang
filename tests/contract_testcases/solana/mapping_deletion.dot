@@ -17,7 +17,7 @@ strict digraph "tests/contract_testcases/solana/mapping_deletion.sol" {
 	storage_load [label="storage load uint256\ntests/contract_testcases/solana/mapping_deletion.sol:8:9-15"]
 	storage_var_18 [label="storage variable\nsavedTest.b\nuint256 storage\ntests/contract_testcases/solana/mapping_deletion.sol:8:9-10"]
 	variable_19 [label="variable: f\nuint256\ntests/contract_testcases/solana/mapping_deletion.sol:8:14-15"]
-	contract_20 [label="contract DeleteTest\ntests/contract_testcases/solana/mapping_deletion.sol:11:1-40:2"]
+	contract_20 [label="contract DeleteTest\ntests/contract_testcases/solana/mapping_deletion.sol:12:1-40:2"]
 	var_21 [label="variable example\nvisibility internal\ntests/contract_testcases/solana/mapping_deletion.sol:18:5-41"]
 	var_22 [label="variable example2\nvisibility internal\ntests/contract_testcases/solana/mapping_deletion.sol:19:5-40"]
 	addData [label="function addData\ncontract: DeleteTest\ntests/contract_testcases/solana/mapping_deletion.sol:21:5-30\nsignature addData()\nvisibility public\nmutability nonpayable"]
@@ -62,7 +62,7 @@ strict digraph "tests/contract_testcases/solana/mapping_deletion.sol" {
 	variable_62 [label="variable: id\nuint256\ntests/contract_testcases/solana/mapping_deletion.sol:37:24-26"]
 	diagnostic [label="found contract 'savedTest'\nlevel Debug\ntests/contract_testcases/solana/mapping_deletion.sol:1:1-10:2"]
 	diagnostic_65 [label="storage variable 'b' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/mapping_deletion.sol:2:5-11"]
-	diagnostic_66 [label="found contract 'DeleteTest'\nlevel Debug\ntests/contract_testcases/solana/mapping_deletion.sol:11:1-40:2"]
+	diagnostic_66 [label="found contract 'DeleteTest'\nlevel Debug\ntests/contract_testcases/solana/mapping_deletion.sol:12:1-40:2"]
 	diagnostic_67 [label="storage variable 'example2' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/mapping_deletion.sol:19:5-40"]
 	structs -> data_struct
 	contracts -> contract

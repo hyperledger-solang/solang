@@ -7,7 +7,7 @@ strict digraph "tests/contract_testcases/evm/standalone_call.sol" {
 	list [label="list\ntests/contract_testcases/evm/standalone_call.sol:3:9-22"]
 	number_literal [label="int256 literal: 1\ntests/contract_testcases/evm/standalone_call.sol:3:17-18"]
 	number_literal_9 [label="int256 literal: 2\ntests/contract_testcases/evm/standalone_call.sol:3:20-21"]
-	contract_10 [label="contract BABYLINK\ntests/contract_testcases/evm/standalone_call.sol:6:1-58:2"]
+	contract_10 [label="contract BABYLINK\ntests/contract_testcases/evm/standalone_call.sol:7:1-58:2"]
 	multipleRetuns [label="function multipleRetuns\ncontract: BABYLINK\ntests/contract_testcases/evm/standalone_call.sol:13:5-71\nsignature multipleRetuns(int256)\nvisibility public\nmutability pure"]
 	parameters [label="parameters\nint256 c"]
 	returns_13 [label="returns\nint256 \nint256 \nint256 "]
@@ -139,7 +139,7 @@ strict digraph "tests/contract_testcases/evm/standalone_call.sol" {
 	return_139 [label="return\ntests/contract_testcases/evm/standalone_call.sol:56:9-17"]
 	variable_140 [label="variable: b\nint256\ntests/contract_testcases/evm/standalone_call.sol:56:16-17"]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/evm/standalone_call.sol:1:1-5:2"]
-	diagnostic_143 [label="found contract 'BABYLINK'\nlevel Debug\ntests/contract_testcases/evm/standalone_call.sol:6:1-58:2"]
+	diagnostic_143 [label="found contract 'BABYLINK'\nlevel Debug\ntests/contract_testcases/evm/standalone_call.sol:7:1-58:2"]
 	structs -> tts
 	contracts -> contract
 	contract -> bar [label="function"]

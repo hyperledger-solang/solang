@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/solana/assign_array_in_array.sol" {
 	Sfixed [label="name:Sfixed\ncontract: C\ntests/contract_testcases/solana/assign_array_in_array.sol:13:9-15\nfield name:f1 ty:uint256[3]"]
 	Sdynamic [label="name:Sdynamic\ncontract: C\ntests/contract_testcases/solana/assign_array_in_array.sol:14:9-17\nfield name:f1 ty:uint256[]"]
-	contract [label="contract C\ntests/contract_testcases/solana/assign_array_in_array.sol:1:60-25:2"]
+	contract [label="contract C\ntests/contract_testcases/solana/assign_array_in_array.sol:2:1-25:2"]
 	fixed [label="function fixed\ncontract: C\ntests/contract_testcases/solana/assign_array_in_array.sol:3:2-25\nsignature fixed()\nvisibility public\nmutability nonpayable"]
 	var_decl [label="variable decl uint256[3][4] iPj\ntests/contract_testcases/solana/assign_array_in_array.sol:4:3-27"]
 	expr [label="expression\ntests/contract_testcases/solana/assign_array_in_array.sol:5:3-19"]
@@ -40,7 +40,7 @@ strict digraph "tests/contract_testcases/solana/assign_array_in_array.sol" {
 	variable_40 [label="variable: iPj\nstruct C.Sdynamic\ntests/contract_testcases/solana/assign_array_in_array.sol:23:3-6"]
 	alloc_array_41 [label="alloc array uint256[]\ntests/contract_testcases/solana/assign_array_in_array.sol:23:12-28"]
 	number_literal_42 [label="uint32 literal: 4\ntests/contract_testcases/solana/assign_array_in_array.sol:23:26-27"]
-	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/assign_array_in_array.sol:1:60-25:2"]
+	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/assign_array_in_array.sol:2:1-25:2"]
 	diagnostic_45 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:3:2-25"]
 	diagnostic_46 [label="local variable 'iPj' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:4:24-27"]
 	diagnostic_47 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/assign_array_in_array.sol:8:2-27"]

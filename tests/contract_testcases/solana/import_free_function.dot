@@ -18,7 +18,7 @@ strict digraph "tests/contract_testcases/solana/import_free_function.sol" {
 	number_literal_17 [label="int256 literal: 1\ntests/contract_testcases/solana/for_if_no_else.sol:4:11-12"]
 	return_18 [label="return\ntests/contract_testcases/solana/for_if_no_else.sol:6:2-10"]
 	number_literal_19 [label="int256 literal: 2\ntests/contract_testcases/solana/for_if_no_else.sol:6:9-10"]
-	bar [label="function bar\ntests/contract_testcases/solana/import_free_function.sol:5:1-6:16\nsignature bar()\nvisibility internal\nmutability nonpayable"]
+	bar [label="function bar\ntests/contract_testcases/solana/import_free_function.sol:6:1-16\nsignature bar()\nvisibility internal\nmutability nonpayable"]
 	var_decl_21 [label="variable decl int256 x\ntests/contract_testcases/solana/import_free_function.sol:7:2-15"]
 	call_internal_function [label="call internal function\ntests/contract_testcases/solana/import_free_function.sol:7:10-15"]
 	internal_function [label="function() internal returns (int256)\nfree function foo\ntests/contract_testcases/solana/import_free_function.sol:7:10-15"]

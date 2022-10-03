@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/solana/comment.sol" {
-	contract [label="contract Hello\ntests/contract_testcases/solana/comment.sol:1:24-4:2"]
+	contract [label="contract Hello\ntests/contract_testcases/solana/comment.sol:2:1-4:2"]
 	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/solana/comment.sol:1:1-23"]
-	diagnostic_4 [label="found contract 'Hello'\nlevel Debug\ntests/contract_testcases/solana/comment.sol:1:24-4:2"]
+	diagnostic_4 [label="found contract 'Hello'\nlevel Debug\ntests/contract_testcases/solana/comment.sol:2:1-4:2"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_4 [label="Debug"]

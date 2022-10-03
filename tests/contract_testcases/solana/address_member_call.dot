@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/solana/address_member_call.sol" {
 	Receipt [label="name:Receipt\ncontract: 0\ntests/contract_testcases/solana/address_member_call.sol:5:11-18\nfield name:From ty:address indexed:no\nfield name:Token ty:address indexed:no\nfield name:Receivers ty:address[] indexed:no\nfield name:Amounts ty:uint64[] indexed:no\nfield name:Payment ty:string indexed:no"]
-	contract [label="contract MyContract\ntests/contract_testcases/solana/address_member_call.sol:3:1-45:2"]
+	contract [label="contract MyContract\ntests/contract_testcases/solana/address_member_call.sol:4:1-45:2"]
 	send [label="function send\ncontract: MyContract\ntests/contract_testcases/solana/address_member_call.sol:13:5-18:23\nsignature send(bytes32[],uint64[],string,uint64)\nvisibility external\nmutability payable"]
 	parameters [label="parameters\naddress[] _receivers\nuint64[] _amounts\nstring _payment\nuint64 value"]
 	expr [label="expression\ntests/contract_testcases/solana/address_member_call.sol:19:9-22:10"]
@@ -71,8 +71,8 @@ strict digraph "tests/contract_testcases/solana/address_member_call.sol" {
 	variable_71 [label="variable: _receivers\naddress[]\ntests/contract_testcases/solana/address_member_call.sol:40:13-23"]
 	variable_72 [label="variable: _amounts\nuint64[]\ntests/contract_testcases/solana/address_member_call.sol:41:13-21"]
 	variable_73 [label="variable: _payment\nstring\ntests/contract_testcases/solana/address_member_call.sol:42:13-21"]
-	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/solana/address_member_call.sol:1:32-2:24"]
-	diagnostic_76 [label="found contract 'MyContract'\nlevel Debug\ntests/contract_testcases/solana/address_member_call.sol:3:1-45:2"]
+	diagnostic [label="pragma 'solidity' is ignored\nlevel Debug\ntests/contract_testcases/solana/address_member_call.sol:2:1-24"]
+	diagnostic_76 [label="found contract 'MyContract'\nlevel Debug\ntests/contract_testcases/solana/address_member_call.sol:4:1-45:2"]
 	events -> Receipt
 	contracts -> contract
 	contract -> send [label="function"]
