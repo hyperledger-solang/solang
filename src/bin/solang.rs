@@ -109,7 +109,8 @@ fn main() {
                             .help("output directory")
                             .short('o')
                             .long("output")
-                            .num_args(1),
+                            .num_args(1)
+                            .value_parser(ValueParser::os_string()),
                     )
                     .arg(
                         Arg::new("IMPORTPATH")
@@ -292,7 +293,8 @@ fn main() {
                             .help("output file")
                             .short('o')
                             .long("output")
-                            .num_args(1),
+                            .num_args(1)
+                            .value_parser(ValueParser::os_string()),
                     ),
             )
             .subcommand(
@@ -349,8 +351,8 @@ fn doc(matches: &ArgMatches) {
         // generate docs
         doc::generate_docs(
             matches
-                .get_one::<String>("OUTPUT")
-                .unwrap_or(&String::from(".")),
+                .get_one::<OsString>("OUTPUT")
+                .unwrap_or(&OsString::from(".")),
             &files,
             verbose,
         );
@@ -521,8 +523,8 @@ fn shell_complete(mut app: Command, matches: &ArgMatches) {
 fn output_file(matches: &ArgMatches, stem: &str, ext: &str) -> PathBuf {
     Path::new(
         matches
-            .get_one::<String>("OUTPUT")
-            .unwrap_or(&String::from(".")),
+            .get_one::<OsString>("OUTPUT")
+            .unwrap_or(&OsString::from(".")),
     )
     .join(format!("{}.{}", stem, ext))
 }
