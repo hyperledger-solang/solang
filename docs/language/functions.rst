@@ -354,10 +354,30 @@ In the function foo, abs() is called with an ``int64`` so the second implementat
 of the function abs() is called.
 
 .. note::
-    Some target runtimes require unique function names (e.g. Substrate). In that case,
-    the names of overloaded functions will be mangled in the ABI as follows:
-    The function name will be concatenated with its argument type, sperated by underscores.
-    Tuple types are preceded with an additional underscore.
+  The substrate target runtime requires function names to be unique.
+  Overloaded function names will be mangled in the ABI. 
+  The function name will be concatenated with allo of its argument types, sperated by underscores.
+  Structs types are be represented by their field types (preceded with an extra underscore at the start).
+  Enum types are simply represented as their underlying uint8 type.
+
+  The following example illustrates some overloaded functions and their mangled name:
+
+  .. code-block:: solidity
+
+    enum E { v1, v2 }
+    struct S { int256 i; bool b; address a; }
+
+    contract C {
+        // foo_
+        function foo() public pure {}
+
+        // foo_uint256_address[]
+        function foo(uint256 i) public pure {}
+
+        // foo_uint8[2]__int256_bool_address
+        function foo(E[2] memory e, S memory s) public pure {}
+    }
+
 
 Function Modifiers
 __________________

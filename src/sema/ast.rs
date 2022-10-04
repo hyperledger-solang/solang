@@ -322,7 +322,6 @@ impl Function {
         };
 
         let mangled_name = signature
-            .trim()
             .replace('(', "_")
             .replace(')', "")
             .replace(',', "_");
