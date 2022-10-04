@@ -353,6 +353,12 @@ values. Here is an example of an overloaded function:
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
 
+.. note::
+    Some target runtimes require unique function names (e.g. Substrate). In that case,
+    the names of overloaded functions will be mangled in the ABI as follows:
+    The function name will be concatenated with its argument type, sperated by underscores.
+    Tuple types are preceded with an additional underscore.
+
 Function Modifiers
 __________________
 
