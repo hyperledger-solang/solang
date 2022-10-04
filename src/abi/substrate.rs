@@ -455,7 +455,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
             Message {
                 name: conflicting_names
                     .contains(&f.name)
-                    .then(|| &f.abi_name)
+                    .then(|| &f.mangled_name)
                     .unwrap_or(&f.name)
                     .into(),
                 mutates: matches!(

@@ -749,12 +749,12 @@ pub fn mangle_function_names(contract_no: usize, ns: &mut ast::Namespace) {
     for f in &public_functions {
         if let Some(offender) = public_functions
             .iter()
-            .find(|other| ns.functions[*f].abi_name == ns.functions[**other].name)
+            .find(|other| ns.functions[*f].mangled_name == ns.functions[**other].name)
         {
             let f = &ns.functions[*f];
             let message = format!(
                 "mangling the symbol of overloaded function '{}' with signature '{}' results in a new symbol '{}' but this symbol already exists",
-                &f.name, &f.signature, &f.abi_name
+                &f.name, &f.signature, &f.mangled_name
             );
             ns.diagnostics.push(ast::Diagnostic::error_with_note(
                 f.loc,
