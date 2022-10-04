@@ -321,8 +321,11 @@ impl Function {
             Some(pt::Mutability::Constant(loc)) => Mutability::View(loc),
         };
 
-        // The ABI name will stay the same unless for overloaded functions
-        let abi_name = name.clone();
+        let abi_name = signature
+            .trim()
+            .replace('(', "_")
+            .replace(')', "")
+            .replace(',', "_");
 
         Function {
             tags,
@@ -397,15 +400,6 @@ impl Function {
         } else {
             format!("{} {}", self.ty, self.name)
         }
-    }
-
-    pub fn mangle_name(&mut self) {
-        self.abi_name = self
-            .signature
-            .trim()
-            .replace('(', "_")
-            .replace(')', "")
-            .replace(',', "_")
     }
 }
 

@@ -733,35 +733,25 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     ns.diagnostics.extend(diagnostics);
 }
 
-/// Given a contract number, check for duplicated names in all public and external functions.
-/// Updates the functions `abi_name` with the mangled name for overloaded functions.
+/// Given a contract number, check for function names conflicting with any mangled name.
+/// Only applies to public functions.
 ///
 /// Note: In sema we do not care about the function name too much.
 /// The mangled name is consumed later by the ABI generation.
 pub fn mangle_function_names(contract_no: usize, ns: &mut ast::Namespace) {
-    let mut all_names = HashMap::new();
-    let mangled: HashSet<usize> = ns.contracts[contract_no]
+    let public_functions: Vec<usize> = ns.contracts[contract_no]
         .all_functions
         .keys()
-        .filter_map(|f| {
-            let function = &ns.functions[*f];
-            match (&function.visibility, &function.ty) {
-                (
-                    pt::Visibility::Public(_) | pt::Visibility::External(_),
-                    pt::FunctionTy::Function,
-                ) => all_names
-                    .insert(function.name.clone(), *f)
-                    .map(|other| [*f, other]),
-                _ => None,
-            }
-        })
-        .flatten()
+        .copied()
+        .filter(|f| ns.functions[*f].is_public() && ns.functions[*f].ty == pt::FunctionTy::Function)
         .collect();
 
-    for f in mangled {
-        let f = &mut ns.functions[f];
-        f.mangle_name();
-        if let Some(offender) = all_names.get(&f.abi_name) {
+    for f in &public_functions {
+        if let Some(offender) = public_functions
+            .iter()
+            .find(|other| ns.functions[*f].abi_name == ns.functions[**other].name)
+        {
+            let f = &ns.functions[*f];
             let message = format!(
                 "mangling the symbol of overloaded function '{}' with signature '{}' results in a new symbol '{}' but this symbol already exists",
                 &f.name, &f.signature, &f.abi_name
@@ -771,7 +761,7 @@ pub fn mangle_function_names(contract_no: usize, ns: &mut ast::Namespace) {
                 message,
                 ns.functions[*offender].loc,
                 "this function declaration conflicts with mangled name".into(),
-            ));
+            ))
         }
     }
 }
