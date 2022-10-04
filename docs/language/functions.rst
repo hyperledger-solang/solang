@@ -372,7 +372,7 @@ of the function abs() is called.
         function foo() public pure {}
 
         // foo_uint256_address[]
-        function foo(uint256 i) public pure {}
+        function foo(uint256 i, address[] memory a) public pure {}
 
         // foo_uint8[2]__int256_bool_address
         function foo(E[2] memory e, S memory s) public pure {}
