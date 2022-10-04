@@ -266,3 +266,46 @@ fn mangle_function_names_in_abi() {
     assert!(messages.contains(&"f_uint256".to_string()));
     assert!(!messages.contains(&"f".to_string()));
 }
+
+#[test]
+fn mangle_overloaded_function_names_in_abi() {
+    let runtime = build_solidity(
+        r##"
+        contract A {
+            function foo(bool x) public {}
+        }
+
+        contract B is A {
+            function foo(int x) public {}
+        }"##,
+    );
+
+    let messages_a: Vec<String> = runtime
+        .programs
+        .get(0)
+        .unwrap()
+        .abi
+        .spec
+        .messages
+        .iter()
+        .map(|m| m.name.clone())
+        .collect();
+
+    assert!(messages_a.contains(&"foo".to_string()));
+    assert!(!messages_a.contains(&"foo_".to_string()));
+
+    let messages_b: Vec<String> = runtime
+        .programs
+        .get(1)
+        .unwrap()
+        .abi
+        .spec
+        .messages
+        .iter()
+        .map(|m| m.name.clone())
+        .collect();
+
+    assert!(!messages_b.contains(&"foo".to_string()));
+    assert!(messages_b.contains(&"foo_bool".to_string()));
+    assert!(messages_b.contains(&"foo_int256".to_string()));
+}
