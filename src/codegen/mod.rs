@@ -4,6 +4,7 @@ mod array_boundary;
 pub mod cfg;
 mod constant_folding;
 mod dead_storage;
+mod dispatch;
 mod encoding;
 mod events;
 mod expression;
@@ -34,13 +35,14 @@ use crate::{sema::ast, Target};
 use std::cmp::Ordering;
 
 use crate::codegen::cfg::ASTFunction;
+use crate::codegen::dispatch::{constructor_dispatch, function_dispatch};
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
 use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{CodeLocation, FunctionTy};
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
@@ -237,6 +239,23 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
+        // TODO: This is a temporary solution. Once Substrate's dispatch moves to codegen,
+        // we can remove this if-condition.
+        if ns.target == Target::Solana {
+            let dispatch_cfg = function_dispatch(contract_no, &all_cfg, ns);
+            ns.contracts[contract_no].dispatch_no = all_cfg.len();
+            all_cfg.push(dispatch_cfg);
+
+            for cfg_no in 0..all_cfg.len() {
+                if all_cfg[cfg_no].ty == FunctionTy::Constructor && all_cfg[cfg_no].public {
+                    let dispatch_cfg = constructor_dispatch(cfg_no, &all_cfg, ns);
+                    ns.contracts[contract_no].constructor_dispatch = Some(all_cfg.len());
+                    all_cfg.push(dispatch_cfg);
+                    break;
+                }
+            }
+        }
+
         ns.contracts[contract_no].cfg = all_cfg;
     }
 }
@@ -277,9 +296,7 @@ fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) ->
 
     cfg.add(&mut vartab, Instr::Return { value: Vec::new() });
 
-    let (vars, next_id) = vartab.drain();
-    cfg.vars = vars;
-    ns.next_id = next_id;
+    vartab.finalize(ns, &mut cfg);
 
     optimize_and_check_cfg(&mut cfg, ns, ASTFunction::None, opt);
 

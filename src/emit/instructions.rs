@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy};
+use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy, ReturnCode};
 use crate::codegen::Expression;
 use crate::emit::binary::Binary;
 use crate::emit::cfg::{create_block, BasicBlock, Work};
 use crate::emit::expression::expression;
-use crate::emit::{ReturnCode, TargetRuntime};
+use crate::emit::TargetRuntime;
 use crate::sema::ast::{Contract, Namespace, RetrieveType, Type};
 use crate::Target;
 use inkwell::types::BasicType;
@@ -930,12 +930,21 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             exception_block: exception,
             tys,
             data,
+            data_len,
         } => {
             let v = expression(target, bin, data, &w.vars, function, ns);
 
-            let mut data = bin.vector_bytes(v);
+            let mut data = if data.ty().is_reference_type(ns) {
+                bin.vector_bytes(v)
+            } else {
+                v.into_pointer_value()
+            };
 
-            let mut data_len = bin.vector_len(v);
+            let mut data_len = if let Some(len) = data_len {
+                expression(target, bin, len, &w.vars, function, ns).into_int_value()
+            } else {
+                bin.vector_len(v)
+            };
 
             if let Some(selector) = selector {
                 let exception = exception.unwrap();
@@ -1168,6 +1177,21 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.position_at_end(pos);
             bin.builder
                 .build_switch(cond.into_int_value(), default_bb, cases.as_ref());
+        }
+
+        Instr::ReturnData { data, data_len } => {
+            let data = if data.ty().is_reference_type(ns) {
+                bin.vector_bytes(expression(target, bin, data, &w.vars, function, ns))
+            } else {
+                expression(target, bin, data, &w.vars, function, ns).into_pointer_value()
+            };
+
+            let data_len = expression(target, bin, data_len, &w.vars, function, ns);
+            target.return_abi_data(bin, data, data_len);
+        }
+
+        Instr::ReturnCode { code } => {
+            target.return_code(bin, bin.return_values[code]);
         }
     }
 }

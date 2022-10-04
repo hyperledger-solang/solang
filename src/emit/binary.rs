@@ -10,8 +10,9 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
+use crate::codegen::cfg::ReturnCode;
 use crate::emit::substrate;
-use crate::emit::{solana, BinaryOp, Generate, ReturnCode};
+use crate::emit::{solana, BinaryOp, Generate};
 use crate::linker::link;
 use crate::Target;
 use inkwell::builder::Builder;
@@ -832,6 +833,11 @@ impl<'a> Binary<'a> {
 
                     BasicTypeEnum::ArrayType(aty)
                 }
+                Type::Struct(StructType::SolParameters) => self
+                    .module
+                    .get_struct_type("struct.SolParameters")
+                    .unwrap()
+                    .as_basic_type_enum(),
                 Type::Struct(str_ty) => self
                     .context
                     .struct_type(
@@ -881,6 +887,11 @@ impl<'a> Binary<'a> {
                     ),
                 ),
                 Type::UserType(no) => self.llvm_type(&ns.user_types[*no].ty, ns),
+                Type::BufferPointer => self
+                    .context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .as_basic_type_enum(),
                 _ => unreachable!(),
             }
         }

@@ -51,6 +51,10 @@ impl AvailableExpressionSet {
                 storage: item_2,
                 ..
             }
+            | Instr::ReturnData {
+                data: item_1,
+                data_len: item_2,
+            }
             | Instr::Store {
                 dest: item_1,
                 data: item_2,
@@ -174,6 +178,7 @@ impl AvailableExpressionSet {
             Instr::AssertFailure { expr: None }
             | Instr::Unreachable
             | Instr::Nop
+            | Instr::ReturnCode { .. }
             | Instr::Branch { .. }
             | Instr::PopMemory { .. } => {}
         }
@@ -390,12 +395,16 @@ impl AvailableExpressionSet {
                 exception_block,
                 tys,
                 data,
+                data_len,
             } => Instr::AbiDecode {
                 res: res.clone(),
                 selector: *selector,
                 exception_block: *exception_block,
                 tys: tys.clone(),
                 data: self.regenerate_expression(data, ave, cst).1,
+                data_len: data_len
+                    .as_ref()
+                    .map(|e| self.regenerate_expression(e, ave, cst).1),
             },
 
             Instr::SelfDestruct { recipient } => Instr::SelfDestruct {
@@ -449,6 +458,11 @@ impl AvailableExpressionSet {
                 buf: self.regenerate_expression(buf, ave, cst).1,
                 offset: self.regenerate_expression(offset, ave, cst).1,
                 value: self.regenerate_expression(value, ave, cst).1,
+            },
+
+            Instr::ReturnData { data, data_len } => Instr::ReturnData {
+                data: self.regenerate_expression(data, ave, cst).1,
+                data_len: self.regenerate_expression(data_len, ave, cst).1,
             },
 
             _ => instr.clone(),

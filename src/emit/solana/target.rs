@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen;
-use crate::codegen::cfg::HashTy;
+use crate::codegen::cfg::{HashTy, ReturnCode};
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::loop_builder::LoopBuilder;
@@ -2479,5 +2479,22 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         );
 
         binary.builder.build_load(temp, "hash").into_int_value()
+    }
+
+    fn return_abi_data<'b>(
+        &self,
+        binary: &Binary<'b>,
+        data: PointerValue<'b>,
+        data_len: BasicValueEnum<'b>,
+    ) {
+        binary.builder.build_call(
+            binary.module.get_function("sol_set_return_data").unwrap(),
+            &[data.into(), data_len.into()],
+            "",
+        );
+
+        binary
+            .builder
+            .build_return(Some(&binary.return_values[&ReturnCode::Success]));
     }
 }

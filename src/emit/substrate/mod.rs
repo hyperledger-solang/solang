@@ -12,10 +12,10 @@ use num_traits::ToPrimitive;
 use solang_parser::pt;
 use std::collections::HashMap;
 
-use crate::emit::dispatch::emit_function_dispatch;
 use crate::emit::functions::{abort_if_value_transfer, emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};
 
+mod dispatch;
 mod storage;
 pub(super) mod target;
 
@@ -379,8 +379,7 @@ impl SubstrateTarget {
 
         let fallback_block = binary.context.append_basic_block(function, "fallback");
 
-        emit_function_dispatch(
-            self,
+        self.emit_function_dispatch(
             binary,
             contract,
             ns,
@@ -422,8 +421,7 @@ impl SubstrateTarget {
             ns,
         );
 
-        emit_function_dispatch(
-            self,
+        self.emit_function_dispatch(
             binary,
             contract,
             ns,

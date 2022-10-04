@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::HashTy;
+use crate::codegen::cfg::{HashTy, ReturnCode};
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::storage::StorageSlot;
@@ -701,6 +701,24 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         binary.builder.build_unreachable();
+    }
+
+    fn return_abi_data<'b>(
+        &self,
+        binary: &Binary<'b>,
+        data: PointerValue<'b>,
+        data_len: BasicValueEnum<'b>,
+    ) {
+        emit_context!(binary);
+
+        call!(
+            "seal_return",
+            &[i32_zero!().into(), data.into(), data_len.into()]
+        );
+
+        binary
+            .builder
+            .build_return(Some(&binary.return_values[&ReturnCode::Success]));
     }
 
     fn assert_failure<'b>(&self, binary: &'b Binary, _data: PointerValue, _length: IntValue) {

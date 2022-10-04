@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::HashTy;
+use crate::codegen::cfg::{HashTy, ReturnCode};
 use crate::codegen::{Builtin, Expression};
 use crate::emit::binary::Binary;
 use crate::emit::math::{build_binary_op_with_overflow_check, multiply, power};
 use crate::emit::strings::{format_string, string_location};
-use crate::emit::{BinaryOp, Generate, ReturnCode, TargetRuntime, Variable};
+use crate::emit::{BinaryOp, Generate, TargetRuntime, Variable};
 use crate::sema::ast::{Namespace, RetrieveType, StructType, Type};
 use crate::Target;
 use inkwell::module::Linkage;
@@ -1340,7 +1340,11 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let v = expression(target, bin, &args[0], vartab, function, ns);
             let offset = expression(target, bin, &args[1], vartab, function, ns).into_int_value();
 
-            let data = bin.vector_bytes(v);
+            let data = if args[0].ty().is_dynamic_memory() {
+                bin.vector_bytes(v)
+            } else {
+                v.into_pointer_value()
+            };
 
             let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
 
