@@ -356,9 +356,9 @@ of the function abs() is called.
 .. note::
   The substrate target runtime requires function names to be unique.
   Overloaded function names will be mangled in the ABI. 
-  The function name will be concatenated with allo of its argument types, sperated by underscores.
-  Structs types are be represented by their field types (preceded with an extra underscore at the start).
-  Enum types are simply represented as their underlying uint8 type.
+  The function name will be concatenated with all of its argument types, seperated by underscores.
+  Struct types are represented by their field types (preceded with an extra underscore at the start).
+  Enum types are represented as their underlying uint8 type.
 
   The following example illustrates some overloaded functions and their mangled name:
 
