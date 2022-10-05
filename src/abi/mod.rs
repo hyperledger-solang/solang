@@ -46,7 +46,7 @@ pub fn generate_abi(
 
 /// Returns a set of all non-unique public function names in a given contract.
 /// These names should not be used in the metadata. Instead, the mangled versions should be used.
-pub fn non_unique_function_names(contract_no: usize, ns: &Namespace) -> HashSet<&String> {
+pub(super) fn non_unique_function_names(contract_no: usize, ns: &Namespace) -> HashSet<&String> {
     let mut names = HashSet::new();
     ns.contracts[contract_no]
         .all_functions
