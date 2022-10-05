@@ -243,10 +243,18 @@ fn issue666() {
 fn mangle_function_names_in_abi() {
     let runtime = build_solidity(
         r##"
-        contract Foo {
-            function f() public pure {}
-            function f(bool foo) public pure {}
-            function f(uint foo) public pure {}
+        enum E { v1, v2 }
+        struct S { int256 i; bool b; address a; }
+
+        contract C {
+            // foo_
+            function foo() public pure {}
+
+            // foo_uint256_addressArray2Array
+            function foo(uint256 i, address[2][] memory a) public pure {}
+
+            // foo_uint8Array2__int256_bool_address
+            function foo(E[2] memory e, S memory s) public pure {}
         }"##,
     );
 
@@ -261,10 +269,10 @@ fn mangle_function_names_in_abi() {
         .map(|m| m.name.clone())
         .collect();
 
-    assert!(messages.contains(&"f_".to_string()));
-    assert!(messages.contains(&"f_bool".to_string()));
-    assert!(messages.contains(&"f_uint256".to_string()));
-    assert!(!messages.contains(&"f".to_string()));
+    assert!(!messages.contains(&"foo".to_string()));
+    assert!(messages.contains(&"foo_".to_string()));
+    assert!(messages.contains(&"foo_uint256_addressArray2Array".to_string()));
+    assert!(messages.contains(&"foo_uint8Array2__int256_bool_address".to_string()));
 }
 
 #[test]
@@ -307,5 +315,4 @@ fn mangle_overloaded_function_names_in_abi() {
 
     assert!(!messages_b.contains(&"foo".to_string()));
     assert!(messages_b.contains(&"foo_bool".to_string()));
-    assert!(messages_b.contains(&"foo_int256".to_string()));
 }

@@ -324,7 +324,10 @@ impl Function {
         let mangled_name = signature
             .replace('(', "_")
             .replace(')', "")
-            .replace(',', "_");
+            .replace(',', "_")
+            .replace("[]", "Array")
+            .replace('[', "Array")
+            .replace(']', "");
 
         Function {
             tags,
