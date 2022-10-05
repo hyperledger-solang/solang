@@ -107,7 +107,7 @@ pub fn resolve(
     for (contract_no, _) in contracts {
         check_inheritance(*contract_no, ns);
         substrate_requires_public_functions(*contract_no, ns);
-        mangle_function_names(*contract_no, ns);
+        check_mangled_function_names(*contract_no, ns);
     }
 
     // Now we can resolve the initializers
@@ -738,7 +738,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
 ///
 /// Note: In sema we do not care about the function name too much.
 /// The mangled name is consumed later by the ABI generation.
-pub fn mangle_function_names(contract_no: usize, ns: &mut ast::Namespace) {
+fn check_mangled_function_names(contract_no: usize, ns: &mut ast::Namespace) {
     let public_functions: Vec<usize> = ns.contracts[contract_no]
         .all_functions
         .keys()
