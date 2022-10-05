@@ -361,7 +361,7 @@ of the function abs() is called.
   - Struct types are represented by their field types (preceded with an extra underscore).
   - Enum types are represented as their underlying uint8 type.
   - Array types are recognizable by having ``Array`` appended. 
-  - Fixed size Arrays will additionally have their length appended as well.
+  - Fixed size arrays will additionally have their length appended as well.
 
   The following example illustrates some overloaded functions and their mangled name:
 
