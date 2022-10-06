@@ -291,8 +291,8 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .map(|p| {
                 let ty = resolve_ast(&p.ty, ns, &mut registry);
 
-                //let spec = TypeSpec::new_from_ty(ty.into(), p.ty.path().clone());
-                let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
+                let path = registry.get(ty).unwrap().path().clone();
+                let spec = TypeSpec::new_from_ty(ty.into(), path);
 
                 MessageParamSpec::new_custom(p.name_as_str().to_string(), spec)
             })
@@ -342,12 +342,9 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             0 => None,
             1 => {
                 let ty = resolve_ast(&f.returns[0].ty, ns, &mut registry);
-
-                let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
-
-                Some(spec)
+                let path = registry.get(ty).unwrap().path().clone();
+                Some(TypeSpec::new_from_ty(ty.into(), path))
             }
-
             _ => {
                 let fields = f
                     .returns
@@ -367,14 +364,14 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     &"return_type".into()
                 );
 
-                let ty = Type::new(path, vec![], TypeDef::Tuple(t), Default::default());
-
-                let ty = registry.register_type(ty);
-
-                Some(TypeSpec::new_from_ty(
-                    ty.into(),
-                    Path::new_custom(vec!["FIXME".into()]),
-                ))
+                let ty = registry.register_type(Type::new(
+                    path,
+                    vec![],
+                    TypeDef::Tuple(t),
+                    Default::default(),
+                ));
+                let path = registry.get(ty).unwrap().path().clone();
+                Some(TypeSpec::new_from_ty(ty.into(), path))
             }
         };
 
@@ -385,8 +382,8 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .iter()
             .map(|p| {
                 let ty = resolve_ast(&p.ty, ns, &mut registry);
-
-                let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
+                let path = registry.get(ty).unwrap().path().clone();
+                let spec = TypeSpec::new_from_ty(ty.into(), path);
 
                 MessageParamSpec::new_custom(p.name_as_str().to_string(), spec)
             })
@@ -437,13 +434,10 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .fields
             .iter()
             .map(|p| {
-                let label = p.name_as_str().to_string();
-
                 let ty = resolve_ast(&p.ty, ns, &mut registry);
-
-                let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
-
-                EventParamSpec::new_custom(label, spec)
+                let path = registry.get(ty).unwrap().path().clone();
+                let spec = TypeSpec::new_from_ty(ty.into(), path);
+                EventParamSpec::new_custom(p.name_as_str().into(), spec)
                     .indexed(p.indexed)
                     .docs(vec![])
                     .done()
