@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
+use solang_parser::pt;
+
 use crate::sema::ast::Namespace;
 use crate::Target;
 
@@ -38,4 +42,17 @@ pub fn generate_abi(
             (serde_json::to_string(&abi).unwrap(), "abi")
         }
     }
+}
+
+/// Returns a set of all non-unique public function names in a given contract.
+/// These names should not be used in the metadata. Instead, the mangled versions should be used.
+pub(super) fn non_unique_function_names(contract_no: usize, ns: &Namespace) -> HashSet<&String> {
+    let mut names = HashSet::new();
+    ns.contracts[contract_no]
+        .all_functions
+        .keys()
+        .map(|f| &ns.functions[*f])
+        .filter(|f| f.is_public() && f.ty == pt::FunctionTy::Function && !names.insert(&f.name))
+        .map(|f| &f.name)
+        .collect()
 }

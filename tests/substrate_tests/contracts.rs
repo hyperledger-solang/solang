@@ -238,3 +238,81 @@ fn issue666() {
 
     assert!(runtime.vm.output.is_empty());
 }
+
+#[test]
+fn mangle_function_names_in_abi() {
+    let runtime = build_solidity(
+        r##"
+        enum E { v1, v2 }
+        struct S { int256 i; bool b; address a; }
+
+        contract C {
+            // foo_
+            function foo() public pure {}
+
+            // foo_uint256_addressArray2Array
+            function foo(uint256 i, address[2][] memory a) public pure {}
+
+            // foo_uint8Array2__int256_bool_address
+            function foo(E[2] memory e, S memory s) public pure {}
+        }"##,
+    );
+
+    let messages: Vec<String> = runtime
+        .programs
+        .get(0)
+        .unwrap()
+        .abi
+        .spec
+        .messages
+        .iter()
+        .map(|m| m.name.clone())
+        .collect();
+
+    assert!(!messages.contains(&"foo".to_string()));
+    assert!(messages.contains(&"foo_".to_string()));
+    assert!(messages.contains(&"foo_uint256_addressArray2Array".to_string()));
+    assert!(messages.contains(&"foo_uint8Array2__int256_bool_address".to_string()));
+}
+
+#[test]
+fn mangle_overloaded_function_names_in_abi() {
+    let runtime = build_solidity(
+        r##"
+        contract A {
+            function foo(bool x) public {}
+        }
+
+        contract B is A {
+            function foo(int x) public {}
+        }"##,
+    );
+
+    let messages_a: Vec<String> = runtime
+        .programs
+        .get(0)
+        .unwrap()
+        .abi
+        .spec
+        .messages
+        .iter()
+        .map(|m| m.name.clone())
+        .collect();
+
+    assert!(messages_a.contains(&"foo".to_string()));
+    assert!(!messages_a.contains(&"foo_".to_string()));
+
+    let messages_b: Vec<String> = runtime
+        .programs
+        .get(1)
+        .unwrap()
+        .abi
+        .spec
+        .messages
+        .iter()
+        .map(|m| m.name.clone())
+        .collect();
+
+    assert!(!messages_b.contains(&"foo".to_string()));
+    assert!(messages_b.contains(&"foo_bool".to_string()));
+}

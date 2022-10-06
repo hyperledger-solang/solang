@@ -106,8 +106,8 @@ pub fn resolve(
     // Now we have all the declarations, we can handle base contracts
     for (contract_no, _) in contracts {
         check_inheritance(*contract_no, ns);
-
         substrate_requires_public_functions(*contract_no, ns);
+        check_mangled_function_names(*contract_no, ns);
     }
 
     // Now we can resolve the initializers
@@ -731,6 +731,39 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     }
 
     ns.diagnostics.extend(diagnostics);
+}
+
+/// Given a contract number, check for function names conflicting with any mangled name.
+/// Only applies to public functions.
+///
+/// Note: In sema we do not care about the function name too much.
+/// The mangled name is consumed later by the ABI generation.
+fn check_mangled_function_names(contract_no: usize, ns: &mut ast::Namespace) {
+    let public_functions: Vec<usize> = ns.contracts[contract_no]
+        .all_functions
+        .keys()
+        .copied()
+        .filter(|f| ns.functions[*f].is_public() && ns.functions[*f].ty == pt::FunctionTy::Function)
+        .collect();
+
+    for f in &public_functions {
+        if let Some(offender) = public_functions
+            .iter()
+            .find(|other| ns.functions[*f].mangled_name == ns.functions[**other].name)
+        {
+            let f = &ns.functions[*f];
+            let message = format!(
+                "mangling the symbol of overloaded function '{}' with signature '{}' results in a new symbol '{}' but this symbol already exists",
+                &f.name, &f.signature, &f.mangled_name
+            );
+            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                f.loc,
+                message,
+                ns.functions[*offender].loc,
+                "this function declaration conflicts with mangled name".into(),
+            ))
+        }
+    }
 }
 
 /// A contract on substrate requires at least one public message

@@ -268,6 +268,8 @@ pub struct Function {
     pub symtable: Symtable,
     // What events are emitted by the body of this function
     pub emits_events: Vec<usize>,
+    // For overloaded functions this is the mangled (unique) name.
+    pub mangled_name: String,
 }
 
 /// This trait provides a single interface for fetching paramenters, returns and the symbol table
@@ -319,6 +321,14 @@ impl Function {
             Some(pt::Mutability::Constant(loc)) => Mutability::View(loc),
         };
 
+        let mangled_name = signature
+            .replace('(', "_")
+            .replace(')', "")
+            .replace(',', "_")
+            .replace("[]", "Array")
+            .replace('[', "Array")
+            .replace(']', "");
+
         Function {
             tags,
             loc,
@@ -340,6 +350,7 @@ impl Function {
             body: Vec::new(),
             symtable: Symtable::new(),
             emits_events: Vec::new(),
+            mangled_name,
         }
     }
 
