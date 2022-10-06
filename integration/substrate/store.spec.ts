@@ -3,7 +3,7 @@ import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from '
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
-// REGRESION metadata #666
+// REGRESSION metadata #666
 describe.skip('Deploy store contract and test', () => {
     let conn: ApiPromise;
 

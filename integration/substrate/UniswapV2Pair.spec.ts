@@ -34,11 +34,11 @@ describe.skip('UniswapV2Pair', () => {
 
         factory = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
-        const tokenA_contract = await deploy(conn, alice, 'ERC20.contract', TOTAL_SUPPLY);
+        const tokenA_contract = await deploy(conn, alice, 'ERC20.contract', BigInt(0), TOTAL_SUPPLY);
 
         const tokenA = new ContractPromise(conn, tokenA_contract.abi, tokenA_contract.address);
 
-        const tokenB_contract = await deploy(conn, alice, 'ERC20.contract', TOTAL_SUPPLY);
+        const tokenB_contract = await deploy(conn, alice, 'ERC20.contract', BigInt(0), TOTAL_SUPPLY);
 
         const tokenB = new ContractPromise(conn, tokenB_contract.abi, tokenB_contract.address);
 

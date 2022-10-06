@@ -29,23 +29,22 @@ describe('Deploy destruct contract and test', () => {
 
         expect(hello.output?.toJSON()).toBe('Hello');
 
-        // REGRESSION metadata #666
-        // let { data: { free: daveBalBefore } } = await conn.query.system.account(dave.address);
-        // let { data: { free: contractBalBefore } } = await conn.query.system.account(String(deploy_contract.address));
+        let { data: { free: daveBalBefore } } = await conn.query.system.account(dave.address);
+        let { data: { free: contractBalBefore } } = await conn.query.system.account(String(deploy_contract.address));
 
-        // let tx = contract.tx.selfterminate({ gasLimit }, dave.address);
+        let tx = contract.tx.selfterminate({ gasLimit }, dave.address);
 
-        // await transaction(tx, alice);
+        await transaction(tx, alice);
 
-        // let { data: { free: daveBalAfter } } = await conn.query.system.account(dave.address);
-        // let { data: { free: contractBalAfter } } = await conn.query.system.account(String(deploy_contract.address));
+        let { data: { free: daveBalAfter } } = await conn.query.system.account(dave.address);
+        let { data: { free: contractBalAfter } } = await conn.query.system.account(String(deploy_contract.address));
 
-        // //console.log(`bal ${daveBalBefore} and ${daveBalAfter}`);
-        // //console.log(`bal ${contractBalBefore} and ${contractBalAfter}`);
+        //console.log(`bal ${daveBalBefore} and ${daveBalAfter}`);
+        //console.log(`bal ${contractBalBefore} and ${contractBalAfter}`);
 
-        // // The contact is gone and has no balance
-        // expect(contractBalAfter.toBigInt()).toBe(0n);
-        // // Dave now has the balance previously held by the contract
-        // expect(daveBalAfter.toBigInt()).toEqual(daveBalBefore.toBigInt() + contractBalBefore.toBigInt());
+        // The contact is gone and has no balance
+        expect(contractBalAfter.toBigInt()).toBe(0n);
+        // Dave now has the balance previously held by the contract
+        expect(daveBalAfter.toBigInt()).toEqual(daveBalBefore.toBigInt() + contractBalBefore.toBigInt());
     });
 });
