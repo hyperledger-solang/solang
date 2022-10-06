@@ -7,7 +7,7 @@ fn main() {
     {
         // compile our linker
         let cxxflags = Command::new("llvm-config")
-            .args(&["--cxxflags"])
+            .args(["--cxxflags"])
             .output()
             .expect("could not execute llvm-config");
 
@@ -29,7 +29,7 @@ fn main() {
 
         // add the llvm linker
         let libdir = Command::new("llvm-config")
-            .args(&["--libdir"])
+            .args(["--libdir"])
             .output()
             .unwrap();
         let libdir = String::from_utf8(libdir.stdout).unwrap();
@@ -46,7 +46,7 @@ fn main() {
     }
 
     let output = Command::new("git")
-        .args(&["describe", "--tags"])
+        .args(["describe", "--tags"])
         .output()
         .unwrap();
     let solang_version = if output.stdout.is_empty() {

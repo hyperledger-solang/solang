@@ -1198,7 +1198,7 @@ fn create_program_address(program_id: &Account, seeds: &[&[u8]]) -> Pubkey {
         hasher.update(seed);
     }
 
-    hasher.update(&program_id);
+    hasher.update(program_id);
     hasher.update(b"ProgramDerivedAddress");
 
     let hash = hasher.finalize();
@@ -1340,9 +1340,9 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                         assert_eq!(create_account.instruction, 3);
 
                         let mut hasher = Sha256::new();
-                        hasher.update(&create_account.base);
+                        hasher.update(create_account.base);
                         hasher.update(create_account.seed);
-                        hasher.update(&create_account.program_id);
+                        hasher.update(create_account.program_id);
 
                         let hash = hasher.finalize();
 
@@ -1563,7 +1563,7 @@ impl VirtualMachine {
         self.validate_account_data_heap();
 
         if let Some((_, return_data)) = &self.return_data {
-            println!("return: {}", hex::encode(&return_data));
+            println!("return: {}", hex::encode(return_data));
         }
 
         res
@@ -1572,7 +1572,7 @@ impl VirtualMachine {
     fn constructor(&mut self, name: &str, args: &[Token]) {
         let program = &self.stack[0];
 
-        println!("constructor for {}", hex::encode(&program.data));
+        println!("constructor for {}", hex::encode(program.data));
 
         let mut calldata = VirtualMachine::input(&program.data, &self.origin, name, &[]);
 
@@ -1594,7 +1594,7 @@ impl VirtualMachine {
     ) -> Vec<Token> {
         let program = &self.stack[0];
 
-        println!("function for {}", hex::encode(&program.data));
+        println!("function for {}", hex::encode(program.data));
 
         let mut calldata = VirtualMachine::input(
             &program.data,
@@ -1624,7 +1624,7 @@ impl VirtualMachine {
         };
 
         if let Some((_, return_data)) = &self.return_data {
-            println!("return: {}", hex::encode(&return_data));
+            println!("return: {}", hex::encode(return_data));
 
             let program = &self.stack[0];
 
@@ -1645,7 +1645,7 @@ impl VirtualMachine {
     ) -> Result<u64, EbpfError<UserError>> {
         let program = &self.stack[0];
 
-        println!("function for {}", hex::encode(&program.data));
+        println!("function for {}", hex::encode(program.data));
 
         let mut calldata = VirtualMachine::input(
             &program.data,
@@ -1688,12 +1688,12 @@ impl VirtualMachine {
 
         let seeds_len = seeds.len() as u8;
 
-        calldata.extend(&[seeds_len]);
+        calldata.extend([seeds_len]);
 
         for (_, seed) in seeds {
             let seed_len = seed.len() as u8;
 
-            calldata.extend(&[seed_len]);
+            calldata.extend([seed_len]);
             calldata.extend_from_slice(seed);
         }
 

@@ -228,7 +228,7 @@ fn issue666() {
 
     let flipper_address = runtime.vm.account;
 
-    println!("flipper_address={}", hex::encode(&flipper_address));
+    println!("flipper_address={}", hex::encode(flipper_address));
 
     runtime.set_program(1);
 

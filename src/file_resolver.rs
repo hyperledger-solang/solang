@@ -96,7 +96,7 @@ impl FileResolver {
         }
 
         // read the file
-        let mut f = match File::open(&path) {
+        let mut f = match File::open(path) {
             Err(err_info) => {
                 return Err(format!(
                     "cannot open file '{}': {}",
