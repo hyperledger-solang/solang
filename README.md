@@ -1,3 +1,5 @@
+<img src="docs//hl_solang_horizontal-color.svg" alt="Solang Logo" width="75%"/>
+
 # solang - Solidity Compiler for Solana and Substrate
 
 [![Discord](https://img.shields.io/discord/905194001349627914?logo=Hyperledger&style=plastic)](https://discord.gg/jhn4rkqNsT)
