@@ -56,7 +56,7 @@ convert_case = "0.5"
 
 ink_metadata = {git = "https://github.com/paritytech/ink.git", branch = "cl/runtime-metadata"}
 ink_primitives = {git = "https://github.com/paritytech/ink.git", branch = "cl/runtime-metadata"}
-scale-info = {git = "https://github.com/paritytech/scale-info.git", branch = "aj/custom-meta-types"}
+scale-info = "2"
 
 
 [dev-dependencies]
