@@ -92,4 +92,4 @@ llvm = ["inkwell", "libc"]
 members = ["solang-parser"]
 
 [patch.crates-io]
-scale-info = {git = "https://github.com/paritytech/scale-info.git", branch = "aj/custom-meta-types"}
+scale-info = {git = "https://github.com/paritytech/scale-info", branch = "aj/custom-meta-types"}
