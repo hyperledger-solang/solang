@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-use std::collections::HashMap;
-
 use contract_metadata::{
     CodeHash, Compiler, Contract, ContractMetadata, Language, Source, SourceCompiler,
     SourceLanguage, SourceWasm,
@@ -93,20 +91,8 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
     registry.register_type(ty)
 }
 
-type Cache = HashMap<ast::Type, u32>;
-
 /// given an `ast::Type`, find and register the `scale_info::Type` definition in the `PortableRegistry`
-fn resolve_ast(
-    ty: &ast::Type,
-    ns: &ast::Namespace,
-    registry: &mut PortableRegistryBuilder,
-    cache: &mut Cache,
-) -> u32 {
-    // early return if already cached
-    if let Some(ty) = cache.get(ty) {
-        return ty.clone();
-    }
-
+fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegistryBuilder) -> u32 {
     match ty {
         //  should reflect address_length for different substrate runtime
         ast::Type::Address(_) | ast::Type::Contract(_) => {
@@ -119,7 +105,6 @@ fn resolve_ast(
                 ),
                 ns,
                 registry,
-                cache,
             );
 
             // substituded to struct { AccountId }
@@ -144,7 +129,7 @@ fn resolve_ast(
         // resolve from the deepest element to outside
         // [[A; a: usize]; b: usize] -> Array(A_id, vec![a, b])
         ast::Type::Array(ty, dims) => {
-            let mut ty = resolve_ast(ty, ns, registry, cache);
+            let mut ty = resolve_ast(ty, ns, registry);
 
             for d in dims {
                 if let ast::ArrayLength::Fixed(d) = d {
@@ -180,14 +165,12 @@ fn resolve_ast(
             ),
             ns,
             registry,
-            cache,
         ),
         // substituded to Vec<u8>
         ast::Type::DynamicBytes => resolve_ast(
             &ast::Type::Array(Box::new(ast::Type::Uint(8)), vec![ArrayLength::Dynamic]),
             ns,
             registry,
-            cache,
         ),
 
         ast::Type::Struct(s) => {
@@ -197,7 +180,7 @@ fn resolve_ast(
                 .fields
                 .iter()
                 .map(|f| {
-                    let f_ty = resolve_ast(&f.ty, ns, registry, cache);
+                    let f_ty = resolve_ast(&f.ty, ns, registry);
 
                     Field::new(Some(f.name_as_str().to_string()), f_ty.into(), None, vec![])
                 })
@@ -236,14 +219,14 @@ fn resolve_ast(
             let ty = Type::new(path, vec![], TypeDef::Variant(v), Default::default());
             registry.register_type(ty)
         }
-        ast::Type::Ref(ty) => resolve_ast(ty, ns, registry, cache),
-        ast::Type::StorageRef(_, ty) => resolve_ast(ty, ns, registry, cache),
-        ast::Type::InternalFunction { .. } => resolve_ast(&ast::Type::Uint(8), ns, registry, cache),
+        ast::Type::Ref(ty) => resolve_ast(ty, ns, registry),
+        ast::Type::StorageRef(_, ty) => resolve_ast(ty, ns, registry),
+        ast::Type::InternalFunction { .. } => resolve_ast(&ast::Type::Uint(8), ns, registry),
         ast::Type::ExternalFunction { .. } => {
             let fields = [ast::Type::Address(false), ast::Type::Uint(32)]
                 .into_iter()
                 .map(|ty| {
-                    let ty = resolve_ast(&ty, ns, registry, cache);
+                    let ty = resolve_ast(&ty, ns, registry);
 
                     Field::new(
                         Default::default(),
@@ -261,7 +244,7 @@ fn resolve_ast(
             let ty = Type::new(path, vec![], TypeDef::Composite(c), Default::default());
             registry.register_type(ty)
         }
-        ast::Type::UserType(no) => resolve_ast(&ns.user_types[*no].ty, ns, registry, cache),
+        ast::Type::UserType(no) => resolve_ast(&ns.user_types[*no].ty, ns, registry),
 
         _ => unreachable!(),
     }
@@ -271,9 +254,6 @@ fn resolve_ast(
 pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
     // manually building the PortableRegistry
     let mut registry = PortableRegistryBuilder::new();
-
-    // type cache to avoid resolving already resolved `ast::Type`
-    let mut cache = Cache::new();
 
     let fields: Vec<FieldLayout<PortableForm>> = ns.contracts[contract_no]
         .layout
@@ -287,7 +267,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             if !var.ty.contains_mapping(ns) && var.ty.fits_in_memory(ns) {
                 let layout_key = LayoutKey::new(layout.slot.to_u32().unwrap());
 
-                let ty = resolve_ast(&layout.ty, ns, &mut registry, &mut cache);
+                let ty = resolve_ast(&layout.ty, ns, &mut registry);
 
                 let leaf = LeafLayout::new_from_ty(layout_key, ty.into());
 
@@ -309,7 +289,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .params
             .iter()
             .map(|p| {
-                let ty = resolve_ast(&p.ty, ns, &mut registry, &mut cache);
+                let ty = resolve_ast(&p.ty, ns, &mut registry);
 
                 //let spec = TypeSpec::new_from_ty(ty.into(), p.ty.path().clone());
                 let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
@@ -361,7 +341,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         let ret_spec: Option<TypeSpec<PortableForm>> = match f.returns.len() {
             0 => None,
             1 => {
-                let ty = resolve_ast(&f.returns[0].ty, ns, &mut registry, &mut cache);
+                let ty = resolve_ast(&f.returns[0].ty, ns, &mut registry);
 
                 let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
 
@@ -373,7 +353,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     .returns
                     .iter()
                     .map(|r_p| {
-                        let ty = resolve_ast(&r_p.ty, ns, &mut registry, &mut cache);
+                        let ty = resolve_ast(&r_p.ty, ns, &mut registry);
 
                         ty.into()
                     })
@@ -404,7 +384,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .params
             .iter()
             .map(|p| {
-                let ty = resolve_ast(&p.ty, ns, &mut registry, &mut cache);
+                let ty = resolve_ast(&p.ty, ns, &mut registry);
 
                 let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
 
@@ -459,7 +439,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .map(|p| {
                 let label = p.name_as_str().to_string();
 
-                let ty = resolve_ast(&p.ty, ns, &mut registry, &mut cache);
+                let ty = resolve_ast(&p.ty, ns, &mut registry);
 
                 let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
 
