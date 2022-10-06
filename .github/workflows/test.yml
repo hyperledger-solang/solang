@@ -60,7 +60,7 @@ jobs:
       with:
         submodules: recursive
     - name: Rust stable
-      run: rustup default 1.59.0
+      run: rustup default 1.63.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -83,7 +83,7 @@ jobs:
       with:
         submodules: recursive
     - name: Rust stable
-      run: rustup default 1.59.0
+      run: rustup default 1.63.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
