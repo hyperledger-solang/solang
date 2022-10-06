@@ -17,42 +17,44 @@ use serde_json::{Map, Value};
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use scale_info::{
-    form::PortableForm, registry::PortableType, Field, Path, PortableRegistry, Type, TypeDef,
-    TypeDefArray, TypeDefComposite, TypeDefPrimitive, TypeDefSequence, TypeDefTuple,
-    TypeDefVariant, Variant,
+    form::PortableForm, Field, Path, PortableRegistryBuilder, Type, TypeDef, TypeDefArray,
+    TypeDefComposite, TypeDefPrimitive, TypeDefSequence, TypeDefTuple, TypeDefVariant, Variant,
 };
 use semver::Version;
 use solang_parser::pt;
 
+use super::non_unique_function_names;
 use crate::sema::{
     ast::{self, ArrayLength, EventDecl, Function},
     tags::render,
 };
 
-fn path_from_str(s: impl Into<String>) -> Path<PortableForm> {
-    serde_json::from_value::<Path<PortableForm>>(serde_json::json!(vec![s.into()])).unwrap()
+macro_rules! path {
+    ($( $segments:expr ),*) => {
+        Path::new_custom([$($segments),*].iter().map(ToString::to_string).collect::<Vec<_>>())
+    }
 }
 
-fn primitive_to_ty(ty: &ast::Type, registry: &mut PortableRegistry) -> Type<PortableForm> {
+fn primitive_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
     match ty {
         ast::Type::Int(_) | ast::Type::Uint(_) => int_to_ty(ty, registry),
-        ast::Type::Bool => Type::new(
-            path_from_str("bool"),
+        ast::Type::Bool => registry.register_type(Type::new(
+            path!("bool"),
             vec![],
             TypeDef::Primitive(TypeDefPrimitive::Bool),
             Default::default(),
-        ),
-        ast::Type::String => Type::new(
-            path_from_str("string"),
+        )),
+        ast::Type::String => registry.register_type(Type::new(
+            path!("string"),
             vec![],
             TypeDef::Primitive(TypeDefPrimitive::Str),
             Default::default(),
-        ),
+        )),
         _ => unreachable!("non primitive types"),
     }
 }
 
-fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistry) -> Type<PortableForm> {
+fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
     let (signed, scalety) = match ty {
         ast::Type::Uint(n) => ('u', n.next_power_of_two()),
         ast::Type::Int(n) => ('i', n.next_power_of_two()),
@@ -84,27 +86,22 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistry) -> Type<PortableFo
         }
     };
 
-    let path = serde_json::from_value::<Path<PortableForm>>(serde_json::json!(vec![format!(
-        "{signed}{scalety}"
-    )]))
-    .unwrap();
+    let path = path!(format!("{signed}{scalety}"));
 
     let ty = Type::new(path, vec![], TypeDef::Primitive(def), Default::default());
 
-    get_or_register_ty(&ty, registry);
-
-    ty
+    registry.register_type(ty)
 }
 
-type Cache = HashMap<ast::Type, PortableType>;
+type Cache = HashMap<ast::Type, u32>;
 
 /// given an `ast::Type`, find and register the `scale_info::Type` definition in the `PortableRegistry`
 fn resolve_ast(
     ty: &ast::Type,
     ns: &ast::Namespace,
-    registry: &mut PortableRegistry,
+    registry: &mut PortableRegistryBuilder,
     cache: &mut Cache,
-) -> PortableType {
+) -> u32 {
     // early return if already cached
     if let Some(ty) = cache.get(ty) {
         return ty.clone();
@@ -126,27 +123,22 @@ fn resolve_ast(
             );
 
             // substituded to struct { AccountId }
-            let field = Field::new(None, address_ty.id().into(), None, vec![]);
+            let field = Field::new(None, address_ty.into(), None, vec![]);
 
             let c = TypeDefComposite::new(vec![field]);
 
-            let path = serde_json::from_value::<Path<PortableForm>>(serde_json::json!([
-                "ink_env",
-                "types",
-                "AccountId"
-            ]))
-            .unwrap();
+            let path = path!("ink_env", "types", "AccountId");
 
             let ty: Type<PortableForm> =
                 Type::new(path, vec![], TypeDef::Composite(c), Default::default());
 
-            get_or_register_ty(&ty, registry)
+            //get_or_register_ty(&ty, registry)
+            registry.register_type(ty)
         }
 
         // primitive types
         ast::Type::Bool | ast::Type::Int(_) | ast::Type::Uint(_) | ast::Type::String => {
-            let ty = primitive_to_ty(ty, registry);
-            get_or_register_ty(&ty, registry)
+            primitive_to_ty(ty, registry)
         }
 
         // resolve from the deepest element to outside
@@ -156,31 +148,25 @@ fn resolve_ast(
 
             for d in dims {
                 if let ast::ArrayLength::Fixed(d) = d {
-                    let def = TypeDefArray::new(d.to_u32().unwrap(), ty.id().into());
+                    let def = TypeDefArray::new(d.to_u32().unwrap(), ty.into());
 
                     // resolve current depth
-                    ty = get_or_register_ty(
-                        &Type::new(
-                            Default::default(),
-                            vec![],
-                            TypeDef::Array(def),
-                            Default::default(),
-                        ),
-                        registry,
-                    );
+                    ty = registry.register_type(Type::new(
+                        Default::default(),
+                        vec![],
+                        TypeDef::Array(def),
+                        Default::default(),
+                    ));
                 } else {
-                    let def = TypeDefSequence::new(ty.id().into());
+                    let def = TypeDefSequence::new(ty.into());
 
                     // resolve current depth
-                    ty = get_or_register_ty(
-                        &Type::new(
-                            Default::default(),
-                            vec![],
-                            TypeDef::Sequence(def),
-                            Default::default(),
-                        ),
-                        registry,
-                    );
+                    ty = registry.register_type(Type::new(
+                        Default::default(),
+                        vec![],
+                        TypeDef::Sequence(def),
+                        Default::default(),
+                    ));
                 }
             }
 
@@ -213,23 +199,17 @@ fn resolve_ast(
                 .map(|f| {
                     let f_ty = resolve_ast(&f.ty, ns, registry, cache);
 
-                    Field::new(
-                        Some(f.name_as_str().to_string()),
-                        f_ty.id().into(),
-                        None,
-                        vec![],
-                    )
+                    Field::new(Some(f.name_as_str().to_string()), f_ty.into(), None, vec![])
                 })
                 .collect::<Vec<Field<PortableForm>>>();
 
-            let c = TypeDefComposite::<PortableForm> { fields };
+            //let c = TypeDefComposite::<PortableForm> { fields };
+            let c = TypeDefComposite::new(fields);
 
-            let path: Path<PortableForm> =
-                serde_json::from_value(serde_json::json!([def.name])).unwrap();
+            let path = path!(&def.name);
 
             let ty = Type::new(path, vec![], TypeDef::Composite(c), Default::default());
-
-            get_or_register_ty(&ty, registry)
+            registry.register_type(ty)
         }
         ast::Type::Enum(n) => {
             let decl = &ns.enums[*n];
@@ -251,12 +231,10 @@ fn resolve_ast(
 
             let v = TypeDefVariant::new(variants);
 
-            let path: Path<PortableForm> =
-                serde_json::from_value(serde_json::json!([decl.name])).unwrap();
+            let path = path!(&decl.name);
 
             let ty = Type::new(path, vec![], TypeDef::Variant(v), Default::default());
-
-            get_or_register_ty(&ty, registry)
+            registry.register_type(ty)
         }
         ast::Type::Ref(ty) => resolve_ast(ty, ns, registry, cache),
         ast::Type::StorageRef(_, ty) => resolve_ast(ty, ns, registry, cache),
@@ -269,21 +247,19 @@ fn resolve_ast(
 
                     Field::new(
                         Default::default(),
-                        ty.id().into(),
+                        ty.into(),
                         Default::default(),
                         Default::default(),
                     )
                 })
                 .collect::<Vec<_>>();
 
-            let c = TypeDefComposite { fields };
+            let c = TypeDefComposite::new(fields);
 
-            let path: Path<PortableForm> =
-                serde_json::from_value(serde_json::json!(["ExternalFunction"])).unwrap();
+            let path = path!("ExternalFunction");
 
             let ty = Type::new(path, vec![], TypeDef::Composite(c), Default::default());
-
-            get_or_register_ty(&ty, registry)
+            registry.register_type(ty)
         }
         ast::Type::UserType(no) => resolve_ast(&ns.user_types[*no].ty, ns, registry, cache),
 
@@ -291,25 +267,10 @@ fn resolve_ast(
     }
 }
 
-/// register new type if not already specified, type_id starts from 0
-fn get_or_register_ty(ty: &Type<PortableForm>, registry: &mut PortableRegistry) -> PortableType {
-    if let Some(t) = registry.types().iter().find(|e| e.ty() == ty) {
-        t.clone()
-    } else {
-        let id = registry.types().len() as u32;
-        let pty = PortableType::new_custom(id, ty.clone());
-        let mut types: Vec<PortableType> = Vec::from(registry.types());
-        types.push(pty.clone());
-        *registry = PortableRegistry::new_from_types(types);
-
-        pty
-    }
-}
-
 /// generate `InkProject` from `ast::Type` and `ast::Namespace`
 pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
     // manually building the PortableRegistry
-    let mut registry = PortableRegistry::new_from_types(vec![]);
+    let mut registry = PortableRegistryBuilder::new();
 
     // type cache to avoid resolving already resolved `ast::Type`
     let mut cache = Cache::new();
@@ -328,7 +289,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
 
                 let ty = resolve_ast(&layout.ty, ns, &mut registry, &mut cache);
 
-                let leaf = LeafLayout::new_from_ty(layout_key, ty.id().into());
+                let leaf = LeafLayout::new_from_ty(layout_key, ty.into());
 
                 let f = FieldLayout::new_custom(var.name.clone(), Layout::Leaf(leaf));
 
@@ -350,17 +311,18 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .map(|p| {
                 let ty = resolve_ast(&p.ty, ns, &mut registry, &mut cache);
 
-                let spec = TypeSpec::new_from_ty(ty.id().into(), ty.ty().path().clone());
+                //let spec = TypeSpec::new_from_ty(ty.into(), p.ty.path().clone());
+                let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
 
                 MessageParamSpec::new_custom(p.name_as_str().to_string(), spec)
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
-        ConstructorSpec::from_label("new")
+        ConstructorSpec::from_label("new".to_string())
             .selector(f.selector().try_into().unwrap())
             .payable(payable)
             .args(args)
-            .docs(vec![render(&f.tags).as_str()])
+            .docs(vec![render(&f.tags)])
             .done()
     };
 
@@ -387,6 +349,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .map(|f| f_to_constructor(f))
         .collect::<Vec<ConstructorSpec<PortableForm>>>();
 
+    let conflicting_names = non_unique_function_names(contract_no, ns);
     let mut f_to_message = |f: &Function| -> MessageSpec<PortableForm> {
         let payable = matches!(f.mutability, ast::Mutability::Payable(_));
 
@@ -400,7 +363,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             1 => {
                 let ty = resolve_ast(&f.returns[0].ty, ns, &mut registry, &mut cache);
 
-                let spec = TypeSpec::new_from_ty(ty.id().into(), ty.ty().path().clone());
+                let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
 
                 Some(spec)
             }
@@ -412,28 +375,25 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     .map(|r_p| {
                         let ty = resolve_ast(&r_p.ty, ns, &mut registry, &mut cache);
 
-                        ty.id().into()
+                        ty.into()
                     })
                     .collect::<Vec<_>>();
 
                 let t = TypeDefTuple::new_custom(fields);
 
-                let path = [
+                let path = path!(
                     &ns.contracts[contract_no].name,
                     &f.name,
-                    &"return_type".into(),
-                ];
+                    &"return_type".into()
+                );
 
-                let display_name: Path<PortableForm> =
-                    serde_json::from_value(serde_json::json!(path)).unwrap();
+                let ty = Type::new(path, vec![], TypeDef::Tuple(t), Default::default());
 
-                let ty = Type::new(display_name, vec![], TypeDef::Tuple(t), Default::default());
-
-                let ty = get_or_register_ty(&ty, &mut registry);
+                let ty = registry.register_type(ty);
 
                 Some(TypeSpec::new_from_ty(
-                    ty.id().into(),
-                    ty.ty().path().clone(),
+                    ty.into(),
+                    Path::new_custom(vec!["FIXME".into()]),
                 ))
             }
         };
@@ -446,19 +406,24 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .map(|p| {
                 let ty = resolve_ast(&p.ty, ns, &mut registry, &mut cache);
 
-                let spec = TypeSpec::new_from_ty(ty.id().into(), ty.ty().path().clone());
+                let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
 
                 MessageParamSpec::new_custom(p.name_as_str().to_string(), spec)
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
-        MessageSpec::from_label(&f.name)
+        let label = conflicting_names
+            .contains(&f.name)
+            .then(|| &f.mangled_name)
+            .unwrap_or(&f.name)
+            .into();
+        MessageSpec::from_label(label)
             .selector(f.selector().try_into().unwrap())
             .mutates(mutates)
             .payable(payable)
             .args(args)
             .returns(ret_type)
-            .docs(vec![render(&f.tags).as_str()])
+            .docs(vec![render(&f.tags)])
             .done()
     };
 
@@ -496,7 +461,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
 
                 let ty = resolve_ast(&p.ty, ns, &mut registry, &mut cache);
 
-                let spec = TypeSpec::new_from_ty(ty.id().into(), ty.ty().path().clone());
+                let spec = TypeSpec::new_from_ty(ty.into(), Path::new_custom(vec!["FIXME".into()]));
 
                 EventParamSpec::new_custom(label, spec)
                     .indexed(p.indexed)
@@ -505,9 +470,9 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             })
             .collect::<Vec<_>>();
 
-        EventSpec::new(&e.name)
+        EventSpec::new(e.name.clone())
             .args(args)
-            .docs(vec![render(&e.tags).as_str()])
+            .docs(vec![render(&e.tags)])
             .done()
     };
 
@@ -525,10 +490,10 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .constructors(constructors)
         .messages(messages)
         .events(events)
-        .docs(vec![render(&ns.contracts[contract_no].tags).as_str()])
+        .docs(vec![render(&ns.contracts[contract_no].tags)])
         .done();
 
-    InkProject::new_portable(layout, spec, registry)
+    InkProject::new_portable(layout, spec, registry.finish())
 }
 
 fn tags(contract_no: usize, tagname: &str, ns: &ast::Namespace) -> Vec<String> {
@@ -545,7 +510,7 @@ fn tags(contract_no: usize, tagname: &str, ns: &ast::Namespace) -> Vec<String> {
         .collect()
 }
 
-/// Generate the metadata for Substrate 3.0
+/// Generate the metadata for Substrate 4.0
 pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
     let hash = blake2_rfc::blake2b::blake2b(32, &[], code);
     let version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
