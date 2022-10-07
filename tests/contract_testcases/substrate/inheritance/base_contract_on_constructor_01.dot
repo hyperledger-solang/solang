@@ -5,7 +5,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	contract_5 [label="contract b\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_01.sol:6:9-8:10"]
 	contract_6 [label="contract apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_01.sol:10:9-14:10"]
 	base [label="base base\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_01.sol:10:35-39"]
-	node_8 [label="constructor \ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_01.sol:11:13-35\nsignature ()\nvisibility public\nmutability nonpayable"]
+	new [label="constructor new\ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_01.sol:11:13-35\nsignature new()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found abstract contract 'base'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_01.sol:2:9-4:10"]
 	diagnostic_11 [label="found abstract contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_01.sol:6:9-8:10"]
 	diagnostic_12 [label="found abstract contract 'apex'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_01.sol:10:9-14:10"]
@@ -17,7 +17,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	contracts -> contract_5
 	contracts -> contract_6
 	contract_6 -> base [label="base"]
-	contract_6 -> node_8 [label="constructor"]
+	contract_6 -> new [label="constructor"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_11 [label="Debug"]
 	diagnostics -> diagnostic_12 [label="Debug"]

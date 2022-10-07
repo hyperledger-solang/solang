@@ -58,7 +58,7 @@ pub fn contract_function(
                 ));
                 return None;
             }
-            // Allow setting a name in Substrate (currently only used during metadata generation).
+            // Allow setting a name in Substrate to be used during metadata generation.
             if func.name.is_some() && !ns.target.is_substrate() {
                 ns.diagnostics.push(Diagnostic::error(
                     func.loc,
@@ -512,10 +512,28 @@ pub fn contract_function(
         return None;
     }
 
-    let name = match &func.name {
-        Some(s) => s.name.to_owned(),
-        None => "".to_owned(),
-    };
+    let name = func
+        .name
+        .as_ref()
+        .map(|s| s.name.as_str())
+        .unwrap_or_else(|| {
+            if ns.target.is_substrate() && func.ty == pt::FunctionTy::Constructor {
+                "new"
+            } else {
+                ""
+            }
+        })
+        .to_owned();
+    //let name = match &func.name {
+    //    Some(s) => s.name.to_owned(),
+    //    None => {
+    //        if ns.target.is_substrate() && func.ty == pt::FunctionTy::Constructor {
+    //            "new".to_owned()
+    //        } else {
+    //            "".to_owned()
+    //        }
+    //    }
+    //};
 
     let bases: Vec<String> = contract
         .base
@@ -552,12 +570,12 @@ pub fn contract_function(
     fdecl.selector = selector;
 
     if func.ty == pt::FunctionTy::Constructor {
-        // In the eth solidity and Substrate, only one constructor is allowed
-        //
-        // The Substrate runtime supports multiple constructors, but they also need to have a name.
-        // Currently, solang does not support named constructors.
-        // This is to prevent conflicts (overloaded constructors would have the same name).
-        if matches!(ns.target, Target::EVM | Target::Substrate { .. }) {
+        // All constructors have a name in substrate. Default is "new".
+        if ns.target.is_substrate() && fdecl.name == "" {
+            fdecl.name = "new".into()
+        }
+        // In the eth solidity only one constructor is allowed
+        if ns.target == Target::EVM {
             if let Some(prev_func_no) = ns.contracts[contract_no]
                 .functions
                 .iter()

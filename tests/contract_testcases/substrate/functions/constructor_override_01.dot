@@ -1,12 +1,14 @@
 strict digraph "tests/contract_testcases/substrate/functions/constructor_override_01.sol" {
 	contract [label="contract C\ntests/contract_testcases/substrate/functions/constructor_override_01.sol:1:1-5:2"]
-	node_2 [label="constructor \ncontract: C\ntests/contract_testcases/substrate/functions/constructor_override_01.sol:2:5-26\nsignature ()\nvisibility public\nmutability payable"]
+	new [label="constructor new\ncontract: C\ntests/contract_testcases/substrate/functions/constructor_override_01.sol:2:5-26\nsignature new()\nvisibility public\nmutability payable"]
+	new_3 [label="constructor new\ncontract: C\ntests/contract_testcases/substrate/functions/constructor_override_01.sol:4:5-37\nsignature new(uint256)\nvisibility public\nmutability payable"]
+	parameters [label="parameters\nuint256 foo"]
 	diagnostic [label="found abstract contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/functions/constructor_override_01.sol:1:1-5:2"]
-	diagnostic_5 [label="constructor already defined\nlevel Error\ntests/contract_testcases/substrate/functions/constructor_override_01.sol:4:5-37"]
-	note [label="location of previous definition\ntests/contract_testcases/substrate/functions/constructor_override_01.sol:2:5-26"]
+	diagnostic_7 [label="function parameter 'foo' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/constructor_override_01.sol:4:25-28"]
 	contracts -> contract
-	contract -> node_2 [label="constructor"]
+	contract -> new [label="constructor"]
+	contract -> new_3 [label="constructor"]
+	new_3 -> parameters [label="parameters"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_5 [label="Error"]
-	diagnostic_5 -> note [label="note"]
+	diagnostics -> diagnostic_7 [label="Warning"]
 }

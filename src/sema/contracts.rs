@@ -107,7 +107,7 @@ pub fn resolve(
     for (contract_no, _) in contracts {
         check_inheritance(*contract_no, ns);
         substrate_requires_public_functions(*contract_no, ns);
-        substrate_unique_function_names(*contract_no, ns);
+        substrate_unique_constructor_names(*contract_no, ns);
         check_mangled_function_names(*contract_no, ns);
     }
 
@@ -744,7 +744,13 @@ fn check_mangled_function_names(contract_no: usize, ns: &mut ast::Namespace) {
         .all_functions
         .keys()
         .copied()
-        .filter(|f| ns.functions[*f].is_public() && ns.functions[*f].ty == pt::FunctionTy::Function)
+        .filter(|f| ns.functions[*f].is_public())
+        .filter(|f| {
+            matches!(
+                ns.functions[*f].ty,
+                pt::FunctionTy::Function | pt::FunctionTy::Constructor
+            )
+        })
         .collect();
 
     for f in &public_functions {
@@ -792,17 +798,24 @@ fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespa
     }
 }
 
-/// In substrate, a any function within a contract must have a unique name.
-fn substrate_unique_function_names(contract_no: usize, ns: &mut ast::Namespace) {
+/// Constructors and functions are no different in Substrate.
+/// This function checks that all constructors and function names are unique.
+/// Overloading (mangled function or constructor names) is taken into account.
+fn substrate_unique_constructor_names(contract_no: usize, ns: &mut ast::Namespace) {
     if !ns.target.is_substrate() || ns.diagnostics.any_errors() {
         return;
     }
 
-    let mut functions = HashSet::new();
+    let mut functions = HashMap::new();
     for f in ns.contracts[contract_no].functions.iter() {
         let func = &ns.functions[*f];
-        if !functions.insert(&func.name) {
-            todo!("{}", &func.name)
+        if let Some(offender) = functions.insert(&func.mangled_name, *f) {
+            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                func.loc,
+                format!("Non unique function or constructor name '{}'", &func.name),
+                ns.functions[offender].loc,
+                format!("previous declaration of '{}'", &ns.functions[offender].name),
+            ))
         }
     }
 }
