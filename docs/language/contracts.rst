@@ -27,6 +27,7 @@ If a contract is expected to hold receive value on instantiation, the constructo
     In Substrate, constructors have a name. Solang allows to name constructors in the substrate target:
 
     .. code-block:: solidity
+ 
         contract Foo {
             constructor my_new_foo() {}
         }
