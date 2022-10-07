@@ -1,10 +1,10 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/base_contract.sol" {
 	contract [label="contract base\ntests/contract_testcases/substrate/inheritance/base_contract.sol:2:9-4:10"]
-	node_2 [label="constructor \ncontract: base\ntests/contract_testcases/substrate/inheritance/base_contract.sol:3:13-35\nsignature (uint64)\nvisibility public\nmutability nonpayable"]
+	new [label="constructor new\ncontract: base\ntests/contract_testcases/substrate/inheritance/base_contract.sol:3:13-35\nsignature new(uint64)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint64 a"]
 	contract_4 [label="contract apex\ntests/contract_testcases/substrate/inheritance/base_contract.sol:6:9-11:10"]
 	base [label="base base\ntests/contract_testcases/substrate/inheritance/base_contract.sol:6:26-30"]
-	node_6 [label="constructor \ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract.sol:7:13-27\nsignature ()\nvisibility public\nmutability nonpayable"]
+	new_6 [label="constructor new\ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract.sol:7:13-27\nsignature new()\nvisibility public\nmutability nonpayable"]
 	foo [label="function foo\ncontract: apex\ntests/contract_testcases/substrate/inheritance/base_contract.sol:8:13-69\nsignature foo(uint64)\nvisibility external\nmutability nonpayable\nvirtual"]
 	parameters_8 [label="parameters\nuint64 a"]
 	returns [label="returns\nuint64 "]
@@ -18,11 +18,11 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract.sol
 	diagnostic_18 [label="missing arguments to base contract 'base' constructor\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract.sol:6:9-11:10"]
 	diagnostic_19 [label="missing arguments to contract 'base' constructor\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract.sol:7:13-27"]
 	contracts -> contract
-	contract -> node_2 [label="constructor"]
-	node_2 -> parameters [label="parameters"]
+	contract -> new [label="constructor"]
+	new -> parameters [label="parameters"]
 	contracts -> contract_4
 	contract_4 -> base [label="base"]
-	contract_4 -> node_6 [label="constructor"]
+	contract_4 -> new_6 [label="constructor"]
 	contract_4 -> foo [label="function"]
 	foo -> parameters_8 [label="parameters"]
 	foo -> returns [label="returns"]

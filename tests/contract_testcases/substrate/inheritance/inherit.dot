@@ -1,13 +1,13 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/inherit.sol" {
 	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit.sol:2:9-5:10"]
-	node_2 [label="constructor \ncontract: a\ntests/contract_testcases/substrate/inheritance/inherit.sol:3:13-41\nsignature (int256)\nvisibility public\nmutability nonpayable"]
+	new [label="constructor new\ncontract: a\ntests/contract_testcases/substrate/inheritance/inherit.sol:3:13-41\nsignature new(int256)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nint256 arg1"]
 	diagnostic [label="found contract 'a'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/inherit.sol:2:9-5:10"]
 	diagnostic_6 [label="contract 'a' cannot have itself as a base contract\nlevel Error\ntests/contract_testcases/substrate/inheritance/inherit.sol:2:23-24"]
 	diagnostic_7 [label="'public': visibility for constructors is ignored\nlevel Warning\ntests/contract_testcases/substrate/inheritance/inherit.sol:3:35-41"]
 	contracts -> contract
-	contract -> node_2 [label="constructor"]
-	node_2 -> parameters [label="parameters"]
+	contract -> new [label="constructor"]
+	new -> parameters [label="parameters"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_6 [label="Error"]
 	diagnostics -> diagnostic_7 [label="Warning"]

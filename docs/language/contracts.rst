@@ -18,18 +18,10 @@ like so:
       }
   }
 
-A constructor does not have a name and may have any number of arguments. If a constructor has arguments,
-then when the contract is deployed then those arguments must be supplied.
+In Substrate, constructor can optionally have a name and may have any number of arguments.
+If a constructor has arguments, then when the contract is deployed then those arguments must be supplied.
 
 If a contract is expected to hold receive value on instantiation, the constructor should be declared ``payable``.
-
-.. note::
-
-  Parity Substrate allows multiple constructors to be defined, which is not true for
-  Solana. So, when building for Substrate, multiple constructors can be
-  defined as long as their argument list is different (i.e. overloaded).
-
-  When the contract is deployed in the Polkadot UI, the user can select the constructor to be used.
 
 Instantiation using new
 _______________________

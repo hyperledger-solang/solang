@@ -58,7 +58,8 @@ pub fn contract_function(
                 ));
                 return None;
             }
-            if func.name.is_some() {
+            // Allow setting a name in Substrate to be used during metadata generation.
+            if func.name.is_some() && !ns.target.is_substrate() {
                 ns.diagnostics.push(Diagnostic::error(
                     func.loc,
                     "constructor cannot have a name".to_string(),
@@ -511,10 +512,28 @@ pub fn contract_function(
         return None;
     }
 
-    let name = match &func.name {
-        Some(s) => s.name.to_owned(),
-        None => "".to_owned(),
-    };
+    let name = func
+        .name
+        .as_ref()
+        .map(|s| s.name.as_str())
+        .unwrap_or_else(|| {
+            if ns.target.is_substrate() && func.ty == pt::FunctionTy::Constructor {
+                "new"
+            } else {
+                ""
+            }
+        })
+        .to_owned();
+    //let name = match &func.name {
+    //    Some(s) => s.name.to_owned(),
+    //    None => {
+    //        if ns.target.is_substrate() && func.ty == pt::FunctionTy::Constructor {
+    //            "new".to_owned()
+    //        } else {
+    //            "".to_owned()
+    //        }
+    //    }
+    //};
 
     let bases: Vec<String> = contract
         .base
@@ -551,7 +570,11 @@ pub fn contract_function(
     fdecl.selector = selector;
 
     if func.ty == pt::FunctionTy::Constructor {
-        // In the eth solidity, only one constructor is allowed
+        // All constructors have a name in substrate. Default is "new".
+        if ns.target.is_substrate() && fdecl.name == "" {
+            fdecl.name = "new".into()
+        }
+        // In the eth solidity only one constructor is allowed
         if ns.target == Target::EVM {
             if let Some(prev_func_no) = ns.contracts[contract_no]
                 .functions
