@@ -453,11 +453,12 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
             let payable = matches!(f.mutability, ast::Mutability::Payable(_));
 
             Message {
-                name: conflicting_names
-                    .contains(&f.name)
-                    .then(|| &f.mangled_name)
-                    .unwrap_or(&f.name)
-                    .into(),
+                name: if conflicting_names.contains(&f.name) {
+                    &f.mangled_name
+                } else {
+                    &f.name
+                }
+                .into(),
                 mutates: matches!(
                     f.mutability,
                     ast::Mutability::Payable(_) | ast::Mutability::Nonpayable(_)

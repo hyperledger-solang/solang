@@ -349,7 +349,7 @@ fn bytes_push_pop() {
 
     vm.function("push", &[Token::FixedBytes(vec![0x41])], &[], None);
 
-    println!("data:{}", hex::encode(&vm.data()));
+    println!("data:{}", hex::encode(vm.data()));
 
     let returns = vm.function("get_bs", &[], &[], None);
 
