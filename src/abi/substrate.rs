@@ -400,13 +400,14 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
         .iter()
         .filter_map(|function_no| {
             let f = &ns.functions[*function_no];
+            let name = if conflicting_names.contains(&f.name) {
+                f.mangled_name.clone()
+            } else {
+                f.name.clone()
+            };
             if f.is_constructor() {
                 Some(Constructor {
-                    name: conflicting_names
-                        .contains(&f.name)
-                        .then(|| &f.mangled_name)
-                        .unwrap_or(&f.name)
-                        .into(),
+                    name,
                     selector: render_selector(f),
                     args: f
                         .params
