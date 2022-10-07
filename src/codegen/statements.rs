@@ -1106,6 +1106,7 @@ fn try_catch(
                             exception_block: None,
                             tys,
                             data: Expression::ReturnData(pt::Loc::Codegen),
+                            data_len: None,
                         },
                     );
                 }
@@ -1225,6 +1226,7 @@ fn try_catch(
                 res: vec![error_var],
                 tys: vec![error_param.clone()],
                 data: Expression::ReturnData(pt::Loc::Codegen),
+                data_len: None,
             },
         );
 

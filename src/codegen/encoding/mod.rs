@@ -37,6 +37,7 @@ pub(super) trait AbiEncoding {
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
+        buffer_size: Option<Expression>,
     ) -> Vec<Expression>;
 
     /// Cache items loaded from storage to reuse them later, so we avoid the expensive operation

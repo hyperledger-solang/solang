@@ -47,6 +47,8 @@ impl ast::Contract {
             cfg: Vec::new(),
             code: Vec::new(),
             instantiable,
+            dispatch_no: 0,
+            constructor_dispatch: None,
         }
     }
 
