@@ -18,8 +18,9 @@ like so:
       }
   }
 
-In Substrate, constructor can optionally have a name and may have any number of arguments.
-If a constructor has arguments, then when the contract is deployed then those arguments must be supplied.
+A constructor can have any number of arguments. In Substrate, it may have a name. The constructor
+name is only used to represent it in the metadata.
+If a constructor has arguments, those arguments must be supplied when the contract is deployed.
 
 If a contract is expected to hold receive value on instantiation, the constructor should be declared ``payable``.
 
