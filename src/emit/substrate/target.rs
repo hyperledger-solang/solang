@@ -775,7 +775,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             length = binary.builder.build_int_add(
                 length,
-                self.encoded_length(*arg, false, true, ty, function, binary, ns),
+                SubstrateTarget::encoded_length(*arg, false, true, ty, function, binary, ns),
                 "",
             );
         }
@@ -785,7 +785,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             length = binary.builder.build_int_add(
                 length,
-                self.encoded_length(*arg, false, false, ty, function, binary, ns),
+                SubstrateTarget::encoded_length(*arg, false, false, ty, function, binary, ns),
                 "",
             );
         }
@@ -905,7 +905,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         for (i, ty) in tys.iter().enumerate() {
             length = binary.builder.build_int_add(
                 length,
-                self.encoded_length(args[i], load, false, ty, function, binary, ns),
+                SubstrateTarget::encoded_length(args[i], load, false, ty, function, binary, ns),
                 "",
             );
         }
