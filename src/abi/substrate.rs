@@ -29,7 +29,7 @@ use crate::sema::{
 
 macro_rules! path {
     ($( $segments:expr ),*) => {
-        Path::new_custom([$($segments),*].iter().map(ToString::to_string).collect::<Vec<_>>())
+        Path::from_segments_unchecked([$($segments),*].iter().map(ToString::to_string))
     }
 }
 
@@ -356,7 +356,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     })
                     .collect::<Vec<_>>();
 
-                let t = TypeDefTuple::new_custom(fields);
+                let t = TypeDefTuple::new_portable(fields);
 
                 let path = path!(
                     &ns.contracts[contract_no].name,
