@@ -18,11 +18,20 @@ like so:
       }
   }
 
-A constructor can have any number of arguments. In Substrate, it may have a name. The constructor
-name is only used to represent it in the metadata.
+A constructor can have any number of arguments.
 If a constructor has arguments, those arguments must be supplied when the contract is deployed.
 
 If a contract is expected to hold receive value on instantiation, the constructor should be declared ``payable``.
+
+.. note::
+    In Substrate, constructors have a name. Solang allows to name constructors in the substrate target:
+
+    .. code-block:: solidity
+        contract Foo {
+            constructor my_new_foo() {}
+        }
+
+    Unnamed constructors will be called ``new`` in the metadata.
 
 Instantiation using new
 _______________________
