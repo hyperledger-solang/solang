@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/solana/bad_seeds_on_external_call.sol" {
-	contract [label="contract c\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:2:1-25:2"]
+	contract [label="contract c\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:3:1-25:2"]
 	var [label="variable zero\nvisibility internal\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:4:2-27"]
 	number_literal [label="address literal: 0\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:4:17-27"]
 	test1 [label="function test1\ncontract: c\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:6:2-25\nsignature test1()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:2:1-25:2"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:3:1-25:2"]
 	diagnostic_7 [label="type bytes1 found where array of slices expected\nlevel Error\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:13:4-7"]
 	diagnostic_8 [label="expected 'bytes1 slice[]', found integer\nlevel Error\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:15:4-5"]
 	diagnostic_9 [label="type string found where array of slices expected\nlevel Error\ntests/contract_testcases/solana/bad_seeds_on_external_call.sol:16:4-5"]

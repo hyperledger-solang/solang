@@ -104,7 +104,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
     - name: Download LLVM
-      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang/releases/download/v0.1.12/llvm13.0-win.zip
+      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang/releases/download/v0.1.13/llvm13.0-win.zip
     - name: Extract LLVM
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
@@ -139,7 +139,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
     - name: Get LLVM
-      run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.12/llvm13.0-mac-arm.tar.xz
+      run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.13/llvm13.0-mac-arm.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-arm.tar.xz
     - name: Add LLVM to Path
@@ -164,7 +164,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
     - name: Get LLVM
-      run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.12/llvm13.0-mac-intel.tar.xz
+      run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.13/llvm13.0-mac-intel.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-intel.tar.xz
     - name: Add LLVM to Path
@@ -197,7 +197,7 @@ jobs:
         name: solang-mac
         path: solang-mac
 
-  image-multiarch:
+  container-multiarch:
     name: Multiarch Container Image
     runs-on: linux-arm64
     if: ${{ github.repository_owner == 'hyperledger' }}
@@ -220,35 +220,47 @@ jobs:
 
   solana:
     name: Solana Integration test
-    runs-on: ubuntu-20.04
-    container: ubuntu:20.04
+    runs-on: ubuntu-latest
+    container: ghcr.io/hyperledger/solang:ci
     needs: linux-x86-64
-    services:
-      solana:
-        image: solanalabs/solana:v1.9.15
-        ports:
-          - 8899
-          - 8900
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - uses: actions/setup-node@v1
+    - uses: actions/setup-node@v3
       with:
         node-version: '14'
+    - name: Rust Stable
+      run: rustup default stable
+    - name: Setup yarn
+      run: npm install -g yarn
     - uses: actions/download-artifact@master
       with:
         name: solang-linux-x86-64
         path: bin
-    - run: |
+    - name: Solang Compiler
+      run: |
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
+    - name: Build Anchor test program
+      run: |
+        yarn install
+        anchor build
+        anchor test
+      working-directory: ./integration/anchor
+    - run: nohup solana-test-validator -q &
     - run: npm install
+      working-directory: ./integration/solana
+    - name: Deploy Anchor program
+      run: |
+        solana -ul airdrop -k id.json 10
+        anchor deploy
+      working-directory: ./integration/anchor
+    - name: Create Solidity interface file for Anchor
+      run: solang idl ../anchor/target/idl/anchor.json
       working-directory: ./integration/solana
     - name: Build Solang contracts
       run: npm run build
       working-directory: ./integration/solana
-    - name: Set github env
-      run: echo "RPC_URL=http://solana:8899/" >> $GITHUB_ENV
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/solana

@@ -1,0 +1,4 @@
+strict digraph "tests/contract_testcases/substrate/functions/mangling_02.sol" {
+	B [label="name:B\ntests/contract_testcases/substrate/functions/mangling_02.sol:1:8-9\nfield name:foo ty:bool"]
+	structs -> B
+}

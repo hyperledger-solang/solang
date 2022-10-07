@@ -106,9 +106,9 @@ pub fn resolve(
     // Now we have all the declarations, we can handle base contracts
     for (contract_no, _) in contracts {
         check_inheritance(*contract_no, ns);
-
         substrate_requires_public_functions(*contract_no, ns);
         substrate_unique_function_names(*contract_no, ns);
+        check_mangled_function_names(*contract_no, ns);
     }
 
     // Now we can resolve the initializers
@@ -303,6 +303,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     let mut variable_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: BTreeMap<String, Vec<(usize, usize)>> = BTreeMap::new();
     let mut diagnostics = Diagnostics::default();
+    let mut selectors: HashMap<Vec<u8>, usize> = HashMap::new();
 
     for base_contract_no in ns.contract_bases(contract_no) {
         // find file number where contract is defined
@@ -630,6 +631,40 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     .insert(signature, function_no);
             }
 
+            let selector = cur.selector();
+
+            // On Solana, concrete contracts have selectors of 4 bytes
+            // TODO: this will change with the switch to borsh!
+            if ns.contracts[contract_no].is_concrete() && selector.len() != 4 {
+                diagnostics.push(ast::Diagnostic::error(
+                    cur.loc,
+                    format!(
+                        "function '{}' selector '{}' must be 4 bytes rather than {} bytes",
+                        cur.name,
+                        hex::encode(&selector),
+                        selector.len()
+                    ),
+                ));
+            }
+
+            if let Some(other_func_no) = selectors.get(&selector) {
+                let other = &ns.functions[*other_func_no];
+
+                if other.signature != cur.signature {
+                    diagnostics.push(ast::Diagnostic::error_with_note(
+                        cur.loc,
+                        format!(
+                            "{} '{}' selector is the same as {} '{}'",
+                            cur.ty, cur.name, other.ty, other.name
+                        ),
+                        other.loc,
+                        format!("definition of {} '{}'", other.ty, other.name),
+                    ));
+                }
+            } else {
+                selectors.insert(selector, function_no);
+            }
+
             ns.contracts[contract_no]
                 .all_functions
                 .insert(function_no, usize::MAX);
@@ -697,6 +732,39 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     }
 
     ns.diagnostics.extend(diagnostics);
+}
+
+/// Given a contract number, check for function names conflicting with any mangled name.
+/// Only applies to public functions.
+///
+/// Note: In sema we do not care about the function name too much.
+/// The mangled name is consumed later by the ABI generation.
+fn check_mangled_function_names(contract_no: usize, ns: &mut ast::Namespace) {
+    let public_functions: Vec<usize> = ns.contracts[contract_no]
+        .all_functions
+        .keys()
+        .copied()
+        .filter(|f| ns.functions[*f].is_public() && ns.functions[*f].ty == pt::FunctionTy::Function)
+        .collect();
+
+    for f in &public_functions {
+        if let Some(offender) = public_functions
+            .iter()
+            .find(|other| ns.functions[*f].mangled_name == ns.functions[**other].name)
+        {
+            let f = &ns.functions[*f];
+            let message = format!(
+                "mangling the symbol of overloaded function '{}' with signature '{}' results in a new symbol '{}' but this symbol already exists",
+                &f.name, &f.signature, &f.mangled_name
+            );
+            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                f.loc,
+                message,
+                ns.functions[*offender].loc,
+                "this function declaration conflicts with mangled name".into(),
+            ))
+        }
+    }
 }
 
 /// A contract on substrate requires at least one public message

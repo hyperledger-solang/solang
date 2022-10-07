@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/solana/event.sol" {
 	Foo [label="name:Foo\ntests/contract_testcases/solana/event.sol:3:7-10\nfield name:no ty:int256 indexed:no\nfield name:name ty:string indexed:no"]
-	contract [label="contract c\ntests/contract_testcases/solana/event.sol:4:1-11:2"]
+	contract [label="contract c\ntests/contract_testcases/solana/event.sol:5:1-11:2"]
 	foo [label="function foo\ncontract: c\ntests/contract_testcases/solana/event.sol:6:5-26\nsignature foo()\nvisibility public\nmutability nonpayable"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/event.sol:4:1-11:2"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/event.sol:5:1-11:2"]
 	diagnostic_7 [label="'a' not found\nlevel Error\ntests/contract_testcases/solana/event.sol:7:18-19"]
 	diagnostic_8 [label="'a' not found\nlevel Error\ntests/contract_testcases/solana/event.sol:8:24-25"]
 	diagnostic_9 [label="'b' not found\nlevel Error\ntests/contract_testcases/solana/event.sol:8:33-34"]

@@ -358,3 +358,131 @@ contract testing  {
     b_vec.reverse();
     assert_eq!(b_vec, sender.to_vec());
 }
+
+#[test]
+fn addmod_mulmod() {
+    let mut vm = build_solidity(
+        r#"
+    contract foo {
+        function testMod() public pure returns (uint256 a, uint256 b) {
+            assembly {
+                let x := 115792089237316195423570985008687907853269984665640564039457584007913129639935
+                let y := 115792089237316195423570985008687907853269984665640564039457584007913129639935
+
+                a := mulmod(x, 2, 10)
+                b := addmod(y, 2, 10)
+            }
+
+            return (a, b);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor("foo", &[]);
+
+    let returns = vm.function("testMod", &[], &[], None);
+    assert_eq!(
+        returns,
+        vec![Token::Uint(Uint::from(0)), Token::Uint(Uint::from(7))]
+    );
+}
+
+#[test]
+fn switch_statement() {
+    let mut vm = build_solidity(
+        r#"
+
+contract Testing {
+    function switch_default(uint a) public pure returns (uint b) {
+        b = 4;
+        assembly {
+            switch a
+            case 1 {
+                b := 5
+            }
+            case 2 {
+                b := 6
+            }
+            default {
+                b := 7
+            }
+        }
+
+        if (b == 7) {
+            b += 2;
+        }
+    }
+
+    function switch_no_default(uint a) public pure returns (uint b) {
+        b = 4;
+        assembly {
+            switch a
+            case 1 {
+                b := 5
+            }
+            case 2 {
+                b := 6
+            }
+        }
+
+        if (b == 5) {
+            b -= 2;
+        }
+    }
+
+    function switch_no_case(uint a) public pure returns (uint b) {
+        b = 7;
+        assembly {
+            switch a
+            default {
+                b := 5
+            }
+        }
+
+        if (b == 5) {
+            b -= 1;
+        }
+    }
+}
+        "#,
+    );
+
+    vm.constructor("Testing", &[]);
+
+    let returns = vm.function("switch_default", &[Token::Uint(Uint::from(1))], &[], None);
+    assert_eq!(returns[0], Token::Uint(Uint::from(5)));
+
+    let returns = vm.function("switch_default", &[Token::Uint(Uint::from(2))], &[], None);
+    assert_eq!(returns[0], Token::Uint(Uint::from(6)));
+
+    let returns = vm.function("switch_default", &[Token::Uint(Uint::from(6))], &[], None);
+    assert_eq!(returns[0], Token::Uint(Uint::from(9)));
+
+    let returns = vm.function(
+        "switch_no_default",
+        &[Token::Uint(Uint::from(1))],
+        &[],
+        None,
+    );
+    assert_eq!(returns[0], Token::Uint(Uint::from(3)));
+
+    let returns = vm.function(
+        "switch_no_default",
+        &[Token::Uint(Uint::from(2))],
+        &[],
+        None,
+    );
+    assert_eq!(returns[0], Token::Uint(Uint::from(6)));
+
+    let returns = vm.function(
+        "switch_no_default",
+        &[Token::Uint(Uint::from(6))],
+        &[],
+        None,
+    );
+    assert_eq!(returns[0], Token::Uint(Uint::from(4)));
+
+    let returns = vm.function("switch_no_case", &[Token::Uint(Uint::from(3))], &[], None);
+    assert_eq!(returns[0], Token::Uint(Uint::from(4)));
+}

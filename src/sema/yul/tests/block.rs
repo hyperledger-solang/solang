@@ -186,7 +186,10 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    assert!(ns.diagnostics.contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
+    for item in ns.diagnostics.iter() {
+        std::println!("{}", item.message);
+    }
+    assert!(ns.diagnostics.contains_message("unreachable yul statement"));
 
     let file = r#"
 contract testTypes {
@@ -209,12 +212,10 @@ contract testTypes {
     }
 }    "#;
     let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
 
     let file = r#"
     contract testTypes {
@@ -237,12 +238,10 @@ contract testTypes {
 }    "#;
 
     let ns = parse(file);
+    assert_eq!(ns.diagnostics.len(), 1);
     assert!(ns
         .diagnostics
         .contains_message("found contract 'testTypes'"));
-    assert!(ns
-        .diagnostics
-        .contains_message("switch statements have no implementation in code generation yet. Please, file a GitHub issue if there is urgent need for such a feature"));
 }
 
 #[test]

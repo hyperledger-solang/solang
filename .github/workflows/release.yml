@@ -241,20 +241,6 @@ jobs:
         asset_name: solang-mac
         tag: ${{ github.ref }}
 
-  container:
-    name: Container Image
-    runs-on: ubuntu-20.04
-    if: ${{ github.repository_owner != 'hyperledger' }}
-    steps:
-    - name: Checkout sources
-      uses: actions/checkout@v2
-    - run:
-        docker build . -t ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF/refs\/tags\//}
-            --label org.opencontainers.image.description="Solidity Compiler for Solana and Substrate version $(git describe --tags)"
-    - run: |
-        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-        docker push ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_REF/refs\/tags\//}
-
   container-multiarch:
     name: Multiarch Container Image
     runs-on: linux-arm64

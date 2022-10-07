@@ -11,7 +11,7 @@ strict digraph "tests/contract_testcases/evm/llvm_type.sol" {
 	builtins_11 [label="builtin GetAddress\ntests/contract_testcases/evm/llvm_type.sol:6:17-21"]
 	return_12 [label="return\ntests/contract_testcases/evm/llvm_type.sol:7:17-33"]
 	builtins_13 [label="builtin Calldata\ntests/contract_testcases/evm/llvm_type.sol:7:25-33"]
-	contract_14 [label="contract Ownable\ntests/contract_testcases/evm/llvm_type.sol:10:1-43:2"]
+	contract_14 [label="contract Ownable\ntests/contract_testcases/evm/llvm_type.sol:11:1-43:2"]
 	base [label="base Context\ntests/contract_testcases/evm/llvm_type.sol:11:24-31"]
 	var [label="variable _owner\nvisibility private\ntests/contract_testcases/evm/llvm_type.sol:12:9-33"]
 	node_17 [label="constructor \ncontract: Ownable\ntests/contract_testcases/evm/llvm_type.sol:15:9-26\nsignature ()\nvisibility public\nmutability nonpayable"]
@@ -76,7 +76,7 @@ strict digraph "tests/contract_testcases/evm/llvm_type.sol" {
 	zero_ext [label="zero extend uint256\ntests/contract_testcases/evm/llvm_type.sol:41:17-40"]
 	builtins_77 [label="builtin Timestamp\ntests/contract_testcases/evm/llvm_type.sol:41:25-40"]
 	diagnostic [label="found abstract contract 'Context'\nlevel Debug\ntests/contract_testcases/evm/llvm_type.sol:1:1-9:2"]
-	diagnostic_80 [label="found contract 'Ownable'\nlevel Debug\ntests/contract_testcases/evm/llvm_type.sol:10:1-43:2"]
+	diagnostic_80 [label="found contract 'Ownable'\nlevel Debug\ntests/contract_testcases/evm/llvm_type.sol:11:1-43:2"]
 	events -> OwnershipTransferred
 	contracts -> contract
 	contract -> _msgSender [label="function"]

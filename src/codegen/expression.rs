@@ -1717,6 +1717,58 @@ fn expr_builtin(
 
             Expression::Builtin(*loc, tys.to_vec(), builtin.into(), vec![buf, offset])
         }
+        ast::Builtin::AddMod | ast::Builtin::MulMod => {
+            let arguments: Vec<Expression> = args
+                .iter()
+                .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
+                .collect();
+
+            let temp = vartab.temp_anonymous(&tys[0]);
+            let zero = Expression::NumberLiteral(*loc, tys[0].clone(), BigInt::zero());
+            let cond =
+                Expression::NotEqual(*loc, Box::new(zero.clone()), Box::new(arguments[2].clone()));
+
+            let true_block = cfg.new_basic_block("builtin_call".to_string());
+            let false_block = cfg.new_basic_block("zero".to_string());
+            let end_if = cfg.new_basic_block("end_if".to_string());
+
+            cfg.add(
+                vartab,
+                Instr::BranchCond {
+                    cond,
+                    true_block,
+                    false_block,
+                },
+            );
+
+            cfg.set_basic_block(true_block);
+            vartab.new_dirty_tracker();
+
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: *loc,
+                    res: temp,
+                    expr: Expression::Builtin(*loc, tys.to_vec(), builtin.into(), arguments),
+                },
+            );
+            cfg.add(vartab, Instr::Branch { block: end_if });
+
+            cfg.set_basic_block(false_block);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: *loc,
+                    res: temp,
+                    expr: zero,
+                },
+            );
+            cfg.add(vartab, Instr::Branch { block: end_if });
+
+            cfg.set_phis(end_if, vartab.pop_dirty_tracker());
+            cfg.set_basic_block(end_if);
+            Expression::Variable(*loc, tys[0].clone(), temp)
+        }
         _ => {
             let arguments: Vec<Expression> = args
                 .iter()
@@ -2312,9 +2364,10 @@ pub fn emit_function_call(
                 ..
             } = function.as_ref()
             {
-                let ftype = &ns.functions[*function_no];
+                let dest_func = &ns.functions[*function_no];
+
                 let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
-                let args = args
+                let mut args: Vec<Expression> = args
                     .iter()
                     .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
                     .collect();
@@ -2324,48 +2377,73 @@ pub fn emit_function_call(
                 } else {
                     default_gas(ns)
                 };
+                let accounts = call_args
+                    .accounts
+                    .as_ref()
+                    .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
                 let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
 
-                let dest_func = &ns.functions[*function_no];
+                let selector = dest_func.selector();
 
-                tys.insert(0, Type::Bytes(4));
+                tys.insert(0, Type::Bytes(selector.len() as u8));
 
                 let (payload, address) = if ns.target == Target::Solana {
-                    tys.insert(0, Type::Address(false));
-                    tys.insert(1, Type::Address(false));
-                    tys.insert(2, Type::Uint(64));
-                    tys.insert(3, Type::Bytes(4));
-                    tys.insert(4, Type::Bytes(1));
+                    if dest_func.selector.is_some() {
+                        // TODO: Use borsh encoding; This is a temporary solution, where we use borsh encoding
+                        // only for functions with function selectors for now. This is useful so we can
+                        // Call rust contracts by specifying a function selector override.
+                        let mut encoder = create_encoder(ns);
 
-                    (
-                        Expression::AbiEncode {
-                            loc: *loc,
-                            tys,
-                            packed: vec![
-                                address,
-                                Expression::Builtin(
-                                    *loc,
-                                    vec![Type::Address(false)],
-                                    Builtin::GetAddress,
-                                    Vec::new(),
-                                ),
-                                value.clone(),
-                                Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
-                                Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
-                                Expression::BytesLiteral(
-                                    *loc,
-                                    Type::Bytes(4),
-                                    dest_func.selector(),
-                                ),
-                            ],
-                            args,
-                        },
-                        None,
-                    )
+                        args.insert(
+                            0,
+                            Expression::BytesLiteral(
+                                *loc,
+                                Type::Bytes(selector.len() as u8),
+                                selector,
+                            ),
+                        );
+
+                        (
+                            encoder.abi_encode(loc, &args, ns, vartab, cfg).0,
+                            Some(address),
+                        )
+                    } else {
+                        tys.insert(0, Type::Address(false));
+                        tys.insert(1, Type::Address(false));
+                        tys.insert(2, Type::Uint(64));
+                        tys.insert(3, Type::Bytes(4));
+                        tys.insert(4, Type::Bytes(1));
+
+                        (
+                            Expression::AbiEncode {
+                                loc: *loc,
+                                tys,
+                                packed: vec![
+                                    address,
+                                    Expression::Builtin(
+                                        *loc,
+                                        vec![Type::Address(false)],
+                                        Builtin::GetAddress,
+                                        Vec::new(),
+                                    ),
+                                    value.clone(),
+                                    Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
+                                    Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
+                                    Expression::BytesLiteral(
+                                        *loc,
+                                        Type::Bytes(selector.len() as u8),
+                                        selector,
+                                    ),
+                                ],
+                                args,
+                            },
+                            None,
+                        )
+                    }
                 } else {
                     (
                         Expression::AbiEncode {
@@ -2373,8 +2451,8 @@ pub fn emit_function_call(
                             tys,
                             packed: vec![Expression::BytesLiteral(
                                 *loc,
-                                Type::Bytes(4),
-                                dest_func.selector(),
+                                Type::Bytes(selector.len() as u8),
+                                selector,
                             )],
                             args,
                         },
@@ -2386,7 +2464,7 @@ pub fn emit_function_call(
                     vartab,
                     Instr::ExternalCall {
                         success: None,
-                        accounts: None,
+                        accounts,
                         seeds: None,
                         address,
                         payload,
@@ -2397,30 +2475,52 @@ pub fn emit_function_call(
                 );
 
                 // If the first element of returns is Void, we can discard the returns
-                if !ftype.returns.is_empty() && returns[0] != Type::Void {
-                    let mut returns = Vec::new();
-                    let mut res = Vec::new();
+                if !dest_func.returns.is_empty() && returns[0] != Type::Void {
+                    let mut returns;
 
-                    for ret in &*ftype.returns {
-                        let id = pt::Identifier {
-                            loc: ret.loc,
-                            name: ret.name_as_str().to_owned(),
-                        };
-                        let temp_pos = vartab.temp(&id, &ret.ty);
-                        res.push(temp_pos);
-                        returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
+                    if dest_func.selector.is_some() {
+                        // borsh decode
+                        let mut types = Vec::new();
+
+                        for ret in &*dest_func.returns {
+                            types.push(ret.ty.clone());
+                        }
+
+                        let encoder = create_encoder(ns);
+
+                        returns = encoder.abi_decode(
+                            loc,
+                            &Expression::ReturnData(*loc),
+                            &types,
+                            ns,
+                            vartab,
+                            cfg,
+                        );
+                    } else {
+                        returns = Vec::new();
+                        let mut res = Vec::new();
+
+                        for ret in &*dest_func.returns {
+                            let id = pt::Identifier {
+                                loc: ret.loc,
+                                name: ret.name_as_str().to_owned(),
+                            };
+                            let temp_pos = vartab.temp(&id, &ret.ty);
+                            res.push(temp_pos);
+                            returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
+                        }
+
+                        cfg.add(
+                            vartab,
+                            Instr::AbiDecode {
+                                res,
+                                selector: None,
+                                exception_block: None,
+                                tys: (*dest_func.returns).clone(),
+                                data: Expression::ReturnData(*loc),
+                            },
+                        );
                     }
-
-                    cfg.add(
-                        vartab,
-                        Instr::AbiDecode {
-                            res,
-                            selector: None,
-                            exception_block: None,
-                            tys: (*ftype.returns).clone(),
-                            data: Expression::ReturnData(*loc),
-                        },
-                    );
 
                     returns
                 } else {

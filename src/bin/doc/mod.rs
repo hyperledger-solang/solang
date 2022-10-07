@@ -153,6 +153,8 @@ fn get_tag_no<'a>(name: &str, no: usize, tags: &'a [ast::Tag]) -> Option<&'a str
         .map(|e| &e.value as &str)
 }
 
+/// Generate documentation from the doccomments. This may be replaced with force-doc
+/// one day (once it exists)
 pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
     let mut top = Top {
         contracts: Vec::new(),

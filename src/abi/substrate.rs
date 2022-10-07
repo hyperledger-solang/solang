@@ -11,6 +11,8 @@ use serde_json::{Map, Value};
 use solang_parser::pt;
 use std::convert::TryInto;
 
+use super::non_unique_function_names;
+
 #[derive(Deserialize, Serialize)]
 pub struct Abi {
     storage: Storage,
@@ -426,6 +428,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
         });
     }
 
+    let conflicting_names = non_unique_function_names(contract_no, ns);
     let messages = ns.contracts[contract_no]
         .all_functions
         .keys()
@@ -450,7 +453,11 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
             let payable = matches!(f.mutability, ast::Mutability::Payable(_));
 
             Message {
-                name: f.name.to_owned(),
+                name: conflicting_names
+                    .contains(&f.name)
+                    .then(|| &f.mangled_name)
+                    .unwrap_or(&f.name)
+                    .into(),
                 mutates: matches!(
                     f.mutability,
                     ast::Mutability::Payable(_) | ast::Mutability::Nonpayable(_)

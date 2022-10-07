@@ -1,0 +1,22 @@
+strict digraph "tests/contract_testcases/substrate/functions/mangling_03.sol" {
+	A [label="name:A\ntests/contract_testcases/substrate/functions/mangling_03.sol:3:8-9\nfield name:foo ty:uint256"]
+	B [label="name:B\ntests/contract_testcases/substrate/functions/mangling_02.sol:1:8-9\nfield name:foo ty:bool"]
+	contract [label="contract C\ntests/contract_testcases/substrate/functions/mangling_03.sol:5:1-8:2"]
+	foo [label="function foo\ncontract: C\ntests/contract_testcases/substrate/functions/mangling_03.sol:6:8-44\nsignature foo((uint256))\nvisibility public\nmutability pure"]
+	parameters [label="parameters\nstruct A s"]
+	foo_7 [label="function foo\ncontract: C\ntests/contract_testcases/substrate/functions/mangling_03.sol:7:8-46\nsignature foo((bool))\nvisibility public\nmutability pure"]
+	parameters_8 [label="parameters\nstruct B s"]
+	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/functions/mangling_03.sol:5:1-8:2"]
+	diagnostic_11 [label="function parameter 's' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/mangling_03.sol:6:30-31"]
+	diagnostic_12 [label="function parameter 's' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/mangling_03.sol:7:32-33"]
+	structs -> A
+	structs -> B
+	contracts -> contract
+	contract -> foo [label="function"]
+	foo -> parameters [label="parameters"]
+	contract -> foo_7 [label="function"]
+	foo_7 -> parameters_8 [label="parameters"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_11 [label="Warning"]
+	diagnostics -> diagnostic_12 [label="Warning"]
+}

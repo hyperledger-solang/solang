@@ -315,6 +315,22 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         bytes: bytes.0,
                     };
                 }
+                Instr::Switch {
+                    cond,
+                    cases,
+                    default,
+                } => {
+                    let cond = expression(cond, Some(&vars), cfg, ns);
+                    let cases = cases
+                        .iter()
+                        .map(|(exp, goto)| (expression(exp, Some(&vars), cfg, ns).0, *goto))
+                        .collect::<Vec<(Expression, usize)>>();
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::Switch {
+                        cond: cond.0,
+                        cases,
+                        default: *default,
+                    };
+                }
                 _ => (),
             }
 

@@ -223,7 +223,8 @@ pub fn apply_transfers(transfers: &[Transfer], vars: &mut IndexMap<usize, IndexM
     }
 }
 
-pub fn block_edges(block: &BasicBlock) -> Vec<usize> {
+/// Fetch the blocks that can be executed after the block passed as argument
+pub(super) fn block_edges(block: &BasicBlock) -> Vec<usize> {
     let mut out = Vec::new();
 
     // out cfg has edge as the last instruction in a block; EXCEPT
@@ -246,6 +247,12 @@ pub fn block_edges(block: &BasicBlock) -> Vec<usize> {
                 ..
             } => {
                 out.push(*block);
+            }
+            Instr::Switch { default, cases, .. } => {
+                out.push(*default);
+                for (_, goto) in cases {
+                    out.push(*goto);
+                }
             }
             _ => (),
         }

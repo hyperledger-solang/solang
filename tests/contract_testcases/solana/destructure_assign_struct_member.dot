@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/solana/destructure_assign_struct_member.sol" {
 	Data [label="name:Data\ncontract: TestContract\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:3:12-16\nfield name:a1 ty:bytes32\nfield name:a2 ty:bytes32"]
-	contract [label="contract TestContract\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:1:52-15:2"]
+	contract [label="contract TestContract\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:2:1-15:2"]
 	var [label="variable Hashes\nvisibility internal\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:8:5-39"]
 	node_5 [label="constructor \ncontract: TestContract\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:10:5-19\nsignature ()\nvisibility public\nmutability nonpayable"]
 	getdata [label="function getdata\ncontract: TestContract\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:12:5-84\nsignature getdata(uint176,bool)\nvisibility public\nmutability view"]
@@ -22,7 +22,7 @@ strict digraph "tests/contract_testcases/solana/destructure_assign_struct_member
 	add_22 [label="add\nuint176\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:13:46-50"]
 	variable_23 [label="variable: id\nuint176\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:13:46-48"]
 	number_literal_24 [label="uint176 literal: 2\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:13:49-50"]
-	diagnostic [label="found contract 'TestContract'\nlevel Debug\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:1:52-15:2"]
+	diagnostic [label="found contract 'TestContract'\nlevel Debug\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:2:1-15:2"]
 	diagnostic_27 [label="function parameter 'needHash' has never been read\nlevel Warning\ntests/contract_testcases/solana/destructure_assign_struct_member.sol:12:39-47"]
 	structs -> Data
 	contracts -> contract
