@@ -194,6 +194,7 @@ impl StructType {
             StructType::AccountInfo => &BUILTIN_STRUCTS[0],
             StructType::AccountMeta => &BUILTIN_STRUCTS[1],
             StructType::ExternalFunction => &BUILTIN_STRUCTS[2],
+            StructType::SolParameters => unreachable!("SolParameters is defined in a solana.c"),
         }
     }
 }

@@ -260,8 +260,12 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     exception_block,
                     tys,
                     data,
+                    data_len,
                 } => {
                     let (data, _) = expression(data, Some(&vars), cfg, ns);
+                    let data_len = data_len
+                        .as_ref()
+                        .map(|e| expression(e, Some(&vars), cfg, ns).0);
 
                     cfg.blocks[block_no].instr[instr_no].1 = Instr::AbiDecode {
                         res: res.clone(),
@@ -269,6 +273,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         exception_block: *exception_block,
                         tys: tys.clone(),
                         data,
+                        data_len,
                     }
                 }
                 Instr::SelfDestruct { recipient } => {
@@ -329,6 +334,14 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         cond: cond.0,
                         cases,
                         default: *default,
+                    };
+                }
+                Instr::ReturnData { data, data_len } => {
+                    let data = expression(data, Some(&vars), cfg, ns);
+                    let data_len = expression(data_len, Some(&vars), cfg, ns);
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::ReturnData {
+                        data: data.0,
+                        data_len: data_len.0,
                     };
                 }
                 _ => (),

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::codegen::cfg::ReturnCode;
 use crate::{sema::ast, Target};
 use inkwell::types::BasicType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
@@ -8,7 +9,7 @@ use inkwell::IntPredicate;
 use num_traits::ToPrimitive;
 
 use super::loop_builder::LoopBuilder;
-use super::{Binary, ReturnCode};
+use super::Binary;
 
 /// Generate an in-place abi encoder. This is done in several stages:
 /// 1) EncoderBuilder::new() generates the code which calculates the required encoded length at runtime

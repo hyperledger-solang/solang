@@ -136,6 +136,8 @@ fn contract_constant_variable() {
         cfg: vec![],
         code: vec![],
         instantiable: true,
+        dispatch_no: 0,
+        constructor_dispatch: None,
     };
     ns.contracts.push(contract);
 
@@ -255,6 +257,8 @@ fn slot_suffix() {
         cfg: vec![],
         code: vec![],
         instantiable: true,
+        dispatch_no: 0,
+        constructor_dispatch: None,
     };
     ns.contracts.push(contract);
 

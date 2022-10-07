@@ -15,7 +15,6 @@ use inkwell::values::{
 
 pub mod binary;
 mod cfg;
-mod dispatch;
 mod ethabiencoder;
 mod expression;
 mod functions;
@@ -342,13 +341,14 @@ pub trait TargetRuntime<'a> {
         topic_tys: &[Type],
         ns: &Namespace,
     );
-}
 
-#[derive(PartialEq, Eq, Hash)]
-pub(crate) enum ReturnCode {
-    Success,
-    FunctionSelectorInvalid,
-    AbiEncodingInvalid,
+    /// Return ABI encoded data
+    fn return_abi_data<'b>(
+        &self,
+        binary: &Binary<'b>,
+        data: PointerValue<'b>,
+        data_len: BasicValueEnum<'b>,
+    );
 }
 
 #[derive(PartialEq, Eq)]

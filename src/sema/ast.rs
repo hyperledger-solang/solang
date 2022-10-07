@@ -120,6 +120,7 @@ pub enum StructType {
     AccountInfo,
     AccountMeta,
     ExternalFunction,
+    SolParameters,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -600,16 +601,20 @@ pub struct Contract {
     pub virtual_functions: HashMap<String, usize>,
     pub yul_functions: Vec<usize>,
     pub variables: Vec<Variable>,
-    // List of contracts this contract instantiates
+    /// List of contracts this contract instantiates
     pub creates: Vec<usize>,
-    // List of events this contract produces
+    /// List of events this contract produces
     pub sends_events: Vec<usize>,
     pub initializer: Option<usize>,
     pub default_constructor: Option<(Function, usize)>,
     pub cfg: Vec<ControlFlowGraph>,
     pub code: Vec<u8>,
-    // Can the contract be instantiated, i.e. not abstract, no errors, etc.
+    /// Can the contract be instantiated, i.e. not abstract, no errors, etc.
     pub instantiable: bool,
+    /// CFG number of this contract's dispatch function
+    pub dispatch_no: usize,
+    /// CFG number of this contract's constructor dispatch
+    pub constructor_dispatch: Option<usize>,
 }
 
 impl Contract {
@@ -1068,8 +1073,10 @@ impl CodeLocation for Instr {
                 _ => destination.loc(),
             },
             Instr::Switch { cond, .. } => cond.loc(),
+            Instr::ReturnData { data, .. } => data.loc(),
             Instr::Branch { .. }
             | Instr::Unreachable
+            | Instr::ReturnCode { .. }
             | Instr::Nop
             | Instr::AssertFailure { .. }
             | Instr::PopMemory { .. } => pt::Loc::Codegen,

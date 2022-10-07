@@ -2495,6 +2495,7 @@ pub fn emit_function_call(
                             ns,
                             vartab,
                             cfg,
+                            None,
                         );
                     } else {
                         returns = Vec::new();
@@ -2518,6 +2519,7 @@ pub fn emit_function_call(
                                 exception_block: None,
                                 tys: (*dest_func.returns).clone(),
                                 data: Expression::ReturnData(*loc),
+                                data_len: None,
                             },
                         );
                     }
@@ -2636,6 +2638,7 @@ pub fn emit_function_call(
                             exception_block: None,
                             tys,
                             data: Expression::ReturnData(*loc),
+                            data_len: None,
                         },
                     );
 
@@ -2650,7 +2653,7 @@ pub fn emit_function_call(
         ast::Expression::Builtin(loc, tys, ast::Builtin::AbiBorshDecode, args) => {
             let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);
             let encoder = create_encoder(ns);
-            encoder.abi_decode(loc, &data, tys, ns, vartab, cfg)
+            encoder.abi_decode(loc, &data, tys, ns, vartab, cfg, None)
         }
         ast::Expression::Builtin(loc, tys, ast::Builtin::AbiDecode, args) => {
             let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);
@@ -2683,6 +2686,7 @@ pub fn emit_function_call(
                         })
                         .collect(),
                     data,
+                    data_len: None,
                 },
             );
 

@@ -4,7 +4,6 @@ use crate::emit::binary::Binary;
 use crate::emit::cfg::emit_cfg;
 use crate::emit::TargetRuntime;
 use crate::sema::ast::{Contract, Namespace, Type};
-use crate::Target;
 use inkwell::module::Linkage;
 use inkwell::values::FunctionValue;
 use inkwell::{AddressSpace, IntPredicate};
@@ -78,41 +77,37 @@ pub(super) fn abort_if_value_transfer<'a, T: TargetRuntime<'a> + ?Sized>(
     function: FunctionValue,
     ns: &Namespace,
 ) {
-    if ns.target != Target::Solana {
-        let value = target.value_transferred(binary, ns);
+    let value = target.value_transferred(binary, ns);
 
-        let got_value = binary.builder.build_int_compare(
-            IntPredicate::NE,
-            value,
-            binary.value_type(ns).const_zero(),
-            "is_value_transfer",
-        );
+    let got_value = binary.builder.build_int_compare(
+        IntPredicate::NE,
+        value,
+        binary.value_type(ns).const_zero(),
+        "is_value_transfer",
+    );
 
-        let not_value_transfer = binary
+    let not_value_transfer = binary
+        .context
+        .append_basic_block(function, "not_value_transfer");
+    let abort_value_transfer = binary
+        .context
+        .append_basic_block(function, "abort_value_transfer");
+
+    binary
+        .builder
+        .build_conditional_branch(got_value, abort_value_transfer, not_value_transfer);
+
+    binary.builder.position_at_end(abort_value_transfer);
+
+    target.assert_failure(
+        binary,
+        binary
             .context
-            .append_basic_block(function, "not_value_transfer");
-        let abort_value_transfer = binary
-            .context
-            .append_basic_block(function, "abort_value_transfer");
+            .i8_type()
+            .ptr_type(AddressSpace::Generic)
+            .const_null(),
+        binary.context.i32_type().const_zero(),
+    );
 
-        binary.builder.build_conditional_branch(
-            got_value,
-            abort_value_transfer,
-            not_value_transfer,
-        );
-
-        binary.builder.position_at_end(abort_value_transfer);
-
-        target.assert_failure(
-            binary,
-            binary
-                .context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .const_null(),
-            binary.context.i32_type().const_zero(),
-        );
-
-        binary.builder.position_at_end(not_value_transfer);
-    }
+    binary.builder.position_at_end(not_value_transfer);
 }

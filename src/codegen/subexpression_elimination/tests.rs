@@ -206,6 +206,7 @@ fn invalid() {
         exception_block: None,
         tys: vec![],
         data: exp.clone(),
+        data_len: None,
     };
 
     let mut ave = AvailableExpression::default();

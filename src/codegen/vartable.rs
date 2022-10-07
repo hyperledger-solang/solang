@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::codegen::cfg::ControlFlowGraph;
+use crate::sema::ast::Namespace;
 use crate::sema::{ast::Type, symtable::Symtable};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
@@ -150,8 +152,9 @@ impl Vartable {
         var_no
     }
 
-    pub fn drain(self) -> (Vars, usize) {
-        (self.vars, self.next_id)
+    pub fn finalize(self, ns: &mut Namespace, cfg: &mut ControlFlowGraph) {
+        ns.next_id = self.next_id;
+        cfg.vars = self.vars;
     }
 
     // In order to create phi nodes, we need to track what vars are set in a certain scope

@@ -4,25 +4,22 @@ pub(super) mod target;
 
 use crate::sema::ast;
 use crate::Target;
-use solang_parser::pt;
 use std::collections::HashMap;
 use std::str;
 
+use crate::codegen::cfg::ReturnCode;
 use crate::sema::ast::Type;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::BasicType;
-use inkwell::values::{
-    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress,
-};
+use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress};
 use inkwell::{context::Context, types::BasicTypeEnum};
 use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
 use num_traits::ToPrimitive;
 
-use crate::emit::dispatch::emit_function_dispatch;
 use crate::emit::ethabiencoder;
-use crate::emit::functions::{abort_if_value_transfer, emit_functions, emit_initializer};
+use crate::emit::functions::{emit_functions, emit_initializer};
 use crate::emit::loop_builder::LoopBuilder;
-use crate::emit::{Binary, ReturnCode, TargetRuntime};
+use crate::emit::{Binary, TargetRuntime};
 
 pub struct SolanaTarget {
     abi: ethabiencoder::EthAbiDecoder,
@@ -32,9 +29,8 @@ pub struct SolanaTarget {
 pub struct Contract<'a> {
     magic: u32,
     contract: &'a ast::Contract,
-    ns: &'a ast::Namespace,
     storage_initializer: FunctionValue<'a>,
-    constructor: Option<(FunctionValue<'a>, &'a Vec<ast::Parameter>)>,
+    constructor: Option<FunctionValue<'a>>,
     functions: HashMap<usize, FunctionValue<'a>>,
 }
 
@@ -78,6 +74,10 @@ impl SolanaTarget {
             ReturnCode::AbiEncodingInvalid,
             context.i64_type().const_int(2u64 << 32, false),
         );
+        binary.return_values.insert(
+            ReturnCode::InvalidDataError,
+            context.i32_type().const_int(2, false),
+        );
         // externals
         target.declare_externals(&mut binary, ns);
 
@@ -86,11 +86,8 @@ impl SolanaTarget {
         let storage_initializer = emit_initializer(&mut target, &mut binary, contract, ns);
 
         let constructor = contract
-            .cfg
-            .iter()
-            .enumerate()
-            .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor && cfg.public)
-            .map(|(cfg_no, cfg)| (binary.functions[&cfg_no], &*cfg.params));
+            .constructor_dispatch
+            .map(|cfg_no| binary.functions[&cfg_no]);
 
         let mut functions = HashMap::new();
 
@@ -101,7 +98,6 @@ impl SolanaTarget {
             &[Contract {
                 magic: target.magic,
                 contract,
-                ns,
                 storage_initializer,
                 constructor,
                 functions,
@@ -172,11 +168,8 @@ impl SolanaTarget {
                 let storage_initializer = emit_initializer(&mut target, &mut binary, contract, ns);
 
                 let constructor = contract
-                    .cfg
-                    .iter()
-                    .enumerate()
-                    .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor && cfg.public)
-                    .map(|(cfg_no, cfg)| (binary.functions[&cfg_no], &*cfg.params));
+                    .constructor_dispatch
+                    .map(|cfg_no| binary.functions[&cfg_no]);
 
                 let mut functions = HashMap::new();
 
@@ -184,7 +177,6 @@ impl SolanaTarget {
 
                 contracts.push(Contract {
                     magic: target.magic,
-                    ns,
                     contract,
                     storage_initializer,
                     constructor,
@@ -532,50 +524,8 @@ impl SolanaTarget {
 
         let mut cases = vec![(binary.context.i32_type().const_zero(), constructor_block)];
 
-        let input = binary.builder.build_pointer_cast(
-            input,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
-            "input_ptr32",
-        );
-
-        let dispatch_function_ty = binary.context.i64_type().fn_type(
-            &[
-                input.get_type().into(),
-                input_len.get_type().into(),
-                sol_params.get_type().into(),
-            ],
-            false,
-        );
-
         for contract in contracts {
-            let dispatch_function = binary.module.add_function(
-                &format!("dispatch_{}", contract.contract.name),
-                dispatch_function_ty,
-                None,
-            );
-
-            let entry = binary
-                .context
-                .append_basic_block(dispatch_function, "entry");
-
-            binary.builder.position_at_end(entry);
-
-            emit_function_dispatch(
-                self,
-                binary,
-                contract.contract,
-                contract.ns,
-                pt::FunctionTy::Function,
-                dispatch_function
-                    .get_nth_param(0)
-                    .unwrap()
-                    .into_pointer_value(),
-                dispatch_function.get_nth_param(1).unwrap().into_int_value(),
-                dispatch_function,
-                &contract.functions,
-                None,
-                |_| false,
-            );
+            let dispatch_function = contract.functions[&contract.contract.dispatch_no];
 
             let function_block = binary
                 .context
@@ -613,12 +563,6 @@ impl SolanaTarget {
         ));
 
         binary.builder.position_at_end(function_block);
-
-        let input = binary.builder.build_pointer_cast(
-            input,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
-            "input_ptr32",
-        );
 
         binary
             .builder
@@ -712,49 +656,15 @@ impl SolanaTarget {
                 "",
             );
 
-            // is there a not a payable constructor
-            if !contract.contract.functions.iter().any(|function_no| {
-                let f = &contract.ns.functions[*function_no];
-                f.is_constructor() && f.is_payable()
-            }) {
-                abort_if_value_transfer(self, binary, function, contract.ns);
-            }
-
             // There is only one possible constructor
-            let ret = if let Some((constructor_function, params)) = contract.constructor {
-                let mut args = Vec::new();
-
-                // insert abi decode
-                self.abi.decode(
-                    binary,
-                    function,
-                    &mut args,
-                    input,
-                    input_len,
-                    params,
-                    contract.ns,
-                );
-
-                let params_ty = constructor_function
-                    .get_type()
-                    .get_param_types()
-                    .last()
-                    .unwrap()
-                    .into_pointer_type();
-
-                args.push(
-                    binary
-                        .builder
-                        .build_pointer_cast(sol_params, params_ty, "")
-                        .into(),
-                );
-
-                let args: Vec<BasicMetadataValueEnum> =
-                    args.iter().map(|arg| (*arg).into()).collect();
-
+            let ret = if let Some(constructor_function) = contract.constructor {
                 binary
                     .builder
-                    .build_call(constructor_function, &args, "")
+                    .build_call(
+                        constructor_function,
+                        &[input.into(), input_len.into(), sol_params.into()],
+                        "constructor_dispatch_call",
+                    )
                     .try_as_basic_value()
                     .left()
                     .unwrap()
