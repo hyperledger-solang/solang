@@ -524,16 +524,6 @@ pub fn contract_function(
             }
         })
         .to_owned();
-    //let name = match &func.name {
-    //    Some(s) => s.name.to_owned(),
-    //    None => {
-    //        if ns.target.is_substrate() && func.ty == pt::FunctionTy::Constructor {
-    //            "new".to_owned()
-    //        } else {
-    //            "".to_owned()
-    //        }
-    //    }
-    //};
 
     let bases: Vec<String> = contract
         .base
@@ -570,10 +560,6 @@ pub fn contract_function(
     fdecl.selector = selector;
 
     if func.ty == pt::FunctionTy::Constructor {
-        // All constructors have a name in substrate. Default is "new".
-        if ns.target.is_substrate() && fdecl.name == "" {
-            fdecl.name = "new".into()
-        }
         // In the eth solidity only one constructor is allowed
         if ns.target == Target::EVM {
             if let Some(prev_func_no) = ns.contracts[contract_no]
