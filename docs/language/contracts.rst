@@ -21,10 +21,10 @@ like so:
 A constructor can have any number of arguments.
 If a constructor has arguments, those arguments must be supplied when the contract is deployed.
 
-If a contract is expected to hold receive value on instantiation, the constructor should be declared ``payable``.
+If a contract is expected to receive value on instantiation, the constructor should be declared ``payable``.
 
 .. note::
-    In Substrate, constructors have a name. Solang allows to name constructors in the substrate target:
+    On Substrate, constructors have a name. Solang allows to name constructors in the substrate target:
 
     .. code-block:: solidity
  
@@ -33,6 +33,9 @@ If a contract is expected to hold receive value on instantiation, the constructo
         }
 
     Unnamed constructors will be called ``new`` in the metadata.
+
+    Note that constructor names are only used in the generated metadata. For contract instantiation,
+    the correct constructor matching the function signature will be selected automatically.
 
 Instantiation using new
 _______________________

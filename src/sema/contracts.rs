@@ -809,7 +809,7 @@ fn substrate_unique_constructor_names(contract_no: usize, ns: &mut ast::Namespac
     }
 
     let mut functions = HashMap::new();
-    for f in ns.contracts[contract_no].functions.iter() {
+    for f in &ns.contracts[contract_no].functions {
         let func = &ns.functions[*f];
         if let Some(offender) = functions.insert(&func.mangled_name, *f) {
             ns.diagnostics.push(ast::Diagnostic::error_with_note(
