@@ -3,7 +3,7 @@ import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
 import { Anchor } from "../target/types/anchor";
 
-describe("anchor", () => {
+describe("Anchor", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
 
