@@ -1,10 +1,10 @@
 strict digraph "tests/contract_testcases/substrate/functions/constructors_01.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/functions/constructors_01.sol:2:9-4:10"]
-	node_2 [label="constructor \ncontract: test\ntests/contract_testcases/substrate/functions/constructors_01.sol:3:13-34\nsignature ()\nvisibility public\nmutability nonpayable\nvirtual"]
+	new [label="constructor new\ncontract: test\ntests/contract_testcases/substrate/functions/constructors_01.sol:3:13-34\nsignature new()\nvisibility public\nmutability nonpayable\nvirtual"]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/functions/constructors_01.sol:2:9-4:10"]
 	diagnostic_5 [label="constructors cannot be declared 'virtual'\nlevel Error\ntests/contract_testcases/substrate/functions/constructors_01.sol:3:13-34"]
 	contracts -> contract
-	contract -> node_2 [label="constructor"]
+	contract -> new [label="constructor"]
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_5 [label="Error"]
 }

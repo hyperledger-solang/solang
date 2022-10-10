@@ -18,18 +18,24 @@ like so:
       }
   }
 
-A constructor does not have a name and may have any number of arguments. If a constructor has arguments,
-then when the contract is deployed then those arguments must be supplied.
+A constructor can have any number of arguments.
+If a constructor has arguments, they must be supplied when the contract is deployed.
 
-If a contract is expected to hold receive value on instantiation, the constructor should be declared ``payable``.
+If a contract is expected to receive value on instantiation, the constructor should be declared ``payable``.
 
 .. note::
+    On Substrate, constructors have a name. Solang allows naming constructors in the substrate target:
 
-  Parity Substrate allows multiple constructors to be defined, which is not true for
-  Solana. So, when building for Substrate, multiple constructors can be
-  defined as long as their argument list is different (i.e. overloaded).
+    .. code-block:: solidity
+ 
+        contract Foo {
+            constructor my_new_foo() {}
+        }
 
-  When the contract is deployed in the Polkadot UI, the user can select the constructor to be used.
+    Unnamed constructors will be called ``new`` in the metadata.
+
+    Note that constructor names are only used in the generated metadata. For contract instantiation,
+    the correct constructor matching the function signature will be selected automatically.
 
 Instantiation using new
 _______________________

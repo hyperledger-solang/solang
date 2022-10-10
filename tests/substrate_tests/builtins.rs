@@ -444,8 +444,8 @@ fn data() {
         r##"
         contract bar {
             constructor(string memory s) public {
-                assert(msg.data == hex"88eaeb6c18666f6f626172");
-                assert(msg.sig == hex"88ea_eb6c");
+                assert(msg.data == hex"98dd1bb318666f6f626172");
+                assert(msg.sig == hex"98dd_1bb3");
             }
 
             function test(uint32 x) public {
