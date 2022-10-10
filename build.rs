@@ -46,7 +46,7 @@ fn main() {
     }
 
     let output = Command::new("git")
-        .args(["describe", "--tags"])
+        .args(["describe", "--tags", "--always"])
         .output()
         .unwrap();
     let solang_version = if output.stdout.is_empty() {

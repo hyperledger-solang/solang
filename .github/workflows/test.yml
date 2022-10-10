@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Run repolinter
         run: npx repolinter --rulesetUrl https://raw.githubusercontent.com/hyperledger-labs/hyperledger-community-management-tools/master/repo_structure/repolint.json
 
@@ -22,7 +22,7 @@ jobs:
     container: ghcr.io/hyperledger/solang:ci
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Rust stable
         run: rustup default stable
       - name: Run cargo fmt
@@ -36,7 +36,7 @@ jobs:
     container: ubuntu:20.04
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Python
         run: |
           apt-get update
@@ -54,9 +54,7 @@ jobs:
     container: ghcr.io/hyperledger/solang:ci
     steps:
     - name: Checkout sources
-      # Make sure "git describe --tags" works for solang --version
-      # checkout@v2 requires git 2.18 or higher, which is not in our image
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
       with:
         submodules: recursive
     - name: Rust stable
@@ -77,9 +75,7 @@ jobs:
     container: ghcr.io/hyperledger/solang:ci
     steps:
     - name: Checkout sources
-      # Make sure "git describe --tags" works for solang --version
-      # checkout@v2 requires git 2.18 or higher, which is not in our image
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
       with:
         submodules: recursive
     - name: Rust stable
@@ -98,10 +94,8 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
-        # Make sure "git describe --tags" works for solang --version
-        fetch-depth: 0
         submodules: recursive
     - name: Download LLVM
       run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang/releases/download/v0.1.13/llvm13.0-win.zip
@@ -135,8 +129,6 @@ jobs:
     - name: Checkout sources
       uses: actions/checkout@v3
       with:
-        # Make sure "git describe --tags" works for solang --version
-        fetch-depth: 0
         submodules: recursive
     - name: Get LLVM
       run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.13/llvm13.0-mac-arm.tar.xz
@@ -158,10 +150,8 @@ jobs:
     runs-on: macos-latest
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
-        # Make sure "git describe --tags" works for solang --version
-        fetch-depth: 0
         submodules: recursive
     - name: Get LLVM
       run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.13/llvm13.0-mac-intel.tar.xz
@@ -204,9 +194,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
-      with:
-        # Make sure "git describe --tags" works for solang --version
-        fetch-depth: 0
     - run: echo "::set-output name=push::--push"
       id: push
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
@@ -225,7 +212,7 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - uses: actions/setup-node@v3
       with:
         node-version: '14'
@@ -271,7 +258,7 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - uses: actions/setup-node@v3
       with:
         node-version: '14'
@@ -303,7 +290,7 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       # We can't run substrate as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
@@ -333,7 +320,7 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - uses: actions/download-artifact@master
       with:
         name: solang-linux-x86-64
