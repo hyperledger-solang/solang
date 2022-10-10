@@ -24,7 +24,7 @@ If a constructor has arguments, they must be supplied when the contract is deplo
 If a contract is expected to receive value on instantiation, the constructor should be declared ``payable``.
 
 .. note::
-    On Substrate, constructors have a name. Solang allows to name constructors in the substrate target:
+    On Substrate, constructors have a name. Solang allows naming constructors in the substrate target:
 
     .. code-block:: solidity
  
