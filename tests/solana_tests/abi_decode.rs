@@ -1173,3 +1173,37 @@ fn test_struct_validation_invalid() {
     let encoded = input.try_to_vec().unwrap();
     let _ = vm.function("test", &[Token::Bytes(encoded)], &[], None);
 }
+
+#[test]
+fn string_fixed_array() {
+    let mut vm = build_solidity(
+        r#"
+        contract test {
+    function testing(bytes memory data) public pure {
+        string[4] arr = abi.borshDecode(data, (string[4]));
+        assert(arr[0] == "a");
+        assert(arr[1] == "b");
+        assert(arr[2] == "c");
+        assert(arr[3] == "d");
+    }
+}
+        "#,
+    );
+    vm.constructor("test", &[]);
+
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        a: [String; 4],
+    }
+
+    let input = Input {
+        a: [
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+            "d".to_string(),
+        ],
+    };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("testing", &[Token::Bytes(encoded)], &[], None);
+}
