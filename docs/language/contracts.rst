@@ -19,7 +19,7 @@ like so:
   }
 
 A constructor can have any number of arguments.
-If a constructor has arguments, those arguments must be supplied when the contract is deployed.
+If a constructor has arguments, they must be supplied when the contract is deployed.
 
 If a contract is expected to receive value on instantiation, the constructor should be declared ``payable``.
 
