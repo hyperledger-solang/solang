@@ -456,7 +456,6 @@ fn eval_constants_in_expression(expr: Expression) -> Result<Expression, Diagnost
 
 /// Function that takes a BigInt and an expected type. If the number of bits in the type required to represent the BigInt is not suffiecient, it will return a diagnostic.
 fn overflow_check(result: BigInt, ty: Type, loc: Loc) -> Option<Diagnostic> {
-    println!("result {}", result.bits());
     if let Type::Uint(bits) = ty {
         // If the result sign is minus, throw an error.
         if let Sign::Minus = result.sign() {
