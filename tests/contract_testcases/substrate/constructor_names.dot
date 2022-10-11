@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/constructor_names.sol" {
+	contract [label="contract C\ntests/contract_testcases/substrate/constructor_names.sol:1:1-5:2"]
+	my_constructor [label="constructor my_constructor\ncontract: C\ntests/contract_testcases/substrate/constructor_names.sol:2:2-32\nsignature my_constructor()\nvisibility public\nmutability nonpayable"]
+	foo [label="function foo\ncontract: C\ntests/contract_testcases/substrate/constructor_names.sol:4:2-28\nsignature foo()\nvisibility public\nmutability pure"]
+	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/constructor_names.sol:1:1-5:2"]
+	contracts -> contract
+	contract -> my_constructor [label="constructor"]
+	contract -> foo [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+}

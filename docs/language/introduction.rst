@@ -23,7 +23,7 @@ Unique features to Solang:
 
 - Solang can target different blockchains and some features depending on the target.
   For example, Parity Substrate uses a different ABI encoding and allows constructors
-  to be overloaded.
+  to be named.
 - Events can be declared outside of contracts
 - Base contracts can be declared in any order
 - There is a ``print()`` function for debugging

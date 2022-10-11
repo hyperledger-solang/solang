@@ -9,7 +9,7 @@ The Parity Substrate has the following differences to Ethereum Solidity:
 - The address type is 32 bytes, not 20 bytes. This is what Substrate calls an "account"
 - An address literal has to be specified using the ``address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ"`` syntax
 - ABI encoding and decoding is done using the `SCALE <https://docs.substrate.io/reference/scale-codec/>`_ encoding
-- Multiple constructors are allowed, and can be overloaded
+- Constructors can be named. Constructors with no name will be called ``new`` in the generated metadata.
 - There is no ``ecrecover()`` builtin function, or any other function to recover or verify cryptographic signatures at runtime
 - Only functions called via rpc may return values; when calling a function in a transaction, the return values cannot be accessed
 - An `assert()`, `require()`, or `revert()` executes the wasm unreachable instruction. The reason code is lost
