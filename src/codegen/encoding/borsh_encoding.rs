@@ -1047,10 +1047,12 @@ impl BorshEncoding {
     ) {
         // If we have a 'int[3][4][] vec', we can only validate the buffer after we have
         // allocated the outer dimension, i.e., we are about to read a 'int[3][4]' item.
+        // Arrays whose elements are dynamic cannot be verified.
         if validator.validation_necessary()
             && !dims[0..(dimension + 1)]
                 .iter()
                 .any(|d| *d == ArrayLength::Dynamic)
+            && !elem_ty.is_dynamic(ns)
         {
             let mut elems = BigInt::one();
             for item in &dims[0..(dimension + 1)] {
