@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/test_abstract.sol" {
 	contract [label="contract foo\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:2:9-8:10"]
-	node_2 [label="constructor \ncontract: foo\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:3:13-41\nsignature (int256)\nvisibility public\nmutability nonpayable"]
+	new [label="constructor new\ncontract: foo\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:3:13-41\nsignature new(int256)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nint256 arg1"]
 	f1 [label="function f1\ncontract: foo\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:6:13-33\nsignature f1()\nvisibility public\nmutability nonpayable"]
 	contract_5 [label="contract bar\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:10:9-14:10"]
@@ -11,8 +11,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/test_abstract.sol
 	diagnostic_11 [label="found contract 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:10:9-14:10"]
 	diagnostic_12 [label="cannot construct 'foo' of type 'abstract contract'\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_abstract.sol:12:25-35"]
 	contracts -> contract
-	contract -> node_2 [label="constructor"]
-	node_2 -> parameters [label="parameters"]
+	contract -> new [label="constructor"]
+	new -> parameters [label="parameters"]
 	contract -> f1 [label="function"]
 	contracts -> contract_5
 	contract_5 -> test [label="function"]

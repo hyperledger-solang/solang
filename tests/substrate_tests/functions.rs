@@ -19,10 +19,6 @@ fn constructors() {
                 result = 1;
             }
 
-            constructor(uint64 x) public {
-                result = x;
-            }
-
             function get() public returns (uint64) {
                 return result;
             }
@@ -40,10 +36,6 @@ fn constructors() {
         contract test {
             uint64 result;
 
-            constructor() public {
-                result = 1;
-            }
-
             constructor(uint64 x) public {
                 result = x;
             }
@@ -54,7 +46,7 @@ fn constructors() {
         }",
     );
 
-    runtime.constructor(1, Val(0xaa_bb_cc_dd).encode());
+    runtime.constructor(0, Val(0xaa_bb_cc_dd).encode());
     runtime.function("get", Vec::new());
 
     assert_eq!(runtime.vm.output, Val(0xaa_bb_cc_dd).encode());
@@ -67,10 +59,6 @@ fn constructor_wrong_selector() {
         "
         contract test {
             uint64 result;
-
-            constructor() public {
-                result = 1;
-            }
 
             constructor(uint64 x) public {
                 result = x;
@@ -92,10 +80,6 @@ fn constructor_override_selector() {
         contract test {
             uint64 result;
 
-            constructor() {
-                result = 1;
-            }
-
             constructor(uint64 x) selector=hex"01020304" {
                 result = x;
             }
@@ -105,8 +89,6 @@ fn constructor_override_selector() {
             }
         }"#,
     );
-
-    runtime.constructor(0, Vec::new());
 
     let mut input: Vec<u8> = vec![1, 2, 3, 4];
     input.extend(0xaa_bb_cc_ddu64.encode());
@@ -181,10 +163,6 @@ fn function_wrong_selector() {
         "
         contract test {
             uint64 result;
-
-            constructor() public {
-                result = 1;
-            }
 
             constructor(uint64 x) public {
                 result = x;

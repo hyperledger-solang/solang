@@ -393,14 +393,21 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
 
     abi.storage.structs.fields = fields;
 
+    let conflicting_names = non_unique_function_names(contract_no, ns);
+
     let mut constructors = ns.contracts[contract_no]
         .functions
         .iter()
         .filter_map(|function_no| {
             let f = &ns.functions[*function_no];
+            let name = if conflicting_names.contains(&f.name) {
+                f.mangled_name.clone()
+            } else {
+                f.name.clone()
+            };
             if f.is_constructor() {
                 Some(Constructor {
-                    name: String::from("new"),
+                    name,
                     selector: render_selector(f),
                     args: f
                         .params
@@ -428,7 +435,6 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
         });
     }
 
-    let conflicting_names = non_unique_function_names(contract_no, ns);
     let messages = ns.contracts[contract_no]
         .all_functions
         .keys()
