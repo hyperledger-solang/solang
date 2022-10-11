@@ -203,7 +203,18 @@ fn constant_overflow_checks() {
 
             uint8 sesa = 500- 400 + test_params(100+200, 0) + (200+101) + input.readUint8(4294967296);
             int8 seas = (120 + 120) + a + (120 + 125);  
+
+            // no diagnostic
             uint8 b = 255 - 255/5 ;
+
+            // value 260 does not fit into type uint8.
+            uint8 shift_r = (120 >> 2) + 230;
+
+            // value 261 does not fit into type uint8.
+            uint8 mod_test = 254 + (500%17);
+
+            // value 269 does not fit into type uint8.
+            uint8 bb = 320 - (255/5) ;
         }
     }
     
@@ -241,6 +252,18 @@ fn constant_overflow_checks() {
     );
     assert_eq!(errors[17].message, "value 240 does not fit into type int8.");
     assert_eq!(errors[18].message, "value 245 does not fit into type int8.");
+    assert_eq!(
+        errors[19].message,
+        "value 260 does not fit into type uint8."
+    );
+    assert_eq!(
+        errors[20].message,
+        "value 261 does not fit into type uint8."
+    );
+    assert_eq!(
+        errors[21].message,
+        "value 269 does not fit into type uint8."
+    );
 }
 
 #[test]

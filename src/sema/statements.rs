@@ -332,7 +332,7 @@ fn statement(
                     ResolveTo::Type(&var_ty),
                 )?;
 
-                verify_expression_for_overflow(expr.clone(), ns);
+                verify_expression_for_overflow(&expr, ns);
                 used_variable(ns, &expr, symtable);
 
                 Some(Arc::new(expr.cast(
@@ -702,7 +702,7 @@ fn statement(
         pt::Statement::Return(loc, Some(returns)) => {
             let expr = return_with_values(returns, loc, context, symtable, ns, diagnostics)?;
 
-            verify_expression_for_overflow(expr.clone(), ns);
+            verify_expression_for_overflow(&expr, ns);
 
             for offset in symtable.returns.iter() {
                 let elem = symtable.vars.get_mut(offset).unwrap();
@@ -767,7 +767,7 @@ fn statement(
                         ResolveTo::Discard,
                     )?;
 
-                    verify_expression_for_overflow(ret.clone(), ns);
+                    verify_expression_for_overflow(&ret, ns);
                     ret
                 }
                 pt::Expression::NamedFunctionCall(loc, ty, args) => {
@@ -782,7 +782,7 @@ fn statement(
                         diagnostics,
                         ResolveTo::Discard,
                     )?;
-                    verify_expression_for_overflow(ret.clone(), ns);
+                    verify_expression_for_overflow(&ret, ns);
                     ret
                 }
                 _ => {

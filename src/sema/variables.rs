@@ -346,7 +346,7 @@ pub fn variable_decl<'a>(
                     // implicitly conversion to correct ty
                     match res.cast(&def.loc, &ty, true, ns, &mut diagnostics) {
                         Ok(res) => {
-                            verify_expression_for_overflow(res.clone(), ns);
+                            verify_expression_for_overflow(&res, ns);
 
                             Some(res)
                         }
@@ -677,7 +677,7 @@ pub fn resolve_initializers(
             ResolveTo::Type(&ty),
         ) {
             if let Ok(res) = res.cast(&initializer.loc(), &ty, true, ns, &mut diagnostics) {
-                verify_expression_for_overflow(res.clone(), ns);
+                verify_expression_for_overflow(&res, ns);
                 ns.contracts[*contract_no].variables[*var_no].initializer = Some(res);
             }
         }

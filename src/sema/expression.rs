@@ -3923,7 +3923,7 @@ fn assign_single(
         ResolveTo::Type(var_ty.deref_any()),
     )?;
 
-    verify_expression_for_overflow(val.clone(), ns);
+    verify_expression_for_overflow(&val, ns);
 
     used_variable(ns, &val, symtable);
     match &var {
@@ -4948,7 +4948,7 @@ fn array_subscript(
 
     let index_ty = index.ty();
 
-    verify_expression_for_overflow(index.clone(), ns);
+    verify_expression_for_overflow(&index, ns);
 
     match index_ty.deref_any() {
         Type::Uint(_) => (),

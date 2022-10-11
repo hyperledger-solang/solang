@@ -118,9 +118,9 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     let generated_dot = ns.dotgraphviz();
 
     // uncomment the next three lines to regenerate the test data
-    //use std::io::Write;
-    //let mut file = File::create(&path)?;
-    //file.write_all(generated_dot.as_bytes())?;
+    // use std::io::Write;
+    // let mut file = File::create(&path)?;
+    // file.write_all(generated_dot.as_bytes())?;
 
     let mut file = File::open(&path)?;
 
