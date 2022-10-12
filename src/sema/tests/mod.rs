@@ -172,9 +172,11 @@ fn constant_overflow_checks() {
     
         function test_shift(int8 input) public {
             // value 128 does not fit into type int8.
+            // warning: left shift by 7 may overflow the final result.
             int8 mul_ovf = 1 << 7;
     
             // value 128 does not fit into type int8.
+            // warning: left shift by 7 may overflow the final result
             int8 mixed = (1 << 7) + input;
         }
     
@@ -215,12 +217,28 @@ fn constant_overflow_checks() {
 
             // value 269 does not fit into type uint8.
             uint8 bb = 320 - (255/5) ;
+
+            // left shift by 7 may overflow the final result
+            uint8 shift_warning = (1 << 9) - 300;
+
+            int8 bitwise_or = (250 | 5) - 150;
+
+            // value 155 does not fit into type int8.
+            int8 bitwise_or_ovf = (250 | 5) - 100;
+
+            uint8 bitwise_and = 1000 & 5 ;
+
+            // value 262 does not fit into type uint8.
+            uint8 bitwise_and_ovf = (1000 & 255) + 30 ;
+
+            uint8 bitwise_xor = 1000 ^ 256;
         }
     }
     
         "#;
     let ns = parse(file);
     let errors = ns.diagnostics.errors();
+    let warnings = ns.diagnostics.warnings();
 
     assert_eq!(errors[0].message, "value 133 does not fit into type int8.");
     assert_eq!(errors[1].message, "negative value -1 does not fit into type uint8. Cannot implicitly convert signed literal to unsigned type.");
@@ -265,7 +283,31 @@ fn constant_overflow_checks() {
         errors[21].message,
         "value 269 does not fit into type uint8."
     );
-    assert_eq!(errors.len(), 22);
+    assert_eq!(errors[22].message, "value 155 does not fit into type int8.");
+    assert_eq!(
+        errors[23].message,
+        "value 262 does not fit into type uint8."
+    );
+
+    assert_eq!(
+        errors[24].message,
+        "value 744 does not fit into type uint8."
+    );
+
+    assert_eq!(errors.len(), 25);
+
+    assert_eq!(
+        warnings[1].message,
+        "left shift by 7 may overflow the final result"
+    );
+    assert_eq!(
+        warnings[2].message,
+        "left shift by 7 may overflow the final result"
+    );
+    assert_eq!(
+        warnings[3].message,
+        "left shift by 9 may overflow the final result"
+    );
 }
 
 #[test]

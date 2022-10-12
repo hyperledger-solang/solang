@@ -8,14 +8,15 @@ use super::ast::{
 use super::builtin;
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
+use super::eval::check_term_for_constant_overflow;
 use super::eval::eval_const_number;
 use super::eval::eval_const_rational;
-use super::eval::verify_expression_for_overflow;
 use super::format::string_format;
 use super::{symtable::Symtable, using};
 use crate::sema::unused_variable::{
     assigned_variable, check_function_call, check_var_usage_expression, used_variable,
 };
+use crate::sema::Recurse;
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use num_bigint::{BigInt, Sign};
@@ -3923,7 +3924,7 @@ fn assign_single(
         ResolveTo::Type(var_ty.deref_any()),
     )?;
 
-    verify_expression_for_overflow(&val, ns);
+    val.recurse(ns, check_term_for_constant_overflow);
 
     used_variable(ns, &val, symtable);
     match &var {
@@ -4948,7 +4949,7 @@ fn array_subscript(
 
     let index_ty = index.ty();
 
-    verify_expression_for_overflow(&index, ns);
+    index.recurse(ns, check_term_for_constant_overflow);
 
     match index_ty.deref_any() {
         Type::Uint(_) => (),

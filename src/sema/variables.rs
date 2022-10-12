@@ -12,7 +12,8 @@ use super::{
     symtable::{VariableInitializer, VariableUsage},
     tags::resolve_tags,
 };
-use crate::sema::eval::verify_expression_for_overflow;
+use crate::sema::eval::check_term_for_constant_overflow;
+use crate::sema::Recurse;
 use solang_parser::{
     doccomment::{parse_doccomments, DocComment},
     pt::{self, CodeLocation, OptionalCodeLocation},
@@ -346,8 +347,7 @@ pub fn variable_decl<'a>(
                     // implicitly conversion to correct ty
                     match res.cast(&def.loc, &ty, true, ns, &mut diagnostics) {
                         Ok(res) => {
-                            verify_expression_for_overflow(&res, ns);
-
+                            res.recurse(ns, check_term_for_constant_overflow);
                             Some(res)
                         }
                         Err(_) => {
@@ -677,7 +677,7 @@ pub fn resolve_initializers(
             ResolveTo::Type(&ty),
         ) {
             if let Ok(res) = res.cast(&initializer.loc(), &ty, true, ns, &mut diagnostics) {
-                verify_expression_for_overflow(&res, ns);
+                res.recurse(ns, check_term_for_constant_overflow);
                 ns.contracts[*contract_no].variables[*var_no].initializer = Some(res);
             }
         }
