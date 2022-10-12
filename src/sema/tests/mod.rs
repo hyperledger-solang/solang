@@ -225,6 +225,7 @@ fn constant_overflow_checks() {
     assert_eq!(errors[0].message, "value 133 does not fit into type int8.");
     assert_eq!(errors[1].message, "negative value -1 does not fit into type uint8. Cannot implicitly convert signed literal to unsigned type.");
     assert_eq!(errors[2].message, "value 133 does not fit into type int8.");
+    assert_eq!(errors[3].message, "negative value -1 does not fit into type uint8. Cannot implicitly convert signed literal to unsigned type.");
     assert_eq!(errors[4].message, "value 762 does not fit into type int8.");
     assert_eq!(errors[5].message, "value 882 does not fit into type int8.");
     assert_eq!(errors[6].message, "value 128 does not fit into type int8.");
@@ -264,6 +265,7 @@ fn constant_overflow_checks() {
         errors[21].message,
         "value 269 does not fit into type uint8."
     );
+    assert_eq!(errors.len(), 22);
 }
 
 #[test]
@@ -355,4 +357,5 @@ fn test_types() {
     assert_eq!(errors[8].message, "value 3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 does not fit into type uint256.");
 
     assert_eq!(errors[9].message, "value 463168356949264781694283940034751631413079938662562256157830336031652518559740 does not fit into type uint256.");
+    assert_eq!(errors.len(), 10);
 }
