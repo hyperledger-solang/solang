@@ -4,7 +4,7 @@ use contract_metadata::{
     SourceLanguage, SourceWasm,
 };
 use ink_metadata::{
-    layout::{FieldLayout, Layout, LayoutKey, LeafLayout, StructLayout},
+    layout::{FieldLayout, Layout, LayoutKey, LeafLayout, RootLayout, StructLayout},
     ConstructorSpec, ContractSpec, EventParamSpec, EventSpec, InkProject, MessageParamSpec,
     MessageSpec, ReturnTypeSpec, TypeSpec,
 };
@@ -280,8 +280,11 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         })
         .collect();
 
-    // FIXME: what shoudl be the name of the storage?
-    let layout = Layout::Struct(StructLayout::new(String::new(), fields));
+    let contract_name = ns.contracts[contract_no].name.clone();
+    let storage = Layout::Root(RootLayout::new(
+        LayoutKey::new(0u32),
+        Layout::Struct(StructLayout::new(contract_name, fields)),
+    ));
 
     let mut f_to_constructor = |f: &Function| -> ConstructorSpec<PortableForm> {
         let payable = matches!(f.mutability, ast::Mutability::Payable(_));
@@ -467,7 +470,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .docs(vec![render(&ns.contracts[contract_no].tags)])
         .done();
 
-    InkProject::new_portable(layout, spec, registry.finish())
+    InkProject::new_portable(storage, spec, registry.finish())
 }
 
 fn tags(contract_no: usize, tagname: &str, ns: &ast::Namespace) -> Vec<String> {
