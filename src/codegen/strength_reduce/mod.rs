@@ -158,16 +158,15 @@ fn block_reduce(
                 *value = Box::new(expression_reduce(value, &vars, ns));
             }
             Instr::Constructor {
-                args,
+                encoded_args,
+                encoded_args_len,
                 value,
                 gas,
                 salt,
                 ..
             } => {
-                *args = args
-                    .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
-                    .collect();
+                *encoded_args = expression_reduce(encoded_args, &vars, ns);
+                *encoded_args_len = expression_reduce(encoded_args_len, &vars, ns);
                 if let Some(value) = value {
                     *value = expression_reduce(value, &vars, ns);
                 }
