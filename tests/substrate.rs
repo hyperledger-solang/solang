@@ -452,7 +452,7 @@ impl Externals for MockSubstrate {
 
                 hash.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &buf).as_bytes());
 
-                println!("seal_random: {} {}", hex::encode(buf), hex::encode(&hash));
+                println!("seal_random: {} {}", hex::encode(buf), hex::encode(hash));
 
                 let len = self
                     .vm
@@ -828,7 +828,7 @@ impl Externals for MockSubstrate {
 
                 self.accounts.get_mut(&account).unwrap().1 += remaining;
 
-                println!("seal_terminate: {} {}", hex::encode(&account), remaining);
+                println!("seal_terminate: {} {}", hex::encode(account), remaining);
 
                 self.accounts.remove(&self.vm.account);
 
@@ -878,7 +878,7 @@ impl Externals for MockSubstrate {
                     "seal_deposit_event: topic: {} data: {}",
                     topics
                         .iter()
-                        .map(|t| hex::encode(&t))
+                        .map(hex::encode)
                         .collect::<Vec<String>>()
                         .join(" "),
                     hex::encode(&data)
@@ -940,7 +940,7 @@ impl ModuleImportResolver for MockSubstrate {
 
 impl MockSubstrate {
     fn create_module(&self, code: &[u8]) -> ModuleRef {
-        let module = Module::from_buffer(&code).expect("parse wasm should work");
+        let module = Module::from_buffer(code).expect("parse wasm should work");
 
         ModuleInstance::new(
             &module,

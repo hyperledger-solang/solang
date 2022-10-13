@@ -1,3 +1,11 @@
+.. image:: hl_solang_horizontal-color.svg
+    :width: 75%
+    :alt: Hyperledger Solang Logo
+    :align: center
+    :target: https://github.com/hyperledger/solang
+
+|
+
 Solang Solidity Compiler
 ========================
 

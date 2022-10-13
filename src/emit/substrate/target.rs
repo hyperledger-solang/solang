@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::HashTy;
+use crate::codegen::cfg::{HashTy, ReturnCode};
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::storage::StorageSlot;
@@ -703,6 +703,24 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         binary.builder.build_unreachable();
     }
 
+    fn return_abi_data<'b>(
+        &self,
+        binary: &Binary<'b>,
+        data: PointerValue<'b>,
+        data_len: BasicValueEnum<'b>,
+    ) {
+        emit_context!(binary);
+
+        call!(
+            "seal_return",
+            &[i32_zero!().into(), data.into(), data_len.into()]
+        );
+
+        binary
+            .builder
+            .build_return(Some(&binary.return_values[&ReturnCode::Success]));
+    }
+
     fn assert_failure<'b>(&self, binary: &'b Binary, _data: PointerValue, _length: IntValue) {
         // insert "unreachable" instruction; not that build_unreachable() tells the compiler
         // that this code path is not reachable and may be discarded.
@@ -775,7 +793,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             length = binary.builder.build_int_add(
                 length,
-                self.encoded_length(*arg, false, true, ty, function, binary, ns),
+                SubstrateTarget::encoded_length(*arg, false, true, ty, function, binary, ns),
                 "",
             );
         }
@@ -785,7 +803,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             length = binary.builder.build_int_add(
                 length,
-                self.encoded_length(*arg, false, false, ty, function, binary, ns),
+                SubstrateTarget::encoded_length(*arg, false, false, ty, function, binary, ns),
                 "",
             );
         }
@@ -905,7 +923,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         for (i, ty) in tys.iter().enumerate() {
             length = binary.builder.build_int_add(
                 length,
-                self.encoded_length(args[i], load, false, ty, function, binary, ns),
+                SubstrateTarget::encoded_length(args[i], load, false, ty, function, binary, ns),
                 "",
             );
         }

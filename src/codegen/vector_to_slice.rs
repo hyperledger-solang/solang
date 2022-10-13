@@ -99,6 +99,7 @@ fn find_writable_vectors(
             // These instructions are fine with vectors
             Instr::Set { .. }
             | Instr::Nop
+            | Instr::ReturnCode { .. }
             | Instr::Branch { .. }
             | Instr::BranchCond { .. }
             | Instr::Switch { .. }
@@ -117,6 +118,7 @@ fn find_writable_vectors(
             | Instr::Unreachable
             | Instr::Print { .. }
             | Instr::AssertFailure { .. }
+            | Instr::ReturnData { .. }
             | Instr::ValueTransfer { .. } => {
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }

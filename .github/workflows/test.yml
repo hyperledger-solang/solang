@@ -60,7 +60,7 @@ jobs:
       with:
         submodules: recursive
     - name: Rust stable
-      run: rustup default 1.59.0
+      run: rustup default 1.63.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -83,7 +83,7 @@ jobs:
       with:
         submodules: recursive
     - name: Rust stable
-      run: rustup default 1.59.0
+      run: rustup default 1.63.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -218,8 +218,8 @@ jobs:
           --platform linux/arm64,linux/amd64 \
           --label org.opencontainers.image.description="Solidity Compiler for Solana and Substrate version $(git describe --tags)"
 
-  solana:
-    name: Solana Integration test
+  anchor:
+    name: Anchor Integration test
     runs-on: ubuntu-latest
     container: ghcr.io/hyperledger/solang:ci
     needs: linux-x86-64
@@ -245,7 +245,6 @@ jobs:
       run: |
         yarn install
         anchor build
-        anchor test
       working-directory: ./integration/anchor
     - run: nohup solana-test-validator -q &
     - run: npm install
@@ -256,7 +255,40 @@ jobs:
         anchor deploy
       working-directory: ./integration/anchor
     - name: Create Solidity interface file for Anchor
-      run: solang idl ../anchor/target/idl/anchor.json
+      run: yarn parse-idl
+      working-directory: ./integration/anchor
+    - name: Build Solang contracts
+      run: yarn build
+      working-directory: ./integration/anchor
+    - name: Test Anchor
+      run: anchor test --skip-local-validator
+      working-directory: ./integration/anchor
+
+  solana:
+    name: Solana Integration test
+    runs-on: ubuntu-latest
+    container: ghcr.io/hyperledger/solang:ci
+    needs: linux-x86-64
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+    - name: Rust Stable
+      run: rustup default stable
+    - name: Setup yarn
+      run: npm install -g yarn
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-linux-x86-64
+        path: bin
+    - name: Solang Compiler
+      run: |
+        chmod 755 ./bin/solang
+        echo "$(pwd)/bin" >> $GITHUB_PATH
+    - run: nohup solana-test-validator -q &
+    - run: npm install
       working-directory: ./integration/solana
     - name: Build Solang contracts
       run: npm run build

@@ -12,10 +12,10 @@ use num_traits::ToPrimitive;
 use solang_parser::pt;
 use std::collections::HashMap;
 
-use crate::emit::dispatch::emit_function_dispatch;
 use crate::emit::functions::{abort_if_value_transfer, emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};
 
+mod dispatch;
 mod storage;
 pub(super) mod target;
 
@@ -379,8 +379,7 @@ impl SubstrateTarget {
 
         let fallback_block = binary.context.append_basic_block(function, "fallback");
 
-        emit_function_dispatch(
-            self,
+        self.emit_function_dispatch(
             binary,
             contract,
             ns,
@@ -422,8 +421,7 @@ impl SubstrateTarget {
             ns,
         );
 
-        emit_function_dispatch(
-            self,
+        self.emit_function_dispatch(
             binary,
             contract,
             ns,
@@ -1438,7 +1436,6 @@ impl SubstrateTarget {
     /// dereferenced. However, this is already encoded by the fact it is a Type::Ref(..) type. So, the load
     /// argument should be removed from this function.
     pub fn encoded_length<'x>(
-        &self,
         arg: BasicValueEnum<'x>,
         load: bool,
         packed: bool,
@@ -1457,9 +1454,15 @@ impl SubstrateTarget {
                 .context
                 .i32_type()
                 .const_int(ns.address_length as u64, false),
-            ast::Type::Enum(n) => {
-                self.encoded_length(arg, load, packed, &ns.enums[*n].ty, function, binary, ns)
-            }
+            ast::Type::Enum(n) => SubstrateTarget::encoded_length(
+                arg,
+                load,
+                packed,
+                &ns.enums[*n].ty,
+                function,
+                binary,
+                ns,
+            ),
             ast::Type::Struct(str_ty) => {
                 let arg = if load {
                     binary
@@ -1502,7 +1505,7 @@ impl SubstrateTarget {
 
                     normal_sum = binary.builder.build_int_add(
                         normal_sum,
-                        self.encoded_length(
+                        SubstrateTarget::encoded_length(
                             elem.into(),
                             !field.ty.is_fixed_reference_type(),
                             packed,
@@ -1526,7 +1529,7 @@ impl SubstrateTarget {
                 for field in &str_ty.definition(ns).fields {
                     null_sum = binary.builder.build_int_add(
                         null_sum,
-                        self.encoded_length(
+                        SubstrateTarget::encoded_length(
                             binary.default_value(&field.ty, ns),
                             false,
                             packed,
@@ -1602,7 +1605,7 @@ impl SubstrateTarget {
                             };
 
                             *sum = binary.builder.build_int_add(
-                                self.encoded_length(
+                                SubstrateTarget::encoded_length(
                                     elem.into(),
                                     !elem_ty.deref_memory().is_fixed_reference_type(),
                                     packed,
@@ -1626,7 +1629,7 @@ impl SubstrateTarget {
                     let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                     let null_length = binary.builder.build_int_mul(
-                        self.encoded_length(
+                        SubstrateTarget::encoded_length(
                             elem,
                             false,
                             packed,
@@ -1660,7 +1663,7 @@ impl SubstrateTarget {
                     let elem = binary.default_value(elem_ty.deref_any(), ns);
 
                     binary.builder.build_int_mul(
-                        self.encoded_length(
+                        SubstrateTarget::encoded_length(
                             elem,
                             false,
                             packed,
@@ -1725,7 +1728,7 @@ impl SubstrateTarget {
                             );
 
                             *sum = binary.builder.build_int_add(
-                                self.encoded_length(
+                                SubstrateTarget::encoded_length(
                                     elem.into(),
                                     !elem_ty.deref_memory().is_fixed_reference_type(),
                                     packed,
@@ -1748,7 +1751,7 @@ impl SubstrateTarget {
                     binary.builder.build_int_add(
                         encoded_length,
                         binary.builder.build_int_mul(
-                            self.encoded_length(
+                            SubstrateTarget::encoded_length(
                                 elem,
                                 false,
                                 packed,
@@ -1764,7 +1767,9 @@ impl SubstrateTarget {
                     )
                 }
             }
-            ast::Type::Ref(r) => self.encoded_length(arg, load, packed, r, function, binary, ns),
+            ast::Type::Ref(r) => {
+                SubstrateTarget::encoded_length(arg, load, packed, r, function, binary, ns)
+            }
             ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
                     binary.builder.build_load(arg.into_pointer_value(), "")

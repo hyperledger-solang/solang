@@ -84,21 +84,33 @@ impl AbiEncoding for BorshEncoding {
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
+        buffer_size_expr: Option<Expression>,
     ) -> Vec<Expression> {
         let buffer_size = vartab.temp_anonymous(&Type::Uint(32));
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: Loc::Codegen,
-                res: buffer_size,
-                expr: Expression::Builtin(
-                    Loc::Codegen,
-                    vec![Type::Uint(32)],
-                    Builtin::ArrayLength,
-                    vec![buffer.clone()],
-                ),
-            },
-        );
+        if let Some(length_expression) = buffer_size_expr {
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Loc::Codegen,
+                    res: buffer_size,
+                    expr: length_expression,
+                },
+            );
+        } else {
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Loc::Codegen,
+                    res: buffer_size,
+                    expr: Expression::Builtin(
+                        Loc::Codegen,
+                        vec![Type::Uint(32)],
+                        Builtin::ArrayLength,
+                        vec![buffer.clone()],
+                    ),
+                },
+            );
+        }
 
         let mut validator = BufferValidator::new(buffer_size, types);
 

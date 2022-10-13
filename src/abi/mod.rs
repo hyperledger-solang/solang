@@ -52,7 +52,9 @@ pub(super) fn non_unique_function_names(contract_no: usize, ns: &Namespace) -> H
         .all_functions
         .keys()
         .map(|f| &ns.functions[*f])
-        .filter(|f| f.is_public() && f.ty == pt::FunctionTy::Function && !names.insert(&f.name))
+        .filter(|f| f.is_public())
+        .filter(|f| f.ty == pt::FunctionTy::Function || f.ty == pt::FunctionTy::Constructor)
+        .filter(|f| !names.insert(&f.name))
         .map(|f| &f.name)
         .collect()
 }

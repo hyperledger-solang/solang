@@ -11,14 +11,15 @@ use super::{
 use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
 use crate::codegen::{undefined_variable, Expression, LLVMName};
 use crate::sema::ast::{
-    CallTy, Contract, Function, FunctionAttributes, Namespace, Parameter, RetrieveType,
-    StringLocation, StructType, Type,
+    CallTy, Contract, FunctionAttributes, Namespace, Parameter, RetrieveType, StringLocation,
+    StructType, Type,
 };
 use crate::sema::{contracts::collect_base_args, diagnostics::Diagnostics, Recurse};
 use crate::{sema::ast, Target};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_traits::One;
+use parse_display::Display;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -26,6 +27,7 @@ use std::ops::AddAssign;
 use std::str;
 use std::sync::Arc;
 use std::{fmt, fmt::Write};
+
 // IndexMap <ArrayVariable res , res of temp variable>
 pub type ArrayLengthVars = IndexMap<usize, usize>;
 
@@ -144,6 +146,7 @@ pub enum Instr {
         exception_block: Option<usize>,
         tys: Vec<Parameter>,
         data: Expression,
+        data_len: Option<Expression>,
     },
     /// Insert unreachable instruction after e.g. self-destruct
     Unreachable,
@@ -176,6 +179,24 @@ pub enum Instr {
     },
     /// Do nothing
     Nop,
+    /// Return AbiEncoded data via an environment system call
+    ReturnData {
+        data: Expression,
+        data_len: Expression,
+    },
+    /// Return a code at the end of a function
+    ReturnCode { code: ReturnCode },
+}
+
+/// This struct defined the return codes that we send to the execution environment when we return
+/// from a function.
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Display)]
+#[display(style = "title case")]
+pub enum ReturnCode {
+    Success,
+    FunctionSelectorInvalid,
+    AbiEncodingInvalid,
+    InvalidDataError,
 }
 
 impl Instr {
@@ -209,6 +230,10 @@ impl Instr {
             | Instr::Store {
                 dest: item_1,
                 data: item_2,
+            }
+            | Instr::ReturnData {
+                data: item_1,
+                data_len: item_2,
             } => {
                 item_1.recurse(cx, f);
                 item_2.recurse(cx, f);
@@ -316,6 +341,7 @@ impl Instr {
             Instr::AssertFailure { expr: None }
             | Instr::Unreachable
             | Instr::Nop
+            | Instr::ReturnCode { .. }
             | Instr::Branch { .. }
             | Instr::PopMemory { .. } => {}
         }
@@ -1070,26 +1096,37 @@ impl ControlFlowGraph {
                 selector,
                 exception_block: exception,
                 data,
-            } => format!(
-                "{} = (abidecode:(%{}, {} {} ({}))",
-                res.iter()
-                    .map(|local| format!("%{}", self.vars[local].id.name))
-                    .collect::<Vec<String>>()
-                    .join(", "),
-                self.expr_to_string(contract, ns, data),
-                selector
-                    .iter()
-                    .map(|s| format!("selector:0x{:08x} ", s))
-                    .collect::<String>(),
-                exception
-                    .iter()
-                    .map(|block| format!("exception: block{} ", block))
-                    .collect::<String>(),
-                tys.iter()
-                    .map(|ty| ty.ty.to_string(ns))
-                    .collect::<Vec<String>>()
-                    .join(", "),
-            ),
+                data_len,
+            } => {
+                let mut val = format!(
+                    "{} = (abidecode:(%{}, {} {} ({}))",
+                    res.iter()
+                        .map(|local| format!("%{}", self.vars[local].id.name))
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                    self.expr_to_string(contract, ns, data),
+                    selector
+                        .iter()
+                        .map(|s| format!("selector:0x{:08x} ", s))
+                        .collect::<String>(),
+                    exception
+                        .iter()
+                        .map(|block| format!("exception: block{} ", block))
+                        .collect::<String>(),
+                    tys.iter()
+                        .map(|ty| ty.ty.to_string(ns))
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                );
+
+                if let Some(len) = data_len {
+                    val.push_str(
+                        format!(" data len: {}", self.expr_to_string(contract, ns, len)).as_str(),
+                    );
+                }
+
+                val
+            }
 
             Instr::Store { dest, data } => format!(
                 "store {}, {}",
@@ -1195,6 +1232,18 @@ impl ControlFlowGraph {
                 }
                 description.push_str(format!("\n\t\tdefault: goto block #{}", default).as_str());
                 description
+            }
+
+            Instr::ReturnData { data, data_len } => {
+                format!(
+                    "return data {}, data length: {}",
+                    self.expr_to_string(contract, ns, data),
+                    self.expr_to_string(contract, ns, data_len)
+                )
+            }
+
+            Instr::ReturnCode { code } => {
+                format!("return code: {}", code)
             }
         }
     }
@@ -1308,48 +1357,36 @@ pub fn generate_cfg(
 
     let mut cfg = function_cfg(contract_no, function_no, ns, opt);
 
-    let default_constructor = &ns.default_constructor(contract_no);
-    let func = match function_no {
-        Some(function_no) => &ns.functions[function_no],
-        None => default_constructor,
-    };
+    if let Some(func_no) = function_no {
+        let func = &ns.functions[func_no];
+        // if the function has any modifiers, generate the modifier chain
+        if !func.modifiers.is_empty() {
+            // only function can have modifiers
+            assert_eq!(func.ty, pt::FunctionTy::Function);
+            let public = cfg.public;
+            let nonpayable = cfg.nonpayable;
 
-    // if the function is a modifier, generate the modifier chain
-    if !func.modifiers.is_empty() {
-        // only function can have modifiers
-        assert_eq!(func.ty, pt::FunctionTy::Function);
-        let public = cfg.public;
-        let nonpayable = cfg.nonpayable;
+            cfg.public = false;
 
-        cfg.public = false;
+            for chain_no in (0..func.modifiers.len()).rev() {
+                let modifier_cfg_no = all_cfgs.len();
 
-        for (chain_no, call) in func.modifiers.iter().enumerate().rev() {
-            let modifier_cfg_no = all_cfgs.len();
+                all_cfgs.push(cfg);
 
-            all_cfgs.push(cfg);
+                cfg = generate_modifier_dispatch(
+                    contract_no,
+                    func_no,
+                    modifier_cfg_no,
+                    chain_no,
+                    ns,
+                    opt,
+                );
+            }
 
-            let (modifier_no, args) = resolve_modifier_call(call, &ns.contracts[contract_no]);
-
-            let modifier = &ns.functions[modifier_no];
-
-            let (new_cfg, next_id) = generate_modifier_dispatch(
-                contract_no,
-                func,
-                modifier,
-                modifier_cfg_no,
-                chain_no,
-                args,
-                ns,
-                opt,
-            );
-
-            cfg = new_cfg;
-            ns.next_id = next_id;
+            cfg.public = public;
+            cfg.nonpayable = nonpayable;
+            cfg.selector = ns.functions[func_no].selector();
         }
-
-        cfg.public = public;
-        cfg.nonpayable = nonpayable;
-        cfg.selector = func.selector();
     }
 
     optimize_and_check_cfg(
@@ -1672,9 +1709,7 @@ fn function_cfg(
         );
     }
 
-    let (vars, next_id) = vartab.drain();
-    cfg.vars = vars;
-    ns.next_id = next_id;
+    vartab.finalize(ns, &mut cfg);
 
     // walk cfg to check for use for before initialize
     cfg
@@ -1725,16 +1760,20 @@ pub(crate) fn populate_named_returns<T: FunctionAttributes>(
 }
 
 /// Generate the CFG for a modifier on a function
-pub fn generate_modifier_dispatch(
+fn generate_modifier_dispatch(
     contract_no: usize,
-    func: &Function,
-    modifier: &Function,
+    func_no: usize,
     cfg_no: usize,
     chain_no: usize,
-    args: &[ast::Expression],
-    ns: &Namespace,
+    ns: &mut Namespace,
     opt: &Options,
-) -> (ControlFlowGraph, usize) {
+) -> ControlFlowGraph {
+    let (modifier_no, args) = resolve_modifier_call(
+        &ns.functions[func_no].modifiers[chain_no],
+        &ns.contracts[contract_no],
+    );
+    let func = &ns.functions[func_no];
+    let modifier = &ns.functions[modifier_no];
     let name = format!(
         "{}::{}::{}::modifier{}::{}",
         &ns.contracts[contract_no].name,
@@ -1859,10 +1898,10 @@ pub fn generate_modifier_dispatch(
             },
         );
     }
-    let (vars, next_id) = vartab.drain();
-    cfg.vars = vars;
 
-    (cfg, next_id)
+    vartab.finalize(ns, &mut cfg);
+
+    cfg
 }
 
 impl Contract {

@@ -116,9 +116,6 @@ fn yul_function_cfg(
         cfg.add_yul(&mut vartab, returns);
     }
 
-    let (vars, next_id) = vartab.drain();
-    cfg.vars = vars;
-    ns.next_id = next_id;
-
+    vartab.finalize(ns, &mut cfg);
     cfg
 }

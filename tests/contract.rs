@@ -137,7 +137,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
 }
 
 fn add_file(cache: &mut FileResolver, path: &Path, target: Target) -> io::Result<String> {
-    let mut file = File::open(&path)?;
+    let mut file = File::open(path)?;
 
     let mut source = String::new();
 

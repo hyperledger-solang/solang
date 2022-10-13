@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_01.sol" {
 	contract [label="contract base\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:2:9-4:10"]
-	node_2 [label="constructor \ncontract: base\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:3:13-41\nsignature (uint64)\nvisibility public\nmutability nonpayable"]
+	new [label="constructor new\ncontract: base\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:3:13-41\nsignature new(uint64)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint64 a"]
 	contract_4 [label="contract apex\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:6:9-10:10"]
 	base [label="base base\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:6:26-36"]
@@ -17,8 +17,8 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_01.
 	diagnostic_17 [label="missing arguments to base contract 'base' constructor\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:6:9-10:10"]
 	diagnostic_18 [label="conversion from bool to uint64 not possible\nlevel Error\ntests/contract_testcases/substrate/inheritance/base_contract_01.sol:6:31-35"]
 	contracts -> contract
-	contract -> node_2 [label="constructor"]
-	node_2 -> parameters [label="parameters"]
+	contract -> new [label="constructor"]
+	new -> parameters [label="parameters"]
 	contracts -> contract_4
 	contract_4 -> base [label="base"]
 	contract_4 -> foo [label="function"]
