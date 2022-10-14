@@ -675,17 +675,15 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             success,
             res,
             contract_no,
-            constructor_no,
-            args,
+            encoded_args,
+            encoded_args_len,
             value,
             gas,
             salt,
             space,
         } => {
-            let args = &args
-                .iter()
-                .map(|a| expression(target, bin, a, &w.vars, function, ns))
-                .collect::<Vec<BasicValueEnum>>();
+            let encoded_args = expression(target, bin, encoded_args, &w.vars, function, ns);
+            let encoded_args_len = expression(target, bin, encoded_args_len, &w.vars, function, ns);
 
             let address = bin.build_alloca(function, bin.address_type(ns), "address");
 
@@ -710,13 +708,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 function,
                 success,
                 *contract_no,
-                *constructor_no,
                 bin.builder.build_pointer_cast(
                     address,
                     bin.context.i8_type().ptr_type(AddressSpace::Generic),
                     "address",
                 ),
-                args,
+                encoded_args,
+                encoded_args_len,
                 gas,
                 value,
                 salt,

@@ -86,16 +86,16 @@ impl AvailableExpressionSet {
             }
 
             Instr::Constructor {
-                args,
+                encoded_args,
+                encoded_args_len,
                 value,
                 gas,
                 salt,
                 space,
                 ..
             } => {
-                for arg in args {
-                    let _ = self.gen_expression(arg, ave, cst);
-                }
+                let _ = self.gen_expression(encoded_args, ave, cst);
+                let _ = self.gen_expression(encoded_args_len, ave, cst);
                 if let Some(expr) = value {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
@@ -310,8 +310,8 @@ impl AvailableExpressionSet {
                 success,
                 res,
                 contract_no,
-                constructor_no,
-                args,
+                encoded_args,
+                encoded_args_len,
                 value,
                 gas,
                 salt,
@@ -333,11 +333,8 @@ impl AvailableExpressionSet {
                     success: *success,
                     res: *res,
                     contract_no: *contract_no,
-                    constructor_no: *constructor_no,
-                    args: args
-                        .iter()
-                        .map(|v| self.regenerate_expression(v, ave, cst).1)
-                        .collect::<Vec<Expression>>(),
+                    encoded_args: self.regenerate_expression(encoded_args, ave, cst).1,
+                    encoded_args_len: self.regenerate_expression(encoded_args_len, ave, cst).1,
                     value: new_value,
                     gas: self.regenerate_expression(gas, ave, cst).1,
                     salt: new_salt,
