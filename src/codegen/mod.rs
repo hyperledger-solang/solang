@@ -3,6 +3,7 @@
 mod array_boundary;
 pub mod cfg;
 mod constant_folding;
+mod constructor;
 mod dead_storage;
 mod dispatch;
 mod encoding;

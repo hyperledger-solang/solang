@@ -1012,9 +1012,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
-        constructor_no: Option<usize>,
         address: PointerValue<'b>,
-        args: &[BasicValueEnum<'b>],
+        encoded_args: BasicValueEnum<'b>,
+        encoded_args_len: BasicValueEnum<'b>,
         gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
         salt: Option<IntValue<'b>>,
@@ -1024,11 +1024,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         let created_contract = &ns.contracts[contract_no];
-
-        let constructor = match constructor_no {
-            Some(function_no) => &ns.functions[function_no],
-            None => &created_contract.default_constructor.as_ref().unwrap().0,
-        };
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
@@ -1065,20 +1060,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
         }
 
-        let tys: Vec<ast::Type> = constructor.params.iter().map(|p| p.ty.clone()).collect();
-
-        // input
-        let (input, input_len) = self.abi_encode(
-            binary,
-            Some(i32_const!(
-                u32::from_le_bytes(constructor.selector().try_into().unwrap()) as u64
-            )),
-            false,
-            function,
-            args,
-            &tys,
-            ns,
-        );
+        let encoded_args = binary.vector_bytes(encoded_args);
 
         let value_ptr = binary
             .builder
@@ -1128,8 +1110,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 codehash.into(),
                 gas.into(),
                 cast_byte_ptr!(value_ptr, "value_transfer").into(),
-                input.into(),
-                input_len.into(),
+                encoded_args.into(),
+                encoded_args_len.into(),
                 address.into(),
                 address_len_ptr.into(),
                 scratch_buf.into(),

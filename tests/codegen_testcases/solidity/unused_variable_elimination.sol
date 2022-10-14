@@ -76,13 +76,13 @@ contract c3 {
         c2 ct = new c2();
 
         return 3;
-// CHECK: constructor salt: value: gas:uint64 0 space: c2 #None ()
+// CHECK: constructor salt: value: gas:uint64 0 space: c2 (encoded buffer: %temp.78, buffer len: (builtin ArrayLength (%temp.78)))
     }
 
 // BEGIN-CHECK: c3::function::test7
     function test7() public returns (int32) {
         c2 ct = new c2();
-// CHECK: constructor salt: value: gas:uint64 0 space: c2 #None ()
+// CHECK: constructor salt: value: gas:uint64 0 space: c2 (encoded buffer: %temp.80, buffer len: (builtin ArrayLength (%temp.80)))
         address ad = address(ct);
         (bool p, ) = ad.call(hex'ba');
 // CHECK: external call::regular address:%ad payload:(alloc bytes uint32 1 hex"ba") value:uint128 0 gas:uint64 0
@@ -135,7 +135,7 @@ return 3;
         int f = 4;
 
         int c = 32 +4 *(f = it1+it2);
-// CHECK: ty:int256 %c = (int256 32 + (sext int256 (int64 4 * (trunc int64 (%temp.84 + %temp.85)))))
+// CHECK: ty:int256 %c = (int256 32 + (sext int256 (int64 4 * (trunc int64 (%temp.87 + %temp.88)))))
 // NOT-CHECK: ty:int256 %f = (%temp.10 + %temp.11)
         return c;
     }
@@ -164,7 +164,7 @@ return 3;
     function test13() public returns (int){
 
         int[] memory vec = new int[](5);
-        // CHECK: alloc int256[] len %array_length.temp.92
+        // CHECK: alloc int256[] len %array_length.temp.97
         vec[0] = 3;
 
         return vec[1];
@@ -176,7 +176,7 @@ return 3;
     function test14() public returns (int) {
         int[] storage ptrArr = testArr;
 
-// CHECK: store storage slot(%temp.98) ty:int256 storage = int256 3
+// CHECK: store storage slot(%temp.103) ty:int256 storage = int256 3
         ptrArr.push(3);
 
         return ptrArr[0];

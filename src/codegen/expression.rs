@@ -9,6 +9,7 @@ use super::{
     vartable::Vartable,
 };
 use crate::codegen::array_boundary::handle_array_assign;
+use crate::codegen::constructor::call_constructor;
 use crate::codegen::encoding::create_encoder;
 use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::unused_variable::should_remove_assignment;
@@ -301,43 +302,21 @@ pub fn expression(
         } => {
             let address_res = vartab.temp_anonymous(&Type::Contract(*contract_no));
 
-            let args = args
-                .iter()
-                .map(|v| expression(v, cfg, *contract_no, func, ns, vartab, opt))
-                .collect();
-            let gas = if let Some(gas) = &call_args.gas {
-                expression(gas, cfg, *contract_no, func, ns, vartab, opt)
-            } else {
-                default_gas(ns)
-            };
-            let value = call_args
-                .value
-                .as_ref()
-                .map(|value| expression(value, cfg, *contract_no, func, ns, vartab, opt));
-            let salt = call_args
-                .salt
-                .as_ref()
-                .map(|salt| expression(salt, cfg, *contract_no, func, ns, vartab, opt));
-            let space = call_args
-                .space
-                .as_ref()
-                .map(|space| expression(space, cfg, *contract_no, func, ns, vartab, opt));
-
-            cfg.add(
+            call_constructor(
+                loc,
+                contract_no,
+                *contract_no,
+                constructor_no,
+                args,
+                call_args,
+                address_res,
+                None,
+                func,
+                ns,
                 vartab,
-                Instr::Constructor {
-                    success: None,
-                    res: address_res,
-                    contract_no: *contract_no,
-                    constructor_no: *constructor_no,
-                    args,
-                    value,
-                    gas,
-                    salt,
-                    space,
-                },
+                cfg,
+                opt,
             );
-
             Expression::Variable(*loc, Type::Contract(*contract_no), address_res)
         }
         ast::Expression::InternalFunction {
