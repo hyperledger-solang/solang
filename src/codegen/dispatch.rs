@@ -5,7 +5,7 @@ use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type};
 use num_bigint::{BigInt, Sign};
-use num_traits::Zero;
+use num_traits::{ToPrimitive, Zero};
 use solang_parser::pt;
 use solang_parser::pt::{FunctionTy, Loc};
 use std::sync::Arc;
@@ -336,6 +336,28 @@ pub(super) fn constructor_dispatch(
         );
     }
 
+    // Write heap offset to 12
+    let fixed_fields_size = ns.contracts[contract_no]
+        .fixed_layout_size
+        .to_u64()
+        .unwrap();
+
+    let heap_offset = (fixed_fields_size + 7) & !7;
+
+    cfg.add(
+        &mut vartab,
+        Instr::SetStorage {
+            ty: Type::Uint(32),
+            value: Expression::NumberLiteral(
+                pt::Loc::Codegen,
+                Type::Uint(64),
+                BigInt::from(heap_offset),
+            ),
+            storage: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(64), BigInt::from(12)),
+        },
+    );
+
+    // Call storage initializer
     cfg.add(
         &mut vartab,
         Instr::Call {

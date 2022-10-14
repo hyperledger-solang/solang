@@ -620,23 +620,6 @@ impl SolanaTarget {
                     .const_int(contract.magic as u64, false),
             );
 
-            // write heap_offset.
-            let heap_offset_ptr = unsafe {
-                binary.builder.build_gep(
-                    magic_value_ptr,
-                    &[binary.context.i64_type().const_int(3, false)],
-                    "heap_offset",
-                )
-            };
-
-            // align heap to 8 bytes
-            let heap_offset = (fixed_fields_size + 7) & !7;
-
-            binary.builder.build_store(
-                heap_offset_ptr,
-                binary.context.i32_type().const_int(heap_offset, false),
-            );
-
             // There is only one possible constructor
             let ret = if let Some(constructor_function) = contract.constructor {
                 binary
