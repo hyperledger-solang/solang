@@ -276,6 +276,7 @@ fn add_dispatch_case(
 /// Create the dispatch for a contract constructor. This case needs creates a new function in
 /// the CFG because we want to use de abi decoding implementation from codegen.
 pub(super) fn constructor_dispatch(
+    contract_no: usize,
     constructor_cfg_no: usize,
     all_cfg: &[ControlFlowGraph],
     ns: &mut Namespace,
@@ -334,6 +335,18 @@ pub(super) fn constructor_dispatch(
             },
         );
     }
+
+    cfg.add(
+        &mut vartab,
+        Instr::Call {
+            res: vec![],
+            return_tys: vec![],
+            call: InternalCallTy::Static {
+                cfg_no: ns.contracts[contract_no].initializer.unwrap(),
+            },
+            args: vec![],
+        },
+    );
 
     cfg.add(
         &mut vartab,

@@ -17,7 +17,7 @@ use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
 use num_traits::ToPrimitive;
 
 use crate::emit::ethabiencoder;
-use crate::emit::functions::{emit_functions, emit_initializer};
+use crate::emit::functions::emit_functions;
 use crate::emit::loop_builder::LoopBuilder;
 use crate::emit::{Binary, TargetRuntime};
 
@@ -29,7 +29,6 @@ pub struct SolanaTarget {
 pub struct Contract<'a> {
     magic: u32,
     contract: &'a ast::Contract,
-    storage_initializer: FunctionValue<'a>,
     constructor: Option<FunctionValue<'a>>,
     functions: HashMap<usize, FunctionValue<'a>>,
 }
@@ -83,8 +82,6 @@ impl SolanaTarget {
 
         emit_functions(&mut target, &mut binary, contract, ns);
 
-        let storage_initializer = emit_initializer(&mut target, &mut binary, contract, ns);
-
         let constructor = contract
             .constructor_dispatch
             .map(|cfg_no| binary.functions[&cfg_no]);
@@ -98,7 +95,6 @@ impl SolanaTarget {
             &[Contract {
                 magic: target.magic,
                 contract,
-                storage_initializer,
                 constructor,
                 functions,
             }],
@@ -165,8 +161,6 @@ impl SolanaTarget {
 
                 emit_functions(&mut target, &mut binary, contract, ns);
 
-                let storage_initializer = emit_initializer(&mut target, &mut binary, contract, ns);
-
                 let constructor = contract
                     .constructor_dispatch
                     .map(|cfg_no| binary.functions[&cfg_no]);
@@ -178,7 +172,6 @@ impl SolanaTarget {
                 contracts.push(Contract {
                     magic: target.magic,
                     contract,
-                    storage_initializer,
                     constructor,
                     functions,
                 });
@@ -642,18 +635,6 @@ impl SolanaTarget {
             binary.builder.build_store(
                 heap_offset_ptr,
                 binary.context.i32_type().const_int(heap_offset, false),
-            );
-
-            let arg_ty =
-                contract.storage_initializer.get_type().get_param_types()[0].into_pointer_type();
-
-            binary.builder.build_call(
-                contract.storage_initializer,
-                &[binary
-                    .builder
-                    .build_pointer_cast(sol_params, arg_ty, "")
-                    .into()],
-                "",
             );
 
             // There is only one possible constructor
