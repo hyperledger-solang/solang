@@ -1282,63 +1282,31 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
-        constructor_no: Option<usize>,
         address: PointerValue<'b>,
-        args: &[BasicValueEnum<'b>],
+        encoded_args: BasicValueEnum<'b>,
+        encoded_args_len: BasicValueEnum<'b>,
         _gas: IntValue<'b>,
-        value: Option<IntValue<'b>>,
+        _value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
         space: Option<IntValue<'b>>,
         ns: &ast::Namespace,
     ) {
-        // abi encode the arguments. The
-        let mut tys = vec![
-            ast::Type::Uint(64),
-            ast::Type::Bytes(4),
-            ast::Type::Bytes(1),
-        ];
-
-        if let Some(function_no) = constructor_no {
-            for param in &*ns.functions[function_no].params {
-                tys.push(param.ty.clone());
-            }
-        };
-
-        let value = if let Some(value) = value {
-            value
-        } else {
-            binary.context.i64_type().const_zero()
-        };
-
-        let packed = [
-            value.into(),
-            binary
-                .context
-                .i32_type()
-                .const_int(ns.contracts[contract_no].selector().to_be() as u64, false)
-                .into(),
-            binary.context.i8_type().const_zero().into(),
-        ];
-
-        let encoder = ethabiencoder::EncoderBuilder::new(
-            binary, function, false, &packed, args, &tys, true, ns,
-        );
-
-        let length = encoder.encoded_length();
         let address_length = binary
             .context
             .i32_type()
             .const_int(ns.address_length as u64 * 2, false);
 
-        let malloc_length = binary
-            .builder
-            .build_int_add(length, address_length, "malloc_length");
+        let malloc_length = binary.builder.build_int_add(
+            encoded_args_len.into_int_value(),
+            address_length,
+            "malloc_length",
+        );
 
         // The format of the payload is:
         // 32 bytes recv (will be filled in by create_contract C function)
         // 32 bytes sender (will be filled in by create_contract C function)
         // 4 bytes contract selector/magic
-        // remainder: eth abi encoded constructor arguments
+        // remainder: abi encoded constructor arguments
         let payload = binary
             .builder
             .build_call(
@@ -1353,7 +1321,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         let enc = unsafe { binary.builder.build_gep(payload, &[address_length], "enc") };
 
-        encoder.finish(binary, function, enc, ns);
+        let buffer_bytes = binary.vector_bytes(encoded_args);
+        binary.builder.build_call(
+            binary.module.get_function("__memcpy").unwrap(),
+            &[enc.into(), buffer_bytes.into(), encoded_args_len.into()],
+            "",
+        );
 
         let space = binary.builder.build_int_add(
             binary.context.i64_type().const_int(

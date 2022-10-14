@@ -9,6 +9,7 @@ use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
+use crate::codegen::constructor::call_constructor;
 use crate::codegen::events::new_event_emitter;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
@@ -1116,6 +1117,7 @@ fn try_catch(
             }
         }
         ast::Expression::Constructor {
+            loc,
             contract_no,
             constructor_no,
             args,
@@ -1127,41 +1129,20 @@ fn try_catch(
                 _ => vartab.temp_anonymous(&Type::Contract(*contract_no)),
             };
 
-            let value = call_args.value.as_ref().map(|value| {
-                expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt)
-            });
-
-            let gas = if let Some(gas) = &call_args.gas {
-                expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
-            } else {
-                default_gas(ns)
-            };
-            let salt = call_args
-                .salt
-                .as_ref()
-                .map(|salt| expression(salt, cfg, callee_contract_no, Some(func), ns, vartab, opt));
-            let space = call_args.space.as_ref().map(|space| {
-                expression(space, cfg, callee_contract_no, Some(func), ns, vartab, opt)
-            });
-
-            let args = args
-                .iter()
-                .map(|a| expression(a, cfg, callee_contract_no, Some(func), ns, vartab, opt))
-                .collect();
-
-            cfg.add(
+            call_constructor(
+                loc,
+                contract_no,
+                callee_contract_no,
+                constructor_no,
+                args,
+                call_args,
+                address_res,
+                Some(success),
+                Some(func),
+                ns,
                 vartab,
-                Instr::Constructor {
-                    success: Some(success),
-                    res: address_res,
-                    contract_no: *contract_no,
-                    constructor_no: *constructor_no,
-                    args,
-                    value,
-                    gas,
-                    salt,
-                    space,
-                },
+                cfg,
+                opt,
             );
 
             cfg.add(

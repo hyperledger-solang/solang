@@ -8,6 +8,7 @@ use crate::codegen::subexpression_elimination::{AvailableExpression, AvailableEx
 use crate::codegen::Expression;
 use crate::sema::ast::{StringLocation, Type};
 use num_bigint::{BigInt, Sign};
+use num_traits::Zero;
 use solang_parser::pt::Loc;
 
 #[test]
@@ -334,8 +335,8 @@ fn string() {
         success: None,
         res: 0,
         contract_no: 0,
-        constructor_no: None,
-        args: vec![concat.clone()],
+        encoded_args: concat.clone(),
+        encoded_args_len: Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::zero()),
         value: Some(compare.clone()),
         gas: concat2.clone(),
         salt: Some(compare2.clone()),

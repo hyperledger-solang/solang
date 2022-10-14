@@ -186,17 +186,15 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     success,
                     res,
                     contract_no,
-                    constructor_no,
-                    args,
+                    encoded_args,
+                    encoded_args_len,
                     value,
                     gas,
                     salt,
                     space,
                 } => {
-                    let args = args
-                        .iter()
-                        .map(|e| expression(e, Some(&vars), cfg, ns).0)
-                        .collect();
+                    let encoded_args = expression(encoded_args, Some(&vars), cfg, ns).0;
+                    let encoded_args_len = expression(encoded_args_len, Some(&vars), cfg, ns).0;
                     let value = value
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
@@ -212,8 +210,8 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         success: *success,
                         res: *res,
                         contract_no: *contract_no,
-                        constructor_no: *constructor_no,
-                        args,
+                        encoded_args,
+                        encoded_args_len,
                         value,
                         gas,
                         salt,

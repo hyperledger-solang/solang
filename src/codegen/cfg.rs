@@ -113,8 +113,8 @@ pub enum Instr {
         success: Option<usize>,
         res: usize,
         contract_no: usize,
-        constructor_no: Option<usize>,
-        args: Vec<Expression>,
+        encoded_args: Expression,
+        encoded_args_len: Expression,
         value: Option<Expression>,
         gas: Expression,
         salt: Option<Expression>,
@@ -262,16 +262,16 @@ impl Instr {
             }
 
             Instr::Constructor {
-                args,
+                encoded_args,
+                encoded_args_len,
                 value,
                 gas,
                 salt,
                 space,
                 ..
             } => {
-                for arg in args {
-                    arg.recurse(cx, f);
-                }
+                encoded_args.recurse(cx, f);
+                encoded_args_len.recurse(cx, f);
                 if let Some(expr) = value {
                     expr.recurse(cx, f);
                 }
@@ -1138,14 +1138,14 @@ impl ControlFlowGraph {
                 success,
                 res,
                 contract_no,
-                constructor_no,
-                args,
+                encoded_args,
+                encoded_args_len,
                 gas,
                 salt,
                 value,
                 space,
             } => format!(
-                "%{}, {} = constructor salt:{} value:{} gas:{} space:{} {} #{:?} ({})",
+                "%{}, {} = constructor salt:{} value:{} gas:{} space:{} {} (encoded buffer: {}, buffer len: {})",
                 self.vars[res].id.name,
                 match success {
                     Some(i) => format!("%{}", self.vars[i].id.name),
@@ -1165,11 +1165,8 @@ impl ControlFlowGraph {
                     None => "".to_string(),
                 },
                 ns.contracts[*contract_no].name,
-                constructor_no,
-                args.iter()
-                    .map(|expr| self.expr_to_string(contract, ns, expr))
-                    .collect::<Vec<String>>()
-                    .join(", ")
+                self.expr_to_string(contract, ns, encoded_args),
+                self.expr_to_string(contract, ns, encoded_args_len)
             ),
             Instr::Unreachable => "unreachable".to_string(),
             Instr::SelfDestruct { recipient } => format!(
