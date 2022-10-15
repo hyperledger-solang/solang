@@ -145,7 +145,7 @@ fn constant_overflow_checks() {
     let file = r#"
     contract test_contract {
         function test_params(uint8 usesa, int8 sesa) public returns(uint8) {
-            return usesa;
+            return usesa + uint8(sesa);
         }
     
         function test_add(int8 input) public returns (uint8) {
@@ -232,6 +232,23 @@ fn constant_overflow_checks() {
             uint8 bitwise_and_ovf = (1000 & 255) + 30 ;
 
             uint8 bitwise_xor = 1000 ^ 256;
+
+            // divide by zero
+            uint8 div_zero= 3 / (1-1);
+
+            // divide by zero
+            uint8 div_zeroo = (300-50) % 0;
+
+            // shift by negative number not allowed.
+            uint8 shift_left_neg = 120 << -1;
+            uint8 shift_right_neg = 120 >> -1;
+
+            // power by -1 is not allowed.
+            uint8 pow = 12 ** -1;
+
+            // large shift not allowed
+            int x = 1 >> 14676683207225698178084221555689649093015162623576402558976;
+
         }
     }
     
@@ -293,21 +310,28 @@ fn constant_overflow_checks() {
         errors[24].message,
         "value 744 does not fit into type uint8."
     );
+    assert_eq!(errors[25].message, "divide by zero");
+    assert_eq!(errors[26].message, "divide by zero");
+    assert_eq!(errors[27].message, "left shift by -1 is not possible");
+    assert_eq!(errors[28].message, "right shift by -1 is not possible");
+    assert_eq!(errors[29].message, "power by -1 is not possible");
+    assert_eq!(errors[30].message, "right shift by 14676683207225698178084221555689649093015162623576402558976 is not possible");
 
-    assert_eq!(errors.len(), 25);
+    assert_eq!(errors.len(), 31);
 
+    assert_eq!(
+        warnings[0].message,
+        "left shift by 7 may overflow the final result"
+    );
     assert_eq!(
         warnings[1].message,
         "left shift by 7 may overflow the final result"
     );
     assert_eq!(
         warnings[2].message,
-        "left shift by 7 may overflow the final result"
-    );
-    assert_eq!(
-        warnings[3].message,
         "left shift by 9 may overflow the final result"
     );
+    assert_eq!(warnings.len(), 3);
 }
 
 #[test]

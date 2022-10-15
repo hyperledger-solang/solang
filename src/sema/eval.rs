@@ -197,9 +197,8 @@ pub fn eval_const_rational(
     }
 }
 
-/// Function that recurses the expression, and calls a function that folds number literals in the expression(eval_constants_in_expression())
+/// Function that recurses the expression, and calls a function that folds number literals in the expression: eval_constants_in_expression().
 /// If the expression is an arithmetic operation of two number literals, overflow_check() will be called on the result.
-/// If the return is a diagnostic, push it to the namspace diagnostics
 pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Namespace) -> bool {
     match expr {
         Expression::Add(..)
@@ -214,14 +213,17 @@ pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Names
         | Expression::BitwiseOr(..)
         | Expression::BitwiseXor(..)
         | Expression::NumberLiteral(..) => match eval_constants_in_expression(expr, ns) {
-            Some(Expression::NumberLiteral(loc, ty, result)) => {
+            (Some(Expression::NumberLiteral(loc, ty, result)), _) => {
                 if let Some(diagnostic) = overflow_check(&result, &ty, &loc) {
                     ns.diagnostics.push(diagnostic);
                 }
+
                 return false;
             }
-            Some(_) => {}
-            None => {}
+            (None, false) => {
+                return false;
+            }
+            _ => {}
         },
         _ => {}
     }
@@ -230,54 +232,66 @@ pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Names
 }
 
 /// This function recursively folds number literals in a given expression.
-fn eval_constants_in_expression(expr: &Expression, ns: &mut Namespace) -> Option<Expression> {
+fn eval_constants_in_expression(
+    expr: &Expression,
+    ns: &mut Namespace,
+) -> (Option<Expression>, bool) {
     match expr {
         Expression::Add(loc, ty, _, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
                 Some(Expression::NumberLiteral(_, _, right)),
             ) = (left, right)
             {
-                Some(Expression::NumberLiteral(*loc, ty.clone(), left.add(right)))
+                (
+                    Some(Expression::NumberLiteral(*loc, ty.clone(), left.add(right))),
+                    true,
+                )
             } else {
-                None
+                (None, true)
             }
         }
         Expression::Subtract(loc, ty, _, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
                 Some(Expression::NumberLiteral(_, _, right)),
             ) = (&left, &right)
             {
-                Some(Expression::NumberLiteral(*loc, ty.clone(), left.sub(right)))
+                (
+                    Some(Expression::NumberLiteral(*loc, ty.clone(), left.sub(right))),
+                    true,
+                )
             } else {
-                None
+                (None, true)
             }
         }
 
         Expression::Multiply(loc, ty, _, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
                 Some(Expression::NumberLiteral(_, _, right)),
             ) = (&left, &right)
             {
-                Some(Expression::NumberLiteral(*loc, ty.clone(), left.mul(right)))
+                (
+                    Some(Expression::NumberLiteral(*loc, ty.clone(), left.mul(right))),
+                    true,
+                )
             } else {
-                None
+                (None, true)
             }
         }
         Expression::Divide(loc, ty, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
@@ -287,18 +301,21 @@ fn eval_constants_in_expression(expr: &Expression, ns: &mut Namespace) -> Option
                 if right.is_zero() {
                     ns.diagnostics
                         .push(Diagnostic::error(*loc, "divide by zero".to_string()));
-                    None
+                    (None, false)
                 } else {
-                    Some(Expression::NumberLiteral(*loc, ty.clone(), left.div(right)))
+                    (
+                        Some(Expression::NumberLiteral(*loc, ty.clone(), left.div(right))),
+                        true,
+                    )
                 }
             } else {
-                None
+                (None, true)
             }
         }
 
         Expression::Modulo(loc, ty, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
@@ -308,52 +325,61 @@ fn eval_constants_in_expression(expr: &Expression, ns: &mut Namespace) -> Option
                 if right.is_zero() {
                     ns.diagnostics
                         .push(Diagnostic::error(*loc, "divide by zero".to_string()));
-                    None
+                    (None, false)
                 } else {
-                    Some(Expression::NumberLiteral(*loc, ty.clone(), left % right))
+                    (
+                        Some(Expression::NumberLiteral(*loc, ty.clone(), left % right)),
+                        true,
+                    )
                 }
             } else {
-                None
+                (None, true)
             }
         }
         Expression::Power(loc, ty, _, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
                 Some(Expression::NumberLiteral(right_loc, _, right)),
             ) = (&left, &right)
             {
-                if let Some(diagnostic) = overflow_check(right, &Type::Uint(16), right_loc) {
-                    ns.diagnostics.push(diagnostic);
-                    None
+                if overflow_check(right, &Type::Uint(16), right_loc).is_some() {
+                    ns.diagnostics.push(Diagnostic::error(
+                        *right_loc,
+                        format!("power by {} is not possible", right),
+                    ));
+                    (None, false)
                 } else {
-                    Some(Expression::NumberLiteral(
-                        *loc,
-                        ty.clone(),
-                        left.pow(right.to_u16().unwrap().into()),
-                    ))
+                    (
+                        Some(Expression::NumberLiteral(
+                            *loc,
+                            ty.clone(),
+                            left.pow(right.to_u16().unwrap().into()),
+                        )),
+                        true,
+                    )
                 }
             } else {
-                None
+                (None, true)
             }
         }
         Expression::ShiftLeft(loc, ty, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
                 Some(Expression::NumberLiteral(right_loc, _, right)),
             ) = (&left, &right)
             {
-                if right.sign() == Sign::Minus {
+                if overflow_check(right, &Type::Uint(64), right_loc).is_some() {
                     ns.diagnostics.push(Diagnostic::error(
                         *right_loc,
                         format!("left shift by {} is not possible", right),
                     ));
-                    None
+                    (None, false)
                 } else {
                     if right >= &BigInt::from(left.bits()) {
                         ns.diagnostics.push(Diagnostic::warning(
@@ -362,119 +388,130 @@ fn eval_constants_in_expression(expr: &Expression, ns: &mut Namespace) -> Option
                         ));
                     }
 
-                    Some(Expression::NumberLiteral(
-                        *loc,
-                        ty.clone(),
-                        left.shl(right.to_u64().unwrap()),
-                    ))
+                    (
+                        Some(Expression::NumberLiteral(
+                            *loc,
+                            ty.clone(),
+                            left.shl(right.to_u64().unwrap()),
+                        )),
+                        true,
+                    )
                 }
             } else {
-                None
+                (None, true)
             }
         }
 
         Expression::ShiftRight(loc, ty, left, right, _) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
-                Some(Expression::NumberLiteral(_, _, right)),
+                Some(Expression::NumberLiteral(right_loc, _, right)),
             ) = (&left, &right)
             {
-                Some(Expression::NumberLiteral(
-                    *loc,
-                    ty.clone(),
-                    left.shr(right.to_u64().unwrap()),
-                ))
+                if overflow_check(right, &Type::Uint(64), right_loc).is_some() {
+                    ns.diagnostics.push(Diagnostic::error(
+                        *right_loc,
+                        format!("right shift by {} is not possible", right),
+                    ));
+                    (None, false)
+                } else {
+                    (
+                        Some(Expression::NumberLiteral(
+                            *loc,
+                            ty.clone(),
+                            left.shr(right.to_u64().unwrap()),
+                        )),
+                        true,
+                    )
+                }
             } else {
-                None
+                (None, true)
             }
         }
         Expression::BitwiseAnd(loc, ty, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
                 Some(Expression::NumberLiteral(_, _, right)),
             ) = (&left, &right)
             {
-                Some(Expression::NumberLiteral(
-                    *loc,
-                    ty.clone(),
-                    left.bitand(right),
-                ))
+                (
+                    Some(Expression::NumberLiteral(
+                        *loc,
+                        ty.clone(),
+                        left.bitand(right),
+                    )),
+                    true,
+                )
             } else {
-                None
+                (None, true)
             }
         }
         Expression::BitwiseOr(loc, ty, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
                 Some(Expression::NumberLiteral(_, _, right)),
             ) = (&left, &right)
             {
-                Some(Expression::NumberLiteral(
-                    *loc,
-                    ty.clone(),
-                    left.bitor(right),
-                ))
+                (
+                    Some(Expression::NumberLiteral(
+                        *loc,
+                        ty.clone(),
+                        left.bitor(right),
+                    )),
+                    true,
+                )
             } else {
-                None
+                (None, true)
             }
         }
         Expression::BitwiseXor(loc, ty, left, right) => {
-            let left = eval_constants_in_expression(left, ns);
-            let right = eval_constants_in_expression(right, ns);
+            let left = eval_constants_in_expression(left, ns).0;
+            let right = eval_constants_in_expression(right, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral(_, _, left)),
                 Some(Expression::NumberLiteral(_, _, right)),
             ) = (&left, &right)
             {
-                Some(Expression::NumberLiteral(
-                    *loc,
-                    ty.clone(),
-                    left.bitxor(right),
-                ))
+                (
+                    Some(Expression::NumberLiteral(
+                        *loc,
+                        ty.clone(),
+                        left.bitxor(right),
+                    )),
+                    true,
+                )
             } else {
-                None
+                (None, true)
             }
-        }
-        Expression::Builtin(.., ref args) => {
-            for args_iter in args {
-                let expression = eval_constants_in_expression(args_iter, ns);
-                if let Some(Expression::NumberLiteral(loc, ty, res)) = &expression {
-                    if let Some(diagnostic) = overflow_check(res, ty, loc) {
-                        ns.diagnostics.push(diagnostic);
-                    }
-                }
-            }
-
-            None
         }
         Expression::ZeroExt(loc, ty, expr) => {
-            let expr = eval_constants_in_expression(expr, ns);
+            let expr = eval_constants_in_expression(expr, ns).0;
             if let Some(Expression::NumberLiteral(_, _, n)) = expr {
-                Some(Expression::NumberLiteral(*loc, ty.clone(), n))
+                (Some(Expression::NumberLiteral(*loc, ty.clone(), n)), true)
             } else {
-                None
+                (None, true)
             }
         }
         Expression::SignExt(loc, ty, expr) => {
-            let expr = eval_constants_in_expression(expr, ns);
+            let expr = eval_constants_in_expression(expr, ns).0;
             if let Some(Expression::NumberLiteral(_, _, n)) = expr {
-                Some(Expression::NumberLiteral(*loc, ty.clone(), n))
+                (Some(Expression::NumberLiteral(*loc, ty.clone(), n)), true)
             } else {
-                None
+                (None, true)
             }
         }
-        Expression::NumberLiteral(..) => Some(expr.clone()),
-        _ => None,
+        Expression::NumberLiteral(..) => (Some(expr.clone()), true),
+        _ => (None, true),
     }
 }
 
