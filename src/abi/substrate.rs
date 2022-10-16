@@ -9,6 +9,8 @@ use ink_metadata::{
     MessageSpec, ReturnTypeSpec, TypeSpec,
 };
 
+use ink_primitives::KeyComposer;
+use ink_storage::traits::{AutoKey, StorageKey};
 use itertools::Itertools;
 use serde_json::{Map, Value};
 
@@ -172,7 +174,6 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
             ns,
             registry,
         ),
-
         ast::Type::Struct(s) => {
             let def = s.definition(ns);
 
@@ -186,11 +187,8 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                 })
                 .collect::<Vec<Field<PortableForm>>>();
 
-            //let c = TypeDefComposite::<PortableForm> { fields };
             let c = TypeDefComposite::new(fields);
-
             let path = path!(&def.name);
-
             let ty = Type::new(path, vec![], TypeDef::Composite(c), Default::default());
             registry.register_type(ty)
         }
@@ -250,9 +248,28 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
     }
 }
 
+/// Recoursively build the storage layout after all types are registered
+fn type_to_storage_layout(key: u32, registry: &PortableRegistryBuilder) -> Layout<PortableForm> {
+    let ty = registry.get(key).unwrap();
+    match ty.type_def() {
+        TypeDef::Composite(inner) => Layout::Struct(StructLayout::new(
+            ty.path().ident().unwrap_or_default(),
+            inner.fields().iter().map(|field| {
+                FieldLayout::new_custom(
+                    field.name().map(ToString::to_string).unwrap_or_default(),
+                    type_to_storage_layout(field.ty().id(), registry),
+                )
+            }),
+        )),
+        _ => Layout::Leaf(LeafLayout::new_from_ty(
+            <AutoKey as StorageKey>::KEY.into(),
+            key.into(),
+        )),
+    }
+}
+
 /// generate `InkProject` from `ast::Type` and `ast::Namespace`
 pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
-    // manually building the PortableRegistry
     let mut registry = PortableRegistryBuilder::new();
 
     let fields: Vec<FieldLayout<PortableForm>> = ns.contracts[contract_no]
@@ -261,17 +278,20 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .filter_map(|layout| {
             let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
 
-            // TODO: consult ink storage layout, maybe mapping can be resolved?
-
-            //mappings and large types cannot be represented
+            // TODO impl mappings should be easy now
+            // TODO move the memory fit check to sema maybe??
             if !var.ty.contains_mapping(ns) && var.ty.fits_in_memory(ns) {
-                let layout_key = LayoutKey::new(layout.slot.to_u32().unwrap());
+                //let layout_key = LayoutKey::new(layout.slot.to_u32().unwrap());
 
                 let ty = resolve_ast(&layout.ty, ns, &mut registry);
 
-                let leaf = LeafLayout::new_from_ty(layout_key, ty.into());
+                //let leaf = LeafLayout::new_from_ty(layout_key, ty.into());
 
-                let f = FieldLayout::new_custom(var.name.clone(), Layout::Leaf(leaf));
+                //let f = FieldLayout::new_custom(var.name.clone(), Layout::Leaf(leaf));
+                let f = FieldLayout::new_custom(
+                    var.name.clone(),
+                    type_to_storage_layout(ty, &registry),
+                );
 
                 Some(f)
             } else {
@@ -286,7 +306,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         Layout::Struct(StructLayout::new(contract_name, fields)),
     ));
 
-    let mut f_to_constructor = |f: &Function| -> ConstructorSpec<PortableForm> {
+    let f_to_constructor = |f: &Function| -> ConstructorSpec<PortableForm> {
         let payable = matches!(f.mutability, ast::Mutability::Payable(_));
         let args = f
             .params
@@ -329,11 +349,11 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                 .as_ref()
                 .map(|(e, _)| e),
         )
-        .map(|f| f_to_constructor(f))
+        .map(f_to_constructor)
         .collect::<Vec<ConstructorSpec<PortableForm>>>();
 
     let conflicting_names = non_unique_function_names(contract_no, ns);
-    let mut f_to_message = |f: &Function| -> MessageSpec<PortableForm> {
+    let f_to_message = |f: &Function| -> MessageSpec<PortableForm> {
         let payable = matches!(f.mutability, ast::Mutability::Payable(_));
 
         let mutates = matches!(
@@ -429,7 +449,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             ),
             _ => false,
         })
-        .map(|f| f_to_message(f))
+        .map(f_to_message)
         .collect::<Vec<MessageSpec<PortableForm>>>();
 
     let mut e_to_evt = |e: &EventDecl| -> EventSpec<PortableForm> {
