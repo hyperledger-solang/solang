@@ -197,7 +197,7 @@ pub fn eval_const_rational(
     }
 }
 
-/// Function that recurses the expression, and calls a function that folds number literals in the expression: eval_constants_in_expression().
+/// Function that recurses the expression and folds number literals by calling 'eval_constants_in_expression'.
 /// If the expression is an arithmetic operation of two number literals, overflow_check() will be called on the result.
 pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Namespace) -> bool {
     match expr {
@@ -232,6 +232,7 @@ pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Names
 }
 
 /// This function recursively folds number literals in a given expression.
+/// It returns an Option<Expression> which is the result of the folding if the operands are number literals, and a boolean flag that is set to false if the recursion should stop.
 fn eval_constants_in_expression(
     expr: &Expression,
     ns: &mut Namespace,
