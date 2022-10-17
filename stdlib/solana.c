@@ -51,7 +51,7 @@ entrypoint(const uint8_t *input)
         }
     }
 
-    if (params.ka_cur == UINT64_MAX)
+    if (params.ka_cur != 0)
     {
         return ERROR_INVALID_INSTRUCTION_DATA;
     }
@@ -118,7 +118,7 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t space, Sol
     // find a suitable new account and seed
     for (int i = 0; i < params->seeds_len; i++)
     {
-        SolAccountInfo *acc = &params->ka[i];
+        SolAccountInfo *acc = &params->ka[i + 1];
 
         if (acc->data_len == 0 && SolPubkey_same(&system_address, acc->owner))
         {

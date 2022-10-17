@@ -303,7 +303,17 @@ fn serialize_parameters(
     v.write_u64::<LittleEndian>(vm.account_data.len() as u64)
         .unwrap();
 
-    // first do the seeds
+    // first do the account data
+    let data_account = &vm.stack[0].data;
+
+    serialize_account(
+        &mut v,
+        &mut refs,
+        data_account,
+        &vm.account_data[data_account],
+    );
+
+    // second do the seeds
     for (acc, _) in seeds {
         let data = &vm.account_data[acc];
 
@@ -312,9 +322,10 @@ fn serialize_parameters(
         serialize_account(&mut v, &mut refs, acc, data);
     }
 
+    // then the rest of the accounts
     for (acc, data) in &vm.account_data {
         //println!("acc:{} {}", hex::encode(acc), hex::encode(&data.0));
-        if !seeds.iter().any(|seed| seed.0 == *acc) {
+        if !seeds.iter().any(|seed| seed.0 == *acc) && acc != data_account {
             serialize_account(&mut v, &mut refs, acc, data);
         }
     }
