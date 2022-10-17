@@ -1930,8 +1930,11 @@ pub fn expression(
                 ));
                 return Err(());
             };
-
-            assign_expr(loc, var, expr, e, context, ns, symtable, diagnostics)
+            let expr = assign_expr(loc, var, expr, e, context, ns, symtable, diagnostics);
+            if let Ok(expression) = &expr {
+                expression.recurse(ns, check_term_for_constant_overflow);
+            }
+            expr
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => named_call_expr(
             loc,

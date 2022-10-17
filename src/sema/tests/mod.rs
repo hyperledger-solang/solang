@@ -338,54 +338,62 @@ fn constant_overflow_checks() {
 fn test_types() {
     let file = r#"
     contract test_contract {
-    
-        function test_types32(bytes input ) public {
+        function test_types32(bytes input) public {
             // value 2147483648 does not fit into type int32.
             int32 add_ovf = 2147483647 + 1;
-
+    
             // value 2147483648 does not fit into type int32.
             int32 add_normal = 2147483647 + 0;
-
+    
             // value 2147483648 does not fit into type int32.
             int32 mixed = 2147483647 + 1 + input.readInt32LE(2);
         }
     
-
-        function test_types64(bytes input ) public {
+        function test_types64(bytes input) public {
             // value 9223372036854775808 does not fit into type int64.
-            int64 add_ovf = 9223372036854775807 + 1 ;
-
+            int64 add_ovf = 9223372036854775807 + 1;
+    
             int64 add_normal = 9223372036854775807;
-
+    
             // value 9223372036854775808 does not fit into type int64.
             int64 mixed = 9223372036854775807 + 1 + input.readInt64LE(2);
-
+    
             // value 18446744073709551616 does not fit into type uint64.
-            uint64 pow_ovf = 2 ** 64  ;
-
-            uint64 normal_pow = (2**64) -1 ;
+            uint64 pow_ovf = 2**64;
+    
+            uint64 normal_pow = (2**64) - 1;
         }
-
-
-
-        function test_types_128_256(bytes input ) public {
-            
+    
+        function test_types_128_256(bytes input) public {
             while (true) {
                 // value 340282366920938463463374607431768211456 does not fit into type uint64.
-                uint128 ovf = 2 ** 128 ;
-                uint128 normal = 2** 128 -1 ;
+                uint128 ovf = 2**128;
+                uint128 normal = 2**128 - 1;
             }
             uint128[] arr;
             // negative value -1 does not fit into type uint32. Cannot implicitly convert signed literal to unsigned type.
             // value 340282366920938463463374607431768211456 does not fit into type uint128.
-            uint128 access = arr[1-2] + 1 + (2**128);
+            uint128 access = arr[1 - 2] + 1 + (2**128);
             // value 3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 does not fit into type uint256.
             uint256 num = 3e255;
-
-            uint256 num_2 = 115792089237316195423570985008687907853269984665640564039457584007913129639935 * 4;
+    
+            uint256 num_2 = 115792089237316195423570985008687907853269984665640564039457584007913129639935 *
+                    4;
         }
-        
+    
+        function foo() public {
+            uint16 x = 0;
+            x += 450000;
+    
+            for (uint16 i = 0; i < (2**32); i += 65546) {}
+    
+            uint8 y = 0;
+            y *= 120 + 250;
+            y -= 500;
+            y /= 300 + 200 - 200 + y;
+        }
     }
+    
         "#;
     let ns = parse(file);
     let errors = ns.diagnostics.errors();
@@ -423,5 +431,25 @@ fn test_types() {
     assert_eq!(errors[8].message, "value 3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 does not fit into type uint256.");
 
     assert_eq!(errors[9].message, "value 463168356949264781694283940034751631413079938662562256157830336031652518559740 does not fit into type uint256.");
-    assert_eq!(errors.len(), 10);
+    assert_eq!(
+        errors[10].message,
+        "value 450000 does not fit into type uint16."
+    );
+    assert_eq!(
+        errors[11].message,
+        "value 65546 does not fit into type uint16."
+    );
+    assert_eq!(
+        errors[12].message,
+        "value 370 does not fit into type uint8."
+    );
+    assert_eq!(
+        errors[13].message,
+        "value 500 does not fit into type uint8."
+    );
+    assert_eq!(
+        errors[14].message,
+        "value 300 does not fit into type uint8."
+    );
+    assert_eq!(errors.len(), 15);
 }
