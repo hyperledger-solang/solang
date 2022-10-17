@@ -336,7 +336,21 @@ pub(super) fn constructor_dispatch(
         );
     }
 
-    // Write heap offset to 12
+    // Write contract magic to offset 0
+    cfg.add(
+        &mut vartab,
+        Instr::SetStorage {
+            ty: Type::Uint(32),
+            value: Expression::NumberLiteral(
+                pt::Loc::Codegen,
+                Type::Uint(64),
+                BigInt::from(ns.contracts[contract_no].selector()),
+            ),
+            storage: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(64), BigInt::zero()),
+        },
+    );
+
+    // Calculate heap offset
     let fixed_fields_size = ns.contracts[contract_no]
         .fixed_layout_size
         .to_u64()
@@ -344,6 +358,7 @@ pub(super) fn constructor_dispatch(
 
     let heap_offset = (fixed_fields_size + 7) & !7;
 
+    // Write heap offset to 12
     cfg.add(
         &mut vartab,
         Instr::SetStorage {

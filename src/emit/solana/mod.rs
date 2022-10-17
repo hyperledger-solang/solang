@@ -611,15 +611,6 @@ impl SolanaTarget {
 
             binary.builder.position_at_end(enough);
 
-            // write our magic value to the binary
-            binary.builder.build_store(
-                magic_value_ptr,
-                binary
-                    .context
-                    .i32_type()
-                    .const_int(contract.magic as u64, false),
-            );
-
             // There is only one possible constructor
             let ret = if let Some(constructor_function) = contract.constructor {
                 binary
