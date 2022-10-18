@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::{ethereum_types::U256, Token};
+use crate::{build_solidity, BorshToken};
+use num_bigint::BigInt;
+use num_traits::One;
 
 #[test]
 fn conditional_destructure() {
@@ -17,34 +18,90 @@ fn conditional_destructure() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("f", &[Token::Bool(true), Token::Bool(true)], &[], None);
-
-    assert_eq!(
-        returns,
-        vec![Token::Int(U256::from(1)), Token::Int(U256::from(2)),]
+    let returns = vm.function_with_borsh(
+        "f",
+        &[BorshToken::Bool(true), BorshToken::Bool(true)],
+        &[],
+        None,
     );
 
-    let returns = vm.function("f", &[Token::Bool(true), Token::Bool(false)], &[], None);
-
     assert_eq!(
         returns,
-        vec![Token::Int(U256::from(3)), Token::Int(U256::from(4)),]
+        vec![
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::one(),
+            },
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(2u8),
+            }
+        ]
     );
 
-    let returns = vm.function("f", &[Token::Bool(false), Token::Bool(false)], &[], None);
-
-    assert_eq!(
-        returns,
-        vec![Token::Int(U256::from(5)), Token::Int(U256::from(6)),]
+    let returns = vm.function_with_borsh(
+        "f",
+        &[BorshToken::Bool(true), BorshToken::Bool(false)],
+        &[],
+        None,
     );
 
-    let returns = vm.function("f", &[Token::Bool(false), Token::Bool(true)], &[], None);
+    assert_eq!(
+        returns,
+        vec![
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(3u8),
+            },
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(4u8),
+            }
+        ]
+    );
+
+    let returns = vm.function_with_borsh(
+        "f",
+        &[BorshToken::Bool(false), BorshToken::Bool(false)],
+        &[],
+        None,
+    );
 
     assert_eq!(
         returns,
-        vec![Token::Int(U256::from(5)), Token::Int(U256::from(6)),]
+        vec![
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(5u8),
+            },
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(6u8),
+            }
+        ]
+    );
+
+    let returns = vm.function_with_borsh(
+        "f",
+        &[BorshToken::Bool(false), BorshToken::Bool(true)],
+        &[],
+        None,
+    );
+
+    assert_eq!(
+        returns,
+        vec![
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(5u8),
+            },
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(6u8),
+            }
+        ]
     );
 }
 
@@ -64,13 +121,22 @@ fn casting_destructure() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("f", &[], &[], None);
+    let returns = vm.function_with_borsh("f", &[], &[], None);
 
     assert_eq!(
         returns,
-        vec![Token::Int(U256::from(1)), Token::Int(U256::from(2)),]
+        vec![
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::one(),
+            },
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(2u8),
+            }
+        ]
     );
 
     let mut vm = build_solidity(
@@ -83,9 +149,9 @@ fn casting_destructure() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("f", &[], &[], None);
+    let returns = vm.function_with_borsh("f", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::String(String::from("Hello")),]);
+    assert_eq!(returns, vec![BorshToken::String(String::from("Hello")),]);
 }

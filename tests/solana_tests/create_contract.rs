@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::Token;
+use crate::{build_solidity, BorshToken};
 
 #[test]
 fn simple_create_contract() {
@@ -10,20 +9,16 @@ fn simple_create_contract() {
         contract bar0 {
             function test_other() public returns (bar1) {
                 bar1 x = new bar1("yo from bar0");
-
                 return x;
             }
-
             function call_bar1_at_address(bar1 a, string x) public {
                 a.say_hello(x);
             }
         }
-
         contract bar1 {
             constructor(string v) {
                 print("bar1 says: " + v);
             }
-
             function say_hello(string v) public {
                 print("Hello {}".format(v));
             }
@@ -32,11 +27,11 @@ fn simple_create_contract() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor_with_borsh("bar0", &[]);
 
     let seed = vm.create_empty_account();
 
-    let bar1 = vm.function("test_other", &[], &[&seed], None);
+    let bar1 = vm.function_with_borsh("test_other", &[], &[&seed], None);
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0");
 
@@ -44,9 +39,9 @@ fn simple_create_contract() {
 
     println!("next test, {:?}", bar1);
 
-    vm.function(
+    vm.function_with_borsh(
         "call_bar1_at_address",
-        &[bar1[0].clone(), Token::String(String::from("xywoleh"))],
+        &[bar1[0].clone(), BorshToken::String(String::from("xywoleh"))],
         &[],
         None,
     );
@@ -84,9 +79,9 @@ fn missing_contract() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor_with_borsh("bar0", &[]);
 
-    let res = vm.function_must_fail("test_other", &[], &[], None);
+    let res = vm.function_must_fail_with_borsh("test_other", &[], &[], None);
     assert_eq!(res, Ok(64424509440));
 }
 
@@ -112,12 +107,12 @@ fn two_contracts() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor_with_borsh("bar0", &[]);
 
     let seed1 = vm.create_empty_account();
     let seed2 = vm.create_empty_account();
 
-    let _bar1 = vm.function("test_other", &[], &[&seed1, &seed2], None);
+    let _bar1 = vm.function_with_borsh("test_other", &[], &[&seed1, &seed2], None);
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0bar1 says: hi from bar0");
 

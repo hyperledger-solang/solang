@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_new, build_solidity, AccountState};
-use ethabi::{ethereum_types::U256, Function, StateMutability, Token};
+use crate::{account_new, build_solidity, AccountState, BorshToken};
+use ethabi::{Function, StateMutability};
+use num_bigint::BigInt;
 
 #[test]
 fn get_balance() {
@@ -14,7 +15,7 @@ fn get_balance() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor_with_borsh("c", &[]);
 
     let new = account_new();
 
@@ -27,9 +28,15 @@ fn get_balance() {
         },
     );
 
-    let returns = vm.function("test", &[], &[], Some(&new));
+    let returns = vm.function_with_borsh("test", &[], &[], Some(&new));
 
-    assert_eq!(returns, vec![Token::Uint(U256::from(102))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 64,
+            value: BigInt::from(102u8),
+        }]
+    );
 }
 
 #[test]
@@ -43,7 +50,7 @@ fn send_fails() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor_with_borsh("c", &[]);
 
     let new = account_new();
 
@@ -56,17 +63,20 @@ fn send_fails() {
         },
     );
 
-    let returns = vm.function(
+    let returns = vm.function_with_borsh(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(false)]);
+    assert_eq!(returns, vec![BorshToken::Bool(false)]);
 }
 
 #[test]
@@ -84,7 +94,7 @@ fn send_succeeds() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor_with_borsh("c", &[]);
 
     let new = account_new();
 
@@ -97,17 +107,20 @@ fn send_succeeds() {
         },
     );
 
-    let returns = vm.function(
+    let returns = vm.function_with_borsh(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(true)]);
+    assert_eq!(returns, vec![BorshToken::Bool(true)]);
 
     assert_eq!(vm.account_data.get_mut(&new).unwrap().lamports, 107);
 
@@ -130,7 +143,7 @@ fn send_overflows() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor_with_borsh("c", &[]);
 
     let new = account_new();
 
@@ -143,17 +156,20 @@ fn send_overflows() {
         },
     );
 
-    let returns = vm.function(
+    let returns = vm.function_with_borsh(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(false)]);
+    assert_eq!(returns, vec![BorshToken::Bool(false)]);
 
     assert_eq!(
         vm.account_data.get_mut(&new).unwrap().lamports,
@@ -179,7 +195,7 @@ fn transfer_succeeds() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor_with_borsh("c", &[]);
 
     let new = account_new();
 
@@ -192,11 +208,14 @@ fn transfer_succeeds() {
         },
     );
 
-    vm.function(
+    vm.function_with_borsh(
         "transfer",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
@@ -223,7 +242,7 @@ fn transfer_fails_not_enough() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor_with_borsh("c", &[]);
 
     let new = account_new();
 
@@ -236,15 +255,19 @@ fn transfer_fails_not_enough() {
         },
     );
 
-    let res = vm.function_must_fail(
+    let res = vm.function_must_fail_with_borsh(
         "transfer",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(104)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(104u8),
+            },
         ],
         &[],
         None,
     );
+    std::println!("{:?}", res);
     assert!(res.is_err());
 }
 
@@ -263,7 +286,7 @@ fn transfer_fails_overflow() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor_with_borsh("c", &[]);
 
     let new = account_new();
 
@@ -276,11 +299,14 @@ fn transfer_fails_overflow() {
         },
     );
 
-    let res = vm.function_must_fail(
+    let res = vm.function_must_fail_with_borsh(
         "transfer",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(104)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(104u8),
+            },
         ],
         &[],
         None,
@@ -301,7 +327,7 @@ fn fallback() {
 
     vm.account_data.get_mut(&vm.origin).unwrap().lamports = 312;
 
-    vm.constructor("c", &[]);
+    vm.constructor_with_borsh("c", &[]);
 
     if let Some(abi) = &vm.stack[0].abi {
         let mut abi = abi.clone();
@@ -321,7 +347,7 @@ fn fallback() {
         vm.stack[0].abi = Some(abi);
     }
 
-    vm.function("extinct", &[], &[], None);
+    vm.function_with_borsh("extinct", &[], &[], None);
 
     assert_eq!(vm.logs, "fallback");
 }
@@ -341,7 +367,7 @@ fn value_overflows() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor_with_borsh("c", &[]);
 
     let new = account_new();
 
@@ -354,39 +380,48 @@ fn value_overflows() {
         },
     );
 
-    let res = vm.function_must_fail(
+    let res = vm.function_must_fail_with_borsh(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(u64::MAX as u128 + 1)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 128,
+                value: BigInt::from(u64::MAX as u128 + 1),
+            },
         ],
         &[],
         None,
     );
     assert_eq!(res.ok(), Some(4294967296));
 
-    let res = vm.function_must_fail(
+    let res = vm.function_must_fail_with_borsh(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(u128::MAX)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 128,
+                value: BigInt::from(u128::MAX),
+            },
         ],
         &[],
         None,
     );
     assert_eq!(res.ok(), Some(4294967296));
 
-    let returns = vm.function(
+    let returns = vm.function_with_borsh(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 128,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(false)]);
+    assert_eq!(returns, vec![BorshToken::Bool(false)]);
 
     assert_eq!(
         vm.account_data.get_mut(&new).unwrap().lamports,

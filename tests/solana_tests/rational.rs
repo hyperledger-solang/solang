@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::ethereum_types::U256;
+use crate::{build_solidity, BorshToken};
+use num_bigint::BigInt;
+use num_traits::Zero;
 
 #[test]
 fn rational() {
@@ -20,15 +21,27 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function_with_borsh("test", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(4))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(4u8)
+        }]
+    );
 
-    let returns = vm.function("test2", &[], &[], None);
+    let returns = vm.function_with_borsh("test2", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(4))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(4u8)
+        }]
+    );
 
     let mut vm = build_solidity(
         r#"
@@ -40,11 +53,17 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function_with_borsh("test", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(5))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(5u8)
+        }]
+    );
 
     let mut vm = build_solidity(
         r#"
@@ -56,11 +75,17 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function_with_borsh("test", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(24))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(24)
+        }]
+    );
 
     let mut vm = build_solidity(
         r#"
@@ -72,11 +97,17 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function_with_borsh("test", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(0))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::zero(),
+        }]
+    );
 
     let mut vm = build_solidity(
         r#"
@@ -88,11 +119,17 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function_with_borsh("test", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(4))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(4u8),
+        }]
+    );
 
     let mut vm = build_solidity(
         r#"
@@ -103,11 +140,17 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function_with_borsh("test", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(3))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(3u8)
+        }]
+    );
 
     let mut vm = build_solidity(
         r#"
@@ -118,11 +161,17 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function_with_borsh("test", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(15600))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(15600u32)
+        }]
+    );
 
     let mut vm = build_solidity(
         r#"
@@ -133,11 +182,14 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor_with_borsh("foo", &[]);
 
-    let returns = vm.function(
+    let returns = vm.function_with_borsh(
         "test",
-        &[ethabi::Token::Uint(U256::from(982451653))],
+        &[BorshToken::Uint {
+            width: 64,
+            value: BigInt::from(982451653u32),
+        }],
         &[],
         None,
     );
@@ -145,8 +197,14 @@ fn rational() {
     assert_eq!(
         returns,
         vec![
-            ethabi::Token::Uint(U256::from(961748941u64 * 982451653u64)),
-            ethabi::Token::Uint(U256::from(5))
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(961748941u64 * 982451653u64)
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(5u8)
+            },
         ]
     );
 }

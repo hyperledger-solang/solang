@@ -29,8 +29,8 @@ fn using_for_contracts() {
         }"#,
     );
 
-    runtime.constructor("C", &[]);
-    runtime.function("test", &[], &[], None);
+    runtime.constructor_with_borsh("C", &[]);
+    runtime.function_with_borsh("test", &[], &[], None);
 
     assert_eq!(runtime.logs, "Hello");
 
@@ -72,8 +72,8 @@ fn using_for_contracts() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
-    runtime.function("test", &[], &[], None);
+    runtime.constructor_with_borsh("foo", &[]);
+    runtime.function_with_borsh("test", &[], &[], None);
 
     assert_eq!(runtime.logs, "X libX contractx:2");
 }

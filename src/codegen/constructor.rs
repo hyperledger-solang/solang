@@ -1,4 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::encoding::create_encoder;
+use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::expression::{default_gas, expression};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression, Options};
@@ -46,25 +50,27 @@ pub(super) fn call_constructor(
         .as_ref()
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
 
-    let mut tys: Vec<Type> = Vec::new();
-    let mut packed: Vec<Expression> = Vec::new();
-    let mut args: Vec<Expression> = Vec::new();
-    if ns.target == Target::Solana {
-        tys.resize(3, Type::Bool);
-        tys[0] = Type::Uint(64);
-        tys[1] = Type::Uint(32);
-        tys[2] = Type::Bytes(1);
+    let mut constructor_args = constructor_args
+        .iter()
+        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt))
+        .collect::<Vec<Expression>>();
 
+    let mut tys: Vec<Type> = Vec::new();
+    let mut args: Vec<Expression> = Vec::new();
+    let (encoded_args, encoded_args_len) = if ns.target == Target::Solana {
         let value_arg = value.clone().unwrap_or_else(|| {
             Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::zero())
         });
-        let selector = ns.contracts[*contract_no].selector().to_be();
+        let selector = ns.contracts[*contract_no].selector();
         let padding = Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero());
 
-        packed.resize(3, Expression::Poison);
-        packed[0] = value_arg;
-        packed[1] = Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::from(selector));
-        packed[2] = padding;
+        args.resize(3, Expression::Poison);
+        args[0] = value_arg;
+        args[1] = Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::from(selector));
+        args[2] = padding;
+        args.append(&mut constructor_args);
+        let mut encoder = create_encoder(ns);
+        encoder.abi_encode(loc, &args, ns, vartab, cfg)
     } else {
         let selector = match constructor_no {
             Some(func_no) => ns.functions[*func_no].selector(),
@@ -82,41 +88,39 @@ pub(super) fn call_constructor(
             BigInt::from_bytes_le(Sign::Plus, &selector),
         ));
         tys.push(Type::Uint(32));
-    }
 
-    let mut constructor_args = constructor_args
-        .iter()
-        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt))
-        .collect::<Vec<Expression>>();
-    let mut arg_types = constructor_args
-        .iter()
-        .map(|e| e.ty())
-        .collect::<Vec<Type>>();
-    args.append(&mut constructor_args);
-    tys.append(&mut arg_types);
+        let mut arg_types = constructor_args
+            .iter()
+            .map(|e| e.ty())
+            .collect::<Vec<Type>>();
+        args.append(&mut constructor_args);
+        tys.append(&mut arg_types);
 
-    let encoded_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: *loc,
-            res: encoded_buffer,
-            expr: Expression::AbiEncode {
+        let encoded_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
+        cfg.add(
+            vartab,
+            Instr::Set {
                 loc: *loc,
-                tys,
-                packed,
-                args,
+                res: encoded_buffer,
+                expr: Expression::AbiEncode {
+                    loc: *loc,
+                    tys,
+                    packed: vec![],
+                    args,
+                },
             },
-        },
-    );
+        );
 
-    let encoded_args = Expression::Variable(*loc, Type::DynamicBytes, encoded_buffer);
-    let encoded_args_len = Expression::Builtin(
-        *loc,
-        vec![Type::Uint(32)],
-        Builtin::ArrayLength,
-        vec![encoded_args.clone()],
-    );
+        let encoded_args = Expression::Variable(*loc, Type::DynamicBytes, encoded_buffer);
+        let encoded_args_len = Expression::Builtin(
+            *loc,
+            vec![Type::Uint(32)],
+            Builtin::ArrayLength,
+            vec![encoded_args.clone()],
+        );
+
+        (encoded_args, encoded_args_len)
+    };
 
     cfg.add(
         vartab,

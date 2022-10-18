@@ -70,8 +70,10 @@ pub(super) fn function_dispatch(
         },
     );
     cfg.set_basic_block(switch_block);
+
     let argsdata = Expression::FunctionArg(Loc::Codegen, Type::BufferPointer, 0);
     let argslen = Expression::FunctionArg(Loc::Codegen, Type::Uint(64), 1);
+
     let fid = Expression::Builtin(
         Loc::Codegen,
         vec![Type::Uint(32)],
@@ -114,6 +116,7 @@ pub(super) fn function_dispatch(
             &argsdata,
             argslen.clone(),
             &mut cases,
+            ns,
             &mut vartab,
             &mut cfg,
         );
@@ -196,6 +199,7 @@ fn add_dispatch_case(
     argsdata: &Expression,
     argslen: Expression,
     cases: &mut Vec<(Expression, usize)>,
+    ns: &Namespace,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) {
@@ -204,23 +208,20 @@ fn add_dispatch_case(
 
     let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(argslen));
 
-    let mut vars: Vec<usize> = Vec::with_capacity(func_cfg.params.len());
-    let mut decoded: Vec<Expression> = Vec::with_capacity(func_cfg.params.len());
-    for item in func_cfg.params.iter() {
-        let new_var = vartab.temp_anonymous(&item.ty);
-        vars.push(new_var);
-        decoded.push(Expression::Variable(Loc::Codegen, item.ty.clone(), new_var));
-    }
-    cfg.add(
+    let tys = func_cfg
+        .params
+        .iter()
+        .map(|e| e.ty.clone())
+        .collect::<Vec<Type>>();
+    let mut encoder = create_encoder(ns);
+    let decoded = encoder.abi_decode(
+        &Loc::Codegen,
+        argsdata,
+        &tys,
+        ns,
         vartab,
-        Instr::AbiDecode {
-            res: vars,
-            selector: None,
-            exception_block: None,
-            tys: (*func_cfg.params).clone(),
-            data: argsdata.clone(),
-            data_len: Some(truncated_len),
-        },
+        cfg,
+        Some(truncated_len),
     );
 
     let mut returns: Vec<usize> = Vec::with_capacity(func_cfg.returns.len());
@@ -244,18 +245,7 @@ fn add_dispatch_case(
     );
 
     if !func_cfg.returns.is_empty() {
-        let data = Expression::AbiEncode {
-            loc: Loc::Codegen,
-            tys: returns_expr.iter().map(|e| e.ty()).collect::<Vec<Type>>(),
-            packed: vec![],
-            args: returns_expr,
-        };
-        let data_len = Expression::Builtin(
-            Loc::Codegen,
-            vec![Type::Uint(32)],
-            Builtin::ArrayLength,
-            vec![data.clone()],
-        );
+        let (data, data_len) = encoder.abi_encode(&Loc::Codegen, &returns_expr, ns, vartab, cfg);
         let zext_len = Expression::ZeroExt(Loc::Codegen, Type::Uint(64), Box::new(data_len));
         cfg.add(
             vartab,
@@ -316,28 +306,26 @@ pub(super) fn constructor_dispatch(
         },
     ]);
 
-    let mut res: Vec<usize> = Vec::with_capacity(all_cfg[constructor_cfg_no].params.len());
-    let mut returns: Vec<Expression> = Vec::with_capacity(all_cfg[constructor_cfg_no].params.len());
-    for item in all_cfg[constructor_cfg_no].params.iter() {
-        let new_var = vartab.temp_anonymous(&item.ty);
-        res.push(new_var);
-        returns.push(Expression::Variable(Loc::Codegen, item.ty.clone(), new_var));
-    }
-
     let data = Expression::FunctionArg(Loc::Codegen, Type::BufferPointer, 0);
     let data_len = Expression::FunctionArg(Loc::Codegen, Type::Uint(64), 1);
 
-    if !res.is_empty() {
-        cfg.add(
+    let mut returns: Vec<Expression> = Vec::new();
+    if !all_cfg[constructor_cfg_no].params.is_empty() {
+        let tys = all_cfg[constructor_cfg_no]
+            .params
+            .iter()
+            .map(|e| e.ty.clone())
+            .collect::<Vec<Type>>();
+        let encoder = create_encoder(ns);
+        let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(data_len));
+        returns = encoder.abi_decode(
+            &Loc::Codegen,
+            &data,
+            &tys,
+            ns,
             &mut vartab,
-            Instr::AbiDecode {
-                res,
-                selector: None,
-                exception_block: None,
-                tys: (*all_cfg[constructor_cfg_no].params).clone(),
-                data,
-                data_len: Some(data_len),
-            },
+            &mut cfg,
+            Some(truncated_len),
         );
     }
 

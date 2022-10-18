@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::{ethereum_types::U256, Token};
+use crate::{build_solidity, BorshToken};
+use num_bigint::BigInt;
 
 /// This tests check that a public storage variable is not eliminated
 /// and that an assignment inside an expression works
@@ -37,14 +37,32 @@ fn test_returns() {
     "#;
 
     let mut vm = build_solidity(file);
-    vm.constructor("c1", &[]);
-    let _ = vm.function("assign", &[], &[], None);
-    let returns = vm.function("pb1", &[], &[], None);
+    vm.constructor_with_borsh("c1", &[]);
+    let _ = vm.function_with_borsh("assign", &[], &[], None);
+    let returns = vm.function_with_borsh("pb1", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::Int(U256::from(5))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Int {
+            width: 256,
+            value: BigInt::from(5u8)
+        }]
+    );
 
-    let returns = vm.function("test1", &[], &[], None);
-    assert_eq!(returns, vec![Token::Int(U256::from(52))]);
-    let returns = vm.function("test2", &[], &[], None);
-    assert_eq!(returns, vec![Token::Int(U256::from(5))]);
+    let returns = vm.function_with_borsh("test1", &[], &[], None);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Int {
+            width: 256,
+            value: BigInt::from(52u8)
+        }]
+    );
+    let returns = vm.function_with_borsh("test2", &[], &[], None);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Int {
+            width: 256,
+            value: BigInt::from(5u8)
+        }]
+    );
 }
