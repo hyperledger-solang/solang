@@ -9,8 +9,6 @@ use ink_metadata::{
     MessageSpec, ReturnTypeSpec, TypeSpec,
 };
 
-use ink_primitives::KeyComposer;
-use ink_storage::traits::{AutoKey, StorageKey};
 use itertools::Itertools;
 use serde_json::{Map, Value};
 
@@ -243,13 +241,20 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
             registry.register_type(ty)
         }
         ast::Type::UserType(no) => resolve_ast(&ns.user_types[*no].ty, ns, registry),
-
+        ast::Type::Mapping(k, v) => {
+            resolve_ast(k, ns, registry);
+            resolve_ast(v, ns, registry)
+        }
         _ => unreachable!(),
     }
 }
 
 /// Recoursively build the storage layout after all types are registered
-fn type_to_storage_layout(key: u32, registry: &PortableRegistryBuilder) -> Layout<PortableForm> {
+fn type_to_storage_layout(
+    key: u32,
+    root: &LayoutKey,
+    registry: &PortableRegistryBuilder,
+) -> Layout<PortableForm> {
     let ty = registry.get(key).unwrap();
     match ty.type_def() {
         TypeDef::Composite(inner) => Layout::Struct(StructLayout::new(
@@ -257,14 +262,11 @@ fn type_to_storage_layout(key: u32, registry: &PortableRegistryBuilder) -> Layou
             inner.fields().iter().map(|field| {
                 FieldLayout::new_custom(
                     field.name().map(ToString::to_string).unwrap_or_default(),
-                    type_to_storage_layout(field.ty().id(), registry),
+                    type_to_storage_layout(field.ty().id(), root, registry),
                 )
             }),
         )),
-        _ => Layout::Leaf(LeafLayout::new_from_ty(
-            <AutoKey as StorageKey>::KEY.into(),
-            key.into(),
-        )),
+        _ => Layout::Leaf(LeafLayout::new_from_ty(*root, key.into())),
     }
 }
 
@@ -277,23 +279,16 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .iter()
         .filter_map(|layout| {
             let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
-
             // TODO impl mappings should be easy now
             // TODO move the memory fit check to sema maybe??
-            if !var.ty.contains_mapping(ns) && var.ty.fits_in_memory(ns) {
-                //let layout_key = LayoutKey::new(layout.slot.to_u32().unwrap());
-
+            if var.ty.fits_in_memory(ns) {
                 let ty = resolve_ast(&layout.ty, ns, &mut registry);
-
-                //let leaf = LeafLayout::new_from_ty(layout_key, ty.into());
-
-                //let f = FieldLayout::new_custom(var.name.clone(), Layout::Leaf(leaf));
-                let f = FieldLayout::new_custom(
-                    var.name.clone(),
-                    type_to_storage_layout(ty, &registry),
+                let layout_key = LayoutKey::new(layout.slot.to_u32().unwrap());
+                let root = RootLayout::new(
+                    layout_key,
+                    type_to_storage_layout(ty, &layout_key, &registry),
                 );
-
-                Some(f)
+                Some(FieldLayout::new_custom(var.name.clone(), root))
             } else {
                 None
             }
@@ -301,10 +296,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .collect();
 
     let contract_name = ns.contracts[contract_no].name.clone();
-    let storage = Layout::Root(RootLayout::new(
-        LayoutKey::new(0u32),
-        Layout::Struct(StructLayout::new(contract_name, fields)),
-    ));
+    let storage = Layout::Struct(StructLayout::new(contract_name, fields));
 
     let f_to_constructor = |f: &Function| -> ConstructorSpec<PortableForm> {
         let payable = matches!(f.mutability, ast::Mutability::Payable(_));
@@ -412,12 +404,12 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
-        let label = conflicting_names
-            .contains(&f.name)
-            .then(|| &f.mangled_name)
-            .unwrap_or(&f.name)
-            .into();
-        MessageSpec::from_label(label)
+        let label = if conflicting_names.contains(&f.name) {
+            &f.mangled_name
+        } else {
+            &f.name
+        };
+        MessageSpec::from_label(label.into())
             .selector(f.selector().try_into().unwrap())
             .mutates(mutates)
             .payable(payable)
