@@ -1,10 +1,12 @@
 strict digraph "tests/contract_testcases/substrate/primitives/test_literal_overflow_07.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/primitives/test_literal_overflow_07.sol:1:1-3:10"]
 	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/test_literal_overflow_07.sol:2:13-30"]
+	number_literal [label="uint8 literal: -130\ntests/contract_testcases/substrate/primitives/test_literal_overflow_07.sol:2:25-30"]
 	diagnostic [label="found abstract contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/primitives/test_literal_overflow_07.sol:1:1-3:10"]
-	diagnostic_5 [label="negative literal -130 not allowed for unsigned type 'uint8'\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_07.sol:2:25-30"]
+	diagnostic_6 [label="negative value -130 does not fit into type uint8. Cannot implicitly convert signed literal to unsigned type.\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_07.sol:2:25-30"]
 	contracts -> contract
 	contract -> var [label="variable"]
+	var -> number_literal [label="initializer"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_5 [label="Error"]
+	diagnostics -> diagnostic_6 [label="Error"]
 }
