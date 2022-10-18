@@ -3,6 +3,7 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
+use super::eval::check_term_for_constant_overflow;
 use super::expression::{
     available_functions, call_expr, constructor_named_args, expression, function_call_expr,
     function_call_pos_args, match_constructor_to_args, named_call_expr, named_function_call_expr,
@@ -331,6 +332,7 @@ fn statement(
                     ResolveTo::Type(&var_ty),
                 )?;
 
+                expr.recurse(ns, check_term_for_constant_overflow);
                 used_variable(ns, &expr, symtable);
 
                 Some(Arc::new(expr.cast(
@@ -700,6 +702,8 @@ fn statement(
         pt::Statement::Return(loc, Some(returns)) => {
             let expr = return_with_values(returns, loc, context, symtable, ns, diagnostics)?;
 
+            expr.recurse(ns, check_term_for_constant_overflow);
+
             for offset in symtable.returns.iter() {
                 let elem = symtable.vars.get_mut(offset).unwrap();
                 elem.assigned = true;
@@ -750,28 +754,37 @@ fn statement(
                         Err(())
                     };
                 }
-                pt::Expression::FunctionCall(loc, ty, args) => call_expr(
-                    loc,
-                    ty,
-                    args,
-                    true,
-                    context,
-                    ns,
-                    symtable,
-                    diagnostics,
-                    ResolveTo::Discard,
-                )?,
-                pt::Expression::NamedFunctionCall(loc, ty, args) => named_call_expr(
-                    loc,
-                    ty,
-                    args,
-                    true,
-                    context,
-                    ns,
-                    symtable,
-                    diagnostics,
-                    ResolveTo::Discard,
-                )?,
+                pt::Expression::FunctionCall(loc, ty, args) => {
+                    let ret = call_expr(
+                        loc,
+                        ty,
+                        args,
+                        true,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Discard,
+                    )?;
+
+                    ret.recurse(ns, check_term_for_constant_overflow);
+                    ret
+                }
+                pt::Expression::NamedFunctionCall(loc, ty, args) => {
+                    let ret = named_call_expr(
+                        loc,
+                        ty,
+                        args,
+                        true,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Discard,
+                    )?;
+                    ret.recurse(ns, check_term_for_constant_overflow);
+                    ret
+                }
                 _ => {
                     // is it a destructure statement
                     if let pt::Expression::Assign(_, var, expr) = expr {

@@ -8,6 +8,7 @@ use super::ast::{
 use super::builtin;
 use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
+use super::eval::check_term_for_constant_overflow;
 use super::eval::eval_const_number;
 use super::eval::eval_const_rational;
 use super::format::string_format;
@@ -15,6 +16,7 @@ use super::{symtable::Symtable, using};
 use crate::sema::unused_variable::{
     assigned_variable, check_function_call, check_var_usage_expression, used_variable,
 };
+use crate::sema::Recurse;
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use num_bigint::{BigInt, Sign};
@@ -25,7 +27,7 @@ use std::{
     cmp,
     cmp::Ordering,
     collections::{BTreeMap, HashMap},
-    ops::{Add, Mul, Shl, Sub},
+    ops::{Mul, Shl, Sub},
     str::FromStr,
 };
 
@@ -1499,8 +1501,7 @@ fn rational_number_literal(
     }
 }
 
-/// Try to convert a BigInt into a Expression::NumberLiteral. This checks for sign,
-/// width and creates to correct Type.
+/// Try to convert a BigInt into a Expression::NumberLiteral.
 pub fn bigint_to_expression(
     loc: &pt::Loc,
     n: &BigInt,
@@ -1518,59 +1519,13 @@ pub fn bigint_to_expression(
                     format!("expected '{}', found integer", resolve_to.to_string(ns)),
                 ));
                 return Err(());
-            }
-
-            let permitted_bits = if resolve_to.is_signed_int() {
-                resolve_to.bits(ns) as u64 - 1
             } else {
-                resolve_to.bits(ns) as u64
-            };
-
-            return if n.sign() == Sign::Minus {
-                if !resolve_to.is_signed_int() {
-                    diagnostics.push(Diagnostic::cast_error(
-                        *loc,
-                        format!(
-                            "negative literal {} not allowed for unsigned type '{}'",
-                            n,
-                            resolve_to.to_string(ns)
-                        ),
-                    ));
-                    Err(())
-                } else if n.add(1u32).bits() > permitted_bits {
-                    diagnostics.push(Diagnostic::cast_error(
-                        *loc,
-                        format!(
-                            "literal {} is too large to fit into type '{}'",
-                            n,
-                            resolve_to.to_string(ns)
-                        ),
-                    ));
-                    Err(())
-                } else {
-                    Ok(Expression::NumberLiteral(
-                        *loc,
-                        resolve_to.clone(),
-                        n.clone(),
-                    ))
-                }
-            } else if bits > permitted_bits {
-                diagnostics.push(Diagnostic::cast_error(
-                    *loc,
-                    format!(
-                        "literal {} is too large to fit into type '{}'",
-                        n,
-                        resolve_to.to_string(ns)
-                    ),
-                ));
-                Err(())
-            } else {
-                Ok(Expression::NumberLiteral(
+                return Ok(Expression::NumberLiteral(
                     *loc,
                     resolve_to.clone(),
                     n.clone(),
-                ))
-            };
+                ));
+            }
         }
     }
 
@@ -1631,7 +1586,7 @@ pub struct ExprContext {
     pub file_no: usize,
     // Are we resolving a contract, and if so, which one
     pub contract_no: Option<usize>,
-    /// Are resolving the body of a function, and if os, which one
+    /// Are resolving the body of a function, and if so, which one
     pub function_no: Option<usize>,
     /// Are we currently in an unchecked block
     pub unchecked: bool,
@@ -1975,8 +1930,11 @@ pub fn expression(
                 ));
                 return Err(());
             };
-
-            assign_expr(loc, var, expr, e, context, ns, symtable, diagnostics)
+            let expr = assign_expr(loc, var, expr, e, context, ns, symtable, diagnostics);
+            if let Ok(expression) = &expr {
+                expression.recurse(ns, check_term_for_constant_overflow);
+            }
+            expr
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => named_call_expr(
             loc,
@@ -3968,6 +3926,9 @@ fn assign_single(
         diagnostics,
         ResolveTo::Type(var_ty.deref_any()),
     )?;
+
+    val.recurse(ns, check_term_for_constant_overflow);
+
     used_variable(ns, &val, symtable);
     match &var {
         Expression::ConstantVariable(loc, _, Some(contract_no), var_no) => {
@@ -4990,6 +4951,8 @@ fn array_subscript(
     )?;
 
     let index_ty = index.ty();
+
+    index.recurse(ns, check_term_for_constant_overflow);
 
     match index_ty.deref_any() {
         Type::Uint(_) => (),

@@ -1,12 +1,14 @@
 strict digraph "tests/contract_testcases/substrate/primitives/test_literal_overflow_02.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/primitives/test_literal_overflow_02.sol:1:1-3:10"]
 	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/test_literal_overflow_02.sol:2:13-29"]
+	number_literal [label="int8 literal: 128\ntests/contract_testcases/substrate/primitives/test_literal_overflow_02.sol:2:24-29"]
 	diagnostic [label="found contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/primitives/test_literal_overflow_02.sol:1:1-3:10"]
-	diagnostic_5 [label="contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract test'\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_02.sol:1:1-3:10"]
-	diagnostic_6 [label="literal 128 is too large to fit into type 'int8'\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_02.sol:2:24-29"]
+	diagnostic_6 [label="contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract test'\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_02.sol:1:1-3:10"]
+	diagnostic_7 [label="value 128 does not fit into type int8.\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_02.sol:2:24-29"]
 	contracts -> contract
 	contract -> var [label="variable"]
+	var -> number_literal [label="initializer"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_5 [label="Error"]
 	diagnostics -> diagnostic_6 [label="Error"]
+	diagnostics -> diagnostic_7 [label="Error"]
 }
