@@ -37,7 +37,7 @@ entrypoint(const uint8_t *input)
     {
         const SolAccountInfo *acc = &params.ka[account_no];
 
-        if (SolPubkey_same(params.account_id, acc->key))
+        if (SolPubkey_same(params.account_id, acc->key) && params.ka_cur == UINT64_MAX)
         {
             params.ka_cur = account_no;
         }
@@ -82,10 +82,6 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
         .data_len = input_len,
     };
 
-    metas[0].pubkey = dest;
-    metas[0].is_writable = true;
-    metas[0].is_signer = false;
-
     int meta_no = 1;
 
     for (int account_no = 0; account_no < params->ka_num; account_no++)
@@ -94,15 +90,20 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
 
         if (SolPubkey_same(dest, acc->key))
         {
+            metas[0].pubkey = acc->key;
+            metas[0].is_writable = acc->is_writable;
+            metas[0].is_signer = acc->is_signer;
             instruction.program_id = acc->owner;
             params->ka_last_called = acc;
-            continue;
         }
+        else
+        {
 
-        metas[meta_no].pubkey = acc->key;
-        metas[meta_no].is_writable = acc->is_writable;
-        metas[meta_no].is_signer = acc->is_signer;
-        meta_no += 1;
+            metas[meta_no].pubkey = acc->key;
+            metas[meta_no].is_writable = acc->is_writable;
+            metas[meta_no].is_signer = acc->is_signer;
+            meta_no += 1;
+        }
     }
 
     if (instruction.program_id)
