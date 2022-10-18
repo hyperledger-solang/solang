@@ -96,9 +96,9 @@ fn using() {
     let mut runtime = build_solidity(
         r##"
         contract test {
-            using lib for int32[100];
+            using lib for int32[32];
             bool i_exists_to_make_bar_have_non_zero_storage_slot;
-            int32[100] bar;
+            int32[32] bar;
 
             function foo() public returns (int64) {
                     bar.set(10, 571);
@@ -108,7 +108,7 @@ fn using() {
         }
 
         library lib {
-            function set(int32[100] storage a, uint index, int32 val) internal {
+            function set(int32[32] storage a, uint index, int32 val) internal {
                     a[index] = val;
             }
         }"##,

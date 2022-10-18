@@ -281,9 +281,10 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
             // TODO impl mappings should be easy now
             // TODO move the memory fit check to sema maybe??
-            if var.ty.fits_in_memory(ns) {
+            //if var.ty.fits_in_memory(ns) {
+            if let Some(slot) = layout.slot.to_u32() {
                 let ty = resolve_ast(&layout.ty, ns, &mut registry);
-                let layout_key = LayoutKey::new(layout.slot.to_u32().unwrap());
+                let layout_key = LayoutKey::new(slot);
                 let root = RootLayout::new(
                     layout_key,
                     type_to_storage_layout(ty, &layout_key, &registry),
@@ -321,7 +322,6 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .done()
     };
 
-    // TODO: `cargo-transcode` can match constructor with different name, currently we all named them as "new", we might need to adopt this too?
     let constructors = ns.contracts[contract_no]
         .functions
         .iter()

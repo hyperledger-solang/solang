@@ -105,7 +105,7 @@ fn storage_arrays() {
     let mut runtime = build_solidity(
         r##"
         contract foo {
-            int32[8589934592] bigarray;
+            int32[32] bigarray;
 
             function set(uint64 index, int32 val) public {
                 bigarray[index] = val;
@@ -121,8 +121,7 @@ fn storage_arrays() {
 
     let mut vals = Vec::new();
 
-    for _ in 0..100 {
-        let index = rng.gen::<u64>() % 0x200_0000;
+    for index in 0..32 {
         let val = rng.gen::<i32>();
 
         runtime.function("set", SetArg(index, val).encode());
@@ -140,7 +139,7 @@ fn storage_arrays() {
 #[test]
 fn enum_arrays() {
     #[derive(Encode, Decode)]
-    struct Arg([u8; 100]);
+    struct Arg([u8; 32]);
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
 
@@ -149,7 +148,7 @@ fn enum_arrays() {
         contract enum_array {
             enum Foo { Bar1, Bar2, Bar3, Bar4 }
 
-            function count_bar2(Foo[100] calldata foos) public returns (uint32) {
+            function count_bar2(Foo[32] calldata foos) public returns (uint32) {
                 uint32 count = 0;
                 uint32 i;
 
@@ -166,7 +165,7 @@ fn enum_arrays() {
 
     let mut rng = rand::thread_rng();
 
-    let mut a = [0u8; 100];
+    let mut a = [0u8; 32];
     let mut count = 0;
 
     #[allow(clippy::needless_range_loop)]
@@ -334,10 +333,10 @@ fn array_dimensions() {
     let mut runtime = build_solidity(
         r##"
         contract storage_refs {
-            int32[2**16] a;
+            int32[32] a;
 
             function test() public {
-                assert(a.length == 65536);
+                assert(a.length == 32);
             }
         }"##,
     );

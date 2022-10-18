@@ -29,7 +29,7 @@ describe('Deploy arrays contract and test', () => {
         for (let i = 0; i < 3; i++) {
             let addr = '0x' + crypto.randomBytes(32).toString('hex');
             let name = `name${i}`;
-            let id = crypto.randomBytes(4).readUInt32BE(0);
+            let id = crypto.randomInt(32);
             let perms: string[] = [];
 
             for (let j = 0; j < Math.random() * 3; j++) {
@@ -44,6 +44,7 @@ describe('Deploy arrays contract and test', () => {
 
             users.push({ "name": name, "addr": addr, "id": id, "perms": perms });
         }
+        console.log(users);
 
         let user = users[Math.floor(Math.random() * users.length)];
 

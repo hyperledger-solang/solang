@@ -13,9 +13,8 @@ contract arrays {
 		Permission[] perms;
 	}
 
-	// declare a sparse array. Sparse arrays are arrays which are too large to
-	// fit into account data on Solana; this is not neccessarily a Solidity feature
-	user[type(uint64).max] users;
+	// Max. fixed array size on substrate is 32.
+	user[32] users;
 
 	mapping (bytes32 => uint64) addressToUser;
 
