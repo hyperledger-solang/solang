@@ -1425,6 +1425,8 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                     hex::encode(instruction.program_id.0)
                 );
 
+                assert_eq!(data_id, instruction.accounts[0].pubkey.0);
+
                 let p = vm
                     .programs
                     .iter()

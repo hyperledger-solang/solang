@@ -82,6 +82,12 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
         .data_len = input_len,
     };
 
+    metas[0].pubkey = dest;
+    metas[0].is_writable = true;
+    metas[0].is_signer = false;
+
+    int meta_no = 1;
+
     for (int account_no = 0; account_no < params->ka_num; account_no++)
     {
         const SolAccountInfo *acc = &params->ka[account_no];
@@ -90,11 +96,13 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
         {
             instruction.program_id = acc->owner;
             params->ka_last_called = acc;
+            continue;
         }
 
-        metas[account_no].pubkey = acc->key;
-        metas[account_no].is_writable = acc->is_writable;
-        metas[account_no].is_signer = acc->is_signer;
+        metas[meta_no].pubkey = acc->key;
+        metas[meta_no].is_writable = acc->is_writable;
+        metas[meta_no].is_signer = acc->is_signer;
+        meta_no += 1;
     }
 
     if (instruction.program_id)
@@ -205,14 +213,23 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t space, Sol
         .data_len = input_len,
     };
 
-    // A fresh account must be provided by the caller; find it
+    metas[0].pubkey = new_acc->key;
+    metas[0].is_writable = true;
+    metas[0].is_signer = false;
+
+    int meta_no = 1;
+
     for (int account_no = 0; account_no < params->ka_num; account_no++)
     {
         const SolAccountInfo *acc = &params->ka[account_no];
 
-        metas[account_no].pubkey = acc->key;
-        metas[account_no].is_writable = acc->is_writable;
-        metas[account_no].is_signer = acc->is_signer;
+        if (!SolPubkey_same(new_acc->key, acc->key))
+        {
+            metas[meta_no].pubkey = acc->key;
+            metas[meta_no].is_writable = acc->is_writable;
+            metas[meta_no].is_signer = acc->is_signer;
+            meta_no += 1;
+        }
     }
 
     params->ka_last_called = new_acc;
