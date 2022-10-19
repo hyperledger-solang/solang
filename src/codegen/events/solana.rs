@@ -1,6 +1,5 @@
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::create_encoder;
-use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
@@ -47,7 +46,7 @@ impl EventEmitter for SolanaEventEmitter<'_> {
 
         let mut encoder = create_encoder(self.ns);
         let (abi_encoded, abi_encoded_size) =
-            encoder.abi_encode(&self.loc, &to_be_encoded, self.ns, vartab, cfg);
+            encoder.abi_encode(&self.loc, to_be_encoded, self.ns, vartab, cfg);
 
         cfg.add(
             vartab,

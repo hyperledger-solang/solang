@@ -2,12 +2,11 @@
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::create_encoder;
-use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::expression::{default_gas, expression};
 use crate::codegen::vartable::Vartable;
-use crate::codegen::{Builtin, Expression, Options};
+use crate::codegen::{Expression, Options};
 use crate::sema::ast;
-use crate::sema::ast::{CallArgs, Function, Namespace, RetrieveType, Type};
+use crate::sema::ast::{CallArgs, Function, Namespace, Type};
 use crate::Target;
 use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
@@ -55,9 +54,8 @@ pub(super) fn call_constructor(
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
 
-    let mut tys: Vec<Type> = Vec::new();
     let mut args: Vec<Expression> = Vec::new();
-    let (encoded_args, encoded_args_len) = if ns.target == Target::Solana {
+    if ns.target == Target::Solana {
         let value_arg = value.clone().unwrap_or_else(|| {
             Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::zero())
         });
@@ -69,8 +67,6 @@ pub(super) fn call_constructor(
         args[1] = Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::from(selector));
         args[2] = padding;
         args.append(&mut constructor_args);
-        let mut encoder = create_encoder(ns);
-        encoder.abi_encode(loc, &args, ns, vartab, cfg)
     } else {
         let selector = match constructor_no {
             Some(func_no) => ns.functions[*func_no].selector(),
@@ -87,40 +83,11 @@ pub(super) fn call_constructor(
             Type::Uint(32),
             BigInt::from_bytes_le(Sign::Plus, &selector),
         ));
-        tys.push(Type::Uint(32));
-
-        let mut arg_types = constructor_args
-            .iter()
-            .map(|e| e.ty())
-            .collect::<Vec<Type>>();
         args.append(&mut constructor_args);
-        tys.append(&mut arg_types);
-
-        let encoded_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: *loc,
-                res: encoded_buffer,
-                expr: Expression::AbiEncode {
-                    loc: *loc,
-                    tys,
-                    packed: vec![],
-                    args,
-                },
-            },
-        );
-
-        let encoded_args = Expression::Variable(*loc, Type::DynamicBytes, encoded_buffer);
-        let encoded_args_len = Expression::Builtin(
-            *loc,
-            vec![Type::Uint(32)],
-            Builtin::ArrayLength,
-            vec![encoded_args.clone()],
-        );
-
-        (encoded_args, encoded_args_len)
     };
+
+    let mut encoder = create_encoder(ns);
+    let (encoded_args, encoded_args_len) = encoder.abi_encode(loc, args, ns, vartab, cfg);
 
     cfg.add(
         vartab,

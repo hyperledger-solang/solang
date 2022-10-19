@@ -2,9 +2,11 @@
 
 mod borsh_encoding;
 mod buffer_validator;
+mod scale_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
+use crate::codegen::encoding::scale_encoding::ScaleEncoding;
 use crate::codegen::expression::load_storage;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
@@ -23,7 +25,7 @@ pub(super) trait AbiEncoding {
     fn abi_encode(
         &mut self,
         loc: &Loc,
-        args: &[Expression],
+        args: Vec<Expression>,
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
@@ -54,10 +56,10 @@ pub(super) trait AbiEncoding {
 }
 
 /// This function should return the correct encoder, given the target
-pub(super) fn create_encoder(ns: &Namespace) -> impl AbiEncoding {
+pub(super) fn create_encoder(ns: &Namespace) -> Box<dyn AbiEncoding> {
     match &ns.target {
-        Target::Solana => BorshEncoding::new(),
-        _ => unreachable!("Other types of encoding have not been implemented yet"),
+        Target::Solana => Box::new(BorshEncoding::new()),
+        _ => Box::new(ScaleEncoding {}),
     }
 }
 

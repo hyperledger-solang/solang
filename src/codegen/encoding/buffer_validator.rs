@@ -70,10 +70,11 @@ impl BufferValidator<'_> {
     pub(super) fn validate_offset(
         &self,
         offset: Expression,
+        ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) {
-        self.build_branch(offset, vartab, cfg);
+        self.build_branch(offset, ns, vartab, cfg);
     }
 
     /// Checks if a buffer validation is necessary
@@ -91,6 +92,7 @@ impl BufferValidator<'_> {
         &mut self,
         offset: &Expression,
         size: &Expression,
+        ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) {
@@ -102,7 +104,7 @@ impl BufferValidator<'_> {
                 Box::new(offset.clone()),
                 Box::new(size.clone()),
             );
-            self.validate_offset(offset_to_validate, vartab, cfg);
+            self.validate_offset(offset_to_validate, ns, vartab, cfg);
         }
     }
 
@@ -110,6 +112,7 @@ impl BufferValidator<'_> {
     pub(super) fn validate_all_bytes_read(
         &self,
         end_offset: Expression,
+        ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) {
@@ -133,7 +136,7 @@ impl BufferValidator<'_> {
         cfg.set_basic_block(invalid);
 
         // TODO: This needs a proper error message
-        assert_failure(&Loc::Codegen, None, cfg, vartab);
+        assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
 
         cfg.set_basic_block(valid);
     }
@@ -180,11 +183,17 @@ impl BufferValidator<'_> {
         );
 
         self.verified_until = Some(maximum_verifiable);
-        self.build_branch(reach, vartab, cfg);
+        self.build_branch(reach, ns, vartab, cfg);
     }
 
     /// Builds a branch for failing if we are out of bounds
-    fn build_branch(&self, offset: Expression, vartab: &mut Vartable, cfg: &mut ControlFlowGraph) {
+    fn build_branch(
+        &self,
+        offset: Expression,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) {
         let cond = Expression::LessEqual(
             Loc::Codegen,
             Box::new(offset),
@@ -205,7 +214,7 @@ impl BufferValidator<'_> {
 
         cfg.set_basic_block(out_of_bounds_block);
         // TODO: Add an error message here
-        assert_failure(&Loc::Codegen, None, cfg, vartab);
+        assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
         cfg.set_basic_block(inbounds_block);
     }
 

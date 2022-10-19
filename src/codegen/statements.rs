@@ -10,6 +10,7 @@ use super::{
     vartable::Vartable,
 };
 use crate::codegen::constructor::call_constructor;
+use crate::codegen::encoding::create_encoder;
 use crate::codegen::events::new_event_emitter;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
@@ -1031,25 +1032,28 @@ fn try_catch(
                     opt,
                 );
 
-                let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
+                // let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
+                //
+                // tys.insert(0, Type::Bytes(4));
 
-                tys.insert(0, Type::Bytes(4));
-
-                let args = args
+                let mut args = args
                     .iter()
                     .map(|a| expression(a, cfg, callee_contract_no, Some(func), ns, vartab, opt))
-                    .collect();
+                    .collect::<Vec<Expression>>();
 
                 let selector = function.external_function_selector();
 
                 let address = function.external_function_address();
 
-                let payload = Expression::AbiEncode {
-                    loc: *loc,
-                    tys,
-                    packed: vec![selector],
-                    args,
-                };
+                args.insert(0, selector);
+                let mut encoder = create_encoder(ns);
+                let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
+                // let payload = Expression::AbiEncode {
+                //     loc: *loc,
+                //     tys,
+                //     packed: vec![],
+                //     args,
+                // };
 
                 cfg.add(
                     vartab,

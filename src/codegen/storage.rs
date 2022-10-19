@@ -210,7 +210,7 @@ pub fn storage_slots_array_pop(
     );
 
     cfg.set_basic_block(empty_array);
-    assert_failure(loc, None, cfg, vartab);
+    assert_failure(loc, None, ns, cfg, vartab);
 
     cfg.set_basic_block(has_elements);
     let new_length = vartab.temp_anonymous(&slot_ty);

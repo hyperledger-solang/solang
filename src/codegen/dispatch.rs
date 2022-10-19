@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+
 use crate::codegen::{
     cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
     vartable::Vartable,
@@ -245,7 +246,7 @@ fn add_dispatch_case(
     );
 
     if !func_cfg.returns.is_empty() {
-        let (data, data_len) = encoder.abi_encode(&Loc::Codegen, &returns_expr, ns, vartab, cfg);
+        let (data, data_len) = encoder.abi_encode(&Loc::Codegen, returns_expr, ns, vartab, cfg);
         let zext_len = Expression::ZeroExt(Loc::Codegen, Type::Uint(64), Box::new(data_len));
         cfg.add(
             vartab,
