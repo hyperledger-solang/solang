@@ -8,7 +8,7 @@ contract Testing {
 
     // BEGIN-CHECK: Testing::Testing::function::nonCteArray__bytes
     function nonCteArray(bytes memory buffer) public pure returns (string[] memory) {
-        string[] memory a = abi.borshDecode(buffer, (string[]));
+        string[] memory a = abi.decode(buffer, (string[]));
 	    
         // CHECK: ty:uint32 %temp.10 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: ty:uint32 %temp.12 = uint32 0
@@ -68,7 +68,7 @@ contract Testing {
 
     // BEGIN-CHECK: Testing::Testing::function::complexStruct__bytes
     function complexStruct(bytes memory buffer) public pure returns (NonConstantStruct memory) {
-        NonConstantStruct memory cte = abi.borshDecode(buffer, (NonConstantStruct));
+        NonConstantStruct memory cte = abi.decode(buffer, (NonConstantStruct));
 
 	    // CHECK: ty:uint32 %temp.20 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: branchcond (uint32 8 <= %temp.20), block1, block2
@@ -136,7 +136,7 @@ contract Testing {
     NonConstantStruct[] storage_vec;
     // BEGIN-CHECK: Testing::Testing::function::complexArray__bytes
     function complexArray(bytes memory buffer) public {
-        NonConstantStruct[] memory arr = abi.borshDecode(buffer, (NonConstantStruct[]));
+        NonConstantStruct[] memory arr = abi.decode(buffer, (NonConstantStruct[]));
 
 	    // CHECK: ty:uint32 %temp.31 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: ty:uint32 %temp.33 = uint32 0

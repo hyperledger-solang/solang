@@ -6,7 +6,7 @@ contract Other {
 contract Testing {
     // BEGIN-CHECK: Testing::Testing::function::addressContract__bytes
     function addressContract(bytes memory buffer) public pure returns (address, Other) {
-        (address a, Other b) = abi.borshDecode(buffer, (address, Other));
+        (address a, Other b) = abi.decode(buffer, (address, Other));
 	    // CHECK: ty:bytes %buffer = (arg #0)
 	    // CHECK: ty:uint32 %temp.60 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: branchcond (uint32 64 <= %temp.60), block1, block2
@@ -29,7 +29,7 @@ contract Testing {
     function unsignedInteger(bytes memory buffer) public pure returns (uint8, uint16,
      uint32, uint64, uint128, uint256) {
         (uint8 a, uint16 b, uint32 c, uint64 d, uint128 e, uint256 f) = 
-        abi.borshDecode(buffer, (uint8, uint16, uint32, uint64, uint128, uint256));
+        abi.decode(buffer, (uint8, uint16, uint32, uint64, uint128, uint256));
 
         // CHECK: ty:uint32 %temp.61 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: branchcond (uint32 63 <= %temp.61), block1, block2
@@ -57,7 +57,7 @@ contract Testing {
     function signedInteger(bytes memory buffer) public pure returns (int8, int16, int32,
      int64, int128, int256) {
         (int8 a, int16 b, int32 c, int64 d, int128 e, int256 f) = 
-        abi.borshDecode(buffer, (int8, int16, int32, int64, int128, int256));
+        abi.decode(buffer, (int8, int16, int32, int64, int128, int256));
 
         // CHECK: ty:uint32 %temp.62 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: branchcond (uint32 63 <= %temp.62), block1, block2
@@ -84,7 +84,7 @@ contract Testing {
 
     // BEGIN-CHECK: Testing::Testing::function::fixedBytes__bytes
     function fixedBytes(bytes memory buffer) public pure returns (bytes1, bytes5, bytes20, bytes32) {
-        (bytes1 a, bytes5 b, bytes20 c, bytes32 d) = abi.borshDecode(buffer, (bytes1, bytes5, bytes20, bytes32));
+        (bytes1 a, bytes5 b, bytes20 c, bytes32 d) = abi.decode(buffer, (bytes1, bytes5, bytes20, bytes32));
 
         // CHECK: ty:uint32 %temp.63 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: branchcond (uint32 58 <= %temp.63), block1, block2
@@ -108,7 +108,7 @@ contract Testing {
 
     // BEGIN-CHECK: Testing::Testing::function::stringAndBytes__bytes
     function stringAndBytes(bytes memory buffer) public pure returns (bytes memory, string memory) {
-        (bytes memory a, string memory b) = abi.borshDecode(buffer, (bytes, string));
+        (bytes memory a, string memory b) = abi.decode(buffer, (bytes, string));
     	// CHECK: ty:bytes %buffer = (arg #0)
 	    // CHECK: ty:uint32 %temp.64 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: branchcond (uint32 4 <= %temp.64), block1, block2
@@ -160,7 +160,7 @@ contract Testing {
 
     // BEGIN-CHECK: Testing::Testing::function::decodeEnum__bytes
     function decodeEnum(bytes memory buffer) public pure returns (WeekDays) {
-        WeekDays a = abi.borshDecode(buffer, (WeekDays));
+        WeekDays a = abi.decode(buffer, (WeekDays));
 	    // CHECK: ty:uint32 %temp.72 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: branchcond (uint32 1 <= %temp.72), block1, block2
         // CHECK: block1: # inbounds
@@ -190,7 +190,7 @@ contract Testing {
 
     // BEGIN-CHECK:Testing::Testing::function::decodeStruct__bytes
     function decodeStruct(bytes memory buffer) public pure returns (noPadStruct memory, PaddedStruct memory) {
-        (noPadStruct memory a, PaddedStruct memory b) = abi.borshDecode(buffer, (noPadStruct, PaddedStruct));
+        (noPadStruct memory a, PaddedStruct memory b) = abi.decode(buffer, (noPadStruct, PaddedStruct));
         
         // CHECK: ty:uint32 %temp.73 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: branchcond (uint32 57 <= %temp.73), block1, block2
@@ -216,7 +216,7 @@ contract Testing {
     // BEGIN-CHECK: Testing::Testing::function::primitiveStruct__bytes
     function primitiveStruct(bytes memory buffer) public pure returns (uint32[4] memory, noPadStruct[2] memory, noPadStruct[] memory) {
         (uint32[4] memory a, noPadStruct[2] memory b, noPadStruct[] memory c) = 
-        abi.borshDecode(buffer, (uint32[4], noPadStruct[2], noPadStruct[]));
+        abi.decode(buffer, (uint32[4], noPadStruct[2], noPadStruct[]));
 
     	// CHECK: ty:uint32 %temp.76 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: branchcond (uint32 32 <= %temp.76), block1, block2

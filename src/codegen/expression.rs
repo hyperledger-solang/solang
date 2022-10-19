@@ -415,8 +415,7 @@ pub fn expression(
         ast::Expression::InternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCallRaw { .. }
-        | ast::Expression::Builtin(_, _, ast::Builtin::AbiDecode, _)
-        | ast::Expression::Builtin(_, _, ast::Builtin::AbiBorshDecode, _) => {
+        | ast::Expression::Builtin(_, _, ast::Builtin::AbiDecode, _) => {
             let mut returns = emit_function_call(expr, contract_no, cfg, func, ns, vartab, opt);
 
             returns.remove(0)
@@ -2806,13 +2805,8 @@ pub fn emit_function_call(
                 unreachable!();
             }
         }
-        ast::Expression::Builtin(loc, tys, ast::Builtin::AbiBorshDecode, args) => {
-            let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);
-            let encoder = create_encoder(ns);
-            encoder.abi_decode(loc, &data, tys, ns, vartab, cfg, None)
-        }
         ast::Expression::Builtin(loc, tys, ast::Builtin::AbiDecode, args) => {
-            // TODO: Simplify this using the interface and remove BorshDecode
+            // TODO: Simplify this using the interface
             let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);
             if ns.target == Target::Solana {
                 let encoder = create_encoder(ns);
