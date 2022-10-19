@@ -278,8 +278,8 @@ fn add_dispatch_case(
     ));
 }
 
-/// Create the dispatch for a contract constructor. This case needs creates a new function in
-/// the CFG because we want to use de abi decoding implementation from codegen.
+/// Create the dispatch for a contract constructor. This case creates a new function in
+/// the CFG because we want to use the abi decoding implementation from codegen.
 pub(super) fn constructor_dispatch(
     contract_no: usize,
     constructor_cfg_no: usize,
