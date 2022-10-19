@@ -382,13 +382,16 @@ pub(super) fn constructor_dispatch(
     cfg
 }
 
+/// On Solana, prepare the data account after deploy; ensure the account is
+/// large enough and write magic to it to show the account has been deployed.
 fn solana_deploy(
     contract_no: usize,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
     ns: &mut Namespace,
 ) {
-    // Make sure that the data account is large enough
+    // Make sure that the data account is large enough. Read the size of the
+    // account via `tx.accounts[0].data.length`.
     let account_length = Expression::Builtin(
         Loc::Codegen,
         vec![Type::Uint(32)],
@@ -455,7 +458,7 @@ fn solana_deploy(
 
     cfg.set_basic_block(enough);
 
-    // Write contract magic to offset 0
+    // Write contract magic number to offset 0
     cfg.add(
         vartab,
         Instr::SetStorage {
@@ -469,7 +472,7 @@ fn solana_deploy(
         },
     );
 
-    // Calculate heap offset
+    // Calculate heap offset (align on 8 byte boundary)
     let fixed_fields_size = ns.contracts[contract_no]
         .fixed_layout_size
         .to_u64()
