@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode};
-use crate::codegen::vartable::Vartable;
-use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{ArrayLength, Namespace, Parameter, RetrieveType, StructType, Type};
+use crate::codegen::{
+    cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
+    vartable::Vartable,
+    Builtin, Expression,
+};
+use crate::{
+    sema::ast::{ArrayLength, Namespace, Parameter, RetrieveType, StructType, Type},
+    Target,
+};
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 use solang_parser::pt;
@@ -336,6 +341,53 @@ pub(super) fn constructor_dispatch(
         );
     }
 
+    if ns.target == Target::Solana {
+        solana_deploy(contract_no, &mut vartab, &mut cfg, ns);
+    }
+
+    // Call storage initializer
+    cfg.add(
+        &mut vartab,
+        Instr::Call {
+            res: vec![],
+            return_tys: vec![],
+            call: InternalCallTy::Static {
+                cfg_no: ns.contracts[contract_no].initializer.unwrap(),
+            },
+            args: vec![],
+        },
+    );
+
+    cfg.add(
+        &mut vartab,
+        Instr::Call {
+            res: vec![],
+            return_tys: vec![],
+            call: InternalCallTy::Static {
+                cfg_no: constructor_cfg_no,
+            },
+            args: returns,
+        },
+    );
+
+    cfg.add(
+        &mut vartab,
+        Instr::ReturnCode {
+            code: ReturnCode::Success,
+        },
+    );
+
+    vartab.finalize(ns, &mut cfg);
+
+    cfg
+}
+
+fn solana_deploy(
+    contract_no: usize,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+    ns: &mut Namespace,
+) {
     // Make sure that the data account is large enough
     let account_length = Expression::Builtin(
         Loc::Codegen,
@@ -384,7 +436,7 @@ pub(super) fn constructor_dispatch(
     let not_enough = cfg.new_basic_block("not_enough".into());
 
     cfg.add(
-        &mut vartab,
+        vartab,
         Instr::BranchCond {
             cond: is_enough,
             true_block: enough,
@@ -395,7 +447,7 @@ pub(super) fn constructor_dispatch(
     cfg.set_basic_block(not_enough);
 
     cfg.add(
-        &mut vartab,
+        vartab,
         Instr::ReturnCode {
             code: ReturnCode::AccountDataToSmall,
         },
@@ -405,7 +457,7 @@ pub(super) fn constructor_dispatch(
 
     // Write contract magic to offset 0
     cfg.add(
-        &mut vartab,
+        vartab,
         Instr::SetStorage {
             ty: Type::Uint(32),
             value: Expression::NumberLiteral(
@@ -427,7 +479,7 @@ pub(super) fn constructor_dispatch(
 
     // Write heap offset to 12
     cfg.add(
-        &mut vartab,
+        vartab,
         Instr::SetStorage {
             ty: Type::Uint(32),
             value: Expression::NumberLiteral(
@@ -438,40 +490,4 @@ pub(super) fn constructor_dispatch(
             storage: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(64), BigInt::from(12)),
         },
     );
-
-    // Call storage initializer
-    cfg.add(
-        &mut vartab,
-        Instr::Call {
-            res: vec![],
-            return_tys: vec![],
-            call: InternalCallTy::Static {
-                cfg_no: ns.contracts[contract_no].initializer.unwrap(),
-            },
-            args: vec![],
-        },
-    );
-
-    cfg.add(
-        &mut vartab,
-        Instr::Call {
-            res: vec![],
-            return_tys: vec![],
-            call: InternalCallTy::Static {
-                cfg_no: constructor_cfg_no,
-            },
-            args: returns,
-        },
-    );
-
-    cfg.add(
-        &mut vartab,
-        Instr::ReturnCode {
-            code: ReturnCode::Success,
-        },
-    );
-
-    vartab.finalize(ns, &mut cfg);
-
-    cfg
 }
