@@ -31,7 +31,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 28]> = Lazy::new(|| {
+static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -185,17 +185,6 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 28]> = Lazy::new(|| {
             ret: vec![Type::Bytes(32)],
             target: vec![Target::EVM],
             doc: "Returns the block hash for given block number",
-            constant: false,
-        },
-        Prototype {
-            builtin: Builtin::Random,
-            namespace: None,
-            method: None,
-            name: "random",
-            params: vec![Type::DynamicBytes],
-            ret: vec![Type::Bytes(32)],
-            target: vec![Target::default_substrate()],
-            doc: "Returns deterministic random bytes",
             constant: false,
         },
         Prototype {

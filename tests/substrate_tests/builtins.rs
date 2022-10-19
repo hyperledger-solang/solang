@@ -416,21 +416,6 @@ fn functions() {
     );
 
     runtime.function("test", Vec::new());
-
-    let mut runtime = build_solidity(
-        r##"
-        contract c {
-            function test() public {
-                bytes32 o = random(
-                    "abcd"
-                );
-
-                assert(o == hex"429ccf3ebce07f0c6d7cd0d1dead74459f753cdf53ed8359e42728042a91c39c");
-            }
-        }"##,
-    );
-
-    runtime.function("test", Vec::new());
 }
 
 #[test]

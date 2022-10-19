@@ -32,10 +32,6 @@ block, or any block except for the most recent 256. Do not use this a source of
 randomness unless you know what you are doing.
 
 .. note::
-    This function is not available on Parity Substrate. When using Parity Substrate,
-    use ``random()`` as a source of random data.
-
-.. note::
     This function is not available on Solana. There is the
     `recent block hashes account <https://edge.docs.solana.com/developing/runtime-facilities/sysvars#recentblockhashes>`_
     that looks useful at first glance, however it is not usable because:
@@ -43,17 +39,6 @@ randomness unless you know what you are doing.
     - This account is `deprecated <https://github.com/solana-labs/solana/pull/18875>`_.
     - It does not give any slot of block number, so it is not possible to provide a matching
       function signature.
-
-random(bytes subject) returns (bytes32)
-+++++++++++++++++++++++++++++++++++++++
-
-Returns random bytes based on the subject. The same subject for the same transaction
-will return the same random bytes, so the result is deterministic. The chain has
-a ``max_subject_len``, and if *subject* exceeds that, the transaction will be aborted.
-
-.. note::
-
-    This function is only available on Parity Substrate.
 
 ``msg`` properties
 ++++++++++++++++++
