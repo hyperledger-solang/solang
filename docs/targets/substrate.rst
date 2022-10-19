@@ -25,3 +25,26 @@ directory. Write this to flipper.sol and run:
 Now you should have a file called ``flipper.contract``. The file contains both the ABI and contract wasm.
 It can be used directly in the
 `Contracts UI <https://contracts-ui.substrate.io/>`_, as if the contract was written in ink!.
+
+Builtin Imports
+________________
+
+Some builtin functionality is only available after importing. The following types
+can be imported via the special import file ``substrate``.
+
+.. code-block:: solidity
+
+    import {Hash} from 'solana';
+
+Note that ``{Hash}`` can be omitted, renamed or imported via
+import object.
+
+.. code-block:: solidity
+
+    // Now Hash will be known as InkHash
+    import {Hash as InkHash} from 'substrate';
+
+.. note::
+
+    The import file ``substrate`` is only available when compiling for the Substrate
+    target.

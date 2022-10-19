@@ -729,7 +729,7 @@ fn hash() {
         "##,
     );
 
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
+    #[derive(Encode)]
     struct Hash([u8; 32]);
 
     let h = Hash([
