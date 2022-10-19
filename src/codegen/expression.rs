@@ -3131,12 +3131,7 @@ pub(super) fn assert_failure(
     vartab: &mut Vartable,
 ) {
     if arg.is_none() {
-        cfg.add(
-            vartab,
-            Instr::AssertFailure {
-                encoded_args_with_len: None,
-            },
-        );
+        cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
         return;
     }
 
@@ -3158,17 +3153,11 @@ pub(super) fn assert_failure(
         },
     );
     let encoded_buffer = Expression::Variable(Loc::Codegen, Type::DynamicBytes, encoded_var_no);
-    let encoded_buffer_len = Expression::Builtin(
-        Loc::Codegen,
-        vec![Type::Uint(32)],
-        Builtin::ArrayLength,
-        vec![encoded_buffer.clone()],
-    );
 
     cfg.add(
         vartab,
         Instr::AssertFailure {
-            encoded_args_with_len: Some((encoded_buffer, encoded_buffer_len)),
+            encoded_args: Some(encoded_buffer),
         },
     )
 }

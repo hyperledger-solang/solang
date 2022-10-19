@@ -123,10 +123,9 @@ fn block_reduce(
                 *data = expression_reduce(data, &vars, ns);
             }
             Instr::AssertFailure {
-                encoded_args_with_len: Some(expr),
+                encoded_args: Some(expr),
             } => {
-                expr.0 = expression_reduce(&expr.0, &vars, ns);
-                expr.1 = expression_reduce(&expr.1, &vars, ns);
+                *expr = expression_reduce(expr, &vars, ns);
             }
             Instr::Print { expr } => {
                 *expr = expression_reduce(expr, &vars, ns);

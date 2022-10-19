@@ -123,10 +123,7 @@ fn non_commutative() {
     );
 
     let instr = Instr::AssertFailure {
-        encoded_args_with_len: Some((
-            sub.clone(),
-            Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(5u8)),
-        )),
+        encoded_args: Some(sub.clone()),
     };
 
     let mut ave = AvailableExpression::default();

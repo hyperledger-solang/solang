@@ -424,9 +424,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             );
             bin.builder.build_store(size_field, new_len);
         }
-        Instr::AssertFailure {
-            encoded_args_with_len: None,
-        } => {
+        Instr::AssertFailure { encoded_args: None } => {
             target.assert_failure(
                 bin,
                 bin.context
@@ -437,13 +435,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             );
         }
         Instr::AssertFailure {
-            encoded_args_with_len: Some(expr),
+            encoded_args: Some(expr),
         } => {
-            let data = expression(target, bin, &expr.0, &w.vars, function, ns);
+            let data = expression(target, bin, expr, &w.vars, function, ns);
             let vector_bytes = bin.vector_bytes(data);
-            let len = expression(target, bin, &expr.1, &w.vars, function, ns);
+            let len = bin.vector_len(data);
 
-            target.assert_failure(bin, vector_bytes, len.into_int_value());
+            target.assert_failure(bin, vector_bytes, len);
         }
         Instr::Print { expr } => {
             let expr = expression(target, bin, expr, &w.vars, function, ns);

@@ -19,7 +19,7 @@ describe('Deploy solang contract and test', function () {
             if (e instanceof TransactionError) {
                 expect(e.message).toBe('Do the revert thing');
                 expect(e.computeUnitsUsed).toBeGreaterThan(1000);
-                expect(e.computeUnitsUsed).toBeLessThan(1100);
+                expect(e.computeUnitsUsed).toBeLessThan(1110);
                 expect(e.logs.length).toBeGreaterThan(1);
             }
             return;
