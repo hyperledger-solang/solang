@@ -3,7 +3,7 @@
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type};
+use crate::sema::ast::{ArrayLength, Namespace, Parameter, RetrieveType, StructType, Type};
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 use solang_parser::pt;
@@ -335,6 +335,73 @@ pub(super) fn constructor_dispatch(
             },
         );
     }
+
+    // Make sure that the data account is large enough
+    let account_length = Expression::Builtin(
+        Loc::Codegen,
+        vec![Type::Uint(32)],
+        Builtin::ArrayLength,
+        vec![Expression::StructMember(
+            Loc::Codegen,
+            Type::DynamicBytes,
+            Box::new(Expression::Subscript(
+                Loc::Codegen,
+                Type::Struct(StructType::AccountInfo),
+                Type::Array(
+                    Box::new(Type::Struct(StructType::AccountInfo)),
+                    vec![ArrayLength::Dynamic],
+                ),
+                Box::new(Expression::Builtin(
+                    Loc::Codegen,
+                    vec![Type::Array(
+                        Box::new(Type::Struct(StructType::AccountInfo)),
+                        vec![ArrayLength::Dynamic],
+                    )],
+                    Builtin::Accounts,
+                    vec![],
+                )),
+                Box::new(Expression::NumberLiteral(
+                    Loc::Codegen,
+                    Type::Uint(32),
+                    BigInt::zero(),
+                )),
+            )),
+            2,
+        )],
+    );
+
+    let is_enough = Expression::MoreEqual(
+        Loc::Codegen,
+        Box::new(account_length),
+        Box::new(Expression::NumberLiteral(
+            Loc::Codegen,
+            Type::Uint(32),
+            ns.contracts[contract_no].fixed_layout_size.clone(),
+        )),
+    );
+
+    let enough = cfg.new_basic_block("enough".into());
+    let not_enough = cfg.new_basic_block("not_enough".into());
+
+    cfg.add(
+        &mut vartab,
+        Instr::BranchCond {
+            cond: is_enough,
+            true_block: enough,
+            false_block: not_enough,
+        },
+    );
+
+    cfg.set_basic_block(not_enough);
+
+    cfg.add(
+        &mut vartab,
+        Instr::ReturnCode {
+            code: ReturnCode::AccountDataToSmall,
+        },
+    );
+
+    cfg.set_basic_block(enough);
 
     // Write contract magic to offset 0
     cfg.add(
