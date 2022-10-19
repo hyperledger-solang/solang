@@ -204,7 +204,7 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
-    - run: echo "::set-output name=push::--push"
+    - run: echo "push=--push" >> $GITHUB_OUTPUT
       id: push
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     - run: |
@@ -305,7 +305,7 @@ jobs:
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
       run: docker run -d -p 9944:9944 paritytech/contracts-ci-linux:production substrate-contracts-node --dev --ws-external
-    - uses: actions/setup-node@v1
+    - uses: actions/setup-node@v3
       with:
         node-version: '14'
     - uses: actions/download-artifact@master
@@ -339,7 +339,7 @@ jobs:
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
     - name: Install Node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v3
       with:
         node-version: '14'
     - run: npm install
