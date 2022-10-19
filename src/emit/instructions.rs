@@ -424,7 +424,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             );
             bin.builder.build_store(size_field, new_len);
         }
-        Instr::AssertFailure { expr: None } => {
+        Instr::AssertFailure { encoded_args: None } => {
             target.assert_failure(
                 bin,
                 bin.context
@@ -434,22 +434,14 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.context.i32_type().const_zero(),
             );
         }
-        Instr::AssertFailure { expr: Some(expr) } => {
-            let v = expression(target, bin, expr, &w.vars, function, ns);
+        Instr::AssertFailure {
+            encoded_args: Some(expr),
+        } => {
+            let data = expression(target, bin, expr, &w.vars, function, ns);
+            let vector_bytes = bin.vector_bytes(data);
+            let len = bin.vector_len(data);
 
-            let selector = 0x08c3_79a0u32;
-
-            let (data, len) = target.abi_encode(
-                bin,
-                Some(bin.context.i32_type().const_int(selector as u64, false)),
-                false,
-                function,
-                &[v],
-                &[Type::String],
-                ns,
-            );
-
-            target.assert_failure(bin, data, len);
+            target.assert_failure(bin, vector_bytes, len);
         }
         Instr::Print { expr } => {
             let expr = expression(target, bin, expr, &w.vars, function, ns);
