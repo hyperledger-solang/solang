@@ -197,7 +197,7 @@ pub enum ReturnCode {
     FunctionSelectorInvalid,
     AbiEncodingInvalid,
     InvalidDataError,
-    AccountDataToSmall,
+    AccountDataTooSmall,
 }
 
 impl Instr {
