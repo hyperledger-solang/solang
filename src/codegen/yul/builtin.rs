@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::codegen::expression::assert_failure;
 use crate::codegen::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
@@ -167,7 +168,7 @@ pub(crate) fn process_builtin(
         }
 
         YulBuiltInFunction::Invalid => {
-            cfg.add_yul(vartab, Instr::AssertFailure { expr: None });
+            assert_failure(loc, None, cfg, vartab);
             Expression::Poison
         }
 

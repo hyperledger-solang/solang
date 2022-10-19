@@ -123,7 +123,7 @@ fn non_commutative() {
     );
 
     let instr = Instr::AssertFailure {
-        expr: Some(sub.clone()),
+        encoded_args: Some(sub.clone()),
     };
 
     let mut ave = AvailableExpression::default();

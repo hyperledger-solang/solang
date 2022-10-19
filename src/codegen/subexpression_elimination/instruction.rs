@@ -19,7 +19,9 @@ impl AvailableExpressionSet {
             | Instr::LoadStorage { storage: expr, .. }
             | Instr::ClearStorage { storage: expr, .. }
             | Instr::Print { expr }
-            | Instr::AssertFailure { expr: Some(expr) }
+            | Instr::AssertFailure {
+                encoded_args: Some(expr),
+            }
             | Instr::PopStorage { storage: expr, .. }
             | Instr::AbiDecode { data: expr, .. }
             | Instr::SelfDestruct { recipient: expr } => {
@@ -175,7 +177,7 @@ impl AvailableExpressionSet {
                 }
             }
 
-            Instr::AssertFailure { expr: None }
+            Instr::AssertFailure { encoded_args: None }
             | Instr::Unreachable
             | Instr::Nop
             | Instr::ReturnCode { .. }
@@ -239,8 +241,10 @@ impl AvailableExpressionSet {
                 data: self.regenerate_expression(data, ave, cst).1,
             },
 
-            Instr::AssertFailure { expr: Some(exp) } => Instr::AssertFailure {
-                expr: Some(self.regenerate_expression(exp, ave, cst).1),
+            Instr::AssertFailure {
+                encoded_args: Some(exp),
+            } => Instr::AssertFailure {
+                encoded_args: Some(self.regenerate_expression(exp, ave, cst).1),
             },
 
             Instr::Print { expr } => Instr::Print {
