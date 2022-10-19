@@ -56,8 +56,10 @@ impl Namespace {
             hover_overrides: HashMap::new(),
         };
 
-        if target == Target::Solana {
-            ns.add_solana_builtins();
+        match target {
+            Target::Solana => ns.add_solana_builtins(),
+            Target::Substrate { .. } => ns.add_substrate_builtins(),
+            _ => {}
         }
 
         ns
