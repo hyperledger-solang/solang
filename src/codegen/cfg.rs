@@ -60,7 +60,9 @@ pub enum Instr {
     /// Set array element in memory
     Store { dest: Expression, data: Expression },
     /// Abort execution
-    AssertFailure { expr: Option<Expression> },
+    AssertFailure {
+        encoded_args_with_len: Option<(Expression, Expression)>,
+    },
     /// Print to log message
     Print { expr: Expression },
     /// Load storage (this is an instruction rather than an expression
@@ -210,7 +212,6 @@ impl Instr {
             | Instr::LoadStorage { storage: expr, .. }
             | Instr::ClearStorage { storage: expr, .. }
             | Instr::Print { expr }
-            | Instr::AssertFailure { expr: Some(expr) }
             | Instr::PopStorage { storage: expr, .. }
             | Instr::AbiDecode { data: expr, .. }
             | Instr::SelfDestruct { recipient: expr }
@@ -230,6 +231,9 @@ impl Instr {
             | Instr::Store {
                 dest: item_1,
                 data: item_2,
+            }
+            | Instr::AssertFailure {
+                encoded_args_with_len: Some((item_1, item_2)),
             }
             | Instr::ReturnData {
                 data: item_1,
@@ -338,7 +342,9 @@ impl Instr {
                 }
             }
 
-            Instr::AssertFailure { expr: None }
+            Instr::AssertFailure {
+                encoded_args_with_len: None,
+            }
             | Instr::Unreachable
             | Instr::Nop
             | Instr::ReturnCode { .. }
@@ -983,9 +989,12 @@ impl ControlFlowGraph {
                 self.vars[array].id.name,
                 ty.to_string(ns),
             ),
-            Instr::AssertFailure { expr: None } => "assert-failure".to_string(),
-            Instr::AssertFailure { expr: Some(expr) } => {
-                format!("assert-failure:{}", self.expr_to_string(contract, ns, expr))
+            Instr::AssertFailure { encoded_args_with_len: None } => "assert-failure".to_string(),
+            Instr::AssertFailure { encoded_args_with_len: Some(expr) } => {
+                format!("assert-failure: buffer: {}, buffer len: {}",
+                        self.expr_to_string(contract, ns, &expr.0),
+                        self.expr_to_string(contract, ns, &expr.1)
+                )
             }
             Instr::Call {
                 res,

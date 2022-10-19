@@ -13,6 +13,7 @@ use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
+use crate::codegen::expression::assert_failure;
 use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
 use solang_parser::pt;
 
@@ -209,7 +210,7 @@ pub fn storage_slots_array_pop(
     );
 
     cfg.set_basic_block(empty_array);
-    cfg.add(vartab, Instr::AssertFailure { expr: None });
+    assert_failure(loc, None, cfg, vartab);
 
     cfg.set_basic_block(has_elements);
     let new_length = vartab.temp_anonymous(&slot_ty);

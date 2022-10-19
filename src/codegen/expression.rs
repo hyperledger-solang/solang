@@ -1084,7 +1084,7 @@ fn expr_assert(
         },
     );
     cfg.set_basic_block(false_);
-    cfg.add(vartab, Instr::AssertFailure { expr: None });
+    assert_failure(&Loc::Codegen, None, cfg, vartab);
     cfg.set_basic_block(true_);
     Expression::Poison
 }
@@ -1119,9 +1119,9 @@ fn require(
             if let Some(expr) = expr {
                 cfg.add(vartab, Instr::Print { expr });
             }
-            cfg.add(vartab, Instr::AssertFailure { expr: None });
+            assert_failure(&Loc::Codegen, None, cfg, vartab);
         }
-        _ => cfg.add(vartab, Instr::AssertFailure { expr }),
+        _ => assert_failure(&Loc::Codegen, expr, cfg, vartab),
     }
     cfg.set_basic_block(true_);
     Expression::Poison
@@ -1139,7 +1139,7 @@ fn revert(
     let expr = args
         .get(0)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
-    cfg.add(vartab, Instr::AssertFailure { expr });
+    assert_failure(&Loc::Codegen, expr, cfg, vartab);
     Expression::Poison
 }
 
@@ -1571,7 +1571,7 @@ fn expr_builtin(
             );
 
             cfg.set_basic_block(out_of_bounds);
-            cfg.add(vartab, Instr::AssertFailure { expr: None });
+            assert_failure(loc, None, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
 
@@ -1622,7 +1622,7 @@ fn expr_builtin(
             );
 
             cfg.set_basic_block(out_ouf_bounds);
-            cfg.add(vartab, Instr::AssertFailure { expr: None });
+            assert_failure(loc, None, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
             let advanced_ptr = Expression::AdvancePointer {
@@ -1690,7 +1690,7 @@ fn expr_builtin(
             );
 
             cfg.set_basic_block(out_of_bounds);
-            cfg.add(vartab, Instr::AssertFailure { expr: None });
+            assert_failure(loc, None, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
 
@@ -1887,7 +1887,7 @@ fn checking_trunc(
     );
 
     cfg.set_basic_block(out_of_bounds);
-    cfg.add(vartab, Instr::AssertFailure { expr: None });
+    assert_failure(loc, None, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
 
@@ -2852,7 +2852,7 @@ fn array_subscript(
     );
 
     cfg.set_basic_block(out_of_bounds);
-    cfg.add(vartab, Instr::AssertFailure { expr: None });
+    assert_failure(loc, None, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
 
@@ -3120,4 +3120,55 @@ fn array_literal_to_memory_array(
     cfg.array_lengths_temps.insert(memory_array, temp_res);
 
     Expression::Variable(*loc, ty.clone(), memory_array)
+}
+
+/// This function encodes the arguments for the assert-failure instruction
+/// and inserts it in the CFG.
+pub(super) fn assert_failure(
+    loc: &Loc,
+    arg: Option<Expression>,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) {
+    if arg.is_none() {
+        cfg.add(
+            vartab,
+            Instr::AssertFailure {
+                encoded_args_with_len: None,
+            },
+        );
+        return;
+    }
+
+    let selector = 0x08c3_79a0u32;
+    let selector = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(selector));
+
+    let encoded_var_no = vartab.temp_anonymous(&Type::DynamicBytes);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: *loc,
+            res: encoded_var_no,
+            expr: Expression::AbiEncode {
+                loc: *loc,
+                packed: vec![selector],
+                args: vec![arg.unwrap()],
+                tys: vec![Type::Uint(32), Type::String],
+            },
+        },
+    );
+    let encoded_buffer = Expression::Variable(Loc::Codegen, Type::DynamicBytes, encoded_var_no);
+    let encoded_buffer_len = Expression::Builtin(
+        Loc::Codegen,
+        vec![Type::Uint(32)],
+        Builtin::ArrayLength,
+        vec![encoded_buffer.clone()],
+    );
+
+    cfg.add(
+        vartab,
+        Instr::AssertFailure {
+            encoded_args_with_len: Some((encoded_buffer, encoded_buffer_len)),
+        },
+    )
 }
