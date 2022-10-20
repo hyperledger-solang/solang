@@ -3,8 +3,9 @@
 	"displayName": "Solang Solidity Compiler",
 	"description": "Use the solang compiler for syntax highlighting, compiler warnings and errors, and hovers",
 	"publisher": "solang",
+	"icon": "hl_solang.png",
 	"author": "Shivam Balikondwar <shivambalikondwar@icloud.com>",
-	"version": "0.3.1",
+	"version": "0.3.2",
 	"repository": "github.com/hyperledger/solang",
 	"engines": {
 		"vscode": "^1.43.0"
@@ -99,11 +100,11 @@
 		"@types/vscode": "^1.43.0 <1.69.0",
 		"@typescript-eslint/eslint-plugin": "^4.15.0",
 		"@typescript-eslint/parser": "^4.15.0",
+		"@vscode/test-electron": "^1.6.2",
 		"eslint": ">=7.0.0",
 		"glob": "^7.1.6",
 		"mocha": "^7.1.2",
-		"typescript": "^3.8.3",
-		"@vscode/test-electron": "^1.6.2"
+		"typescript": "^3.8.3"
 	},
 	"__metadata": {
 		"id": "3134b20d-911a-4418-a461-3f2380f4a1c2",
