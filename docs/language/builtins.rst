@@ -329,7 +329,7 @@ are cast and checked against the function specified as the first argument.
 Hash
 ++++
 
-Only available on Substrate. It represents the ``Hash`` type from ``ink_primitives`` via user type definition.
+Only available on Substrate, it represents the ``Hash`` type from ``ink_primitives`` via user type definition.
 Its underlying type is ``bytes32``, but it will be reported correctly as the ``Hash`` type in the metadata.
 
 .. code-block:: solidity
