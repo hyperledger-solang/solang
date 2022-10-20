@@ -1,4 +1,5 @@
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::expression::assert_failure;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, Type};
@@ -132,7 +133,7 @@ impl BufferValidator<'_> {
         cfg.set_basic_block(invalid);
 
         // TODO: This needs a proper error message
-        cfg.add(vartab, Instr::AssertFailure { expr: None });
+        assert_failure(&Loc::Codegen, None, cfg, vartab);
 
         cfg.set_basic_block(valid);
     }
@@ -204,7 +205,7 @@ impl BufferValidator<'_> {
 
         cfg.set_basic_block(out_of_bounds_block);
         // TODO: Add an error message here
-        cfg.add(vartab, Instr::AssertFailure { expr: None });
+        assert_failure(&Loc::Codegen, None, cfg, vartab);
         cfg.set_basic_block(inbounds_block);
     }
 
