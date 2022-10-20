@@ -88,8 +88,9 @@ describe('UniswapV2Pair', () => {
         expect(bal1?.eq(token1Amount)).toBeTruthy();
         const { output: reserves } = await pair.query.getReserves(alice.address, {});
         // surely there must be a better way.
-        expect(reserves[0].eq(token0Amount)).toBeTruthy();
-        expect(reserves[1].eq(token1Amount)).toBeTruthy();
+        let v: any = reserves;
+        expect(v[0].eq(token0Amount)).toBeTruthy();
+        expect(v[1].eq(token1Amount)).toBeTruthy();
     })
 
     async function addLiquidity(token0Amount: BigInt, token1Amount: BigInt) {
@@ -118,8 +119,9 @@ describe('UniswapV2Pair', () => {
 
         const { output: reserves } = await pair.query.getReserves(alice.address, {});
         // surely there must be a better way.
-        expect(reserves[0].eq(token0Amount + swapAmount)).toBeTruthy();
-        expect(reserves[1].eq(token1Amount - expectedOutputAmount)).toBeTruthy();
+        let v: any = reserves;
+        expect(v[0].eq(token0Amount + swapAmount)).toBeTruthy();
+        expect(v[1].eq(token1Amount - expectedOutputAmount)).toBeTruthy();
 
         const { output: bal0 } = await token0.query.balanceOf(alice.address, {}, pair.address);
         expect(bal0?.eq(token0Amount + swapAmount)).toBeTruthy();
@@ -154,8 +156,9 @@ describe('UniswapV2Pair', () => {
 
         const { output: reserves } = await pair.query.getReserves(alice.address, {});
         // surely there must be a better way.
-        expect(reserves[0].eq(token0Amount - expectedOutputAmount)).toBeTruthy();
-        expect(reserves[1].eq(token1Amount + swapAmount)).toBeTruthy();
+        let v: any = reserves;
+        expect(v[0].eq(token0Amount - expectedOutputAmount)).toBeTruthy();
+        expect(v[1].eq(token1Amount + swapAmount)).toBeTruthy();
 
         const { output: bal0 } = await token0.query.balanceOf(alice.address, {}, pair.address);
         expect(bal0?.eq(token0Amount - expectedOutputAmount)).toBeTruthy();
