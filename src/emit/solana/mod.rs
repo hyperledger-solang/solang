@@ -78,7 +78,7 @@ impl SolanaTarget {
             context.i32_type().const_int(2, false),
         );
         binary.return_values.insert(
-            ReturnCode::AccountDataToSmall,
+            ReturnCode::AccountDataTooSmall,
             context.i64_type().const_int(5u64 << 32, false),
         );
         // externals
@@ -148,7 +148,7 @@ impl SolanaTarget {
             context.i64_type().const_int(2u64 << 32, false),
         );
         binary.return_values.insert(
-            ReturnCode::AccountDataToSmall,
+            ReturnCode::AccountDataTooSmall,
             context.i64_type().const_int(5u64 << 32, false),
         );
 

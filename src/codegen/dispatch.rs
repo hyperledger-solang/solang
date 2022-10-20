@@ -399,28 +399,26 @@ fn solana_deploy(
         vec![Expression::StructMember(
             Loc::Codegen,
             Type::DynamicBytes,
-            Box::new(Expression::Subscript(
+            Expression::Subscript(
                 Loc::Codegen,
                 Type::Struct(StructType::AccountInfo),
                 Type::Array(
-                    Box::new(Type::Struct(StructType::AccountInfo)),
+                    Type::Struct(StructType::AccountInfo).into(),
                     vec![ArrayLength::Dynamic],
                 ),
-                Box::new(Expression::Builtin(
+                Expression::Builtin(
                     Loc::Codegen,
                     vec![Type::Array(
-                        Box::new(Type::Struct(StructType::AccountInfo)),
+                        Type::Struct(StructType::AccountInfo).into(),
                         vec![ArrayLength::Dynamic],
                     )],
                     Builtin::Accounts,
                     vec![],
-                )),
-                Box::new(Expression::NumberLiteral(
-                    Loc::Codegen,
-                    Type::Uint(32),
-                    BigInt::zero(),
-                )),
-            )),
+                )
+                .into(),
+                Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::zero()).into(),
+            )
+            .into(),
             2,
         )],
     );
@@ -452,7 +450,7 @@ fn solana_deploy(
     cfg.add(
         vartab,
         Instr::ReturnCode {
-            code: ReturnCode::AccountDataToSmall,
+            code: ReturnCode::AccountDataTooSmall,
         },
     );
 
