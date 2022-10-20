@@ -11,7 +11,7 @@ const TEST_ADDRESSES: [string, string] = [
 ]
 
 // REGRESSION metadata #666
-describe.skip('UniswapV2Factory', () => {
+describe('UniswapV2Factory', () => {
   let conn: ApiPromise;
   let factory: ContractPromise;
   let alice: KeyringPair;
@@ -24,7 +24,7 @@ describe.skip('UniswapV2Factory', () => {
     alice = aliceKeypair();
     dave = daveKeypair();
 
-    let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', BigInt(0), alice.address);
+    let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', BigInt(10000000000000000), alice.address);
 
     factory = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
