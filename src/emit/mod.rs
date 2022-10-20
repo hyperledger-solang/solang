@@ -15,7 +15,6 @@ use inkwell::values::{
 
 pub mod binary;
 mod cfg;
-mod ethabiencoder;
 mod expression;
 mod functions;
 mod instructions;

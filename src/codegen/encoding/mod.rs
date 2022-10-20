@@ -53,13 +53,16 @@ pub(super) trait AbiEncoding {
 
     /// Some types have sizes that are specific to each encoding scheme, so there is no way to generalize.
     fn get_encoding_size(&self, expr: &Expression, ty: &Type, ns: &Namespace) -> Expression;
+
+    /// Returns if the we are packed encoding
+    fn is_packed(&self) -> bool;
 }
 
 /// This function should return the correct encoder, given the target
-pub(super) fn create_encoder(ns: &Namespace) -> Box<dyn AbiEncoding> {
+pub(super) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
     match &ns.target {
-        Target::Solana => Box::new(BorshEncoding::new()),
-        _ => Box::new(ScaleEncoding {}),
+        Target::Solana => Box::new(BorshEncoding::new(packed)),
+        _ => Box::new(ScaleEncoding::new(packed)),
     }
 }
 
@@ -265,7 +268,7 @@ fn calculate_array_size<T: AbiEncoding>(
     // Each dynamic dimension size occupies 4 bytes in the buffer
     let dyn_dims = dims.iter().filter(|d| **d == ArrayLength::Dynamic).count();
 
-    if dyn_dims > 0 {
+    if dyn_dims > 0 && !encoder.is_packed() {
         cfg.add(
             vartab,
             Instr::Set {

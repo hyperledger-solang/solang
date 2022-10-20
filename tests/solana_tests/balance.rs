@@ -15,7 +15,7 @@ fn get_balance() {
         }"#,
     );
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
     let new = account_new();
 
@@ -28,7 +28,7 @@ fn get_balance() {
         },
     );
 
-    let returns = vm.function_with_borsh("test", &[], &[], Some(&new));
+    let returns = vm.function("test", &[], &[], Some(&new));
 
     assert_eq!(
         returns,
@@ -50,7 +50,7 @@ fn send_fails() {
         }"#,
     );
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
     let new = account_new();
 
@@ -63,7 +63,7 @@ fn send_fails() {
         },
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "send",
         &[
             BorshToken::FixedBytes(new.to_vec()),
@@ -94,7 +94,7 @@ fn send_succeeds() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
     let new = account_new();
 
@@ -107,7 +107,7 @@ fn send_succeeds() {
         },
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "send",
         &[
             BorshToken::FixedBytes(new.to_vec()),
@@ -143,7 +143,7 @@ fn send_overflows() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
     let new = account_new();
 
@@ -156,7 +156,7 @@ fn send_overflows() {
         },
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "send",
         &[
             BorshToken::FixedBytes(new.to_vec()),
@@ -195,7 +195,7 @@ fn transfer_succeeds() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
     let new = account_new();
 
@@ -208,7 +208,7 @@ fn transfer_succeeds() {
         },
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "transfer",
         &[
             BorshToken::FixedBytes(new.to_vec()),
@@ -242,7 +242,7 @@ fn transfer_fails_not_enough() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
     let new = account_new();
 
@@ -255,7 +255,7 @@ fn transfer_fails_not_enough() {
         },
     );
 
-    let res = vm.function_must_fail_with_borsh(
+    let res = vm.function_must_fail(
         "transfer",
         &[
             BorshToken::FixedBytes(new.to_vec()),
@@ -286,7 +286,7 @@ fn transfer_fails_overflow() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
     let new = account_new();
 
@@ -299,7 +299,7 @@ fn transfer_fails_overflow() {
         },
     );
 
-    let res = vm.function_must_fail_with_borsh(
+    let res = vm.function_must_fail(
         "transfer",
         &[
             BorshToken::FixedBytes(new.to_vec()),
@@ -327,7 +327,7 @@ fn fallback() {
 
     vm.account_data.get_mut(&vm.origin).unwrap().lamports = 312;
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
     if let Some(abi) = &vm.stack[0].abi {
         let mut abi = abi.clone();
@@ -347,7 +347,7 @@ fn fallback() {
         vm.stack[0].abi = Some(abi);
     }
 
-    vm.function_with_borsh("extinct", &[], &[], None);
+    vm.function("extinct", &[], &[], None);
 
     assert_eq!(vm.logs, "fallback");
 }
@@ -367,7 +367,7 @@ fn value_overflows() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
     let new = account_new();
 
@@ -380,7 +380,7 @@ fn value_overflows() {
         },
     );
 
-    let res = vm.function_must_fail_with_borsh(
+    let res = vm.function_must_fail(
         "send",
         &[
             BorshToken::FixedBytes(new.to_vec()),
@@ -394,7 +394,7 @@ fn value_overflows() {
     );
     assert_eq!(res.ok(), Some(4294967296));
 
-    let res = vm.function_must_fail_with_borsh(
+    let res = vm.function_must_fail(
         "send",
         &[
             BorshToken::FixedBytes(new.to_vec()),
@@ -408,7 +408,7 @@ fn value_overflows() {
     );
     assert_eq!(res.ok(), Some(4294967296));
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "send",
         &[
             BorshToken::FixedBytes(new.to_vec()),

@@ -86,7 +86,7 @@ pub(super) fn call_constructor(
         args.append(&mut constructor_args);
     };
 
-    let mut encoder = create_encoder(ns);
+    let mut encoder = create_encoder(ns, false);
     let (encoded_args, encoded_args_len) = encoder.abi_encode(loc, args, ns, vartab, cfg);
 
     cfg.add(

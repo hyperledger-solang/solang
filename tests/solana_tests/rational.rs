@@ -21,9 +21,9 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("test", &[], &[], None);
+    let returns = vm.function("test", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -33,7 +33,7 @@ fn rational() {
         }]
     );
 
-    let returns = vm.function_with_borsh("test2", &[], &[], None);
+    let returns = vm.function("test2", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -53,9 +53,9 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("test", &[], &[], None);
+    let returns = vm.function("test", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -75,9 +75,9 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("test", &[], &[], None);
+    let returns = vm.function("test", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -97,9 +97,9 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("test", &[], &[], None);
+    let returns = vm.function("test", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -119,9 +119,9 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("test", &[], &[], None);
+    let returns = vm.function("test", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -140,9 +140,9 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("test", &[], &[], None);
+    let returns = vm.function("test", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -161,9 +161,9 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("test", &[], &[], None);
+    let returns = vm.function("test", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -182,9 +182,9 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "test",
         &[BorshToken::Uint {
             width: 64,

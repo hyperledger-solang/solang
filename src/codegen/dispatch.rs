@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-
+use crate::codegen::encoding::create_encoder;
 use crate::codegen::{
     cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
     vartable::Vartable,
     Builtin, Expression,
 };
 use crate::{
-    sema::ast::{ArrayLength, Namespace, Parameter, RetrieveType, StructType, Type},
+    sema::ast::{ArrayLength, Namespace, Parameter, StructType, Type},
     Target,
 };
 use num_bigint::{BigInt, Sign};
@@ -214,7 +214,7 @@ fn add_dispatch_case(
         .iter()
         .map(|e| e.ty.clone())
         .collect::<Vec<Type>>();
-    let mut encoder = create_encoder(ns);
+    let mut encoder = create_encoder(ns, false);
     let decoded = encoder.abi_decode(
         &Loc::Codegen,
         argsdata,
@@ -317,7 +317,7 @@ pub(super) fn constructor_dispatch(
             .iter()
             .map(|e| e.ty.clone())
             .collect::<Vec<Type>>();
-        let encoder = create_encoder(ns);
+        let encoder = create_encoder(ns, false);
         let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(data_len));
         returns = encoder.abi_decode(
             &Loc::Codegen,

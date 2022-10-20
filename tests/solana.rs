@@ -1584,11 +1584,11 @@ impl VirtualMachine {
         res
     }
 
-    fn constructor(&mut self, name: &str, args: &[Token]) {
+    fn constructor(&mut self, name: &str, args: &[BorshToken]) {
         self.constructor_expected(0, name, args)
     }
 
-    fn constructor_expected(&mut self, expected: u64, name: &str, args: &[Token]) {
+    fn constructor_expected(&mut self, expected: u64, name: &str, args: &[BorshToken]) {
         let program = &self.stack[0];
         println!("constructor for {}", hex::encode(program.data));
 
@@ -1604,7 +1604,7 @@ impl VirtualMachine {
         assert_eq!(res, Ok(expected));
     }
 
-    fn function_with_borsh(
+    fn function(
         &mut self,
         name: &str,
         args: &[BorshToken],
@@ -1652,7 +1652,7 @@ impl VirtualMachine {
         }
     }
 
-    fn function_must_fail_with_borsh(
+    fn function_must_fail(
         &mut self,
         name: &str,
         args: &[BorshToken],

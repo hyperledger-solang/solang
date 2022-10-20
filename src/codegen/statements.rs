@@ -1046,14 +1046,8 @@ fn try_catch(
                 let address = function.external_function_address();
 
                 args.insert(0, selector);
-                let mut encoder = create_encoder(ns);
+                let mut encoder = create_encoder(ns, false);
                 let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
-                // let payload = Expression::AbiEncode {
-                //     loc: *loc,
-                //     tys,
-                //     packed: vec![],
-                //     args,
-                // };
 
                 cfg.add(
                     vartab,

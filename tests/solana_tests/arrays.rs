@@ -20,9 +20,9 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -66,9 +66,9 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -135,9 +135,9 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -165,7 +165,7 @@ fn fixed_array() {
         ])],
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "set",
         &[BorshToken::Tuple(vec![
             BorshToken::Bool(true),
@@ -230,9 +230,9 @@ fn dynamic_array_fixed_elements() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get",
         &[
             BorshToken::Uint {
@@ -275,7 +275,7 @@ fn dynamic_array_fixed_elements() {
     );
 
     // test that the abi encoder can handle fixed arrays
-    let returns = vm.function_with_borsh("set", &[], &[], None);
+    let returns = vm.function("set", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -338,9 +338,9 @@ fn fixed_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get",
         &[
             BorshToken::Uint {
@@ -370,7 +370,7 @@ fn fixed_array_dynamic_elements() {
         }]
     );
 
-    let returns = vm.function_with_borsh("set", &[], &[], None);
+    let returns = vm.function("set", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -425,9 +425,9 @@ fn dynamic_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get",
         &[
             BorshToken::Uint {
@@ -457,7 +457,7 @@ fn dynamic_array_dynamic_elements() {
         }]
     );
 
-    let returns = vm.function_with_borsh("set", &[], &[], None);
+    let returns = vm.function("set", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -506,9 +506,9 @@ fn fixed_array_fixed_elements_storage() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "set_elem",
         &[
             BorshToken::Uint {
@@ -524,7 +524,7 @@ fn fixed_array_fixed_elements_storage() {
         None,
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "set_elem",
         &[
             BorshToken::Uint {
@@ -540,7 +540,7 @@ fn fixed_array_fixed_elements_storage() {
         None,
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get_elem",
         &[BorshToken::Uint {
             width: 256,
@@ -558,7 +558,7 @@ fn fixed_array_fixed_elements_storage() {
         },]
     );
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -582,7 +582,7 @@ fn fixed_array_fixed_elements_storage() {
         ])],
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "set",
         &[BorshToken::FixedArray(vec![
             BorshToken::Int {
@@ -606,7 +606,7 @@ fn fixed_array_fixed_elements_storage() {
         None,
     );
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -630,9 +630,9 @@ fn fixed_array_fixed_elements_storage() {
         ])],
     );
 
-    vm.function_with_borsh("del", &[], &[], None);
+    vm.function("del", &[], &[], None);
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -686,9 +686,9 @@ fn fixed_array_dynamic_elements_storage() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "set_elem",
         &[
             BorshToken::Uint {
@@ -701,7 +701,7 @@ fn fixed_array_dynamic_elements_storage() {
         None,
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "set_elem",
         &[
             BorshToken::Uint {
@@ -716,7 +716,7 @@ fn fixed_array_dynamic_elements_storage() {
         None,
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get_elem",
         &[BorshToken::Uint {
             width: 256,
@@ -728,7 +728,7 @@ fn fixed_array_dynamic_elements_storage() {
 
     assert_eq!(returns, vec![BorshToken::String(String::from("abcd"))]);
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -742,7 +742,7 @@ fn fixed_array_dynamic_elements_storage() {
         ])],
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "set",
         &[BorshToken::FixedArray(vec![
             BorshToken::String(String::from("a")),
@@ -754,7 +754,7 @@ fn fixed_array_dynamic_elements_storage() {
         None,
     );
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -766,9 +766,9 @@ fn fixed_array_dynamic_elements_storage() {
         ])],
     );
 
-    vm.function_with_borsh("del", &[], &[], None);
+    vm.function("del", &[], &[], None);
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -822,9 +822,9 @@ fn storage_simple_dynamic_array() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("len", &[], &[], None);
+    let returns = vm.function("len", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -834,7 +834,7 @@ fn storage_simple_dynamic_array() {
         }]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "push",
         &[BorshToken::Int {
             width: 64,
@@ -844,9 +844,9 @@ fn storage_simple_dynamic_array() {
         None,
     );
 
-    vm.function_with_borsh("push_zero", &[], &[], None);
+    vm.function("push_zero", &[], &[], None);
 
-    vm.function_with_borsh(
+    vm.function(
         "push",
         &[BorshToken::Int {
             width: 64,
@@ -856,7 +856,7 @@ fn storage_simple_dynamic_array() {
         None,
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "subscript",
         &[BorshToken::Uint {
             width: 32,
@@ -874,7 +874,7 @@ fn storage_simple_dynamic_array() {
         }]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "subscript",
         &[BorshToken::Uint {
             width: 32,
@@ -892,7 +892,7 @@ fn storage_simple_dynamic_array() {
         }]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "subscript",
         &[BorshToken::Uint {
             width: 32,
@@ -910,7 +910,7 @@ fn storage_simple_dynamic_array() {
         },]
     );
 
-    let returns = vm.function_with_borsh("copy", &[], &[], None);
+    let returns = vm.function("copy", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -930,7 +930,7 @@ fn storage_simple_dynamic_array() {
         ])],
     );
 
-    let returns = vm.function_with_borsh("pop", &[], &[], None);
+    let returns = vm.function("pop", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -940,7 +940,7 @@ fn storage_simple_dynamic_array() {
         },]
     );
 
-    let returns = vm.function_with_borsh("len", &[], &[], None);
+    let returns = vm.function("len", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -950,7 +950,7 @@ fn storage_simple_dynamic_array() {
         }]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "set",
         &[BorshToken::Array(vec![
             BorshToken::Uint {
@@ -986,7 +986,7 @@ fn storage_simple_dynamic_array() {
         None,
     );
 
-    let returns = vm.function_with_borsh("copy", &[], &[], None);
+    let returns = vm.function("copy", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1022,9 +1022,9 @@ fn storage_simple_dynamic_array() {
         ])],
     );
 
-    vm.function_with_borsh("rm", &[], &[], None);
+    vm.function("rm", &[], &[], None);
 
-    let returns = vm.function_with_borsh("len", &[], &[], None);
+    let returns = vm.function("len", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1049,9 +1049,9 @@ fn storage_pop_running_on_empty() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh("pop", &[], &[], None);
+    vm.function("pop", &[], &[], None);
 }
 
 #[test]
@@ -1106,9 +1106,9 @@ fn storage_dynamic_array_of_structs() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("len", &[], &[], None);
+    let returns = vm.function("len", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1118,7 +1118,7 @@ fn storage_dynamic_array_of_structs() {
         }]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "push1",
         &[BorshToken::Tuple(vec![
             BorshToken::Uint {
@@ -1131,9 +1131,9 @@ fn storage_dynamic_array_of_structs() {
         None,
     );
 
-    vm.function_with_borsh("push_empty", &[], &[], None);
+    vm.function("push_empty", &[], &[], None);
 
-    vm.function_with_borsh(
+    vm.function(
         "push2",
         &[BorshToken::Tuple(vec![
             BorshToken::Uint {
@@ -1146,7 +1146,7 @@ fn storage_dynamic_array_of_structs() {
         None,
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "subscript",
         &[BorshToken::Uint {
             width: 32,
@@ -1167,7 +1167,7 @@ fn storage_dynamic_array_of_structs() {
         ])]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "subscript",
         &[BorshToken::Uint {
             width: 32,
@@ -1188,7 +1188,7 @@ fn storage_dynamic_array_of_structs() {
         ])]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "subscript",
         &[BorshToken::Uint {
             width: 32,
@@ -1209,7 +1209,7 @@ fn storage_dynamic_array_of_structs() {
         ]),]
     );
 
-    let returns = vm.function_with_borsh("copy", &[], &[], None);
+    let returns = vm.function("copy", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1238,7 +1238,7 @@ fn storage_dynamic_array_of_structs() {
         ])]
     );
 
-    let returns = vm.function_with_borsh("pop", &[], &[], None);
+    let returns = vm.function("pop", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1251,7 +1251,7 @@ fn storage_dynamic_array_of_structs() {
         ])]
     );
 
-    let returns = vm.function_with_borsh("len", &[], &[], None);
+    let returns = vm.function("len", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1261,7 +1261,7 @@ fn storage_dynamic_array_of_structs() {
         }]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "set",
         &[BorshToken::Array(vec![
             BorshToken::Tuple(vec![
@@ -1311,7 +1311,7 @@ fn storage_dynamic_array_of_structs() {
         None,
     );
 
-    let returns = vm.function_with_borsh("copy", &[], &[], None);
+    let returns = vm.function("copy", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1361,9 +1361,9 @@ fn storage_dynamic_array_of_structs() {
         ]),]
     );
 
-    vm.function_with_borsh("rm", &[], &[], None);
+    vm.function("rm", &[], &[], None);
 
-    let returns = vm.function_with_borsh("len", &[], &[], None);
+    let returns = vm.function("len", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1388,9 +1388,9 @@ fn array_literal() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("list", &[], &[], None);
+    let returns = vm.function("list", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1464,16 +1464,16 @@ fn storage_pop_push() {
     }"#,
     );
 
-    vm.constructor_with_borsh("Testing", &[]);
-    vm.function_with_borsh("fn1", &[], &[], None);
-    vm.function_with_borsh("fn2", &[], &[], None);
-    vm.function_with_borsh("fn3", &[], &[], None);
-    vm.function_with_borsh("fn4", &[], &[], None);
-    vm.function_with_borsh("fn5", &[], &[], None);
-    vm.function_with_borsh("fn6", &[], &[], None);
-    vm.function_with_borsh("fn7", &[], &[], None);
-    vm.function_with_borsh("fn8", &[], &[], None);
-    vm.function_with_borsh("clear", &[], &[], None);
+    vm.constructor("Testing", &[]);
+    vm.function("fn1", &[], &[], None);
+    vm.function("fn2", &[], &[], None);
+    vm.function("fn3", &[], &[], None);
+    vm.function("fn4", &[], &[], None);
+    vm.function("fn5", &[], &[], None);
+    vm.function("fn6", &[], &[], None);
+    vm.function("fn7", &[], &[], None);
+    vm.function("fn8", &[], &[], None);
+    vm.function("clear", &[], &[], None);
 
     // make sure every thing has been freed
     assert_eq!(vm.validate_account_data_heap(), 0);
@@ -1503,7 +1503,7 @@ fn initialization_with_literal() {
         "#,
     );
 
-    vm.constructor_with_borsh("Testing", &[]);
+    vm.constructor("Testing", &[]);
 
     let mut addr1: Vec<u8> = Vec::new();
     addr1.resize(32, 0);
@@ -1511,7 +1511,7 @@ fn initialization_with_literal() {
     let mut addr2: Vec<u8> = Vec::new();
     addr2.resize(32, 0);
     addr2[0] = 2;
-    let _ = vm.function_with_borsh(
+    let _ = vm.function(
         "split",
         &[
             BorshToken::FixedBytes(addr1[..].to_vec()),
@@ -1520,7 +1520,7 @@ fn initialization_with_literal() {
         &[],
         None,
     );
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "getIdx",
         &[BorshToken::Uint {
             width: 32,
@@ -1532,7 +1532,7 @@ fn initialization_with_literal() {
     let returned_addr1 = returns[0].clone().into_fixed_bytes().unwrap();
     assert_eq!(addr1, returned_addr1);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "getIdx",
         &[BorshToken::Uint {
             width: 32,
@@ -1544,7 +1544,7 @@ fn initialization_with_literal() {
     let returned_addr2 = returns[0].clone().into_fixed_bytes().unwrap();
     assert_eq!(addr2, returned_addr2);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "getVec",
         &[
             BorshToken::Uint {
@@ -1595,8 +1595,8 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 
     let mut runtime = build_solidity(
         r#"
@@ -1616,8 +1616,8 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 
     let mut runtime = build_solidity(
         r#"
@@ -1642,8 +1642,8 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 
     let mut runtime = build_solidity(
         r#"
@@ -1664,8 +1664,8 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 
     // push() returns a reference to the thing
     let mut runtime = build_solidity(
@@ -1690,8 +1690,8 @@ fn dynamic_array_push() {
         }"#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 }
 
 #[test]
@@ -1714,8 +1714,8 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 
     let mut runtime = build_solidity(
         r#"
@@ -1735,8 +1735,8 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 
     let mut runtime = build_solidity(
         r#"
@@ -1763,8 +1763,8 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 
     let mut runtime = build_solidity(
         r#"
@@ -1785,8 +1785,8 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 }
 
 #[test]
@@ -1804,8 +1804,8 @@ fn dynamic_array_pop_empty_array() {
         }"#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 }
 
 #[test]
@@ -1826,8 +1826,8 @@ fn dynamic_array_pop_bounds() {
         }"#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 }
 
 #[test]
@@ -1866,8 +1866,8 @@ fn dynamic_array_push_pop_loop() {
         }"#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 
     let mut runtime = build_solidity(
         r#"
@@ -1905,6 +1905,6 @@ fn dynamic_array_push_pop_loop() {
         }"#,
     );
 
-    runtime.constructor_with_borsh("foo", &[]);
-    runtime.function_with_borsh("test", &[], &[], None);
+    runtime.constructor("foo", &[]);
+    runtime.function("test", &[], &[], None);
 }

@@ -31,9 +31,9 @@ fn return_single() {
             }
         }"#,
     );
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("f", &[], &[], None);
+    let returns = vm.function("f", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -42,7 +42,7 @@ fn return_single() {
         },]
     );
 
-    let returns = vm.function_with_borsh("g", &[], &[], None);
+    let returns = vm.function("g", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -51,7 +51,7 @@ fn return_single() {
         },]
     );
 
-    let returns = vm.function_with_borsh("h", &[], &[], None);
+    let returns = vm.function("h", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -60,7 +60,7 @@ fn return_single() {
         },]
     );
 
-    let returns = vm.function_with_borsh("i", &[], &[], None);
+    let returns = vm.function("i", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -69,7 +69,7 @@ fn return_single() {
         },]
     );
 
-    let returns = vm.function_with_borsh("j", &[], &[], None);
+    let returns = vm.function("j", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -90,8 +90,8 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
-    let returns = vm.function_with_borsh("f", &[], &[], None);
+    vm.constructor("foo", &[]);
+    let returns = vm.function("f", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -116,8 +116,8 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
-    let returns = vm.function_with_borsh("f", &[], &[], None);
+    vm.constructor("foo", &[]);
+    let returns = vm.function("f", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -156,10 +156,10 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
-    let _returns = vm.function_with_borsh("strange", &[], &[], None);
-    let _returns = vm.function_with_borsh("inc", &[], &[], None);
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    vm.constructor("foo", &[]);
+    let _returns = vm.function("strange", &[], &[], None);
+    let _returns = vm.function("inc", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -192,9 +192,9 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
-    let _returns = vm.function_with_borsh("f", &[], &[], None);
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    vm.constructor("foo", &[]);
+    let _returns = vm.function("f", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -220,8 +220,8 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
-    let returns = vm.function_with_borsh("f", &[], &[], None);
+    vm.constructor("foo", &[]);
+    let returns = vm.function("f", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -250,8 +250,8 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
-    let returns = vm.function_with_borsh("f", &[], &[], None);
+    vm.constructor("foo", &[]);
+    let returns = vm.function("f", &[], &[], None);
 
     assert_eq!(
         returns,

@@ -43,7 +43,7 @@ fn verify() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
     let mut csprng = rand_07::thread_rng();
     let keypair: Keypair = Keypair::generate(&mut csprng);
@@ -59,7 +59,7 @@ fn verify() {
     println!("T: SIG: {}", hex::encode(&signature_bs));
     println!("T: MES: {}", hex::encode(message));
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "verify",
         &[
             BorshToken::Address(keypair.public.to_bytes()),
@@ -90,7 +90,7 @@ fn verify() {
 
     println!("Now try for real");
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "verify",
         &[
             BorshToken::Address(keypair.public.to_bytes()),
@@ -120,7 +120,7 @@ fn verify() {
         },
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "verify",
         &[
             BorshToken::Address(keypair.public.to_bytes()),

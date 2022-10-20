@@ -13,9 +13,9 @@ fn types() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("f1", &[], &[], None);
+    let returns = vm.function("f1", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -32,9 +32,9 @@ fn types() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "f1",
         &[BorshToken::Uint {
             width: 256,
@@ -66,9 +66,9 @@ fn types() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "f1",
         &[
             BorshToken::Uint {
@@ -104,9 +104,9 @@ fn types() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "f1",
         &[BorshToken::Int {
             width: 64,
@@ -139,9 +139,9 @@ fn interfaces() {
         "#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("f1", &[], &[], None);
+    let returns = vm.function("f1", &[], &[], None);
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(b"ab".to_vec())]);
 }
@@ -155,9 +155,9 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor_with_borsh("x", &[]);
+    vm.constructor("x", &[]);
 
-    let returns = vm.function_with_borsh("z", &[], &[], None);
+    let returns = vm.function("z", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -174,9 +174,9 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor_with_borsh("x", &[]);
+    vm.constructor("x", &[]);
 
-    let returns = vm.function_with_borsh("z", &[], &[], None);
+    let returns = vm.function("z", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -193,9 +193,9 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor_with_borsh("x", &[]);
+    vm.constructor("x", &[]);
 
-    let returns = vm.function_with_borsh("z", &[], &[], None);
+    let returns = vm.function("z", &[], &[], None);
 
     assert_eq!(
         returns,

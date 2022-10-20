@@ -25,10 +25,10 @@ fn simple_mapping() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
     for i in 0..10 {
-        vm.function_with_borsh(
+        vm.function(
             "set",
             &[
                 BorshToken::Uint {
@@ -46,7 +46,7 @@ fn simple_mapping() {
     }
 
     for i in 0..10 {
-        let returns = vm.function_with_borsh(
+        let returns = vm.function(
             "get",
             &[BorshToken::Uint {
                 width: 64,
@@ -65,7 +65,7 @@ fn simple_mapping() {
         );
     }
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get",
         &[BorshToken::Uint {
             width: 64,
@@ -83,7 +83,7 @@ fn simple_mapping() {
         }]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "rm",
         &[BorshToken::Uint {
             width: 64,
@@ -94,7 +94,7 @@ fn simple_mapping() {
     );
 
     for i in 0..10 {
-        let returns = vm.function_with_borsh(
+        let returns = vm.function(
             "get",
             &[BorshToken::Uint {
                 width: 64,
@@ -154,9 +154,9 @@ fn less_simple_mapping() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "set_string",
         &[
             BorshToken::Uint {
@@ -167,7 +167,7 @@ fn less_simple_mapping() {
         ], &[], None
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "add_int",
         &[
             BorshToken::Uint {
@@ -183,7 +183,7 @@ fn less_simple_mapping() {
         None,
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get",
         &[BorshToken::Uint {
             width: 256,
@@ -237,9 +237,9 @@ fn string_mapping() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "set_string",
         &[
             BorshToken::String(String::from("a")),
@@ -247,7 +247,7 @@ fn string_mapping() {
         ], &[], None
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "add_int",
         &[
             BorshToken::String(String::from("a")),
@@ -260,8 +260,7 @@ fn string_mapping() {
         None,
     );
 
-    let returns =
-        vm.function_with_borsh("get", &[BorshToken::String(String::from("a"))], &[], None);
+    let returns = vm.function("get", &[BorshToken::String(String::from("a"))], &[], None);
 
     assert_eq!(
         returns,
@@ -300,11 +299,11 @@ fn contract_mapping() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
     let index = BorshToken::Address(account_new());
 
-    vm.function_with_borsh(
+    vm.function(
         "set",
         &[
             index.clone(),
@@ -312,16 +311,16 @@ fn contract_mapping() {
         ], &[], None
     );
 
-    let returns = vm.function_with_borsh("get", &[index.clone()], &[], None);
+    let returns = vm.function("get", &[index.clone()], &[], None);
 
     assert_eq!(
         returns,
         vec![BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder"))]
     );
 
-    vm.function_with_borsh("rm", &[index.clone()], &[], None);
+    vm.function("rm", &[index.clone()], &[], None);
 
-    let returns = vm.function_with_borsh("get", &[index], &[], None);
+    let returns = vm.function("get", &[index], &[], None);
 
     assert_eq!(returns, vec![BorshToken::String(String::from(""))]);
 }
@@ -339,9 +338,9 @@ fn mapping_in_mapping() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "set",
         &[
             BorshToken::String(String::from("a")),
@@ -355,7 +354,7 @@ fn mapping_in_mapping() {
         None,
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "map",
         &[
             BorshToken::String(String::from("a")),
@@ -370,7 +369,7 @@ fn mapping_in_mapping() {
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(vec![0x98])]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "map",
         &[
             BorshToken::String(String::from("a")),
@@ -385,7 +384,7 @@ fn mapping_in_mapping() {
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(vec![0])]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "map",
         &[
             BorshToken::String(String::from("b")),
@@ -431,9 +430,9 @@ fn sparse_array() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "set_string",
         &[
             BorshToken::Uint{
@@ -444,7 +443,7 @@ fn sparse_array() {
         ], &[], None
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "add_int",
         &[
             BorshToken::Uint {
@@ -460,7 +459,7 @@ fn sparse_array() {
         None,
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get",
         &[BorshToken::Uint {
             width: 256,
@@ -514,9 +513,9 @@ fn massive_sparse_array() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "set_string",
         &[
             BorshToken::Uint {
@@ -527,7 +526,7 @@ fn massive_sparse_array() {
         ], &[], None
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "add_int",
         &[
             BorshToken::Uint {
@@ -543,7 +542,7 @@ fn massive_sparse_array() {
         None,
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get",
         &[BorshToken::Uint {
             width: 256,
@@ -601,9 +600,9 @@ fn mapping_in_dynamic_array() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "setNumber",
         &[BorshToken::Int {
             width: 64,
@@ -613,12 +612,12 @@ fn mapping_in_dynamic_array() {
         None,
     );
 
-    vm.function_with_borsh("push", &[], &[], None);
-    vm.function_with_borsh("push", &[], &[], None);
+    vm.function("push", &[], &[], None);
+    vm.function("push", &[], &[], None);
 
     for array_no in 0..2 {
         for i in 0..10 {
-            vm.function_with_borsh(
+            vm.function(
                 "set",
                 &[
                     BorshToken::Uint {
@@ -642,7 +641,7 @@ fn mapping_in_dynamic_array() {
 
     for array_no in 0..2 {
         for i in 0..10 {
-            let returns = vm.function_with_borsh(
+            let returns = vm.function(
                 "map",
                 &[
                     BorshToken::Uint {
@@ -668,7 +667,7 @@ fn mapping_in_dynamic_array() {
         }
     }
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "map",
         &[
             BorshToken::Uint {
@@ -692,7 +691,7 @@ fn mapping_in_dynamic_array() {
         }]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "rm",
         &[
             BorshToken::Uint {
@@ -709,7 +708,7 @@ fn mapping_in_dynamic_array() {
     );
 
     for i in 0..10 {
-        let returns = vm.function_with_borsh(
+        let returns = vm.function(
             "map",
             &[
                 BorshToken::Uint {
@@ -744,7 +743,7 @@ fn mapping_in_dynamic_array() {
         }
     }
 
-    let returns = vm.function_with_borsh("length", &[], &[], None);
+    let returns = vm.function("length", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -753,9 +752,9 @@ fn mapping_in_dynamic_array() {
         }]
     );
 
-    vm.function_with_borsh("pop", &[], &[], None);
+    vm.function("pop", &[], &[], None);
 
-    let returns = vm.function_with_borsh("length", &[], &[], None);
+    let returns = vm.function("length", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -764,9 +763,9 @@ fn mapping_in_dynamic_array() {
         }]
     );
 
-    vm.function_with_borsh("pop", &[], &[], None);
+    vm.function("pop", &[], &[], None);
 
-    let returns = vm.function_with_borsh("length", &[], &[], None);
+    let returns = vm.function("length", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -775,7 +774,7 @@ fn mapping_in_dynamic_array() {
         }]
     );
 
-    let returns = vm.function_with_borsh("number", &[], &[], None);
+    let returns = vm.function("number", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -824,9 +823,9 @@ fn mapping_in_struct_in_dynamic_array() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "setNumber",
         &[BorshToken::Int {
             width: 64,
@@ -836,12 +835,12 @@ fn mapping_in_struct_in_dynamic_array() {
         None,
     );
 
-    vm.function_with_borsh("push", &[], &[], None);
-    vm.function_with_borsh("push", &[], &[], None);
+    vm.function("push", &[], &[], None);
+    vm.function("push", &[], &[], None);
 
     for array_no in 0..2 {
         for i in 0..10 {
-            vm.function_with_borsh(
+            vm.function(
                 "set",
                 &[
                     BorshToken::Uint {
@@ -865,7 +864,7 @@ fn mapping_in_struct_in_dynamic_array() {
 
     for array_no in 0..2 {
         for i in 0..10 {
-            let returns = vm.function_with_borsh(
+            let returns = vm.function(
                 "get",
                 &[
                     BorshToken::Uint {
@@ -891,7 +890,7 @@ fn mapping_in_struct_in_dynamic_array() {
         }
     }
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "get",
         &[
             BorshToken::Uint {
@@ -915,7 +914,7 @@ fn mapping_in_struct_in_dynamic_array() {
         },]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "rm",
         &[
             BorshToken::Uint {
@@ -932,7 +931,7 @@ fn mapping_in_struct_in_dynamic_array() {
     );
 
     for i in 0..10 {
-        let returns = vm.function_with_borsh(
+        let returns = vm.function(
             "get",
             &[
                 BorshToken::Uint {
@@ -967,10 +966,10 @@ fn mapping_in_struct_in_dynamic_array() {
         }
     }
 
-    vm.function_with_borsh("pop", &[], &[], None);
-    vm.function_with_borsh("pop", &[], &[], None);
+    vm.function("pop", &[], &[], None);
+    vm.function("pop", &[], &[], None);
 
-    let returns = vm.function_with_borsh("number", &[], &[], None);
+    let returns = vm.function("number", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -1013,10 +1012,10 @@ contract DeleteTest {
         "#,
     );
 
-    vm.constructor_with_borsh("DeleteTest", &[]);
-    let _ = vm.function_with_borsh("addData", &[], &[], None);
-    let _ = vm.function_with_borsh("deltest", &[], &[], None);
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    vm.constructor("DeleteTest", &[]);
+    let _ = vm.function("addData", &[], &[], None);
+    let _ = vm.function("deltest", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Tuple(vec![
@@ -1072,9 +1071,9 @@ function getArrAmt() public view returns (uint) {
         "#,
     );
 
-    vm.constructor_with_borsh("CrowdFunding", &[]);
+    vm.constructor("CrowdFunding", &[]);
 
-    let ret = vm.function_with_borsh("newCampaign", &[], &[], None);
+    let ret = vm.function("newCampaign", &[], &[], None);
 
     assert_eq!(
         ret,
@@ -1084,7 +1083,7 @@ function getArrAmt() public view returns (uint) {
         }]
     );
 
-    let ret = vm.function_with_borsh("getAmt", &[], &[], None);
+    let ret = vm.function("getAmt", &[], &[], None);
     assert_eq!(
         ret,
         vec![BorshToken::Uint {
@@ -1093,7 +1092,7 @@ function getArrAmt() public view returns (uint) {
         }]
     );
 
-    let ret = vm.function_with_borsh("getArrAmt", &[], &[], None);
+    let ret = vm.function("getArrAmt", &[], &[], None);
     assert_eq!(
         ret,
         vec![BorshToken::Uint {

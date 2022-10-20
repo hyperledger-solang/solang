@@ -28,9 +28,9 @@ fn assert_false() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh("assert_fails", &[], &[], None);
+    vm.function("assert_fails", &[], &[], None);
 }
 
 #[test]
@@ -45,9 +45,9 @@ fn assert_true() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh("assert_fails", &[], &[], None);
+    vm.function("assert_fails", &[], &[], None);
 }
 
 #[test]
@@ -77,18 +77,18 @@ fn boolean() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("return_true", &[], &[], None);
+    let returns = vm.function("return_true", &[], &[], None);
 
     assert_eq!(returns, vec![BorshToken::Bool(true),]);
 
-    let returns = vm.function_with_borsh("return_false", &[], &[], None);
+    let returns = vm.function("return_false", &[], &[], None);
 
     assert_eq!(returns, vec![BorshToken::Bool(false),]);
 
-    vm.function_with_borsh("true_arg", &[BorshToken::Bool(true)], &[], None);
-    vm.function_with_borsh("false_arg", &[BorshToken::Bool(false)], &[], None);
+    vm.function("true_arg", &[BorshToken::Bool(true)], &[], None);
+    vm.function("false_arg", &[BorshToken::Bool(false)], &[], None);
 }
 
 #[test]
@@ -111,9 +111,9 @@ fn address() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("return_address", &[], &[], None);
+    let returns = vm.function("return_address", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -123,7 +123,7 @@ fn address() {
         ]),]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "address_arg",
         &[BorshToken::FixedBytes(vec![
             75, 161, 209, 89, 47, 84, 50, 13, 23, 127, 94, 21, 50, 249, 250, 185, 117, 49, 186,
@@ -155,9 +155,9 @@ fn test_enum() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("return_enum", &[], &[], None);
+    let returns = vm.function("return_enum", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -167,7 +167,7 @@ fn test_enum() {
         }]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "enum_arg",
         &[BorshToken::Uint {
             width: 8,
@@ -217,16 +217,16 @@ fn bytes() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor_with_borsh("test", &[]);
+        vm.constructor("test", &[]);
 
-        let returns = vm.function_with_borsh("return_literal", &[], &[], None);
+        let returns = vm.function("return_literal", &[], &[], None);
 
         assert_eq!(
             returns,
             vec![BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7]),]
         );
 
-        let returns = vm.function_with_borsh(
+        let returns = vm.function(
             "return_arg",
             &[BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
             &[],
@@ -248,7 +248,7 @@ fn bytes() {
             rng.fill(&mut a[..]);
             rng.fill(&mut b[..]);
 
-            let or = vm.function_with_borsh(
+            let or = vm.function(
                 "or",
                 &[
                     BorshToken::FixedBytes(a.to_vec()),
@@ -269,7 +269,7 @@ fn bytes() {
 
             assert_eq!(or, vec![BorshToken::FixedBytes(res)]);
 
-            let and = vm.function_with_borsh(
+            let and = vm.function(
                 "and",
                 &[
                     BorshToken::FixedBytes(a.to_vec()),
@@ -283,7 +283,7 @@ fn bytes() {
 
             assert_eq!(and, vec![BorshToken::FixedBytes(res)]);
 
-            let xor = vm.function_with_borsh(
+            let xor = vm.function(
                 "xor",
                 &[
                     BorshToken::FixedBytes(a.to_vec()),
@@ -301,7 +301,7 @@ fn bytes() {
 
             println!("w = {} r = {}", width, r);
 
-            let shl = vm.function_with_borsh(
+            let shl = vm.function(
                 "shift_left",
                 &[
                     BorshToken::FixedBytes(a.to_vec()),
@@ -326,7 +326,7 @@ fn bytes() {
 
             assert_eq!(shl, vec![BorshToken::FixedBytes(res)]);
 
-            let shr = vm.function_with_borsh(
+            let shr = vm.function(
                 "shift_right",
                 &[
                     BorshToken::FixedBytes(a.to_vec()),
@@ -414,7 +414,7 @@ fn uint() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor_with_borsh("test", &[]);
+        vm.constructor("test", &[]);
 
         println!("width:{}", width);
 
@@ -425,7 +425,7 @@ fn uint() {
                 std::mem::swap(&mut a, &mut b);
             }
 
-            let res = vm.function_with_borsh(
+            let res = vm.function(
                 "pass",
                 &[BorshToken::Uint {
                     width: width as u16,
@@ -437,7 +437,7 @@ fn uint() {
 
             println!("{:x} = {:?} o", a, res);
 
-            let add = vm.function_with_borsh(
+            let add = vm.function(
                 "add",
                 &[
                     BorshToken::Uint {
@@ -466,7 +466,7 @@ fn uint() {
                 }]
             );
 
-            let sub = vm.function_with_borsh(
+            let sub = vm.function(
                 "sub",
                 &[
                     BorshToken::Uint {
@@ -493,7 +493,7 @@ fn uint() {
                 }]
             );
 
-            let mul = vm.function_with_borsh(
+            let mul = vm.function(
                 "mul",
                 &[
                     BorshToken::Uint {
@@ -522,7 +522,7 @@ fn uint() {
 
             if let Some(mut n) = b.to_u32() {
                 n %= 65536;
-                let pow = vm.function_with_borsh(
+                let pow = vm.function(
                     "pow",
                     &[
                         BorshToken::Uint {
@@ -551,7 +551,7 @@ fn uint() {
             }
 
             if b != BigUint::zero() {
-                let div = vm.function_with_borsh(
+                let div = vm.function(
                     "div",
                     &[
                         BorshToken::Uint {
@@ -579,7 +579,7 @@ fn uint() {
                     }]
                 );
 
-                let add = vm.function_with_borsh(
+                let add = vm.function(
                     "mod",
                     &[
                         BorshToken::Uint {
@@ -608,7 +608,7 @@ fn uint() {
                 );
             }
 
-            let or = vm.function_with_borsh(
+            let or = vm.function(
                 "or",
                 &[
                     BorshToken::Uint {
@@ -635,7 +635,7 @@ fn uint() {
                 }]
             );
 
-            let and = vm.function_with_borsh(
+            let and = vm.function(
                 "and",
                 &[
                     BorshToken::Uint {
@@ -662,7 +662,7 @@ fn uint() {
                 }]
             );
 
-            let xor = vm.function_with_borsh(
+            let xor = vm.function(
                 "xor",
                 &[
                     BorshToken::Uint {
@@ -691,7 +691,7 @@ fn uint() {
 
             let r = rng.gen::<u32>() % (width as u32);
 
-            let shl = vm.function_with_borsh(
+            let shl = vm.function(
                 "shift_left",
                 &[
                     BorshToken::Uint {
@@ -719,7 +719,7 @@ fn uint() {
                 }]
             );
 
-            let shr = vm.function_with_borsh(
+            let shr = vm.function(
                 "shift_right",
                 &[
                     BorshToken::Uint {
@@ -776,9 +776,9 @@ fn test_power_overflow_boundaries() {
         .replace("intN", &format!("int{}", width));
 
         let mut contract = build_solidity_with_overflow_check(&src, true);
-        contract.constructor_with_borsh("test", &[]);
+        contract.constructor("test", &[]);
 
-        let return_value = contract.function_with_borsh(
+        let return_value = contract.function(
             "pow",
             &[
                 BorshToken::Uint {
@@ -804,7 +804,7 @@ fn test_power_overflow_boundaries() {
             }]
         );
 
-        let sesa = contract.function_must_fail_with_borsh(
+        let sesa = contract.function_must_fail(
             "pow",
             &[
                 BorshToken::Uint {
@@ -844,8 +844,8 @@ fn test_overflow_boundaries() {
         let second_op = BigInt::from(1_u32);
 
         // Multiply the boundaries by 1.
-        contract.constructor_with_borsh("test", &[]);
-        let return_value = contract.function_with_borsh(
+        contract.constructor("test", &[]);
+        let return_value = contract.function(
             "mul",
             &[
                 BorshToken::Int {
@@ -868,7 +868,7 @@ fn test_overflow_boundaries() {
             }]
         );
 
-        let return_value = contract.function_with_borsh(
+        let return_value = contract.function(
             "mul",
             &[
                 BorshToken::Int {
@@ -902,7 +902,7 @@ fn test_overflow_boundaries() {
 
         let lower_second_op = lower_boundary_minus_two.div(2);
 
-        let res = contract.function_must_fail_with_borsh(
+        let res = contract.function_must_fail(
             "mul",
             &[
                 BorshToken::Int {
@@ -920,7 +920,7 @@ fn test_overflow_boundaries() {
 
         assert_ne!(res, Ok(0));
 
-        let res = contract.function_must_fail_with_borsh(
+        let res = contract.function_must_fail(
             "mul",
             &[
                 BorshToken::Int {
@@ -938,7 +938,7 @@ fn test_overflow_boundaries() {
 
         assert_ne!(res, Ok(0));
 
-        let res = contract.function_must_fail_with_borsh(
+        let res = contract.function_must_fail(
             "mul",
             &[
                 BorshToken::Int {
@@ -956,7 +956,7 @@ fn test_overflow_boundaries() {
 
         assert_ne!(res, Ok(0));
 
-        let res = contract.function_must_fail_with_borsh(
+        let res = contract.function_must_fail(
             "mul",
             &[
                 BorshToken::Int {
@@ -974,7 +974,7 @@ fn test_overflow_boundaries() {
 
         assert_ne!(res, Ok(0));
 
-        let res = contract.function_must_fail_with_borsh(
+        let res = contract.function_must_fail(
             "mul",
             &[
                 BorshToken::Int {
@@ -1018,8 +1018,8 @@ fn test_mul_within_range_signed() {
         let second_op = BigInt::from(*side.choose(&mut rng).unwrap() as i32);
         println!("second op : {:?}", second_op);
 
-        contract.constructor_with_borsh("test", &[]);
-        let return_value = contract.function_with_borsh(
+        contract.constructor("test", &[]);
+        let return_value = contract.function(
             "mul",
             &[
                 BorshToken::Int {
@@ -1059,7 +1059,7 @@ fn test_mul_within_range() {
         .replace("intN", &format!("int{}", width));
 
         let mut contract = build_solidity_with_overflow_check(&src, true);
-        contract.constructor_with_borsh("test", &[]);
+        contract.constructor("test", &[]);
         for _ in 0..10 {
             // Max number to fit unsigned N bits is (2^N)-1
             let mut limit: BigUint = BigUint::from(2_u32).pow(width as u32);
@@ -1071,7 +1071,7 @@ fn test_mul_within_range() {
             // Calculate a number that when multiplied by first_operand_rand, the result will not overflow N bits (the result of this division will cast the float result to int result, therefore lowering it. The result of multiplication will never overflow).
             let second_operand_rand = limit.div(&first_operand_rand);
 
-            let return_value = contract.function_with_borsh(
+            let return_value = contract.function(
                 "mul",
                 &[
                     BorshToken::Uint {
@@ -1112,7 +1112,7 @@ fn test_overflow_detect_signed() {
         .replace("intN", &format!("int{}", width));
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
-        contract.constructor_with_borsh("test", &[]);
+        contract.constructor("test", &[]);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
         let mut limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1125,7 +1125,7 @@ fn test_overflow_detect_signed() {
         // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
         let second_operand_rand = rng.gen_bigint_range(&BigInt::from(2usize), &limit);
 
-        let res = contract.function_must_fail_with_borsh(
+        let res = contract.function_must_fail(
             "mul",
             &[
                 BorshToken::Int {
@@ -1152,7 +1152,7 @@ fn test_overflow_detect_signed() {
         let first_operand_rand =
             rng.gen_bigint_range(&lower_limit, &(lower_limit.clone().div(2usize)).add(1usize));
 
-        let res = contract.function_must_fail_with_borsh(
+        let res = contract.function_must_fail(
             "mul",
             &[
                 BorshToken::Int {
@@ -1185,7 +1185,7 @@ fn test_overflow_detect_unsigned() {
         .replace("intN", &format!("int{}", width));
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
-        contract.constructor_with_borsh("test", &[]);
+        contract.constructor("test", &[]);
 
         for _ in 0..10 {
             // N bits can hold the range [0, (2^N)-1]. Generate a value that overflows N bits
@@ -1199,7 +1199,7 @@ fn test_overflow_detect_unsigned() {
             // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
             let second_operand_rand = rng.gen_biguint_range(&BigUint::from(2usize), &limit);
 
-            let res = contract.function_must_fail_with_borsh(
+            let res = contract.function_must_fail(
                 "mul",
                 &[
                     BorshToken::Uint {
@@ -1272,13 +1272,13 @@ fn int() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor_with_borsh("test", &[]);
+        vm.constructor("test", &[]);
 
         for _ in 0..10 {
             let a = rng.gen_bigint(width - 1);
             let b = rng.gen_bigint(width - 1);
 
-            let add = vm.function_with_borsh(
+            let add = vm.function(
                 "add",
                 &[
                     BorshToken::Int {
@@ -1305,7 +1305,7 @@ fn int() {
                 }]
             );
 
-            let sub = vm.function_with_borsh(
+            let sub = vm.function(
                 "sub",
                 &[
                     BorshToken::Int {
@@ -1332,7 +1332,7 @@ fn int() {
                 }]
             );
 
-            let mul = vm.function_with_borsh(
+            let mul = vm.function(
                 "mul",
                 &[
                     BorshToken::Int {
@@ -1360,7 +1360,7 @@ fn int() {
             );
 
             if b != BigInt::zero() {
-                let div = vm.function_with_borsh(
+                let div = vm.function(
                     "div",
                     &[
                         BorshToken::Int {
@@ -1387,7 +1387,7 @@ fn int() {
                     }]
                 );
 
-                let add = vm.function_with_borsh(
+                let add = vm.function(
                     "mod",
                     &[
                         BorshToken::Int {
@@ -1415,7 +1415,7 @@ fn int() {
                 );
             }
 
-            let or = vm.function_with_borsh(
+            let or = vm.function(
                 "or",
                 &[
                     BorshToken::Int {
@@ -1442,7 +1442,7 @@ fn int() {
                 }]
             );
 
-            let and = vm.function_with_borsh(
+            let and = vm.function(
                 "and",
                 &[
                     BorshToken::Int {
@@ -1469,7 +1469,7 @@ fn int() {
                 }]
             );
 
-            let xor = vm.function_with_borsh(
+            let xor = vm.function(
                 "xor",
                 &[
                     BorshToken::Int {
@@ -1498,7 +1498,7 @@ fn int() {
 
             let r = rng.gen::<u32>() % (width as u32);
 
-            let shl = vm.function_with_borsh(
+            let shl = vm.function(
                 "shift_left",
                 &[
                     BorshToken::Int {
@@ -1526,7 +1526,7 @@ fn int() {
                 }]
             );
 
-            let shr = vm.function_with_borsh(
+            let shr = vm.function(
                 "shift_right",
                 &[
                     BorshToken::Int {

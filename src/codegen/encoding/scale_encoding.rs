@@ -5,13 +5,23 @@ use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type};
 use solang_parser::pt::Loc;
 
-pub(super) struct ScaleEncoding {}
+pub(super) struct ScaleEncoding {
+    packed_encoder: bool,
+}
+
+impl ScaleEncoding {
+    pub fn new(packed: bool) -> ScaleEncoding {
+        ScaleEncoding {
+            packed_encoder: packed,
+        }
+    }
+}
 
 impl AbiEncoding for ScaleEncoding {
     fn abi_encode(
         &mut self,
         loc: &Loc,
-        args: Vec<Expression>,
+        mut args: Vec<Expression>,
         _ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
@@ -19,6 +29,11 @@ impl AbiEncoding for ScaleEncoding {
         let tys = args.iter().map(|e| e.ty()).collect::<Vec<Type>>();
 
         let encoded_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
+        let mut packed: Vec<Expression> = Vec::new();
+        if self.packed_encoder {
+            std::mem::swap(&mut packed, &mut args);
+        }
+
         cfg.add(
             vartab,
             Instr::Set {
@@ -26,7 +41,7 @@ impl AbiEncoding for ScaleEncoding {
                 res: encoded_buffer,
                 expr: Expression::AbiEncode {
                     loc: *loc,
-                    packed: vec![],
+                    packed,
                     args,
                     tys,
                 },
@@ -94,5 +109,9 @@ impl AbiEncoding for ScaleEncoding {
 
     fn get_encoding_size(&self, _expr: &Expression, _ty: &Type, _ns: &Namespace) -> Expression {
         unreachable!("This function is not needed for Scale encoding");
+    }
+
+    fn is_packed(&self) -> bool {
+        self.packed_encoder
     }
 }

@@ -31,6 +31,8 @@ pub(super) struct BorshEncoding {
     ///
     /// For more information, check the comment at function 'cache_storage_load' on encoding/mod.rs
     storage_cache: HashMap<usize, Expression>,
+
+    packed_encoder: bool,
 }
 
 impl AbiEncoding for BorshEncoding {
@@ -164,18 +166,28 @@ impl AbiEncoding for BorshEncoding {
                     Builtin::ArrayLength,
                     vec![expr.clone()],
                 );
-                increment_four(length)
+
+                if self.is_packed() {
+                    length
+                } else {
+                    increment_four(length)
+                }
             }
 
             _ => unreachable!("Type should have the same size for all encoding schemes"),
         }
     }
+
+    fn is_packed(&self) -> bool {
+        self.packed_encoder
+    }
 }
 
 impl BorshEncoding {
-    pub fn new() -> BorshEncoding {
+    pub fn new(packed: bool) -> BorshEncoding {
         BorshEncoding {
             storage_cache: HashMap::new(),
+            packed_encoder: packed,
         }
     }
 
@@ -283,19 +295,25 @@ impl BorshEncoding {
                 );
 
                 let var = Expression::Variable(Loc::Codegen, Type::Uint(32), array_length);
-                cfg.add(
-                    vartab,
-                    Instr::WriteBuffer {
-                        buf: buffer.clone(),
-                        offset: offset.clone(),
-                        value: var.clone(),
-                    },
-                );
+
+                let string_offset = if self.packed_encoder {
+                    offset.clone()
+                } else {
+                    cfg.add(
+                        vartab,
+                        Instr::WriteBuffer {
+                            buf: buffer.clone(),
+                            offset: offset.clone(),
+                            value: var.clone(),
+                        },
+                    );
+                    increment_four(offset.clone())
+                };
 
                 // ptr + offset + size_of_integer
                 let dest_address = Expression::AdvancePointer {
                     pointer: Box::new(buffer.clone()),
-                    bytes_offset: Box::new(increment_four(offset.clone())),
+                    bytes_offset: Box::new(string_offset),
                 };
 
                 cfg.add(
@@ -307,7 +325,11 @@ impl BorshEncoding {
                     },
                 );
 
-                increment_four(var)
+                if self.is_packed() {
+                    var
+                } else {
+                    increment_four(var)
+                }
             }
 
             Type::Enum(_) => {
@@ -464,18 +486,23 @@ impl BorshEncoding {
                     },
                 );
 
-                cfg.add(
-                    vartab,
-                    Instr::WriteBuffer {
-                        buf: buffer.clone(),
-                        offset: offset.clone(),
-                        value: Expression::Variable(Loc::Codegen, Type::Uint(32), size_temp),
-                    },
-                );
+                let new_offset = if self.packed_encoder {
+                    offset.clone()
+                } else {
+                    cfg.add(
+                        vartab,
+                        Instr::WriteBuffer {
+                            buf: buffer.clone(),
+                            offset: offset.clone(),
+                            value: Expression::Variable(Loc::Codegen, Type::Uint(32), size_temp),
+                        },
+                    );
+                    increment_four(offset.clone())
+                };
 
                 let size = calculate_array_bytes_size(size_temp, elem_ty, ns);
 
-                (size, increment_four(offset.clone()))
+                (size, new_offset)
             };
 
             let dest_address = Expression::AdvancePointer {
@@ -495,7 +522,7 @@ impl BorshEncoding {
             // If the array is dynamic, we have written into the buffer its size (a uint32)
             // and its elements
             let dyn_dims = dims.iter().filter(|d| **d == ArrayLength::Dynamic).count();
-            if dyn_dims > 0 {
+            if dyn_dims > 0 && !self.packed_encoder {
                 Expression::Add(
                     Loc::Codegen,
                     Type::Uint(32),
@@ -577,7 +604,7 @@ impl BorshEncoding {
         indexes: &mut Vec<usize>,
     ) {
         // If this dimension is dynamic, we must save its length before all elements
-        if dims[dimension] == ArrayLength::Dynamic {
+        if dims[dimension] == ArrayLength::Dynamic && !self.packed_encoder {
             // TODO: This is wired up for the support of dynamic multidimensional arrays, like
             // TODO: 'int[3][][4] vec', but it needs testing, as soon as Solang works with them.
             // TODO: A discussion about this is under way here: https://github.com/hyperledger/solang/issues/932

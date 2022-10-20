@@ -39,9 +39,9 @@ fn safe_math() {
         }"#,
     );
 
-    vm.constructor_with_borsh("math", &[]);
+    vm.constructor("math", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "mul_test",
         &[
             BorshToken::Uint {
@@ -65,7 +65,7 @@ fn safe_math() {
         },]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "add_test",
         &[
             BorshToken::Uint {
@@ -89,7 +89,7 @@ fn safe_math() {
         },]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "sub_test",
         &[
             BorshToken::Uint {
@@ -113,7 +113,7 @@ fn safe_math() {
         },]
     );
 
-    let res = vm.function_must_fail_with_borsh(
+    let res = vm.function_must_fail(
         "mul_test",
         &[
             BorshToken::Uint {
@@ -131,7 +131,7 @@ fn safe_math() {
 
     assert_ne!(res, Ok(0));
 
-    let res = vm.function_must_fail_with_borsh(
+    let res = vm.function_must_fail(
         "add_test",
         &[
             BorshToken::Uint {
@@ -149,7 +149,7 @@ fn safe_math() {
 
     assert_ne!(res, Ok(0));
 
-    let res = vm.function_must_fail_with_borsh(
+    let res = vm.function_must_fail(
         "sub_test",
         &[
             BorshToken::Uint {

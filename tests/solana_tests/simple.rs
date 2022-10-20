@@ -20,13 +20,13 @@ fn simple() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
     assert_eq!(vm.logs, "Hello from constructor");
 
     vm.logs.truncate(0);
 
-    vm.function_with_borsh("test", &[], &[], None);
+    vm.function("test", &[], &[], None);
 
     assert_eq!(vm.logs, "Hello from function");
 }
@@ -44,7 +44,7 @@ fn format() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
     assert_eq!(
         vm.logs,
@@ -69,9 +69,9 @@ fn parameters() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "test",
         &[
             BorshToken::Uint {
@@ -91,7 +91,7 @@ fn parameters() {
 
     vm.logs.truncate(0);
 
-    vm.function_with_borsh(
+    vm.function(
         "test",
         &[
             BorshToken::Uint {
@@ -121,9 +121,9 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "test",
         &[BorshToken::Uint {
             width: 32,
@@ -150,9 +150,9 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "test",
         &[BorshToken::Uint {
             width: 64,
@@ -200,25 +200,25 @@ fn flipper() {
         }"#,
     );
 
-    vm.constructor_with_borsh("flipper", &[BorshToken::Bool(true)]);
+    vm.constructor("flipper", &[BorshToken::Bool(true)]);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000001").unwrap()
     );
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(returns, vec![BorshToken::Bool(true)]);
 
-    vm.function_with_borsh("flip", &[], &[], None);
+    vm.function("flip", &[], &[], None);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000000").unwrap()
     );
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(returns, vec![BorshToken::Bool(false)]);
 }
@@ -254,7 +254,7 @@ fn incrementer() {
         }"#,
     );
 
-    vm.constructor_with_borsh(
+    vm.constructor(
         "incrementer",
         &[BorshToken::Uint {
             width: 32,
@@ -262,7 +262,7 @@ fn incrementer() {
         }],
     );
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -272,7 +272,7 @@ fn incrementer() {
         }]
     );
 
-    vm.function_with_borsh(
+    vm.function(
         "inc",
         &[BorshToken::Uint {
             width: 32,
@@ -282,7 +282,7 @@ fn incrementer() {
         None,
     );
 
-    let returns = vm.function_with_borsh("get", &[], &[], None);
+    let returns = vm.function("get", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -337,7 +337,7 @@ fn two_arrays() {
         }"#,
     );
 
-    vm.constructor_with_borsh("two_arrays", &[]);
+    vm.constructor("two_arrays", &[]);
 }
 
 #[test]
@@ -362,9 +362,9 @@ fn dead_storage_bug() {
         }"#,
     );
 
-    vm.constructor_with_borsh("deadstorage", &[]);
+    vm.constructor("deadstorage", &[]);
 
-    let returns = vm.function_with_borsh("v", &[], &[], None);
+    let returns = vm.function("v", &[], &[], None);
 
     assert_eq!(
         returns,
@@ -421,12 +421,12 @@ contract test3 {
     );
 
     // call constructor
-    runtime.constructor_with_borsh("test3", &[]);
+    runtime.constructor("test3", &[]);
 
     for i in 0..=50 {
         let res = ((50 - i) * 100 + 5) + i * 1000;
 
-        let returns = runtime.function_with_borsh(
+        let returns = runtime.function(
             "foo",
             &[BorshToken::Uint {
                 width: 32,
@@ -448,7 +448,7 @@ contract test3 {
     for i in 0..=50 {
         let res = (i + 1) * 10 + 1;
 
-        let returns = runtime.function_with_borsh(
+        let returns = runtime.function(
             "bar",
             &[
                 BorshToken::Uint {
@@ -477,7 +477,7 @@ contract test3 {
             res *= 3;
         }
 
-        let returns = runtime.function_with_borsh(
+        let returns = runtime.function(
             "bar",
             &[
                 BorshToken::Uint {
@@ -510,7 +510,7 @@ contract test3 {
             res += 1;
         }
 
-        let returns = runtime.function_with_borsh(
+        let returns = runtime.function(
             "baz",
             &[BorshToken::Uint {
                 width: 32,

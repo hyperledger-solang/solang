@@ -20,8 +20,8 @@ fn test_slice_in_phi() {
     "#;
 
     let mut vm = build_solidity(file);
-    vm.constructor_with_borsh("c1", &[]);
-    let returns = vm.function_with_borsh("test", &[], &[], None);
+    vm.constructor("c1", &[]);
+    let returns = vm.function("test", &[], &[], None);
 
     assert_eq!(returns, vec![BorshToken::String(String::from("Hello!"))]);
 }

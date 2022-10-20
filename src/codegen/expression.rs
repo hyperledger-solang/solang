@@ -1275,7 +1275,7 @@ fn abi_encode(
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
 
-    let mut encoder = create_encoder(ns);
+    let mut encoder = create_encoder(ns, false);
     encoder.abi_encode(loc, args, ns, vartab, cfg).0
 }
 
@@ -1289,33 +1289,14 @@ fn abi_encode_packed(
     loc: &pt::Loc,
     opt: &Options,
 ) -> Expression {
-    // TODO: This does not work for Solana and needs work in another PR
-    let tys = args.iter().map(|a| a.ty()).collect();
     let packed = args
         .iter()
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
-        .collect();
-    let res = vartab.temp(
-        &pt::Identifier {
-            loc: *loc,
-            name: "encoded".to_owned(),
-        },
-        &Type::DynamicBytes,
-    );
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: *loc,
-            res,
-            expr: Expression::AbiEncode {
-                loc: *loc,
-                tys,
-                packed,
-                args: vec![],
-            },
-        },
-    );
-    Expression::Variable(*loc, Type::DynamicBytes, res)
+        .collect::<Vec<Expression>>();
+
+    let mut encoder = create_encoder(ns, true);
+    let (encoded, _) = encoder.abi_encode(loc, packed, ns, vartab, cfg);
+    encoded
 }
 
 fn abi_encode_with_selector(
@@ -1341,7 +1322,7 @@ fn abi_encode_with_selector(
     let mut args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-    let mut encoder = create_encoder(ns);
+    let mut encoder = create_encoder(ns, false);
     let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
     encoder_args.push(selector);
     encoder_args.append(&mut args);
@@ -1374,7 +1355,7 @@ fn abi_encode_with_signature(
     let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
     encoder_args.push(selector);
     encoder_args.append(&mut args);
-    let mut encoder = create_encoder(ns);
+    let mut encoder = create_encoder(ns, false);
     let (encoded, _) = encoder.abi_encode(loc, encoder_args, ns, vartab, cfg);
     encoded
 }
@@ -1411,7 +1392,7 @@ fn abi_encode_call(
     let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
     encoder_args.push(selector);
     encoder_args.append(&mut args);
-    let mut encoder = create_encoder(ns);
+    let mut encoder = create_encoder(ns, false);
     let (encoded, _) = encoder.abi_encode(loc, encoder_args, ns, vartab, cfg);
     encoded
 }
@@ -2422,7 +2403,7 @@ pub fn emit_function_call(
                     None
                 };
 
-                let mut encoder = create_encoder(ns);
+                let mut encoder = create_encoder(ns, false);
                 let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
 
                 cfg.add(
@@ -2441,7 +2422,7 @@ pub fn emit_function_call(
 
                 // If the first element of returns is Void, we can discard the returns
                 if !dest_func.returns.is_empty() && returns[0] != Type::Void {
-                    let encoder = create_encoder(ns);
+                    let encoder = create_encoder(ns, false);
                     let tys = dest_func
                         .returns
                         .iter()
@@ -2514,7 +2495,7 @@ pub fn emit_function_call(
                     Some(address)
                 };
 
-                let mut encoder = create_encoder(ns);
+                let mut encoder = create_encoder(ns, false);
                 let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
 
                 cfg.add(
@@ -2532,8 +2513,7 @@ pub fn emit_function_call(
                 );
 
                 if !func_returns.is_empty() && returns[0] != Type::Void {
-                    // TODO: This can be simplified in the AbiEncoding interface
-                    let encoder = create_encoder(ns);
+                    let encoder = create_encoder(ns, false);
                     encoder.abi_decode(
                         loc,
                         &Expression::ReturnData(*loc),
@@ -2552,7 +2532,7 @@ pub fn emit_function_call(
         }
         ast::Expression::Builtin(loc, tys, ast::Builtin::AbiDecode, args) => {
             let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);
-            let encoder = create_encoder(ns);
+            let encoder = create_encoder(ns, false);
             encoder.abi_decode(loc, &data, tys, ns, vartab, cfg, None)
         }
         _ => unreachable!(),
@@ -3024,7 +3004,7 @@ pub(super) fn assert_failure(
     let selector = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(selector));
     let args = vec![selector, arg.unwrap()];
 
-    let mut encoder = create_encoder(ns);
+    let mut encoder = create_encoder(ns, false);
     let (encoded_buffer, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
 
     cfg.add(

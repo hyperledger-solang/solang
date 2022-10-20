@@ -60,9 +60,9 @@ contract testing  {
       "#,
     );
 
-    vm.constructor_with_borsh("testing", &[]);
+    vm.constructor("testing", &[]);
 
-    let returns = vm.function_with_borsh("test_slot", &[], &[], None);
+    let returns = vm.function("test_slot", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -71,7 +71,7 @@ contract testing  {
         }]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "call_data_array",
         &[BorshToken::Array(vec![
             BorshToken::Uint {
@@ -110,7 +110,7 @@ contract testing  {
         ]
     );
 
-    let returns = vm.function_with_borsh("selector_address", &[], &[], None);
+    let returns = vm.function("selector_address", &[], &[], None);
     assert_eq!(
         returns,
         vec![
@@ -166,9 +166,9 @@ contract testing  {
       "#,
     );
 
-    vm.constructor_with_borsh("testing", &[]);
+    vm.constructor("testing", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "general_test",
         &[BorshToken::Uint {
             width: 64,
@@ -191,7 +191,7 @@ contract testing  {
         ]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "general_test",
         &[BorshToken::Uint {
             width: 64,
@@ -214,7 +214,7 @@ contract testing  {
         ]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "general_test",
         &[BorshToken::Uint {
             width: 64,
@@ -268,13 +268,13 @@ contract c {
         "#,
     );
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
     let num: Vec<u8> = vec![
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
         0x11, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e,
         0x2f, 0x31,
     ];
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "getByte",
         &[BorshToken::Uint {
             width: 256,
@@ -291,7 +291,7 @@ contract c {
         }]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "divide",
         &[
             BorshToken::Uint {
@@ -320,7 +320,7 @@ contract c {
         ]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "divide",
         &[
             BorshToken::Uint {
@@ -349,7 +349,7 @@ contract c {
         ]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "mods",
         &[
             BorshToken::Uint {
@@ -382,7 +382,7 @@ contract c {
         ]
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "mods",
         &[
             BorshToken::Uint {
@@ -440,10 +440,10 @@ fn external_function() {
         "#,
     );
 
-    vm.constructor_with_borsh("C", &[]);
+    vm.constructor("C", &[]);
     let mut addr: Vec<u8> = vec![0; 32];
     addr[5] = 90;
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "test",
         &[
             BorshToken::Uint {
@@ -497,8 +497,8 @@ contract testing  {
 }"#,
     );
 
-    runtime.constructor_with_borsh("testing", &[]);
-    let returns = runtime.function_with_borsh("test_address", &[], &[], None);
+    runtime.constructor("testing", &[]);
+    let returns = runtime.function("test_address", &[], &[], None);
     let addr = returns[0].clone().into_bigint().unwrap();
     let b_vec = addr.to_bytes_be().1;
     assert_eq!(&b_vec, runtime.stack[0].data.as_ref());
@@ -508,7 +508,7 @@ contract testing  {
         .get_mut(&runtime.stack[0].data)
         .unwrap()
         .lamports = 102;
-    let returns = runtime.function_with_borsh("test_balance", &[], &[], None);
+    let returns = runtime.function("test_balance", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -517,7 +517,7 @@ contract testing  {
         },]
     );
 
-    let returns = runtime.function_with_borsh("test_selfbalance", &[], &[], None);
+    let returns = runtime.function("test_selfbalance", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -528,7 +528,7 @@ contract testing  {
 
     let sender = account_new();
 
-    let returns = runtime.function_with_borsh("test_caller", &[], &[], Some(&sender));
+    let returns = runtime.function("test_caller", &[], &[], Some(&sender));
     let addr = returns[0].clone().into_bigint().unwrap();
     let b_vec = addr.to_bytes_be().1;
     assert_eq!(b_vec, sender.to_vec());
@@ -554,9 +554,9 @@ fn addmod_mulmod() {
         "#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("testMod", &[], &[], None);
+    let returns = vm.function("testMod", &[], &[], None);
     assert_eq!(
         returns,
         vec![
@@ -632,9 +632,9 @@ contract Testing {
         "#,
     );
 
-    vm.constructor_with_borsh("Testing", &[]);
+    vm.constructor("Testing", &[]);
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "switch_default",
         &[BorshToken::Uint {
             width: 256,
@@ -651,7 +651,7 @@ contract Testing {
         }
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "switch_default",
         &[BorshToken::Uint {
             width: 256,
@@ -668,7 +668,7 @@ contract Testing {
         },
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "switch_default",
         &[BorshToken::Uint {
             width: 256,
@@ -685,7 +685,7 @@ contract Testing {
         }
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "switch_no_default",
         &[BorshToken::Uint {
             width: 256,
@@ -702,7 +702,7 @@ contract Testing {
         },
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "switch_no_default",
         &[BorshToken::Uint {
             width: 256,
@@ -719,7 +719,7 @@ contract Testing {
         },
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "switch_no_default",
         &[BorshToken::Uint {
             width: 256,
@@ -736,7 +736,7 @@ contract Testing {
         },
     );
 
-    let returns = vm.function_with_borsh(
+    let returns = vm.function(
         "switch_no_case",
         &[BorshToken::Uint {
             width: 256,

@@ -23,9 +23,9 @@ fn simple_event() {
         }"#,
     );
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
-    vm.function_with_borsh("go", &[], &[], None);
+    vm.function("go", &[], &[], None);
 
     let log = vm.events();
 
@@ -79,9 +79,9 @@ fn less_simple_event() {
         }"#,
     );
 
-    vm.constructor_with_borsh("c", &[]);
+    vm.constructor("c", &[]);
 
-    vm.function_with_borsh("go", &[], &[], None);
+    vm.function("go", &[], &[], None);
 
     let log = vm.events();
     assert_eq!(log.len(), 1);

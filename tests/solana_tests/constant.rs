@@ -20,9 +20,9 @@ fn constant() {
         "#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("f", &[], &[], None);
+    let returns = vm.function("f", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -46,9 +46,9 @@ fn constant() {
         "#,
     );
 
-    vm.constructor_with_borsh("foo", &[]);
+    vm.constructor("foo", &[]);
 
-    let returns = vm.function_with_borsh("f", &[], &[], None);
+    let returns = vm.function("f", &[], &[], None);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {

@@ -28,9 +28,9 @@ fn simple_external_call() {
         }"#,
     );
 
-    vm.constructor_with_borsh("bar1", &[]);
+    vm.constructor("bar1", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "test_bar",
         &[BorshToken::String(String::from("yo"))],
         &[],
@@ -45,9 +45,9 @@ fn simple_external_call() {
 
     vm.set_program(0);
 
-    vm.constructor_with_borsh("bar0", &[]);
+    vm.constructor("bar0", &[]);
 
-    vm.function_with_borsh(
+    vm.function(
         "test_bar",
         &[BorshToken::String(String::from("uncle beau"))],
         &[],
@@ -58,7 +58,7 @@ fn simple_external_call() {
 
     vm.logs.truncate(0);
 
-    vm.function_with_borsh(
+    vm.function(
         "test_other",
         &[BorshToken::Address(bar1_account)],
         &[],
@@ -85,9 +85,9 @@ fn external_call_with_returns() {
         }"#,
     );
 
-    vm.constructor_with_borsh("bar1", &[]);
+    vm.constructor("bar1", &[]);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test_bar",
         &[BorshToken::Int {
             width: 64,
@@ -109,9 +109,9 @@ fn external_call_with_returns() {
 
     vm.set_program(0);
 
-    vm.constructor_with_borsh("bar0", &[]);
+    vm.constructor("bar0", &[]);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test_other",
         &[BorshToken::Address(bar1_account)],
         &[],
@@ -156,9 +156,9 @@ fn external_raw_call_with_returns() {
         }"#,
     );
 
-    vm.constructor_with_borsh("bar1", &[]);
+    vm.constructor("bar1", &[]);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test_bar",
         &[BorshToken::Int {
             width: 64,
@@ -180,9 +180,9 @@ fn external_raw_call_with_returns() {
 
     vm.set_program(0);
 
-    vm.constructor_with_borsh("bar0", &[]);
+    vm.constructor("bar0", &[]);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test_other",
         &[BorshToken::Address(bar1_account)],
         &[],
@@ -218,9 +218,9 @@ fn call_external_func_type() {
     "#,
     );
 
-    vm.constructor_with_borsh("testing", &[]);
+    vm.constructor("testing", &[]);
 
-    let res = vm.function_with_borsh("doTest", &[], &[], None);
+    let res = vm.function("doTest", &[], &[], None);
 
     assert_eq!(
         res,
@@ -273,9 +273,9 @@ fn external_call_with_string_returns() {
         }"#,
     );
 
-    vm.constructor_with_borsh("bar1", &[]);
+    vm.constructor("bar1", &[]);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test_bar",
         &[BorshToken::Int {
             width: 64,
@@ -291,11 +291,11 @@ fn external_call_with_string_returns() {
 
     vm.set_program(0);
 
-    vm.constructor_with_borsh("bar0", &[]);
+    vm.constructor("bar0", &[]);
 
     let bar0_account = vm.stack[0].data;
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test_other",
         &[BorshToken::Address(bar1_account)],
         &[],
@@ -304,9 +304,9 @@ fn external_call_with_string_returns() {
 
     assert_eq!(res, vec![BorshToken::String(String::from("foo:7"))]);
 
-    vm.function_with_borsh("test_this", &[BorshToken::Address(bar1_account)], &[], None);
+    vm.function("test_this", &[BorshToken::Address(bar1_account)], &[], None);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test_sender",
         &[BorshToken::Address(bar1_account)],
         &[],
@@ -340,9 +340,9 @@ fn encode_call() {
         }"#,
     );
 
-    vm.constructor_with_borsh("bar1", &[]);
+    vm.constructor("bar1", &[]);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test_bar",
         &[BorshToken::Int {
             width: 64,
@@ -364,9 +364,9 @@ fn encode_call() {
 
     vm.set_program(0);
 
-    vm.constructor_with_borsh("bar0", &[]);
+    vm.constructor("bar0", &[]);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test_other",
         &[BorshToken::Address(bar1_account)],
         &[],
@@ -411,13 +411,13 @@ fn internal_function_storage() {
         }"#,
     );
 
-    vm.constructor_with_borsh("ft", &[]);
+    vm.constructor("ft", &[]);
 
-    let res = vm.function_with_borsh("set_op", &[BorshToken::Bool(true)], &[], None);
+    let res = vm.function("set_op", &[BorshToken::Bool(true)], &[], None);
 
     assert_eq!(res, vec![]);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test",
         &[
             BorshToken::Int {
@@ -441,11 +441,11 @@ fn internal_function_storage() {
         },]
     );
 
-    let res = vm.function_with_borsh("set_op", &[BorshToken::Bool(false)], &[], None);
+    let res = vm.function("set_op", &[BorshToken::Bool(false)], &[], None);
 
     assert_eq!(res, vec![]);
 
-    let res = vm.function_with_borsh(
+    let res = vm.function(
         "test",
         &[
             BorshToken::Int {
@@ -507,7 +507,7 @@ fn raw_call_accounts() {
         }"#,
     );
 
-    vm.constructor_with_borsh("SplToken", &[]);
+    vm.constructor("SplToken", &[]);
 
     let token = Pubkey(
         "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
@@ -553,7 +553,7 @@ fn raw_call_accounts() {
 
     vm.call_params_check.insert(token, test_args);
 
-    vm.function_with_borsh(
+    vm.function(
         "create_mint_with_freezeauthority",
         &[
             BorshToken::Uint {
@@ -590,7 +590,7 @@ fn pda() {
         }"#,
     );
 
-    vm.constructor_with_borsh("pda", &[]);
+    vm.constructor("pda", &[]);
 
     let test_args = |vm: &VirtualMachine, _instr: &Instruction, signers: &[Pubkey]| {
         assert_eq!(
@@ -613,5 +613,5 @@ fn pda() {
 
     vm.call_params_check.insert(token, test_args);
 
-    vm.function_with_borsh("test", &[], &[], None);
+    vm.function("test", &[], &[], None);
 }

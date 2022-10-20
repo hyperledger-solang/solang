@@ -27,11 +27,11 @@ fn simple_create_contract() {
 
     vm.set_program(0);
 
-    vm.constructor_with_borsh("bar0", &[]);
+    vm.constructor("bar0", &[]);
 
     let seed = vm.create_empty_account();
 
-    let bar1 = vm.function_with_borsh("test_other", &[], &[&seed], None);
+    let bar1 = vm.function("test_other", &[], &[&seed], None);
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0");
 
@@ -39,7 +39,7 @@ fn simple_create_contract() {
 
     println!("next test, {:?}", bar1);
 
-    vm.function_with_borsh(
+    vm.function(
         "call_bar1_at_address",
         &[bar1[0].clone(), BorshToken::String(String::from("xywoleh"))],
         &[],
@@ -79,9 +79,9 @@ fn missing_contract() {
 
     vm.set_program(0);
 
-    vm.constructor_with_borsh("bar0", &[]);
+    vm.constructor("bar0", &[]);
 
-    let res = vm.function_must_fail_with_borsh("test_other", &[], &[], None);
+    let res = vm.function_must_fail("test_other", &[], &[], None);
     assert_eq!(res, Ok(64424509440));
 }
 
@@ -107,12 +107,12 @@ fn two_contracts() {
 
     vm.set_program(0);
 
-    vm.constructor_with_borsh("bar0", &[]);
+    vm.constructor("bar0", &[]);
 
     let seed1 = vm.create_empty_account();
     let seed2 = vm.create_empty_account();
 
-    let _bar1 = vm.function_with_borsh("test_other", &[], &[&seed1, &seed2], None);
+    let _bar1 = vm.function("test_other", &[], &[&seed1, &seed2], None);
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0bar1 says: hi from bar0");
 
