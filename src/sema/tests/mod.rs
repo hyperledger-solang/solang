@@ -14,7 +14,6 @@ pub(crate) fn parse(src: &'static str) -> ast::Namespace {
     cache.set_file_contents("test.sol", src.to_string());
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::EVM);
-    ns.print_diagnostics_in_plain(&cache, false);
     ns
 }
 
@@ -452,4 +451,45 @@ fn test_types() {
         "value 300 does not fit into type uint8."
     );
     assert_eq!(errors.len(), 15);
+}
+
+#[test]
+fn try_catch_solana() {
+    let file = r#"
+    contract aborting {
+    function abort() public returns (int32, bool) {
+        revert("bar");
+    }
+}
+
+contract runner {
+    function test() public pure {
+        aborting abort = new aborting();
+
+        try abort.abort() returns (int32 a, bool b) {
+            // call succeeded; return values are in a and b
+        }
+        catch Error(string x) {
+            if (x == "bar") {
+                // "bar" reason code was provided through revert() or require()
+            }
+        }
+        catch (bytes raw) {
+            // if no error string could decoding, we end up here with the raw data
+        }
+    }
+}
+    "#;
+
+    let mut cache = FileResolver::new();
+    cache.set_file_contents("test.sol", file.to_string());
+
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
+
+    assert_eq!(ns.diagnostics.len(), 3);
+    assert!(ns.diagnostics.contains_message("found contract 'runner'"));
+    assert!(ns.diagnostics.contains_message("found contract 'aborting'"));
+    assert!(ns.diagnostics.contains_message("The try-catch statement is not \
+     supported on Solana. Please, go to \
+     https://solang.readthedocs.io/en/latest/language/statements.html#try-catch-statement for more information"));
 }
