@@ -34,7 +34,7 @@ can be imported via the special import file ``substrate``.
 
 .. code-block:: solidity
 
-    import {Hash} from 'solana';
+    import {Hash} from 'substrate';
 
 Note that ``{Hash}`` can be omitted, renamed or imported via
 import object.
