@@ -1628,7 +1628,11 @@ impl Namespace {
         // The Hash type from ink primitives.
         let type_no = self.user_types.len();
         self.user_types.push(UserTypeDecl {
-            tags: vec![],
+            tags: vec![Tag {
+                Tag: "notice".into(),
+                no: 0,
+                Value: "The Hash type from ink primitives",
+            }],
             loc: pt::Loc::Builtin,
             name: "Hash".into(),
             ty: Type::Bytes(32),
