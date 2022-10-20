@@ -2153,10 +2153,10 @@ impl Namespace {
         }
 
         // user types
-        if !self.user_types.is_empty() {
+        if self.user_types.iter().any(|t| t.loc != pt::Loc::Builtin) {
             let types = dot.add_node(Node::new("types", Vec::new()), None, None);
 
-            for decl in &self.user_types {
+            for decl in self.user_types.iter().filter(|t| t.loc != pt::Loc::Builtin) {
                 let mut labels = vec![
                     format!("name:{} ty:{}", decl.name, decl.ty.to_string(self)),
                     self.loc_to_string(&decl.loc),

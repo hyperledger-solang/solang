@@ -8,7 +8,7 @@ use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
 use super::expression::{expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
-use crate::sema::ast::{RetrieveType, UserTypeDecl};
+use crate::sema::ast::{RetrieveType, Tag, UserTypeDecl};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -1629,9 +1629,9 @@ impl Namespace {
         let type_no = self.user_types.len();
         self.user_types.push(UserTypeDecl {
             tags: vec![Tag {
-                Tag: "notice".into(),
+                tag: "notice".into(),
                 no: 0,
-                Value: "The Hash type from ink primitives",
+                value: "The Hash type from ink primitives".into(),
             }],
             loc: pt::Loc::Builtin,
             name: "Hash".into(),
