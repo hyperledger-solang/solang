@@ -15,6 +15,7 @@ use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use crate::sema::yul::resolve_inline_assembly;
 use crate::sema::Recurse;
+use crate::Target;
 use solang_parser::pt;
 use solang_parser::pt::CatchClause;
 use solang_parser::pt::CodeLocation;
@@ -1810,6 +1811,17 @@ fn try_catch(
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
 ) -> Result<(Statement, bool), ()> {
+    if ns.target == Target::Solana {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "The try-catch statement is not supported on Solana. Please, go to \
+             https://solang.readthedocs.io/en/latest/language/statements.html#try-catch-statement \
+             for more information"
+                .to_string(),
+        ));
+        return Err(());
+    }
+
     let mut expr = expr.remove_parenthesis();
     let mut ok = None;
 
