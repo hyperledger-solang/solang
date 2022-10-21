@@ -218,6 +218,10 @@ An internal function cannot be called from a try catch statement. Not all proble
 for example, out of gas cannot be caught. The ``revert()`` and ``require()`` builtins may
 be passed a reason code, which can be inspected using the ``catch Error(string)`` syntax.
 
+.. warning::
+    On Solana, any transaction that fails halts the execution of a contract. The try-catch statement, thus,
+    is not supported for Solana contracts and the compiler will raise an error if it detects its usage.
+
 .. code-block:: solidity
 
     contract aborting {
