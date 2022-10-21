@@ -324,7 +324,6 @@ fn serialize_parameters(
 
     // then the rest of the accounts
     for (acc, data) in &vm.account_data {
-        //println!("acc:{} {}", hex::encode(acc), hex::encode(&data.0));
         if !seeds.iter().any(|seed| seed.0 == *acc) && acc != data_account {
             serialize_account(&mut v, &mut refs, acc, data);
         }
@@ -1583,8 +1582,11 @@ impl VirtualMachine {
     }
 
     fn constructor(&mut self, name: &str, args: &[Token]) {
-        let program = &self.stack[0];
+        self.constructor_expected(0, name, args)
+    }
 
+    fn constructor_expected(&mut self, expected: u64, name: &str, args: &[Token]) {
+        let program = &self.stack[0];
         println!("constructor for {}", hex::encode(program.data));
 
         let mut calldata = VirtualMachine::input(&program.data, &self.origin, name, &[]);
@@ -1594,8 +1596,9 @@ impl VirtualMachine {
         };
 
         let res = self.execute(&calldata, &[]);
+
         println!("res:{:?}", res);
-        assert!(matches!(res, Ok(0)));
+        assert_eq!(res, Ok(expected));
     }
 
     fn function(
@@ -1762,60 +1765,65 @@ impl VirtualMachine {
 
     fn validate_account_data_heap(&self) -> usize {
         let data = &self.account_data[&self.stack[0].data].data;
-        let mut count = 0;
 
-        let mut prev_offset = 0;
-        let return_len = LittleEndian::read_u32(&data[4..]) as usize;
-        let return_offset = LittleEndian::read_u32(&data[8..]) as usize;
-        let mut offset = LittleEndian::read_u32(&data[12..]) as usize;
+        if LittleEndian::read_u32(&data[0..]) != 0 {
+            let mut count = 0;
 
-        // The return_offset/len fields are no longer used (we should remove them at some point)
-        assert_eq!(return_len, 0);
-        assert_eq!(return_offset, 0);
+            let mut prev_offset = 0;
+            let return_len = LittleEndian::read_u32(&data[4..]) as usize;
+            let return_offset = LittleEndian::read_u32(&data[8..]) as usize;
+            let mut offset = LittleEndian::read_u32(&data[12..]) as usize;
 
-        println!(
-            "static: length:{:x} {}",
-            offset - 16,
-            hex::encode(&data[16..offset])
-        );
-
-        loop {
-            let next = LittleEndian::read_u32(&data[offset..]) as usize;
-            let prev = LittleEndian::read_u32(&data[offset + 4..]) as usize;
-            let length = LittleEndian::read_u32(&data[offset + 8..]) as usize;
-            let allocate = LittleEndian::read_u32(&data[offset + 12..]) as usize;
-
-            if allocate == 1 {
-                count += 1;
-            }
+            // The return_offset/len fields are no longer used (we should remove them at some point)
+            assert_eq!(return_len, 0);
+            assert_eq!(return_offset, 0);
 
             println!(
-                "offset:{:x} prev:{:x} next:{:x} length:{} allocated:{} {}",
-                offset + 16,
-                prev + 16,
-                next + 16,
-                length,
-                allocate,
-                hex::encode(&data[offset + 16..offset + 16 + length])
+                "static: length:{:x} {}",
+                offset - 16,
+                hex::encode(&data[16..offset])
             );
 
-            assert_eq!(prev, prev_offset);
-            prev_offset = offset;
+            loop {
+                let next = LittleEndian::read_u32(&data[offset..]) as usize;
+                let prev = LittleEndian::read_u32(&data[offset + 4..]) as usize;
+                let length = LittleEndian::read_u32(&data[offset + 8..]) as usize;
+                let allocate = LittleEndian::read_u32(&data[offset + 12..]) as usize;
 
-            if next == 0 {
-                assert_eq!(length, 0);
-                assert_eq!(allocate, 0);
+                if allocate == 1 {
+                    count += 1;
+                }
 
-                break;
+                println!(
+                    "offset:{:x} prev:{:x} next:{:x} length:{} allocated:{} {}",
+                    offset + 16,
+                    prev + 16,
+                    next + 16,
+                    length,
+                    allocate,
+                    hex::encode(&data[offset + 16..offset + 16 + length])
+                );
+
+                assert_eq!(prev, prev_offset);
+                prev_offset = offset;
+
+                if next == 0 {
+                    assert_eq!(length, 0);
+                    assert_eq!(allocate, 0);
+
+                    break;
+                }
+
+                let space = next - offset - 16;
+                assert!(length <= space);
+
+                offset = next;
             }
 
-            let space = next - offset - 16;
-            assert!(length <= space);
-
-            offset = next;
+            count
+        } else {
+            0
         }
-
-        count
     }
 
     pub fn events(&self) -> Vec<RawLog> {
