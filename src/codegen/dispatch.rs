@@ -470,12 +470,13 @@ fn solana_deploy(
         },
     );
 
-    // Calculate heap offset (align on 8 byte boundary)
+    // Calculate heap offset
     let fixed_fields_size = ns.contracts[contract_no]
         .fixed_layout_size
         .to_u64()
         .unwrap();
 
+    // align on 8 byte boundary (round up to nearest multiple of 8)
     let heap_offset = (fixed_fields_size + 7) & !7;
 
     // Write heap offset to 12
