@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode};
-use crate::codegen::vartable::Vartable;
-use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type};
+use crate::codegen::{
+    cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
+    vartable::Vartable,
+    Builtin, Expression,
+};
+use crate::{
+    sema::ast::{ArrayLength, Namespace, Parameter, RetrieveType, StructType, Type},
+    Target,
+};
 use num_bigint::{BigInt, Sign};
-use num_traits::Zero;
+use num_traits::{ToPrimitive, Zero};
 use solang_parser::pt;
 use solang_parser::pt::{FunctionTy, Loc};
 use std::sync::Arc;
@@ -273,9 +278,10 @@ fn add_dispatch_case(
     ));
 }
 
-/// Create the dispatch for a contract constructor. This case needs creates a new function in
-/// the CFG because we want to use de abi decoding implementation from codegen.
+/// Create the dispatch for a contract constructor. This case creates a new function in
+/// the CFG because we want to use the abi decoding implementation from codegen.
 pub(super) fn constructor_dispatch(
+    contract_no: usize,
     constructor_cfg_no: usize,
     all_cfg: &[ControlFlowGraph],
     ns: &mut Namespace,
@@ -335,6 +341,23 @@ pub(super) fn constructor_dispatch(
         );
     }
 
+    if ns.target == Target::Solana {
+        solana_deploy(contract_no, &mut vartab, &mut cfg, ns);
+    }
+
+    // Call storage initializer
+    cfg.add(
+        &mut vartab,
+        Instr::Call {
+            res: vec![],
+            return_tys: vec![],
+            call: InternalCallTy::Static {
+                cfg_no: ns.contracts[contract_no].initializer.unwrap(),
+            },
+            args: vec![],
+        },
+    );
+
     cfg.add(
         &mut vartab,
         Instr::Call {
@@ -357,4 +380,116 @@ pub(super) fn constructor_dispatch(
     vartab.finalize(ns, &mut cfg);
 
     cfg
+}
+
+/// On Solana, prepare the data account after deploy; ensure the account is
+/// large enough and write magic to it to show the account has been deployed.
+fn solana_deploy(
+    contract_no: usize,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+    ns: &mut Namespace,
+) {
+    // Make sure that the data account is large enough. Read the size of the
+    // account via `tx.accounts[0].data.length`.
+    let account_length = Expression::Builtin(
+        Loc::Codegen,
+        vec![Type::Uint(32)],
+        Builtin::ArrayLength,
+        vec![Expression::StructMember(
+            Loc::Codegen,
+            Type::DynamicBytes,
+            Expression::Subscript(
+                Loc::Codegen,
+                Type::Struct(StructType::AccountInfo),
+                Type::Array(
+                    Type::Struct(StructType::AccountInfo).into(),
+                    vec![ArrayLength::Dynamic],
+                ),
+                Expression::Builtin(
+                    Loc::Codegen,
+                    vec![Type::Array(
+                        Type::Struct(StructType::AccountInfo).into(),
+                        vec![ArrayLength::Dynamic],
+                    )],
+                    Builtin::Accounts,
+                    vec![],
+                )
+                .into(),
+                Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::zero()).into(),
+            )
+            .into(),
+            2,
+        )],
+    );
+
+    let is_enough = Expression::MoreEqual(
+        Loc::Codegen,
+        Box::new(account_length),
+        Box::new(Expression::NumberLiteral(
+            Loc::Codegen,
+            Type::Uint(32),
+            ns.contracts[contract_no].fixed_layout_size.clone(),
+        )),
+    );
+
+    let enough = cfg.new_basic_block("enough".into());
+    let not_enough = cfg.new_basic_block("not_enough".into());
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: is_enough,
+            true_block: enough,
+            false_block: not_enough,
+        },
+    );
+
+    cfg.set_basic_block(not_enough);
+
+    cfg.add(
+        vartab,
+        Instr::ReturnCode {
+            code: ReturnCode::AccountDataTooSmall,
+        },
+    );
+
+    cfg.set_basic_block(enough);
+
+    // Write contract magic number to offset 0
+    cfg.add(
+        vartab,
+        Instr::SetStorage {
+            ty: Type::Uint(32),
+            value: Expression::NumberLiteral(
+                pt::Loc::Codegen,
+                Type::Uint(64),
+                BigInt::from(ns.contracts[contract_no].selector()),
+            ),
+            storage: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(64), BigInt::zero()),
+        },
+    );
+
+    // Calculate heap offset
+    let fixed_fields_size = ns.contracts[contract_no]
+        .fixed_layout_size
+        .to_u64()
+        .unwrap();
+
+    // align on 8 byte boundary (round up to nearest multiple of 8)
+    let heap_offset = (fixed_fields_size + 7) & !7;
+
+    // Write heap offset to 12
+    cfg.add(
+        vartab,
+        Instr::SetStorage {
+            ty: Type::Uint(32),
+            value: Expression::NumberLiteral(
+                pt::Loc::Codegen,
+                Type::Uint(64),
+                BigInt::from(heap_offset),
+            ),
+            storage: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(64), BigInt::from(12)),
+        },
+    );
 }

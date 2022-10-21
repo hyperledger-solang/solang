@@ -337,7 +337,7 @@ describe('Deploy solang contract and test', function () {
     });
 
     it('account storage too small dynamic alloc', async function () {
-        const { contract } = await loadContract('store', 'store.abi', [], 200);
+        const { contract } = await loadContract('store', 'store.abi', [], 233);
 
         // storage.sol needs 168 bytes on constructor, more for string data
 
@@ -348,7 +348,7 @@ describe('Deploy solang contract and test', function () {
     });
 
     it('account storage too small dynamic realloc', async function () {
-        const { contract } = await loadContract('store', 'store.abi', [], 210);
+        const { contract } = await loadContract('store', 'store.abi', [], 233);
 
         async function push_until_bang() {
             for (let i = 0; i < 100; i++) {
