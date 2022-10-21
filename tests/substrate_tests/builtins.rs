@@ -705,3 +705,42 @@ fn my_token() {
     );
     assert_eq!(&runtime.vm.caller[..], &runtime.vm.output[..]);
 }
+
+#[test]
+fn hash() {
+    let mut runtime = build_solidity(
+        r##"
+        import "substrate";
+
+        contract Foo {
+            Hash current;
+            bytes32 current2;
+
+            function set(Hash h) public returns (bytes32) {
+                current = h;
+                current2 = Hash.unwrap(h);
+                return current2;
+            }
+
+            function get() public view returns (Hash) {
+                return Hash.wrap(current2);
+            }
+        }
+        "##,
+    );
+
+    #[derive(Encode)]
+    struct Hash([u8; 32]);
+
+    let h = Hash([
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
+        0x16, 0x17, 0x18, 0x19, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x30,
+        0x31, 0x32,
+    ]);
+
+    runtime.function("set", h.encode());
+    assert_eq!(&runtime.vm.output[..], &h.0[..]);
+
+    runtime.function("get", vec![]);
+    assert_eq!(&runtime.vm.output[..], &h.0[..]);
+}

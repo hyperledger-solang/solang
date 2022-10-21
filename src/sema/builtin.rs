@@ -8,7 +8,7 @@ use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
 use super::expression::{expression, ExprContext, ResolveTo};
 use super::symtable::Symtable;
-use crate::sema::ast::RetrieveType;
+use crate::sema::ast::{RetrieveType, Tag, UserTypeDecl};
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -1615,5 +1615,35 @@ impl Namespace {
             &id,
             Symbol::Function(vec![(pt::Loc::Builtin, func_no)])
         ));
+    }
+
+    pub fn add_substrate_builtins(&mut self) {
+        let file_no = self.files.len();
+        self.files.push(File {
+            path: PathBuf::from("substrate"),
+            line_starts: Vec::new(),
+            cache_no: None,
+        });
+
+        // The Hash type from ink primitives.
+        let type_no = self.user_types.len();
+        self.user_types.push(UserTypeDecl {
+            tags: vec![Tag {
+                tag: "notice".into(),
+                no: 0,
+                value: "The Hash type from ink primitives".into(),
+            }],
+            loc: pt::Loc::Builtin,
+            name: "Hash".into(),
+            ty: Type::Bytes(32),
+            contract: None,
+        });
+
+        let id = pt::Identifier {
+            loc: pt::Loc::Builtin,
+            name: "Hash".into(),
+        };
+        let symbol = Symbol::UserType(pt::Loc::Builtin, type_no);
+        assert!(self.add_symbol(file_no, None, &id, symbol));
     }
 }

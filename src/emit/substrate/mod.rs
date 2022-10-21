@@ -1799,6 +1799,15 @@ impl SubstrateTarget {
                     .i32_type()
                     .const_int(ns.address_length as u64 + 4, false)
             }
+            ast::Type::UserType(user_type) => Self::encoded_length(
+                arg,
+                load,
+                packed,
+                &ns.user_types[*user_type].ty,
+                function,
+                binary,
+                ns,
+            ),
             _ => unreachable!(),
         }
     }
