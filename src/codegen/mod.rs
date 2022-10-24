@@ -90,6 +90,7 @@ pub struct Options {
     pub common_subexpression_elimination: bool,
     pub generate_debug_information: bool,
     pub opt_level: OptimizationLevel,
+    pub log_api_return_codes: bool,
 }
 
 impl Default for Options {
@@ -103,6 +104,7 @@ impl Default for Options {
             common_subexpression_elimination: true,
             generate_debug_information: false,
             opt_level: OptimizationLevel::Default,
+            log_api_return_codes: false,
         }
     }
 }
@@ -162,6 +164,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
                         opt.opt_level.into(),
                         opt.math_overflow_check,
                         opt.generate_debug_information,
+                        opt.log_api_return_codes,
                     );
 
                     let code = binary.code(Generate::Linked).expect("llvm build");

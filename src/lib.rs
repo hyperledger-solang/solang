@@ -160,6 +160,7 @@ pub fn compile_many<'a>(
     opt: inkwell::OptimizationLevel,
     math_overflow_check: bool,
     generate_debug_info: bool,
+    log_api_return_codes: bool,
 ) -> emit::binary::Binary<'a> {
     emit::binary::Binary::build_bundle(
         context,
@@ -168,6 +169,7 @@ pub fn compile_many<'a>(
         opt,
         math_overflow_check,
         generate_debug_info,
+        log_api_return_codes,
     )
 }
 

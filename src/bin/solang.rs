@@ -177,6 +177,12 @@ fn main() {
                             .short('g')
                             .long("generate-debug-info")
                             .hide(true),
+                    )
+                    .arg(
+                        Arg::new("LOGAPICALLS")
+                            .help("Log the return codes of runtime API calls in the environment")
+                            .long("log-api-calls")
+                            .action(ArgAction::SetFalse),
                     ),
             )
             .subcommand(
@@ -378,6 +384,8 @@ fn compile(matches: &ArgMatches) {
 
     let generate_debug_info = matches.contains_id("GENERATEDEBUGINFORMATION");
 
+    let log_api_return_codes = matches.contains_id("LOGAPICALLS");
+
     let mut resolver = imports_arg(matches);
 
     let opt_level = match matches.get_one::<String>("OPT").unwrap().as_str() {
@@ -399,6 +407,7 @@ fn compile(matches: &ArgMatches) {
             .get_one::<bool>("COMMONSUBEXPRESSIONELIMINATION")
             .unwrap(),
         opt_level,
+        log_api_return_codes,
     };
 
     let mut namespaces = Vec::new();
@@ -440,6 +449,7 @@ fn compile(matches: &ArgMatches) {
             opt_level.into(),
             math_overflow_check,
             generate_debug_info,
+            opt.log_api_return_codes,
         );
 
         if !save_intermediates(&binary, matches) {
@@ -631,6 +641,7 @@ fn process_file(
             opt.opt_level.into(),
             opt.math_overflow_check,
             opt.generate_debug_information,
+            opt.log_api_return_codes,
         );
 
         if save_intermediates(&binary, matches) {

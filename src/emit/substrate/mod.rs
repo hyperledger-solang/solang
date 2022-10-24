@@ -132,6 +132,7 @@ impl SubstrateTarget {
         opt: OptimizationLevel,
         math_overflow_check: bool,
         generate_debug_info: bool,
+        log_api_return_codes: bool,
     ) -> Binary<'a> {
         let mut binary = Binary::new(
             context,
@@ -143,6 +144,7 @@ impl SubstrateTarget {
             std_lib,
             None,
             generate_debug_info,
+            log_api_return_codes,
         );
 
         binary.set_early_value_aborts(contract, ns);
@@ -1845,13 +1847,13 @@ fn event_id<'b>(
 
 /// Print the return code of API calls to the debug buffer.
 fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: &IntValue) {
-    if !binary.generate_debug_info {
+    if !binary.log_api_return_codes {
         return;
     }
 
     emit_context!(binary);
 
-    let fmt = format!("{}: ", api);
+    let fmt = format!("{}=", api);
     let msg = fmt.as_bytes();
     let length = i32_const!(msg.len() as u64 + 16);
     let out_buf = binary.vector_new(length, i32_const!(1), None);
