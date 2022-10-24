@@ -219,3 +219,25 @@ This also means that, whenever the length of an array is accessed using '.length
 
 Note that this optimization does not cover every case. When an array is passed
 as a function argument, for instance, the length is unknown.
+
+Debugging Options
+=================
+
+It may be desirable to have access to debug information regarding the contract execution. 
+How-ever, this might lead to less ideal code as well as much higher gas usage. Hence it is disabled by default,
+but can be enabled using CLI flags. Just make sure to not use them in production deployments.
+
+.. _log-api-calls:
+
+Log runtime API call results
+----------------------------
+
+Runtime API calls are not necessarely guaranteed to succeed under all possible circumstances.
+By design, the low revel results of these calls might be abstracted away in Solidity.
+But for development purposes, it might be desirable to observe the low level result of such calls directly. 
+The ``--log-api-calls`` flag will make the contract to print the low-level result of runtime calls (if there is any).
+
+.. note::
+
+    For now, this will only have effect when used with the ``Substrate`` target.
+
