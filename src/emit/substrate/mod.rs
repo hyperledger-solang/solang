@@ -1842,3 +1842,42 @@ fn event_id<'b>(
 
     Some(binary.context.i8_type().const_int(event_id as u64, false))
 }
+
+/// Print the return code of API calls to the debug buffer.
+fn log_return_code<'b>(binary: &Binary<'b>, msg: &'static str, code: &IntValue) {
+    emit_context!(binary);
+
+    let msg = msg.as_bytes();
+    let length = i32_const!(msg.len() as u64 + 16);
+    let out_buf = binary.vector_new(length, i32_const!(1), None);
+    let out_buf_ptr = binary.vector_bytes(out_buf.into());
+    let mut out_buf_offset = out_buf_ptr;
+
+    let msg_string = binary.emit_global_string("seal_instantiate", msg, true);
+    let msg_len = binary.context.i32_type().const_int(msg.len() as u64, false);
+    call!(
+        "__memcpy",
+        &[out_buf_offset.into(), msg_string.into(), msg_len.into()]
+    );
+    out_buf_offset = unsafe { binary.builder.build_gep(out_buf_offset, &[msg_len], "") };
+
+    let code = binary
+        .builder
+        .build_int_z_extend(*code, binary.context.i64_type(), "val_64bits");
+    out_buf_offset = call!("uint2dec", &[out_buf_offset.into(), code.into()])
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_pointer_value();
+
+    let msg_len = binary.builder.build_int_sub(
+        binary
+            .builder
+            .build_ptr_to_int(out_buf_offset, binary.context.i32_type(), "out_buf_idx"),
+        binary
+            .builder
+            .build_ptr_to_int(out_buf_ptr, binary.context.i32_type(), "out_buf_ptr"),
+        "msg_len",
+    );
+    call!("seal_debug_message", &[out_buf_ptr.into(), msg_len.into()]);
+}
