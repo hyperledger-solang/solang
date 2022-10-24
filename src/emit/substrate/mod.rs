@@ -1844,10 +1844,15 @@ fn event_id<'b>(
 }
 
 /// Print the return code of API calls to the debug buffer.
-fn log_return_code<'b>(binary: &Binary<'b>, msg: &'static str, code: &IntValue) {
+fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: &IntValue) {
+    if !binary.generate_debug_info {
+        return;
+    }
+
     emit_context!(binary);
 
-    let msg = msg.as_bytes();
+    let fmt = format!("{}: ", api);
+    let msg = fmt.as_bytes();
     let length = i32_const!(msg.len() as u64 + 16);
     let out_buf = binary.vector_new(length, i32_const!(1), None);
     let out_buf_ptr = binary.vector_bytes(out_buf.into());
