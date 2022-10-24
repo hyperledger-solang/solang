@@ -252,7 +252,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
 
             for cfg_no in 0..all_cfg.len() {
                 if all_cfg[cfg_no].ty == FunctionTy::Constructor && all_cfg[cfg_no].public {
-                    let dispatch_cfg = constructor_dispatch(cfg_no, &all_cfg, ns);
+                    let dispatch_cfg = constructor_dispatch(contract_no, cfg_no, &all_cfg, ns);
                     ns.contracts[contract_no].constructor_dispatch = Some(all_cfg.len());
                     all_cfg.push(dispatch_cfg);
                     break;

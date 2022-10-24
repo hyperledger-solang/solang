@@ -17,7 +17,7 @@ use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
 use num_traits::ToPrimitive;
 
 use crate::emit::ethabiencoder;
-use crate::emit::functions::{emit_functions, emit_initializer};
+use crate::emit::functions::emit_functions;
 use crate::emit::loop_builder::LoopBuilder;
 use crate::emit::{Binary, TargetRuntime};
 
@@ -29,7 +29,6 @@ pub struct SolanaTarget {
 pub struct Contract<'a> {
     magic: u32,
     contract: &'a ast::Contract,
-    storage_initializer: FunctionValue<'a>,
     constructor: Option<FunctionValue<'a>>,
     functions: HashMap<usize, FunctionValue<'a>>,
 }
@@ -80,12 +79,14 @@ impl SolanaTarget {
             ReturnCode::InvalidDataError,
             context.i32_type().const_int(2, false),
         );
+        binary.return_values.insert(
+            ReturnCode::AccountDataTooSmall,
+            context.i64_type().const_int(5u64 << 32, false),
+        );
         // externals
         target.declare_externals(&mut binary, ns);
 
         emit_functions(&mut target, &mut binary, contract, ns);
-
-        let storage_initializer = emit_initializer(&mut target, &mut binary, contract, ns);
 
         let constructor = contract
             .constructor_dispatch
@@ -100,7 +101,6 @@ impl SolanaTarget {
             &[Contract {
                 magic: target.magic,
                 contract,
-                storage_initializer,
                 constructor,
                 functions,
             }],
@@ -151,6 +151,10 @@ impl SolanaTarget {
             ReturnCode::AbiEncodingInvalid,
             context.i64_type().const_int(2u64 << 32, false),
         );
+        binary.return_values.insert(
+            ReturnCode::AccountDataTooSmall,
+            context.i64_type().const_int(5u64 << 32, false),
+        );
 
         // externals
         target.declare_externals(&mut binary, namespaces[0]);
@@ -169,8 +173,6 @@ impl SolanaTarget {
 
                 emit_functions(&mut target, &mut binary, contract, ns);
 
-                let storage_initializer = emit_initializer(&mut target, &mut binary, contract, ns);
-
                 let constructor = contract
                     .constructor_dispatch
                     .map(|cfg_no| binary.functions[&cfg_no]);
@@ -182,7 +184,6 @@ impl SolanaTarget {
                 contracts.push(Contract {
                     magic: target.magic,
                     contract,
-                    storage_initializer,
                     constructor,
                     functions,
                 });
@@ -432,41 +433,6 @@ impl SolanaTarget {
             .into_pointer_value()
     }
 
-    /// Returns the account data length of the executing binary
-    fn contract_storage_datalen<'b>(&self, binary: &Binary<'b>) -> IntValue<'b> {
-        let parameters = self.sol_parameters(binary);
-
-        let ka_cur = binary
-            .builder
-            .build_load(
-                binary
-                    .builder
-                    .build_struct_gep(parameters, 2, "ka_cur")
-                    .unwrap(),
-                "ka_cur",
-            )
-            .into_int_value();
-
-        binary
-            .builder
-            .build_load(
-                unsafe {
-                    binary.builder.build_gep(
-                        parameters,
-                        &[
-                            binary.context.i32_type().const_int(0, false),
-                            binary.context.i32_type().const_int(0, false),
-                            ka_cur,
-                            binary.context.i32_type().const_int(2, false),
-                        ],
-                        "data_len",
-                    )
-                },
-                "data_len",
-            )
-            .into_int_value()
-    }
-
     fn emit_dispatch<'b>(&mut self, binary: &mut Binary<'b>, contracts: &[Contract<'b>]) {
         let function = binary.module.get_function("solang_dispatch").unwrap();
 
@@ -577,8 +543,6 @@ impl SolanaTarget {
 
         binary.builder.position_at_end(constructor_block);
 
-        let contract_data_len = self.contract_storage_datalen(binary);
-
         for contract in contracts {
             let constructor_block = binary
                 .context
@@ -593,72 +557,6 @@ impl SolanaTarget {
                     .const_int(contract.magic as u64, false),
                 constructor_block,
             ));
-
-            // do we have enough binary data
-            let fixed_fields_size = contract.contract.fixed_layout_size.to_u64().unwrap();
-
-            let is_enough = binary.builder.build_int_compare(
-                IntPredicate::UGE,
-                contract_data_len,
-                binary
-                    .context
-                    .i64_type()
-                    .const_int(fixed_fields_size, false),
-                "is_enough",
-            );
-
-            let not_enough = binary.context.append_basic_block(function, "not_enough");
-            let enough = binary.context.append_basic_block(function, "enough");
-
-            binary
-                .builder
-                .build_conditional_branch(is_enough, enough, not_enough);
-
-            binary.builder.position_at_end(not_enough);
-
-            binary.builder.build_return(Some(
-                &binary.context.i64_type().const_int(5u64 << 32, false),
-            ));
-
-            binary.builder.position_at_end(enough);
-
-            // write our magic value to the binary
-            binary.builder.build_store(
-                magic_value_ptr,
-                binary
-                    .context
-                    .i32_type()
-                    .const_int(contract.magic as u64, false),
-            );
-
-            // write heap_offset.
-            let heap_offset_ptr = unsafe {
-                binary.builder.build_gep(
-                    magic_value_ptr,
-                    &[binary.context.i64_type().const_int(3, false)],
-                    "heap_offset",
-                )
-            };
-
-            // align heap to 8 bytes
-            let heap_offset = (fixed_fields_size + 7) & !7;
-
-            binary.builder.build_store(
-                heap_offset_ptr,
-                binary.context.i32_type().const_int(heap_offset, false),
-            );
-
-            let arg_ty =
-                contract.storage_initializer.get_type().get_param_types()[0].into_pointer_type();
-
-            binary.builder.build_call(
-                contract.storage_initializer,
-                &[binary
-                    .builder
-                    .build_pointer_cast(sol_params, arg_ty, "")
-                    .into()],
-                "",
-            );
 
             // There is only one possible constructor
             let ret = if let Some(constructor_function) = contract.constructor {

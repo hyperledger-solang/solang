@@ -123,3 +123,19 @@ fn two_contracts() {
 
     vm.logs.truncate(0);
 }
+
+#[test]
+fn account_too_small() {
+    let mut vm = build_solidity(
+        r#"
+        contract bar {
+            int[200] foo1;
+        }"#,
+    );
+
+    let data = vm.stack[0].data;
+
+    vm.account_data.get_mut(&data).unwrap().data.truncate(100);
+
+    vm.constructor_expected(5 << 32, "bar", &[]);
+}

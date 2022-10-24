@@ -37,7 +37,7 @@ entrypoint(const uint8_t *input)
     {
         const SolAccountInfo *acc = &params.ka[account_no];
 
-        if (SolPubkey_same(params.account_id, acc->key))
+        if (SolPubkey_same(params.account_id, acc->key) && params.ka_cur == UINT64_MAX)
         {
             params.ka_cur = account_no;
         }
@@ -51,7 +51,7 @@ entrypoint(const uint8_t *input)
         }
     }
 
-    if (params.ka_cur == UINT64_MAX)
+    if (params.ka_cur != 0)
     {
         return ERROR_INVALID_INSTRUCTION_DATA;
     }
@@ -82,19 +82,28 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
         .data_len = input_len,
     };
 
+    int meta_no = 1;
+
     for (int account_no = 0; account_no < params->ka_num; account_no++)
     {
         const SolAccountInfo *acc = &params->ka[account_no];
 
         if (SolPubkey_same(dest, acc->key))
         {
+            metas[0].pubkey = acc->key;
+            metas[0].is_writable = acc->is_writable;
+            metas[0].is_signer = acc->is_signer;
             instruction.program_id = acc->owner;
             params->ka_last_called = acc;
         }
+        else
+        {
 
-        metas[account_no].pubkey = acc->key;
-        metas[account_no].is_writable = acc->is_writable;
-        metas[account_no].is_signer = acc->is_signer;
+            metas[meta_no].pubkey = acc->key;
+            metas[meta_no].is_writable = acc->is_writable;
+            metas[meta_no].is_signer = acc->is_signer;
+            meta_no += 1;
+        }
     }
 
     if (instruction.program_id)
@@ -118,7 +127,7 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t space, Sol
     // find a suitable new account and seed
     for (int i = 0; i < params->seeds_len; i++)
     {
-        SolAccountInfo *acc = &params->ka[i];
+        SolAccountInfo *acc = &params->ka[i + 1];
 
         if (acc->data_len == 0 && SolPubkey_same(&system_address, acc->owner))
         {
@@ -205,14 +214,23 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t space, Sol
         .data_len = input_len,
     };
 
-    // A fresh account must be provided by the caller; find it
+    metas[0].pubkey = new_acc->key;
+    metas[0].is_writable = true;
+    metas[0].is_signer = false;
+
+    int meta_no = 1;
+
     for (int account_no = 0; account_no < params->ka_num; account_no++)
     {
         const SolAccountInfo *acc = &params->ka[account_no];
 
-        metas[account_no].pubkey = acc->key;
-        metas[account_no].is_writable = acc->is_writable;
-        metas[account_no].is_signer = acc->is_signer;
+        if (!SolPubkey_same(new_acc->key, acc->key))
+        {
+            metas[meta_no].pubkey = acc->key;
+            metas[meta_no].is_writable = acc->is_writable;
+            metas[meta_no].is_signer = acc->is_signer;
+            meta_no += 1;
+        }
     }
 
     params->ka_last_called = new_acc;
