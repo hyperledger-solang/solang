@@ -167,7 +167,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 27] = [
         name: "gasleft",
         args: &[],
         ret: &[Type::Uint(64)],
-        target: &[Target::default_substrate(), Target::Ewasm],
+        target: &[Target::default_substrate(), Target::Ewasm, Target::Lachain],
         doc: "Return remaing gas left in current call",
         constant: false,
     },
