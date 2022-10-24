@@ -1869,7 +1869,7 @@ fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: &IntValue) 
     let out_buf_ptr = binary.vector_bytes(out_buf.into());
     let mut out_buf_offset = out_buf_ptr;
 
-    let msg_string = binary.emit_global_string("seal_instantiate", msg, true);
+    let msg_string = binary.emit_global_string(&fmt, msg, true);
     let msg_len = binary.context.i32_type().const_int(msg.len() as u64, false);
     call!(
         "__memcpy",
