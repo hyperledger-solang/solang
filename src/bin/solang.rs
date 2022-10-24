@@ -172,17 +172,19 @@ fn main() {
                             .display_order(6),
                     )
                     .arg(
+                        Arg::new("LOGAPIRETURNS")
+                            .help("Log the return codes of runtime API calls in the environment")
+                            .long("log-api-return-codes")
+                            .num_args(0..=1)
+                            .require_equals(true)
+                            .default_missing_value("true"),
+                    )
+                    .arg(
                         Arg::new("GENERATEDEBUGINFORMATION")
                             .help("Enable generating debug information for LLVM IR")
                             .short('g')
                             .long("generate-debug-info")
                             .hide(true),
-                    )
-                    .arg(
-                        Arg::new("LOGAPIRETURNS")
-                            .help("Log the return codes of runtime API calls in the environment")
-                            .long("log-api-return-codes")
-                            .action(ArgAction::SetFalse),
                     ),
             )
             .subcommand(
