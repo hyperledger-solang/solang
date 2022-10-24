@@ -1,5 +1,14 @@
+Code Generation Options
+=======================
+
+There are various compiler flags to control certain aspects of the emitted code.
+They can be roughly divided into two categeries: Optimzer passes are enabled by default 
+and attempt to make the emitted code more optimal in regards of storage and gas usage. 
+Debugging options on the other hand are not enabled by default, but they greatly improve
+developer experience (at the cost of increased gas and storage usage).
+
 Optimizer Passes
-================
+----------------
 
 Solang generates its own internal IR, before the LLVM IR is generated. This internal IR allows us to do
 several optimizations which LLVM cannot do, since it is not aware of higher-level language constructs.
@@ -10,7 +19,7 @@ So we need to do our own optimizations for these types, and we cannot rely on LL
 .. _constant-folding:
 
 Constant Folding Pass
----------------------
++++++++++++++++++++++
 
 There is a constant folding (also called constant propagation) pass done, before all the other passes. This
 helps arithmetic of large types, and also means that the functions are constant folded when their arguments
@@ -27,7 +36,7 @@ the hover will tell you the value of the hash.
 .. _strength-reduce:
 
 Strength Reduction Pass
------------------------
++++++++++++++++++++++++
 
 Strength reduction is when expensive arithmetic is replaced with cheaper ones. So far, the following types
 of arithmetic may be replaced:
@@ -59,7 +68,7 @@ will see this noted.
 .. _dead-storage:
 
 Dead Storage pass
------------------
++++++++++++++++++
 
 Loading from contract storage, or storing to contract storage is expensive. This optimization removes any
 redundant load from and store to contract storage. If the same variable is read twice, then the value from
@@ -91,7 +100,7 @@ having this optimization pass on by comparing the output of `solang --no-dead-st
 .. _vector-to-slice:
 
 Vector to Slice Pass
---------------------
+++++++++++++++++++++
 
 A `bytes` or `string` variable can be stored in a vector, which is a modifyable in-memory buffer, and a slice
 which is a pointer to readonly memory and an a length. Since a vector is modifyable, each instance requires
@@ -128,7 +137,7 @@ having this optimization pass on by comparing the output of `solang --no-vector-
 .. _unused-variable-elimination:
 
 Unused Variable Elimination
-----------------------------
++++++++++++++++++++++++++++
 
 
 During the semantic analysis, Solang detects unused variables and raises warnings for them.
@@ -157,7 +166,7 @@ expressions inside the function.
 .. _common-subexpression-elimination:
 
 Common Subexpression Elimination
----------------------------------
+++++++++++++++++++++++++++++++++
 
 
 Solang performs common subexpression elimination by doing two passes over the CFG (Control
@@ -190,7 +199,7 @@ this contract and check the CFG, using `solang --emit cfg`.
 .. _Array-Bound-checks-optimizations:
 
 Array Bound checks optimization
--------------------------------
++++++++++++++++++++++++++++++++
 
 Whenever an array access is done, there must be a check for ensuring we are not accessing
 beyond the end of an array. Sometimes, the array length could be known. For example:
@@ -221,23 +230,23 @@ Note that this optimization does not cover every case. When an array is passed
 as a function argument, for instance, the length is unknown.
 
 Debugging Options
-=================
+-----------------
 
 It may be desirable to have access to debug information regarding the contract execution. 
-How-ever, this might lead to less ideal code as well as much higher gas usage. Hence it is disabled by default,
-but can be enabled using CLI flags. Just make sure to not use them in production deployments.
+However, this might lead to more instructions as well as higher gas usage. Hence, it is disabled by default,
+but can be enabled using CLI flags. Just make sure not to use them in production deployments.
 
-.. _log-api-calls:
+.. _log-api-return-codes:
 
 Log runtime API call results
-----------------------------
+++++++++++++++++++++++++++++
 
 Runtime API calls are not necessarely guaranteed to succeed under all possible circumstances.
-By design, the low revel results of these calls might be abstracted away in Solidity.
+By design, the low level results of these calls might be abstracted away in Solidity.
 But for development purposes, it might be desirable to observe the low level result of such calls directly. 
-The ``--log-api-calls`` flag will make the contract to print the low-level result of runtime calls (if there is any).
+The ``--log-api-return-codes`` flag will make the contract print the return code of runtime calls (if there is one).
 
 .. note::
 
-    For now, this will only have effect when used with the ``Substrate`` target.
+    For now, this is only implemented for the ``Substrate`` target.
 

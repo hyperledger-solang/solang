@@ -181,8 +181,7 @@ fn main() {
                     .arg(
                         Arg::new("LOGAPIRETURNS")
                             .help("Log the return codes of runtime API calls in the environment")
-                            .long("log-api-calls")
-                            .action(ArgAction::SetFalse),
+                            .long("--log-api-return-codes"),
                     ),
             )
             .subcommand(
