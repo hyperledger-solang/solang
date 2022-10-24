@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
+use crate::{build_solidity, build_solidity_with_options};
 use parity_scale_codec::{Decode, Encode};
 
 #[derive(Debug, PartialEq, Eq, Encode, Decode)]
@@ -760,5 +760,36 @@ fn try_catch_reachable() {
                 _c = 1;
             }
         }"##,
+    );
+}
+
+#[test]
+fn log_api_call_return_values_works() {
+    let mut runtime = build_solidity_with_options(
+        r##"
+        contract Test {
+            constructor () payable {}
+        
+            function test() public {
+                try new Other() returns (Other o) {
+                    o.foo();
+                } 
+                catch {}
+            }
+        }
+        contract Other {
+            function foo() public pure {
+                print("hi!");
+            }
+        }
+        "##,
+        false,
+        true,
+    );
+
+    runtime.function("test", vec![]);
+    assert_eq!(
+        &runtime.printbuf,
+        "seal_instantiate=0hi!seal_debug_message=0seal_call=0"
     );
 }
