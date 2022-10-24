@@ -1247,6 +1247,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
+        log_return_code(binary, "seal_call", &ret);
+
         let is_success =
             binary
                 .builder
