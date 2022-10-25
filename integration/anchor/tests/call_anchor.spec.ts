@@ -38,12 +38,12 @@ describe('Call Anchor program from Solidity via IDL',  () => {
         const contract = new Contract(connection, program.publicKey, storage.publicKey, abi, payer);
 
         const data = Keypair.generate();
-        await contract.deploy(file_name, [publicKeyToHex(data.publicKey)], storage, 8192);
+        await contract.deploy(file_name, [data.publicKey.toBytes()], storage, 8192);
 
         const programId = new PublicKey("z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq");
 
-        let { result } = await contract.functions.test(publicKeyToHex(payer.publicKey), { accounts: [programId, SystemProgram.programId], signers: [data, payer] });
+        let { result } = await contract.functions.test(payer.publicKey.toBytes(), { accounts: [programId, SystemProgram.programId], signers: [data, payer] });
 
-        expect(result.toNumber()).toEqual(11);
+        expect(Number(result)).toStrictEqual(11);
     });
 });
