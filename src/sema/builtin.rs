@@ -20,7 +20,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: [Prototype; 27] = [
+static BUILTIN_FUNCTIONS: [Prototype; 28] = [
     Prototype {
         builtin: Builtin::Extcodesize,
         namespace: None,
@@ -297,6 +297,16 @@ static BUILTIN_FUNCTIONS: [Prototype; 27] = [
         doc: "Recover the address associated with the public key from elliptic curve signature or return zero on error",
         constant: false,
     },
+    Prototype {
+        builtin: Builtin::GetReturnData,
+        namespace: None,
+        name: "getreturndata",
+        args: &[],
+        ret: &[Type::DynamicBytes],
+        target: &[Target::Lachain],
+        doc: "Get return data from the last contract call",
+        constant: false,
+    },
 ];
 
 // A list of all Solidity builtins variables
@@ -437,7 +447,7 @@ static BUILTIN_VARIABLE: [Prototype; 15] = [
         name: "gasprice",
         args: &[],
         ret: &[Type::Value],
-        target: &[Target::default_substrate(), Target::Ewasm],
+        target: &[Target::default_substrate(), Target::Ewasm, Target::Lachain],
         doc: "gas price for one gas unit",
         constant: false,
     },

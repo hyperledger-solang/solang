@@ -1317,6 +1317,7 @@ pub enum Builtin {
     Assert,
     Print,
     Return2,
+    GetReturnData,
     Revert,
     Require,
     SelfDestruct,

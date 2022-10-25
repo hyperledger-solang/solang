@@ -2926,6 +2926,109 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
 
                 binary.builder.build_load(address, "result")
             }
+            ast::Expression::Builtin(_, _, ast::Builtin::GetReturnData, args) => {
+                let length = binary
+                    .builder
+                    .build_call(
+                        binary.module.get_function("get_return_size").unwrap(),
+                        &[],
+                        "returndatasize",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                let malloc_length = binary.builder.build_int_add(
+                    length,
+                    binary
+                        .module
+                        .get_struct_type("struct.vector")
+                        .unwrap()
+                        .size_of()
+                        .unwrap()
+                        .const_cast(binary.context.i32_type(), false),
+                    "size",
+                );
+
+                let p = binary
+                    .builder
+                    .build_call(
+                        binary.module.get_function("__malloc").unwrap(),
+                        &[malloc_length.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let v = binary.builder.build_pointer_cast(
+                    p,
+                    binary
+                        .module
+                        .get_struct_type("struct.vector")
+                        .unwrap()
+                        .ptr_type(AddressSpace::Generic),
+                    "string",
+                );
+
+                let data_len = unsafe {
+                    binary.builder.build_gep(
+                        v,
+                        &[
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_zero(),
+                        ],
+                        "data_len",
+                    )
+                };
+
+                binary.builder.build_store(data_len, length);
+
+                let data_size = unsafe {
+                    binary.builder.build_gep(
+                        v,
+                        &[
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_int(1, false),
+                        ],
+                        "data_size",
+                    )
+                };
+
+                binary.builder.build_store(data_size, length);
+
+                let data = unsafe {
+                    binary.builder.build_gep(
+                        v,
+                        &[
+                            binary.context.i32_type().const_zero(),
+                            binary.context.i32_type().const_int(2, false),
+                        ],
+                        "data",
+                    )
+                };
+
+                binary.builder.build_call(
+                    binary.module.get_function("copy_return_value").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                data,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        binary.context.i32_type().const_zero().into(),
+                        length.into(),
+                    ],
+                    "",
+                );
+
+                binary.builder.build_load(v, "returndata")
+            }
             _ => unimplemented!(),
         }
     }
