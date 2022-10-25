@@ -1,11 +1,11 @@
 Code Generation Options
 =======================
 
-There are various compiler flags to control certain aspects of the emitted code.
-They can be roughly divided into two categeries: Optimzer passes are enabled by default 
-and attempt to make the emitted code more optimal in regards of storage and gas usage. 
-Debugging options on the other hand are not enabled by default, but they greatly improve
-developer experience (at the cost of increased gas and storage usage).
+There are compiler flags to control code generation. They can be divided into two categories: 
+
+* Optimizer passes are enabled by default and make the generated code more optimal. 
+* Debugging options are not enabled by default, but they greatly improve
+  developer experience, at the cost of increased gas and storage usage.
 
 Optimizer Passes
 ----------------
