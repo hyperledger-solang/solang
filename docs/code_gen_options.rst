@@ -248,5 +248,5 @@ The ``--log-api-return-codes`` flag will make the contract print the return code
 
 .. note::
 
-    For now, this is only implemented for the ``Substrate`` target.
+    This is only implemented for the Substrate target.
 
