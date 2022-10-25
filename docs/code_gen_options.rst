@@ -243,7 +243,7 @@ Log runtime API call results
 
 Runtime API calls are not guaranteed to succeed.
 By design, the low level results of these calls are abstracted away in Solidity.
-But for development purposes, it might be desirable to observe the low level result of such calls directly. 
+For development purposes, it can be desirable to observe the low level return code of such calls.
 The ``--log-api-return-codes`` flag will make the contract print the return code of runtime calls (if there is one).
 
 .. note::
