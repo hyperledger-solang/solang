@@ -241,7 +241,7 @@ but can be enabled using CLI flags. Just make sure not to use them in production
 Log runtime API call results
 ++++++++++++++++++++++++++++
 
-Runtime API calls are not necessarely guaranteed to succeed under all possible circumstances.
+Runtime API calls are not guaranteed to succeed.
 By design, the low level results of these calls might be abstracted away in Solidity.
 But for development purposes, it might be desirable to observe the low level result of such calls directly. 
 The ``--log-api-return-codes`` flag will make the contract print the return code of runtime calls (if there is one).
