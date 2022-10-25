@@ -39,7 +39,7 @@ impl StorageSlot for SubstrateTarget {
             dest_size.into()
         );
 
-        log_return_code(binary, "seal_set_storage", &ret);
+        log_return_code(binary, "seal_set_storage", ret);
     }
 
     fn get_storage_address<'a>(
@@ -63,7 +63,7 @@ impl StorageSlot for SubstrateTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", &exists);
+        log_return_code(binary, "seal_get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -105,7 +105,7 @@ impl StorageSlot for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_clear_storage", &ret);
+        log_return_code(binary, "seal_clear_storage", ret);
     }
 
     fn storage_load_slot<'a>(

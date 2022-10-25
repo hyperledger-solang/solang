@@ -112,6 +112,9 @@ Options:
 \\-\\-no\\-cse
    Disable the :ref:`common-subexpression-elimination` optimization
 
+\\-\\-log\\-api\\-return\\-codes
+   Disable the :ref:`common-subexpression-elimination` optimization
+
 Generating Documentation Usage
 ______________________________
 

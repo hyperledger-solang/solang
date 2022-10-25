@@ -1855,7 +1855,7 @@ fn event_id<'b>(
 }
 
 /// Print the return code of API calls to the debug buffer.
-fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: &IntValue) {
+fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: IntValue) {
     if !binary.log_api_return_codes {
         return;
     }
@@ -1865,9 +1865,11 @@ fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: &IntValue) 
     let fmt = format!("{}=", api);
     let msg = fmt.as_bytes();
     let length = i32_const!(msg.len() as u64 + 16);
-    let out_buf = binary.vector_new(length, i32_const!(1), None);
-    let out_buf_ptr = binary.vector_bytes(out_buf.into());
-    let mut out_buf_offset = out_buf_ptr;
+    let out_buf =
+        binary
+            .builder
+            .build_array_alloca(binary.context.i8_type(), length, "seal_ret_code_buf");
+    let mut out_buf_offset = out_buf;
 
     let msg_string = binary.emit_global_string(&fmt, msg, true);
     let msg_len = binary.context.i32_type().const_int(msg.len() as u64, false);
@@ -1879,7 +1881,7 @@ fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: &IntValue) 
 
     let code = binary
         .builder
-        .build_int_z_extend(*code, binary.context.i64_type(), "val_64bits");
+        .build_int_z_extend(code, binary.context.i64_type(), "val_64bits");
     out_buf_offset = call!("uint2dec", &[out_buf_offset.into(), code.into()])
         .try_as_basic_value()
         .left()
@@ -1892,8 +1894,8 @@ fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: &IntValue) 
             .build_ptr_to_int(out_buf_offset, binary.context.i32_type(), "out_buf_idx"),
         binary
             .builder
-            .build_ptr_to_int(out_buf_ptr, binary.context.i32_type(), "out_buf_ptr"),
+            .build_ptr_to_int(out_buf, binary.context.i32_type(), "out_buf_ptr"),
         "msg_len",
     );
-    call!("seal_debug_message", &[out_buf_ptr.into(), msg_len.into()]);
+    call!("seal_debug_message", &[out_buf.into(), msg_len.into()]);
 }

@@ -175,9 +175,7 @@ fn main() {
                         Arg::new("LOGAPIRETURNS")
                             .help("Log the return codes of runtime API calls in the environment")
                             .long("log-api-return-codes")
-                            .num_args(0..=1)
-                            .require_equals(true)
-                            .default_missing_value("true"),
+                            .action(ArgAction::SetTrue),
                     )
                     .arg(
                         Arg::new("GENERATEDEBUGINFORMATION")
@@ -386,7 +384,7 @@ fn compile(matches: &ArgMatches) {
 
     let generate_debug_info = matches.contains_id("GENERATEDEBUGINFORMATION");
 
-    let log_api_return_codes = matches.contains_id("LOGAPIRETURNS");
+    let log_api_return_codes = *matches.get_one::<bool>("LOGAPIRETURNS").unwrap();
 
     let mut resolver = imports_arg(matches);
 

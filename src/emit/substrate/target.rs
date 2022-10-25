@@ -40,7 +40,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .into()
         );
 
-        log_return_code(binary, "seal_set_storage", &ret);
+        log_return_code(binary, "seal_set_storage", ret);
     }
 
     fn get_storage_extfunc(
@@ -91,7 +91,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_get_storage: ", &ret);
+        log_return_code(binary, "seal_get_storage: ", ret);
 
         // TODO: decide behaviour if not exist
 
@@ -135,7 +135,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             len.into()
         );
 
-        log_return_code(binary, "seal_set_storage", &ret);
+        log_return_code(binary, "seal_set_storage", ret);
 
         binary.builder.build_unconditional_branch(done_storage);
 
@@ -150,7 +150,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_clear_storage", &ret);
+        log_return_code(binary, "seal_clear_storage", ret);
 
         binary.builder.build_unconditional_branch(done_storage);
 
@@ -178,7 +178,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage: ", &exists);
+        log_return_code(binary, "seal_get_storage: ", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -238,7 +238,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage: ", &exists);
+        log_return_code(binary, "seal_get_storage: ", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -326,7 +326,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", &exists);
+        log_return_code(binary, "seal_get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -400,7 +400,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", &exists);
+        log_return_code(binary, "seal_get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -455,7 +455,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             length.into()
         );
 
-        log_return_code(binary, "seal_set_storage", &ret);
+        log_return_code(binary, "seal_set_storage", ret);
     }
 
     /// Push a byte onto a bytes string in storage
@@ -490,7 +490,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", &exists);
+        log_return_code(binary, "seal_get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -532,7 +532,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             length.into()
         );
 
-        log_return_code(binary, "seal_set_storage", &ret);
+        log_return_code(binary, "seal_set_storage", ret);
 
         val
     }
@@ -565,7 +565,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", &exists);
+        log_return_code(binary, "seal_get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -630,7 +630,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             new_length.into()
         );
 
-        log_return_code(binary, "seal_set_storage", &ret);
+        log_return_code(binary, "seal_set_storage", ret);
 
         val
     }
@@ -662,7 +662,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", &exists);
+        log_return_code(binary, "seal_get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -1042,7 +1042,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_debug_message", &ret);
+        log_return_code(binary, "seal_debug_message", ret);
     }
 
     fn create_contract<'b>(
@@ -1164,7 +1164,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_instantiate", &ret);
+        log_return_code(binary, "seal_instantiate", ret);
 
         let is_success =
             binary
@@ -1247,7 +1247,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_call", &ret);
+        log_return_code(binary, "seal_call", ret);
 
         let is_success =
             binary
@@ -1314,7 +1314,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_transfer", &ret);
+        log_return_code(binary, "seal_transfer", ret);
 
         let is_success =
             binary

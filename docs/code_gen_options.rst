@@ -233,7 +233,7 @@ Debugging Options
 -----------------
 
 It may be desirable to have access to debug information regarding the contract execution. 
-However, this might lead to more instructions as well as higher gas usage. Hence, it is disabled by default,
+However, this will lead to more instructions as well as higher gas usage. Hence, it is disabled by default,
 but can be enabled using CLI flags. Just make sure not to use them in production deployments.
 
 .. _log-api-return-codes:
