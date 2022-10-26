@@ -78,7 +78,7 @@ Contents
    :maxdepth: 3
    :caption: Extras
 
-   optimizer
+   code_gen_options
    testing
    contributing
 

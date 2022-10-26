@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{build_solidity, build_solidity_with_overflow_check};
+use crate::{build_solidity, build_solidity_with_options};
 use num_bigint::{BigInt, BigUint, RandBigInt, Sign};
 use parity_scale_codec::{Decode, Encode};
 use rand::seq::SliceRandom;
@@ -956,7 +956,7 @@ fn test_power_overflow_boundaries() {
         }"#
         .replace("intN", &format!("int{}", width));
 
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         let base = BigUint::from(2_u32);
         let mut base_data = base.to_bytes_le();
@@ -1156,7 +1156,7 @@ fn test_overflow_boundaries() {
             }
         }"#
         .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
         let upper_boundary = BigInt::from(2_u32).pow(width - 1).sub(1_u32);
@@ -1287,7 +1287,7 @@ fn test_overflow_detect_signed() {
             }
         }"#
         .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
         let limit = BigInt::from(2_u32).pow(width - 1).sub(1_u32);
@@ -1349,7 +1349,7 @@ fn test_overflow_detect_unsigned() {
             }
         }"#
         .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1].
         let limit = BigUint::from(2_u32).pow(width).sub(1_u32);
@@ -1694,7 +1694,7 @@ fn destructure() {
 #[test]
 #[should_panic]
 fn addition_overflow() {
-    let mut runtime = build_solidity_with_overflow_check(
+    let mut runtime = build_solidity_with_options(
         r#"
         contract overflow {
             function foo(uint8 x) internal returns (uint8) {
@@ -1708,6 +1708,7 @@ fn addition_overflow() {
         }
         "#,
         true,
+        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1715,7 +1716,7 @@ fn addition_overflow() {
 
 #[test]
 fn unchecked_addition_overflow() {
-    let mut runtime = build_solidity_with_overflow_check(
+    let mut runtime = build_solidity_with_options(
         r#"
         contract overflow {
             function foo(uint8 x) internal returns (uint8) {
@@ -1731,6 +1732,7 @@ fn unchecked_addition_overflow() {
         }
         "#,
         true,
+        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1739,7 +1741,7 @@ fn unchecked_addition_overflow() {
 #[test]
 #[should_panic]
 fn subtraction_underflow() {
-    let mut runtime = build_solidity_with_overflow_check(
+    let mut runtime = build_solidity_with_options(
         r#"
         contract underflow {
             function foo(uint64 x) internal returns (uint64) {
@@ -1753,6 +1755,7 @@ fn subtraction_underflow() {
         }
         "#,
         true,
+        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1760,7 +1763,7 @@ fn subtraction_underflow() {
 
 #[test]
 fn unchecked_subtraction_underflow() {
-    let mut runtime = build_solidity_with_overflow_check(
+    let mut runtime = build_solidity_with_options(
         r#"
         contract underflow {
             function foo(uint64 x) internal returns (uint64) {
@@ -1776,6 +1779,7 @@ fn unchecked_subtraction_underflow() {
         }
         "#,
         true,
+        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1784,7 +1788,7 @@ fn unchecked_subtraction_underflow() {
 #[test]
 #[should_panic]
 fn multiplication_overflow() {
-    let mut runtime = build_solidity_with_overflow_check(
+    let mut runtime = build_solidity_with_options(
         r#"
         contract overflow {
             function foo(int8 x) internal returns (int8) {
@@ -1798,6 +1802,7 @@ fn multiplication_overflow() {
         }
         "#,
         true,
+        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1805,7 +1810,7 @@ fn multiplication_overflow() {
 
 #[test]
 fn unchecked_multiplication_overflow() {
-    let mut runtime = build_solidity_with_overflow_check(
+    let mut runtime = build_solidity_with_options(
         r#"
         contract overflow {
             function foo(int8 x) internal returns (int8) {
@@ -1821,6 +1826,7 @@ fn unchecked_multiplication_overflow() {
         }
         "#,
         true,
+        false,
     );
 
     runtime.function("bar", Vec::new());

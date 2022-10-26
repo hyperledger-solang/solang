@@ -43,6 +43,7 @@ pub struct Binary<'a> {
     pub(crate) constructor_abort_value_transfers: bool,
     pub(crate) math_overflow_check: bool,
     pub(crate) generate_debug_info: bool,
+    pub(crate) log_api_return_codes: bool,
     pub builder: Builder<'a>,
     pub dibuilder: DebugInfoBuilder<'a>,
     pub compile_unit: DICompileUnit<'a>,
@@ -68,6 +69,7 @@ impl<'a> Binary<'a> {
         opt: OptimizationLevel,
         math_overflow_check: bool,
         generate_debug_info: bool,
+        log_api_return_codes: bool,
     ) -> Self {
         let std_lib = load_stdlib(context, &ns.target);
         match ns.target {
@@ -80,6 +82,7 @@ impl<'a> Binary<'a> {
                 opt,
                 math_overflow_check,
                 generate_debug_info,
+                log_api_return_codes,
             ),
             Target::Solana => solana::SolanaTarget::build(
                 context,
@@ -90,6 +93,7 @@ impl<'a> Binary<'a> {
                 opt,
                 math_overflow_check,
                 generate_debug_info,
+                log_api_return_codes,
             ),
             Target::EVM => unimplemented!(),
         }
@@ -103,6 +107,7 @@ impl<'a> Binary<'a> {
         opt: OptimizationLevel,
         math_overflow_check: bool,
         generate_debug_info: bool,
+        log_api_return_codes: bool,
     ) -> Self {
         assert!(namespaces.iter().all(|ns| ns.target == Target::Solana));
 
@@ -115,6 +120,7 @@ impl<'a> Binary<'a> {
             opt,
             math_overflow_check,
             generate_debug_info,
+            log_api_return_codes,
         )
     }
 
@@ -237,6 +243,7 @@ impl<'a> Binary<'a> {
         std_lib: &Module<'a>,
         runtime: Option<Box<Binary<'a>>>,
         generate_debug_info: bool,
+        log_api_return_codes: bool,
     ) -> Self {
         LLVM_INIT.get_or_init(|| {
             inkwell::targets::Target::initialize_webassembly(&Default::default());
@@ -310,6 +317,7 @@ impl<'a> Binary<'a> {
             constructor_abort_value_transfers: false,
             math_overflow_check,
             generate_debug_info,
+            log_api_return_codes,
             builder,
             dibuilder,
             compile_unit,

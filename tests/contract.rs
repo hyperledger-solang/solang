@@ -88,6 +88,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
                     Default::default(),
                     false,
                     false,
+                    false,
                 );
             }
             Target::Substrate { .. } => {
@@ -99,6 +100,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
                             &ns,
                             &filename,
                             Default::default(),
+                            false,
                             false,
                             false,
                         );

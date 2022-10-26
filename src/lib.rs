@@ -118,6 +118,7 @@ pub fn compile(
     opt_level: inkwell::OptimizationLevel,
     target: Target,
     math_overflow_check: bool,
+    log_api_return_codes: bool,
 ) -> (Vec<(Vec<u8>, String)>, sema::ast::Namespace) {
     let mut ns = parse_and_resolve(filename, resolver, target);
 
@@ -130,6 +131,7 @@ pub fn compile(
         &mut ns,
         &codegen::Options {
             math_overflow_check,
+            log_api_return_codes,
             opt_level: opt_level.into(),
             ..Default::default()
         },
@@ -160,6 +162,7 @@ pub fn compile_many<'a>(
     opt: inkwell::OptimizationLevel,
     math_overflow_check: bool,
     generate_debug_info: bool,
+    log_api_return_codes: bool,
 ) -> emit::binary::Binary<'a> {
     emit::binary::Binary::build_bundle(
         context,
@@ -168,6 +171,7 @@ pub fn compile_many<'a>(
         opt,
         math_overflow_check,
         generate_debug_info,
+        log_api_return_codes,
     )
 }
 

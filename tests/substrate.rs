@@ -1224,9 +1224,13 @@ impl MockSubstrate {
 }
 
 pub fn build_solidity(src: &str) -> MockSubstrate {
-    build_solidity_with_overflow_check(src, false)
+    build_solidity_with_options(src, false, false)
 }
-pub fn build_solidity_with_overflow_check(src: &str, math_overflow_flag: bool) -> MockSubstrate {
+pub fn build_solidity_with_options(
+    src: &str,
+    math_overflow_flag: bool,
+    log_api_return_codes: bool,
+) -> MockSubstrate {
     let mut cache = FileResolver::new();
 
     cache.set_file_contents("test.sol", src.to_string());
@@ -1237,6 +1241,7 @@ pub fn build_solidity_with_overflow_check(src: &str, math_overflow_flag: bool) -
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
         math_overflow_flag,
+        log_api_return_codes,
     );
 
     ns.print_diagnostics_in_plain(&cache, false);

@@ -2,7 +2,7 @@
 
 use crate::emit::binary::Binary;
 use crate::emit::storage::StorageSlot;
-use crate::emit::substrate::SubstrateTarget;
+use crate::emit::substrate::{log_return_code, SubstrateTarget};
 use crate::emit::TargetRuntime;
 use crate::emit_context;
 use crate::sema::ast::{ArrayLength, Namespace, Type};
@@ -32,12 +32,14 @@ impl StorageSlot for SubstrateTarget {
                 .const_cast(binary.context.i32_type(), false)
         };
 
-        seal_set_storage!(
+        let ret = seal_set_storage!(
             cast_byte_ptr!(slot).into(),
             i32_const!(32).into(),
             cast_byte_ptr!(dest).into(),
             dest_size.into()
         );
+
+        log_return_code(binary, "seal_set_storage", ret);
     }
 
     fn get_storage_address<'a>(
@@ -60,6 +62,8 @@ impl StorageSlot for SubstrateTarget {
             scratch_buf.into(),
             scratch_len.into()
         );
+
+        log_return_code(binary, "seal_get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -92,7 +96,7 @@ impl StorageSlot for SubstrateTarget {
     fn storage_delete_single_slot<'a>(&self, binary: &Binary<'a>, slot: PointerValue) {
         emit_context!(binary);
 
-        call!(
+        let ret = call!(
             "seal_clear_storage",
             &[cast_byte_ptr!(slot).into(), i32_const!(32).into()]
         )
@@ -100,6 +104,8 @@ impl StorageSlot for SubstrateTarget {
         .left()
         .unwrap()
         .into_int_value();
+
+        log_return_code(binary, "seal_clear_storage", ret);
     }
 
     fn storage_load_slot<'a>(
