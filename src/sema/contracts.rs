@@ -62,6 +62,7 @@ impl ast::Contract {
         opt: inkwell::OptimizationLevel,
         math_overflow_check: bool,
         generate_debug_info: bool,
+        log_api_return_codes: bool,
     ) -> emit::binary::Binary {
         emit::binary::Binary::build(
             context,
@@ -71,6 +72,7 @@ impl ast::Contract {
             opt,
             math_overflow_check,
             generate_debug_info,
+            log_api_return_codes,
         )
     }
 

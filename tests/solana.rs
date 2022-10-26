@@ -141,6 +141,7 @@ fn build_solidity_with_overflow_check(src: &str, math_overflow_flag: bool) -> Vi
         inkwell::OptimizationLevel::Default,
         math_overflow_flag,
         false,
+        false,
     );
 
     let code = binary

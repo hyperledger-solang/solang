@@ -132,6 +132,7 @@ impl SubstrateTarget {
         opt: OptimizationLevel,
         math_overflow_check: bool,
         generate_debug_info: bool,
+        log_api_return_codes: bool,
     ) -> Binary<'a> {
         let mut binary = Binary::new(
             context,
@@ -143,6 +144,7 @@ impl SubstrateTarget {
             std_lib,
             None,
             generate_debug_info,
+            log_api_return_codes,
         );
 
         binary.set_early_value_aborts(contract, ns);
@@ -1850,4 +1852,50 @@ fn event_id<'b>(
         .unwrap();
 
     Some(binary.context.i8_type().const_int(event_id as u64, false))
+}
+
+/// Print the return code of API calls to the debug buffer.
+fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: IntValue) {
+    if !binary.log_api_return_codes {
+        return;
+    }
+
+    emit_context!(binary);
+
+    let fmt = format!("{}=", api);
+    let msg = fmt.as_bytes();
+    let length = i32_const!(msg.len() as u64 + 16);
+    let out_buf =
+        binary
+            .builder
+            .build_array_alloca(binary.context.i8_type(), length, "seal_ret_code_buf");
+    let mut out_buf_offset = out_buf;
+
+    let msg_string = binary.emit_global_string(&fmt, msg, true);
+    let msg_len = binary.context.i32_type().const_int(msg.len() as u64, false);
+    call!(
+        "__memcpy",
+        &[out_buf_offset.into(), msg_string.into(), msg_len.into()]
+    );
+    out_buf_offset = unsafe { binary.builder.build_gep(out_buf_offset, &[msg_len], "") };
+
+    let code = binary
+        .builder
+        .build_int_z_extend(code, binary.context.i64_type(), "val_64bits");
+    out_buf_offset = call!("uint2dec", &[out_buf_offset.into(), code.into()])
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_pointer_value();
+
+    let msg_len = binary.builder.build_int_sub(
+        binary
+            .builder
+            .build_ptr_to_int(out_buf_offset, binary.context.i32_type(), "out_buf_idx"),
+        binary
+            .builder
+            .build_ptr_to_int(out_buf, binary.context.i32_type(), "out_buf_ptr"),
+        "msg_len",
+    );
+    call!("seal_debug_message", &[out_buf.into(), msg_len.into()]);
 }

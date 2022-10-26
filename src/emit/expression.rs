@@ -131,6 +131,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.opt,
                 bin.math_overflow_check,
                 bin.generate_debug_info,
+                bin.log_api_return_codes,
             );
 
             let code = if *runtime && target_bin.runtime.is_some() {
