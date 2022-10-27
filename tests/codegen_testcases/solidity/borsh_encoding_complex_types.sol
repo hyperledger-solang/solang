@@ -31,7 +31,7 @@ contract EncodingTest {
         // CHECK: block4: # end_for
         // CHECK: ty:bytes %abi_encoded.temp.10 = (alloc bytes len %array_bytes_size_0.temp.8)
 		// CHECK: ty:uint32 %temp.11 = uint32 0
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.10 offset:%temp.11 value:(builtin ArrayLength (%temp.7))
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.10 offset:uint32 0 value:(builtin ArrayLength (%temp.7))
 	    // CHECK: ty:uint32 %temp.11 = uint32 4
 	    // CHECK: ty:uint32 %for_i_0.temp.12 = uint32 0
 	    // CHECK: branch block5
@@ -80,7 +80,7 @@ contract EncodingTest {
 	    // CHECK: ty:bytes %abi_encoded.temp.17 = (alloc bytes len (uint32 8 + %array_bytes_size_0.temp.15))
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.17 offset:uint32 0 value:(load (struct %cte field 0))
 		// CHECK: ty:uint32 %temp.18 = uint32 8
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.17 offset:%temp.18 value:(builtin ArrayLength ((load (struct %cte field 1))))
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.17 offset:uint32 8 value:(builtin ArrayLength ((load (struct %cte field 1))))
 	    // CHECK: ty:uint32 %temp.18 = uint32 12
 	    // CHECK: ty:uint32 %for_i_0.temp.19 = uint32 0
 	    // CHECK: branch block5
@@ -130,7 +130,7 @@ contract EncodingTest {
         // CHECK: block4: # end_for
 	    // CHECK: ty:bytes %abi_encoded.temp.26 = (alloc bytes len %array_bytes_size_0.temp.22)
 		// CHECK: ty:uint32 %temp.27 = uint32 0
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:%temp.27 value:(builtin ArrayLength (%temp.21))
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:uint32 0 value:(builtin ArrayLength (%temp.21))
 	    // CHECK: ty:uint32 %temp.27 = uint32 4
 	    // CHECK: ty:uint32 %for_i_0.temp.28 = uint32 0	
         // CHECK: branch block9

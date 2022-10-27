@@ -2,6 +2,7 @@
 
 use crate::{build_solidity, BorshToken};
 use borsh::BorshDeserialize;
+use num_bigint::BigInt;
 
 #[test]
 fn integers_bool_enum() {
@@ -905,5 +906,46 @@ fn uint8_arrays() {
     assert_eq!(
         decoded.item_3,
         [0, 19, 38, 57, 76, 95, 114, 133, 152, 171, 190, 209, 228]
+    );
+}
+
+#[test]
+fn multiple_external_calls() {
+    let mut vm = build_solidity(
+        r#"
+
+contract caller {
+    function doThis(int64 a) public pure returns (int64) {
+        return a + 2;
+    }
+
+    function doThat(int32 b) public pure returns (int32) {
+        return b + 3;
+    }
+
+    function do_call() pure public returns (int64, int32) {
+        return (this.doThis(5), this.doThat(3));
+    }
+}
+        "#,
+    );
+
+    vm.constructor("caller", &[]);
+
+    let returns = vm.function("do_call", &[], &[], None);
+    assert_eq!(returns.len(), 2);
+    assert_eq!(
+        returns[0],
+        BorshToken::Int {
+            width: 64,
+            value: BigInt::from(7u8)
+        }
+    );
+    assert_eq!(
+        returns[1],
+        BorshToken::Int {
+            width: 32,
+            value: BigInt::from(6u8)
+        }
     );
 }

@@ -17,7 +17,7 @@ use solang_parser::pt::Loc;
 use std::collections::HashMap;
 use std::ops::{AddAssign, MulAssign};
 
-/// This struct implements the trait Encoding for Borsh encoding
+/// This struct implements the trait AbiEncoding for Borsh encoding
 pub(super) struct BorshEncoding {
     /// The trait AbiEncoding has a 'cache_storage_loaded' function, which needs this HashMap to work.
     /// Encoding happens in two steps. First, we look at each argument to calculate their size. If an
@@ -31,7 +31,7 @@ pub(super) struct BorshEncoding {
     ///
     /// For more information, check the comment at function 'cache_storage_load' on encoding/mod.rs
     storage_cache: HashMap<usize, Expression>,
-
+    /// Are we packed encoding?
     packed_encoder: bool,
 }
 
@@ -88,6 +88,7 @@ impl AbiEncoding for BorshEncoding {
         cfg: &mut ControlFlowGraph,
         buffer_size_expr: Option<Expression>,
     ) -> Vec<Expression> {
+        assert!(!self.packed_encoder);
         let buffer_size = vartab.temp_anonymous(&Type::Uint(32));
         if let Some(length_expression) = buffer_size_expr {
             cfg.add(
@@ -787,7 +788,19 @@ impl BorshEncoding {
                     vec![buffer.clone(), offset.clone()],
                 );
 
-                (read_value, size)
+                let read_var = vartab.temp_anonymous(ty);
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: Loc::Codegen,
+                        res: read_var,
+                        expr: read_value,
+                    },
+                );
+
+                let read_expr = Expression::Variable(Loc::Codegen, ty.clone(), read_var);
+
+                (read_expr, size)
             }
 
             Type::DynamicBytes | Type::String => {

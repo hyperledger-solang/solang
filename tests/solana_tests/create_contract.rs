@@ -9,16 +9,20 @@ fn simple_create_contract() {
         contract bar0 {
             function test_other() public returns (bar1) {
                 bar1 x = new bar1("yo from bar0");
+
                 return x;
             }
+
             function call_bar1_at_address(bar1 a, string x) public {
                 a.say_hello(x);
             }
         }
+
         contract bar1 {
             constructor(string v) {
                 print("bar1 says: " + v);
             }
+
             function say_hello(string v) public {
                 print("Hello {}".format(v));
             }

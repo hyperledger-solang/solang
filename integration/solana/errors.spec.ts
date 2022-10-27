@@ -2,7 +2,7 @@ import { TransactionError } from '@solana/solidity';
 import expect from 'expect';
 import { loadContract } from './setup';
 
-describe('Deploy solang contract and test', function () {
+describe('Testing errors', function () {
     this.timeout(500000);
 
     it('errors', async function () {
@@ -18,8 +18,8 @@ describe('Deploy solang contract and test', function () {
             expect(e).toBeInstanceOf(TransactionError);
             if (e instanceof TransactionError) {
                 expect(e.message).toBe('Do the revert thing');
-                expect(e.computeUnitsUsed).toBeGreaterThan(1000);
-                expect(e.computeUnitsUsed).toBeLessThan(1110);
+                expect(e.computeUnitsUsed).toBeGreaterThan(1400);
+                expect(e.computeUnitsUsed).toBeLessThan(1600);
                 expect(e.logs.length).toBeGreaterThan(1);
             }
             return;
@@ -31,8 +31,8 @@ describe('Deploy solang contract and test', function () {
             expect(e).toBeInstanceOf(TransactionError);
             if (e instanceof TransactionError) {
                 expect(e.message).toBe('Do the revert thing');
-                expect(e.computeUnitsUsed).toBeGreaterThan(1000);
-                expect(e.computeUnitsUsed).toBeLessThan(1100);
+                expect(e.computeUnitsUsed).toBeGreaterThan(1400);
+                expect(e.computeUnitsUsed).toBeLessThan(1600);
                 expect(e.logs.length).toBeGreaterThan(1);
             }
             return;

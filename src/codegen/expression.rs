@@ -1299,6 +1299,21 @@ fn abi_encode_packed(
     encoded
 }
 
+fn encode_with_selector(
+    loc: &pt::Loc,
+    selector: Expression,
+    mut args: Vec<Expression>,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+) -> Expression {
+    let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
+    encoder_args.push(selector);
+    encoder_args.append(&mut args);
+    let mut encoder = create_encoder(ns, false);
+    encoder.abi_encode(loc, encoder_args, ns, vartab, cfg).0
+}
+
 fn abi_encode_with_selector(
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
@@ -1319,15 +1334,10 @@ fn abi_encode_with_selector(
         vartab,
         opt,
     );
-    let mut args = args_iter
+    let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-    let mut encoder = create_encoder(ns, false);
-    let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
-    encoder_args.push(selector);
-    encoder_args.append(&mut args);
-    let (encoded, _) = encoder.abi_encode(loc, encoder_args, ns, vartab, cfg);
-    encoded
+    encode_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
 fn abi_encode_with_signature(
@@ -1349,15 +1359,10 @@ fn abi_encode_with_signature(
     );
     let hash = expression(&hash, cfg, contract_no, func, ns, vartab, opt);
     let selector = hash.cast(&Type::Bytes(4), ns);
-    let mut args = args_iter
+    let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-    let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
-    encoder_args.push(selector);
-    encoder_args.append(&mut args);
-    let mut encoder = create_encoder(ns, false);
-    let (encoded, _) = encoder.abi_encode(loc, encoder_args, ns, vartab, cfg);
-    encoded
+    encode_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
 fn abi_encode_call(
@@ -1385,16 +1390,10 @@ fn abi_encode_call(
         vartab,
         opt,
     );
-    let mut args = args_iter
+    let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-
-    let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
-    encoder_args.push(selector);
-    encoder_args.append(&mut args);
-    let mut encoder = create_encoder(ns, false);
-    let (encoded, _) = encoder.abi_encode(loc, encoder_args, ns, vartab, cfg);
-    encoded
+    encode_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
 fn builtin_evm_gasprice(
@@ -2183,124 +2182,23 @@ pub fn emit_function_call(
 
             let (payload, address) = if ns.target == Target::Solana && call_args.accounts.is_none()
             {
-                // TODO: Write this in a separate function
-                let encoded_arr = vartab.temp_anonymous(&Type::DynamicBytes);
-                let args_size = Expression::Builtin(
-                    Loc::Codegen,
-                    vec![Type::Uint(32)],
-                    Builtin::ArrayLength,
-                    vec![args.clone()],
-                );
-                let const_size =
-                    Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(77u8));
-                let arr_size = Expression::Add(
-                    Loc::Codegen,
-                    Type::Uint(32),
-                    false,
-                    Box::new(args_size.clone()),
-                    Box::new(const_size),
-                );
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc: Loc::Codegen,
-                        res: encoded_arr,
-                        expr: Expression::AllocDynamicArray(
-                            Loc::Codegen,
-                            Type::DynamicBytes,
-                            Box::new(arr_size),
-                            None,
-                        ),
-                    },
-                );
+                let encoder_args = vec![
+                    address,
+                    Expression::Builtin(
+                        *loc,
+                        vec![Type::Address(false)],
+                        Builtin::GetAddress,
+                        vec![],
+                    ),
+                    value.clone(),
+                    Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
+                    Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
+                    args,
+                ];
 
-                let buf_var = Expression::Variable(Loc::Codegen, Type::DynamicBytes, encoded_arr);
-                cfg.add(
-                    vartab,
-                    Instr::WriteBuffer {
-                        buf: buf_var.clone(),
-                        value: address,
-                        offset: Expression::NumberLiteral(
-                            Loc::Codegen,
-                            Type::Uint(32),
-                            BigInt::zero(),
-                        ),
-                    },
-                );
-                cfg.add(
-                    vartab,
-                    Instr::WriteBuffer {
-                        buf: buf_var.clone(),
-                        value: Expression::Builtin(
-                            *loc,
-                            vec![Type::Address(false)],
-                            Builtin::GetAddress,
-                            vec![],
-                        ),
-                        offset: Expression::NumberLiteral(
-                            Loc::Codegen,
-                            Type::Uint(32),
-                            BigInt::from(32u8),
-                        ),
-                    },
-                );
-                cfg.add(
-                    vartab,
-                    Instr::WriteBuffer {
-                        buf: buf_var.clone(),
-                        value: value.clone(),
-                        offset: Expression::NumberLiteral(
-                            Loc::Codegen,
-                            Type::Uint(32),
-                            BigInt::from(64u8),
-                        ),
-                    },
-                );
-
-                cfg.add(
-                    vartab,
-                    Instr::MemCopy {
-                        source: args,
-                        destination: Expression::AdvancePointer {
-                            pointer: Box::new(buf_var.clone()),
-                            bytes_offset: Box::new(Expression::NumberLiteral(
-                                Loc::Codegen,
-                                Type::Uint(32),
-                                BigInt::from(77u8),
-                            )),
-                        },
-                        bytes: args_size,
-                    },
-                );
-                (buf_var, None)
-                // (
-                //     Expression::AbiEncode {
-                //         loc: *loc,
-                //         packed: vec![
-                //             address,
-                //             Expression::Builtin(
-                //                 *loc,
-                //                 vec![Type::Address(false)],
-                //                 Builtin::GetAddress,
-                //                 Vec::new(),
-                //             ),
-                //             value.clone(),
-                //             Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
-                //             Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
-                //             args,
-                //         ],
-                //         args: Vec::new(),
-                //         tys: vec![
-                //             Type::Address(false),
-                //             Type::Address(false),
-                //             Type::Uint(64),
-                //             Type::Bytes(4),
-                //             Type::Bytes(1),
-                //             Type::DynamicBytes,
-                //         ],
-                //     },
-                //     None,
-                // )
+                let mut encoder = create_encoder(ns, true);
+                let (encoded, _) = encoder.abi_encode(loc, encoder_args, ns, vartab, cfg);
+                (encoded, None)
             } else {
                 (args, Some(address))
             };
@@ -2365,15 +2263,7 @@ pub fn emit_function_call(
 
                 tys.insert(0, Type::Bytes(selector.len() as u8));
 
-                let address = if dest_func.selector.is_some()
-                    || matches!(ns.target, Target::Substrate { .. })
-                {
-                    args.insert(
-                        0,
-                        Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector),
-                    );
-                    Some(address)
-                } else {
+                let address = if ns.target == Target::Solana && dest_func.selector.is_none() {
                     let mut encoder_args: Vec<Expression> = Vec::with_capacity(6 + args.len());
                     encoder_args.push(address);
                     encoder_args.push(Expression::Builtin(
@@ -2401,6 +2291,12 @@ pub fn emit_function_call(
                     encoder_args.append(&mut args);
                     args = encoder_args;
                     None
+                } else {
+                    args.insert(
+                        0,
+                        Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector),
+                    );
+                    Some(address)
                 };
 
                 let mut encoder = create_encoder(ns, false);

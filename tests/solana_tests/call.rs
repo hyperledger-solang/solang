@@ -137,13 +137,8 @@ fn external_raw_call_with_returns() {
             function test_other(bar1 x) public returns (int64) {
                 bytes select = abi.encodeWithSelector(SELECTOR, int64(7));
                 bytes signature = abi.encodeWithSignature("test_bar(int64)", int64(7));
-                print("{}".format(select));
-                print("{}".format(signature));
                 require(select == signature, "must be the same");
-                print("{}".format(signature));
-                print("after require");
                 (, bytes raw) = address(x).call(signature);
-                print("after call");
                 (int64 v) = abi.decode(raw, (int64));
                 return v + 5;
             }

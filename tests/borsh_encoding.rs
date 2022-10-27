@@ -1,9 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use byte_slice_cast::AsByteSlice;
 use ethabi::{Param, ParamType};
 use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
 use std::cmp::Ordering;
 
+/// This is the token that should be used for each function call in Solana runtime tests
 #[derive(Debug, PartialEq, Clone)]
 pub enum BorshToken {
     Address([u8; 32]),
@@ -19,6 +22,7 @@ pub enum BorshToken {
 }
 
 impl BorshToken {
+    /// Encode the parameter into the buffer
     pub fn encode(&self, buffer: &mut Vec<u8>) {
         match self {
             BorshToken::Address(data) => {
@@ -100,6 +104,7 @@ impl BorshToken {
     }
 }
 
+/// Encode a signed integer
 fn encode_int(width: u16, value: &BigInt, buffer: &mut Vec<u8>) {
     match width {
         8 => {
@@ -149,6 +154,7 @@ fn encode_int(width: u16, value: &BigInt, buffer: &mut Vec<u8>) {
     }
 }
 
+/// Encode an unsigned integer
 fn encode_uint(width: u16, value: &BigInt, buffer: &mut Vec<u8>) {
     match width {
         8 => {
@@ -193,6 +199,7 @@ fn encode_uint(width: u16, value: &BigInt, buffer: &mut Vec<u8>) {
     }
 }
 
+/// Decode the output buffer of a function given the description of its parameters
 pub fn decode_output(params: &[Param], data: &[u8]) -> Vec<BorshToken> {
     let mut offset: usize = 0;
     let mut decoded: Vec<BorshToken> = Vec::with_capacity(params.len());
@@ -204,6 +211,7 @@ pub fn decode_output(params: &[Param], data: &[u8]) -> Vec<BorshToken> {
     decoded
 }
 
+/// Encode the arguments of a function
 pub fn encode_arguments(args: &[BorshToken]) -> Vec<u8> {
     let mut encoded: Vec<u8> = Vec::new();
     for item in args {
@@ -213,6 +221,7 @@ pub fn encode_arguments(args: &[BorshToken]) -> Vec<u8> {
     encoded
 }
 
+/// Decode a parameter at a given offset
 fn decode_at_offset(data: &[u8], offset: &mut usize, ty: &ParamType) -> BorshToken {
     match ty {
         ParamType::Address => {

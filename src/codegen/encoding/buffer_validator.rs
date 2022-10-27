@@ -74,7 +74,7 @@ impl BufferValidator<'_> {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) {
-        self.build_branch(offset, ns, vartab, cfg);
+        self.build_out_of_bounds_fail_branch(offset, ns, vartab, cfg);
     }
 
     /// Checks if a buffer validation is necessary
@@ -183,11 +183,11 @@ impl BufferValidator<'_> {
         );
 
         self.verified_until = Some(maximum_verifiable);
-        self.build_branch(reach, ns, vartab, cfg);
+        self.build_out_of_bounds_fail_branch(reach, ns, vartab, cfg);
     }
 
     /// Builds a branch for failing if we are out of bounds
-    fn build_branch(
+    fn build_out_of_bounds_fail_branch(
         &self,
         offset: Expression,
         ns: &Namespace,

@@ -1201,7 +1201,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _tys: &[ast::Type],
         _ns: &ast::Namespace,
     ) -> PointerValue<'b> {
-        unreachable!("Abi encoding is implemented in code generation for Solana")
+        unreachable!("ABI encoding is implemented in code generation for Solana")
     }
 
     fn abi_encode(
@@ -1214,7 +1214,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _tys: &[ast::Type],
         _ns: &ast::Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        unreachable!("Abi encoding is implemented in code generation for Solana")
+        unreachable!("ABI encoding is implemented in code generation for Solana")
     }
 
     fn abi_decode<'b>(
@@ -1227,7 +1227,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _spec: &[ast::Parameter],
         _ns: &ast::Namespace,
     ) {
-        unreachable!("Abi encoding is implemented in code generation for Solana.")
+        unreachable!("ABI encoding is implemented in code generation for Solana.")
     }
 
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {

@@ -54,7 +54,7 @@ pub(super) fn call_constructor(
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
 
-    let mut args: Vec<Expression> = Vec::new();
+    let mut args;
     if ns.target == Target::Solana {
         let value_arg = value.clone().unwrap_or_else(|| {
             Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::zero())
@@ -62,11 +62,11 @@ pub(super) fn call_constructor(
         let selector = ns.contracts[*contract_no].selector();
         let padding = Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero());
 
-        args.resize(3, Expression::Poison);
-        args[0] = value_arg;
-        args[1] = Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::from(selector));
-        args[2] = padding;
-        args.append(&mut constructor_args);
+        args = vec![
+            value_arg,
+            Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::from(selector)),
+            padding,
+        ];
     } else {
         let selector = match constructor_no {
             Some(func_no) => ns.functions[*func_no].selector(),
@@ -78,13 +78,13 @@ pub(super) fn call_constructor(
                 .selector(),
         };
 
-        args.push(Expression::NumberLiteral(
+        args = vec![Expression::NumberLiteral(
             *loc,
             Type::Uint(32),
             BigInt::from_bytes_le(Sign::Plus, &selector),
-        ));
-        args.append(&mut constructor_args);
+        )];
     };
+    args.append(&mut constructor_args);
 
     let mut encoder = create_encoder(ns, false);
     let (encoded_args, encoded_args_len) = encoder.abi_encode(loc, args, ns, vartab, cfg);

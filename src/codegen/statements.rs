@@ -1032,10 +1032,6 @@ fn try_catch(
                     opt,
                 );
 
-                // let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
-                //
-                // tys.insert(0, Type::Bytes(4));
-
                 let mut args = args
                     .iter()
                     .map(|a| expression(a, cfg, callee_contract_no, Some(func), ns, vartab, opt))

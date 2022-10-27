@@ -165,7 +165,7 @@ return 3;
     function test13() public returns (int){
 
         int[] memory vec = new int[](5);
-        // CHECK: alloc int256[] len %array_length.temp.100
+        // CHECK: alloc int256[] len uint32 5
         vec[0] = 3;
 
         return vec[1];

@@ -345,6 +345,13 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         data_len: data_len.0,
                     };
                 }
+                Instr::WriteBuffer { buf, offset, value } => {
+                    cfg.blocks[block_no].instr[instr_no].1 = Instr::WriteBuffer {
+                        buf: buf.clone(),
+                        offset: expression(offset, Some(&vars), cfg, ns).0,
+                        value: expression(value, Some(&vars), cfg, ns).0,
+                    }
+                }
                 _ => (),
             }
 
@@ -1139,14 +1146,25 @@ fn expression(
                 false,
             )
         }
+
+        Expression::AllocDynamicArray(loc, ty, len, init) => (
+            Expression::AllocDynamicArray(
+                *loc,
+                ty.clone(),
+                Box::new(expression(len, vars, cfg, ns).0),
+                init.clone(),
+            ),
+            false,
+        ),
+
         Expression::NumberLiteral(..)
         | Expression::RationalNumberLiteral(..)
         | Expression::BoolLiteral(..)
         | Expression::BytesLiteral(..)
         | Expression::CodeLiteral(..)
         | Expression::FunctionArg(..) => (expr.clone(), true),
-        Expression::AllocDynamicArray(..)
-        | Expression::ReturnData(_)
+
+        Expression::ReturnData(_)
         | Expression::Undefined(_)
         | Expression::FormatString { .. }
         | Expression::GetRef(..)

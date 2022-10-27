@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::vartable::Vartable;
@@ -5,7 +7,9 @@ use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type};
 use solang_parser::pt::Loc;
 
+/// This struct implements the trait AbiEncoding for Parity's Scale encoding
 pub(super) struct ScaleEncoding {
+    /// Are we pakced encoding?
     packed_encoder: bool,
 }
 
@@ -69,6 +73,7 @@ impl AbiEncoding for ScaleEncoding {
         cfg: &mut ControlFlowGraph,
         buffer_size: Option<Expression>,
     ) -> Vec<Expression> {
+        assert!(!self.packed_encoder);
         let mut returns: Vec<Expression> = Vec::with_capacity(types.len());
         let mut var_nos: Vec<usize> = Vec::with_capacity(types.len());
         let mut decode_params: Vec<Parameter> = Vec::with_capacity(types.len());
