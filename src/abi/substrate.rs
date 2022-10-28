@@ -390,7 +390,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             }
         };
 
-        let ret_type = ReturnTypeSpec::<PortableForm> { opt_type: ret_spec };
+        let ret_type = ReturnTypeSpec::new_custom(ret_spec);
 
         let args = f
             .params
