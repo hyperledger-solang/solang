@@ -251,8 +251,6 @@ jobs:
         anchor build
       working-directory: ./integration/anchor
     - run: nohup solana-test-validator -q &
-    - run: npm install
-      working-directory: ./integration/solana
     - name: Deploy Anchor program
       run: |
         solana -ul airdrop -k id.json 10

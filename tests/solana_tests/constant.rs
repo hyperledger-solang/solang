@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::{ethereum_types::U256, Token};
+use crate::{build_solidity, BorshToken};
+use num_bigint::BigInt;
 
 #[test]
 fn constant() {
@@ -23,7 +23,13 @@ fn constant() {
     vm.constructor("foo", &[]);
 
     let returns = vm.function("f", &[], &[], None);
-    assert_eq!(returns, vec![Token::Uint(U256::from(42))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(42u8)
+        }]
+    );
 
     let mut vm = build_solidity(
         r#"
@@ -43,5 +49,11 @@ fn constant() {
     vm.constructor("foo", &[]);
 
     let returns = vm.function("f", &[], &[], None);
-    assert_eq!(returns, vec![Token::Uint(U256::from(42))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(42u8)
+        }]
+    );
 }

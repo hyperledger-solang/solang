@@ -1131,18 +1131,25 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             };
 
             let size = expression(target, bin, bytes, &w.vars, function, ns);
+            let arg_type = bin.context.i8_type().ptr_type(AddressSpace::Generic);
 
-            if matches!(bytes, Expression::NumberLiteral(..)) {
-                let _ = bin
-                    .builder
-                    .build_memcpy(dest, 1, src, 1, size.into_int_value());
+            let src = if src.get_type() == arg_type {
+                src
             } else {
-                bin.builder.build_call(
-                    bin.module.get_function("__memcpy").unwrap(),
-                    &[dest.into(), src.into(), size.into()],
-                    "",
-                );
-            }
+                bin.builder.build_pointer_cast(src, arg_type, "")
+            };
+
+            let dest = if dest.get_type() == arg_type {
+                dest
+            } else {
+                bin.builder.build_pointer_cast(dest, arg_type, "")
+            };
+
+            bin.builder.build_call(
+                bin.module.get_function("__memcpy").unwrap(),
+                &[dest.into(), src.into(), size.into()],
+                "",
+            );
         }
         Instr::Switch {
             cond,

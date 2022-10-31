@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_new, build_solidity, AccountState};
-use ethabi::{ethereum_types::U256, Function, StateMutability, Token};
+use crate::{account_new, build_solidity, AccountState, BorshToken};
+use ethabi::{Function, StateMutability};
+use num_bigint::BigInt;
 
 #[test]
 fn get_balance() {
@@ -29,7 +30,13 @@ fn get_balance() {
 
     let returns = vm.function("test", &[], &[], Some(&new));
 
-    assert_eq!(returns, vec![Token::Uint(U256::from(102))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 64,
+            value: BigInt::from(102u8),
+        }]
+    );
 }
 
 #[test]
@@ -59,14 +66,17 @@ fn send_fails() {
     let returns = vm.function(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(false)]);
+    assert_eq!(returns, vec![BorshToken::Bool(false)]);
 }
 
 #[test]
@@ -100,14 +110,17 @@ fn send_succeeds() {
     let returns = vm.function(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(true)]);
+    assert_eq!(returns, vec![BorshToken::Bool(true)]);
 
     assert_eq!(vm.account_data.get_mut(&new).unwrap().lamports, 107);
 
@@ -146,14 +159,17 @@ fn send_overflows() {
     let returns = vm.function(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(false)]);
+    assert_eq!(returns, vec![BorshToken::Bool(false)]);
 
     assert_eq!(
         vm.account_data.get_mut(&new).unwrap().lamports,
@@ -195,8 +211,11 @@ fn transfer_succeeds() {
     vm.function(
         "transfer",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
@@ -239,12 +258,16 @@ fn transfer_fails_not_enough() {
     let res = vm.function_must_fail(
         "transfer",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(104)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(104u8),
+            },
         ],
         &[],
         None,
     );
+    std::println!("{:?}", res);
     assert!(res.is_err());
 }
 
@@ -279,8 +302,11 @@ fn transfer_fails_overflow() {
     let res = vm.function_must_fail(
         "transfer",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(104)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(104u8),
+            },
         ],
         &[],
         None,
@@ -357,8 +383,11 @@ fn value_overflows() {
     let res = vm.function_must_fail(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(u64::MAX as u128 + 1)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 128,
+                value: BigInt::from(u64::MAX as u128 + 1),
+            },
         ],
         &[],
         None,
@@ -368,8 +397,11 @@ fn value_overflows() {
     let res = vm.function_must_fail(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(u128::MAX)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 128,
+                value: BigInt::from(u128::MAX),
+            },
         ],
         &[],
         None,
@@ -379,14 +411,17 @@ fn value_overflows() {
     let returns = vm.function(
         "send",
         &[
-            Token::FixedBytes(new.to_vec()),
-            Token::Uint(U256::from(102)),
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 128,
+                value: BigInt::from(102u8),
+            },
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(false)]);
+    assert_eq!(returns, vec![BorshToken::Bool(false)]);
 
     assert_eq!(
         vm.account_data.get_mut(&new).unwrap().lamports,

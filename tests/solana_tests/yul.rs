@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_new, build_solidity};
-use byte_slice_cast::AsByteSlice;
-use ethabi::{ethereum_types::U256, FixedBytes, Token, Uint};
+use crate::{account_new, build_solidity, BorshToken};
+use num_bigint::{BigInt, Sign};
+use num_traits::{One, Zero};
 
 #[test]
 fn suffixes_access() {
@@ -63,15 +63,33 @@ contract testing  {
     vm.constructor("testing", &[]);
 
     let returns = vm.function("test_slot", &[], &[], None);
-    assert_eq!(returns, vec![Token::Uint(U256::from(56016))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(56016u16)
+        }]
+    );
 
     let returns = vm.function(
         "call_data_array",
-        &[Token::Array(vec![
-            Token::Uint(U256::from(3)),
-            Token::Uint(U256::from(5)),
-            Token::Uint(U256::from(7)),
-            Token::Uint(U256::from(11)),
+        &[BorshToken::Array(vec![
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(3u8),
+            },
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(5u8),
+            },
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(7u8),
+            },
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(11u8),
+            },
         ])],
         &[],
         None,
@@ -81,8 +99,14 @@ contract testing  {
         returns,
         vec![
             // the heap is 0x300000000. The header 32 bytes (sizeof(chunk) in heap.c)
-            Token::Uint(U256::from(0x300000020u64)),
-            Token::Uint(U256::from(4))
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(0x300000020u64)
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(4u8)
+            },
         ]
     );
 
@@ -90,8 +114,14 @@ contract testing  {
     assert_eq!(
         returns,
         vec![
-            Token::Uint(U256::from_big_endian(vm.stack[0].data.as_ref())),
-            Token::Uint(U256::from(2081714652u32))
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_bytes_be(Sign::Plus, vm.stack[0].data.as_ref())
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(2081714652u32)
+            },
         ]
     );
 }
@@ -138,22 +168,73 @@ contract testing  {
 
     vm.constructor("testing", &[]);
 
-    let returns = vm.function("general_test", &[Token::Uint(Uint::from(5))], &[], None);
+    let returns = vm.function(
+        "general_test",
+        &[BorshToken::Uint {
+            width: 64,
+            value: BigInt::from(5u8),
+        }],
+        &[],
+        None,
+    );
     assert_eq!(
         returns,
-        vec![Token::Uint(Uint::from(100)), Token::Uint(Uint::from(20))]
+        vec![
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(100u8),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(20u8)
+            },
+        ]
     );
 
-    let returns = vm.function("general_test", &[Token::Uint(Uint::from(78))], &[], None);
+    let returns = vm.function(
+        "general_test",
+        &[BorshToken::Uint {
+            width: 64,
+            value: BigInt::from(78u8),
+        }],
+        &[],
+        None,
+    );
     assert_eq!(
         returns,
-        vec![Token::Uint(Uint::from(20)), Token::Uint(Uint::from(0))]
+        vec![
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(20u8),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::zero(),
+            },
+        ]
     );
 
-    let returns = vm.function("general_test", &[Token::Uint(Uint::from(259))], &[], None);
+    let returns = vm.function(
+        "general_test",
+        &[BorshToken::Uint {
+            width: 64,
+            value: BigInt::from(259u16),
+        }],
+        &[],
+        None,
+    );
     assert_eq!(
         returns,
-        vec![Token::Uint(Uint::from(0)), Token::Uint(Uint::from(10))]
+        vec![
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::zero(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(10u8)
+            },
+        ]
     );
 }
 
@@ -195,62 +276,143 @@ contract c {
     ];
     let returns = vm.function(
         "getByte",
-        &[Token::Uint(U256::from_big_endian(&num))],
-        &[],
-        None,
-    );
-    assert_eq!(returns, vec![Token::Uint(U256::from(6))]);
-
-    let returns = vm.function(
-        "divide",
-        &[Token::Uint(U256::from(4)), Token::Uint(U256::from(3))],
+        &[BorshToken::Uint {
+            width: 256,
+            value: BigInt::from_bytes_be(Sign::Plus, &num),
+        }],
         &[],
         None,
     );
     assert_eq!(
         returns,
-        vec![Token::Uint(U256::from(1)), Token::Uint(U256::from(1))]
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(6u8),
+        }]
     );
 
     let returns = vm.function(
         "divide",
-        &[Token::Uint(U256::from(4)), Token::Uint(U256::from(0))],
-        &[],
-        None,
-    );
-    assert_eq!(
-        returns,
-        vec![Token::Uint(U256::from(0)), Token::Uint(U256::from(0))]
-    );
-
-    let returns = vm.function(
-        "mods",
         &[
-            Token::Uint(U256::from(4)),
-            Token::Uint(U256::from(2)),
-            Token::Uint(U256::from(3)),
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(4u8),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(3u8),
+            },
         ],
         &[],
         None,
     );
     assert_eq!(
         returns,
-        vec![Token::Uint(U256::from(0)), Token::Uint(U256::from(2))]
+        vec![
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::one(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::one(),
+            },
+        ]
     );
 
     let returns = vm.function(
-        "mods",
+        "divide",
         &[
-            Token::Uint(U256::from(4)),
-            Token::Uint(U256::from(2)),
-            Token::Uint(U256::from(0)),
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(4u8),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::zero(),
+            },
         ],
         &[],
         None,
     );
     assert_eq!(
         returns,
-        vec![Token::Uint(U256::from(0)), Token::Uint(U256::from(0))]
+        vec![
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::zero(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::zero(),
+            },
+        ]
+    );
+
+    let returns = vm.function(
+        "mods",
+        &[
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(4u8),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(2u8),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(3u8),
+            },
+        ],
+        &[],
+        None,
+    );
+    assert_eq!(
+        returns,
+        vec![
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::zero(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(2u8),
+            },
+        ]
+    );
+
+    let returns = vm.function(
+        "mods",
+        &[
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(4u8),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(2u8),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::zero(),
+            },
+        ],
+        &[],
+        None,
+    );
+    assert_eq!(
+        returns,
+        vec![
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::zero(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::zero(),
+            },
+        ]
     );
 }
 
@@ -284,8 +446,11 @@ fn external_function() {
     let returns = vm.function(
         "test",
         &[
-            Token::Uint(U256::from_little_endian(&addr[..])),
-            Token::FixedBytes(FixedBytes::from([1, 2, 3, 4])),
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_bytes_le(Sign::Plus, addr.as_slice()),
+            },
+            BorshToken::FixedBytes(vec![1, 2, 3, 4]),
         ],
         &[],
         None,
@@ -334,9 +499,8 @@ contract testing  {
 
     runtime.constructor("testing", &[]);
     let returns = runtime.function("test_address", &[], &[], None);
-    let addr = returns[0].clone().into_uint().unwrap();
-    let mut b_vec = addr.as_byte_slice().to_vec();
-    b_vec.reverse();
+    let addr = returns[0].clone().into_bigint().unwrap();
+    let b_vec = addr.to_bytes_be().1;
     assert_eq!(&b_vec, runtime.stack[0].data.as_ref());
 
     runtime
@@ -345,17 +509,28 @@ contract testing  {
         .unwrap()
         .lamports = 102;
     let returns = runtime.function("test_balance", &[], &[], None);
-    assert_eq!(returns, vec![Token::Uint(U256::from(102))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(102u8),
+        },]
+    );
 
     let returns = runtime.function("test_selfbalance", &[], &[], None);
-    assert_eq!(returns, vec![Token::Uint(U256::from(102))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(102u8),
+        },]
+    );
 
     let sender = account_new();
 
     let returns = runtime.function("test_caller", &[], &[], Some(&sender));
-    let addr = returns[0].clone().into_uint().unwrap().0;
-    let mut b_vec = addr.as_byte_slice().to_vec();
-    b_vec.reverse();
+    let addr = returns[0].clone().into_bigint().unwrap();
+    let b_vec = addr.to_bytes_be().1;
     assert_eq!(b_vec, sender.to_vec());
 }
 
@@ -384,7 +559,16 @@ fn addmod_mulmod() {
     let returns = vm.function("testMod", &[], &[], None);
     assert_eq!(
         returns,
-        vec![Token::Uint(Uint::from(0)), Token::Uint(Uint::from(7))]
+        vec![
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::zero(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(7u8),
+            },
+        ]
     );
 }
 
@@ -450,39 +634,122 @@ contract Testing {
 
     vm.constructor("Testing", &[]);
 
-    let returns = vm.function("switch_default", &[Token::Uint(Uint::from(1))], &[], None);
-    assert_eq!(returns[0], Token::Uint(Uint::from(5)));
-
-    let returns = vm.function("switch_default", &[Token::Uint(Uint::from(2))], &[], None);
-    assert_eq!(returns[0], Token::Uint(Uint::from(6)));
-
-    let returns = vm.function("switch_default", &[Token::Uint(Uint::from(6))], &[], None);
-    assert_eq!(returns[0], Token::Uint(Uint::from(9)));
-
     let returns = vm.function(
-        "switch_no_default",
-        &[Token::Uint(Uint::from(1))],
+        "switch_default",
+        &[BorshToken::Uint {
+            width: 256,
+            value: BigInt::one(),
+        }],
         &[],
         None,
     );
-    assert_eq!(returns[0], Token::Uint(Uint::from(3)));
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(5u8),
+        }
+    );
 
     let returns = vm.function(
-        "switch_no_default",
-        &[Token::Uint(Uint::from(2))],
+        "switch_default",
+        &[BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(2u8),
+        }],
         &[],
         None,
     );
-    assert_eq!(returns[0], Token::Uint(Uint::from(6)));
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(6u8),
+        },
+    );
 
     let returns = vm.function(
-        "switch_no_default",
-        &[Token::Uint(Uint::from(6))],
+        "switch_default",
+        &[BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(6u8),
+        }],
         &[],
         None,
     );
-    assert_eq!(returns[0], Token::Uint(Uint::from(4)));
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(9u8),
+        }
+    );
 
-    let returns = vm.function("switch_no_case", &[Token::Uint(Uint::from(3))], &[], None);
-    assert_eq!(returns[0], Token::Uint(Uint::from(4)));
+    let returns = vm.function(
+        "switch_no_default",
+        &[BorshToken::Uint {
+            width: 256,
+            value: BigInt::one(),
+        }],
+        &[],
+        None,
+    );
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(3u8),
+        },
+    );
+
+    let returns = vm.function(
+        "switch_no_default",
+        &[BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(2u8),
+        }],
+        &[],
+        None,
+    );
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(6u8),
+        },
+    );
+
+    let returns = vm.function(
+        "switch_no_default",
+        &[BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(6u8),
+        }],
+        &[],
+        None,
+    );
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(4u8),
+        },
+    );
+
+    let returns = vm.function(
+        "switch_no_case",
+        &[BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(3u8),
+        }],
+        &[],
+        None,
+    );
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(4u8),
+        },
+    );
 }
