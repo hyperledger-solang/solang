@@ -168,7 +168,7 @@ pub(crate) fn process_builtin(
         }
 
         YulBuiltInFunction::Invalid => {
-            assert_failure(loc, None, cfg, vartab);
+            assert_failure(loc, None, ns, cfg, vartab);
             Expression::Poison
         }
 

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::{ethereum_types::U256, Token};
-use num_bigint::BigUint;
+use crate::{build_solidity, BorshToken};
+use num_bigint::BigInt;
 use std::str::FromStr;
 
 #[test]
@@ -45,12 +44,14 @@ fn safe_math() {
     let returns = vm.function(
         "mul_test",
         &[
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("1000000000000000000").unwrap(),
-            )),
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("4000000000000000000").unwrap(),
-            )),
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("1000000000000000000").unwrap(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("4000000000000000000").unwrap(),
+            },
         ],
         &[],
         None,
@@ -58,20 +59,23 @@ fn safe_math() {
 
     assert_eq!(
         returns,
-        vec![Token::Uint(biguint_to_eth(
-            &BigUint::from_str("4000000000000000000000000000000000000").unwrap()
-        ))]
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from_str("4000000000000000000000000000000000000").unwrap(),
+        },]
     );
 
     let returns = vm.function(
         "add_test",
         &[
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("1000000000000000000").unwrap(),
-            )),
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("4000000000000000000").unwrap(),
-            )),
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("1000000000000000000").unwrap(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("4000000000000000000").unwrap(),
+            },
         ],
         &[],
         None,
@@ -79,20 +83,23 @@ fn safe_math() {
 
     assert_eq!(
         returns,
-        vec![Token::Uint(biguint_to_eth(
-            &BigUint::from_str("5000000000000000000").unwrap()
-        ))]
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from_str("5000000000000000000").unwrap(),
+        },]
     );
 
     let returns = vm.function(
         "sub_test",
         &[
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("4000000000000000000").unwrap(),
-            )),
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("1000000000000000000").unwrap(),
-            )),
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("4000000000000000000").unwrap(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("1000000000000000000").unwrap(),
+            },
         ],
         &[],
         None,
@@ -100,20 +107,23 @@ fn safe_math() {
 
     assert_eq!(
         returns,
-        vec![Token::Uint(biguint_to_eth(
-            &BigUint::from_str("3000000000000000000").unwrap()
-        ))]
+        vec![BorshToken::Uint {
+            width: 256,
+            value: BigInt::from_str("3000000000000000000").unwrap(),
+        },]
     );
 
     let res = vm.function_must_fail(
         "mul_test",
         &[
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("400000000000000000000000000000000000000").unwrap(),
-            )),
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("400000000000000000000000000000000000000").unwrap(),
-            )),
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("400000000000000000000000000000000000000").unwrap(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("400000000000000000000000000000000000000").unwrap(),
+            },
         ],
         &[],
         None,
@@ -124,12 +134,14 @@ fn safe_math() {
     let res = vm.function_must_fail(
         "add_test",
         &[
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("100000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap(),
-            )),
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("100000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap(),
-            )),
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("100000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("100000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            },
         ],
         &[],
         None,
@@ -140,31 +152,18 @@ fn safe_math() {
     let res = vm.function_must_fail(
         "sub_test",
         &[
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("1000000000000000000").unwrap(),
-            )),
-            Token::Uint(biguint_to_eth(
-                &BigUint::from_str("4000000000000000000").unwrap(),
-            )),
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("1000000000000000000").unwrap(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("4000000000000000000").unwrap(),
+            },
         ],
         &[],
         None,
     );
 
     assert_ne!(res, Ok(0));
-}
-
-fn biguint_to_eth(v: &BigUint) -> U256 {
-    let mut buf = v.to_bytes_be();
-    let width = 32;
-
-    while buf.len() > width {
-        buf.remove(0);
-    }
-
-    while buf.len() < width {
-        buf.insert(0, 0);
-    }
-
-    U256::from_big_endian(&buf)
 }

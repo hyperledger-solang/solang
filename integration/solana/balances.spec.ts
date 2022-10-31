@@ -1,5 +1,4 @@
 import expect from 'expect';
-import { publicKeyToHex } from '@solana/solidity';
 import * as web3 from '@solana/web3.js';
 import { loadContract } from './setup';
 
@@ -9,7 +8,7 @@ describe('Deploy solang contract and test', function () {
     it('balances', async function () {
         let { contract, connection, payer, storage } = await loadContract('balances', 'balances.abi');
 
-        let res = await contract.functions.get_balance(publicKeyToHex(payer.publicKey), {
+        let res = await contract.functions.get_balance(payer.publicKey.toBytes(), {
             accounts: [payer.publicKey],
         });
 
@@ -23,7 +22,7 @@ describe('Deploy solang contract and test', function () {
         let before_bal = await connection.getBalance(storage.publicKey);
 
         /// transfer some lamports to the storage account
-        var transaction = new web3.Transaction().add(
+        const transaction = new web3.Transaction().add(
             web3.SystemProgram.transfer({
                 fromPubkey: payer.publicKey,
                 toPubkey: storage.publicKey,
@@ -34,7 +33,7 @@ describe('Deploy solang contract and test', function () {
         // Sign transaction, broadcast, and confirm
         await web3.sendAndConfirmTransaction(connection, transaction, [payer]);
 
-        await contract.functions.send(publicKeyToHex(payer.publicKey), 500, {
+        await contract.functions.send(payer.publicKey.toBytes(), 500, {
             writableAccounts: [payer.publicKey],
             //  signers: [storage],
         });

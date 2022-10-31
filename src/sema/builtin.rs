@@ -31,7 +31,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
+static BUILTIN_FUNCTIONS: Lazy<[Prototype; 26]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -196,17 +196,6 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             ret: vec![],
             target: vec![],
             doc: "Abi decode byte array with the given types",
-            constant: false,
-        },
-        Prototype {
-            builtin: Builtin::AbiBorshDecode,
-            namespace: Some("abi"),
-            method: None,
-            name: "borshDecode",
-            params: vec![Type::DynamicBytes],
-            ret: vec![],
-            target: vec![Target::Solana],
-            doc: "Abi decode byte array with the given types, using Borsh decoder",
             constant: false,
         },
         Prototype {
@@ -1046,7 +1035,6 @@ pub fn resolve_namespace_call(
     let builtin = match name {
         "decode" => Builtin::AbiDecode,
         "encode" => Builtin::AbiEncode,
-        "borshDecode" => Builtin::AbiBorshDecode,
         "encodePacked" => Builtin::AbiEncodePacked,
         "encodeWithSelector" => Builtin::AbiEncodeWithSelector,
         "encodeWithSignature" => Builtin::AbiEncodeWithSignature,
@@ -1054,7 +1042,7 @@ pub fn resolve_namespace_call(
         _ => unreachable!(),
     };
 
-    if matches!(builtin, Builtin::AbiDecode | Builtin::AbiBorshDecode) {
+    if builtin == Builtin::AbiDecode {
         if args.len() != 2 {
             diagnostics.push(Diagnostic::error(
                 *loc,
@@ -1140,23 +1128,6 @@ pub fn resolve_namespace_call(
                 }
 
                 tys.push(ty);
-            }
-        }
-
-        if builtin == Builtin::AbiBorshDecode {
-            // TODO: This is temporary and must be removed once Borsh encoding is fully wired up
-            // for Solana.
-            if ns.target != Target::Solana {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "'abi.borshDecode' is only available for Solana".to_string(),
-                ));
-            } else {
-                ns.diagnostics.push(Diagnostic::warning(
-                    *loc,
-                    "'abi.borshDecode' is experimental and is not yet fully compatible with Solana"
-                        .to_string(),
-                ));
             }
         }
 

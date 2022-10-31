@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::Token;
+use crate::{build_solidity, BorshToken};
 
 #[test]
 fn test_slice_in_phi() {
@@ -24,5 +23,5 @@ fn test_slice_in_phi() {
     vm.constructor("c1", &[]);
     let returns = vm.function("test", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::String(String::from("Hello!"))]);
+    assert_eq!(returns, vec![BorshToken::String(String::from("Hello!"))]);
 }

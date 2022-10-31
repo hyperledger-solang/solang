@@ -21,7 +21,7 @@ describe('Create spl-token and use from solidity', function () {
             3
         );
 
-        await contract.functions.set_mint(publicKeyToHex(mint));
+        await contract.functions.set_mint(mint.toBytes());
 
         expect(Number((await contract.functions.total_supply({ accounts: [mint] })).result)).toBe(0);
 
@@ -32,12 +32,12 @@ describe('Create spl-token and use from solidity', function () {
             payer.publicKey
         )
 
-        expect(Number((await contract.functions.get_balance(publicKeyToHex(tokenAccount.address), { accounts: [tokenAccount.address] })).result)).toBe(0);
+        expect(Number((await contract.functions.get_balance(tokenAccount.address.toBytes(), { accounts: [tokenAccount.address] })).result)).toBe(0);
 
         // Now let's mint some tokens
         await contract.functions.mint_to(
-            publicKeyToHex(tokenAccount.address),
-            publicKeyToHex(mintAuthority.publicKey),
+            tokenAccount.address.toBytes(),
+            mintAuthority.publicKey.toBytes(),
             100000,
             {
                 accounts: [TOKEN_PROGRAM_ID],
@@ -49,7 +49,7 @@ describe('Create spl-token and use from solidity', function () {
         // let's check the balances
         expect(Number((await contract.functions.total_supply({ accounts: [mint] })).result)).toBe(100000);
 
-        expect(Number((await contract.functions.get_balance(publicKeyToHex(tokenAccount.address), { accounts: [tokenAccount.address] })).result)).toBe(100000);
+        expect(Number((await contract.functions.get_balance(tokenAccount.address.toBytes(), { accounts: [tokenAccount.address] })).result)).toBe(100000);
 
         // transfer
         const theOutsider = Keypair.generate();
@@ -62,9 +62,9 @@ describe('Create spl-token and use from solidity', function () {
         )
 
         await contract.functions.transfer(
-            publicKeyToHex(tokenAccount.address),
-            publicKeyToHex(otherTokenAccount.address),
-            publicKeyToHex(payer.publicKey),
+            tokenAccount.address.toBytes(),
+            otherTokenAccount.address.toBytes(),
+            payer.publicKey.toBytes(),
             70000,
             {
                 accounts: [TOKEN_PROGRAM_ID],
@@ -76,14 +76,14 @@ describe('Create spl-token and use from solidity', function () {
 
         expect(Number((await contract.functions.total_supply({ accounts: [mint] })).result)).toBe(100000);
 
-        expect(Number((await contract.functions.get_balance(publicKeyToHex(tokenAccount.address), { accounts: [tokenAccount.address] })).result)).toBe(30000);
+        expect(Number((await contract.functions.get_balance(tokenAccount.address.toBytes(), { accounts: [tokenAccount.address] })).result)).toBe(30000);
 
-        expect(Number((await contract.functions.get_balance(publicKeyToHex(otherTokenAccount.address), { accounts: [otherTokenAccount.address] })).result)).toBe(70000);
+        expect(Number((await contract.functions.get_balance(otherTokenAccount.address.toBytes(), { accounts: [otherTokenAccount.address] })).result)).toBe(70000);
 
         // burn
         await contract.functions.burn(
-            publicKeyToHex(otherTokenAccount.address),
-            publicKeyToHex(theOutsider.publicKey),
+            otherTokenAccount.address.toBytes(),
+            theOutsider.publicKey.toBytes(),
             20000,
             {
                 accounts: [TOKEN_PROGRAM_ID],
@@ -94,8 +94,8 @@ describe('Create spl-token and use from solidity', function () {
 
         expect(Number((await contract.functions.total_supply({ accounts: [mint] })).result)).toBe(80000);
 
-        expect(Number((await contract.functions.get_balance(publicKeyToHex(tokenAccount.address), { accounts: [tokenAccount.address] })).result)).toBe(30000);
+        expect(Number((await contract.functions.get_balance(tokenAccount.address.toBytes(), { accounts: [tokenAccount.address] })).result)).toBe(30000);
 
-        expect(Number((await contract.functions.get_balance(publicKeyToHex(otherTokenAccount.address), { accounts: [otherTokenAccount.address] })).result)).toBe(50000);
+        expect(Number((await contract.functions.get_balance(otherTokenAccount.address.toBytes(), { accounts: [otherTokenAccount.address] })).result)).toBe(50000);
     });
 });

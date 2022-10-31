@@ -6,7 +6,7 @@ use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::loop_builder::LoopBuilder;
 use crate::emit::solana::SolanaTarget;
-use crate::emit::{ethabiencoder, TargetRuntime, Variable};
+use crate::emit::{TargetRuntime, Variable};
 use crate::sema::ast;
 use inkwell::types::{BasicType, BasicTypeEnum, IntType};
 use inkwell::values::{
@@ -1194,72 +1194,40 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     /// ABI encode into a vector for abi.encode* style builtin functions
     fn abi_encode_to_vector<'b>(
         &self,
-        binary: &Binary<'b>,
-        function: FunctionValue<'b>,
-        packed: &[BasicValueEnum<'b>],
-        args: &[BasicValueEnum<'b>],
-        tys: &[ast::Type],
-        ns: &ast::Namespace,
+        _binary: &Binary<'b>,
+        _function: FunctionValue<'b>,
+        _packed: &[BasicValueEnum<'b>],
+        _args: &[BasicValueEnum<'b>],
+        _tys: &[ast::Type],
+        _ns: &ast::Namespace,
     ) -> PointerValue<'b> {
-        ethabiencoder::encode_to_vector(binary, function, packed, args, tys, true, ns)
+        unreachable!("ABI encoding is implemented in code generation for Solana")
     }
 
     fn abi_encode(
         &self,
-        binary: &Binary<'a>,
-        selector: Option<IntValue<'a>>,
-        load: bool,
-        function: FunctionValue<'a>,
-        args: &[BasicValueEnum<'a>],
-        tys: &[ast::Type],
-        ns: &ast::Namespace,
+        _binary: &Binary<'a>,
+        _selector: Option<IntValue<'a>>,
+        _load: bool,
+        _function: FunctionValue<'a>,
+        _args: &[BasicValueEnum<'a>],
+        _tys: &[ast::Type],
+        _ns: &ast::Namespace,
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        debug_assert_eq!(args.len(), tys.len());
-
-        let mut tys = tys.to_vec();
-
-        let packed = if let Some(selector) = selector {
-            tys.insert(0, ast::Type::Uint(32));
-            vec![selector.into()]
-        } else {
-            vec![]
-        };
-
-        let encoder = ethabiencoder::EncoderBuilder::new(
-            binary, function, load, &packed, args, &tys, true, ns,
-        );
-
-        let length = encoder.encoded_length();
-
-        let encoded_data = binary
-            .builder
-            .build_call(
-                binary.module.get_function("__malloc").unwrap(),
-                &[length.into()],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_pointer_value();
-
-        encoder.finish(binary, function, encoded_data, ns);
-
-        (encoded_data, length)
+        unreachable!("ABI encoding is implemented in code generation for Solana")
     }
 
     fn abi_decode<'b>(
         &self,
-        binary: &Binary<'b>,
-        function: FunctionValue<'b>,
-        args: &mut Vec<BasicValueEnum<'b>>,
-        data: PointerValue<'b>,
-        length: IntValue<'b>,
-        spec: &[ast::Parameter],
-        ns: &ast::Namespace,
+        _binary: &Binary<'b>,
+        _function: FunctionValue<'b>,
+        _args: &mut Vec<BasicValueEnum<'b>>,
+        _data: PointerValue<'b>,
+        _length: IntValue<'b>,
+        _spec: &[ast::Parameter],
+        _ns: &ast::Namespace,
     ) {
-        self.abi
-            .decode(binary, function, args, data, length, spec, ns);
+        unreachable!("ABI encoding is implemented in code generation for Solana.")
     }
 
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
