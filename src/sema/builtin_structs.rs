@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::sema::ast::{Namespace, Parameter, StructDecl, StructType, Type};
 use once_cell::sync::Lazy;
 use solang_parser::pt;

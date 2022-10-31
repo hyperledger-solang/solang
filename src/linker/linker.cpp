@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Call the LLD linker
 #include "lld/Common/Driver.h"
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::expression::{default_gas, expression};
 use crate::codegen::vartable::Vartable;

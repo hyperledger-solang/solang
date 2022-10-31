@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::create_encoder;
 use crate::codegen::encoding::AbiEncoding;
