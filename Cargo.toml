@@ -57,7 +57,7 @@ parse-display = "0.6.0"
 
 ink_metadata = {git = "https://github.com/paritytech/ink.git", branch = "cl/runtime-metadata"}
 ink_primitives = {git = "https://github.com/paritytech/ink.git", branch = "cl/runtime-metadata"}
-scale-info = { git = "https://github.com/paritytech/scale-info", branch = "cl/next-release" }
+scale-info = "2.3"
 
 
 [dev-dependencies]
