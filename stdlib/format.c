@@ -1,4 +1,4 @@
-/// This should be compiled with clang 11.
+// SPDX-License-Identifier: Apache-2.0
 
 #include <stdint.h>
 
