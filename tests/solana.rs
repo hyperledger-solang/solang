@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::borsh_encoding::{decode_output, encode_arguments, BorshToken};
 use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use ethabi::{RawLog, Token};
+use ethabi::RawLog;
 use libc::c_char;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -34,6 +35,7 @@ use std::{
 };
 use tiny_keccak::{Hasher, Keccak};
 
+mod borsh_encoding;
 mod solana_tests;
 
 pub type Account = [u8; 32];
@@ -1582,18 +1584,18 @@ impl VirtualMachine {
         res
     }
 
-    fn constructor(&mut self, name: &str, args: &[Token]) {
+    fn constructor(&mut self, name: &str, args: &[BorshToken]) {
         self.constructor_expected(0, name, args)
     }
 
-    fn constructor_expected(&mut self, expected: u64, name: &str, args: &[Token]) {
+    fn constructor_expected(&mut self, expected: u64, name: &str, args: &[BorshToken]) {
         let program = &self.stack[0];
         println!("constructor for {}", hex::encode(program.data));
 
         let mut calldata = VirtualMachine::input(&program.data, &self.origin, name, &[]);
-
-        if let Some(constructor) = &program.abi.as_ref().unwrap().constructor {
-            calldata.extend(&constructor.encode_input(vec![], args).unwrap());
+        if program.abi.as_ref().unwrap().constructor.is_some() {
+            let mut encoded_data = encode_arguments(args);
+            calldata.append(&mut encoded_data);
         };
 
         let res = self.execute(&calldata, &[]);
@@ -1605,13 +1607,13 @@ impl VirtualMachine {
     fn function(
         &mut self,
         name: &str,
-        args: &[Token],
+        args: &[BorshToken],
         seeds: &[&(Account, Vec<u8>)],
         sender: Option<&Account>,
-    ) -> Vec<Token> {
+    ) -> Vec<BorshToken> {
         let program = &self.stack[0];
 
-        println!("function for {}", hex::encode(program.data));
+        println!("function for {}", hex::encode(&program.data));
 
         let mut calldata = VirtualMachine::input(
             &program.data,
@@ -1626,10 +1628,10 @@ impl VirtualMachine {
 
         println!("input: {} seeds {:?}", hex::encode(&calldata), seeds);
 
-        match program.abi.as_ref().unwrap().functions[name][0].encode_input(args) {
-            Ok(n) => calldata.extend(&n),
-            Err(x) => panic!("{}", x),
-        };
+        let selector = program.abi.as_ref().unwrap().functions[name][0].short_signature();
+        calldata.extend_from_slice(&selector);
+        let mut encoded_args = encode_arguments(args);
+        calldata.append(&mut encoded_args);
 
         println!("input: {}", hex::encode(&calldata));
 
@@ -1641,13 +1643,10 @@ impl VirtualMachine {
         };
 
         if let Some((_, return_data)) = &self.return_data {
-            println!("return: {}", hex::encode(return_data));
+            println!("return: {}", hex::encode(&return_data));
 
-            let program = &self.stack[0];
-
-            program.abi.as_ref().unwrap().functions[name][0]
-                .decode_output(return_data)
-                .unwrap()
+            let func = &self.stack[0].abi.as_ref().unwrap().functions[name][0];
+            decode_output(&func.outputs, return_data)
         } else {
             Vec::new()
         }
@@ -1656,7 +1655,7 @@ impl VirtualMachine {
     fn function_must_fail(
         &mut self,
         name: &str,
-        args: &[Token],
+        args: &[BorshToken],
         seeds: &[&(Account, Vec<u8>)],
         sender: Option<&Account>,
     ) -> Result<u64, EbpfError<UserError>> {
@@ -1677,10 +1676,10 @@ impl VirtualMachine {
 
         println!("input: {} seeds {:?}", hex::encode(&calldata), seeds);
 
-        match program.abi.as_ref().unwrap().functions[name][0].encode_input(args) {
-            Ok(n) => calldata.extend(&n),
-            Err(x) => panic!("{}", x),
-        };
+        let selector = program.abi.as_ref().unwrap().functions[name][0].short_signature();
+        calldata.extend_from_slice(&selector);
+        let mut encoded = encode_arguments(args);
+        calldata.append(&mut encoded);
 
         println!("input: {}", hex::encode(&calldata));
 

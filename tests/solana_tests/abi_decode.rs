@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
 use crate::solana_tests::abi_encode::create_response;
+use crate::{build_solidity, BorshToken};
 use borsh::BorshSerialize;
-use ethabi::Token;
 
 #[test]
 fn integers_bool_enum() {
@@ -46,7 +45,7 @@ fn integers_bool_enum() {
 
         function decodeTest1(bytes memory buffer) public pure {
             (uint8 a, uint64 b, uint128 c, int16 d, int32 e, WeekDay day, bool h) =
-            abi.borshDecode(buffer, (uint8, uint64, uint128, int16, int32, WeekDay, bool));
+            abi.decode(buffer, (uint8, uint64, uint128, int16, int32, WeekDay, bool));
 
             assert(a == 45);
             assert(b == 9965956609890);
@@ -59,7 +58,7 @@ fn integers_bool_enum() {
 
         function decodeTest2(bytes memory buffer) public pure {
             (WeekDay a, WeekDay b, WeekDay c) =
-            abi.borshDecode(buffer, (WeekDay, WeekDay, WeekDay));
+            abi.decode(buffer, (WeekDay, WeekDay, WeekDay));
             assert(a == WeekDay.Sunday);
             assert(b == WeekDay.Saturday);
             assert(c == WeekDay.Friday);
@@ -79,7 +78,7 @@ fn integers_bool_enum() {
         h: false,
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("decodeTest1", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("decodeTest1", &[BorshToken::Bytes(encoded)], &[], None);
 
     let input = Res2 {
         item_1: WeekDay::Sunday,
@@ -87,7 +86,7 @@ fn integers_bool_enum() {
         item_3: WeekDay::Friday,
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("decodeTest2", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("decodeTest2", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -102,7 +101,7 @@ fn decode_address() {
         r#"
     contract Testing {
         function testAddress(bytes memory buffer) public view {
-            (address a, Testing b) = abi.borshDecode(buffer, (address, Testing));
+            (address a, Testing b) = abi.decode(buffer, (address, Testing));
 
             assert(a == address(this));
             assert(b == this);
@@ -117,7 +116,7 @@ fn decode_address() {
         this: vm.programs[0].data,
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("testAddress", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testAddress", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -132,7 +131,7 @@ fn string_and_bytes() {
         r#"
     contract Testing {
         function testStringAndBytes(bytes memory buffer) public view {
-            (string memory a, bytes memory b) = abi.borshDecode(buffer, (string, bytes));
+            (string memory a, bytes memory b) = abi.decode(buffer, (string, bytes));
 
             assert(a == "coffee");
             assert(b == "tea");
@@ -147,7 +146,12 @@ fn string_and_bytes() {
         b: b"tea".to_vec(),
     };
     let encoded = data.try_to_vec().unwrap();
-    let _ = vm.function("testStringAndBytes", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function(
+        "testStringAndBytes",
+        &[BorshToken::Bytes(encoded)],
+        &[],
+        None,
+    );
 }
 
 #[test]
@@ -180,13 +184,13 @@ fn primitive_struct() {
         }
 
         function testNoPadStruct(bytes memory buffer) public pure {
-            NoPadStruct memory str = abi.borshDecode(buffer, (NoPadStruct));
+            NoPadStruct memory str = abi.decode(buffer, (NoPadStruct));
             assert(str.a == 1238);
             assert(str.b == 87123);
         }
 
         function testPaddedStruct(bytes memory buffer) public pure {
-            PaddedStruct memory str = abi.borshDecode(buffer, (PaddedStruct));
+            PaddedStruct memory str = abi.decode(buffer, (PaddedStruct));
             assert(str.a == 12998);
             assert(str.b == 240);
             assert(str.c == "tea_is_good");
@@ -198,7 +202,7 @@ fn primitive_struct() {
     vm.constructor("Testing", &[]);
     let data = NoPadStruct { a: 1238, b: 87123 };
     let encoded = data.try_to_vec().unwrap();
-    let _ = vm.function("testNoPadStruct", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testNoPadStruct", &[BorshToken::Bytes(encoded)], &[], None);
 
     let mut elem = b"tea_is_good".to_vec();
     elem.append(&mut vec![0; 21]);
@@ -208,7 +212,7 @@ fn primitive_struct() {
         c: <[u8; 32]>::try_from(&elem[0..32]).unwrap(),
     };
     let encoded = data.try_to_vec().unwrap();
-    let _ = vm.function("testPaddedStruct", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testPaddedStruct", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -222,7 +226,7 @@ fn returned_string() {
         r#"
     contract Testing {
            function returnedString(bytes memory buffer) public pure returns (string memory) {
-                string memory s = abi.borshDecode(buffer, (string));
+                string memory s = abi.decode(buffer, (string));
                 return s;
            }
     }
@@ -233,7 +237,7 @@ fn returned_string() {
         rr: "cortado".to_string(),
     };
     let encoded = data.try_to_vec().unwrap();
-    let returns = vm.function("returnedString", &[Token::Bytes(encoded)], &[], None);
+    let returns = vm.function("returnedString", &[BorshToken::Bytes(encoded)], &[], None);
     let string = returns[0].clone().into_string().unwrap();
     assert_eq!(string, "cortado");
 }
@@ -249,7 +253,7 @@ fn test_string_array() {
         r#"
         contract Testing {
             function testStringVector(bytes memory buffer) public pure returns (string[] memory) {
-                string[] memory vec = abi.borshDecode(buffer, (string[]));
+                string[] memory vec = abi.decode(buffer, (string[]));
                 return vec;
             }
         }
@@ -265,7 +269,7 @@ fn test_string_array() {
         ],
     };
     let encoded = data.try_to_vec().unwrap();
-    let returns = vm.function("testStringVector", &[Token::Bytes(encoded)], &[], None);
+    let returns = vm.function("testStringVector", &[BorshToken::Bytes(encoded)], &[], None);
     let vec = returns[0].clone().into_array().unwrap();
     assert_eq!(vec.len(), 3);
     assert_eq!(vec[0].clone().into_string().unwrap(), "coffee");
@@ -318,7 +322,7 @@ fn struct_within_struct() {
         }
 
         function testStruct(bytes memory buffer) public pure {
-            NonConstantStruct memory str = abi.borshDecode(buffer, (NonConstantStruct));
+            NonConstantStruct memory str = abi.decode(buffer, (NonConstantStruct));
             assert(str.a == 890234);
             assert(str.b.length == 2);
             assert(str.b[0] == "tea");
@@ -349,7 +353,7 @@ fn struct_within_struct() {
         pad,
     };
     let encoded = data.try_to_vec().unwrap();
-    let _ = vm.function("testStruct", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testStruct", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -400,7 +404,7 @@ fn struct_in_array() {
         }
 
         function twoStructs(bytes memory buffer) public pure {
-            (NoPadStruct memory a, PaddedStruct memory b) = abi.borshDecode(buffer, (NoPadStruct, PaddedStruct));
+            (NoPadStruct memory a, PaddedStruct memory b) = abi.decode(buffer, (NoPadStruct, PaddedStruct));
             assert(a.a == 945);
             assert(a.b == 7453);
             assert(b.a == 1);
@@ -410,7 +414,7 @@ fn struct_in_array() {
 
         function fixedArrays(bytes memory buffer) public pure {
             (int32[4] memory a, NoPadStruct[2] memory b, NoPadStruct[] memory c) =
-            abi.borshDecode(buffer, (int32[4], NoPadStruct[2], NoPadStruct[]));
+            abi.decode(buffer, (int32[4], NoPadStruct[2], NoPadStruct[]));
 
             assert(a[0] == 1);
             assert(a[1] == -298);
@@ -432,7 +436,7 @@ fn struct_in_array() {
         }
 
         function primitiveDynamic(bytes memory buffer) public pure {
-            NoPadStruct[] memory vec = abi.borshDecode(buffer, (NoPadStruct[]));
+            NoPadStruct[] memory vec = abi.decode(buffer, (NoPadStruct[]));
 
             assert(vec.length == 2);
             assert(vec[0].a == 5);
@@ -457,7 +461,7 @@ fn struct_in_array() {
         },
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("twoStructs", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("twoStructs", &[BorshToken::Bytes(encoded)], &[], None);
 
     let input = Input2 {
         item_1: [1, -298, 3, -434],
@@ -469,13 +473,13 @@ fn struct_in_array() {
         ],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("fixedArrays", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("fixedArrays", &[BorshToken::Bytes(encoded)], &[], None);
 
     let input = Input3 {
         vec: vec![NoPadStruct { a: 5, b: 6 }, NoPadStruct { a: 7, b: 8 }],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("primitiveDynamic", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("primitiveDynamic", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -510,7 +514,7 @@ fn arrays() {
         }
 
         function decodeComplex(bytes memory buffer) public view {
-            NonConstantStruct[] memory vec = abi.borshDecode(buffer, (NonConstantStruct[]));
+            NonConstantStruct[] memory vec = abi.decode(buffer, (NonConstantStruct[]));
 
             assert(vec.length == 2);
 
@@ -524,7 +528,7 @@ fn arrays() {
         }
 
         function dynamicArray(bytes memory buffer) public view {
-            int16[] memory vec = abi.borshDecode(buffer, (int16[]));
+            int16[] memory vec = abi.decode(buffer, (int16[]));
 
             assert(vec.length == 3);
 
@@ -534,7 +538,7 @@ fn arrays() {
         }
 
         function decodeMultiDim(bytes memory buffer) public view {
-            int8[2][3] memory vec = abi.borshDecode(buffer, (int8[2][3]));
+            int8[2][3] memory vec = abi.decode(buffer, (int8[2][3]));
 
             print("{}".format(vec[0][1]));
             assert(vec[0][0] == 1);
@@ -562,19 +566,19 @@ fn arrays() {
         ],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("decodeComplex", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("decodeComplex", &[BorshToken::Bytes(encoded)], &[], None);
 
     let input = Input2 {
         vec: vec![-90, 5523, -89],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("dynamicArray", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("dynamicArray", &[BorshToken::Bytes(encoded)], &[], None);
 
     let input = Input3 {
         multi_dim: [[1, 2], [4, 5], [6, 7]],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("decodeMultiDim", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("decodeMultiDim", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -612,7 +616,7 @@ fn multi_dimensional_arrays() {
         }
 
         function multiDimStruct(bytes memory buffer) public pure {
-            (PaddedStruct[2][3][] memory vec, int16 g) = abi.borshDecode(buffer, (PaddedStruct[2][3][], int16));
+            (PaddedStruct[2][3][] memory vec, int16 g) = abi.decode(buffer, (PaddedStruct[2][3][], int16));
 
             assert(vec.length == 1);
 
@@ -644,7 +648,7 @@ fn multi_dimensional_arrays() {
         }
 
         function multiDimInt(bytes memory buffer) public pure {
-            uint16[4][2][] memory vec = abi.borshDecode(buffer, (uint16[4][2][]));
+            uint16[4][2][] memory vec = abi.decode(buffer, (uint16[4][2][]));
 
             assert(vec.length == 2);
 
@@ -670,7 +674,7 @@ fn multi_dimensional_arrays() {
         }
 
         function uniqueDim(bytes memory buffer) public pure {
-            uint16[] memory vec = abi.borshDecode(buffer, (uint16[]));
+            uint16[] memory vec = abi.decode(buffer, (uint16[]));
 
             assert(vec.length == 5);
 
@@ -728,7 +732,7 @@ fn multi_dimensional_arrays() {
         item_2: -90,
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("multiDimStruct", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("multiDimStruct", &[BorshToken::Bytes(encoded)], &[], None);
 
     let input = Input2 {
         vec: vec![
@@ -737,13 +741,13 @@ fn multi_dimensional_arrays() {
         ],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("multiDimInt", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("multiDimInt", &[BorshToken::Bytes(encoded)], &[], None);
 
     let input = Input3 {
         vec: vec![9, 3, 4, 90, 834],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("uniqueDim", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("uniqueDim", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -769,7 +773,7 @@ fn empty_arrays() {
         }
 
         function testEmpty(bytes memory buffer) public pure {
-            (S[] memory vec_1, string[] memory vec_2) = abi.borshDecode(buffer, (S[], string[]));
+            (S[] memory vec_1, string[] memory vec_2) = abi.decode(buffer, (S[], string[]));
 
             assert(vec_1.length == 0);
             assert(vec_2.length == 0);
@@ -784,7 +788,7 @@ fn empty_arrays() {
         vec_2: vec![],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("testEmpty", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testEmpty", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -799,7 +803,7 @@ fn external_function() {
         r#"
     contract Testing {
         function testExternalFunction(bytes memory buffer) public view returns (bytes4, address) {
-            function (uint8) external returns (int8) fPtr = abi.borshDecode(buffer, (function (uint8) external returns (int8)));
+            function (uint8) external returns (int8) fPtr = abi.decode(buffer, (function (uint8) external returns (int8)));
             return (fPtr.selector, fPtr.address);
         }
     }
@@ -815,7 +819,12 @@ fn external_function() {
         ],
     };
     let encoded = input.try_to_vec().unwrap();
-    let returns = vm.function("testExternalFunction", &[Token::Bytes(encoded)], &[], None);
+    let returns = vm.function(
+        "testExternalFunction",
+        &[BorshToken::Bytes(encoded)],
+        &[],
+        None,
+    );
 
     let selector = returns[0].clone().into_fixed_bytes().unwrap();
     assert_eq!(selector, input.selector);
@@ -836,7 +845,7 @@ fn bytes_arrays() {
         r#"
         contract Testing {
             function testByteArrays(bytes memory buffer) public view {
-                (bytes4[2] memory arr, bytes5[] memory vec) = abi.borshDecode(buffer, (bytes4[2], bytes5[]));
+                (bytes4[2] memory arr, bytes5[] memory vec) = abi.decode(buffer, (bytes4[2], bytes5[]));
 
                 assert(arr[0] == "abcd");
                 assert(arr[1] == "efgh");
@@ -855,7 +864,7 @@ fn bytes_arrays() {
         item_2: vec![b"12345".to_owned(), b"67890".to_owned()],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("testByteArrays", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testByteArrays", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -871,7 +880,7 @@ fn different_types() {
         r#"
     contract Testing {
         function testByteArrays(bytes memory buffer) public view {
-            (bytes4[2] memory arr, bytes5[] memory vec) = abi.borshDecode(buffer, (bytes4[2], bytes5[]));
+            (bytes4[2] memory arr, bytes5[] memory vec) = abi.decode(buffer, (bytes4[2], bytes5[]));
 
             assert(arr[0] == "abcd");
             assert(arr[1] == "efgh");
@@ -887,7 +896,7 @@ fn different_types() {
     vm.constructor("Testing", &[]);
     let input = Input1 { a: -789, b: 14234 };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("testByteArrays", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testByteArrays", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -902,7 +911,7 @@ fn more_elements() {
         r#"
         contract Testing {
             function wrongNumber(bytes memory buffer) public view {
-               int64[5] memory vec = abi.borshDecode(buffer, (int64[5]));
+               int64[5] memory vec = abi.decode(buffer, (int64[5]));
 
                assert(vec[1] == 0);
             }
@@ -914,7 +923,7 @@ fn more_elements() {
 
     let input = Input { vec: [1, 4, 5, 6] };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("wrongNumber", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("wrongNumber", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -929,7 +938,7 @@ fn extra_element() {
         r#"
         contract Testing {
             function extraElement(bytes memory buffer) public pure {
-               (int64[] memory vec, int32 g) = abi.borshDecode(buffer, (int64[], int32));
+               (int64[] memory vec, int32 g) = abi.decode(buffer, (int64[], int32));
 
                assert(vec[1] == 0);
                assert(g == 3);
@@ -944,7 +953,7 @@ fn extra_element() {
     };
 
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("extraElement", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("extraElement", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -959,7 +968,7 @@ fn invalid_type() {
         r#"
     contract Testing {
         function invalidType(bytes memory buffer) public pure {
-           int64[] memory vec = abi.borshDecode(buffer, (int64[]));
+           int64[] memory vec = abi.decode(buffer, (int64[]));
 
            assert(vec[1] == 0);
         }
@@ -971,7 +980,7 @@ fn invalid_type() {
 
     let input = Input { item: 5 };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("invalidType", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("invalidType", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -987,7 +996,7 @@ fn longer_buffer() {
         r#"
     contract Testing {
         function testLongerBuffer(bytes memory buffer) public view {
-            uint64 a = abi.borshDecode(buffer, (uint64));
+            uint64 a = abi.decode(buffer, (uint64));
 
             assert(a == 4);
         }
@@ -1002,7 +1011,7 @@ fn longer_buffer() {
         item_2: 5,
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("testLongerBuffer", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testLongerBuffer", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -1018,7 +1027,7 @@ fn longer_buffer_array() {
         r#"
         contract Testing {
             function testLongerBuffer(bytes memory buffer) public view {
-                (uint64 a, uint32[3] memory b) = abi.borshDecode(buffer, (uint64, uint32[3]));
+                (uint64 a, uint32[3] memory b) = abi.decode(buffer, (uint64, uint32[3]));
 
                 assert(a == 4);
                 assert(b[0] == 1);
@@ -1034,7 +1043,7 @@ fn longer_buffer_array() {
         item_2: [1, 2, 3, 4],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("testLongerBuffer", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testLongerBuffer", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -1048,7 +1057,7 @@ fn dynamic_array_of_array() {
         r#"
         contract Testing {
             function testArrayAssign(bytes memory buffer) public pure {
-                int32[2][] memory vec = abi.borshDecode(buffer, (int32[2][]));
+                int32[2][] memory vec = abi.decode(buffer, (int32[2][]));
 
                 assert(vec.length == 2);
 
@@ -1066,7 +1075,7 @@ fn dynamic_array_of_array() {
         vec: vec![[0, 1], [2, -3]],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("testArrayAssign", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testArrayAssign", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -1095,7 +1104,7 @@ fn test_struct_validation() {
 
 
         function test(bytes memory buffer) public pure {
-            (uint128 b, myStruct memory m_str) = abi.borshDecode(buffer, (uint128, myStruct));
+            (uint128 b, myStruct memory m_str) = abi.decode(buffer, (uint128, myStruct));
 
             assert(m_str.b == "struct");
             assert(m_str.c == 1);
@@ -1119,7 +1128,7 @@ fn test_struct_validation() {
         },
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("test", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("test", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -1148,7 +1157,7 @@ fn test_struct_validation_invalid() {
 
 
         function test(bytes memory buffer) public pure {
-            (uint128 b, myStruct memory m_str) = abi.borshDecode(buffer, (uint128, myStruct));
+            (uint128 b, myStruct memory m_str) = abi.decode(buffer, (uint128, myStruct));
 
             assert(m_str.b == "struct");
             assert(m_str.c == 1);
@@ -1171,7 +1180,7 @@ fn test_struct_validation_invalid() {
         },
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("test", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("test", &[BorshToken::Bytes(encoded)], &[], None);
 }
 
 #[test]
@@ -1180,7 +1189,7 @@ fn string_fixed_array() {
         r#"
         contract test {
     function testing(bytes memory data) public pure {
-        string[4] arr = abi.borshDecode(data, (string[4]));
+        string[4] arr = abi.decode(data, (string[4]));
         assert(arr[0] == "a");
         assert(arr[1] == "b");
         assert(arr[2] == "c");
@@ -1205,5 +1214,5 @@ fn string_fixed_array() {
         ],
     };
     let encoded = input.try_to_vec().unwrap();
-    let _ = vm.function("testing", &[Token::Bytes(encoded)], &[], None);
+    let _ = vm.function("testing", &[BorshToken::Bytes(encoded)], &[], None);
 }

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
 use crate::build_solidity_with_overflow_check;
-use ethabi::ethereum_types::U256;
-use num_bigint::{BigInt, BigUint, RandBigInt};
+use crate::{build_solidity, BorshToken};
+use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt};
+use num_traits::{ToPrimitive, Zero};
 use rand::seq::SliceRandom;
 use rand::Rng;
-use std::ops::Add;
 use std::ops::BitAnd;
 use std::ops::Div;
 use std::ops::Mul;
@@ -14,6 +13,7 @@ use std::ops::Rem;
 use std::ops::Shl;
 use std::ops::Shr;
 use std::ops::Sub;
+use std::ops::{Add, BitOr, BitXor, MulAssign, ShlAssign, ShrAssign, SubAssign};
 
 #[test]
 #[should_panic]
@@ -81,14 +81,14 @@ fn boolean() {
 
     let returns = vm.function("return_true", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Bool(true),]);
+    assert_eq!(returns, vec![BorshToken::Bool(true),]);
 
     let returns = vm.function("return_false", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Bool(false),]);
+    assert_eq!(returns, vec![BorshToken::Bool(false),]);
 
-    vm.function("true_arg", &[ethabi::Token::Bool(true)], &[], None);
-    vm.function("false_arg", &[ethabi::Token::Bool(false)], &[], None);
+    vm.function("true_arg", &[BorshToken::Bool(true)], &[], None);
+    vm.function("false_arg", &[BorshToken::Bool(false)], &[], None);
 }
 
 #[test]
@@ -117,7 +117,7 @@ fn address() {
 
     assert_eq!(
         returns,
-        vec![ethabi::Token::FixedBytes(vec![
+        vec![BorshToken::FixedBytes(vec![
             171, 59, 10, 127, 211, 122, 217, 123, 53, 213, 159, 40, 54, 36, 50, 52, 196, 144, 17,
             226, 97, 168, 69, 213, 79, 14, 6, 232, 165, 44, 58, 31
         ]),]
@@ -125,7 +125,7 @@ fn address() {
 
     vm.function(
         "address_arg",
-        &[ethabi::Token::FixedBytes(vec![
+        &[BorshToken::FixedBytes(vec![
             75, 161, 209, 89, 47, 84, 50, 13, 23, 127, 94, 21, 50, 249, 250, 185, 117, 49, 186,
             134, 82, 130, 112, 97, 218, 24, 157, 198, 40, 105, 118, 27,
         ])],
@@ -159,9 +159,23 @@ fn test_enum() {
 
     let returns = vm.function("return_enum", &[], &[], None);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(U256::from(9))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 8,
+            value: BigInt::from(9u8)
+        }]
+    );
 
-    vm.function("enum_arg", &[ethabi::Token::Uint(U256::from(6))], &[], None);
+    vm.function(
+        "enum_arg",
+        &[BorshToken::Uint {
+            width: 8,
+            value: BigInt::from(6u8),
+        }],
+        &[],
+        None,
+    );
 }
 
 #[test]
@@ -209,19 +223,19 @@ fn bytes() {
 
         assert_eq!(
             returns,
-            vec![ethabi::Token::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7]),]
+            vec![BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7]),]
         );
 
         let returns = vm.function(
             "return_arg",
-            &[ethabi::Token::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
+            &[BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
             &[],
             None,
         );
 
         assert_eq!(
             returns,
-            vec![ethabi::Token::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])]
+            vec![BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])]
         );
 
         for _ in 0..10 {
@@ -237,8 +251,8 @@ fn bytes() {
             let or = vm.function(
                 "or",
                 &[
-                    ethabi::Token::FixedBytes(a.to_vec()),
-                    ethabi::Token::FixedBytes(b.to_vec()),
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::FixedBytes(b.to_vec()),
                 ],
                 &[],
                 None,
@@ -253,13 +267,13 @@ fn bytes() {
                 hex::encode(&res)
             );
 
-            assert_eq!(or, vec![ethabi::Token::FixedBytes(res)]);
+            assert_eq!(or, vec![BorshToken::FixedBytes(res)]);
 
             let and = vm.function(
                 "and",
                 &[
-                    ethabi::Token::FixedBytes(a.to_vec()),
-                    ethabi::Token::FixedBytes(b.to_vec()),
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::FixedBytes(b.to_vec()),
                 ],
                 &[],
                 None,
@@ -267,13 +281,13 @@ fn bytes() {
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a & b).collect();
 
-            assert_eq!(and, vec![ethabi::Token::FixedBytes(res)]);
+            assert_eq!(and, vec![BorshToken::FixedBytes(res)]);
 
             let xor = vm.function(
                 "xor",
                 &[
-                    ethabi::Token::FixedBytes(a.to_vec()),
-                    ethabi::Token::FixedBytes(b.to_vec()),
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::FixedBytes(b.to_vec()),
                 ],
                 &[],
                 None,
@@ -281,7 +295,7 @@ fn bytes() {
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a ^ b).collect();
 
-            assert_eq!(xor, vec![ethabi::Token::FixedBytes(res)]);
+            assert_eq!(xor, vec![BorshToken::FixedBytes(res)]);
 
             let r = rng.gen::<u32>() % (width as u32 * 8);
 
@@ -290,8 +304,11 @@ fn bytes() {
             let shl = vm.function(
                 "shift_left",
                 &[
-                    ethabi::Token::FixedBytes(a.to_vec()),
-                    ethabi::Token::Uint(U256::from(r)),
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
                 ],
                 &[],
                 None,
@@ -307,13 +324,16 @@ fn bytes() {
                 res.insert(0, 0);
             }
 
-            assert_eq!(shl, vec![ethabi::Token::FixedBytes(res)]);
+            assert_eq!(shl, vec![BorshToken::FixedBytes(res)]);
 
             let shr = vm.function(
                 "shift_right",
                 &[
-                    ethabi::Token::FixedBytes(a.to_vec()),
-                    ethabi::Token::Uint(U256::from(r)),
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
                 ],
                 &[],
                 None,
@@ -325,7 +345,7 @@ fn bytes() {
                 res.insert(0, 0);
             }
 
-            assert_eq!(shr, vec![ethabi::Token::FixedBytes(res)]);
+            assert_eq!(shr, vec![BorshToken::FixedBytes(res)]);
         }
     }
 }
@@ -399,210 +419,349 @@ fn uint() {
         println!("width:{}", width);
 
         for _ in 0..10 {
-            let mut a = Vec::new();
-            let mut b = Vec::new();
+            let mut a = rng.gen_biguint(width as u64);
+            let mut b = rng.gen_biguint(width as u64);
+            if b > a {
+                std::mem::swap(&mut a, &mut b);
+            }
 
-            a.resize(width / 8, 0);
-            b.resize(width / 8, 0);
-
-            rng.fill(&mut a[..]);
-            rng.fill(&mut b[..]);
-
-            let mut a = U256::from_big_endian(&a);
-            let mut b = U256::from_big_endian(&b);
-
-            rng.fill(&mut a.0[..]);
-            rng.fill(&mut b.0[..]);
-
-            truncate_uint(&mut a, width);
-            truncate_uint(&mut b, width);
-
-            let res = vm.function("pass", &[ethabi::Token::Uint(a)], &[], None);
+            let res = vm.function(
+                "pass",
+                &[BorshToken::Uint {
+                    width: width as u16,
+                    value: a.to_bigint().unwrap(),
+                }],
+                &[],
+                None,
+            );
 
             println!("{:x} = {:?} o", a, res);
 
             let add = vm.function(
                 "add",
-                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let (mut res, _) = a.overflowing_add(b);
-
-            truncate_uint(&mut res, width);
+            let mut res = a.clone().add(&b);
+            truncate_biguint(&mut res, width);
 
             println!("{:x} + {:x} = {:?} or {:x}", a, b, add, res);
 
-            assert_eq!(add, vec![ethabi::Token::Uint(res)]);
+            assert_eq!(
+                add,
+                vec![BorshToken::Uint {
+                    width: width as u16,
+                    value: res.to_bigint().unwrap(),
+                }]
+            );
 
             let sub = vm.function(
                 "sub",
-                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let (mut res, _) = a.overflowing_sub(b);
+            let mut res = a.clone().sub(&b);
+            truncate_biguint(&mut res, width);
 
-            truncate_uint(&mut res, width);
-
-            assert_eq!(sub, vec![ethabi::Token::Uint(res)]);
+            assert_eq!(
+                sub,
+                vec![BorshToken::Uint {
+                    width: width as u16,
+                    value: res.to_bigint().unwrap(),
+                }]
+            );
 
             let mul = vm.function(
                 "mul",
-                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let (mut res, _) = a.overflowing_mul(b);
+            let mut res = a.clone().mul(&b);
+            truncate_biguint(&mut res, width);
 
-            truncate_uint(&mut res, width);
-
-            assert_eq!(mul, vec![ethabi::Token::Uint(res)]);
-
-            let pow = vm.function(
-                "pow",
-                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
-                &[],
-                None,
+            assert_eq!(
+                mul,
+                vec![BorshToken::Uint {
+                    width: width as u16,
+                    value: res.to_bigint().unwrap(),
+                }]
             );
 
-            let (mut res, _) = a.overflowing_pow(b);
-
-            truncate_uint(&mut res, width);
-
-            assert_eq!(pow, vec![ethabi::Token::Uint(res)]);
-
-            if b != U256::zero() {
-                let div = vm.function(
-                    "div",
-                    &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+            if let Some(mut n) = b.to_u32() {
+                n %= 65536;
+                let pow = vm.function(
+                    "pow",
+                    &[
+                        BorshToken::Uint {
+                            width: width as u16,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width: width as u16,
+                            value: BigInt::from(n),
+                        },
+                    ],
                     &[],
                     None,
                 );
 
-                let mut res = a.div(b);
+                let mut res = a.clone().pow(n);
+                truncate_biguint(&mut res, width);
 
-                truncate_uint(&mut res, width);
+                assert_eq!(
+                    pow,
+                    vec![BorshToken::Uint {
+                        width: width as u16,
+                        value: res.to_bigint().unwrap(),
+                    }]
+                );
+            }
 
-                assert_eq!(div, vec![ethabi::Token::Uint(res)]);
+            if b != BigUint::zero() {
+                let div = vm.function(
+                    "div",
+                    &[
+                        BorshToken::Uint {
+                            width: width as u16,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width: width as u16,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ],
+                    &[],
+                    None,
+                );
+
+                let mut res = a.clone().div(&b);
+
+                truncate_biguint(&mut res, width);
+
+                assert_eq!(
+                    div,
+                    vec![BorshToken::Uint {
+                        width: width as u16,
+                        value: res.to_bigint().unwrap(),
+                    }]
+                );
 
                 let add = vm.function(
                     "mod",
-                    &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                    &[
+                        BorshToken::Uint {
+                            width: width as u16,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width: width as u16,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ],
                     &[],
                     None,
                 );
 
-                let mut res = a.rem(b);
+                let mut res = a.clone().rem(&b);
 
-                truncate_uint(&mut res, width);
+                truncate_biguint(&mut res, width);
 
-                assert_eq!(add, vec![ethabi::Token::Uint(res)]);
+                assert_eq!(
+                    add,
+                    vec![BorshToken::Uint {
+                        width: width as u16,
+                        value: res.to_bigint().unwrap(),
+                    }]
+                );
             }
 
             let or = vm.function(
                 "or",
-                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let mut res = U256([
-                a.0[0] | b.0[0],
-                a.0[1] | b.0[1],
-                a.0[2] | b.0[2],
-                a.0[3] | b.0[3],
-            ]);
+            let mut res = a.clone().bitor(&b);
+            truncate_biguint(&mut res, width);
 
-            truncate_uint(&mut res, width);
-
-            assert_eq!(or, vec![ethabi::Token::Uint(res)]);
+            assert_eq!(
+                or,
+                vec![BorshToken::Uint {
+                    width: width as u16,
+                    value: res.to_bigint().unwrap(),
+                }]
+            );
 
             let and = vm.function(
                 "and",
-                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let mut res = U256([
-                a.0[0] & b.0[0],
-                a.0[1] & b.0[1],
-                a.0[2] & b.0[2],
-                a.0[3] & b.0[3],
-            ]);
+            let mut res = a.clone().bitand(&b);
+            truncate_biguint(&mut res, width);
 
-            truncate_uint(&mut res, width);
-
-            assert_eq!(and, vec![ethabi::Token::Uint(res)]);
+            assert_eq!(
+                and,
+                vec![BorshToken::Uint {
+                    width: width as u16,
+                    value: res.to_bigint().unwrap(),
+                }]
+            );
 
             let xor = vm.function(
                 "xor",
-                &[ethabi::Token::Uint(a), ethabi::Token::Uint(b)],
+                &[
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let mut res = U256([
-                a.0[0] ^ b.0[0],
-                a.0[1] ^ b.0[1],
-                a.0[2] ^ b.0[2],
-                a.0[3] ^ b.0[3],
-            ]);
+            let mut res = a.clone().bitxor(&b);
+            truncate_biguint(&mut res, width);
 
-            truncate_uint(&mut res, width);
-
-            assert_eq!(xor, vec![ethabi::Token::Uint(res)]);
+            assert_eq!(
+                xor,
+                vec![BorshToken::Uint {
+                    width: width as u16,
+                    value: res.to_bigint().unwrap(),
+                }]
+            );
 
             let r = rng.gen::<u32>() % (width as u32);
 
             let shl = vm.function(
                 "shift_left",
-                &[ethabi::Token::Uint(a), ethabi::Token::Uint(U256::from(r))],
+                &[
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let mut res = a.shl(r);
+            let mut res = a.clone();
+            res.shl_assign(r);
+            truncate_biguint(&mut res, width);
 
-            truncate_uint(&mut res, width);
-
-            assert_eq!(shl, vec![ethabi::Token::Uint(res)]);
+            assert_eq!(
+                shl,
+                vec![BorshToken::Uint {
+                    width: width as u16,
+                    value: res.to_bigint().unwrap(),
+                }]
+            );
 
             let shr = vm.function(
                 "shift_right",
-                &[ethabi::Token::Uint(a), ethabi::Token::Uint(U256::from(r))],
+                &[
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let mut res = a.shr(r);
+            let mut res = a.clone();
+            res.shr_assign(&r);
+            truncate_biguint(&mut res, width);
 
-            truncate_uint(&mut res, width);
-
-            assert_eq!(shr, vec![ethabi::Token::Uint(res)]);
+            assert_eq!(
+                shr,
+                vec![BorshToken::Uint {
+                    width: width as u16,
+                    value: res.to_bigint().unwrap(),
+                }]
+            );
         }
     }
 }
 
-fn truncate_uint(n: &mut U256, width: usize) {
-    let mut bits = 256 - width;
-
-    let mut offset = 3;
-
-    while bits > 64 {
-        n.0[offset] = 0;
-
-        offset -= 1;
-        bits -= 64;
+fn truncate_biguint(n: &mut BigUint, width: usize) {
+    let mut bytes = n.to_bytes_le();
+    let byte_width = width / 8;
+    if bytes.len() < byte_width {
+        return;
     }
 
-    if bits > 0 {
-        n.0[offset] &= (1 << (64 - bits)) - 1;
+    for item in bytes.iter_mut().skip(byte_width) {
+        *item = 0;
     }
+
+    *n = BigUint::from_bytes_le(&bytes);
 }
 
 #[test]
@@ -622,8 +781,14 @@ fn test_power_overflow_boundaries() {
         let return_value = contract.function(
             "pow",
             &[
-                ethabi::Token::Uint(U256::from(2)),
-                ethabi::Token::Uint(U256::from(width - 1)),
+                BorshToken::Uint {
+                    width,
+                    value: BigInt::from(2u8),
+                },
+                BorshToken::Uint {
+                    width,
+                    value: BigInt::from(width - 1),
+                },
             ],
             &[],
             None,
@@ -633,16 +798,23 @@ fn test_power_overflow_boundaries() {
 
         assert_eq!(
             return_value,
-            vec![ethabi::Token::Uint(U256::from_big_endian(
-                &res.to_bytes_be()
-            ))]
+            vec![BorshToken::Uint {
+                width,
+                value: res.to_bigint().unwrap(),
+            }]
         );
 
         let sesa = contract.function_must_fail(
             "pow",
             &[
-                ethabi::Token::Uint(U256::from(2)),
-                ethabi::Token::Uint(U256::from(width + 1)),
+                BorshToken::Uint {
+                    width,
+                    value: BigInt::from(2u8),
+                },
+                BorshToken::Uint {
+                    width,
+                    value: BigInt::from(width + 1),
+                },
             ],
             &[],
             None,
@@ -665,8 +837,10 @@ fn test_overflow_boundaries() {
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
-        let upper_boundary = BigInt::from(2_u32).pow(width - 1).sub(1);
-        let lower_boundary = BigInt::from(2_u32).pow(width - 1).mul(-1);
+        let mut upper_boundary: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
+        upper_boundary.sub_assign(1);
+        let mut lower_boundary: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
+        lower_boundary.mul_assign(-1);
         let second_op = BigInt::from(1_u32);
 
         // Multiply the boundaries by 1.
@@ -674,41 +848,55 @@ fn test_overflow_boundaries() {
         let return_value = contract.function(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(&upper_boundary, width.try_into().unwrap())),
-                ethabi::Token::Int(bigint_to_eth(&second_op, width.try_into().unwrap())),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: upper_boundary.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: second_op.clone(),
+                },
             ],
             &[],
             None,
         );
         assert_eq!(
             return_value,
-            vec![ethabi::Token::Int(bigint_to_eth(
-                &upper_boundary,
-                width.try_into().unwrap(),
-            ))]
+            vec![BorshToken::Int {
+                width: width as u16,
+                value: upper_boundary.clone(),
+            }]
         );
 
         let return_value = contract.function(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(&lower_boundary, width.try_into().unwrap())),
-                ethabi::Token::Int(bigint_to_eth(&second_op, width.try_into().unwrap())),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: lower_boundary.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: second_op.clone(),
+                },
             ],
             &[],
             None,
         );
         assert_eq!(
             return_value,
-            vec![ethabi::Token::Int(bigint_to_eth(
-                &lower_boundary,
-                width.try_into().unwrap(),
-            ))]
+            vec![BorshToken::Int {
+                width: width as u16,
+                value: lower_boundary.clone(),
+            },]
         );
 
-        let upper_boundary_plus_one = BigInt::from(2_u32).pow(width - 1);
+        let upper_boundary_plus_one: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
 
         // We subtract 2 instead of one to make the number even, so that no rounding occurs when we divide by 2 later on.
-        let lower_boundary_minus_two = BigInt::from(2_u32).pow(width - 1).mul(-1_i32).sub(2_i32);
+        let mut lower_boundary_minus_two: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
+        lower_boundary_minus_two.mul_assign(-1_i32);
+        lower_boundary_minus_two.sub_assign(2_i32);
 
         let upper_second_op = upper_boundary_plus_one.div(2);
 
@@ -717,8 +905,14 @@ fn test_overflow_boundaries() {
         let res = contract.function_must_fail(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(&upper_second_op, width.try_into().unwrap())),
-                ethabi::Token::Int(bigint_to_eth(&BigInt::from(2), width.try_into().unwrap())),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: upper_second_op,
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: BigInt::from(2u8),
+                },
             ],
             &[],
             None,
@@ -729,8 +923,14 @@ fn test_overflow_boundaries() {
         let res = contract.function_must_fail(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(&lower_second_op, width.try_into().unwrap())),
-                ethabi::Token::Int(bigint_to_eth(&BigInt::from(2), width.try_into().unwrap())),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: lower_second_op,
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: BigInt::from(2),
+                },
             ],
             &[],
             None,
@@ -741,8 +941,14 @@ fn test_overflow_boundaries() {
         let res = contract.function_must_fail(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(&upper_boundary, width.try_into().unwrap())),
-                ethabi::Token::Int(bigint_to_eth(&upper_boundary, width.try_into().unwrap())),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: upper_boundary.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: upper_boundary.clone(),
+                },
             ],
             &[],
             None,
@@ -753,8 +959,14 @@ fn test_overflow_boundaries() {
         let res = contract.function_must_fail(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(&lower_boundary, width.try_into().unwrap())),
-                ethabi::Token::Int(bigint_to_eth(&lower_boundary, width.try_into().unwrap())),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: lower_boundary.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: lower_boundary.clone(),
+                },
             ],
             &[],
             None,
@@ -765,8 +977,14 @@ fn test_overflow_boundaries() {
         let res = contract.function_must_fail(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(&upper_boundary, width.try_into().unwrap())),
-                ethabi::Token::Int(bigint_to_eth(&lower_boundary, width.try_into().unwrap())),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: upper_boundary.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: lower_boundary.clone(),
+                },
             ],
             &[],
             None,
@@ -783,6 +1001,7 @@ fn test_mul_within_range_signed() {
         let src = r#"
         contract test {
             function mul(intN a, intN b) public returns (intN) {
+                print("{}*{}".format(a, b));
                 return a * b;
             }
         }"#
@@ -803,11 +1022,14 @@ fn test_mul_within_range_signed() {
         let return_value = contract.function(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(
-                    &first_operand_rand,
-                    width.try_into().unwrap(),
-                )),
-                ethabi::Token::Int(bigint_to_eth(&second_op, width.try_into().unwrap())),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: first_operand_rand.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: second_op.clone(),
+                },
             ],
             &[],
             None,
@@ -816,10 +1038,10 @@ fn test_mul_within_range_signed() {
         let res = first_operand_rand.mul(second_op);
         assert_eq!(
             return_value,
-            vec![ethabi::Token::Int(bigint_to_eth(
-                &res,
-                width.try_into().unwrap(),
-            ))]
+            vec![BorshToken::Int {
+                width: width as u16,
+                value: res,
+            }]
         );
     }
 }
@@ -840,7 +1062,8 @@ fn test_mul_within_range() {
         contract.constructor("test", &[]);
         for _ in 0..10 {
             // Max number to fit unsigned N bits is (2^N)-1
-            let limit = BigUint::from(2_u32).pow(width).sub(1_u32);
+            let mut limit: BigUint = BigUint::from(2_u32).pow(width as u32);
+            limit.sub_assign(1u8);
 
             // Generate a random number within the the range [0, 2^N -1]
             let first_operand_rand = rng.gen_biguint_range(&BigUint::from(1usize), &limit);
@@ -851,8 +1074,14 @@ fn test_mul_within_range() {
             let return_value = contract.function(
                 "mul",
                 &[
-                    ethabi::Token::Uint(U256::from_big_endian(&first_operand_rand.to_bytes_be())),
-                    ethabi::Token::Uint(U256::from_big_endian(&second_operand_rand.to_bytes_be())),
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: first_operand_rand.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: second_operand_rand.to_bigint().unwrap(),
+                    },
                 ],
                 &[],
                 None,
@@ -861,9 +1090,10 @@ fn test_mul_within_range() {
 
             assert_eq!(
                 return_value,
-                vec![ethabi::Token::Uint(U256::from_big_endian(
-                    &res.to_bytes_be()
-                ))]
+                vec![BorshToken::Uint {
+                    width: width as u16,
+                    value: res.to_bigint().unwrap(),
+                }]
             );
         }
     }
@@ -885,7 +1115,8 @@ fn test_overflow_detect_signed() {
         contract.constructor("test", &[]);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
-        let limit = BigInt::from(2_u32).pow(width - 1).sub(1usize);
+        let mut limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
+        limit.sub_assign(1u8);
 
         // Generate a random number within the the range [(2^N-1)/2, (2^N-1) -1]
         let first_operand_rand =
@@ -897,14 +1128,14 @@ fn test_overflow_detect_signed() {
         let res = contract.function_must_fail(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(
-                    &first_operand_rand,
-                    width.try_into().unwrap(),
-                )),
-                ethabi::Token::Int(bigint_to_eth(
-                    &second_operand_rand,
-                    width.try_into().unwrap(),
-                )),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: first_operand_rand.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: second_operand_rand.clone(),
+                },
             ],
             &[],
             None,
@@ -913,7 +1144,9 @@ fn test_overflow_detect_signed() {
         assert_ne!(res, Ok(0));
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
-        let lower_limit = BigInt::from(2_u32).pow(width - 1).sub(1usize).mul(-1_i32);
+        let mut lower_limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
+        lower_limit.sub_assign(1usize);
+        lower_limit.mul_assign(-1_i32);
 
         // Generate a random number within the the range [-(2^N-1), -(2^N-1)/2]
         let first_operand_rand =
@@ -922,14 +1155,14 @@ fn test_overflow_detect_signed() {
         let res = contract.function_must_fail(
             "mul",
             &[
-                ethabi::Token::Int(bigint_to_eth(
-                    &first_operand_rand,
-                    width.try_into().unwrap(),
-                )),
-                ethabi::Token::Int(bigint_to_eth(
-                    &second_operand_rand,
-                    width.try_into().unwrap(),
-                )),
+                BorshToken::Int {
+                    width: width as u16,
+                    value: first_operand_rand.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: second_operand_rand.clone(),
+                },
             ],
             &[],
             None,
@@ -956,7 +1189,8 @@ fn test_overflow_detect_unsigned() {
 
         for _ in 0..10 {
             // N bits can hold the range [0, (2^N)-1]. Generate a value that overflows N bits
-            let limit = BigUint::from(2_u32).pow(width).sub(1usize);
+            let mut limit: BigUint = BigUint::from(2_u32).pow(width as u32);
+            limit.sub_assign(1u8);
 
             // Generate a random number within the the range [(2^N-1)/2, 2^N -1]
             let first_operand_rand =
@@ -968,8 +1202,14 @@ fn test_overflow_detect_unsigned() {
             let res = contract.function_must_fail(
                 "mul",
                 &[
-                    ethabi::Token::Uint(U256::from_big_endian(&first_operand_rand.to_bytes_be())),
-                    ethabi::Token::Uint(U256::from_big_endian(&second_operand_rand.to_bytes_be())),
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: first_operand_rand.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: second_operand_rand.to_bigint().unwrap(),
+                    },
                 ],
                 &[],
                 None,
@@ -1035,220 +1275,294 @@ fn int() {
         vm.constructor("test", &[]);
 
         for _ in 0..10 {
-            let mut a_bs = Vec::new();
-            let mut b_bs = Vec::new();
-
-            a_bs.resize(width / 8, 0);
-            b_bs.resize(width / 8, 0);
-
-            rng.fill(&mut a_bs[..]);
-            rng.fill(&mut b_bs[..]);
-
-            let mut a = U256::from_big_endian(&a_bs);
-            let mut b = U256::from_big_endian(&b_bs);
-
-            truncate_int(&mut a, width);
-            truncate_int(&mut b, width);
-
-            let big_a = eth_to_bigint(&a, width);
-            let big_b = eth_to_bigint(&b, width);
+            let a = rng.gen_bigint(width - 1);
+            let b = rng.gen_bigint(width - 1);
 
             let add = vm.function(
                 "add",
-                &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let res = big_a.clone().add(&big_b);
+            let mut res = a.clone().add(&b);
+            truncate_bigint(&mut res, width as usize);
 
-            let res = bigint_to_eth(&res, width);
-
-            assert_eq!(add, vec![ethabi::Token::Int(res)]);
+            assert_eq!(
+                add,
+                vec![BorshToken::Int {
+                    width: width as u16,
+                    value: res,
+                }]
+            );
 
             let sub = vm.function(
                 "sub",
-                &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let res = bigint_to_eth(&big_a.clone().sub(&big_b), width);
+            let mut res = a.clone().sub(&b);
+            truncate_bigint(&mut res, width as usize);
 
-            assert_eq!(sub, vec![ethabi::Token::Int(res)]);
+            assert_eq!(
+                sub,
+                vec![BorshToken::Int {
+                    width: width as u16,
+                    value: res,
+                }]
+            );
 
             let mul = vm.function(
                 "mul",
-                &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let res = bigint_to_eth(&big_a.clone().mul(&big_b), width);
+            let mut res = a.clone().mul(&b);
+            truncate_bigint(&mut res, width as usize);
 
-            assert_eq!(mul, vec![ethabi::Token::Int(res)]);
+            assert_eq!(
+                mul,
+                vec![BorshToken::Int {
+                    width: width as u16,
+                    value: res,
+                }]
+            );
 
-            if b != U256::zero() {
+            if b != BigInt::zero() {
                 let div = vm.function(
                     "div",
-                    &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
+                    &[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: b.clone(),
+                        },
+                    ],
                     &[],
                     None,
                 );
 
-                let res = bigint_to_eth(&big_a.clone().div(&big_b), width);
+                let mut res = a.clone().div(&b);
+                truncate_bigint(&mut res, width as usize);
 
-                assert_eq!(div, vec![ethabi::Token::Int(res)]);
+                assert_eq!(
+                    div,
+                    vec![BorshToken::Int {
+                        width: width as u16,
+                        value: res,
+                    }]
+                );
 
                 let add = vm.function(
                     "mod",
-                    &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
+                    &[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: b.clone(),
+                        },
+                    ],
                     &[],
                     None,
                 );
 
-                let res = big_a.clone().rem(&big_b);
+                let mut res = a.clone().rem(&b);
+                truncate_bigint(&mut res, width as usize);
 
-                let res = bigint_to_eth(&res, width);
-
-                assert_eq!(add, vec![ethabi::Token::Int(res)]);
+                assert_eq!(
+                    add,
+                    vec![BorshToken::Int {
+                        width: width as u16,
+                        value: res,
+                    }]
+                );
             }
 
             let or = vm.function(
                 "or",
-                &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let mut res = U256([
-                a.0[0] | b.0[0],
-                a.0[1] | b.0[1],
-                a.0[2] | b.0[2],
-                a.0[3] | b.0[3],
-            ]);
+            let mut res = a.clone().bitor(&b);
+            truncate_bigint(&mut res, width as usize);
 
-            truncate_int(&mut res, width);
-
-            assert_eq!(or, vec![ethabi::Token::Int(res)]);
+            assert_eq!(
+                or,
+                vec![BorshToken::Int {
+                    width: width as u16,
+                    value: res,
+                }]
+            );
 
             let and = vm.function(
                 "and",
-                &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let mut res = U256([
-                a.0[0] & b.0[0],
-                a.0[1] & b.0[1],
-                a.0[2] & b.0[2],
-                a.0[3] & b.0[3],
-            ]);
+            let mut res = a.clone().bitand(&b);
+            truncate_bigint(&mut res, width as usize);
 
-            truncate_int(&mut res, width);
-
-            assert_eq!(and, vec![ethabi::Token::Int(res)]);
+            assert_eq!(
+                and,
+                vec![BorshToken::Int {
+                    width: width as u16,
+                    value: res,
+                }]
+            );
 
             let xor = vm.function(
                 "xor",
-                &[ethabi::Token::Int(a), ethabi::Token::Int(b)],
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let mut res = U256([
-                a.0[0] ^ b.0[0],
-                a.0[1] ^ b.0[1],
-                a.0[2] ^ b.0[2],
-                a.0[3] ^ b.0[3],
-            ]);
+            let mut res = a.clone().bitxor(&b);
+            truncate_bigint(&mut res, width as usize);
 
-            truncate_int(&mut res, width);
-
-            assert_eq!(xor, vec![ethabi::Token::Int(res)]);
+            assert_eq!(
+                xor,
+                vec![BorshToken::Int {
+                    width: width as u16,
+                    value: res,
+                }]
+            );
 
             let r = rng.gen::<u32>() % (width as u32);
 
             let shl = vm.function(
                 "shift_left",
-                &[ethabi::Token::Int(a), ethabi::Token::Uint(U256::from(r))],
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let mut res = a.shl(r);
+            let mut res = a.clone().shl(r);
 
-            truncate_int(&mut res, width);
+            truncate_bigint(&mut res, width as usize);
 
-            assert_eq!(shl, vec![ethabi::Token::Int(res)]);
+            assert_eq!(
+                shl,
+                vec![BorshToken::Int {
+                    width: width as u16,
+                    value: res,
+                }]
+            );
 
             let shr = vm.function(
                 "shift_right",
-                &[ethabi::Token::Int(a), ethabi::Token::Uint(U256::from(r))],
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ],
                 &[],
                 None,
             );
 
-            let res = bigint_to_eth(&big_a.clone().shr(r), width);
-
-            assert_eq!(shr, vec![ethabi::Token::Int(res)]);
+            let mut res = a.shr(r);
+            truncate_bigint(&mut res, width as usize);
+            assert_eq!(
+                shr,
+                vec![BorshToken::Int {
+                    width: width as u16,
+                    value: res,
+                }]
+            );
         }
     }
 }
 
-fn truncate_int(n: &mut U256, width: usize) {
-    let sign = n.bitand(U256::from(1) << (width - 1)) != U256::zero();
-
-    let mut bits = 256 - width;
-
-    let mut offset = 3;
-
-    while bits > 64 {
-        n.0[offset] = if sign { u64::MAX } else { 0 };
-
-        offset -= 1;
-        bits -= 64;
+fn truncate_bigint(n: &mut BigInt, width: usize) {
+    let mut bytes_le = n.to_signed_bytes_le();
+    let bytes_width = width / 8;
+    if bytes_le.len() < bytes_width {
+        return;
     }
-
-    if bits > 0 {
-        if sign {
-            n.0[offset] |= !((1 << (64 - bits)) - 1);
-        } else {
-            n.0[offset] &= (1 << (64 - bits)) - 1;
-        }
+    while bytes_le.len() > bytes_width {
+        bytes_le.pop();
     }
-}
-
-fn bigint_to_eth(v: &BigInt, width: usize) -> U256 {
-    let mut buf = v.to_signed_bytes_be();
-    let width = width / 8;
-
-    while buf.len() > width {
-        buf.remove(0);
-    }
-
-    let sign = if (buf[0] & 128) != 0 { 0xff } else { 0 };
-
-    while buf.len() < 32 {
-        buf.insert(0, sign);
-    }
-
-    U256::from_big_endian(&buf)
-}
-
-fn eth_to_bigint(v: &U256, width: usize) -> BigInt {
-    let mut buf = Vec::new();
-
-    buf.resize(32, 0);
-
-    v.to_big_endian(&mut buf);
-
-    let width = width / 8;
-
-    while buf.len() > width {
-        buf.remove(0);
-    }
-
-    BigInt::from_signed_bytes_be(&buf)
+    *n = BigInt::from_signed_bytes_le(&bytes_le);
 }

@@ -45,7 +45,7 @@ describe('Simple collectible', function() {
             payer,
             "SimpleCollectible",
             "SimpleCollectible.abi",
-            [publicKeyToHex(mint), publicKeyToHex(metadata_authority.publicKey)]
+            [mint.toBytes(), metadata_authority.publicKey.toBytes()]
         );
 
         const nft_uri = "www.nft.com";
@@ -53,8 +53,8 @@ describe('Simple collectible', function() {
         // Create a collectible for an owner given a mint authority.
         await contract.functions.createCollectible(
             nft_uri,
-            publicKeyToHex(mint_authority.publicKey),
-            publicKeyToHex(owner_token_account.address),
+            mint_authority.publicKey.toBytes(),
+            owner_token_account.address.toBytes(),
             {
                 accounts: [TOKEN_PROGRAM_ID],
                 writableAccounts: [mint, owner_token_account.address],
@@ -75,8 +75,8 @@ describe('Simple collectible', function() {
 
         // Transfer ownership to another owner
         await contract.functions.transferOwnership(
-            publicKeyToHex(owner_token_account.address),
-            publicKeyToHex(new_owner_token_account.address),
+            owner_token_account.address.toBytes(),
+            new_owner_token_account.address.toBytes(),
             {
                 accounts: [TOKEN_PROGRAM_ID],
                 writableAccounts: [owner_token_account.address, new_owner_token_account.address],
@@ -86,8 +86,8 @@ describe('Simple collectible', function() {
 
         // Confirm that the ownership transference worked
         const verify_transfer_result = await contract.functions.isOwner(
-            publicKeyToHex(new_owner.publicKey),
-            publicKeyToHex(new_owner_token_account.address),
+            new_owner.publicKey.toBytes(),
+            new_owner_token_account.address.toBytes(),
             {
                 accounts: [new_owner_token_account.address],
             }

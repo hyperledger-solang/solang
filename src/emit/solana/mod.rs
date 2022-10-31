@@ -16,13 +16,11 @@ use inkwell::{context::Context, types::BasicTypeEnum};
 use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
 use num_traits::ToPrimitive;
 
-use crate::emit::ethabiencoder;
 use crate::emit::functions::emit_functions;
 use crate::emit::loop_builder::LoopBuilder;
 use crate::emit::{Binary, TargetRuntime};
 
 pub struct SolanaTarget {
-    abi: ethabiencoder::EthAbiDecoder,
     magic: u32,
 }
 
@@ -47,7 +45,6 @@ impl SolanaTarget {
         log_api_return_codes: bool,
     ) -> Binary<'a> {
         let mut target = SolanaTarget {
-            abi: ethabiencoder::EthAbiDecoder { bswap: true },
             magic: contract.selector(),
         };
 
@@ -122,10 +119,7 @@ impl SolanaTarget {
         generate_debug_info: bool,
         log_api_return_codes: bool,
     ) -> Binary<'a> {
-        let mut target = SolanaTarget {
-            abi: ethabiencoder::EthAbiDecoder { bswap: true },
-            magic: 0,
-        };
+        let mut target = SolanaTarget { magic: 0 };
 
         let mut binary = Binary::new(
             context,

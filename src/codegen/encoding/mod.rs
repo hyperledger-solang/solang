@@ -2,9 +2,11 @@
 
 mod borsh_encoding;
 mod buffer_validator;
+mod scale_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
+use crate::codegen::encoding::scale_encoding::ScaleEncoding;
 use crate::codegen::expression::load_storage;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
@@ -23,7 +25,7 @@ pub(super) trait AbiEncoding {
     fn abi_encode(
         &mut self,
         loc: &Loc,
-        args: &[Expression],
+        args: Vec<Expression>,
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
@@ -51,13 +53,21 @@ pub(super) trait AbiEncoding {
 
     /// Some types have sizes that are specific to each encoding scheme, so there is no way to generalize.
     fn get_encoding_size(&self, expr: &Expression, ty: &Type, ns: &Namespace) -> Expression;
+
+    /// Returns if the we are packed encoding
+    fn is_packed(&self) -> bool;
 }
 
 /// This function should return the correct encoder, given the target
-pub(super) fn create_encoder(ns: &Namespace) -> impl AbiEncoding {
+pub(super) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
     match &ns.target {
-        Target::Solana => BorshEncoding::new(),
-        _ => unreachable!("Other types of encoding have not been implemented yet"),
+        Target::Solana => Box::new(BorshEncoding::new(packed)),
+        // Solana utilizes Borsh encoding and Substrate, Scale encoding.
+        // All other targets are using the Scale encoding, because we have tests for a
+        // fake Ethereum target that checks the presence of Instr::AbiDecode and
+        // Expression::AbiEncode.
+        // If a new target is added, this piece of code needs to change.
+        _ => Box::new(ScaleEncoding::new(packed)),
     }
 }
 
@@ -263,7 +273,7 @@ fn calculate_array_size<T: AbiEncoding>(
     // Each dynamic dimension size occupies 4 bytes in the buffer
     let dyn_dims = dims.iter().filter(|d| **d == ArrayLength::Dynamic).count();
 
-    if dyn_dims > 0 {
+    if dyn_dims > 0 && !encoder.is_packed() {
         cfg.add(
             vartab,
             Instr::Set {

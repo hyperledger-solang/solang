@@ -113,11 +113,6 @@ impl<'a> LoopBuilder<'a> {
         self.phis[name].add_incoming(&[(&value, block)]);
     }
 
-    /// Can you use this to get the value of a phi in the body or after the loop exits
-    pub fn get_loop_phi(&self, name: &'static str) -> BasicValueEnum<'a> {
-        self.phis[name].as_basic_value()
-    }
-
     /// Call this once the body of the loop has been generated. This will close the loop
     /// and ensure the exit block has been reached.
     pub fn finish(&self, binary: &Binary<'a>) {

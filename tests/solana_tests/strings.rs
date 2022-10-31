@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::ethereum_types::U256;
-use ethabi::Token;
+use crate::{build_solidity, BorshToken};
+use num_bigint::BigInt;
+use num_traits::{One, Zero};
 
 #[test]
 fn storage_string_length() {
@@ -24,13 +24,19 @@ fn storage_string_length() {
 
     let _ = vm.function(
         "setString",
-        &[Token::String("coffee_tastes_good".to_string())],
+        &[BorshToken::String("coffee_tastes_good".to_string())],
         &[],
         None,
     );
     let returns = vm.function("getLength", &[], &[], None);
 
-    assert_eq!(returns[0], Token::Uint(U256::from(18)));
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(18u8),
+        }
+    );
 }
 
 #[test]
@@ -57,16 +63,58 @@ fn load_string_vector() {
 
     vm.constructor("Testing", &[]);
     let returns = vm.function("testLength", &[], &[], None);
-    assert_eq!(returns[0], Token::Uint(U256::from(3)));
-    assert_eq!(returns[1], Token::Uint(U256::from(5)));
-    assert_eq!(returns[2], Token::Uint(U256::from(6)));
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(3u8),
+        }
+    );
+    assert_eq!(
+        returns[1],
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(5u8),
+        }
+    );
+    assert_eq!(
+        returns[2],
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(6u8),
+        }
+    );
 
-    let returns = vm.function("getString", &[Token::Uint(U256::from(0))], &[], None);
-    assert_eq!(returns[0], Token::String("tea".to_string()));
+    let returns = vm.function(
+        "getString",
+        &[BorshToken::Uint {
+            width: 32,
+            value: BigInt::zero(),
+        }],
+        &[],
+        None,
+    );
+    assert_eq!(returns[0], BorshToken::String("tea".to_string()));
 
-    let returns = vm.function("getString", &[Token::Uint(U256::from(1))], &[], None);
-    assert_eq!(returns[0], Token::String("coffe".to_string()));
+    let returns = vm.function(
+        "getString",
+        &[BorshToken::Uint {
+            width: 32,
+            value: BigInt::one(),
+        }],
+        &[],
+        None,
+    );
+    assert_eq!(returns[0], BorshToken::String("coffe".to_string()));
 
-    let returns = vm.function("getString", &[Token::Uint(U256::from(2))], &[], None);
-    assert_eq!(returns[0], Token::String("sixsix".to_string()));
+    let returns = vm.function(
+        "getString",
+        &[BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(2u8),
+        }],
+        &[],
+        None,
+    );
+    assert_eq!(returns[0], BorshToken::String("sixsix".to_string()));
 }

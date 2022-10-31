@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::{ethereum_types::U256, Token};
+use crate::{build_solidity, BorshToken};
+use num_bigint::BigInt;
+use num_traits::{One, Zero};
 
 #[test]
 fn simple() {
@@ -19,7 +20,13 @@ fn simple() {
 
     vm.constructor("foo", &[]);
     let returns = vm.function("boom", &[], &[], None);
-    assert_eq!(returns, vec![Token::Int(U256::from(0)),]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Int {
+            width: 256,
+            value: BigInt::zero(),
+        }]
+    );
 
     let mut vm = build_solidity(
         r#"
@@ -43,7 +50,13 @@ fn simple() {
 
     vm.constructor("c", &[]);
     let returns = vm.function("func", &[], &[], None);
-    assert_eq!(returns, vec![Token::Int(U256::from(1)),]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Int {
+            width: 256,
+            value: BigInt::one(),
+        }]
+    );
 }
 
 #[test]
@@ -72,11 +85,11 @@ fn string() {
 
     let returns = vm.function("get", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::String(String::from(""))]);
+    assert_eq!(returns, vec![BorshToken::String(String::from(""))]);
 
     vm.function(
         "set",
-        &[Token::String(String::from("Hello, World!"))],
+        &[BorshToken::String(String::from("Hello, World!"))],
         &[],
         None,
     );
@@ -90,20 +103,26 @@ fn string() {
 
     let returns = vm.function("get", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::String(String::from("Hello, World!"))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::String(String::from("Hello, World!"))]
+    );
 
     // try replacing it with a string of the same length. This is a special
     // fast-path handling
     vm.function(
         "set",
-        &[Token::String(String::from("Hallo, Werld!"))],
+        &[BorshToken::String(String::from("Hallo, Werld!"))],
         &[],
         None,
     );
 
     let returns = vm.function("get", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::String(String::from("Hallo, Werld!"))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::String(String::from("Hallo, Werld!"))]
+    );
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
@@ -112,11 +131,11 @@ fn string() {
 
     // Try setting this to an empty string. This is also a special case where
     // the result should be offset 0
-    vm.function("set", &[Token::String(String::from(""))], &[], None);
+    vm.function("set", &[BorshToken::String(String::from(""))], &[], None);
 
     let returns = vm.function("get", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::String(String::from(""))]);
+    assert_eq!(returns, vec![BorshToken::String(String::from(""))]);
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
@@ -158,11 +177,17 @@ fn bytes() {
 
     let returns = vm.function("foo_length", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::Uint(U256::from(0))]);
+    assert_eq!(
+        returns,
+        vec![BorshToken::Uint {
+            width: 32,
+            value: BigInt::zero(),
+        }]
+    );
 
     vm.function(
         "set_foo",
-        &[Token::Bytes(
+        &[BorshToken::Bytes(
             b"The shoemaker always wears the worst shoes".to_vec(),
         )],
         &[],
@@ -178,21 +203,41 @@ fn bytes() {
         .iter()
         .enumerate()
     {
-        let returns = vm.function("get_foo_offset", &[Token::Uint(U256::from(i))], &[], None);
+        let returns = vm.function(
+            "get_foo_offset",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(i),
+            }],
+            &[],
+            None,
+        );
 
-        assert_eq!(returns, vec![Token::FixedBytes(vec![*b])]);
+        assert_eq!(returns, vec![BorshToken::FixedBytes(vec![*b])]);
     }
 
     vm.function(
         "set_foo_offset",
-        &[Token::Uint(U256::from(2)), Token::FixedBytes(b"E".to_vec())],
+        &[
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(2u8),
+            },
+            BorshToken::FixedBytes(b"E".to_vec()),
+        ],
         &[],
         None,
     );
 
     vm.function(
         "set_foo_offset",
-        &[Token::Uint(U256::from(7)), Token::FixedBytes(b"E".to_vec())],
+        &[
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(7u8),
+            },
+            BorshToken::FixedBytes(b"E".to_vec()),
+        ],
         &[],
         None,
     );
@@ -201,9 +246,17 @@ fn bytes() {
         .iter()
         .enumerate()
     {
-        let returns = vm.function("get_foo_offset", &[Token::Uint(U256::from(i))], &[], None);
+        let returns = vm.function(
+            "get_foo_offset",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(i),
+            }],
+            &[],
+            None,
+        );
 
-        assert_eq!(returns, vec![Token::FixedBytes(vec![*b])]);
+        assert_eq!(returns, vec![BorshToken::FixedBytes(vec![*b])]);
     }
 }
 
@@ -237,7 +290,13 @@ fn bytes_set_subscript_range() {
 
     vm.function(
         "set_foo_offset",
-        &[Token::Uint(U256::from(0)), Token::FixedBytes(b"E".to_vec())],
+        &[
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::zero(),
+            },
+            BorshToken::FixedBytes(b"E".to_vec()),
+        ],
         &[],
         None,
     );
@@ -273,7 +332,7 @@ fn bytes_get_subscript_range() {
 
     vm.function(
         "set_foo",
-        &[Token::Bytes(
+        &[BorshToken::Bytes(
             b"The shoemaker always wears the worst shoes".to_vec(),
         )],
         &[],
@@ -282,7 +341,10 @@ fn bytes_get_subscript_range() {
 
     vm.function(
         "get_foo_offset",
-        &[Token::Uint(U256::from(0x80000000u64))],
+        &[BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(0x80000000u64),
+        }],
         &[],
         None,
     );
@@ -337,29 +399,29 @@ fn bytes_push_pop() {
 
     let returns = vm.function("get_bs", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::Bytes(vec!(0x0e, 0xda))]);
+    assert_eq!(returns, vec![BorshToken::Bytes(vec!(0x0e, 0xda))]);
 
     let returns = vm.function("pop", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::FixedBytes(vec!(0xda))]);
+    assert_eq!(returns, vec![BorshToken::FixedBytes(vec!(0xda))]);
 
     let returns = vm.function("get_bs", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::Bytes(vec!(0x0e))]);
+    assert_eq!(returns, vec![BorshToken::Bytes(vec!(0x0e))]);
 
-    vm.function("push", &[Token::FixedBytes(vec![0x41])], &[], None);
+    vm.function("push", &[BorshToken::FixedBytes(vec![0x41])], &[], None);
 
     println!("data:{}", hex::encode(vm.data()));
 
     let returns = vm.function("get_bs", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::Bytes(vec!(0x0e, 0x41))]);
+    assert_eq!(returns, vec![BorshToken::Bytes(vec!(0x0e, 0x41))]);
 
-    vm.function("push", &[Token::FixedBytes(vec![0x01])], &[], None);
+    vm.function("push", &[BorshToken::FixedBytes(vec![0x01])], &[], None);
 
     let returns = vm.function("get_bs", &[], &[], None);
 
-    assert_eq!(returns, vec![Token::Bytes(vec!(0x0e, 0x41, 0x01))]);
+    assert_eq!(returns, vec![BorshToken::Bytes(vec!(0x0e, 0x41, 0x01))]);
 }
 
 #[test]
@@ -424,17 +486,29 @@ fn simple_struct() {
 
     assert_eq!(
         returns,
-        vec![Token::Tuple(vec![
-            Token::Uint(U256::from(254)),
-            Token::Uint(U256::from(0xdead)),
+        vec![BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(254u8)
+            },
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(0xdeadu32)
+            }
         ])]
     );
 
     vm.function(
         "set_s1",
-        &[Token::Tuple(vec![
-            Token::Uint(U256::from(102)),
-            Token::Uint(U256::from(3240121)),
+        &[BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(102u8),
+            },
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(3240121u32),
+            },
         ])],
         &[],
         None,
@@ -444,9 +518,15 @@ fn simple_struct() {
 
     assert_eq!(
         returns,
-        vec![Token::Tuple(vec![
-            Token::Uint(U256::from(102)),
-            Token::Uint(U256::from(3240121)),
+        vec![BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(102u8)
+            },
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(3240121u32)
+            }
         ])]
     );
 }
@@ -501,25 +581,43 @@ fn struct_in_struct() {
 
     assert_eq!(
         returns,
-        vec![Token::Tuple(vec![
-            Token::Uint(U256::from(254)),
-            Token::Tuple(vec![
-                Token::Int(U256::from(102)),
-                Token::FixedBytes(vec![102, 111, 111, 98, 97, 114])
+        vec![BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(254u8)
+            },
+            BorshToken::Tuple(vec![
+                BorshToken::Int {
+                    width: 32,
+                    value: BigInt::from(102u8)
+                },
+                BorshToken::FixedBytes(vec![102, 111, 111, 98, 97, 114])
             ]),
-            Token::Uint(U256::from(1234567890))
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(1234567890u64)
+            },
         ])]
     );
 
     vm.function(
         "set_s1",
-        &[Token::Tuple(vec![
-            Token::Uint(U256::from(127)),
-            Token::Tuple(vec![
-                Token::Int(U256::from(8192)),
-                Token::FixedBytes(vec![1, 2, 3, 4, 5, 6]),
+        &[BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(127u8),
+            },
+            BorshToken::Tuple(vec![
+                BorshToken::Int {
+                    width: 32,
+                    value: BigInt::from(8192u32),
+                },
+                BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6]),
             ]),
-            Token::Uint(U256::from(12345678901234567890u64)),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(12345678901234567890u64),
+            },
         ])],
         &[],
         None,
@@ -529,13 +627,22 @@ fn struct_in_struct() {
 
     assert_eq!(
         returns,
-        vec![Token::Tuple(vec![
-            Token::Uint(U256::from(127)),
-            Token::Tuple(vec![
-                Token::Int(U256::from(8192)),
-                Token::FixedBytes(vec![1, 2, 3, 4, 5, 6]),
+        vec![BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(127u8)
+            },
+            BorshToken::Tuple(vec![
+                BorshToken::Int {
+                    width: 32,
+                    value: BigInt::from(8192u32)
+                },
+                BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6])
             ]),
-            Token::Uint(U256::from(12345678901234567890u64)),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(12345678901234567890u64)
+            },
         ])]
     );
 }
@@ -585,19 +692,31 @@ fn string_in_struct() {
 
     assert_eq!(
         returns,
-        vec![Token::Tuple(vec![
-            Token::Uint(U256::from(254)),
-            Token::String(String::from("foobar")),
-            Token::Uint(U256::from(1234567890))
+        vec![BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(254u8)
+            },
+            BorshToken::String(String::from("foobar")),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(1234567890u64)
+            }
         ])]
     );
 
     vm.function(
         "set_s1",
-        &[Token::Tuple(vec![
-            Token::Uint(U256::from(127)),
-            Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
-            Token::Uint(U256::from(12345678901234567890u64)),
+        &[BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(127u8),
+            },
+            BorshToken::String(String::from("foobar foobar foobar foobar foobar foobar")),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(12345678901234567890u64),
+            },
         ])],
         &[],
         None,
@@ -607,10 +726,16 @@ fn string_in_struct() {
 
     assert_eq!(
         returns,
-        vec![Token::Tuple(vec![
-            Token::Uint(U256::from(127)),
-            Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
-            Token::Uint(U256::from(12345678901234567890u64)),
+        vec![BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(127u8)
+            },
+            BorshToken::String(String::from("foobar foobar foobar foobar foobar foobar")),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(12345678901234567890u64)
+            }
         ])]
     );
 }
@@ -676,44 +801,62 @@ fn complex_struct() {
     assert_eq!(
         returns,
         vec![
-            Token::Tuple(vec![
-                Token::Uint(U256::from(254)),
-                Token::String(String::from("foobar")),
-                Token::Tuple(vec!(
-                    Token::Bool(true),
-                    Token::FixedBytes(vec!(0xed, 0xae, 0xda))
+            BorshToken::Tuple(vec![
+                BorshToken::Uint {
+                    width: 8,
+                    value: BigInt::from(254u8)
+                },
+                BorshToken::String(String::from("foobar")),
+                BorshToken::Tuple(vec!(
+                    BorshToken::Bool(true),
+                    BorshToken::FixedBytes(vec!(0xed, 0xae, 0xda))
                 )),
-                Token::Uint(U256::from(1234567890)),
-                Token::Tuple(vec!(
-                    Token::Uint(U256::from(12123131321312u128)),
-                    Token::Bytes(b"jasldajldjaldjlads".to_vec())
+                BorshToken::Uint {
+                    width: 64,
+                    value: BigInt::from(1234567890)
+                },
+                BorshToken::Tuple(vec!(
+                    BorshToken::Uint {
+                        width: 256,
+                        value: BigInt::from(12123131321312u128)
+                    },
+                    BorshToken::Bytes(b"jasldajldjaldjlads".to_vec())
                 )),
-                Token::String(String::from(
+                BorshToken::String(String::from(
                     "as nervous as a long-tailed cat in a room full of rocking chairs"
                 ))
             ]),
-            Token::String(String::from("")),
+            BorshToken::String(String::from("")),
         ]
     );
 
     vm.function(
         "set_s1",
         &[
-            Token::Tuple(vec![
-                Token::Uint(U256::from(127)),
-                Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
-                Token::Tuple(vec![
-                    Token::Bool(false),
-                    Token::FixedBytes(vec![0xc3, 0x9a, 0xfd]),
+            BorshToken::Tuple(vec![
+                BorshToken::Uint {
+                    width: 8,
+                    value: BigInt::from(127u8),
+                },
+                BorshToken::String(String::from("foobar foobar foobar foobar foobar foobar")),
+                BorshToken::Tuple(vec![
+                    BorshToken::Bool(false),
+                    BorshToken::FixedBytes(vec![0xc3, 0x9a, 0xfd]),
                 ]),
-                Token::Uint(U256::from(12345678901234567890u64)),
-                Token::Tuple(vec![
-                    Token::Uint(U256::from(97560097522392203078545981438598778247u128)),
-                    Token::Bytes(b"jasldajldjaldjlads".to_vec()),
+                BorshToken::Uint {
+                    width: 64,
+                    value: BigInt::from(12345678901234567890u64),
+                },
+                BorshToken::Tuple(vec![
+                    BorshToken::Uint {
+                        width: 256,
+                        value: BigInt::from(97560097522392203078545981438598778247u128),
+                    },
+                    BorshToken::Bytes(b"jasldajldjaldjlads".to_vec()),
                 ]),
-                Token::String(String::from("be as honest as the day is long")),
+                BorshToken::String(String::from("be as honest as the day is long")),
             ]),
-            Token::String(String::from("yadayada")),
+            BorshToken::String(String::from("yadayada")),
         ],
         &[],
         None,
@@ -724,21 +867,30 @@ fn complex_struct() {
     assert_eq!(
         returns,
         vec![
-            Token::Tuple(vec![
-                Token::Uint(U256::from(127)),
-                Token::String(String::from("foobar foobar foobar foobar foobar foobar")),
-                Token::Tuple(vec![
-                    Token::Bool(false),
-                    Token::FixedBytes(vec![0xc3, 0x9a, 0xfd]),
-                ]),
-                Token::Uint(U256::from(12345678901234567890u64)),
-                Token::Tuple(vec![
-                    Token::Uint(U256::from(97560097522392203078545981438598778247u128,)),
-                    Token::Bytes(b"jasldajldjaldjlads".to_vec()),
-                ]),
-                Token::String(String::from("be as honest as the day is long")),
+            BorshToken::Tuple(vec![
+                BorshToken::Uint {
+                    width: 8,
+                    value: BigInt::from(127u8)
+                },
+                BorshToken::String(String::from("foobar foobar foobar foobar foobar foobar")),
+                BorshToken::Tuple(vec!(
+                    BorshToken::Bool(false),
+                    BorshToken::FixedBytes(vec!(0xc3, 0x9a, 0xfd))
+                )),
+                BorshToken::Uint {
+                    width: 64,
+                    value: BigInt::from(12345678901234567890u64)
+                },
+                BorshToken::Tuple(vec!(
+                    BorshToken::Uint {
+                        width: 256,
+                        value: BigInt::from(97560097522392203078545981438598778247u128)
+                    },
+                    BorshToken::Bytes(b"jasldajldjaldjlads".to_vec())
+                )),
+                BorshToken::String(String::from("be as honest as the day is long"))
             ]),
-            Token::String(String::from("yadayada")),
+            BorshToken::String(String::from("yadayada")),
         ]
     );
 
@@ -749,15 +901,30 @@ fn complex_struct() {
     assert_eq!(
         returns,
         vec![
-            Token::Tuple(vec![
-                Token::Uint(U256::from(0)),
-                Token::String(String::from("")),
-                Token::Tuple(vec![Token::Bool(false), Token::FixedBytes(vec![0, 0, 0]),]),
-                Token::Uint(U256::from(0)),
-                Token::Tuple(vec![Token::Uint(U256::from(0)), Token::Bytes(Vec::new()),]),
-                Token::String(String::from("")),
+            BorshToken::Tuple(vec![
+                BorshToken::Uint {
+                    width: 8,
+                    value: BigInt::zero()
+                },
+                BorshToken::String(String::from("")),
+                BorshToken::Tuple(vec!(
+                    BorshToken::Bool(false),
+                    BorshToken::FixedBytes(vec!(0, 0, 0))
+                )),
+                BorshToken::Uint {
+                    width: 64,
+                    value: BigInt::zero()
+                },
+                BorshToken::Tuple(vec!(
+                    BorshToken::Uint {
+                        width: 256,
+                        value: BigInt::zero(),
+                    },
+                    BorshToken::Bytes(vec![]),
+                )),
+                BorshToken::String(String::from(""))
             ]),
-            Token::String(String::from("yadayada")),
+            BorshToken::String(String::from("yadayada")),
         ]
     );
 }

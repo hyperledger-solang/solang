@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{build_solidity, Account, AccountState};
+use crate::{build_solidity, Account, AccountState, BorshToken};
 use base58::FromBase58;
 use ed25519_dalek::{Keypair, Signature, Signer};
-use ethabi::Token;
 use serde_derive::Serialize;
 use std::convert::TryInto;
 use std::mem::size_of;
@@ -63,15 +62,15 @@ fn verify() {
     let returns = vm.function(
         "verify",
         &[
-            Token::FixedBytes(keypair.public.to_bytes().to_vec()),
-            Token::Bytes(message.to_vec()),
-            Token::Bytes(signature_bs.clone()),
+            BorshToken::Address(keypair.public.to_bytes()),
+            BorshToken::Bytes(message.to_vec()),
+            BorshToken::Bytes(signature_bs.clone()),
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(false)]);
+    assert_eq!(returns, vec![BorshToken::Bool(false)]);
 
     let instructions_account: Account = "Sysvar1nstructions1111111111111111111111111"
         .from_base58()
@@ -94,15 +93,15 @@ fn verify() {
     let returns = vm.function(
         "verify",
         &[
-            Token::FixedBytes(keypair.public.to_bytes().to_vec()),
-            Token::Bytes(message.to_vec()),
-            Token::Bytes(signature_bs.clone()),
+            BorshToken::Address(keypair.public.to_bytes()),
+            BorshToken::Bytes(message.to_vec()),
+            BorshToken::Bytes(signature_bs.clone()),
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(true)]);
+    assert_eq!(returns, vec![BorshToken::Bool(true)]);
 
     println!("now try with bad signature");
 
@@ -124,15 +123,15 @@ fn verify() {
     let returns = vm.function(
         "verify",
         &[
-            Token::FixedBytes(keypair.public.to_bytes().to_vec()),
-            Token::Bytes(message.to_vec()),
-            Token::Bytes(signature_bs),
+            BorshToken::Address(keypair.public.to_bytes()),
+            BorshToken::Bytes(message.to_vec()),
+            BorshToken::Bytes(signature_bs),
         ],
         &[],
         None,
     );
 
-    assert_eq!(returns, vec![Token::Bool(false)]);
+    assert_eq!(returns, vec![BorshToken::Bool(false)]);
 }
 
 fn encode_instructions(public_key: &[u8], signature: &[u8], message: &[u8]) -> Vec<u8> {

@@ -66,8 +66,9 @@ contract c {
         x = 102 + t*y/(t+5*y) + g + test3() - vec.push(2) + ct.sum(1, 2);
 		return 2;
 // CHECK: push array ty:int32[] value:int32 2
-// CHECK: _ = external call::regular address:%ct payload:(abiencode packed:hex"91577f73" non-packed:int32 1, int32 2) value:uint128 0 gas:uint64 0
-	}
+// CHECK: _ = external call::regular address:%ct payload:%temp.75 value:uint128 0 gas:uint64 0 accounts: seeds:
+}
+
 }
 
 contract c3 {
@@ -76,13 +77,13 @@ contract c3 {
         c2 ct = new c2();
 
         return 3;
-// CHECK: constructor salt: value: gas:uint64 0 space: c2 (encoded buffer: %temp.78, buffer len: (builtin ArrayLength (%temp.78)))
+// CHECK: constructor salt: value: gas:uint64 0 space: c2 (encoded buffer: %temp.79, buffer len: (builtin ArrayLength (%temp.79)))
     }
 
 // BEGIN-CHECK: c3::function::test7
     function test7() public returns (int32) {
         c2 ct = new c2();
-// CHECK: constructor salt: value: gas:uint64 0 space: c2 (encoded buffer: %temp.80, buffer len: (builtin ArrayLength (%temp.80)))
+// CHECK: constructor salt: value: gas:uint64 0 space: c2 (encoded buffer: %temp.81, buffer len: (builtin ArrayLength (%temp.81)))
         address ad = address(ct);
         (bool p, ) = ad.call(hex'ba');
 // CHECK: external call::regular address:%ad payload:(alloc bytes uint32 1 hex"ba") value:uint128 0 gas:uint64 0
@@ -135,7 +136,7 @@ return 3;
         int f = 4;
 
         int c = 32 +4 *(f = it1+it2);
-// CHECK: ty:int256 %c = (int256 32 + (sext int256 (int64 4 * (trunc int64 (%temp.87 + %temp.88)))))
+// CHECK: ty:int256 %c = (int256 32 + (sext int256 (int64 4 * (trunc int64 (%temp.88 + %temp.89)))))
 // NOT-CHECK: ty:int256 %f = (%temp.10 + %temp.11)
         return c;
     }
@@ -164,7 +165,7 @@ return 3;
     function test13() public returns (int){
 
         int[] memory vec = new int[](5);
-        // CHECK: alloc int256[] len %array_length.temp.97
+        // CHECK: alloc int256[] len uint32 5
         vec[0] = 3;
 
         return vec[1];
@@ -176,7 +177,7 @@ return 3;
     function test14() public returns (int) {
         int[] storage ptrArr = testArr;
 
-// CHECK: store storage slot(%temp.103) ty:int256 storage = int256 3
+// CHECK: store storage slot(%temp.106) ty:int256 storage = int256 3
         ptrArr.push(3);
 
         return ptrArr[0];
