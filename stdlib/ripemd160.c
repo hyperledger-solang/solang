@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Source:
  * https://github.com/pycrypto/pycrypto/blob/master/src/RIPEMD160.c
