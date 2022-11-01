@@ -680,6 +680,7 @@ impl OptionalCodeLocation for Visibility {
         }
     }
 }
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 
