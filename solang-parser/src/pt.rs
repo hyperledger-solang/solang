@@ -610,9 +610,9 @@ impl Expression {
         }
     }
 }
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
-
 pub struct Parameter {
     pub loc: Loc,
     pub ty: Expression,
