@@ -19,7 +19,7 @@ describe('Signature Check', function () {
         const signature = nacl.sign.detached(message, payer.secretKey);
 
         const { result } = await contract.functions.verify(
-            publicKeyToHex(payer.publicKey), message, signature,
+            payer.publicKey.toBytes(), message, signature,
             {
                 ed25519sigs: [{ publicKey: payer.publicKey, message, signature }],
             }
@@ -37,7 +37,7 @@ describe('Signature Check', function () {
         broken_signature[1] ^= 1;
 
         const { result } = await contract.functions.verify(
-            publicKeyToHex(payer.publicKey), message, broken_signature,
+            payer.publicKey.toBytes(), message, broken_signature,
             {
                 ed25519sigs: [{ publicKey: payer.publicKey, message, signature }],
             }

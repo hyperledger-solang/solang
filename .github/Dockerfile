@@ -24,7 +24,7 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y zlib1g-dev pkg-config libssl-dev git libffi-dev curl gcc g++ make
+RUN apt-get install -y zlib1g-dev pkg-config libssl-dev git libffi-dev curl gcc g++ make python3
 RUN apt-get clean
 RUN apt-get autoclean
 

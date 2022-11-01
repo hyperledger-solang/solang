@@ -1,4 +1,5 @@
-// clang --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c
+// SPDX-License-Identifier: Apache-2.0
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>

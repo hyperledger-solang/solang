@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -62,7 +63,7 @@ void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
     }
 }
 
-// A version of __mul32 that detects overflow. 
+// A version of __mul32 that detects overflow.
 bool __mul32_with_builtin_ovf(uint32_t left[], uint32_t right[], uint32_t out[], int len)
 {
     bool overflow = false;

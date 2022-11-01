@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity;
-use ethabi::Token;
+use crate::{build_solidity, BorshToken};
 
 #[test]
 fn simple_create_contract() {
@@ -46,7 +45,7 @@ fn simple_create_contract() {
 
     vm.function(
         "call_bar1_at_address",
-        &[bar1[0].clone(), Token::String(String::from("xywoleh"))],
+        &[bar1[0].clone(), BorshToken::String(String::from("xywoleh"))],
         &[],
         None,
     );
