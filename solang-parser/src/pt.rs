@@ -793,6 +793,7 @@ pub enum YulStatement {
     FunctionDefinition(Box<YulFunctionDefinition>),
     FunctionCall(Box<YulFunctionCall>),
 }
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct YulSwitch {
