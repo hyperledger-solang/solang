@@ -18,8 +18,13 @@ lalrpop-util = "0.19"
 phf = { version = "0.10", features = ["macros"] }
 unicode-xid = "0.2.0"
 itertools = "0.10"
+serde = { version = "1.0.145", features = ["derive"], optional = true }
 
 [dev-dependencies]
 walkdir = "2.3.2"
 regex = "1.5.5"
 pretty_assertions = "1.2"
+
+[features]
+default = []
+pt-serde = ["serde"]
