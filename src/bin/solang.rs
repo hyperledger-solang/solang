@@ -94,7 +94,7 @@ fn main() {
                     .arg(
                         Arg::new("STD-JSON")
                             .help("mimic solidity json output on stdout")
-                            .conflicts_with_all(&["VERBOSE", "OUTPUT", "EMIT"])
+                            .conflicts_with_all(["VERBOSE", "OUTPUT", "EMIT"])
                             .long("standard-json"),
                     )
                     .arg(

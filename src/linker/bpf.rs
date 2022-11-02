@@ -18,8 +18,8 @@ use tempfile::tempdir;
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
 
-    let object_filename = dir.path().join(&format!("{}.o", name));
-    let res_filename = dir.path().join(&format!("{}.so", name));
+    let object_filename = dir.path().join(format!("{}.o", name));
+    let res_filename = dir.path().join(format!("{}.so", name));
     let linker_script_filename = dir.path().join("linker.ld");
 
     let mut objectfile =

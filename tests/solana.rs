@@ -1613,7 +1613,7 @@ impl VirtualMachine {
     ) -> Vec<BorshToken> {
         let program = &self.stack[0];
 
-        println!("function for {}", hex::encode(&program.data));
+        println!("function for {}", hex::encode(program.data));
 
         let mut calldata = VirtualMachine::input(
             &program.data,
@@ -1643,7 +1643,7 @@ impl VirtualMachine {
         };
 
         if let Some((_, return_data)) = &self.return_data {
-            println!("return: {}", hex::encode(&return_data));
+            println!("return: {}", hex::encode(return_data));
 
             let func = &self.stack[0].abi.as_ref().unwrap().functions[name][0];
             decode_output(&func.outputs, return_data)

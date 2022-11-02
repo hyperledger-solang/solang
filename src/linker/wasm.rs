@@ -11,8 +11,8 @@ use tempfile::tempdir;
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
 
-    let object_filename = dir.path().join(&format!("{}.o", name));
-    let res_filename = dir.path().join(&format!("{}.wasm", name));
+    let object_filename = dir.path().join(format!("{}.o", name));
+    let res_filename = dir.path().join(format!("{}.wasm", name));
 
     let mut objectfile =
         File::create(object_filename.clone()).expect("failed to create object file");

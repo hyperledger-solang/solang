@@ -263,7 +263,7 @@ fn add_dispatch_case(
         Expression::NumberLiteral(
             Loc::Codegen,
             Type::Uint(32),
-            BigInt::from_bytes_le(Sign::Plus, &*func_cfg.selector),
+            BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector),
         ),
         bb,
     ));
