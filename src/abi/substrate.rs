@@ -260,13 +260,13 @@ fn type_to_storage_layout(
         TypeDef::Composite(inner) => Layout::Struct(StructLayout::new(
             ty.path().ident().unwrap_or_default(),
             inner.fields().iter().map(|field| {
-                FieldLayout::new_custom(
+                FieldLayout::new(
                     field.name().map(ToString::to_string).unwrap_or_default(),
                     type_to_storage_layout(field.ty().id(), root, registry),
                 )
             }),
         )),
-        _ => Layout::Leaf(LeafLayout::new_from_ty(*root, key.into())),
+        _ => Layout::Leaf(LeafLayout::new(*root, key.into())),
     }
 }
 
@@ -289,7 +289,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     layout_key,
                     type_to_storage_layout(ty, &layout_key, &registry),
                 );
-                Some(FieldLayout::new_custom(var.name.clone(), root))
+                Some(FieldLayout::new(var.name.clone(), root))
             } else {
                 None
             }
@@ -308,9 +308,11 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                 let ty = resolve_ast(&p.ty, ns, &mut registry);
 
                 let path = registry.get(ty).unwrap().path().clone();
-                let spec = TypeSpec::new_from_ty(ty.into(), path);
+                let spec = TypeSpec::new(ty.into(), path);
 
-                MessageParamSpec::new_custom(p.name_as_str().to_string(), spec)
+                MessageParamSpec::new(p.name_as_str().to_string())
+                    .of_type(spec)
+                    .done()
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
@@ -318,7 +320,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .selector(f.selector().try_into().unwrap())
             .payable(payable)
             .args(args)
-            .docs(vec![render(&f.tags)])
+            .docs(vec![render(&f.tags).as_str()])
             .done()
     };
 
@@ -358,7 +360,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             1 => {
                 let ty = resolve_ast(&f.returns[0].ty, ns, &mut registry);
                 let path = registry.get(ty).unwrap().path().clone();
-                Some(TypeSpec::new_from_ty(ty.into(), path))
+                Some(TypeSpec::new(ty.into(), path))
             }
             _ => {
                 let fields = f
@@ -386,11 +388,11 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     Default::default(),
                 ));
                 let path = registry.get(ty).unwrap().path().clone();
-                Some(TypeSpec::new_from_ty(ty.into(), path))
+                Some(TypeSpec::new(ty.into(), path))
             }
         };
 
-        let ret_type = ReturnTypeSpec::new_custom(ret_spec);
+        let ret_type = ReturnTypeSpec::new(ret_spec);
 
         let args = f
             .params
@@ -398,9 +400,11 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .map(|p| {
                 let ty = resolve_ast(&p.ty, ns, &mut registry);
                 let path = registry.get(ty).unwrap().path().clone();
-                let spec = TypeSpec::new_from_ty(ty.into(), path);
+                let spec = TypeSpec::new(ty.into(), path);
 
-                MessageParamSpec::new_custom(p.name_as_str().to_string(), spec)
+                MessageParamSpec::new(p.name_as_str().to_string())
+                    .of_type(spec)
+                    .done()
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
@@ -451,8 +455,9 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .map(|p| {
                 let ty = resolve_ast(&p.ty, ns, &mut registry);
                 let path = registry.get(ty).unwrap().path().clone();
-                let spec = TypeSpec::new_from_ty(ty.into(), path);
-                EventParamSpec::new_custom(p.name_as_str().into(), spec)
+                let spec = TypeSpec::new(ty.into(), path);
+                EventParamSpec::new(p.name_as_str().into())
+                    .of_type(spec)
                     .indexed(p.indexed)
                     .docs(vec![])
                     .done()

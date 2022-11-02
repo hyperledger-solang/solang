@@ -55,8 +55,8 @@ anchor-syn = { version = "0.25", features = ["idl"] }
 convert_case = "0.6"
 parse-display = "0.6.0"
 
-ink_metadata = {git = "https://github.com/paritytech/ink.git", branch = "cl/runtime-metadata"}
-ink_primitives = {git = "https://github.com/paritytech/ink.git", branch = "cl/runtime-metadata"}
+ink_metadata = { git = "https://github.com/paritytech/ink.git" }
+ink_primitives = { git = "https://github.com/paritytech/ink.git" }
 scale-info = "2.3"
 
 
