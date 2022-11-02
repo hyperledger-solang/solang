@@ -1121,7 +1121,7 @@ impl MockSubstrate {
     }
 
     pub fn heap_verify(&self) {
-        let memsize = self.vm.memory.current_size().0 as usize * 0x10000;
+        let memsize = self.vm.memory.current_size().0 * 0x10000;
         println!("memory size:{}", memsize);
         let mut buf = Vec::new();
         buf.resize(memsize, 0);

@@ -42,8 +42,7 @@ pub fn find_undefined_variables(
         }
     }
 
-    let mut all_diagnostics: Vec<Diagnostic> =
-        diagnostics.into_iter().map(|(_, diag)| diag).collect();
+    let mut all_diagnostics: Vec<Diagnostic> = diagnostics.into_values().collect();
     ns.diagnostics.append(&mut all_diagnostics);
 
     !all_diagnostics.is_empty()

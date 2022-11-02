@@ -964,10 +964,10 @@ fn test_power_overflow_boundaries() {
         let exp = BigUint::from(width - 1);
         let mut exp_data = exp.to_bytes_le();
 
-        let width_rounded = (width as usize / 8).next_power_of_two();
+        let width_rounded = (width / 8usize).next_power_of_two();
 
-        base_data.resize((width_rounded) as usize, 0);
-        exp_data.resize((width_rounded) as usize, 0);
+        base_data.resize(width_rounded, 0);
+        exp_data.resize(width_rounded, 0);
 
         contract.function(
             "pow",
@@ -981,13 +981,13 @@ fn test_power_overflow_boundaries() {
         let res = BigUint::from(2_usize).pow((width - 1).try_into().unwrap());
         let mut res_data = res.to_bytes_le();
         res_data.resize(width / 8, 0);
-        contract.vm.output.truncate((width / 8) as usize);
+        contract.vm.output.truncate(width / 8);
 
         assert_eq!(contract.vm.output, res_data);
 
         let exp = exp.add(1_usize);
         let mut exp_data = exp.to_bytes_le();
-        exp_data.resize((width_rounded) as usize, 0);
+        exp_data.resize(width_rounded, 0);
 
         contract.function_expect_failure(
             "pow",
@@ -1080,25 +1080,25 @@ fn test_mul_within_range_signed() {
         let mut a_data = a.to_signed_bytes_le();
 
         let side = vec![-1, 0, 1];
-        let b = BigInt::from(*side.choose(&mut rng).unwrap() as i32);
+        let b = BigInt::from(*side.choose(&mut rng).unwrap());
         let b_sign = b.sign();
         let mut b_data = b.to_signed_bytes_le();
 
-        a_data.resize((width_rounded) as usize, sign_extend(a_sign));
-        b_data.resize((width_rounded) as usize, sign_extend(b_sign));
+        a_data.resize(width_rounded, sign_extend(a_sign));
+        b_data.resize(width_rounded, sign_extend(b_sign));
 
         runtime.function(
             "mul",
             a_data.into_iter().chain(b_data.into_iter()).collect(),
         );
 
-        runtime.vm.output.truncate((width / 8) as usize);
+        runtime.vm.output.truncate(width / 8);
 
         let value = a * b;
         let value_sign = value.sign();
 
         let mut value_data = value.to_signed_bytes_le();
-        value_data.resize((width / 8) as usize, sign_extend(value_sign));
+        value_data.resize(width / 8, sign_extend(value_sign));
 
         assert_eq!(value_data, runtime.vm.output);
     }
@@ -1127,8 +1127,8 @@ fn test_mul_within_range() {
         let b = BigUint::from(1_u32);
 
         let mut b_data = b.to_bytes_le();
-        a_data.resize((width_rounded) as usize, 0);
-        b_data.resize((width_rounded) as usize, 0);
+        a_data.resize(width_rounded, 0);
+        b_data.resize(width_rounded, 0);
 
         runtime.function(
             "mul",
@@ -1170,9 +1170,9 @@ fn test_overflow_boundaries() {
 
         let width_rounded = (width as usize / 8).next_power_of_two();
 
-        up_data.resize((width_rounded) as usize, 0);
-        low_data.resize((width_rounded) as usize, 255);
-        sec_data.resize((width_rounded) as usize, 0);
+        up_data.resize(width_rounded, 0);
+        low_data.resize(width_rounded, 255);
+        sec_data.resize(width_rounded, 0);
 
         // Multiply the boundaries by 1.
         contract.function(
@@ -1220,9 +1220,9 @@ fn test_overflow_boundaries() {
 
         let mut two_data = BigInt::from(2_u32).to_signed_bytes_le();
 
-        upper_second_op_data.resize((width_rounded) as usize, 0);
-        two_data.resize((width_rounded) as usize, 0);
-        lower_second_op_data.resize((width_rounded) as usize, 255);
+        upper_second_op_data.resize(width_rounded, 0);
+        two_data.resize(width_rounded, 0);
+        lower_second_op_data.resize(width_rounded, 255);
 
         // This will generate a value more than the upper boundary.
         contract.function_expect_failure(
@@ -1300,14 +1300,14 @@ fn test_overflow_detect_signed() {
         let mut first_op_data = first_operand_rand.to_signed_bytes_le();
 
         let width_rounded = (width as usize / 8).next_power_of_two();
-        first_op_data.resize((width_rounded) as usize, sign_extend(first_op_sign));
+        first_op_data.resize(width_rounded, sign_extend(first_op_sign));
 
         // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
         let second_operand_rand = rng.gen_bigint_range(&BigInt::from(2usize), &limit);
 
         let second_op_sign = second_operand_rand.sign();
         let mut second_op_data = second_operand_rand.to_signed_bytes_le();
-        second_op_data.resize((width_rounded) as usize, sign_extend(second_op_sign));
+        second_op_data.resize(width_rounded, sign_extend(second_op_sign));
 
         contract.function_expect_failure(
             "mul",
@@ -1326,7 +1326,7 @@ fn test_overflow_detect_signed() {
 
         let first_op_sign = first_operand_rand.sign();
         let mut first_op_data = first_operand_rand.to_signed_bytes_le();
-        first_op_data.resize((width_rounded) as usize, sign_extend(first_op_sign));
+        first_op_data.resize(width_rounded, sign_extend(first_op_sign));
 
         contract.function_expect_failure(
             "mul",
@@ -1361,13 +1361,13 @@ fn test_overflow_detect_unsigned() {
         let mut first_op_data = first_operand_rand.to_bytes_le();
 
         let width_rounded = (width as usize / 8).next_power_of_two();
-        first_op_data.resize((width_rounded) as usize, 0);
+        first_op_data.resize(width_rounded, 0);
 
         // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
         let second_operand_rand = rng.gen_biguint_range(&BigUint::from(2usize), &limit);
 
         let mut second_op_data = second_operand_rand.to_bytes_le();
-        second_op_data.resize((width_rounded) as usize, 0);
+        second_op_data.resize(width_rounded, 0);
 
         contract.function_expect_failure(
             "mul",

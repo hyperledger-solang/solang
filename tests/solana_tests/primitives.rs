@@ -769,7 +769,7 @@ fn test_power_overflow_boundaries() {
     for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
-            function pow(uintN a, uintN b) public returns (uintN) { 
+            function pow(uintN a, uintN b) public returns (uintN) {
                 return a ** b;
             }
         }"#
@@ -1015,7 +1015,7 @@ fn test_mul_within_range_signed() {
 
         let side = vec![-1, 0, 1];
         // -1, 1 or 0
-        let second_op = BigInt::from(*side.choose(&mut rng).unwrap() as i32);
+        let second_op = BigInt::from(*side.choose(&mut rng).unwrap());
         println!("second op : {:?}", second_op);
 
         contract.constructor("test", &[]);
@@ -1052,7 +1052,7 @@ fn test_mul_within_range() {
     for width in (8..=256).step_by(8) {
         let src = r#"
         contract test {
-            function mul(uintN a, uintN b) public returns (uintN) { 
+            function mul(uintN a, uintN b) public returns (uintN) {
                 return a * b;
             }
         }"#
