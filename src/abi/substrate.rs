@@ -10,7 +10,7 @@ use ink_metadata::{
 };
 
 use itertools::Itertools;
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
@@ -58,7 +58,6 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
         ast::Type::Int(n) => ('i', n.next_power_of_two()),
         _ => unreachable!(),
     };
-
     let def = match (signed, scalety) {
         ('u', n) => match n {
             8 => TypeDefPrimitive::U8,
@@ -83,11 +82,8 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
             unreachable!()
         }
     };
-
     let path = path!(format!("{signed}{scalety}"));
-
     let ty = Type::new(path, vec![], TypeDef::Primitive(def), Default::default());
-
     registry.register_type(ty)
 }
 
@@ -97,7 +93,6 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
         //  should reflect address_length for different substrate runtime
         ast::Type::Address(_) | ast::Type::Contract(_) => {
             // substituted to [u8 ;address_length]
-
             let address_ty = resolve_ast(
                 &ast::Type::Array(
                     Box::new(ast::Type::Uint(8)),
@@ -106,31 +101,22 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                 ns,
                 registry,
             );
-
             // substituded to struct { AccountId }
             let field = Field::new(None, address_ty.into(), None, vec![]);
-
             let c = TypeDefComposite::new(vec![field]);
-
             let path = path!("ink_env", "types", "AccountId");
-
             let ty: Type<PortableForm> =
                 Type::new(path, vec![], TypeDef::Composite(c), Default::default());
-
-            //get_or_register_ty(&ty, registry)
             registry.register_type(ty)
         }
-
         // primitive types
         ast::Type::Bool | ast::Type::Int(_) | ast::Type::Uint(_) | ast::Type::String => {
             primitive_to_ty(ty, registry)
         }
-
         // resolve from the deepest element to outside
         // [[A; a: usize]; b: usize] -> Array(A_id, vec![a, b])
         ast::Type::Array(ty, dims) => {
             let mut ty = resolve_ast(ty, ns, registry);
-
             for d in dims {
                 if let ast::ArrayLength::Fixed(d) = d {
                     let def = TypeDefArray::new(d.to_u32().unwrap(), ty.into());
@@ -154,7 +140,6 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                     ));
                 }
             }
-
             ty
         }
         // substituded to [u8; len]
@@ -174,7 +159,6 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
         ),
         ast::Type::Struct(s) => {
             let def = s.definition(ns);
-
             let fields = def
                 .fields
                 .iter()
@@ -184,7 +168,6 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                     Field::new(Some(f.name_as_str().to_string()), f_ty.into(), None, vec![])
                 })
                 .collect::<Vec<Field<PortableForm>>>();
-
             let c = TypeDefComposite::new(fields);
             let path = path!(&def.name);
             let ty = Type::new(path, vec![], TypeDef::Composite(c), Default::default());
@@ -192,12 +175,9 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
         }
         ast::Type::Enum(n) => {
             let decl = &ns.enums[*n];
-
             let mut variants = decl.values.iter().collect_vec();
-
             // sort by discriminant
             variants.sort_by(|a, b| a.1 .1.cmp(&b.1 .1));
-
             let variants = variants
                 .into_iter()
                 .map(|(k, v)| Variant {
@@ -207,12 +187,9 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                     docs: Default::default(),
                 })
                 .collect::<Vec<_>>();
-
-            let v = TypeDefVariant::new(variants);
-
+            let variant = TypeDef::Variant(TypeDefVariant::new(variants));
             let path = path!(&decl.name);
-
-            let ty = Type::new(path, vec![], TypeDef::Variant(v), Default::default());
+            let ty = Type::new(path, vec![], variant, Default::default());
             registry.register_type(ty)
         }
         ast::Type::Ref(ty) => resolve_ast(ty, ns, registry),
@@ -232,12 +209,9 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                     )
                 })
                 .collect::<Vec<_>>();
-
-            let c = TypeDefComposite::new(fields);
-
+            let composite = TypeDef::Composite(TypeDefComposite::new(fields));
             let path = path!("ExternalFunction");
-
-            let ty = Type::new(path, vec![], TypeDef::Composite(c), Default::default());
+            let ty = Type::new(path, vec![], composite, Default::default());
             registry.register_type(ty)
         }
         ast::Type::UserType(no) => resolve_ast(&ns.user_types[*no].ty, ns, registry),
@@ -270,18 +244,18 @@ fn type_to_storage_layout(
     }
 }
 
-/// generate `InkProject` from `ast::Type` and `ast::Namespace`
+/// Generate `InkProject` from `ast::Type` and `ast::Namespace`
 pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
     let mut registry = PortableRegistryBuilder::new();
 
+    // This is only used by off-chain tooling. At the moment there is no such tooling available yet.
+    // So it is not exactly clear yet what this should look like.
+    // For now it just contains all root layouts (you get all storage keys in use).
     let fields: Vec<FieldLayout<PortableForm>> = ns.contracts[contract_no]
         .layout
         .iter()
         .filter_map(|layout| {
             let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
-            // TODO impl mappings should be easy now
-            // TODO move the memory fit check to sema maybe??
-            //if var.ty.fits_in_memory(ns) {
             if let Some(slot) = layout.slot.to_u32() {
                 let ty = resolve_ast(&layout.ty, ns, &mut registry);
                 let layout_key = LayoutKey::new(slot);
@@ -295,7 +269,6 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             }
         })
         .collect();
-
     let contract_name = ns.contracts[contract_no].name.clone();
     let storage = Layout::Struct(StructLayout::new(contract_name, fields));
 
@@ -321,6 +294,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .payable(payable)
             .args(args)
             .docs(vec![render(&f.tags).as_str()])
+            //.returns(ReturnTypeSpec::new(None)) FIXME this will be needed very soon
             .done()
     };
 
@@ -347,14 +321,13 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .collect::<Vec<ConstructorSpec<PortableForm>>>();
 
     let conflicting_names = non_unique_function_names(contract_no, ns);
+
     let f_to_message = |f: &Function| -> MessageSpec<PortableForm> {
         let payable = matches!(f.mutability, ast::Mutability::Payable(_));
-
         let mutates = matches!(
             f.mutability,
             ast::Mutability::Payable(_) | ast::Mutability::Nonpayable(_)
         );
-
         let ret_spec: Option<TypeSpec<PortableForm>> = match f.returns.len() {
             0 => None,
             1 => {
@@ -391,9 +364,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                 Some(TypeSpec::new(ty.into(), path))
             }
         };
-
         let ret_type = ReturnTypeSpec::new(ret_spec);
-
         let args = f
             .params
             .iter()
@@ -407,7 +378,6 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     .done()
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
-
         let label = if conflicting_names.contains(&f.name) {
             &f.mangled_name
         } else {
@@ -428,14 +398,12 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .keys()
         .filter_map(|function_no| {
             let func = &ns.functions[*function_no];
-
             // escape if it's a library
             if let Some(base_contract_no) = func.contract_no {
                 if ns.contracts[base_contract_no].is_library() {
                     return None;
                 }
             }
-
             Some(func)
         })
         .filter(|f| match f.visibility {
@@ -463,7 +431,6 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     .done()
             })
             .collect::<Vec<_>>();
-
         EventSpec::new(e.name.clone())
             .args(args)
             .docs(vec![render(&e.tags)])
@@ -475,7 +442,6 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .iter()
         .map(|event_no| {
             let event = &ns.events[*event_no];
-
             e_to_evt(event)
         })
         .collect::<Vec<EventSpec<PortableForm>>>();
@@ -512,48 +478,31 @@ pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
     let compiler = SourceCompiler::new(Compiler::Solang, version);
     let code_hash: [u8; 32] = hash.as_bytes().try_into().unwrap();
     let source_wasm = SourceWasm::new(code.to_vec());
-
     let source = Source::new(Some(source_wasm), CodeHash(code_hash), language, compiler);
+
     let mut builder = Contract::builder();
-
-    // Add our name and tags
     builder.name(&ns.contracts[contract_no].name);
-
     let mut description = tags(contract_no, "title", ns);
-
     description.extend(tags(contract_no, "notice", ns));
-
     if !description.is_empty() {
         builder.description(description.join("\n"));
     };
-
     let authors = tags(contract_no, "author", ns);
-
     if !authors.is_empty() {
         builder.authors(authors);
     } else {
         builder.authors(vec!["unknown"]);
     }
-
-    // FIXME: contract-metadata wants us to provide a version number, but there is no version in the solidity source
-    // code. Since we must provide a valid semver version, we just provide a bogus value.Abi
     builder.version(Version::new(0, 0, 1));
-
     let contract = builder.build().unwrap();
 
-    let project = gen_project(contract_no, ns);
+    let project_json = serde_json::to_value(gen_project(contract_no, ns)).unwrap();
+    let abi = serde_json::from_value(project_json).unwrap();
 
-    let abi_json: Map<String, Value> =
-        serde_json::from_value(serde_json::to_value(project).unwrap()).unwrap();
-
-    let metadata = ContractMetadata::new(source, contract, None, abi_json);
-
-    // serialize to json
-    serde_json::to_value(&metadata).unwrap()
+    serde_json::to_value(ContractMetadata::new(source, contract, None, abi)).unwrap()
 }
 
 pub fn load(s: &str) -> InkProject {
     let bundle = serde_json::from_str::<ContractMetadata>(s).unwrap();
-
     serde_json::from_value::<InkProject>(serde_json::to_value(bundle.abi).unwrap()).unwrap()
 }
