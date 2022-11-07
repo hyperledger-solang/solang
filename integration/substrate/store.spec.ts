@@ -3,7 +3,8 @@ import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from '
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
-// REGRESSION metadata #666
+// TODO:
+// This apparently works with subxt.
 describe.skip('Deploy store contract and test', () => {
     let conn: ApiPromise;
 
