@@ -87,7 +87,7 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
     registry.register_type(ty)
 }
 
-/// given an `ast::Type`, find and register the `scale_info::Type` definition in the `PortableRegistry`
+/// Given an `ast::Type`, find and register the `scale_info::Type` definition in the registry
 fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegistryBuilder) -> u32 {
     match ty {
         //  should reflect address_length for different substrate runtime

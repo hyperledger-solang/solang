@@ -10,7 +10,6 @@ const TEST_ADDRESSES: [string, string] = [
   '5C4hrfjw9DjXZTzV3MwzrrAr9P1MJhSrvWGWqi1eSuyV1W6M'
 ]
 
-// REGRESSION metadata #666
 describe('UniswapV2Factory', () => {
   let conn: ApiPromise;
   let factory: ContractPromise;
