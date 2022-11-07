@@ -294,7 +294,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .payable(payable)
             .args(args)
             .docs(vec![render(&f.tags).as_str()])
-            //.returns(ReturnTypeSpec::new(None)) FIXME this will be needed very soon
+            .returns(ReturnTypeSpec::new(None))
             .done()
     };
 
