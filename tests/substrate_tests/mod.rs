@@ -20,7 +20,6 @@ mod inheritance;
 mod libraries;
 mod loops;
 mod mappings;
-mod metadata;
 mod modifier;
 mod primitives;
 mod storage;
