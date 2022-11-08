@@ -220,7 +220,6 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
             match (decl.name.as_ref(), decl.loc) {
                 // Builtin Hash type from ink primitives
                 ("Hash", pt::Loc::Builtin) => {
-                    // substituded to struct { AccountId }
                     let field = Field::new(None, resolved.into(), None, vec![]);
                     let composite = TypeDef::Composite(TypeDefComposite::new([field]));
                     let path = path!("ink_env", "types", "Hash");

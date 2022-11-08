@@ -1276,7 +1276,7 @@ pub fn build_solidity_with_options(
     }
 }
 
-pub fn load_abi(s: &str) -> InkProject {
+fn load_abi(s: &str) -> InkProject {
     let bundle = serde_json::from_str::<ContractMetadata>(s).unwrap();
     serde_json::from_value::<InkProject>(serde_json::to_value(bundle.abi).unwrap()).unwrap()
 }
