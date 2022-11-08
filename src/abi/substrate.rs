@@ -214,7 +214,21 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
             let ty = Type::new(path, vec![], composite, Default::default());
             registry.register_type(ty)
         }
-        ast::Type::UserType(no) => resolve_ast(&ns.user_types[*no].ty, ns, registry),
+        ast::Type::UserType(no) => {
+            let decl = &ns.user_types[*no];
+            let resolved = resolve_ast(&decl.ty, ns, registry);
+            match (decl.name.as_ref(), decl.loc) {
+                // Builtin Hash type from ink primitives
+                ("Hash", pt::Loc::Builtin) => {
+                    // substituded to struct { AccountId }
+                    let field = Field::new(None, resolved.into(), None, vec![]);
+                    let composite = TypeDef::Composite(TypeDefComposite::new([field]));
+                    let path = path!("ink_env", "types", "Hash");
+                    registry.register_type(Type::new(path, vec![], composite, vec![]))
+                }
+                _ => resolved,
+            }
+        }
         ast::Type::Mapping(k, v) => {
             resolve_ast(k, ns, registry);
             resolve_ast(v, ns, registry)
