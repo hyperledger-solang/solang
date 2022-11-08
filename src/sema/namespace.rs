@@ -781,7 +781,10 @@ impl Namespace {
                         ));
                         return Err(());
                     } else if is_substrate && n > &32.into() {
-                        let msg = format!("array dimension of {} exceeds the maximum of 32", n);
+                        let msg = format!(
+                            "array dimension of {} exceeds the maximum of 32 on Substrate",
+                            n
+                        );
                         diagnostics.push(Diagnostic::decl_error(*loc, msg));
                         return Err(());
                     }
