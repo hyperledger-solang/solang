@@ -25,19 +25,19 @@ describe('UniswapV2Pair', () => {
 
         // Upload UniswapV2Pair contract code so that it can instantiated from the factory
         // there probably is a better way of doing this than deploying a contract. Patches welcome.
-        const pairTmp = await deploy(conn, alice, 'UniswapV2Pair.contract', BigInt(0));
+        const pairTmp = await deploy(conn, alice, 'UniswapV2Pair.contract', 0n);
 
         const pairAbi = pairTmp.abi;
 
-        let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', BigInt(10000000000000000), alice.address);
+        let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', 10000000000000000n, alice.address);
 
         factory = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
-        const tokenA_contract = await deploy(conn, alice, 'ERC20.contract', BigInt(0), TOTAL_SUPPLY);
+        const tokenA_contract = await deploy(conn, alice, 'ERC20.contract', 0n, TOTAL_SUPPLY);
 
         const tokenA = new ContractPromise(conn, tokenA_contract.abi, tokenA_contract.address);
 
-        const tokenB_contract = await deploy(conn, alice, 'ERC20.contract', BigInt(0), TOTAL_SUPPLY);
+        const tokenB_contract = await deploy(conn, alice, 'ERC20.contract', 0n, TOTAL_SUPPLY);
 
         const tokenB = new ContractPromise(conn, tokenB_contract.abi, tokenB_contract.address);
 

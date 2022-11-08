@@ -23,13 +23,13 @@ describe('UniswapV2Factory', () => {
     alice = aliceKeypair();
     dave = daveKeypair();
 
-    let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', BigInt(10000000000000000), alice.address);
+    let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', 10000000000000000n, alice.address);
 
     factory = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
     // Upload UniswapV2Pair contract code so that it can instantiated from the factory
     // there probably is a better way of doing this than deploying a contract. Patches welcome.
-    let pair = await deploy(conn, alice, 'UniswapV2Pair.contract', BigInt(0));
+    let pair = await deploy(conn, alice, 'UniswapV2Pair.contract', 0n);
 
     pairAbi = pair.abi;
   });

@@ -44,7 +44,6 @@ describe('Deploy arrays contract and test', () => {
 
             users.push({ "name": name, "addr": addr, "id": id, "perms": perms });
         }
-        console.log(users);
 
         let user = users[Math.floor(Math.random() * users.length)];
 
