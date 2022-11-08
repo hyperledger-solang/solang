@@ -286,7 +286,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
     let contract_name = ns.contracts[contract_no].name.clone();
     let storage = Layout::Struct(StructLayout::new(contract_name, fields));
 
-    let f_to_constructor = |f: &Function| -> ConstructorSpec<PortableForm> {
+    let constructor_spec = |f: &Function| -> ConstructorSpec<PortableForm> {
         let payable = matches!(f.mutability, ast::Mutability::Payable(_));
         let args = f
             .params
@@ -303,7 +303,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
-        ConstructorSpec::from_label("new".to_string())
+        ConstructorSpec::from_label(f.name.clone())
             .selector(f.selector().try_into().unwrap())
             .payable(payable)
             .args(args)
@@ -331,12 +331,12 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                 .as_ref()
                 .map(|(e, _)| e),
         )
-        .map(f_to_constructor)
+        .map(constructor_spec)
         .collect::<Vec<ConstructorSpec<PortableForm>>>();
 
     let conflicting_names = non_unique_function_names(contract_no, ns);
 
-    let f_to_message = |f: &Function| -> MessageSpec<PortableForm> {
+    let message_spec = |f: &Function| -> MessageSpec<PortableForm> {
         let payable = matches!(f.mutability, ast::Mutability::Payable(_));
         let mutates = matches!(
             f.mutability,
@@ -412,7 +412,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .keys()
         .filter_map(|function_no| {
             let func = &ns.functions[*function_no];
-            // escape if it's a library
+            // libraries are never in the public interface
             if let Some(base_contract_no) = func.contract_no {
                 if ns.contracts[base_contract_no].is_library() {
                     return None;
@@ -427,10 +427,10 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             ),
             _ => false,
         })
-        .map(f_to_message)
+        .map(message_spec)
         .collect::<Vec<MessageSpec<PortableForm>>>();
 
-    let mut e_to_evt = |e: &EventDecl| -> EventSpec<PortableForm> {
+    let mut event_spec = |e: &EventDecl| -> EventSpec<PortableForm> {
         let args = e
             .fields
             .iter()
@@ -456,7 +456,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .iter()
         .map(|event_no| {
             let event = &ns.events[*event_no];
-            e_to_evt(event)
+            event_spec(event)
         })
         .collect::<Vec<EventSpec<PortableForm>>>();
 
@@ -514,9 +514,4 @@ pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
     let abi = serde_json::from_value(project_json).unwrap();
 
     serde_json::to_value(ContractMetadata::new(source, contract, None, abi)).unwrap()
-}
-
-pub fn load(s: &str) -> InkProject {
-    let bundle = serde_json::from_str::<ContractMetadata>(s).unwrap();
-    serde_json::from_value::<InkProject>(serde_json::to_value(bundle.abi).unwrap()).unwrap()
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use contract_metadata::ContractMetadata;
 use ink_metadata::InkProject;
 // Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
@@ -11,7 +12,6 @@ use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
-use solang::abi;
 use solang::file_resolver::FileResolver;
 use solang::{compile, Target};
 
@@ -1226,6 +1226,7 @@ impl MockSubstrate {
 pub fn build_solidity(src: &str) -> MockSubstrate {
     build_solidity_with_options(src, false, false)
 }
+
 pub fn build_solidity_with_options(
     src: &str,
     math_overflow_flag: bool,
@@ -1252,7 +1253,7 @@ pub fn build_solidity_with_options(
         .iter()
         .map(|res| Program {
             code: res.0.clone(),
-            abi: abi::substrate::load(&res.1),
+            abi: load_abi(&res.1),
         })
         .collect();
 
@@ -1273,4 +1274,9 @@ pub fn build_solidity_with_options(
         current_program: 0,
         events: Vec::new(),
     }
+}
+
+pub fn load_abi(s: &str) -> InkProject {
+    let bundle = serde_json::from_str::<ContractMetadata>(s).unwrap();
+    serde_json::from_value::<InkProject>(serde_json::to_value(bundle.abi).unwrap()).unwrap()
 }
