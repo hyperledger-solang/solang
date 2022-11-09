@@ -760,8 +760,10 @@ impl Namespace {
         id: &pt::Expression,
         diagnostics: &mut Diagnostics,
     ) -> Result<Type, ()> {
-        let resolve_dimensions = |ast_dimensions: &[Option<(pt::Loc, BigInt)>],
-                                  diagnostics: &mut Diagnostics| {
+        fn resolve_dimensions(
+            ast_dimensions: &[Option<(pt::Loc, BigInt)>],
+            diagnostics: &mut Diagnostics,
+        ) -> Result<Vec<ArrayLength>, ()> {
             let mut dimensions = Vec::new();
 
             for d in ast_dimensions.iter().rev() {
@@ -786,7 +788,7 @@ impl Namespace {
             }
 
             Ok(dimensions)
-        };
+        }
 
         let (namespace, id, dimensions) =
             self.expr_to_type(file_no, contract_no, id, diagnostics)?;
