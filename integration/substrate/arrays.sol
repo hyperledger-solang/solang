@@ -13,8 +13,7 @@ contract arrays {
 		Permission[] perms;
 	}
 
-	// Max. fixed array size on substrate is 32.
-	user[32] users;
+	user[1024] users;
 
 	mapping (bytes32 => uint64) addressToUser;
 
