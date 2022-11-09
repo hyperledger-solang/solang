@@ -98,20 +98,20 @@ fn storage_arrays() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(i32);
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct SetArg(u16, i32);
+    struct SetArg(u32, i32);
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct GetArg(u16);
+    struct GetArg(u32);
 
     let mut runtime = build_solidity(
         r##"
         contract foo {
-            int32[type(uint16).max] bigarray;
+            int32[type(uint32).max] bigarray;
 
-            function set(uint16 index, int32 val) public {
+            function set(uint32 index, int32 val) public {
                 bigarray[index] = val;
             }
 
-            function get(uint16 index) public returns (int32) {
+            function get(uint32 index) public returns (int32) {
                 return bigarray[index];
             }
         }"##,
@@ -122,7 +122,7 @@ fn storage_arrays() {
     let mut vals = Vec::new();
 
     for _ in 0..100 {
-        let index = rng.gen::<u16>();
+        let index = rng.gen::<u32>();
         let val = rng.gen::<i32>();
 
         runtime.function("set", SetArg(index, val).encode());
