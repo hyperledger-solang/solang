@@ -27,9 +27,9 @@ describe('Deploy arrays contract and test', () => {
         let users = [];
 
         for (let i = 0; i < 3; i++) {
-            let addr = '0x' + crypto.randomBytes(1024).toString('hex');
+            let addr = '0x' + crypto.randomBytes(32).toString('hex');
             let name = `name${i}`;
-            let id = crypto.randomInt(32);
+            let id = crypto.randomBytes(4).readUInt32BE(0) % 1024;
             let perms: string[] = [];
 
             for (let j = 0; j < Math.random() * 3; j++) {
