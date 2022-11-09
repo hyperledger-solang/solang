@@ -760,8 +760,6 @@ impl Namespace {
         id: &pt::Expression,
         diagnostics: &mut Diagnostics,
     ) -> Result<Type, ()> {
-        let is_substrate = self.target.is_substrate();
-
         let resolve_dimensions = |ast_dimensions: &[Option<(pt::Loc, BigInt)>],
                                   diagnostics: &mut Diagnostics| {
             let mut dimensions = Vec::new();
@@ -779,13 +777,6 @@ impl Namespace {
                             *loc,
                             "negative size of array declared".to_string(),
                         ));
-                        return Err(());
-                    } else if is_substrate && n > &32.into() {
-                        let msg = format!(
-                            "array dimension of {} exceeds the maximum of 32 on Substrate",
-                            n
-                        );
-                        diagnostics.push(Diagnostic::decl_error(*loc, msg));
                         return Err(());
                     }
                     dimensions.push(ArrayLength::Fixed(n.clone()));

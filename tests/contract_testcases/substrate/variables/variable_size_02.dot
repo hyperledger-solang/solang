@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/substrate/variables/variable_size_02.so
 	contract [label="contract x\ntests/contract_testcases/substrate/variables/variable_size_02.sol:1:1-5:10"]
 	foo [label="function foo\ncontract: x\ntests/contract_testcases/substrate/variables/variable_size_02.sol:2:13-34\nsignature foo()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/variables/variable_size_02.sol:1:1-5:10"]
-	diagnostic_5 [label="array dimension of 65536 exceeds the maximum of 32 on Substrate\nlevel Error\ntests/contract_testcases/substrate/variables/variable_size_02.sol:3:21-28"]
+	diagnostic_5 [label="type is too large to fit into memory\nlevel Error\ntests/contract_testcases/substrate/variables/variable_size_02.sol:3:17-29"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	diagnostics -> diagnostic [label="Debug"]
