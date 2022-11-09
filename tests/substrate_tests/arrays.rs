@@ -98,20 +98,20 @@ fn storage_arrays() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(i32);
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct SetArg(u64, i32);
+    struct SetArg(u16, i32);
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct GetArg(u64);
+    struct GetArg(u16);
 
     let mut runtime = build_solidity(
         r##"
         contract foo {
-            int32[32] bigarray;
+            int32[type(uint16).max] bigarray;
 
-            function set(uint64 index, int32 val) public {
+            function set(uint16 index, int32 val) public {
                 bigarray[index] = val;
             }
 
-            function get(uint64 index) public returns (int32) {
+            function get(uint16 index) public returns (int32) {
                 return bigarray[index];
             }
         }"##,
@@ -121,7 +121,8 @@ fn storage_arrays() {
 
     let mut vals = Vec::new();
 
-    for index in 0..32 {
+    for _ in 0..100 {
+        let index = rng.gen::<u16>();
         let val = rng.gen::<i32>();
 
         runtime.function("set", SetArg(index, val).encode());
@@ -139,7 +140,7 @@ fn storage_arrays() {
 #[test]
 fn enum_arrays() {
     #[derive(Encode, Decode)]
-    struct Arg([u8; 32]);
+    struct Arg([u8; 100]);
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
 
@@ -148,7 +149,7 @@ fn enum_arrays() {
         contract enum_array {
             enum Foo { Bar1, Bar2, Bar3, Bar4 }
 
-            function count_bar2(Foo[32] calldata foos) public returns (uint32) {
+            function count_bar2(Foo[100] calldata foos) public returns (uint32) {
                 uint32 count = 0;
                 uint32 i;
 
@@ -165,7 +166,7 @@ fn enum_arrays() {
 
     let mut rng = rand::thread_rng();
 
-    let mut a = [0u8; 32];
+    let mut a = [0u8; 100];
     let mut count = 0;
 
     #[allow(clippy::needless_range_loop)]

@@ -13,7 +13,7 @@ contract arrays {
 		Permission[] perms;
 	}
 
-	user[1024] users;
+	user[type(uint64).max] users;
 
 	mapping (bytes32 => uint64) addressToUser;
 

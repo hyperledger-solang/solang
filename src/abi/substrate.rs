@@ -101,7 +101,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                 ns,
                 registry,
             );
-            // substituded to struct { AccountId }
+            // substituted to struct { AccountId }
             let field = Field::new(None, address_ty.into(), None, vec![]);
             let c = TypeDefComposite::new(vec![field]);
             let path = path!("ink_env", "types", "AccountId");
@@ -142,7 +142,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
             }
             ty
         }
-        // substituded to [u8; len]
+        // substituted to [u8; len]
         ast::Type::Bytes(n) => resolve_ast(
             &ast::Type::Array(
                 Box::new(ast::Type::Uint(8)),
@@ -151,7 +151,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
             ns,
             registry,
         ),
-        // substituded to Vec<u8>
+        // substituted to Vec<u8>
         ast::Type::DynamicBytes => resolve_ast(
             &ast::Type::Array(Box::new(ast::Type::Uint(8)), vec![ArrayLength::Dynamic]),
             ns,
@@ -236,7 +236,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
     }
 }
 
-/// Recoursively build the storage layout after all types are registered
+/// Recursively build the storage layout after all types are registered
 fn type_to_storage_layout(
     key: u32,
     root: &LayoutKey,
@@ -361,11 +361,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
 
                 let t = TypeDefTuple::new_portable(fields);
 
-                let path = path!(
-                    &ns.contracts[contract_no].name,
-                    &f.name,
-                    &"return_type".into()
-                );
+                let path = path!(&ns.contracts[contract_no].name, &f.name, "return_type");
 
                 let ty = registry.register_type(Type::new(
                     path,
