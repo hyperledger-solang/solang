@@ -92,7 +92,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
     match ty {
         //  should reflect address_length for different substrate runtime
         ast::Type::Address(_) | ast::Type::Contract(_) => {
-            // substituted to [u8 ;address_length]
+            // substituted to [u8; address_length]
             let address_ty = resolve_ast(
                 &ast::Type::Array(
                     Box::new(ast::Type::Uint(8)),

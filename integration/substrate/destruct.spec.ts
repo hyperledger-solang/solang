@@ -39,9 +39,6 @@ describe('Deploy destruct contract and test', () => {
         let { data: { free: daveBalAfter } } = await conn.query.system.account(dave.address);
         let { data: { free: contractBalAfter } } = await conn.query.system.account(String(deploy_contract.address));
 
-        //console.log(`bal ${daveBalBefore} and ${daveBalAfter}`);
-        //console.log(`bal ${contractBalBefore} and ${contractBalAfter}`);
-
         // The contact is gone and has no balance
         expect(contractBalAfter.toBigInt()).toBe(0n);
         // Dave now has the balance previously held by the contract
