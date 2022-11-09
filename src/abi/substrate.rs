@@ -302,7 +302,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
-        ConstructorSpec::from_label(f.name.clone())
+        ConstructorSpec::from_label(if f.name.is_empty() { "new" } else { &f.name }.into())
             .selector(f.selector().try_into().unwrap())
             .payable(payable)
             .args(args)
