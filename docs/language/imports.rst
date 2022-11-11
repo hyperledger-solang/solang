@@ -2,7 +2,7 @@ Imports
 =======
 
 The ``import`` directive is used to import items from other Solidity files. This can be useful to
-keep a single definition in one file, which can be used in other files. For example
+keep a single definition in one file, which can be used in multiple other files. For example,
 you could have an interface in one source file, which several contracts implement or use
 which are in other files. Solidity imports are somewhat similar to JavaScript ES6, however
 there is no export statement, or default export.
@@ -15,10 +15,11 @@ another file.
 - enums definitions
 - event definitions
 - global functions
+- free standing functions
 - contracts, including abstract contract, libraries, and interfaces
 
 There are a few different flavours of import. You can specify if you want everything imported,
-or a just a select few. You can also rename the imports. The following directive imports only
+or just a select few items. You can also rename the imports. The following directive imports only
 `foo` and `bar`:
 
 .. code-block:: solidity
@@ -42,7 +43,7 @@ the command line option ``--importmap @openzeppelin=/opt/openzeppelin-contracts/
 
 .. code-block:: solidity
 
-    import "openzeppelin/interfaces/IERC20.sol";
+    import "@openzeppelin/interfaces/IERC20.sol";
 
 will automatically map to `/opt/openzeppelin-contracts/contracts/interfaces/IERC20.sol`.
 
@@ -67,7 +68,7 @@ there can be no naming conflict.
 
     import "defines.sol" as defs;
 
-This also has a slightly more baroque syntax, which does exactly the same.
+There is another syntax, which does exactly the same.
 
 .. code-block:: solidity
 

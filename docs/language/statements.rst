@@ -2,8 +2,8 @@ Statements
 ==========
 
 In functions, you can declare variables in code blocks. If the name is the same as
-an existing function, enum type, or another variable, then the compiler will generate a
-warning as the original item is no longer accessible.
+an existing function, enum type, or another variable, then the compiler will shadow
+the original item and generate a warning as it is no longer accessible.
 
 .. code-block:: solidity
 
@@ -56,12 +56,25 @@ condition must evaluate to a ``bool`` value.
 The statements enclosed by ``{`` and ``}`` (commonly known as a *block*) are executed only if
 the condition evaluates to true.
 
+You can optionally add an ``else`` block which is executed only if the condition evaluates to false.
+
+.. code-block:: solidity
+
+    function foo(uint32 n) private {
+        if (n > 10) {
+            // do something
+        } else {
+            // do something different
+        }
+    }
+
+
 While statement
 _______________
 
 Repeated execution of a block can be achieved using ``while``. It syntax is similar to ``if``,
 however the block is repeatedly executed until the condition evaluates to false.
-If the condition is not true on first execution, then the loop is never executed:
+If the condition is not true on first execution, then the loop body is never executed:
 
 .. code-block:: solidity
 
@@ -90,6 +103,9 @@ cease execution of the block, but repeat the loop if the condition still holds:
               // cease execution of this while loop and jump to the "n = 102" statement
               break;
           }
+
+          // only executed if both if statements were false
+          print("neither true");
       }
 
       n = 102;
@@ -99,7 +115,7 @@ Do While statement
 __________________
 
 A ``do { ... } while (condition);`` statement is much like the ``while (condition) { ... }`` except
-that the condition is evaluated after execution the block. This means that the block is executed
+that the condition is evaluated after executing the block. This means that the block is always executed
 at least once, which is not true for ``while`` statements:
 
 .. code-block:: solidity
@@ -209,9 +225,12 @@ of elements in both sides of the conditional must match the left hand side of th
 Try Catch Statement
 ___________________
 
+Solidity's try-catch statement can only be used with external calls or constructor calls using ``new``. The
+compiler will refuse to compile any other expression.
+
 Sometimes execution gets reverted due to a ``revert()`` or ``require()``. These types of problems
 usually cause the entire transaction to be aborted. However, it is possible to catch
-some of these problems and continue execution.
+some of these problems in the caller and continue execution.
 
 This is only possible for contract instantiation through new, and external function calls.
 An internal function cannot be called from a try catch statement. Not all problems can be handled,

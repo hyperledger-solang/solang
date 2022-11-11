@@ -1,7 +1,7 @@
 Parity Substrate
 ================
 
-Solang works with Parity Substrate 3.0. Note that for recent Substrate Version, cross-contract calls as well as using `address`
+Solang works with Parity Substrate 3.0. Note that for recent Substrate versions, cross-contract calls as well as using `address`
 type as function argument or return values are not supported. We are currently working on fixing any regressions.
 
 The Parity Substrate has the following differences to Ethereum Solidity:
