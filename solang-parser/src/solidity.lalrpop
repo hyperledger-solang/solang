@@ -316,7 +316,9 @@ Precedence14: Expression = {
     <a:@L> <l:Precedence13> "*=" <r:Precedence14> <b:@R> => Expression::AssignMultiply(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     <a:@L> <l:Precedence13> "/=" <r:Precedence14> <b:@R> => Expression::AssignDivide(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     <a:@L> <l:Precedence13> "%=" <r:Precedence14> <b:@R> => Expression::AssignModulo(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <a:@L> <c:Precedence13> "?" <l:Precedence14> ":" <r:Precedence14> <b:@R> => Expression::Ternary(Loc::File(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
+    <a:@L> <c:Precedence13> "?" <l:Precedence14> ":" <r:Precedence14> <b:@R> => {
+        Expression::ConditionalOperator(Loc::File(file_no, a, b), Box::new(c), Box::new(l), Box::new(r))
+    },
     Precedence13,
 }
 

@@ -669,7 +669,7 @@ impl SolangServer {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
             }
 
-            ast::Expression::Ternary(_locs, _typ, expr1, expr2, expr3) => {
+            ast::Expression::ConditionalOperator(_locs, _typ, expr1, expr2, expr3) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
                 SolangServer::construct_expr(expr3, lookup_tbl, symtab, ns);

@@ -698,7 +698,7 @@ pub fn expression(
         ast::Expression::AllocDynamicArray(loc, ty, size, init) => {
             alloc_dynamic_array(size, cfg, contract_no, func, ns, vartab, loc, ty, init, opt)
         }
-        ast::Expression::Ternary(loc, ty, cond, left, right) => ternary(
+        ast::Expression::ConditionalOperator(loc, ty, cond, left, right) => conditional_operator(
             loc,
             ty,
             cond,
@@ -1824,7 +1824,7 @@ fn format_string(
     Expression::FormatString(*loc, args)
 }
 
-fn ternary(
+fn conditional_operator(
     loc: &pt::Loc,
     ty: &Type,
     cond: &ast::Expression,
@@ -1851,7 +1851,7 @@ fn ternary(
 
     let left_block = cfg.new_basic_block("left_value".to_string());
     let right_block = cfg.new_basic_block("right_value".to_string());
-    let done_block = cfg.new_basic_block("ternary_done".to_string());
+    let done_block = cfg.new_basic_block("conditional_done".to_string());
 
     cfg.add(
         vartab,
