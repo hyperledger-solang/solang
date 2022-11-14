@@ -263,10 +263,10 @@ fn mangle_function_names_in_abi() {
         .get(0)
         .unwrap()
         .abi
-        .spec
-        .messages
+        .spec()
+        .messages()
         .iter()
-        .map(|m| m.name.clone())
+        .map(|m| m.label().clone())
         .collect();
 
     assert!(!messages.contains(&"foo".to_string()));
@@ -293,10 +293,10 @@ fn mangle_overloaded_function_names_in_abi() {
         .get(0)
         .unwrap()
         .abi
-        .spec
-        .messages
+        .spec()
+        .messages()
         .iter()
-        .map(|m| m.name.clone())
+        .map(|m| m.label().clone())
         .collect();
 
     assert!(messages_a.contains(&"foo".to_string()));
@@ -307,10 +307,10 @@ fn mangle_overloaded_function_names_in_abi() {
         .get(1)
         .unwrap()
         .abi
-        .spec
-        .messages
+        .spec()
+        .messages()
         .iter()
-        .map(|m| m.name.clone())
+        .map(|m| m.label().clone())
         .collect();
 
     assert!(!messages_b.contains(&"foo".to_string()));

@@ -131,14 +131,13 @@ describe('Deploy primitives contract and test', () => {
         // TEST address type.
         const default_account = '5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ';
 
-        // RERGRESSION metadata #666
-        //res = await contract.query.addressPassthrough(alice.address, {}, default_account);
-        //expect(res.output?.toJSON()).toEqual(default_account);
+        res = await contract.query.addressPassthrough(alice.address, {}, default_account);
+        expect(res.output?.toJSON()).toEqual(default_account);
 
-        //res = await contract.query.addressPassthrough(alice.address, {}, dave.address);
-        //expect(res.output?.toJSON()).toEqual(dave.address);
+        res = await contract.query.addressPassthrough(alice.address, {}, dave.address);
+        expect(res.output?.toJSON()).toEqual(dave.address);
 
-        //res = await contract.query.addressPassthrough(alice.address, {}, alice.address);
-        //expect(res.output?.toJSON()).toEqual(alice.address);
+        res = await contract.query.addressPassthrough(alice.address, {}, alice.address);
+        expect(res.output?.toJSON()).toEqual(alice.address);
     });
 });

@@ -98,20 +98,20 @@ fn storage_arrays() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(i32);
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct SetArg(u64, i32);
+    struct SetArg(u32, i32);
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct GetArg(u64);
+    struct GetArg(u32);
 
     let mut runtime = build_solidity(
         r##"
         contract foo {
-            int32[8589934592] bigarray;
+            int32[type(uint32).max] bigarray;
 
-            function set(uint64 index, int32 val) public {
+            function set(uint32 index, int32 val) public {
                 bigarray[index] = val;
             }
 
-            function get(uint64 index) public returns (int32) {
+            function get(uint32 index) public returns (int32) {
                 return bigarray[index];
             }
         }"##,
@@ -122,7 +122,7 @@ fn storage_arrays() {
     let mut vals = Vec::new();
 
     for _ in 0..100 {
-        let index = rng.gen::<u64>() % 0x200_0000;
+        let index = rng.gen::<u32>();
         let val = rng.gen::<i32>();
 
         runtime.function("set", SetArg(index, val).encode());
@@ -334,10 +334,10 @@ fn array_dimensions() {
     let mut runtime = build_solidity(
         r##"
         contract storage_refs {
-            int32[2**16] a;
+            int32[32] a;
 
             function test() public {
-                assert(a.length == 65536);
+                assert(a.length == 32);
             }
         }"##,
     );

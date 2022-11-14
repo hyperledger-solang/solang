@@ -9,8 +9,7 @@ const TOTAL_SUPPLY = BigInt(10000e18);
 const TEST_AMOUNT = BigInt(10e18);
 const MAX_UINT256 = BigInt(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
 
-// REGRESSION metadata #666
-describe.skip('Deploy UniswapV2ERC20 contract and test', () => {
+describe('Deploy UniswapV2ERC20 contract and test', () => {
     let conn: ApiPromise;
     let token: ContractPromise;
     let alice: KeyringPair;

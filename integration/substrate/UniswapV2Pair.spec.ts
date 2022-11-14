@@ -8,8 +8,7 @@ import type { Codec } from '@polkadot/types/types';
 const MINIMUM_LIQUIDITY = BigInt(1000);
 const TOTAL_SUPPLY = BigInt(10000e18);
 
-// REGRESSION metadata #666
-describe.skip('UniswapV2Pair', () => {
+describe('UniswapV2Pair', () => {
     let conn: ApiPromise;
     let factory: ContractPromise;
     let pair: ContractPromise;
@@ -26,19 +25,19 @@ describe.skip('UniswapV2Pair', () => {
 
         // Upload UniswapV2Pair contract code so that it can instantiated from the factory
         // there probably is a better way of doing this than deploying a contract. Patches welcome.
-        const pairTmp = await deploy(conn, alice, 'UniswapV2Pair.contract', BigInt(0));
+        const pairTmp = await deploy(conn, alice, 'UniswapV2Pair.contract', 0n);
 
         const pairAbi = pairTmp.abi;
 
-        let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', BigInt(0), alice.address);
+        let deploy_contract = await deploy(conn, alice, 'UniswapV2Factory.contract', 10000000000000000n, alice.address);
 
         factory = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
-        const tokenA_contract = await deploy(conn, alice, 'ERC20.contract', TOTAL_SUPPLY);
+        const tokenA_contract = await deploy(conn, alice, 'ERC20.contract', 0n, TOTAL_SUPPLY);
 
         const tokenA = new ContractPromise(conn, tokenA_contract.abi, tokenA_contract.address);
 
-        const tokenB_contract = await deploy(conn, alice, 'ERC20.contract', TOTAL_SUPPLY);
+        const tokenB_contract = await deploy(conn, alice, 'ERC20.contract', 0n, TOTAL_SUPPLY);
 
         const tokenB = new ContractPromise(conn, tokenB_contract.abi, tokenB_contract.address);
 
@@ -81,7 +80,7 @@ describe.skip('UniswapV2Pair', () => {
 
         const { output: totalSupply } = await pair.query.totalSupply(alice.address, {});
         expect(totalSupply?.eq(expectedLiquidity)).toBeTruthy();
-        const { output: bal } = await pair.query.balanceOf(alice.address, {}, alice.address);
+        const { output: bal } = await pair.query.balanceOfAddress(alice.address, {}, alice.address);
         expect(bal?.eq(expectedLiquidity - MINIMUM_LIQUIDITY)).toBeTruthy();
         const { output: bal0 } = await token0.query.balanceOf(alice.address, {}, pair.address);
         expect(bal0?.eq(token0Amount)).toBeTruthy();
@@ -90,10 +89,8 @@ describe.skip('UniswapV2Pair', () => {
         const { output: reserves } = await pair.query.getReserves(alice.address, {});
         // surely there must be a better way.
         let v: any = reserves;
-        let v0: Codec = v._reserve0;
-        expect(v0.eq(token0Amount)).toBeTruthy();
-        let v1: Codec = v._reserve1;
-        expect(v1.eq(token1Amount)).toBeTruthy();
+        expect(v[0].eq(token0Amount)).toBeTruthy();
+        expect(v[1].eq(token1Amount)).toBeTruthy();
     })
 
     async function addLiquidity(token0Amount: BigInt, token1Amount: BigInt) {
@@ -123,10 +120,8 @@ describe.skip('UniswapV2Pair', () => {
         const { output: reserves } = await pair.query.getReserves(alice.address, {});
         // surely there must be a better way.
         let v: any = reserves;
-        let v0: Codec = v._reserve0;
-        expect(v0.eq(token0Amount + swapAmount)).toBeTruthy();
-        let v1: Codec = v._reserve1;
-        expect(v1.eq(token1Amount - expectedOutputAmount)).toBeTruthy();
+        expect(v[0].eq(token0Amount + swapAmount)).toBeTruthy();
+        expect(v[1].eq(token1Amount - expectedOutputAmount)).toBeTruthy();
 
         const { output: bal0 } = await token0.query.balanceOf(alice.address, {}, pair.address);
         expect(bal0?.eq(token0Amount + swapAmount)).toBeTruthy();
@@ -162,10 +157,8 @@ describe.skip('UniswapV2Pair', () => {
         const { output: reserves } = await pair.query.getReserves(alice.address, {});
         // surely there must be a better way.
         let v: any = reserves;
-        let v0: Codec = v._reserve0;
-        expect(v0.eq(token0Amount - expectedOutputAmount)).toBeTruthy();
-        let v1: Codec = v._reserve1;
-        expect(v1.eq(token1Amount + swapAmount)).toBeTruthy();
+        expect(v[0].eq(token0Amount - expectedOutputAmount)).toBeTruthy();
+        expect(v[1].eq(token1Amount + swapAmount)).toBeTruthy();
 
         const { output: bal0 } = await token0.query.balanceOf(alice.address, {}, pair.address);
         expect(bal0?.eq(token0Amount - expectedOutputAmount)).toBeTruthy();
@@ -191,13 +184,13 @@ describe.skip('UniswapV2Pair', () => {
 
         const expectedLiquidity = BigInt(3e18)
 
-        let tx = pair.tx.transfer({ gasLimit }, pair.address, expectedLiquidity - MINIMUM_LIQUIDITY);
+        let tx = pair.tx.transferAddressUint256({ gasLimit }, pair.address, expectedLiquidity - MINIMUM_LIQUIDITY);
         await transaction(tx, alice);
 
         tx = pair.tx.burn({ gasLimit }, alice.address);
         await transaction(tx, alice);
 
-        const { output: walletBal0 } = await pair.query.balanceOf(alice.address, {}, alice.address);
+        const { output: walletBal0 } = await pair.query.balanceOfAddress(alice.address, {}, alice.address);
         expect(walletBal0?.eq(0)).toBeTruthy();
 
         const { output: pairTotalSupply } = await pair.query.totalSupply(alice.address, {});

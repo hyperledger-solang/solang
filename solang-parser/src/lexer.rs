@@ -665,8 +665,12 @@ impl<'input> Lexer<'input> {
         if let Some((i, 'e' | 'E')) = self.chars.peek() {
             exp_start = *i + 1;
             self.chars.next();
+            // Negative exponent
+            while matches!(self.chars.peek(), Some((_, '-'))) {
+                self.chars.next();
+            }
             while let Some((i, ch)) = self.chars.peek() {
-                if !ch.is_ascii_digit() && *ch != '_' && *ch != '-' {
+                if !ch.is_ascii_digit() && *ch != '_' {
                     break;
                 }
                 end = *i;
@@ -1279,7 +1283,7 @@ fn lexertest() {
         )
     );
 
-    let tokens = Lexer::new("// foo bar\n0x00fead0_12 .0008 0.9e-2", 0, &mut comments)
+    let tokens = Lexer::new("// foo bar\n0x00fead0_12 .0008 0.9e-2-2", 0, &mut comments)
         .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
 
     assert_eq!(
@@ -1287,16 +1291,21 @@ fn lexertest() {
         vec!(
             Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
             Ok((24, Token::RationalNumber("", "0008", ""), 29)),
-            Ok((30, Token::RationalNumber("0", "9", "-2"), 36))
+            Ok((30, Token::RationalNumber("0", "9", "-2"), 36)),
+            Ok((36, Token::Subtract, 37)),
+            Ok((37, Token::Number("2", ""), 38))
         )
     );
 
-    let tokens = Lexer::new("1.2_3e2", 0, &mut comments)
+    let tokens = Lexer::new("1.2_3e2-", 0, &mut comments)
         .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
 
     assert_eq!(
         tokens,
-        vec!(Ok((0, Token::RationalNumber("1", "2_3", "2"), 7)))
+        vec!(
+            Ok((0, Token::RationalNumber("1", "2_3", "2"), 7)),
+            Ok((7, Token::Subtract, 8))
+        )
     );
 
     let tokens = Lexer::new("\"foo\"", 0, &mut comments)
