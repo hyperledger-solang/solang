@@ -251,6 +251,7 @@ pub fn contract_function(
                     ));
                 }
             }
+            pt::FunctionAttribute::Error(_) => unreachable!(),
         }
     }
 
@@ -822,6 +823,9 @@ pub fn function(
                     *loc,
                     format!("attribute '{}' not supported", name.name),
                 ));
+                success = false;
+            }
+            pt::FunctionAttribute::Error(_) => {
                 success = false;
             }
         }

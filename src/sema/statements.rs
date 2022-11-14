@@ -348,14 +348,18 @@ fn statement(
             };
 
             if let Some(pos) = symtable.add(
-                &decl.name,
+                decl.name.as_ref().unwrap(),
                 var_ty.clone(),
                 ns,
                 VariableInitializer::Solidity(initializer.clone()),
                 VariableUsage::LocalVariable,
                 decl.storage.clone(),
             ) {
-                ns.check_shadowing(context.file_no, context.contract_no, &decl.name);
+                ns.check_shadowing(
+                    context.file_no,
+                    context.contract_no,
+                    decl.name.as_ref().unwrap(),
+                );
 
                 res.push(Statement::VariableDecl(
                     *loc,
@@ -364,7 +368,7 @@ fn statement(
                         loc: decl.loc,
                         ty: var_ty,
                         ty_loc: Some(ty_loc),
-                        id: Some(decl.name.clone()),
+                        id: Some(decl.name.clone().unwrap()),
                         indexed: false,
                         readonly: false,
                         recursive: false,
@@ -904,6 +908,7 @@ fn statement(
             ));
             Err(())
         }
+        pt::Statement::Error(_) => unimplemented!(),
     }
 }
 

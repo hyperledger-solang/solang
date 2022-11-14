@@ -164,6 +164,7 @@ pub(crate) fn resolve_yul_statement(
             resolved_statements.push(resolved_for.0);
             Ok(resolved_for.1)
         }
+        pt::YulStatement::Error(..) => Err(()),
     }
 }
 
