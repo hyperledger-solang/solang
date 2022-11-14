@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use contract_metadata::ContractMetadata;
+use ink_metadata::InkProject;
 // Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -10,7 +12,6 @@ use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
-use solang::abi;
 use solang::file_resolver::FileResolver;
 use solang::{compile, Target};
 
@@ -112,9 +113,10 @@ impl VirtualMachine {
 }
 
 pub struct Program {
-    abi: abi::substrate::Abi,
+    abi: InkProject,
     code: Vec<u8>,
 }
+
 pub struct MockSubstrate {
     pub store: HashMap<(Account, StorageKey), Vec<u8>>,
     pub programs: Vec<Program>,
@@ -1000,11 +1002,20 @@ impl MockSubstrate {
     }
 
     pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
-        let m = &self.programs[self.current_program].abi.spec.constructors[index];
+        let m = &self.programs[self.current_program]
+            .abi
+            .spec()
+            .constructors()[index];
 
         let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
-        self.vm.input = m.selector().into_iter().chain(args).collect();
+        self.vm.input = m
+            .selector()
+            .to_bytes()
+            .iter()
+            .copied()
+            .chain(args)
+            .collect();
 
         let ret = self.invoke_deploy(module);
 
@@ -1016,11 +1027,20 @@ impl MockSubstrate {
     }
 
     pub fn constructor_expect_return(&mut self, index: usize, expected_ret: i32, args: Vec<u8>) {
-        let m = &self.programs[self.current_program].abi.spec.constructors[index];
+        let m = &self.programs[self.current_program]
+            .abi
+            .spec()
+            .constructors()[index];
 
         let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
-        self.vm.input = m.selector().into_iter().chain(args).collect();
+        self.vm.input = m
+            .selector()
+            .to_bytes()
+            .iter()
+            .copied()
+            .chain(args)
+            .collect();
 
         let ret = self.invoke_deploy(module);
 
@@ -1039,12 +1059,21 @@ impl MockSubstrate {
     pub fn function(&mut self, name: &str, args: Vec<u8>) {
         let m = self.programs[self.current_program]
             .abi
-            .get_function(name)
+            .spec()
+            .messages()
+            .iter()
+            .find(|f| f.label() == name)
             .unwrap();
 
         let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
-        self.vm.input = m.selector().into_iter().chain(args).collect();
+        self.vm.input = m
+            .selector()
+            .to_bytes()
+            .iter()
+            .copied()
+            .chain(args)
+            .collect();
 
         println!("input:{}", hex::encode(&self.vm.input));
 
@@ -1056,12 +1085,21 @@ impl MockSubstrate {
     pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
         let m = self.programs[self.current_program]
             .abi
-            .get_function(name)
+            .spec()
+            .messages()
+            .iter()
+            .find(|m| m.label() == name)
             .unwrap();
 
         let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
 
-        self.vm.input = m.selector().into_iter().chain(args).collect();
+        self.vm.input = m
+            .selector()
+            .to_bytes()
+            .iter()
+            .copied()
+            .chain(args)
+            .collect();
 
         match module.invoke_export("call", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
@@ -1188,6 +1226,7 @@ impl MockSubstrate {
 pub fn build_solidity(src: &str) -> MockSubstrate {
     build_solidity_with_options(src, false, false)
 }
+
 pub fn build_solidity_with_options(
     src: &str,
     math_overflow_flag: bool,
@@ -1214,7 +1253,7 @@ pub fn build_solidity_with_options(
         .iter()
         .map(|res| Program {
             code: res.0.clone(),
-            abi: abi::substrate::load(&res.1).unwrap(),
+            abi: load_abi(&res.1),
         })
         .collect();
 
@@ -1235,4 +1274,9 @@ pub fn build_solidity_with_options(
         current_program: 0,
         events: Vec::new(),
     }
+}
+
+fn load_abi(s: &str) -> InkProject {
+    let bundle = serde_json::from_str::<ContractMetadata>(s).unwrap();
+    serde_json::from_value::<InkProject>(serde_json::to_value(bundle.abi).unwrap()).unwrap()
 }
