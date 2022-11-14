@@ -1358,7 +1358,13 @@ fn lexertest() {
         )
     );
 
-    let tokens = Lexer::new("// foo bar\n0x00fead0_12 .0008 0.9e-2-2", 0, &mut comments, &mut errors).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+    let tokens = Lexer::new(
+        "// foo bar\n0x00fead0_12 .0008 0.9e-2-2",
+        0,
+        &mut comments,
+        &mut errors,
+    )
+    .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
 
     assert_eq!(
         tokens,
