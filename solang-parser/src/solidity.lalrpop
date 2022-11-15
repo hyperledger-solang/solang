@@ -29,20 +29,26 @@ ImportDirective: SourceUnitPart = {
     <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" => {
         if from.name != "from" {
             let error = ErrorRecovery {
-            error: ParseError::User { error: LexicalError::ExpectedFrom(from.loc, from.name)},
-            dropped_tokens: Vec::new()};
-            parser_errors.push(error);   
+                error: ParseError::User {
+                    error: LexicalError::ExpectedFrom(from.loc, from.name)
+                    },
+                    dropped_tokens: Vec::new(),
+                };
+                parser_errors.push(error);   
         }
         SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r)))   
     },
     <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
             let error = ErrorRecovery {
-            error: ParseError::User { error: LexicalError::ExpectedFrom(from.loc, from.name)},
-            dropped_tokens: Vec::new()};
-            parser_errors.push(error);
-        } 
-        Ok(SourceUnitPart::ImportDirective(Import::Rename(s, rename, Loc::File(file_no, l, r)))) 
+                error: ParseError::User {
+                    error: LexicalError::ExpectedFrom(from.loc, from.name),
+                    },
+                    dropped_tokens: Vec::new(),
+                };
+                parser_errors.push(error);
+        }
+        Ok(SourceUnitPart::ImportDirective(Import::Rename(s,rename,Loc::File(file_no, l, r))))
     },
 }
 
@@ -125,6 +131,7 @@ SolIdentifier: Identifier = {
     <l:@L> "error" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()},
     <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
 }
+
 SolIdentifierOrError: Option<Identifier> = {
     SolIdentifier => Some(<>),
     ! => {
@@ -132,7 +139,6 @@ SolIdentifierOrError: Option<Identifier> = {
         None
     }
 }
-
 
 SolNoErrorIdentifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
@@ -152,7 +158,7 @@ SolIdentifierPath: IdentifierPath = {
 
 VariableDeclaration: VariableDeclaration = {
     <l:@L> <ty:AnyType> <storage:StorageLocation?>  <name:SolIdentifierOrError> <r:@R> => VariableDeclaration {
-        loc: Loc::File(file_no, l, r), ty, storage, name: name
+        loc: Loc::File(file_no, l, r), ty, storage, name
     },
 }
 
