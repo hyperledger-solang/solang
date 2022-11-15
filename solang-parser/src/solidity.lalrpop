@@ -34,7 +34,7 @@ ImportDirective: SourceUnitPart = {
                     },
                     dropped_tokens: Vec::new(),
                 };
-                parser_errors.push(error);   
+            parser_errors.push(error);   
         }
         SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r)))   
     },
@@ -46,7 +46,7 @@ ImportDirective: SourceUnitPart = {
                     },
                     dropped_tokens: Vec::new(),
                 };
-                parser_errors.push(error);
+            parser_errors.push(error);
         }
         Ok(SourceUnitPart::ImportDirective(Import::Rename(s,rename,Loc::File(file_no, l, r))))
     },
