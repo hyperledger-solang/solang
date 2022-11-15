@@ -78,6 +78,8 @@ path-slash = "0.2"
 pretty_assertions = "1.2"
 byte-slice-cast = "1.2.1"
 borsh = "0.9.3"
+ink_env = { git = "https://github.com/paritytech/ink.git", rev = "c19181e44c3300c6bab7b098710ef55e3493eb52" }
+ink_primitives = { git = "https://github.com/paritytech/ink.git", rev = "c19181e44c3300c6bab7b098710ef55e3493eb52" }
 
 [package.metadata.docs.rs]
 no-default-features = true

@@ -561,6 +561,12 @@ fn event_decl(
                 loc: name.loc,
             })
         } else {
+            if ns.target.is_substrate() {
+                ns.diagnostics.push(Diagnostic::error(
+                    field.loc,
+                    "event fields must have a name on substrate".into(),
+                ));
+            }
             None
         };
 
