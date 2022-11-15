@@ -31,9 +31,9 @@ ImportDirective: SourceUnitPart = {
             let error = ErrorRecovery {
                 error: ParseError::User {
                     error: LexicalError::ExpectedFrom(from.loc, from.name)
-                    },
-                    dropped_tokens: Vec::new(),
-                };
+                },
+                dropped_tokens: Vec::new(),
+            };
             parser_errors.push(error);   
         }
         SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r)))   
@@ -43,9 +43,9 @@ ImportDirective: SourceUnitPart = {
             let error = ErrorRecovery {
                 error: ParseError::User {
                     error: LexicalError::ExpectedFrom(from.loc, from.name),
-                    },
-                    dropped_tokens: Vec::new(),
-                };
+                },
+                dropped_tokens: Vec::new(),
+            };
             parser_errors.push(error);
         }
         Ok(SourceUnitPart::ImportDirective(Import::Rename(s,rename,Loc::File(file_no, l, r))))
@@ -157,7 +157,7 @@ SolIdentifierPath: IdentifierPath = {
 }
 
 VariableDeclaration: VariableDeclaration = {
-    <l:@L> <ty:AnyType> <storage:StorageLocation?>  <name:SolIdentifierOrError> <r:@R> => VariableDeclaration {
+    <l:@L> <ty:AnyType> <storage:StorageLocation?> <name:SolIdentifierOrError> <r:@R> => VariableDeclaration {
         loc: Loc::File(file_no, l, r), ty, storage, name
     },
 }
@@ -246,7 +246,7 @@ EnumDefinition: Box<EnumDefinition> = {
 VariableDefinition: Box<VariableDefinition> = {
     <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:SolIdentifierOrError> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
-            loc: Loc::File(file_no, l, r), ty, attrs, name: name, initializer: e,
+            loc: Loc::File(file_no, l, r), ty, attrs, name, initializer: e,
         })
     },
     <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:SolIdentifier> <false_token:!> <r:@R> ";" => {
@@ -641,7 +641,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
         Box::new(FunctionDefinition{
             loc: Loc::File(file_no, l, r),
             ty: FunctionTy::Function,
-            name: name,
+            name,
             name_loc: Loc::File(file_no, nl, nr),
             params,
             attributes,
