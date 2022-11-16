@@ -76,7 +76,7 @@ pub(crate) fn statement(
             let mut expression = expression(init, cfg, contract_no, Some(func), ns, vartab, opt);
 
             // Let's check if the declaration is a declaration of a dynamic array
-            if let Expression::AllocDynamicArray(
+            if let Expression::AllocDynamicBytes(
                 loc_dyn_arr,
                 ty_dyn_arr @ Type::Array(..),
                 size,
@@ -94,7 +94,7 @@ pub(crate) fn statement(
                     },
                 );
                 // If expression is an AllocDynamic array, replace the expression with AllocDynamicArray(_,_,tempvar,_) to avoid inserting size twice in the cfg
-                expression = Expression::AllocDynamicArray(
+                expression = Expression::AllocDynamicBytes(
                     loc_dyn_arr,
                     ty_dyn_arr,
                     Box::new(Expression::Variable(*loc, Type::Uint(32), temp_res)),
@@ -1363,7 +1363,7 @@ impl Type {
                 ))
             }
             Type::StorageRef(..) => None,
-            Type::String | Type::DynamicBytes => Some(Expression::AllocDynamicArray(
+            Type::String | Type::DynamicBytes => Some(Expression::AllocDynamicBytes(
                 pt::Loc::Codegen,
                 self.clone(),
                 Box::new(Expression::NumberLiteral(
@@ -1380,7 +1380,7 @@ impl Type {
                 ty.default(ns)?;
 
                 if dims.last() == Some(&ArrayLength::Dynamic) {
-                    Some(Expression::AllocDynamicArray(
+                    Some(Expression::AllocDynamicBytes(
                         pt::Loc::Codegen,
                         self.clone(),
                         Box::new(Expression::NumberLiteral(

@@ -175,7 +175,7 @@ fn update_vectors_to_slice(
     for block_no in 0..cfg.blocks.len() {
         for instr_no in 0..cfg.blocks[block_no].instr.len() {
             if let Instr::Set {
-                expr: Expression::AllocDynamicArray(..),
+                expr: Expression::AllocDynamicBytes(..),
                 ..
             } = &cfg.blocks[block_no].instr[instr_no].1
             {
@@ -215,14 +215,14 @@ fn update_vectors_to_slice(
         if let Instr::Set {
             loc,
             res,
-            expr: Expression::AllocDynamicArray(_, _, len, Some(bs)),
+            expr: Expression::AllocDynamicBytes(_, _, len, Some(bs)),
         } = &cfg.blocks[def.block_no].instr[def.instr_no].1
         {
             let res = *res;
             cfg.blocks[def.block_no].instr[def.instr_no].1 = Instr::Set {
                 loc: *loc,
                 res,
-                expr: Expression::AllocDynamicArray(
+                expr: Expression::AllocDynamicBytes(
                     *loc,
                     Type::Slice(Box::new(Type::Bytes(1))),
                     len.clone(),

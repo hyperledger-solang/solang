@@ -380,7 +380,7 @@ pub enum Expression {
         args: Vec<Expression>,
     },
     Add(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
-    AllocDynamicArray(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
+    AllocDynamicBytes(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
     ArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
     BitwiseAnd(pt::Loc, Type, Box<Expression>, Box<Expression>),
     BitwiseOr(pt::Loc, Type, Box<Expression>, Box<Expression>),
@@ -505,7 +505,7 @@ impl CodeLocation for Expression {
             | Expression::ShiftRight(loc, ..)
             | Expression::ShiftLeft(loc, ..)
             | Expression::RationalNumberLiteral(loc, ..)
-            | Expression::AllocDynamicArray(loc, ..)
+            | Expression::AllocDynamicBytes(loc, ..)
             | Expression::BytesCast(loc, ..)
             | Expression::SignedMore(loc, ..)
             | Expression::UnsignedMore(loc, ..)
@@ -577,7 +577,7 @@ impl Recurse for Expression {
             | Expression::Load(_, _, exp)
             | Expression::StorageArrayLength { array: exp, .. }
             | Expression::StructMember(_, _, exp, _)
-            | Expression::AllocDynamicArray(_, _, exp, _) => {
+            | Expression::AllocDynamicBytes(_, _, exp, _) => {
                 exp.recurse(cx, f);
             }
 
@@ -656,7 +656,7 @@ impl RetrieveType for Expression {
             | Expression::StructMember(_, ty, ..)
             | Expression::StringConcat(_, ty, ..)
             | Expression::FunctionArg(_, ty, ..)
-            | Expression::AllocDynamicArray(_, ty, ..)
+            | Expression::AllocDynamicBytes(_, ty, ..)
             | Expression::BytesCast(_, ty, ..)
             | Expression::RationalNumberLiteral(_, ty, ..)
             | Expression::Subscript(_, ty, ..) => ty.clone(),
@@ -739,7 +739,7 @@ impl Expression {
             }
             (&Expression::BytesLiteral(loc, _, ref init), _, &Type::DynamicBytes)
             | (&Expression::BytesLiteral(loc, _, ref init), _, &Type::String) => {
-                return Expression::AllocDynamicArray(
+                return Expression::AllocDynamicBytes(
                     loc,
                     to.clone(),
                     Box::new(Expression::NumberLiteral(
@@ -1147,8 +1147,8 @@ impl Expression {
                 Expression::StructMember(loc, ty, expr, field) => {
                     Expression::StructMember(*loc, ty.clone(), Box::new(filter(expr, ctx)), *field)
                 }
-                Expression::AllocDynamicArray(loc, ty, expr, initializer) => {
-                    Expression::AllocDynamicArray(
+                Expression::AllocDynamicBytes(loc, ty, expr, initializer) => {
+                    Expression::AllocDynamicBytes(
                         *loc,
                         ty.clone(),
                         Box::new(filter(expr, ctx)),

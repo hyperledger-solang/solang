@@ -1192,7 +1192,7 @@ fn payable_send(
                 address: Some(address),
                 accounts: None,
                 seeds: None,
-                payload: Expression::AllocDynamicArray(
+                payload: Expression::AllocDynamicBytes(
                     *loc,
                     Type::DynamicBytes,
                     Box::new(Expression::NumberLiteral(
@@ -1241,7 +1241,7 @@ fn payable_transfer(
                 accounts: None,
                 seeds: None,
                 address: Some(address),
-                payload: Expression::AllocDynamicArray(
+                payload: Expression::AllocDynamicBytes(
                     *loc,
                     Type::DynamicBytes,
                     Box::new(Expression::NumberLiteral(
@@ -1687,7 +1687,7 @@ fn alloc_dynamic_array(
     opt: &Options,
 ) -> Expression {
     let size = expression(size, cfg, contract_no, func, ns, vartab, opt);
-    Expression::AllocDynamicArray(*loc, ty.clone(), Box::new(size), init.clone())
+    Expression::AllocDynamicBytes(*loc, ty.clone(), Box::new(size), init.clone())
 }
 
 fn add(
@@ -2832,7 +2832,7 @@ fn array_literal_to_memory_array(
         Instr::Set {
             loc: *loc,
             res: memory_array,
-            expr: Expression::AllocDynamicArray(
+            expr: Expression::AllocDynamicBytes(
                 *loc,
                 ty.clone(),
                 Box::new(array_size.clone()),

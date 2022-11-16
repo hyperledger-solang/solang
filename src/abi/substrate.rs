@@ -447,7 +447,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
     };
 
     let events = ns.contracts[contract_no]
-        .sends_events
+        .emits_events
         .iter()
         .map(|event_no| {
             let event = &ns.events[*event_no];
