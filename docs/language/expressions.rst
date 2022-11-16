@@ -47,10 +47,6 @@ line argument is specified. No overflow checking is generated in `unchecked` blo
         }
     }
 
-.. warning::
-
-  Overflow checking for types larger than ``int64`` (e.g. ``uint128``) is not implemented yet.
-
 Bitwise operators
 _________________
 
@@ -114,9 +110,9 @@ a bool.
 Increment and Decrement operators
 _________________________________
 
-The post-increment and pre-increment operators are implemented like you would expect. So, ``a++``
-evaluates to the value of ``a`` before incrementing, and ``++a`` evaluates to value of ``a``
-after incrementing.
+The post-increment and pre-increment operators are implemented by reading the variable's
+value before or after modifying it. ``i++``returns the value of ``i`` before incrementing,
+and ``++i`` returns the value of ``i`` after incrementing.
 
 this
 ____
@@ -149,6 +145,11 @@ this only works with public functions.
         }
     }
 
+.. note::
+
+    On Solana, this gives the account of contract data. If you want the account with the program code,
+    use ``tx.program_id``.
+
 type(..) operators
 __________________
 
@@ -177,10 +178,10 @@ an interface at runtime, which can be used to write a `supportsInterface()` func
 in the EIP.
 
 The contract code for a contract, i.e. the binary WebAssembly or BPF, can be retrieved using the
-``type(c).creationCode`` and ``type(c).runtimeCode`` fields, as ``bytes``. In Ethereum,
-the constructor code is in the ``creationCode`` WebAssembly and all the functions are in
-the ``runtimeCode`` WebAssembly or BPF. Parity Substrate has a single WebAssembly code for both,
-so both fields will evaluate to the same value.
+``type(c).creationCode`` and ``type(c).runtimeCode`` fields, as ``bytes``. On EVM,
+the constructor code is in the ``creationCode`` and all the functions are in
+the ``runtimeCode``. Parity Substrate and Solana use the same
+code for both, so those fields will evaluate to the same value.
 
 .. code-block:: solidity
 
@@ -227,7 +228,8 @@ Casting
 _______
 
 Solidity is very strict about the sign of operations, and whether an assignment can truncate a
-value. You can force the compiler to accept truncations or differences in sign by adding a cast.
+value. You can force the compiler to accept truncations or sign changes by adding an
+explicit cast.
 
 Some examples:
 
@@ -248,7 +250,7 @@ The compiler will say:
    implicit conversion would truncate from int256 to int64
 
 Now you can work around this by adding a cast to the argument to return ``return int64(bar);``,
-however it would be much nicer if the return value matched the argument. Instead, implement
+however it is idiomatic to match the return value type with the argument type. Instead, implement
 multiple overloaded abs() functions, so that there is an ``abs()`` for each type.
 
 It is allowed to cast from a ``bytes`` type to ``int`` or ``uint`` (or vice versa), only if the length
@@ -281,4 +283,5 @@ A similar example for truncation:
   bytes4 start2 = bytes4(bytes8(start));
   // first cast, then truncate as bytes: start2 = hex"dead"
 
-Since ``byte`` is array of one byte, a conversion from ``byte`` to ``uint8`` requires a cast.
+Since ``byte`` is an array of one byte, a conversion from ``byte`` to ``uint8`` requires a cast. This is
+because ``byte`` is an alias for ``bytes1``.

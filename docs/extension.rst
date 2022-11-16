@@ -23,18 +23,7 @@ Both the Visual Studio Code extension code and the language server were develope
 Solidity Language flavour
 -------------------------
 
-The Solidity language flavour depends on what target you are compiling for. For
-example:
-
-* Ethereum style address literals like ``0xE0f5206BBD039e7b0592d8918820024e2a7437b9`` are
-  not supported on Substrate or Solana, but are supported for EVM.
-* On Substrate and Solana, base58 style encoded address literals like
-  ``address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ"`` are supported, but
-  not with EVM.
-* On Solana, there is special builtin import file called ``'solana'`` available.
-* Different blockchains offer different builtins. See the :ref:`builtins documentation <builtins>`.
-* See :ref:`language-status` for compatiblity with Ethereum Solidity (solc)
-* There are many more differences, which are noted throughout the documentation.
+The Solidity language flavour depends on what target you are compiling for, see :ref:`language-status` for a brief overview.
 
 You can choose the between the following targets:
 
@@ -48,7 +37,7 @@ evm
    Solidity for any EVM based chain like Ethereum
 
 Note that the language server has support for EVM, but Hyperledger Solang does
-not support compiling for EVM (yet).
+not support compiling for EVM.
 
 Using the extension
 -------------------

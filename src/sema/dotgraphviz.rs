@@ -837,12 +837,12 @@ impl Dot {
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
 
-            Expression::Ternary(loc, ty, cond, left, right) => {
+            Expression::ConditionalOperator(loc, ty, cond, left, right) => {
                 let node = self.add_node(
                     Node::new(
                         "conditional",
                         vec![
-                            format!("conditiona {}", ty.to_string(ns)),
+                            format!("conditional operator {}", ty.to_string(ns)),
                             ns.loc_to_string(loc),
                         ],
                     ),

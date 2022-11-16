@@ -709,7 +709,7 @@ pub enum Expression {
     Complement(pt::Loc, Type, Box<Expression>),
     UnaryMinus(pt::Loc, Type, Box<Expression>),
 
-    Ternary(
+    ConditionalOperator(
         pt::Loc,
         Type,
         Box<Expression>,
@@ -865,7 +865,7 @@ impl Recurse for Expression {
                 | Expression::Complement(_, _, expr)
                 | Expression::UnaryMinus(_, _, expr) => expr.recurse(cx, f),
 
-                Expression::Ternary(_, _, cond, left, right) => {
+                Expression::ConditionalOperator(_, _, cond, left, right) => {
                     cond.recurse(cx, f);
                     left.recurse(cx, f);
                     right.recurse(cx, f);
@@ -985,7 +985,7 @@ impl CodeLocation for Expression {
             | Expression::Not(loc, _)
             | Expression::Complement(loc, ..)
             | Expression::UnaryMinus(loc, ..)
-            | Expression::Ternary(loc, ..)
+            | Expression::ConditionalOperator(loc, ..)
             | Expression::Subscript(loc, ..)
             | Expression::StructMember(loc, ..)
             | Expression::Or(loc, ..)

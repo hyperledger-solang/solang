@@ -29,24 +29,24 @@ followed by one or more solidity source filenames.
 
 Options:
 
--v, \\-\\-verbose
+-v, \-\-verbose
   Make the output more verbose. The compiler tell you what contracts have been
   found in the source, and what files are generated. Without this option Solang
   will be silent if there are no errors or warnings.
 
-\\-\\-target *target*
+\-\-target *target*
   This takes one argument, which can either be ``solana`` or ``substrate``. The target
   must be specified.
 
-\\-\\-address\\-length *length-in-bytes*
+\-\-address\-length *length-in-bytes*
   Change the default address length on Substrate. By default, Substate uses an address type of 32 bytes. This option
   is ignored for any other target.
 
-\\-\\-value\\-length *length-in-bytes*
+\-\-value\-length *length-in-bytes*
   Change the default value length on Substrate. By default, Substate uses an value type of 16 bytes. This option
   is ignored for any other target.
 
--o, \\-\\-output *directory*
+-o, \-\-output *directory*
   This option takes one argument, which is the directory where output should
   be saved. The default is the current directory.
 
@@ -54,25 +54,25 @@ Options:
   This takes one argument, which can either be ``none``, ``less``, ``default``,
   or ``aggressive``. These correspond to llvm optimization levels.
 
-\\-\\-importpath *directory*
+\-\-importpath *directory*
   When resolving ``import`` directives, search this directory. By default ``import``
   will only search the current directory. This option can be specified multiple times
   and the directories will be searched in the order specified.
 
-\\-\\-importmap *map=directory*
+\-\-importmap *map=directory*
   When resolving ``import`` directives, if the first part of the path matches *map*,
   search the directory provided for the file. This option can be specified multiple times
   with different values for map.
 
-\\-\\-help, -h
+\-\-help, -h
   This displays a short description of all the options
 
-\\-\\-standard-json
+\-\-standard-json
   This option causes Solang to emulate the behaviour of Solidity
   `standard json output <https://solidity.readthedocs.io/en/v0.5.13/using-the-compiler.html#output-description>`_. No output files are written, all the
   output will be in json on stdout.
 
-\\-\\-emit *phase*
+\-\-emit *phase*
   This option is can be used for debugging Solang itself. This is used to
   output early phases of compilation.
 
@@ -97,22 +97,22 @@ Options:
   object
     Output wasm object file; this is the contract before final linking.
 
-\\-\\-no\\-constant\\-folding
+\-\-no\-constant\-folding
    Disable the :ref:`constant-folding` codegen optimization
 
-\\-\\-no\\-strength\\-reduce
+\-\-no\-strength\-reduce
    Disable the :ref:`strength-reduce` codegen optimization
 
-\\-\\-no\\-dead\\-storage
+\-\-no\-dead\-storage
    Disable the :ref:`dead-storage` optimization
 
-\\-\\-no\\-vector\\-to\\-slice
+\-\-no\-vector\-to\-slice
    Disable the :ref:`vector-to-slice` optimization
 
-\\-\\-no\\-cse
+\-\-no\-cse
    Disable the :ref:`common-subexpression-elimination` optimization
 
-\\-\\-log\\-api\\-return\\-codes
+\-\-log\-api\-return\-codes
    Disable the :ref:`common-subexpression-elimination` optimization
 
 Generating Documentation Usage
@@ -129,37 +129,37 @@ followed by one or more solidity source filenames.
 
 Options:
 
-\\-\\-target *target*
+\-\-target *target*
   This takes one argument, which can either be ``solana`` or ``substrate``. The target
   must be specified.
 
-\\-\\-address\\-length *length-in-bytes*
+\-\-address\-length *length-in-bytes*
   Change the default address length on Substrate. By default, Substate uses an address type of 32 bytes. This option
   is ignored for any other target.
 
-\\-\\-value\\-length *length-in-bytes*
+\-\-value\-length *length-in-bytes*
   Change the default value length on Substrate. By default, Substate uses an value type of 16 bytes. This option
   is ignored for any other target.
 
-\\-\\-importpath *directory*
+\-\-importpath *directory*
   When resolving ``import`` directives, search this directory. By default ``import``
   will only search the current directory. This option can be specified multiple times
   and the directories will be searched in the order specified.
 
-\\-\\-importmap *map=directory*
+\-\-importmap *map=directory*
   When resolving ``import`` directives, if the first part of the path matches *map*,
   search the directory provided for the file. This option can be specified multiple times
   with different values for map.
 
-\\-\\-help, -h
+\-\-help, -h
   This displays a short description of all the options
 
 .. _idl_command:
 
-Using the idl command
-_____________________
+Generate Solidity interface from IDL
+____________________________________
 
-This command converts Anchor IDL into Solidity import files in order to call
+This command converts Anchor IDL into Solidity import files, so they can be used to call
 Anchor Programs from Solidity.
 
   solang idl [--output DIR] [IDLFILE]...
@@ -169,17 +169,17 @@ for an example of how to use this.
 
 .. note::
 
-  There is only support for Solana at this time.
+  There is only supported on Solana.
 
-Running Solang using container
-______________________________
+Running Solang using a container
+________________________________
 
 First pull the last Solang container from
 `solang containers <https://github.com/hyperledger/solang/pkgs/container/solang>`_:
 
 .. code-block:: bash
 
-    docker pull ghcr.io/hyperledger/solang
+    docker image pull ghcr.io/hyperledger/solang
 
 And if you are using podman:
 
@@ -199,8 +199,8 @@ Or podman:
 
 	  podman container run --rm -it ghcr.io/hyperledger/solang --version
 
-If you want to compile some solidity files, the source file needs to be
-available inside the container. You can do this via the -v command line.
+If you want to compile some Solidity files, the source files need to be
+available inside the container. You can do this via the ``-v`` docker command line.
 In this example ``/local/path`` should be replaced with the absolute path
 to your solidity files:
 

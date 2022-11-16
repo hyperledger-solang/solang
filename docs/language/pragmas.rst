@@ -39,5 +39,5 @@ Solang takes a different view:
    but of the build environment. No other language set the compiler version in
    the source code.
 
-If anything some languages allow conditional compilation based on the compiler
+If anything, some languages allow conditional compilation based on the compiler
 version, which is much more useful.

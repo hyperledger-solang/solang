@@ -78,7 +78,7 @@ impl RetrieveType for Expression {
             | Expression::BytesCast(_, _, ty, _)
             | Expression::Complement(_, ty, _)
             | Expression::UnaryMinus(_, ty, _)
-            | Expression::Ternary(_, ty, ..)
+            | Expression::ConditionalOperator(_, ty, ..)
             | Expression::StructMember(_, ty, ..)
             | Expression::AllocDynamicArray(_, ty, ..)
             | Expression::PreIncrement(_, ty, ..)
@@ -1862,7 +1862,7 @@ pub fn expression(
             Ok(expr)
         }
 
-        pt::Expression::Ternary(loc, c, l, r) => {
+        pt::Expression::ConditionalOperator(loc, c, l, r) => {
             let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
             let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
             check_var_usage_expression(ns, &left, &right, symtable);
@@ -1875,7 +1875,7 @@ pub fn expression(
             let left = left.cast(&l.loc(), &ty, true, ns, diagnostics)?;
             let right = right.cast(&r.loc(), &ty, true, ns, diagnostics)?;
 
-            Ok(Expression::Ternary(
+            Ok(Expression::ConditionalOperator(
                 *loc,
                 ty,
                 Box::new(cond),

@@ -1374,7 +1374,7 @@ fn destructure_values(
             check_function_call(ns, &res, symtable);
             res
         }
-        pt::Expression::Ternary(loc, cond, left, right) => {
+        pt::Expression::ConditionalOperator(loc, cond, left, right) => {
             let cond = expression(
                 cond,
                 context,
@@ -1408,7 +1408,7 @@ fn destructure_values(
             )?;
             used_variable(ns, &right, symtable);
 
-            return Ok(Expression::Ternary(
+            return Ok(Expression::ConditionalOperator(
                 *loc,
                 Type::Unreachable,
                 Box::new(cond),
@@ -1596,7 +1596,7 @@ fn return_with_values(
             used_variable(ns, &expr, symtable);
             expr
         }
-        pt::Expression::Ternary(loc, cond, left, right) => {
+        pt::Expression::ConditionalOperator(loc, cond, left, right) => {
             let cond = expression(
                 cond,
                 context,
@@ -1614,7 +1614,7 @@ fn return_with_values(
                 return_with_values(right, &right.loc(), context, symtable, ns, diagnostics)?;
             used_variable(ns, &right, symtable);
 
-            return Ok(Expression::Ternary(
+            return Ok(Expression::ConditionalOperator(
                 *loc,
                 Type::Unreachable,
                 Box::new(cond),

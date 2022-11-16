@@ -497,7 +497,7 @@ pub enum Expression {
     NotEqual(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
     Or(Loc, Box<Expression>, Box<Expression>),
-    Ternary(Loc, Box<Expression>, Box<Expression>, Box<Expression>),
+    ConditionalOperator(Loc, Box<Expression>, Box<Expression>, Box<Expression>),
     Assign(Loc, Box<Expression>, Box<Expression>),
     AssignOr(Loc, Box<Expression>, Box<Expression>),
     AssignAnd(Loc, Box<Expression>, Box<Expression>),
@@ -563,7 +563,7 @@ impl CodeLocation for Expression {
             | Expression::NotEqual(loc, ..)
             | Expression::And(loc, ..)
             | Expression::Or(loc, ..)
-            | Expression::Ternary(loc, ..)
+            | Expression::ConditionalOperator(loc, ..)
             | Expression::Assign(loc, ..)
             | Expression::AssignOr(loc, ..)
             | Expression::AssignAnd(loc, ..)

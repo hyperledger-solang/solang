@@ -11,7 +11,7 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_06.sol" {
 	parameters_10 [label="parameters\nuint64 a\nuint64 b"]
 	returns_11 [label="returns\nuint64 "]
 	return [label="return\ntests/contract_testcases/substrate/libraries/using_06.sol:14:17-37"]
-	conditional [label="conditiona unreachable\ntests/contract_testcases/substrate/libraries/using_06.sol:14:24-37"]
+	conditional [label="conditional operator unreachable\ntests/contract_testcases/substrate/libraries/using_06.sol:14:24-37"]
 	more [label="more\ntests/contract_testcases/substrate/libraries/using_06.sol:14:24-29"]
 	variable [label="variable: a\nuint64\ntests/contract_testcases/substrate/libraries/using_06.sol:14:24-25"]
 	variable_16 [label="variable: b\nuint64\ntests/contract_testcases/substrate/libraries/using_06.sol:14:28-29"]
