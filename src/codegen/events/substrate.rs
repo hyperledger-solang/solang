@@ -10,8 +10,8 @@ use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
 use ink_env::hash::{Blake2x256, CryptoHash, HashOutput};
 use ink_env::topics::PrefixedValue;
 use ink_primitives::{Clear, Hash};
-use num_bigint::BigInt;
 use parity_scale_codec as scale;
+use scale::Encode;
 use solang_parser::pt;
 
 /// This struct implements the trait 'EventEmitter' in order to handle the emission of events
@@ -57,21 +57,26 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         let mut topics = Vec::new();
         let mut topic_tys = Vec::new();
 
+        let loc = pt::Loc::Builtin;
         let event = &self.ns.events[self.event_no];
+        let topic_ty = || Type::Bytes(32);
 
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
-        let mut topic_hashes = Vec::new();
         if !event.anonymous {
             let value = format!("{}::{}", &self.ns.contracts[contract_no].name, &event.name);
-            topic_hashes.push(encoded_into_hash(&PrefixedValue {
+            let event_topic = encoded_into_hash(&PrefixedValue {
                 prefix: b"",
                 value: &value.as_bytes(),
-            }));
+            })
+            .as_ref()
+            .to_vec();
+            topics.push(Expression::BytesLiteral(loc, topic_ty(), event_topic));
+            topic_tys.push(topic_ty());
         };
 
         // Topic prefixes are static and can be calculated at compile time.
-        let topic_prefixes: Vec<Vec<u8>> = event
+        let mut topic_prefixes: Vec<Vec<u8>> = event
             .fields
             .iter()
             .filter(|field| field.indexed)
@@ -83,13 +88,13 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     &field.name_as_str()
                 )
                 .into_bytes()
+                .encode()
             })
             .collect();
 
-        let loc = pt::Loc::Builtin;
         for (i, arg) in self.args.iter().enumerate() {
             if self.ns.events[self.event_no].fields[i].indexed {
-                let ty = arg.ty();
+                //let ty = arg.ty();
 
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
 
@@ -113,8 +118,8 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
                 let concatenated = Expression::StringConcat(
                     loc,
-                    Type::String,
-                    ast::StringLocation::CompileTime(todo!()),
+                    Type::DynamicBytes,
+                    ast::StringLocation::CompileTime(topic_prefixes.remove(0)), // TODO not efficient
                     ast::StringLocation::RunTime(e.into()),
                 );
 
@@ -122,7 +127,13 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
                 let compare = Expression::UnsignedMore(
                     pt::Loc::Codegen,
-                    todo!(), //Expression::Builtin(pt::Loc::Codegen, Builtin::ArrayLength, vec![concatenated]),
+                    Expression::Builtin(
+                        pt::Loc::Codegen,
+                        vec![Type::DynamicBytes],
+                        Builtin::ArrayLength,
+                        vec![concatenated.clone()],
+                    )
+                    .into(),
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(32), 32.into()).into(),
                 );
 
@@ -152,9 +163,9 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                         res: var,
                         expr: Expression::Builtin(
                             loc,
-                            vec![Type::String],
+                            vec![Type::DynamicBytes],
                             Builtin::Blake2_256,
-                            vec![concatenated],
+                            vec![concatenated.clone()],
                         ),
                     },
                 );
@@ -183,7 +194,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     Type::DynamicBytes,
                     var,
                 ));
-                topic_tys.push(ty);
+                topic_tys.push(topic_ty());
             } else {
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
 

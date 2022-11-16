@@ -1459,7 +1459,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         data: &[BasicValueEnum<'b>],
         data_tys: &[ast::Type],
         topics: &[BasicValueEnum<'b>],
-        topic_tys: &[ast::Type],
+        _topic_tys: &[ast::Type],
         ns: &ast::Namespace,
     ) {
         emit_context!(binary);
@@ -1502,15 +1502,15 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 ]
             );
 
-            for (i, topic) in topics.iter().enumerate() {
-                let mut data = dest;
+            for topic in topics.iter() {
+                //let mut data = dest; TODO
 
                 binary.builder.build_call(
                     binary.module.get_function("__memcpy").unwrap(),
                     &[
-                        data.into(),
-                        binary.vector_bytes(topics[i]).into(),
-                        binary.vector_len(topics[i]).into(),
+                        dest.into(),
+                        binary.vector_bytes(*topic).into(),
+                        binary.vector_len(*topic).into(),
                     ],
                     "",
                 );
