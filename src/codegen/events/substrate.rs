@@ -59,19 +59,34 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
         let loc = pt::Loc::Builtin;
         let event = &self.ns.events[self.event_no];
-        let topic_ty = || Type::Bytes(32);
+        let topic_ty = || Type::Slice(Type::Uint(8).into());
 
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
         if !event.anonymous {
-            let value = format!("{}::{}", &self.ns.contracts[contract_no].name, &event.name);
-            let event_topic = encoded_into_hash(&PrefixedValue {
-                prefix: b"",
-                value: &value.as_bytes(),
-            })
-            .as_ref()
-            .to_vec();
-            topics.push(Expression::BytesLiteral(loc, topic_ty(), event_topic));
+            let mut encoded =
+                format!("{}::{}", &self.ns.contracts[contract_no].name, &event.name).encode();
+            encoded[0] = 0; // Set the prefix
+            let len_encoded = encoded.len();
+            let mut result = Hash::clear();
+            let len_result = result.as_ref().len();
+            let result = if len_encoded <= len_result {
+                result.as_mut()[..len_encoded].copy_from_slice(&encoded);
+                result
+            } else {
+                let mut hash_output = <<Blake2x256 as HashOutput>::Type as Default>::default();
+                <Blake2x256 as CryptoHash>::hash(&encoded, &mut hash_output);
+                let copy_len = core::cmp::min(hash_output.len(), len_result);
+                result.as_mut()[0..copy_len].copy_from_slice(&hash_output[0..copy_len]);
+                result
+            };
+            let result = result.as_ref().to_vec();
+            topics.push(Expression::AllocDynamicArray(
+                loc,
+                topic_ty(),
+                Expression::NumberLiteral(loc, Type::Uint(32), result.len().into()).into(),
+                Some(result),
+            ));
             topic_tys.push(topic_ty());
         };
 
@@ -99,22 +114,11 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
 
                 let e = Expression::AbiEncode {
-                    loc: pt::Loc::Codegen,
-                    tys: vec![Type::String, e.ty()],
+                    loc,
+                    tys: vec![e.ty()],
                     packed: vec![],
                     args: vec![e],
                 };
-
-                //let prefix = Expression::AllocDynamicArray(
-                //    pt::Loc::Codegen,
-                //    Type::Slice(Type::Uint(8).into()),
-                //    Box::new(Expression::NumberLiteral(
-                //        loc,
-                //        Type::Uint(32),
-                //        BigInt::from(todo!()),
-                //    )),
-                //    Some(todo!()),
-                //);
 
                 let concatenated = Expression::StringConcat(
                     loc,
@@ -126,15 +130,15 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 assert_eq!(concatenated.ty(), Type::DynamicBytes);
 
                 let compare = Expression::UnsignedMore(
-                    pt::Loc::Codegen,
+                    loc,
                     Expression::Builtin(
-                        pt::Loc::Codegen,
+                        loc,
                         vec![Type::DynamicBytes],
                         Builtin::ArrayLength,
                         vec![concatenated.clone()],
                     )
                     .into(),
-                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(32), 32.into()).into(),
+                    Expression::NumberLiteral(loc, Type::Uint(32), 32.into()).into(),
                 );
 
                 let bigger = cfg.new_basic_block("bigger".into());
@@ -159,7 +163,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 cfg.add(
                     vartab,
                     Instr::Set {
-                        loc: pt::Loc::Codegen,
+                        loc,
                         res: var,
                         expr: Expression::Builtin(
                             loc,
@@ -179,7 +183,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 cfg.add(
                     vartab,
                     Instr::Set {
-                        loc: pt::Loc::Codegen,
+                        loc,
                         res: var,
                         expr: concatenated,
                     },
@@ -189,11 +193,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
                 cfg.set_phis(done, vartab.pop_dirty_tracker());
 
-                topics.push(Expression::Variable(
-                    pt::Loc::Codegen,
-                    Type::DynamicBytes,
-                    var,
-                ));
+                topics.push(Expression::Variable(loc, Type::DynamicBytes, var));
                 topic_tys.push(topic_ty());
             } else {
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
