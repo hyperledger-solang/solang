@@ -1,13 +1,73 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::diagnostics::{Diagnostic, ErrorType::ParserError, Level::Error};
 use crate::lexer::Lexer;
 use crate::pt::*;
 use crate::solidity;
+use crate::Loc::File;
 use pretty_assertions::assert_eq;
 use std::sync::mpsc;
 use std::time::Duration;
 use std::{fs, path::Path, thread};
 use walkdir::WalkDir;
+
+#[test]
+fn parser_error_recovery() {
+    let src = r#"import * as sesa frum "sesa";
+pragma sesa_pragma;
+usingg sesa for *;
+contract 9c {
+    uint256 0sesa_glb = 90;
+    9uint256 sesa_glb = 90;
+    uint256 sesa_glb = 90id;
+
+    event 1sesa_event(uint 0invalid_param_id);
+    event sesa_event(3uint invalid_param_type);
+
+    error 1sesa_error(uint 0invalid_param_id);
+    error sesa_error(3uint invalid_param_type);
+
+    struct 2sesa_struct {
+        uint256 3sesa_struct_mem;
+    }
+
+    function 4sesa_func() public! pure {
+        uint 3sesa_var = 3sesa_id + id; 
+        9uint sesa= 4b;
+        if (true)
+    }
+}
+"#;
+
+    if let Err(errors) = crate::parse(src, 0) {
+        assert_eq!(
+            errors,
+            vec![
+                Diagnostic { loc: File(0, 17, 21), level: Error, ty: ParserError, message: "'frum' found where 'from' expected".to_string(), notes: vec![]},
+                Diagnostic { loc: File(0, 48, 49), level: Error, ty: ParserError, message: r#"unrecognised token ';', expected string"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 62, 65), level: Error, ty: ParserError, message: r#"unrecognised token 'for', expected ";", "=""#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 78, 79), level: Error, ty: ParserError, message: r#"unrecognised token '9', expected "case", "default", "error", "leave", "revert", "switch", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 95, 96), level: Error, ty: ParserError, message: r#"unrecognised token '0', expected "!=", "%", "%=", "&", "&&", "&=", "(", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", "=>", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "calldata", "case", "constant", "days", "default", "error", "ether", "external", "gwei", "hours", "immutable", "indexed", "internal", "leave", "memory", "minutes", "override", "private", "public", "revert", "seconds", "storage", "switch", "weeks", "wei", "{", "|", "|=", "||", "}", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 116, 123), level: Error, ty: ParserError, message: r#"unrecognised token 'uint256', expected "!=", "%", "%=", "&", "&&", "&=", "(", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", "=>", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "calldata", "case", "constant", "days", "default", "error", "ether", "external", "gwei", "hours", "immutable", "indexed", "internal", "leave", "memory", "minutes", "override", "payable", "private", "public", "pure", "return", "returns", "revert", "seconds", "storage", "switch", "view", "virtual", "weeks", "wei", "{", "|", "|=", "||", "}", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 164, 166), level: Error, ty: ParserError, message: r#"unrecognised token 'id', expected ";""#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 179, 180), level: Error, ty: ParserError, message: r#"unrecognised token '1', expected "case", "default", "error", "leave", "revert", "switch", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 196, 197), level: Error, ty: ParserError, message: r#"unrecognised token '0', expected "!=", "%", "%=", "&", "&&", "&=", "(", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", "=>", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "calldata", "case", "constant", "days", "default", "error", "ether", "external", "gwei", "hours", "immutable", "indexed", "internal", "leave", "memory", "minutes", "override", "private", "public", "revert", "seconds", "storage", "switch", "weeks", "wei", "{", "|", "|=", "||", "}", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 238, 242), level: Error, ty: ParserError, message: r#"unrecognised token 'uint256', expected "!=", "%", "%=", "&", "&&", "&=", "(", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", "=>", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "calldata", "case", "constant", "days", "default", "error", "ether", "external", "gwei", "hours", "immutable", "indexed", "internal", "leave", "memory", "minutes", "override", "payable", "private", "public", "pure", "return", "returns", "revert", "seconds", "storage", "switch", "view", "virtual", "weeks", "wei", "{", "|", "|=", "||", "}", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 292, 293), level: Error, ty: ParserError, message: r#"unrecognised token '0', expected "!=", "%", "%=", "&", "&&", "&=", "(", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", "=>", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "calldata", "case", "constant", "days", "default", "error", "ether", "external", "gwei", "hours", "immutable", "indexed", "internal", "leave", "memory", "minutes", "override", "private", "public", "revert", "seconds", "storage", "switch", "weeks", "wei", "{", "|", "|=", "||", "}", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 334, 338), level: Error, ty: ParserError, message: r#"unrecognised token 'uint256', expected "!=", "%", "%=", "&", "&&", "&=", "(", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", "=>", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "calldata", "case", "constant", "days", "default", "error", "ether", "external", "gwei", "hours", "immutable", "indexed", "internal", "leave", "memory", "minutes", "override", "payable", "private", "public", "pure", "return", "returns", "revert", "seconds", "storage", "switch", "view", "virtual", "weeks", "wei", "{", "|", "|=", "||", "}", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 403, 404), level: Error, ty: ParserError, message: r#"unrecognised token '3', expected "!=", "%", "%=", "&", "&&", "&=", "(", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", "=>", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "calldata", "case", "constant", "days", "default", "error", "ether", "external", "gwei", "hours", "immutable", "indexed", "internal", "leave", "memory", "minutes", "override", "private", "public", "revert", "seconds", "storage", "switch", "weeks", "wei", "{", "|", "|=", "||", "}", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 441, 442), level: Error, ty: ParserError, message: r#"unrecognised token '4', expected "(", "case", "default", "error", "leave", "revert", "switch", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 460, 461), level: Error, ty: ParserError, message: r#"unrecognised token '!', expected "!=", "%", "%=", "&", "&&", "&=", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", "=>", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "calldata", "case", "constant", "days", "default", "error", "ether", "external", "gwei", "hours", "immutable", "indexed", "internal", "leave", "memory", "minutes", "override", "payable", "private", "public", "pure", "return", "returns", "revert", "seconds", "storage", "switch", "view", "virtual", "weeks", "wei", "{", "|", "|=", "||", "}", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 482, 483), level: Error, ty: ParserError, message: r#"unrecognised token '3', expected "!=", "%", "%=", "&", "&&", "&=", "(", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", "=>", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "calldata", "case", "constant", "days", "default", "error", "ether", "external", "gwei", "hours", "immutable", "indexed", "internal", "leave", "memory", "minutes", "override", "private", "public", "revert", "seconds", "storage", "switch", "weeks", "wei", "{", "|", "|=", "||", "}", identifier"#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 495, 502), level: Error, ty: ParserError, message: r#"unrecognised token 'sesa_id', expected ")", ";""#.to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 519, 523), level: Error, ty: ParserError, message: "unrecognised token 'uint256', expected \"!=\", \"%\", \"%=\", \"&\", \"&&\", \"&=\", \"(\", \")\", \"*\", \"**\", \"*=\", \"+\", \"++\", \"+=\", \",\", \"-\", \"--\", \"-=\", \".\", \"/\", \"/=\", \":\", \";\", \"<\", \"<<\", \"<<=\", \"<=\", \"=\", \"==\", \"=>\", \">\", \">=\", \">>\", \">>=\", \"?\", \"[\", \"]\", \"^\", \"^=\", \"calldata\", \"case\", \"constant\", \"days\", \"default\", \"error\", \"ether\", \"external\", \"gwei\", \"hours\", \"immutable\", \"indexed\", \"internal\", \"leave\", \"memory\", \"minutes\", \"override\", \"payable\", \"private\", \"public\", \"pure\", \"return\", \"returns\", \"revert\", \"seconds\", \"storage\", \"switch\", \"view\", \"virtual\", \"weeks\", \"wei\", \"{\", \"|\", \"|=\", \"||\", \"}\", identifier".to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 531, 532), level: Error, ty: ParserError, message: "unrecognised token 'b', expected \")\", \";\"".to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 556, 557), level: Error, ty: ParserError, message: "unrecognised token '}', expected \"!\", \"(\", \"+\", \"++\", \"-\", \"--\", \"[\", \"address\", \"assembly\", \"bool\", \"break\", \"byte\", \"bytes\", \"case\", \"continue\", \"default\", \"delete\", \"do\", \"emit\", \"error\", \"false\", \"for\", \"function\", \"if\", \"leave\", \"mapping\", \"new\", \"payable\", \"return\", \"revert\", \"string\", \"switch\", \"this\", \"true\", \"try\", \"type\", \"unchecked\", \"while\", \"{\", \"~\", Bytes, Int, Uint, address, hexnumber, hexstring, identifier, number, rational, string".to_string(), notes: vec![] },
+                Diagnostic { loc: File(0, 558, 559), level: Error, ty: ParserError, message: "unrecognised token '}', expected \"(\", \";\", \"[\", \"abstract\", \"address\", \"bool\", \"byte\", \"bytes\", \"case\", \"contract\", \"default\", \"enum\", \"error\", \"event\", \"false\", \"function\", \"import\", \"interface\", \"leave\", \"library\", \"mapping\", \"payable\", \"pragma\", \"string\", \"struct\", \"switch\", \"this\", \"true\", \"type\", \"using\", Bytes, Int, Uint, address, hexnumber, hexstring, identifier, number, rational, string".to_string(), notes: vec![] }
+            ]
+        )
+    }
+}
 
 #[test]
 fn parse_test() {
@@ -47,84 +107,85 @@ fn parse_test() {
                 }"#;
 
     let mut comments = Vec::new();
-    let lex = Lexer::new(src, 0, &mut comments);
+    let mut errors = Vec::new();
+    let lex = Lexer::new(src, 0, &mut comments, &mut errors);
 
+    let my_errs = &mut Vec::new();
     let actual_parse_tree = solidity::SourceUnitParser::new()
-        .parse(src, 0, lex)
+        .parse(src, 0, my_errs, lex)
         .unwrap();
-
     let expected_parse_tree = SourceUnit(vec![
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
             loc: Loc::File(0, 92, 702),
             ty: ContractTy::Contract(Loc::File(0, 92, 100)),
-            name: Identifier {
+            name: Some(Identifier {
                 loc: Loc::File(0, 101, 104),
                 name: "foo".to_string(),
-            },
+            }),
             base: Vec::new(),
             parts: vec![
                 ContractPart::StructDefinition(Box::new(StructDefinition {
-                    name: Identifier {
+                    name: Some(Identifier {
                         loc: Loc::File(0, 419, 431),
                         name: "Jurisdiction".to_string(),
-                    },
+                    }),
                     loc: Loc::File(0, 412, 609),
                     fields: vec![
                         VariableDeclaration {
                             loc: Loc::File(0, 458, 469),
                             ty: Expression::Type(Loc::File(0, 458, 462), Type::Bool),
                             storage: None,
-                            name: Identifier {
+                            name: Some(Identifier {
                                 loc: Loc::File(0, 463, 469),
                                 name: "exists".to_string(),
-                            },
+                            }),
                         },
                         VariableDeclaration {
                             loc: Loc::File(0, 495, 506),
                             ty: Expression::Type(Loc::File(0, 495, 499), Type::Uint(256)),
                             storage: None,
-                            name: Identifier {
+                            name: Some(Identifier {
                                 loc: Loc::File(0, 500, 506),
                                 name: "keyIdx".to_string(),
-                            },
+                            }),
                         },
                         VariableDeclaration {
                             loc: Loc::File(0, 532, 546),
                             ty: Expression::Type(Loc::File(0, 532, 538), Type::Bytes(2)),
                             storage: None,
-                            name: Identifier {
+                            name: Some(Identifier {
                                 loc: Loc::File(0, 539, 546),
                                 name: "country".to_string(),
-                            },
+                            }),
                         },
                         VariableDeclaration {
                             loc: Loc::File(0, 572, 586),
                             ty: Expression::Type(Loc::File(0, 572, 579), Type::Bytes(32)),
                             storage: None,
-                            name: Identifier {
+                            name: Some(Identifier {
                                 loc: Loc::File(0, 580, 586),
                                 name: "region".to_string(),
-                            },
+                            }),
                         },
                     ],
                 })),
                 ContractPart::VariableDefinition(Box::new(VariableDefinition {
                     ty: Expression::Type(Loc::File(0, 630, 636), Type::String),
                     attrs: vec![],
-                    name: Identifier {
+                    name: Some(Identifier {
                         loc: Loc::File(0, 637, 645),
                         name: "__abba_$".to_string(),
-                    },
+                    }),
                     loc: Loc::File(0, 630, 645),
                     initializer: None,
                 })),
                 ContractPart::VariableDefinition(Box::new(VariableDefinition {
                     ty: Expression::Type(Loc::File(0, 667, 672), Type::Int(64)),
                     attrs: vec![],
-                    name: Identifier {
+                    name: Some(Identifier {
                         loc: Loc::File(0, 673, 683),
                         name: "$thing_102".to_string(),
-                    },
+                    }),
                     loc: Loc::File(0, 667, 683),
                     initializer: None,
                 })),
@@ -374,10 +435,10 @@ fn parse_error_test() {
     let expected_parse_tree = SourceUnit(vec![
         SourceUnitPart::ErrorDefinition(Box::new(ErrorDefinition {
             loc: Loc::File(0, 10, 58),
-            name: Identifier {
+            name: Some(Identifier {
                 loc: Loc::File(0, 16, 21),
                 name: "Outer".to_string(),
-            },
+            }),
             fields: vec![
                 ErrorParameter {
                     ty: Expression::Type(Loc::File(0, 22, 29), Type::Uint(256)),
@@ -400,26 +461,26 @@ fn parse_error_test() {
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
             loc: Loc::File(0, 69, 438),
             ty: ContractTy::Contract(Loc::File(0, 69, 77)),
-            name: Identifier {
+            name: Some(Identifier {
                 loc: Loc::File(0, 78, 87),
                 name: "TestToken".to_string(),
-            },
+            }),
             base: vec![],
             parts: vec![
                 ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
                     loc: Loc::File(0, 102, 120),
-                    name: Identifier {
+                    name: Some(Identifier {
                         loc: Loc::File(0, 108, 118),
                         name: "NotPending".to_string(),
-                    },
+                    }),
                     fields: vec![],
                 })),
                 ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
                     loc: Loc::File(0, 365, 427),
-                    name: Identifier {
+                    name: Some(Identifier {
                         loc: Loc::File(0, 371, 390),
                         name: "InsufficientBalance".to_string(),
-                    },
+                    }),
                     fields: vec![
                         ErrorParameter {
                             ty: Expression::Type(Loc::File(0, 391, 398), Type::Uint(256)),
@@ -505,9 +566,12 @@ fn test_assembly_parser() {
                 }"#;
 
     let mut comments = Vec::new();
-    let lex = Lexer::new(src, 0, &mut comments);
+    let mut errors = Vec::new();
+    let lex = Lexer::new(src, 0, &mut comments, &mut errors);
+
+    let my_errs = &mut Vec::new();
     let actual_parse_tree = solidity::SourceUnitParser::new()
-        .parse(src, 0, lex)
+        .parse(src, 0, my_errs, lex)
         .unwrap();
 
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::FunctionDefinition(Box::new(
@@ -946,18 +1010,18 @@ fn parse_revert_test() {
         ContractDefinition {
             loc: Loc::File(0, 9, 150),
             ty: ContractTy::Contract(Loc::File(0, 9, 17)),
-            name: Identifier {
+            name: Some(Identifier {
                 loc: Loc::File(0, 18, 27),
                 name: "TestToken".to_string(),
-            },
+            }),
             base: vec![],
             parts: vec![
                 ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
                     loc: Loc::File(0, 42, 59),
-                    name: Identifier {
+                    name: Some(Identifier {
                         loc: Loc::File(0, 48, 57),
                         name: "BAR_ERROR".to_string(),
-                    },
+                    }),
                     fields: vec![],
                 })),
                 ContractPart::FunctionDefinition(Box::new(FunctionDefinition {
@@ -1035,10 +1099,10 @@ fn parse_user_defined_value_type() {
         SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
             loc: Loc::File(0, 42, 109),
             ty: ContractTy::Contract(Loc::File(0, 42, 50)),
-            name: Identifier {
+            name: Some(Identifier {
                 loc: Loc::File(0, 51, 60),
                 name: "TestToken".to_string(),
-            },
+            }),
             base: vec![],
             parts: vec![ContractPart::TypeDefinition(Box::new(TypeDefinition {
                 loc: Loc::File(0, 75, 98),

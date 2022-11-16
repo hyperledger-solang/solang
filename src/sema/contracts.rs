@@ -930,7 +930,7 @@ fn resolve_declarations<'a>(
 ) {
     ns.diagnostics.push(ast::Diagnostic::debug(
         def.loc,
-        format!("found {} '{}'", def.ty, def.name.name),
+        format!("found {} '{}'", def.ty, def.name.as_ref().unwrap().name),
     ));
 
     let mut function_no_bodies = Vec::new();

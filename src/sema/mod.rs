@@ -96,7 +96,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     for part in &pt.0 {
         match part {
             pt::SourceUnitPart::PragmaDirective(loc, name, value) => {
-                resolve_pragma(loc, name, value, ns);
+                resolve_pragma(loc, name.as_ref().unwrap(), value.as_ref().unwrap(), ns);
             }
             pt::SourceUnitPart::ImportDirective(import) => {
                 resolve_import(import, Some(file), file_no, resolver, ns);
