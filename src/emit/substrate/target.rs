@@ -1504,15 +1504,15 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             for (i, topic) in topics.iter().enumerate() {
                 let mut data = dest;
-                self.encode_ty(
-                    binary,
-                    ns,
-                    false,
-                    true,
-                    function,
-                    &topic_tys[i],
-                    *topic,
-                    &mut data,
+
+                binary.builder.build_call(
+                    binary.module.get_function("__memcpy").unwrap(),
+                    &[
+                        data.into(),
+                        self.vector_data(topics[i]).into(),
+                        self.vector_len(topics[i]).into(),
+                    ],
+                    "",
                 );
 
                 dest = unsafe { binary.builder.build_gep(dest, &[i32_const!(32)], "dest") };

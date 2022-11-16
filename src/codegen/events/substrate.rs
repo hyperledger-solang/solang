@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::cfg::{ControlFlowGraph, Expression, Instr};
 use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
@@ -36,58 +36,59 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             if self.ns.events[self.event_no].fields[i].indexed {
                 let ty = arg.ty();
 
-                match ty {
-                    Type::String | Type::DynamicBytes => {
-                        let e = expression(
-                            &ast::Expression::Builtin(
-                                pt::Loc::Codegen,
-                                vec![Type::Bytes(32)],
-                                ast::Builtin::Keccak256,
-                                vec![arg.clone()],
-                            ),
-                            cfg,
-                            contract_no,
-                            Some(func),
-                            self.ns,
-                            vartab,
-                            opt,
-                        );
+                let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
 
-                        topics.push(e);
-                        topic_tys.push(Type::Bytes(32));
-                    }
-                    Type::Struct(_) | Type::Array(..) => {
-                        // We should have an AbiEncodePackedPad
-                        let e = expression(
-                            &ast::Expression::Builtin(
-                                pt::Loc::Codegen,
-                                vec![Type::Bytes(32)],
-                                ast::Builtin::Keccak256,
-                                vec![ast::Expression::Builtin(
-                                    pt::Loc::Codegen,
-                                    vec![Type::DynamicBytes],
-                                    ast::Builtin::AbiEncodePacked,
-                                    vec![arg.clone()],
-                                )],
-                            ),
-                            cfg,
-                            contract_no,
-                            Some(func),
-                            self.ns,
-                            vartab,
-                            opt,
-                        );
+                let e = Expression::AbiEncode {
+                    loc: pt::Loc::Codegen,
+                    tys: vec![Type::String, e.ty()],
+                    packed: vec![],
+                    args: vec![e],
+                };
 
-                        topics.push(e);
-                        topic_tys.push(Type::Bytes(32));
-                    }
-                    _ => {
-                        let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
+                let prefix = Expression::AllocDynamicArray(
+                    Loc::Codegen,
+                    Type::Slice,
+                    Some(b"Foo:bar:bar".into()),
+                );
 
-                        topics.push(e);
-                        topic_tys.push(ty);
-                    }
-                }
+                let concatenated = Expression::StringConcat(prefix, e);
+
+                assert_eq!(concatenated.ty(), Type::DynamicBytes);
+
+                let compare = Expression::More(
+                    Loc::Codegen,
+                    Expression::Builtin(Loc::Codegen, Builtin::ArrayLength, vec![concatenated]),
+                    Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 32.into()),
+                );
+
+                let bigger = cfg.new_basic_block("bigger");
+                let smaller = cfg.new_basic_block("smaller");
+                let done = cfg.new_basic_block("done");
+
+                vartab.new_dirty_tracker();
+
+                let var = vartab.temp_anonymous(&Type::DynamicBytes);
+
+                cfg.add(vartab, Instr::BranchCond {cond: compare, true_block: bigger, false_block: smaller});
+
+                cfg.set_basic_block(bigger);
+
+                cfg.add(Instr::Set { res: var, expr: Expression::Builtin(Loc::Codegen, Builtin::Blake2_256, vec![concatenated])});
+
+                vartab.set_dirty(var);
+
+                cfg.add(vartab, Instr::Branch { block: done });
+
+                cfg.set_basic_block(smaller);
+
+                cfg.add(Instr::Set { res: var, expr: concatenated)});
+                vartab.set_dirty(var);
+                cfg.add(vartab, Instr::Branch { block: done });
+
+                cfg.set_phis(done, vartab.pop_dirty_tracker());
+
+                topics.push(Expression::Variable(Loc::Codegen, Type::DynamicBytes, var));
+                topic_tys.push(ty);
             } else {
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
 
