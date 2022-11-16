@@ -1509,8 +1509,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     binary.module.get_function("__memcpy").unwrap(),
                     &[
                         data.into(),
-                        self.vector_data(topics[i]).into(),
-                        self.vector_len(topics[i]).into(),
+                        binary.vector_bytes(topics[i]).into(),
+                        binary.vector_len(topics[i]).into(),
                     ],
                     "",
                 );

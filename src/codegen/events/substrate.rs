@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{ControlFlowGraph, Expression, Instr};
+use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
-use crate::codegen::Options;
+use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
 use ink_env::hash::{Blake2x256, CryptoHash, HashOutput};
 use ink_env::topics::PrefixedValue;
 use ink_primitives::{Clear, Hash};
+use num_bigint::BigInt;
 use parity_scale_codec as scale;
 use solang_parser::pt;
 
@@ -85,6 +86,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             })
             .collect();
 
+        let loc = pt::Loc::Builtin;
         for (i, arg) in self.args.iter().enumerate() {
             if self.ns.events[self.event_no].fields[i].indexed {
                 let ty = arg.ty();
@@ -98,35 +100,64 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     args: vec![e],
                 };
 
-                let prefix = Expression::AllocDynamicArray(
-                    Loc::Codegen,
-                    Type::Slice,
-                    Some(b"Foo:bar:bar".into()),
-                );
+                //let prefix = Expression::AllocDynamicArray(
+                //    pt::Loc::Codegen,
+                //    Type::Slice(Type::Uint(8).into()),
+                //    Box::new(Expression::NumberLiteral(
+                //        loc,
+                //        Type::Uint(32),
+                //        BigInt::from(todo!()),
+                //    )),
+                //    Some(todo!()),
+                //);
 
-                let concatenated = Expression::StringConcat(prefix, e);
+                let concatenated = Expression::StringConcat(
+                    loc,
+                    Type::String,
+                    ast::StringLocation::CompileTime(todo!()),
+                    ast::StringLocation::RunTime(e.into()),
+                );
 
                 assert_eq!(concatenated.ty(), Type::DynamicBytes);
 
-                let compare = Expression::More(
-                    Loc::Codegen,
-                    Expression::Builtin(Loc::Codegen, Builtin::ArrayLength, vec![concatenated]),
-                    Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 32.into()),
+                let compare = Expression::UnsignedMore(
+                    pt::Loc::Codegen,
+                    todo!(), //Expression::Builtin(pt::Loc::Codegen, Builtin::ArrayLength, vec![concatenated]),
+                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(32), 32.into()).into(),
                 );
 
-                let bigger = cfg.new_basic_block("bigger");
-                let smaller = cfg.new_basic_block("smaller");
-                let done = cfg.new_basic_block("done");
+                let bigger = cfg.new_basic_block("bigger".into());
+                let smaller = cfg.new_basic_block("smaller".into());
+                let done = cfg.new_basic_block("done".into());
 
                 vartab.new_dirty_tracker();
 
                 let var = vartab.temp_anonymous(&Type::DynamicBytes);
 
-                cfg.add(vartab, Instr::BranchCond {cond: compare, true_block: bigger, false_block: smaller});
+                cfg.add(
+                    vartab,
+                    Instr::BranchCond {
+                        cond: compare,
+                        true_block: bigger,
+                        false_block: smaller,
+                    },
+                );
 
                 cfg.set_basic_block(bigger);
 
-                cfg.add(Instr::Set { res: var, expr: Expression::Builtin(Loc::Codegen, Builtin::Blake2_256, vec![concatenated])});
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: pt::Loc::Codegen,
+                        res: var,
+                        expr: Expression::Builtin(
+                            loc,
+                            vec![Type::String],
+                            Builtin::Blake2_256,
+                            vec![concatenated],
+                        ),
+                    },
+                );
 
                 vartab.set_dirty(var);
 
@@ -134,19 +165,26 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
                 cfg.set_basic_block(smaller);
 
-                cfg.add(Instr::Set { res: var, expr: concatenated)});
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: pt::Loc::Codegen,
+                        res: var,
+                        expr: concatenated,
+                    },
+                );
                 vartab.set_dirty(var);
                 cfg.add(vartab, Instr::Branch { block: done });
 
                 cfg.set_phis(done, vartab.pop_dirty_tracker());
 
-                topics.push(Expression::Variable(Loc::Codegen, Type::DynamicBytes, var));
+                topics.push(Expression::Variable(
+                    pt::Loc::Codegen,
+                    Type::DynamicBytes,
+                    var,
+                ));
                 topic_tys.push(ty);
             } else {
-                // TODO: In ink all topics are stuffed into an Enum
-                // The enum variant number will be in the encoded event
-                // So we need to make sure this matches the order within the metadata?
-
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
 
                 data.push(e);

@@ -54,15 +54,15 @@ bitflags = "1.3"
 anchor-syn = { version = "0.25", features = ["idl"] }
 convert_case = "0.6"
 parse-display = "0.6.0"
-
+parity-scale-codec = "3.1"
 ink_metadata = { git = "https://github.com/paritytech/ink.git", rev = "c19181e44c3300c6bab7b098710ef55e3493eb52" }
 ink_primitives = { git = "https://github.com/paritytech/ink.git", rev = "c19181e44c3300c6bab7b098710ef55e3493eb52" }
+ink_env = { git = "https://github.com/paritytech/ink.git", rev = "c19181e44c3300c6bab7b098710ef55e3493eb52" }
 scale-info = "2.3"
 
 
 [dev-dependencies]
 num-derive = "0.3"
-parity-scale-codec = "3.1"
 ethabi = "17.0"
 wasmi = "0.11"
 # rand version 0.7 is needed for ed25519_dalek::keypair::generate, used in solana_tests/signature_verify.rs
@@ -78,8 +78,6 @@ path-slash = "0.2"
 pretty_assertions = "1.2"
 byte-slice-cast = "1.2.1"
 borsh = "0.9.3"
-ink_env = { git = "https://github.com/paritytech/ink.git", rev = "c19181e44c3300c6bab7b098710ef55e3493eb52" }
-ink_primitives = { git = "https://github.com/paritytech/ink.git", rev = "c19181e44c3300c6bab7b098710ef55e3493eb52" }
 
 [package.metadata.docs.rs]
 no-default-features = true
