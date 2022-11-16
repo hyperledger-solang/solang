@@ -41,7 +41,7 @@ impl ast::Contract {
             virtual_functions: HashMap::new(),
             variables: Vec::new(),
             creates: Vec::new(),
-            sends_events: Vec::new(),
+            emits_events: Vec::new(),
             initializer: None,
             default_constructor: None,
             cfg: Vec::new(),

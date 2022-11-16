@@ -603,8 +603,8 @@ pub struct Contract {
     pub variables: Vec<Variable>,
     /// List of contracts this contract instantiates
     pub creates: Vec<usize>,
-    /// List of events this contract produces
-    pub sends_events: Vec<usize>,
+    /// List of events this contract may emit
+    pub emits_events: Vec<usize>,
     pub initializer: Option<usize>,
     pub default_constructor: Option<(Function, usize)>,
     pub cfg: Vec<ControlFlowGraph>,

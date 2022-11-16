@@ -1846,7 +1846,7 @@ fn event_id<'b>(
     event_no: usize,
 ) -> Option<IntValue<'b>> {
     let event_id = contract
-        .sends_events
+        .emits_events
         .iter()
         .position(|e| *e == event_no)
         .unwrap();
