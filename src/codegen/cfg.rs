@@ -757,12 +757,12 @@ impl ControlFlowGraph {
             Expression::Complement(_, _, e) => format!("~{}", self.expr_to_string(contract, ns, e)),
             Expression::UnaryMinus(_, _, e) => format!("-{}", self.expr_to_string(contract, ns, e)),
             Expression::Poison => "☠".to_string(),
-            Expression::AllocDynamicArray(_, ty, size, None) => format!(
+            Expression::AllocDynamicBytes(_, ty, size, None) => format!(
                 "(alloc {} len {})",
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, size)
             ),
-            Expression::AllocDynamicArray(_, ty, size, Some(init)) => format!(
+            Expression::AllocDynamicBytes(_, ty, size, Some(init)) => format!(
                 "(alloc {} {} {})",
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, size),

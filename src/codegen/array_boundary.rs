@@ -18,7 +18,7 @@ pub(crate) fn handle_array_assign(
     vartab: &mut Vartable,
     pos: &usize,
 ) -> Expression {
-    if let Expression::AllocDynamicArray(loc, ty @ Type::Array(..), size, option) = right {
+    if let Expression::AllocDynamicBytes(loc, ty @ Type::Array(..), size, option) = right {
         // If we re-allocate the pointer, create a new temp variable to hold the new array length
         let temp_res = vartab.temp_name("array_length", &Type::Uint(32));
 
@@ -33,7 +33,7 @@ pub(crate) fn handle_array_assign(
 
         cfg.array_lengths_temps.insert(*pos, temp_res);
 
-        Expression::AllocDynamicArray(
+        Expression::AllocDynamicBytes(
             loc,
             ty,
             Box::new(Expression::Variable(Loc::Codegen, Type::Uint(32), temp_res)),

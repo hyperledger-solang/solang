@@ -740,7 +740,7 @@ fn expression(
         Expression::Builtin(loc, tys, Builtin::Keccak256, args) => {
             let arg = expression(&args[0], vars, cfg, ns);
 
-            if let Expression::AllocDynamicArray(_, _, _, Some(bs)) = arg.0 {
+            if let Expression::AllocDynamicBytes(_, _, _, Some(bs)) = arg.0 {
                 let mut hasher = Keccak::v256();
                 hasher.update(&bs);
                 let mut hash = [0u8; 32];
@@ -760,7 +760,7 @@ fn expression(
         Expression::Builtin(loc, tys, Builtin::Ripemd160, args) => {
             let arg = expression(&args[0], vars, cfg, ns);
 
-            if let Expression::AllocDynamicArray(_, _, _, Some(bs)) = arg.0 {
+            if let Expression::AllocDynamicBytes(_, _, _, Some(bs)) = arg.0 {
                 let mut hasher = Ripemd160::new();
                 hasher.update(&bs);
                 let result = hasher.finalize();
@@ -779,7 +779,7 @@ fn expression(
         Expression::Builtin(loc, tys, Builtin::Blake2_256, args) => {
             let arg = expression(&args[0], vars, cfg, ns);
 
-            if let Expression::AllocDynamicArray(_, _, _, Some(bs)) = arg.0 {
+            if let Expression::AllocDynamicBytes(_, _, _, Some(bs)) = arg.0 {
                 let hash = blake2_rfc::blake2b::blake2b(32, &[], &bs);
 
                 (
@@ -796,7 +796,7 @@ fn expression(
         Expression::Builtin(loc, tys, Builtin::Blake2_128, args) => {
             let arg = expression(&args[0], vars, cfg, ns);
 
-            if let Expression::AllocDynamicArray(_, _, _, Some(bs)) = arg.0 {
+            if let Expression::AllocDynamicBytes(_, _, _, Some(bs)) = arg.0 {
                 let hash = blake2_rfc::blake2b::blake2b(16, &[], &bs);
 
                 (
@@ -813,7 +813,7 @@ fn expression(
         Expression::Builtin(loc, tys, Builtin::Sha256, args) => {
             let arg = expression(&args[0], vars, cfg, ns);
 
-            if let Expression::AllocDynamicArray(_, _, _, Some(bs)) = arg.0 {
+            if let Expression::AllocDynamicBytes(_, _, _, Some(bs)) = arg.0 {
                 let mut hasher = Sha256::new();
 
                 // write input message
@@ -844,7 +844,7 @@ fn expression(
 
                     if all_constant {
                         match &expr {
-                            Expression::AllocDynamicArray(_, _, _, Some(bs))
+                            Expression::AllocDynamicBytes(_, _, _, Some(bs))
                             | Expression::BytesLiteral(_, _, bs) => {
                                 hasher.update(bs);
                             }
@@ -1147,8 +1147,8 @@ fn expression(
             )
         }
 
-        Expression::AllocDynamicArray(loc, ty, len, init) => (
-            Expression::AllocDynamicArray(
+        Expression::AllocDynamicBytes(loc, ty, len, init) => (
+            Expression::AllocDynamicBytes(
                 *loc,
                 ty.clone(),
                 Box::new(expression(len, vars, cfg, ns).0),
@@ -1222,9 +1222,9 @@ fn constants_equal(left: &Expression, right: &Expression) -> bool {
             _ => false,
         },
         Expression::BytesLiteral(_, _, left)
-        | Expression::AllocDynamicArray(_, _, _, Some(left)) => match right {
+        | Expression::AllocDynamicBytes(_, _, _, Some(left)) => match right {
             Expression::BytesLiteral(_, _, right)
-            | Expression::AllocDynamicArray(_, _, _, Some(right)) => left == right,
+            | Expression::AllocDynamicBytes(_, _, _, Some(right)) => left == right,
             _ => false,
         },
         _ => false,

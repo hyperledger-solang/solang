@@ -1297,7 +1297,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             array.into()
         }
-        Expression::AllocDynamicArray(_, ty, size, init) => {
+        Expression::AllocDynamicBytes(_, ty, size, init) => {
             if matches!(ty, Type::Slice(_)) {
                 let init = init.as_ref().unwrap();
 

@@ -52,7 +52,7 @@ impl AbiEncoding for BorshEncoding {
             Instr::Set {
                 loc: *loc,
                 res: encoded_bytes,
-                expr: Expression::AllocDynamicArray(
+                expr: Expression::AllocDynamicBytes(
                     *loc,
                     Type::DynamicBytes,
                     Box::new(size.clone()),
