@@ -190,9 +190,9 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 );
                 vartab.set_dirty(var);
 
-                cfg.set_basic_block(done);
-
                 cfg.add(vartab, Instr::Branch { block: done });
+
+                cfg.set_basic_block(done);
 
                 cfg.set_phis(done, vartab.pop_dirty_tracker());
 
