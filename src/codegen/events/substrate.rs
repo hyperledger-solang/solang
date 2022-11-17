@@ -5,7 +5,7 @@ use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression, Options};
-use crate::sema::ast;
+use crate::sema::ast::{self, ArrayLength};
 use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
 use ink_env::hash::{Blake2x256, CryptoHash, HashOutput};
 use ink_env::topics::PrefixedValue;
@@ -59,7 +59,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
         let loc = pt::Loc::Builtin;
         let event = &self.ns.events[self.event_no];
-        let topic_ty = || Type::Slice(Type::Uint(8).into());
+        let topic_ty = || Type::DynamicBytes;
 
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
@@ -83,7 +83,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             let result = result.as_ref().to_vec();
             topics.push(Expression::AllocDynamicArray(
                 loc,
-                topic_ty(),
+                Type::Slice(Type::Uint(8).into()),
                 Expression::NumberLiteral(loc, Type::Uint(32), result.len().into()).into(),
                 Some(result),
             ));
@@ -193,7 +193,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
                 cfg.set_phis(done, vartab.pop_dirty_tracker());
 
-                topics.push(Expression::Variable(loc, Type::DynamicBytes, var));
+                topics.push(Expression::Variable(loc, topic_ty(), var));
                 topic_tys.push(topic_ty());
             } else {
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);

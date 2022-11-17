@@ -1503,12 +1503,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
 
             for topic in topics.iter() {
-                //let mut data = dest; TODO
+                let data = dest;
 
                 binary.builder.build_call(
                     binary.module.get_function("__memcpy").unwrap(),
                     &[
-                        dest.into(),
+                        data.into(),
                         binary.vector_bytes(*topic).into(),
                         binary.vector_len(*topic).into(),
                     ],
