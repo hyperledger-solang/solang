@@ -11,6 +11,7 @@ use super::{
     SOLANA_SPARSE_ARRAY_SIZE,
 };
 use crate::Target;
+use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::{
@@ -19,7 +20,7 @@ use solang_parser::{
     pt::CodeLocation,
 };
 use std::collections::HashSet;
-use std::{collections::HashMap, fmt::Write, ops::Mul};
+use std::{fmt::Write, ops::Mul};
 
 /// List the types which should be resolved later
 pub struct ResolveFields<'a> {
@@ -657,14 +658,14 @@ fn enum_decl(
     }
 
     // check for duplicates
-    let mut entries: HashMap<String, (pt::Loc, usize)> = HashMap::new();
+    let mut entries: IndexMap<String, pt::Loc> = IndexMap::new();
 
-    for (i, e) in enum_.values.iter().enumerate() {
+    for e in enum_.values.iter() {
         if let Some(prev) = entries.get(&e.as_ref().unwrap().name.to_string()) {
             ns.diagnostics.push(Diagnostic::error_with_note(
                 e.as_ref().unwrap().loc,
                 format!("duplicate enum value {}", e.as_ref().unwrap().name),
-                prev.0,
+                *prev,
                 "location of previous definition".to_string(),
             ));
             valid = false;
@@ -673,7 +674,7 @@ fn enum_decl(
 
         entries.insert(
             e.as_ref().unwrap().name.to_string(),
-            (e.as_ref().unwrap().loc, i),
+            e.as_ref().unwrap().loc,
         );
     }
 

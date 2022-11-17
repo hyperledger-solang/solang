@@ -2070,11 +2070,11 @@ impl Namespace {
             let enums = dot.add_node(Node::new("enums", Vec::new()), None, None);
 
             for decl in &self.enums {
-                let mut labels = vec![String::new(); decl.values.len()];
-
-                for (name, (_, pos)) in &decl.values {
-                    labels[*pos] = format!("value: {}", name);
-                }
+                let mut labels = decl
+                    .values
+                    .iter()
+                    .map(|(name, _)| format!("value: {}", name))
+                    .collect::<Vec<String>>();
 
                 labels.insert(0, self.loc_to_string(&decl.loc));
                 if let Some(contract) = &decl.contract {
