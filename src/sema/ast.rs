@@ -719,7 +719,7 @@ pub enum Expression {
     Subscript(pt::Loc, Type, Type, Box<Expression>, Box<Expression>),
     StructMember(pt::Loc, Type, Box<Expression>, usize),
 
-    AllocDynamicArray(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
+    AllocDynamicBytes(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
     StorageArrayLength {
         loc: pt::Loc,
         ty: Type,
@@ -876,7 +876,7 @@ impl Recurse for Expression {
                 }
                 Expression::StructMember(_, _, expr, _) => expr.recurse(cx, f),
 
-                Expression::AllocDynamicArray(_, _, expr, _) => expr.recurse(cx, f),
+                Expression::AllocDynamicBytes(_, _, expr, _) => expr.recurse(cx, f),
                 Expression::StorageArrayLength { array, .. } => array.recurse(cx, f),
                 Expression::StringCompare(_, left, right)
                 | Expression::StringConcat(_, _, left, right) => {
@@ -989,7 +989,7 @@ impl CodeLocation for Expression {
             | Expression::Subscript(loc, ..)
             | Expression::StructMember(loc, ..)
             | Expression::Or(loc, ..)
-            | Expression::AllocDynamicArray(loc, ..)
+            | Expression::AllocDynamicBytes(loc, ..)
             | Expression::StorageArrayLength { loc, .. }
             | Expression::StringCompare(loc, ..)
             | Expression::StringConcat(loc, ..)
