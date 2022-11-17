@@ -5,10 +5,8 @@ use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression, Options};
-use crate::sema::ast::{self, ArrayLength};
-use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
+use crate::sema::ast::{self, Function, Namespace, RetrieveType, StringLocation, Type};
 use ink_env::hash::{Blake2x256, CryptoHash, HashOutput};
-use ink_env::topics::PrefixedValue;
 use ink_primitives::{Clear, Hash};
 use parity_scale_codec as scale;
 use scale::Encode;
@@ -24,7 +22,7 @@ pub(super) struct SubstrateEventEmitter<'a> {
 }
 
 /// Taken from the ink erc20 example test
-pub(crate) fn encoded_into_hash<T>(entity: &T) -> Hash
+pub(crate) fn _encoded_into_hash<T>(entity: &T) -> Hash
 where
     T: scale::Encode,
 {
@@ -110,7 +108,6 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         for (i, arg) in self.args.iter().enumerate() {
             if self.ns.events[self.event_no].fields[i].indexed {
                 //let ty = arg.ty();
-                // TODO if the topic prefix is ALREADY 32 bytes or more we can spare us a branch
 
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
 
@@ -124,15 +121,13 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 let concatenated = Expression::StringConcat(
                     loc,
                     Type::DynamicBytes,
-                    ast::StringLocation::CompileTime(topic_prefixes.remove(0)), // TODO not efficient
-                    ast::StringLocation::RunTime(e.into()),
+                    StringLocation::CompileTime(topic_prefixes.remove(0)), // TODO not efficient
+                    StringLocation::RunTime(e.into()),
                 );
                 assert_eq!(concatenated.ty(), Type::DynamicBytes);
 
                 vartab.new_dirty_tracker();
-
                 let var = vartab.temp_anonymous(&Type::DynamicBytes);
-
                 cfg.add(
                     vartab,
                     Instr::Set {
@@ -141,9 +136,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                         expr: concatenated,
                     },
                 );
-
                 let unhashed = Expression::Variable(loc, topic_ty(), var);
-
                 let compare = Expression::UnsignedMore(
                     loc,
                     Expression::Builtin(
@@ -157,9 +150,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 );
 
                 let bigger = cfg.new_basic_block("bigger".into());
-                //let smaller = cfg.new_basic_block("smaller".into());
                 let done = cfg.new_basic_block("done".into());
-
                 cfg.add(
                     vartab,
                     Instr::BranchCond {
@@ -172,12 +163,12 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 cfg.set_basic_block(bigger);
                 cfg.add(
                     vartab,
-                    Instr::Set {
-                        loc,
-                        res: var,
-                        expr: Expression::Builtin(
+                    Instr::WriteBuffer {
+                        buf: unhashed.clone(),
+                        offset: Expression::NumberLiteral(loc, Type::Uint(32), 0.into()),
+                        value: Expression::Builtin(
                             loc,
-                            vec![Type::Uint(32)],
+                            vec![Type::Uint(256)],
                             Builtin::Blake2_256,
                             vec![unhashed.clone()],
                         ),
@@ -186,14 +177,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 vartab.set_dirty(var);
                 cfg.add(vartab, Instr::Branch { block: done });
 
-                //cfg.set_basic_block(smaller);
-
-                //vartab.set_dirty(var);
-
-                //cfg.add(vartab, Instr::Branch { block: done });
-
                 cfg.set_basic_block(done);
-
                 cfg.set_phis(done, vartab.pop_dirty_tracker());
 
                 topics.push(unhashed);
