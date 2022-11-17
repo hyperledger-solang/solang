@@ -110,6 +110,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         for (i, arg) in self.args.iter().enumerate() {
             if self.ns.events[self.event_no].fields[i].indexed {
                 //let ty = arg.ty();
+                // TODO if the topic prefix is ALREADY 32 bytes or more we can spare us a branch
 
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
 
@@ -126,59 +127,11 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     ast::StringLocation::CompileTime(topic_prefixes.remove(0)), // TODO not efficient
                     ast::StringLocation::RunTime(e.into()),
                 );
-
                 assert_eq!(concatenated.ty(), Type::DynamicBytes);
-
-                let compare = Expression::UnsignedMore(
-                    loc,
-                    Expression::Builtin(
-                        loc,
-                        vec![Type::Uint(32)],
-                        Builtin::ArrayLength,
-                        vec![concatenated.clone()],
-                    )
-                    .into(),
-                    Expression::NumberLiteral(loc, Type::Uint(32), 32.into()).into(),
-                );
-
-                let bigger = cfg.new_basic_block("bigger".into());
-                let smaller = cfg.new_basic_block("smaller".into());
-                let done = cfg.new_basic_block("done".into());
 
                 vartab.new_dirty_tracker();
 
                 let var = vartab.temp_anonymous(&Type::DynamicBytes);
-
-                cfg.add(
-                    vartab,
-                    Instr::BranchCond {
-                        cond: compare,
-                        true_block: bigger,
-                        false_block: smaller,
-                    },
-                );
-
-                cfg.set_basic_block(bigger);
-
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc,
-                        res: var,
-                        expr: Expression::Builtin(
-                            loc,
-                            vec![Type::Uint(32)],
-                            Builtin::Blake2_256,
-                            vec![concatenated.clone()],
-                        ),
-                    },
-                );
-
-                vartab.set_dirty(var);
-
-                cfg.add(vartab, Instr::Branch { block: done });
-
-                cfg.set_basic_block(smaller);
 
                 cfg.add(
                     vartab,
@@ -188,15 +141,62 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                         expr: concatenated,
                     },
                 );
-                vartab.set_dirty(var);
 
+                let unhashed = Expression::Variable(loc, topic_ty(), var);
+
+                let compare = Expression::UnsignedMore(
+                    loc,
+                    Expression::Builtin(
+                        loc,
+                        vec![Type::Uint(32)],
+                        Builtin::ArrayLength,
+                        vec![unhashed.clone()],
+                    )
+                    .into(),
+                    Expression::NumberLiteral(loc, Type::Uint(32), 32.into()).into(),
+                );
+
+                let bigger = cfg.new_basic_block("bigger".into());
+                //let smaller = cfg.new_basic_block("smaller".into());
+                let done = cfg.new_basic_block("done".into());
+
+                cfg.add(
+                    vartab,
+                    Instr::BranchCond {
+                        cond: compare,
+                        true_block: bigger,
+                        false_block: done,
+                    },
+                );
+
+                cfg.set_basic_block(bigger);
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc,
+                        res: var,
+                        expr: Expression::Builtin(
+                            loc,
+                            vec![Type::Uint(32)],
+                            Builtin::Blake2_256,
+                            vec![unhashed.clone()],
+                        ),
+                    },
+                );
+                vartab.set_dirty(var);
                 cfg.add(vartab, Instr::Branch { block: done });
+
+                //cfg.set_basic_block(smaller);
+
+                //vartab.set_dirty(var);
+
+                //cfg.add(vartab, Instr::Branch { block: done });
 
                 cfg.set_basic_block(done);
 
                 cfg.set_phis(done, vartab.pop_dirty_tracker());
 
-                topics.push(Expression::Variable(loc, topic_ty(), var));
+                topics.push(unhashed);
                 topic_tys.push(topic_ty());
             } else {
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
