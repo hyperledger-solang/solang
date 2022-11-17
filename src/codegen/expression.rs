@@ -695,7 +695,7 @@ pub fn expression(
         ast::Expression::FormatString(loc, args) => {
             format_string(args, cfg, contract_no, func, ns, vartab, loc, opt)
         }
-        ast::Expression::AllocDynamicArray(loc, ty, size, init) => {
+        ast::Expression::AllocDynamicBytes(loc, ty, size, init) => {
             alloc_dynamic_array(size, cfg, contract_no, func, ns, vartab, loc, ty, init, opt)
         }
         ast::Expression::ConditionalOperator(loc, ty, cond, left, right) => conditional_operator(

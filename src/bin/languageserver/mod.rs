@@ -685,7 +685,7 @@ impl SolangServer {
             }
 
             // Array operation expression
-            ast::Expression::AllocDynamicArray(_locs, _typ, expr1, _valvec) => {
+            ast::Expression::AllocDynamicBytes(_locs, _typ, expr1, _valvec) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
             }
             ast::Expression::StorageArrayLength { array, .. } => {

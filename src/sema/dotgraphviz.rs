@@ -886,7 +886,7 @@ impl Dot {
                 self.add_expression(var, func, ns, node, String::from("var"));
             }
 
-            Expression::AllocDynamicArray(loc, ty, length, initializer) => {
+            Expression::AllocDynamicBytes(loc, ty, length, initializer) => {
                 let mut labels = vec![
                     format!("alloc array {}", ty.to_string(ns)),
                     ns.loc_to_string(loc),
