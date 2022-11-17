@@ -133,7 +133,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     loc,
                     Expression::Builtin(
                         loc,
-                        vec![Type::DynamicBytes],
+                        vec![Type::Uint(32)],
                         Builtin::ArrayLength,
                         vec![concatenated.clone()],
                     )
@@ -167,7 +167,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                         res: var,
                         expr: Expression::Builtin(
                             loc,
-                            vec![Type::DynamicBytes],
+                            vec![Type::Uint(32)],
                             Builtin::Blake2_256,
                             vec![concatenated.clone()],
                         ),
@@ -189,6 +189,9 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     },
                 );
                 vartab.set_dirty(var);
+
+                cfg.set_basic_block(done);
+
                 cfg.add(vartab, Instr::Branch { block: done });
 
                 cfg.set_phis(done, vartab.pop_dirty_tracker());
