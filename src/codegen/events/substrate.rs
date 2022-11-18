@@ -79,7 +79,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 result
             };
             let result = result.as_ref().to_vec();
-            topics.push(Expression::AllocDynamicArray(
+            topics.push(Expression::AllocDynamicBytes(
                 loc,
                 Type::Slice(Type::Uint(8).into()),
                 Expression::NumberLiteral(loc, Type::Uint(32), result.len().into()).into(),
@@ -168,7 +168,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                         offset: Expression::NumberLiteral(loc, Type::Uint(32), 0.into()),
                         value: Expression::Builtin(
                             loc,
-                            vec![Type::Uint(256)],
+                            vec![Type::Bytes(32)],
                             Builtin::Blake2_256,
                             vec![unhashed.clone()],
                         ),
