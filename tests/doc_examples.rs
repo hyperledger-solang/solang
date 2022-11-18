@@ -1,11 +1,19 @@
 use rayon::prelude::*;
-use solang::{file_resolver::FileResolver, sema::diagnostics::Diagnostics, Target};
-use std::{ffi::OsStr, fs::read_to_string};
-use walkdir::WalkDir;
+use solang::{
+    codegen::{codegen, OptimizationLevel, Options},
+    file_resolver::FileResolver,
+    sema::diagnostics::Diagnostics,
+    Target,
+};
+use std::{
+    ffi::OsStr,
+    fs::{read_dir, read_to_string},
+};
 
 // Returns a list of all `.sol` files in the given `dir` path.
 fn get_source_files(dir: &str) -> Vec<String> {
-    WalkDir::new(dir)
+    read_dir(dir)
+        .unwrap()
         .into_iter()
         .filter_map(|entry| {
             let e = entry.unwrap();
@@ -23,19 +31,18 @@ fn get_source_files(dir: &str) -> Vec<String> {
 fn try_compile(path: &str, target: Target) -> Result<(), Diagnostics> {
     let mut cache = FileResolver::new();
     cache.set_file_contents(path, read_to_string(path).unwrap());
-    let diagnostics = solang::compile(
-        OsStr::new(path),
-        &mut cache,
-        inkwell::OptimizationLevel::Default,
-        target,
-        true,
-        false,
-    )
-    .1
-    .diagnostics;
-    if diagnostics.any_errors() {
-        return Err(diagnostics);
+    let mut ns = solang::parse_and_resolve(OsStr::new(path), &mut cache, target);
+    if ns.diagnostics.any_errors() {
+        return Err(ns.diagnostics);
     }
+    // Codegen should work too
+    codegen(
+        &mut ns,
+        &Options {
+            opt_level: OptimizationLevel::Default,
+            ..Default::default()
+        },
+    );
     Ok(())
 }
 
@@ -50,6 +57,21 @@ fn assert_compile(dir: &str, target: Target) {
 }
 
 #[test]
-fn they_compile() {
+fn substrate_general() {
     assert_compile("examples/", Target::default_substrate())
+}
+
+#[test]
+fn substrate_specific() {
+    assert_compile("examples/substrate/", Target::default_substrate())
+}
+
+#[test]
+fn solana_general() {
+    assert_compile("examples/", Target::Solana)
+}
+
+#[test]
+fn solana_specific() {
+    assert_compile("examples/solana", Target::Solana)
 }
