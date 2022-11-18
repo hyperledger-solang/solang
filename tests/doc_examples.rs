@@ -10,7 +10,23 @@ use std::{
     fs::{read_dir, read_to_string},
 };
 
-// Returns a list of all `.sol` files in the given `dir` path.
+/// Poppulates a file resolver with all imports that could be used by some example.
+fn file_resolver(target: Target) -> FileResolver {
+    let mut result = FileResolver::new();
+    if let Target::Solana = target {
+        result.set_file_contents(
+                "examples/solana/bobcat.sol",
+                r##"
+                anchor_anchor constant bobcat = anchor_anchor(address'z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq');
+                interface anchor_anchor {
+                    function pounce() selector=hex"afaf6d1f0d989bed" view external returns(int64);
+                }"##.into(),
+            );
+    }
+    result
+}
+
+/// Returns a list of all `.sol` files in the given `dir` path.
 fn get_source_files(dir: &str) -> Vec<String> {
     read_dir(dir)
         .unwrap()
@@ -27,9 +43,9 @@ fn get_source_files(dir: &str) -> Vec<String> {
         .collect()
 }
 
-// Attempts to compile the file at `path` for the `target`, returning the diagnostics on fail.
+/// Attempts to compile the file at `path` for the `target`, returning the diagnostics on fail.
 fn try_compile(path: &str, target: Target) -> Result<(), Diagnostics> {
-    let mut cache = FileResolver::new();
+    let mut cache = file_resolver(target);
     cache.set_file_contents(path, read_to_string(path).unwrap());
     let mut ns = solang::parse_and_resolve(OsStr::new(path), &mut cache, target);
     if ns.diagnostics.any_errors() {
@@ -52,7 +68,7 @@ fn try_compile(path: &str, target: Target) -> Result<(), Diagnostics> {
     Ok(())
 }
 
-// Assert no compilation errors for for all `.sol` files found in `dir`.
+/// Assert no compilation errors for for all `.sol` files found in `dir`.
 fn assert_compile(dir: &str, target: Target) {
     let errors = get_source_files(dir)
         .par_iter()
