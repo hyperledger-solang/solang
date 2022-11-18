@@ -641,7 +641,7 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::BytesCast(loc, from, to, expr) => {
+            Expression::BytesCast(loc, to, from, expr) => {
                 let node = self.add_node(
                     Node::new(
                         "bytes_cast",
@@ -837,12 +837,12 @@ impl Dot {
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
 
-            Expression::Ternary(loc, ty, cond, left, right) => {
+            Expression::ConditionalOperator(loc, ty, cond, left, right) => {
                 let node = self.add_node(
                     Node::new(
                         "conditional",
                         vec![
-                            format!("conditiona {}", ty.to_string(ns)),
+                            format!("conditional operator {}", ty.to_string(ns)),
                             ns.loc_to_string(loc),
                         ],
                     ),
@@ -886,7 +886,7 @@ impl Dot {
                 self.add_expression(var, func, ns, node, String::from("var"));
             }
 
-            Expression::AllocDynamicArray(loc, ty, length, initializer) => {
+            Expression::AllocDynamicBytes(loc, ty, length, initializer) => {
                 let mut labels = vec![
                     format!("alloc array {}", ty.to_string(ns)),
                     ns.loc_to_string(loc),
@@ -2070,11 +2070,11 @@ impl Namespace {
             let enums = dot.add_node(Node::new("enums", Vec::new()), None, None);
 
             for decl in &self.enums {
-                let mut labels = vec![String::new(); decl.values.len()];
-
-                for (name, (_, pos)) in &decl.values {
-                    labels[*pos] = format!("value: {}", name);
-                }
+                let mut labels = decl
+                    .values
+                    .iter()
+                    .map(|(name, _)| format!("value: {}", name))
+                    .collect::<Vec<String>>();
 
                 labels.insert(0, self.loc_to_string(&decl.loc));
                 if let Some(contract) = &decl.contract {

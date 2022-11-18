@@ -236,8 +236,8 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
 
             let mut field: Vec<&str> = Vec::new();
             field.resize(enum_decl.values.len(), "");
-            for (value, (_, pos)) in &enum_decl.values {
-                field[*pos] = value;
+            for (idx, (value, _)) in enum_decl.values.iter().enumerate() {
+                field[idx] = value;
             }
 
             top.enums.push(EnumDecl {

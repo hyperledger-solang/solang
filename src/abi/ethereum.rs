@@ -132,7 +132,7 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
         })
         .chain(
             ns.contracts[contract_no]
-                .sends_events
+                .emits_events
                 .iter()
                 .map(|event_no| {
                     let event = &ns.events[*event_no];

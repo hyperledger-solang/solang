@@ -143,7 +143,7 @@ pub struct SourceUnit(pub Vec<SourceUnitPart>);
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
-    PragmaDirective(Loc, Identifier, StringLiteral),
+    PragmaDirective(Loc, Option<Identifier>, Option<StringLiteral>),
     ImportDirective(Import),
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
@@ -250,7 +250,7 @@ pub struct VariableDeclaration {
     pub loc: Loc,
     pub ty: Expression,
     pub storage: Option<StorageLocation>,
-    pub name: Identifier,
+    pub name: Option<Identifier>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -258,7 +258,7 @@ pub struct VariableDeclaration {
 #[allow(clippy::vec_box)]
 pub struct StructDefinition {
     pub loc: Loc,
-    pub name: Identifier,
+    pub name: Option<Identifier>,
     pub fields: Vec<VariableDeclaration>,
 }
 
@@ -298,6 +298,7 @@ impl ContractPart {
 pub enum UsingList {
     Library(IdentifierPath),
     Functions(Vec<IdentifierPath>),
+    Error(),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -342,7 +343,7 @@ pub struct Base {
 pub struct ContractDefinition {
     pub loc: Loc,
     pub ty: ContractTy,
-    pub name: Identifier,
+    pub name: Option<Identifier>,
     pub base: Vec<Base>,
     pub parts: Vec<ContractPart>,
 }
@@ -360,7 +361,7 @@ pub struct EventParameter {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct EventDefinition {
     pub loc: Loc,
-    pub name: Identifier,
+    pub name: Option<Identifier>,
     pub fields: Vec<EventParameter>,
     pub anonymous: bool,
 }
@@ -377,7 +378,7 @@ pub struct ErrorParameter {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct ErrorDefinition {
     pub loc: Loc,
-    pub name: Identifier,
+    pub name: Option<Identifier>,
     pub fields: Vec<ErrorParameter>,
 }
 
@@ -385,8 +386,8 @@ pub struct ErrorDefinition {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct EnumDefinition {
     pub loc: Loc,
-    pub name: Identifier,
-    pub values: Vec<Identifier>,
+    pub name: Option<Identifier>,
+    pub values: Vec<Option<Identifier>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -404,7 +405,7 @@ pub struct VariableDefinition {
     pub loc: Loc,
     pub ty: Expression,
     pub attrs: Vec<VariableAttribute>,
-    pub name: Identifier,
+    pub name: Option<Identifier>,
     pub initializer: Option<Expression>,
 }
 
@@ -496,7 +497,7 @@ pub enum Expression {
     NotEqual(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
     Or(Loc, Box<Expression>, Box<Expression>),
-    Ternary(Loc, Box<Expression>, Box<Expression>, Box<Expression>),
+    ConditionalOperator(Loc, Box<Expression>, Box<Expression>, Box<Expression>),
     Assign(Loc, Box<Expression>, Box<Expression>),
     AssignOr(Loc, Box<Expression>, Box<Expression>),
     AssignAnd(Loc, Box<Expression>, Box<Expression>),
@@ -562,7 +563,7 @@ impl CodeLocation for Expression {
             | Expression::NotEqual(loc, ..)
             | Expression::And(loc, ..)
             | Expression::Or(loc, ..)
-            | Expression::Ternary(loc, ..)
+            | Expression::ConditionalOperator(loc, ..)
             | Expression::Assign(loc, ..)
             | Expression::AssignOr(loc, ..)
             | Expression::AssignAnd(loc, ..)
@@ -692,6 +693,7 @@ pub enum FunctionAttribute {
     Override(Loc, Vec<IdentifierPath>),
     BaseOrModifier(Loc, Base),
     NameValue(Loc, Identifier, Expression),
+    Error(Loc),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -770,6 +772,7 @@ pub enum Statement {
         Option<(ParameterList, Box<Statement>)>,
         Vec<CatchClause>,
     ),
+    Error(Loc),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -793,6 +796,7 @@ pub enum YulStatement {
     Block(YulBlock),
     FunctionDefinition(Box<YulFunctionDefinition>),
     FunctionCall(Box<YulFunctionCall>),
+    Error(Loc),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -893,7 +897,8 @@ impl CodeLocation for Statement {
             | Statement::Revert(loc, ..)
             | Statement::RevertNamedArgs(loc, ..)
             | Statement::Emit(loc, ..)
-            | Statement::Try(loc, ..) => *loc,
+            | Statement::Try(loc, ..)
+            | Statement::Error(loc) => *loc,
         }
     }
 }
@@ -916,6 +921,7 @@ impl YulStatement {
 
             YulStatement::For(for_struct) => for_struct.loc,
             YulStatement::Switch(switch_struct) => switch_struct.loc,
+            YulStatement::Error(loc) => *loc,
         }
     }
 }

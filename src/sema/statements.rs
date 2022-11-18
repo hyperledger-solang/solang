@@ -348,14 +348,18 @@ fn statement(
             };
 
             if let Some(pos) = symtable.add(
-                &decl.name,
+                decl.name.as_ref().unwrap(),
                 var_ty.clone(),
                 ns,
                 VariableInitializer::Solidity(initializer.clone()),
                 VariableUsage::LocalVariable,
                 decl.storage.clone(),
             ) {
-                ns.check_shadowing(context.file_no, context.contract_no, &decl.name);
+                ns.check_shadowing(
+                    context.file_no,
+                    context.contract_no,
+                    decl.name.as_ref().unwrap(),
+                );
 
                 res.push(Statement::VariableDecl(
                     *loc,
@@ -364,7 +368,7 @@ fn statement(
                         loc: decl.loc,
                         ty: var_ty,
                         ty_loc: Some(ty_loc),
-                        id: Some(decl.name.clone()),
+                        id: Some(decl.name.clone().unwrap()),
                         indexed: false,
                         readonly: false,
                         recursive: false,
@@ -904,6 +908,7 @@ fn statement(
             ));
             Err(())
         }
+        pt::Statement::Error(_) => unimplemented!(),
     }
 }
 
@@ -1369,7 +1374,7 @@ fn destructure_values(
             check_function_call(ns, &res, symtable);
             res
         }
-        pt::Expression::Ternary(loc, cond, left, right) => {
+        pt::Expression::ConditionalOperator(loc, cond, left, right) => {
             let cond = expression(
                 cond,
                 context,
@@ -1403,7 +1408,7 @@ fn destructure_values(
             )?;
             used_variable(ns, &right, symtable);
 
-            return Ok(Expression::Ternary(
+            return Ok(Expression::ConditionalOperator(
                 *loc,
                 Type::Unreachable,
                 Box::new(cond),
@@ -1591,7 +1596,7 @@ fn return_with_values(
             used_variable(ns, &expr, symtable);
             expr
         }
-        pt::Expression::Ternary(loc, cond, left, right) => {
+        pt::Expression::ConditionalOperator(loc, cond, left, right) => {
             let cond = expression(
                 cond,
                 context,
@@ -1609,7 +1614,7 @@ fn return_with_values(
                 return_with_values(right, &right.loc(), context, symtable, ns, diagnostics)?;
             used_variable(ns, &right, symtable);
 
-            return Ok(Expression::Ternary(
+            return Ok(Expression::ConditionalOperator(
                 *loc,
                 Type::Unreachable,
                 Box::new(cond),

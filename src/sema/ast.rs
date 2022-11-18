@@ -6,6 +6,7 @@ use crate::diagnostics::Diagnostics;
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
 use crate::sema::Recurse;
 use crate::{codegen, Target};
+use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_rational::BigRational;
 pub use solang_parser::diagnostics::*;
@@ -174,7 +175,7 @@ pub struct EnumDecl {
     pub contract: Option<String>,
     pub loc: pt::Loc,
     pub ty: Type,
-    pub values: HashMap<String, (pt::Loc, usize)>,
+    pub values: IndexMap<String, pt::Loc>,
 }
 
 impl fmt::Display for EnumDecl {
@@ -603,8 +604,8 @@ pub struct Contract {
     pub variables: Vec<Variable>,
     /// List of contracts this contract instantiates
     pub creates: Vec<usize>,
-    /// List of events this contract produces
-    pub sends_events: Vec<usize>,
+    /// List of events this contract may emit
+    pub emits_events: Vec<usize>,
     pub initializer: Option<usize>,
     pub default_constructor: Option<(Function, usize)>,
     pub cfg: Vec<ControlFlowGraph>,
@@ -709,7 +710,7 @@ pub enum Expression {
     Complement(pt::Loc, Type, Box<Expression>),
     UnaryMinus(pt::Loc, Type, Box<Expression>),
 
-    Ternary(
+    ConditionalOperator(
         pt::Loc,
         Type,
         Box<Expression>,
@@ -719,7 +720,7 @@ pub enum Expression {
     Subscript(pt::Loc, Type, Type, Box<Expression>, Box<Expression>),
     StructMember(pt::Loc, Type, Box<Expression>, usize),
 
-    AllocDynamicArray(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
+    AllocDynamicBytes(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
     StorageArrayLength {
         loc: pt::Loc,
         ty: Type,
@@ -865,7 +866,7 @@ impl Recurse for Expression {
                 | Expression::Complement(_, _, expr)
                 | Expression::UnaryMinus(_, _, expr) => expr.recurse(cx, f),
 
-                Expression::Ternary(_, _, cond, left, right) => {
+                Expression::ConditionalOperator(_, _, cond, left, right) => {
                     cond.recurse(cx, f);
                     left.recurse(cx, f);
                     right.recurse(cx, f);
@@ -876,7 +877,7 @@ impl Recurse for Expression {
                 }
                 Expression::StructMember(_, _, expr, _) => expr.recurse(cx, f),
 
-                Expression::AllocDynamicArray(_, _, expr, _) => expr.recurse(cx, f),
+                Expression::AllocDynamicBytes(_, _, expr, _) => expr.recurse(cx, f),
                 Expression::StorageArrayLength { array, .. } => array.recurse(cx, f),
                 Expression::StringCompare(_, left, right)
                 | Expression::StringConcat(_, _, left, right) => {
@@ -985,11 +986,11 @@ impl CodeLocation for Expression {
             | Expression::Not(loc, _)
             | Expression::Complement(loc, ..)
             | Expression::UnaryMinus(loc, ..)
-            | Expression::Ternary(loc, ..)
+            | Expression::ConditionalOperator(loc, ..)
             | Expression::Subscript(loc, ..)
             | Expression::StructMember(loc, ..)
             | Expression::Or(loc, ..)
-            | Expression::AllocDynamicArray(loc, ..)
+            | Expression::AllocDynamicBytes(loc, ..)
             | Expression::StorageArrayLength { loc, .. }
             | Expression::StringCompare(loc, ..)
             | Expression::StringConcat(loc, ..)

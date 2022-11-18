@@ -4,7 +4,7 @@ Installing Solang
 The Solang compiler is a single binary. It can be installed in different ways, listed below.
 
 1. :ref:`Download from Homebrew <download-brew>` (MacOS only)
-2. :ref:`Download pre-compiled binaries <download-binaries>`
+2. :ref:`Download binaries <download-binaries>`
 3. :ref:`Download from a Docker container <download-docker>`
 4. :ref:`Build using Dockerfile <build-dockerfile>`
 5. :ref:`Build from source <build-source>`
@@ -14,7 +14,7 @@ The Solang compiler is a single binary. It can be installed in different ways, l
 Option 1: Download from Brew
 ----------------------------
 
-Solang is available on Brew via a private tap. Currently, this works only for MacOS systems, both Intel and Apple Silicon.
+Solang is available on Brew via a private tap. This works only for MacOS systems, both Intel and Apple Silicon.
 To install Solang via Brew, run the following command:
 
 .. code-block:: text
@@ -23,8 +23,8 @@ To install Solang via Brew, run the following command:
 
 .. _download-binaries:
 
-Option 2: Download release binaries
------------------------------------
+Option 2: Download binaries
+---------------------------
 
 There are binaries available on github releases:
 
@@ -33,6 +33,9 @@ There are binaries available on github releases:
 - `Windows x64 <https://github.com/hyperledger/solang/releases/download/v0.1.13/solang.exe>`_
 - `MacOS intel <https://github.com/hyperledger/solang/releases/download/v0.1.13/solang-mac-intel>`_
 - `MacOS arm <https://github.com/hyperledger/solang/releases/download/v0.1.13/solang-mac-arm>`_
+
+Download the file and save it somewhere in your ``$PATH``, for example the bin directory in your home directory. If the
+path you use is not already in ``$PATH``, then you need to add it yourself.
 
 On MacOS, remember to give execution permission to the file and remove it from quarantine by executing the following commands:
 
@@ -85,7 +88,7 @@ Option 5: Build Solang from source
 ----------------------------------
 
 In order to build Solang from source, you will need rust 1.63.0 or higher,
-and a build of LLVM based on the Solana LLVM tree. There are a few patches which are not upstream yet.
+and a build of LLVM based on the Solana LLVM tree. There are a few LLVM patches required that are not upstream yet.
 First, follow the steps below for installing LLVM and then proceed from there.
 
 If you do not have the correct version of rust installed, go to `rustup <https://rustup.rs/>`_.
@@ -106,13 +109,13 @@ _____________________________________
 
 Solang needs a build of
 `LLVM with some extra patches <https://github.com/solana-labs/llvm-project/>`_.
-These patches make it possible to generate code for Solana, and fixes some
+These patches make it possible to generate code for Solana, and fixes
 concurrency issues in the lld linker.
 
 You can either download the pre-built libraries from
 `github <https://github.com/hyperledger/solang/releases/tag/v0.1.13>`_
-or :ref:`build your own from source <llvm-from-source>`. After that, you need to add the ``bin`` directory to your
-path, so that the build system of Solang can find the correct version of LLVM to use.
+or :ref:`build your own from source <llvm-from-source>`. After that, you need to add the ``bin`` of your
+LLVM directory to your path, so that the build system of Solang can find the correct version of LLVM to use.
 
 Linux
 ~~~~~

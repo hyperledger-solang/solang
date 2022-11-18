@@ -14,13 +14,13 @@ Welcome to the Solang Solidity Compiler. Using Solang, you can compile smart con
 `Solana <https://www.solana.com/>`_ and
 `Parity Substrate <https://substrate.io/>`_. It uses the
 `llvm <https://www.llvm.org/>`_ compiler framework to produce WebAssembly
-(wasm) or BPF contract code. As result, the output is highly optimized, which saves you in gas costs.
+(WASM) or BPF contract code. As result, the output is highly optimized, which saves you in gas costs
+or compute units.
 
 Solang aims for source file compatibility with the Ethereum EVM Solidity compiler,
 version 0.8. Where differences exists, this is noted in the language documentation.
 The source code repository can be found on `github <https://github.com/hyperledger/solang>`_
-and we have a `channel #solang on Hyperledger Discord <https://discord.gg/jhn4rkqNsT>`_, and
-a `channel #solang-solidity-compiler on Solana Discord <https://discord.gg/TmE2Ek5ZbW>`_.
+and we have a `channel #solang on Hyperledger Discord <https://discord.gg/jhn4rkqNsT>`_.
 
 Contents
 ========

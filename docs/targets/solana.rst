@@ -9,9 +9,12 @@ Solana has the following differences to Ethereum Solidity:
 - An address literal has to be specified using the ``address"36VtvSbE6jVGGQytYWSaDPG7uZphaxEjpJHUUpuUbq4D"`` syntax
 - There is no ``ecrecover()`` builtin function, but there is a ``signatureVerify()`` function which can check ed25519
   signatures.
-- Solana has no concept of gas, so there is no gas functions
+- There is no concept of gas, so there is no gas functions
 - Solana balance is stored in a ``uint64``, so *address* ``.balance``, ``.transfer()`` and ``.send()``
   all use ``uint64`` rather than ``uint256``.
+- Solana uses different accounts for the program code, and the contract data.
+- Programs are upgradable. There is no need to implement upgrades in Solidity.
+- Solana provides different builtins, e.g. ``tx.program_id`` and ``tx.accounts``.
 
 This is how to build your Solidity for Solana:
 
@@ -79,14 +82,14 @@ Calling Anchor Programs from Solidity
 _____________________________________
 
 It is possible to call `Anchor Programs <https://github.com/coral-xyz/anchor>`_
-from Solidity. You first have to generate an interface file from the IDL file using
+from Solidity. You first have to generate a Solidity interface file from the IDL file using
 the :ref:`idl_command`. Then, import the Solidity file in your Solidity using the
-``import "...";`` syntax. Say you have an anchor program called `solidity_from_idl` with a
-function `idl_defined_function`, you can call it like so:
+``import "...";`` syntax. Say you have an anchor program called `bobcat` with a
+function `pounce`, you can call it like so:
 
 .. code-block:: solidity
 
-    import "solidity_from_idl.sol";
+    import "bobcat.sol";
     import "solana";
 
     contract example {
@@ -99,7 +102,7 @@ function `idl_defined_function`, you can call it like so:
             ];
 
             // Any return values are decoded automatically
-            int64 res = solidity_from_idl.idl_defined_function{accounts: am}(arg1, arg2);
+            int64 res = bobcat.pounce{accounts: am}(arg1, arg2);
         }
     }
 
@@ -118,7 +121,7 @@ Solana Cross Program Invocation (CPI) does not support this. This means that:
 
 .. note::
 
-    Hypothetically, this could be implemented like so: the caller could transfer
+    A naive way to implement this is to let the caller transfer
     native balance and then inform the callee about the amount transferred by
     specifying this in the instruction data. However, it would be trivial to
     forge such an operation.
@@ -137,7 +140,7 @@ Builtin Imports
 ________________
 
 Some builtin functionality is only available after importing. The following structs
-can be imported via the special import file ``solana``.
+can be imported via the special builtin import file ``solana``.
 
 .. code-block:: solidity
 
@@ -253,7 +256,7 @@ Solana Library
 ______________
 
 In Solang's Github repository, there is a directory called ``solana-library``. It contains libraries for Solidity contracts
-to interact with Solana specific instructions. Currently, there are two libraries there: one for SPL tokens and another
+to interact with Solana specific instructions. We provide two libraries: one for SPL tokens and another
 for Solana's system instructions. In order to use those functionalities, copy the correspondent library
 file to your project and import it.
 

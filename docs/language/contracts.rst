@@ -24,15 +24,15 @@ If a constructor has arguments, they must be supplied when the contract is deplo
 If a contract is expected to receive value on instantiation, the constructor should be declared ``payable``.
 
 .. note::
-    On Substrate, constructors have a name. Solang allows naming constructors in the substrate target:
+    Solang allows naming constructors in the Substrate target:
 
     .. code-block:: solidity
- 
+
         contract Foo {
             constructor my_new_foo() {}
         }
 
-    Unnamed constructors will be called ``new`` in the metadata.
+    Constructors without a name will be called ``new`` in the metadata.
 
     Note that constructor names are only used in the generated metadata. For contract instantiation,
     the correct constructor matching the function signature will be selected automatically.
@@ -93,6 +93,9 @@ The constructor should be declared ``payable`` for this to work.
 .. note::
     If no value is specified, then on Parity Substrate the minimum balance (also know as the
     existential deposit) is sent.
+
+.. note::
+    On Solana, this functionality is not available.
 
 Setting the salt, gas, and space for the new contract
 _____________________________________________________

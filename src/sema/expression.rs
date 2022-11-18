@@ -75,12 +75,12 @@ impl RetrieveType for Expression {
             | Expression::Trunc(_, ty, _)
             | Expression::CheckingTrunc(_, ty, _)
             | Expression::Cast(_, ty, _)
-            | Expression::BytesCast(_, _, ty, _)
+            | Expression::BytesCast(_, ty, ..)
             | Expression::Complement(_, ty, _)
             | Expression::UnaryMinus(_, ty, _)
-            | Expression::Ternary(_, ty, ..)
+            | Expression::ConditionalOperator(_, ty, ..)
             | Expression::StructMember(_, ty, ..)
-            | Expression::AllocDynamicArray(_, ty, ..)
+            | Expression::AllocDynamicBytes(_, ty, ..)
             | Expression::PreIncrement(_, ty, ..)
             | Expression::PreDecrement(_, ty, ..)
             | Expression::PostIncrement(_, ty, ..)
@@ -355,7 +355,7 @@ impl Expression {
             }
             (&Expression::BytesLiteral(loc, _, ref init), _, &Type::DynamicBytes)
             | (&Expression::BytesLiteral(loc, _, ref init), _, &Type::String) => {
-                return Ok(Expression::AllocDynamicArray(
+                return Ok(Expression::AllocDynamicBytes(
                     loc,
                     to.clone(),
                     Box::new(Expression::NumberLiteral(
@@ -436,7 +436,7 @@ impl Expression {
                 // TODO would be help to have current contract to resolve contract constants
                 if let Ok((_, big_number)) = eval_const_number(self, ns) {
                     if let Some(number) = big_number.to_usize() {
-                        if enum_ty.values.values().any(|(_, v)| *v == number) {
+                        if enum_ty.values.len() > number {
                             return Ok(Expression::NumberLiteral(
                                 self.loc(),
                                 to.clone(),
@@ -839,7 +839,7 @@ impl Expression {
                 Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())))
             }
             (Type::Bytes(_), Type::DynamicBytes) | (Type::DynamicBytes, Type::Bytes(_)) => Ok(
-                Expression::BytesCast(*loc, from.clone(), to.clone(), Box::new(self.clone())),
+                Expression::BytesCast(*loc, to.clone(), from.clone(), Box::new(self.clone())),
             ),
             // Explicit conversion from bytesN to int/uint only allowed with expliciy
             // cast and if it is the same size (i.e. no conversion required)
@@ -1862,7 +1862,7 @@ pub fn expression(
             Ok(expr)
         }
 
-        pt::Expression::Ternary(loc, c, l, r) => {
+        pt::Expression::ConditionalOperator(loc, c, l, r) => {
             let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
             let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
             check_var_usage_expression(ns, &left, &right, symtable);
@@ -1875,7 +1875,7 @@ pub fn expression(
             let left = left.cast(&l.loc(), &ty, true, ns, diagnostics)?;
             let right = right.cast(&r.loc(), &ty, true, ns, diagnostics)?;
 
-            Ok(Expression::Ternary(
+            Ok(Expression::ConditionalOperator(
                 *loc,
                 ty,
                 Box::new(cond),
@@ -2189,7 +2189,7 @@ fn string_literal(
     let length = result.len();
 
     match resolve_to {
-        ResolveTo::Type(Type::String) => Expression::AllocDynamicArray(
+        ResolveTo::Type(Type::String) => Expression::AllocDynamicBytes(
             loc,
             Type::String,
             Box::new(Expression::NumberLiteral(
@@ -2200,7 +2200,7 @@ fn string_literal(
             Some(result),
         ),
         ResolveTo::Type(Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
-            Expression::AllocDynamicArray(
+            Expression::AllocDynamicBytes(
                 loc,
                 Type::Slice(ty.clone()),
                 Box::new(Expression::NumberLiteral(
@@ -2240,7 +2240,7 @@ fn hex_literal(
 
     match resolve_to {
         ResolveTo::Type(Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
-            Ok(Expression::AllocDynamicArray(
+            Ok(Expression::AllocDynamicBytes(
                 loc,
                 Type::Slice(ty.clone()),
                 Box::new(Expression::NumberLiteral(
@@ -2251,7 +2251,7 @@ fn hex_literal(
                 Some(result),
             ))
         }
-        ResolveTo::Type(Type::DynamicBytes) => Ok(Expression::AllocDynamicArray(
+        ResolveTo::Type(Type::DynamicBytes) => Ok(Expression::AllocDynamicBytes(
             loc,
             Type::DynamicBytes,
             Box::new(Expression::NumberLiteral(
@@ -3665,7 +3665,7 @@ pub fn new(
         size_expr.cast(&size_loc, &expected_ty, true, ns, diagnostics)?
     };
 
-    Ok(Expression::AllocDynamicArray(
+    Ok(Expression::AllocDynamicBytes(
         *loc,
         ty,
         Box::new(size),
@@ -4411,11 +4411,11 @@ fn enum_value(
     }
 
     if let Some(e) = ns.resolve_enum(file_no, contract_no, namespace[0]) {
-        match ns.enums[e].values.get(&id.name) {
-            Some((_, val)) => Ok(Some(Expression::NumberLiteral(
+        match ns.enums[e].values.get_full(&id.name) {
+            Some((val, _, _)) => Ok(Some(Expression::NumberLiteral(
                 *loc,
                 Type::Enum(e),
-                BigInt::from_usize(*val).unwrap(),
+                BigInt::from_usize(val).unwrap(),
             ))),
             None => {
                 diagnostics.push(Diagnostic::error(

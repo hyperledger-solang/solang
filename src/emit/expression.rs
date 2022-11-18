@@ -985,7 +985,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             runtime_cast(bin, function, &from, to, e, ns)
         }
-        Expression::BytesCast(_, Type::Bytes(_), Type::DynamicBytes, e) => {
+        Expression::BytesCast(_, Type::DynamicBytes, Type::Bytes(_), e) => {
             let e = expression(target, bin, e, vartab, function, ns).into_int_value();
 
             let size = e.get_type().get_bit_width() / 8;
@@ -1021,7 +1021,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .left()
                 .unwrap()
         }
-        Expression::BytesCast(_, Type::DynamicBytes, Type::Bytes(n), e) => {
+        Expression::BytesCast(_, Type::Bytes(n), Type::DynamicBytes, e) => {
             let array = expression(target, bin, e, vartab, function, ns);
 
             let len = bin.vector_len(array);
@@ -1297,7 +1297,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             array.into()
         }
-        Expression::AllocDynamicArray(_, ty, size, init) => {
+        Expression::AllocDynamicBytes(_, ty, size, init) => {
             if matches!(ty, Type::Slice(_)) {
                 let init = init.as_ref().unwrap();
 

@@ -11,6 +11,7 @@ use super::{
     SOLANA_SPARSE_ARRAY_SIZE,
 };
 use crate::Target;
+use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::{
@@ -19,7 +20,7 @@ use solang_parser::{
     pt::CodeLocation,
 };
 use std::collections::HashSet;
-use std::{collections::HashMap, fmt::Write, ops::Mul};
+use std::{fmt::Write, ops::Mul};
 
 /// List the types which should be resolved later
 pub struct ResolveFields<'a> {
@@ -79,13 +80,16 @@ pub fn resolve_typenames<'a>(
                 if ns.add_symbol(
                     file_no,
                     None,
-                    &def.name,
-                    Symbol::Struct(def.name.loc, StructType::UserDefined(struct_no)),
+                    def.name.as_ref().unwrap(),
+                    Symbol::Struct(
+                        def.name.as_ref().unwrap().loc,
+                        StructType::UserDefined(struct_no),
+                    ),
                 ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
-                        name: def.name.name.to_owned(),
-                        loc: def.name.loc,
+                        name: def.name.as_ref().unwrap().name.to_owned(),
+                        loc: def.name.as_ref().unwrap().loc,
                         contract: None,
                         fields: Vec::new(),
                         offsets: Vec::new(),
@@ -105,24 +109,25 @@ pub fn resolve_typenames<'a>(
 
                 let tags = parse_doccomments(comments, doc_comment_start, def.loc.start());
 
-                if let Some(Symbol::Event(events)) =
-                    ns.variable_symbols
-                        .get_mut(&(file_no, None, def.name.name.to_owned()))
-                {
-                    events.push((def.name.loc, event_no));
+                if let Some(Symbol::Event(events)) = ns.variable_symbols.get_mut(&(
+                    file_no,
+                    None,
+                    def.name.as_ref().unwrap().name.to_owned(),
+                )) {
+                    events.push((def.name.as_ref().unwrap().loc, event_no));
                 } else if !ns.add_symbol(
                     file_no,
                     None,
-                    &def.name,
-                    Symbol::Event(vec![(def.name.loc, event_no)]),
+                    def.name.as_ref().unwrap(),
+                    Symbol::Event(vec![(def.name.as_ref().unwrap().loc, event_no)]),
                 ) {
                     continue;
                 }
 
                 ns.events.push(EventDecl {
                     tags: Vec::new(),
-                    name: def.name.name.to_owned(),
-                    loc: def.name.loc,
+                    name: def.name.as_ref().unwrap().name.to_owned(),
+                    loc: def.name.as_ref().unwrap().loc,
                     contract: None,
                     fields: Vec::new(),
                     anonymous: def.anonymous,
@@ -280,9 +285,8 @@ fn resolve_contract<'a>(
     ns: &mut Namespace,
 ) -> bool {
     let contract_no = ns.contracts.len();
-
     let doc = resolve_tags(
-        def.name.loc.file_no(),
+        def.name.as_ref().unwrap().loc.file_no(),
         "contract",
         contract_tags,
         None,
@@ -291,22 +295,26 @@ fn resolve_contract<'a>(
         ns,
     );
 
-    ns.contracts
-        .push(Contract::new(&def.name.name, def.ty.clone(), doc, def.loc));
+    ns.contracts.push(Contract::new(
+        &def.name.as_ref().unwrap().name,
+        def.ty.clone(),
+        doc,
+        def.loc,
+    ));
 
     let mut broken = !ns.add_symbol(
         file_no,
         None,
-        &def.name,
+        def.name.as_ref().unwrap(),
         Symbol::Contract(def.loc, contract_no),
     );
 
-    if is_windows_reserved(&def.name.name) {
+    if is_windows_reserved(&def.name.as_ref().unwrap().name) {
         ns.diagnostics.push(Diagnostic::error(
-            def.name.loc,
+            def.name.as_ref().unwrap().loc,
             format!(
                 "contract name '{}' is reserved file name on Windows",
-                def.name.name
+                def.name.as_ref().unwrap().name
             ),
         ));
     }
@@ -330,14 +338,17 @@ fn resolve_contract<'a>(
                 if ns.add_symbol(
                     file_no,
                     Some(contract_no),
-                    &pt.name,
-                    Symbol::Struct(pt.name.loc, StructType::UserDefined(struct_no)),
+                    pt.name.as_ref().unwrap(),
+                    Symbol::Struct(
+                        pt.name.as_ref().unwrap().loc,
+                        StructType::UserDefined(struct_no),
+                    ),
                 ) {
                     ns.structs.push(StructDecl {
                         tags: Vec::new(),
-                        name: pt.name.name.to_owned(),
-                        loc: pt.name.loc,
-                        contract: Some(def.name.name.to_owned()),
+                        name: pt.name.as_ref().unwrap().name.to_owned(),
+                        loc: pt.name.as_ref().unwrap().loc,
+                        contract: Some(def.name.as_ref().unwrap().name.to_owned()),
                         fields: Vec::new(),
                         offsets: Vec::new(),
                         storage_offsets: Vec::new(),
@@ -361,14 +372,14 @@ fn resolve_contract<'a>(
                 if let Some(Symbol::Event(events)) = ns.variable_symbols.get_mut(&(
                     file_no,
                     Some(contract_no),
-                    pt.name.name.to_owned(),
+                    pt.name.as_ref().unwrap().name.to_owned(),
                 )) {
-                    events.push((pt.name.loc, event_no));
+                    events.push((pt.name.as_ref().unwrap().loc, event_no));
                 } else if !ns.add_symbol(
                     file_no,
                     Some(contract_no),
-                    &pt.name,
-                    Symbol::Event(vec![(pt.name.loc, event_no)]),
+                    pt.name.as_ref().unwrap(),
+                    Symbol::Event(vec![(pt.name.as_ref().unwrap().loc, event_no)]),
                 ) {
                     broken = true;
                     continue;
@@ -376,8 +387,8 @@ fn resolve_contract<'a>(
 
                 ns.events.push(EventDecl {
                     tags: Vec::new(),
-                    name: pt.name.name.to_owned(),
-                    loc: pt.name.loc,
+                    name: pt.name.as_ref().unwrap().name.to_owned(),
+                    loc: pt.name.as_ref().unwrap().loc,
                     contract: Some(contract_no),
                     fields: Vec::new(),
                     anonymous: pt.anonymous,
@@ -436,15 +447,16 @@ pub fn struct_decl(
             }
         };
 
-        if let Some(other) = fields
-            .iter()
-            .find(|f| f.id.as_ref().map(|id| id.name.as_str()) == Some(field.name.name.as_str()))
-        {
+        if let Some(other) = fields.iter().find(|f| {
+            f.id.as_ref().map(|id| id.name.as_str())
+                == Some(field.name.as_ref().unwrap().name.as_str())
+        }) {
             ns.diagnostics.push(Diagnostic::error_with_note(
-                field.name.loc,
+                field.name.as_ref().unwrap().loc,
                 format!(
                     "struct '{}' has duplicate struct field '{}'",
-                    def.name.name, field.name.name
+                    def.name.as_ref().unwrap().name,
+                    field.name.as_ref().unwrap().name
                 ),
                 other.loc,
                 format!(
@@ -472,8 +484,8 @@ pub fn struct_decl(
         fields.push(Parameter {
             loc: field.loc,
             id: Some(pt::Identifier {
-                name: field.name.name.to_string(),
-                loc: field.name.loc,
+                name: field.name.as_ref().unwrap().name.to_string(),
+                loc: field.name.as_ref().unwrap().loc,
             }),
             ty,
             ty_loc: Some(field.ty.loc()),
@@ -485,13 +497,16 @@ pub fn struct_decl(
 
     if fields.is_empty() {
         ns.diagnostics.push(Diagnostic::error(
-            def.name.loc,
-            format!("struct definition for '{}' has no fields", def.name.name),
+            def.name.as_ref().unwrap().loc,
+            format!(
+                "struct definition for '{}' has no fields",
+                def.name.as_ref().unwrap().name
+            ),
         ));
     }
 
     let doc = resolve_tags(
-        def.name.loc.file_no(),
+        def.name.as_ref().unwrap().loc.file_no(),
         "struct",
         tags,
         Some(&fields),
@@ -546,7 +561,8 @@ fn event_decl(
                     name.loc,
                     format!(
                         "event '{}' has duplicate field name '{}'",
-                        def.name.name, name.name
+                        def.name.as_ref().unwrap().name,
+                        name.name
                     ),
                     other.loc,
                     format!(
@@ -587,24 +603,26 @@ fn event_decl(
 
     if def.anonymous && indexed_fields > 4 {
         ns.diagnostics.push(Diagnostic::error(
-            def.name.loc,
+            def.name.as_ref().unwrap().loc,
             format!(
                 "anonymous event definition for '{}' has {} indexed fields where 4 permitted",
-                def.name.name, indexed_fields
+                def.name.as_ref().unwrap().name,
+                indexed_fields
             ),
         ));
     } else if !def.anonymous && indexed_fields > 3 {
         ns.diagnostics.push(Diagnostic::error(
-            def.name.loc,
+            def.name.as_ref().unwrap().loc,
             format!(
                 "event definition for '{}' has {} indexed fields where 3 permitted",
-                def.name.name, indexed_fields
+                def.name.as_ref().unwrap().name,
+                indexed_fields
             ),
         ));
     }
 
     let doc = resolve_tags(
-        def.name.loc.file_no(),
+        def.name.as_ref().unwrap().loc.file_no(),
         "event",
         tags,
         Some(&fields),
@@ -629,16 +647,16 @@ fn enum_decl(
 
     if enum_.values.is_empty() {
         ns.diagnostics.push(Diagnostic::error(
-            enum_.name.loc,
-            format!("enum '{}' has no fields", enum_.name.name),
+            enum_.name.as_ref().unwrap().loc,
+            format!("enum '{}' has no fields", enum_.name.as_ref().unwrap().name),
         ));
         valid = false;
     } else if enum_.values.len() > 256 {
         ns.diagnostics.push(Diagnostic::error(
-            enum_.name.loc,
+            enum_.name.as_ref().unwrap().loc,
             format!(
                 "enum '{}' has {} fields, which is more than the 256 limit",
-                enum_.name.name,
+                enum_.name.as_ref().unwrap().name,
                 enum_.values.len()
             ),
         ));
@@ -646,28 +664,39 @@ fn enum_decl(
     }
 
     // check for duplicates
-    let mut entries: HashMap<String, (pt::Loc, usize)> = HashMap::new();
+    let mut entries: IndexMap<String, pt::Loc> = IndexMap::new();
 
-    for (i, e) in enum_.values.iter().enumerate() {
-        if let Some(prev) = entries.get(&e.name.to_string()) {
+    for e in enum_.values.iter() {
+        if let Some(prev) = entries.get(&e.as_ref().unwrap().name.to_string()) {
             ns.diagnostics.push(Diagnostic::error_with_note(
-                e.loc,
-                format!("duplicate enum value {}", e.name),
-                prev.0,
+                e.as_ref().unwrap().loc,
+                format!("duplicate enum value {}", e.as_ref().unwrap().name),
+                *prev,
                 "location of previous definition".to_string(),
             ));
             valid = false;
             continue;
         }
 
-        entries.insert(e.name.to_string(), (e.loc, i));
+        entries.insert(
+            e.as_ref().unwrap().name.to_string(),
+            e.as_ref().unwrap().loc,
+        );
     }
 
-    let tags = resolve_tags(enum_.name.loc.file_no(), "enum", tags, None, None, None, ns);
+    let tags = resolve_tags(
+        enum_.name.as_ref().unwrap().loc.file_no(),
+        "enum",
+        tags,
+        None,
+        None,
+        None,
+        ns,
+    );
 
     let decl = EnumDecl {
         tags,
-        name: enum_.name.name.to_string(),
+        name: enum_.name.as_ref().unwrap().name.to_string(),
         loc: enum_.loc,
         contract: match contract_no {
             Some(c) => Some(ns.contracts[c].name.to_owned()),
@@ -684,8 +713,8 @@ fn enum_decl(
     if !ns.add_symbol(
         file_no,
         contract_no,
-        &enum_.name,
-        Symbol::Enum(enum_.name.loc, pos),
+        enum_.name.as_ref().unwrap(),
+        Symbol::Enum(enum_.name.as_ref().unwrap().loc, pos),
     ) {
         valid = false;
     }

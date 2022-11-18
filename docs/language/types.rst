@@ -51,7 +51,7 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
 
 .. code-block:: none
 
-    literal 300 is too large to fit into type 'uint8'
+    value 300 does not fit into type uint8
 
 .. tip::
 
@@ -64,7 +64,7 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
   calculations, which are expensive.
 
   WebAssembly or BPF do not support this. As a result that Solang has to emulate larger types with
-  many instructions, resulting in larger contract code and higher gas cost.
+  many instructions, resulting in larger contract code and higher gas cost or compute units.
 
 Fixed Length byte arrays
 ________________________
@@ -125,8 +125,8 @@ Address and Address Payable Type
 ________________________________
 
 The ``address`` type holds the address of an account. The length of an ``address`` type depends on
-the target being compiled for. On ewasm, an address is 20 bytes. Solana and Substrate have an address
-length of 32 bytes. The format of an address literal depends on what target you are building for. On ewasm,
+the target being compiled for. On EVM, an address is 20 bytes. Solana and Substrate have an address
+length of 32 bytes. The format of an address literal depends on what target you are building for. On EVM,
 ethereum addresses can be specified with a particular hexadecimal number.
 
 .. code-block:: solidity
@@ -330,13 +330,14 @@ in any contract without the prefix.
     }
 
 The `users` struct contains an array of `user`, which is another struct. The `users` struct is
-defined in contract `db`, and can be used in another contract with the type name `db.users`. Astute
-readers may have noticed that the `db.users` struct is used before it is declared. In Solidity,
-types can be always be used before their declaration, or before they are imported.
+defined in contract `db`, and can be used in another contract with the type name `db.users`.
+Notice that the `db.users` struct type is used in the function `authenticate` before it is declared. In Solidity,
+types can be always be used before their declaration, or even before the ``import`` directive.
 
 Structs can be contract storage variables. Structs in contract storage can be assigned to structs
 in memory and vice versa, like in the *set_card1()* function. Copying structs between storage
-and memory is expensive; code has to be generated for each field and executed.
+and memory is expensive; code has to be generated and executed for each field. In the *set_card1* function,
+the following is done:
 
 - The function argument ``c`` has to ABI decoded (1 copy + decoding overhead)
 - The ``card1`` has to load from contract storage (1 copy + contract storage overhead)
@@ -371,13 +372,6 @@ visible in the caller as well.
           assert(bar1.f4 == "foobar");
       }
   }
-
-.. note::
-
-  In the Ethereum Foundation Solidity compiler, you need to add ``pragma experimental ABIEncoderV2;``
-  to use structs as return values or function arguments in public functions. The default ABI encoder
-  of Solang can handle structs, so there is no need for this pragma. The Solang compiler ignores
-  this pragma if present.
 
 Fixed Length Arrays
 ___________________
@@ -433,7 +427,7 @@ be reflected in the current function. For example:
         }
 
         function foo() private {
-            int8[4] val = [ int8(1), 2, 3, 4 ];
+            int8[4] val = [ 1, 2, 3, 4 ];
 
             set_2(val);
 
@@ -441,6 +435,8 @@ be reflected in the current function. For example:
             assert(val[2] == 102);
         }
     }
+
+On Solang, it is not necessary to cast the first element of the array literal.
 
 .. note::
 
@@ -450,8 +446,9 @@ be reflected in the current function. For example:
   32 bytes. However, since ``bytes32`` is a primitive in itself, this will only be 32
   bytes when ABI encoded.
 
-  In Substrate, the `SCALE <https://docs.substrate.io/reference/scale-codec/>`_
-  encoding uses 32 bytes for both types.
+  On Substrate, the `SCALE <https://docs.substrate.io/reference/scale-codec/>`_
+  encoding uses 32 bytes for both types. Similarly, the `borsh encoding <https://borsh.io/>`_
+  used on Solana uses 32 bytes for both types.
 
 Dynamic Length Arrays
 _____________________
@@ -462,7 +459,7 @@ on whether they are contract storage variables or stored in memory.
 
 Memory dynamic arrays must be allocated with ``new`` before they can be used. The ``new``
 expression requires a single unsigned integer argument. The length can be read using
-``length`` member variable. Once created, the length of the array cannot be changed.
+``length`` member variable.
 
 .. code-block:: solidity
 
@@ -509,7 +506,7 @@ methods.
     }
 
 Calling the method ``pop()`` on an empty array is an error and contract execution will abort,
-just like when you access an element beyond the end of an array.
+just like when accessing an element beyond the end of an array.
 
 ``push()`` without any arguments returns a storage reference. This is only available for types
 that support storage references (see below).
@@ -657,7 +654,7 @@ Mappings are declared with ``mapping(keytype => valuetype)``, for example:
 
 If you access a non-existing field on a mapping, all the fields will read as zero. So, it
 is common practise to have a boolean field called ``exists``. Since mappings are not iterable,
-it is not possible to do a ``delete`` on an mapping, but an entry can be deleted.
+it is not possible to ``delete`` an entire mapping itself, but individual mapping entries can be deleted.
 
 .. note::
 
@@ -680,7 +677,7 @@ ______________
 
 In Solidity, other smart contracts can be called and created. So, there is a type to hold the
 address of a contract. This is in fact simply the address of the contract, with some syntax
-sugar for calling functions it.
+sugar for calling functions on it.
 
 A contract can be created with the new statement, followed by the name of the contract. The
 arguments to the constructor must be provided.

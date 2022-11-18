@@ -1,8 +1,8 @@
 use lalrpop_util::ParseError;
 use super::pt::*;
 use super::lexer::{Token, LexicalError};
-
-grammar<'input>(input: &'input str, file_no: usize);
+use lalrpop_util::ErrorRecovery;
+grammar<'input, 'err>(input: &'input str, file_no: usize , parser_errors: &'err mut Vec<ErrorRecovery<usize, Token<'input>, LexicalError>> );
 
 pub SourceUnit: SourceUnit = {
     SourceUnitPart* => SourceUnit(<>)
@@ -26,20 +26,30 @@ SourceUnitPart: SourceUnitPart = {
 ImportDirective: SourceUnitPart = {
     <l:@L> "import" <s:StringLiteral> <r:@R> ";" => SourceUnitPart::ImportDirective(Import::Plain(s, Loc::File(file_no, l, r))),
     <l:@L> "import" <s:StringLiteral> "as" <id:SolIdentifier> <r:@R> ";" => SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))),
-    <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
+    <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" => {
         if from.name != "from" {
-            Err(ParseError::User { error: LexicalError::ExpectedFrom(from.loc, from.name)})
-        } else {
-            Ok(SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))))
+            let error = ErrorRecovery {
+                error: ParseError::User {
+                    error: LexicalError::ExpectedFrom(from.loc, from.name)
+                },
+                dropped_tokens: Vec::new(),
+            };
+            parser_errors.push(error);   
         }
+        SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r)))   
     },
     <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
-            Err(ParseError::User { error:LexicalError::ExpectedFrom(from.loc, from.name)})
-        } else {
-            Ok(SourceUnitPart::ImportDirective(Import::Rename(s, rename, Loc::File(file_no, l, r))))
+            let error = ErrorRecovery {
+                error: ParseError::User {
+                    error: LexicalError::ExpectedFrom(from.loc, from.name),
+                },
+                dropped_tokens: Vec::new(),
+            };
+            parser_errors.push(error);
         }
-    }
+        Ok(SourceUnitPart::ImportDirective(Import::Rename(s,rename,Loc::File(file_no, l, r))))
+    },
 }
 
 ImportRename: (Identifier, Option<Identifier>) = {
@@ -49,7 +59,11 @@ ImportRename: (Identifier, Option<Identifier>) = {
 
 PragmaDirective: SourceUnitPart = {
     // The lexer does special parsing for String literal; it isn't really a string literal
-    <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), i, s)
+    <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), Some(i), Some(s)) ,
+    <l:@L> "pragma" <false_token:!> <r:@R> ";" => {
+        parser_errors.push(false_token);     
+        SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), None, None)
+    },
 }
 
 Type: Type = {
@@ -118,6 +132,14 @@ SolIdentifier: Identifier = {
     <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
 }
 
+SolIdentifierOrError: Option<Identifier> = {
+    SolIdentifier => Some(<>),
+    ! => {
+        parser_errors.push(<>);
+        None
+    }
+}
+
 SolNoErrorIdentifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
     <l:@L> "switch" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "switch".to_string()},
@@ -135,13 +157,13 @@ SolIdentifierPath: IdentifierPath = {
 }
 
 VariableDeclaration: VariableDeclaration = {
-    <l:@L> <ty:AnyType> <storage:StorageLocation?> <name:SolIdentifier> <r:@R> => VariableDeclaration {
+    <l:@L> <ty:AnyType> <storage:StorageLocation?> <name:SolIdentifierOrError> <r:@R> => VariableDeclaration {
         loc: Loc::File(file_no, l, r), ty, storage, name
     },
 }
 
 StructDefinition: Box<StructDefinition> = {
-    <l:@L> "struct" <name:SolIdentifier> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
+    <l:@L> "struct" <name:SolIdentifierOrError> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
         Box::new(StructDefinition{loc: Loc::File(file_no, l, r), name, fields})
     }
 }
@@ -181,7 +203,7 @@ Base: Base = {
 }
 
 ContractDefinition: Box<ContractDefinition> = {
-    <l:@L> <ty:ContractTy> <name:SolIdentifier> <base:Bases>
+    <l:@L> <ty:ContractTy> <name:SolIdentifierOrError> <base:Bases>
     "{" <parts:(<ContractPart>)*> "}" <r:@R> => {
         Box::new(ContractDefinition{loc: Loc::File(file_no, l, r), ty, name, base, parts})
     }
@@ -200,7 +222,7 @@ ErrorParameter: ErrorParameter = {
 }
 
 EventDefinition: Box<EventDefinition> = {
-    <l:@L> "event" <name:SolIdentifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> <r:@R> ";" => {
+    <l:@L> "event" <name:SolIdentifierOrError> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> <r:@R> ";" => {
         Box::new(EventDefinition{
             loc: Loc::File(file_no, l, r), name, fields: v, anonymous: a.is_some()
         })
@@ -208,7 +230,7 @@ EventDefinition: Box<EventDefinition> = {
 }
 
 ErrorDefinition: Box<ErrorDefinition> = {
-    <l:@L> "error" <name:SolIdentifier> "(" <v:Comma<ErrorParameter>> ")" <r:@R> ";" => {
+    <l:@L> "error" <name:SolIdentifierOrError> "(" <v:Comma<ErrorParameter>> ")" <r:@R> ";" => {
         Box::new(ErrorDefinition{
             loc: Loc::File(file_no, l, r), name, fields: v
         })
@@ -216,22 +238,29 @@ ErrorDefinition: Box<ErrorDefinition> = {
 }
 
 EnumDefinition: Box<EnumDefinition> = {
-    <l:@L> "enum" <name:SolIdentifier> "{" <values:Comma<SolIdentifier>> "}" <r:@R> => {
+    <l:@L> "enum" <name:SolIdentifierOrError> "{" <values:Comma<SolIdentifierOrError>> "}" <r:@R> => {
         Box::new(EnumDefinition{loc: Loc::File(file_no, l, r), name, values})
     }
 }
 
 VariableDefinition: Box<VariableDefinition> = {
-    <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
+    <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:SolIdentifierOrError> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
             loc: Loc::File(file_no, l, r), ty, attrs, name, initializer: e,
         })
     },
+    <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:SolIdentifier> <false_token:!> <r:@R> ";" => {
+        parser_errors.push (false_token);
+        Box::new(VariableDefinition{
+            loc: Loc::File(file_no, l, r), ty, attrs, name: Some(name), initializer: None,
+        })
+    },
+    
     <l:@L> "error" <er:@R> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         let ty = Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()});
 
         Box::new(VariableDefinition{
-            loc: Loc::File(file_no, l, r), ty, attrs, name, initializer: e,
+            loc: Loc::File(file_no, l, r), ty, attrs, name: Some(name), initializer: e,
         })
     },
     // attributes cause shift-reduce errors with function type, since a function type contract variable can be declare as
@@ -241,7 +270,7 @@ VariableDefinition: Box<VariableDefinition> = {
     // }
     <l:@L> <ty:FunctionTyPrecedence0> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
-            loc: Loc::File(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
+            loc: Loc::File(file_no, l, r), ty, attrs: Vec::new(), name: Some(name), initializer: e,
         })
     }
 }
@@ -287,7 +316,9 @@ Precedence14: Expression = {
     <a:@L> <l:Precedence13> "*=" <r:Precedence14> <b:@R> => Expression::AssignMultiply(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     <a:@L> <l:Precedence13> "/=" <r:Precedence14> <b:@R> => Expression::AssignDivide(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
     <a:@L> <l:Precedence13> "%=" <r:Precedence14> <b:@R> => Expression::AssignModulo(Loc::File(file_no, a, b), Box::new(l), Box::new(r)),
-    <a:@L> <c:Precedence13> "?" <l:Precedence14> ":" <r:Precedence14> <b:@R> => Expression::Ternary(Loc::File(file_no, a, b), Box::new(c), Box::new(l), Box::new(r)),
+    <a:@L> <c:Precedence13> "?" <l:Precedence14> ":" <r:Precedence14> <b:@R> => {
+        Expression::ConditionalOperator(Loc::File(file_no, a, b), Box::new(c), Box::new(l), Box::new(r))
+    },
     Precedence13,
 }
 
@@ -511,6 +542,10 @@ ParameterList: Vec<(Loc, Option<Parameter>)> = {
     "(" ")" => Vec::new(),
     "(" <l:@L> <p:Parameter> <r:@R> ")" => vec!((Loc::File(file_no, l, r), Some(p))),
     "(" <CommaTwo<OptParameter>> ")" => <>,
+    "(" <false_token:!> ")"=> {
+        parser_errors.push(<>);
+        Vec::new()
+    }
 }
 
 Mutability: Mutability = {
@@ -532,7 +567,11 @@ FunctionAttribute: FunctionAttribute = {
     <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc::File(file_no, l, r), base),
     <l:@L> <name:SolIdentifier> "=" <value:LiteralExpression> <r:@R> => {
         FunctionAttribute::NameValue(Loc::File(file_no, l, r), name, value)
-    }
+    },
+    <l:@L> <false_token:!> <r:@R> => {
+        parser_errors.push(false_token); 
+        FunctionAttribute::Error(Loc::File(file_no, l ,r))
+    },
 }
 
 // Modifier and function have special case
@@ -596,7 +635,7 @@ ConstructorDefinition: Box<FunctionDefinition> = {
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
-    <l:@L> "function" <nl:@L> <name:SolIdentifier> <nr:@R> <params:ParameterList>
+    <l:@L> "function" <nl:@L> <name:SolIdentifierOrError> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
     <returns:(returns ParameterList)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
@@ -604,7 +643,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
         Box::new(FunctionDefinition{
             loc: Loc::File(file_no, l, r),
             ty: FunctionTy::Function,
-            name: Some(name),
+            name,
             name_loc: Loc::File(file_no, nl, nr),
             params,
             attributes,
@@ -653,6 +692,17 @@ Using: Box<Using> = {
         ty: None,
         global,
     }),
+  <l:@L> "using" <false_token:!> <r:@R> ";" => {
+        parser_errors.push(false_token);
+        let list = UsingList::Error();
+        let global = None;
+        Box::new(Using {
+            loc: Loc::File(file_no, l, r),
+            list,
+            ty: None,
+            global,
+        })
+    },
 }
 
 UsingList: UsingList = {
@@ -701,6 +751,10 @@ ClosedStatement: Statement = {
 Statement: Statement = {
     OpenStatement,
     ClosedStatement,
+    <l:@L> <false_token:!> <r:@R> => {
+        parser_errors.push(false_token);
+        Statement::Error(Loc::File(file_no, l, r))
+    },
 }
 
 SimpleStatement: Statement = {
@@ -803,6 +857,10 @@ YulStatement: YulStatement = {
     },
     <l:@L> "continue" <r:@R> => {
         YulStatement::Continue(Loc::File(file_no, l, r))
+    },
+    <l:@L><false_token:!><r:@R> => {
+        parser_errors.push(false_token);
+        YulStatement::Error(Loc::File(file_no, l ,r))
     },
 }
 

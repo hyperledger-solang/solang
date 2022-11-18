@@ -669,7 +669,7 @@ impl SolangServer {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
             }
 
-            ast::Expression::Ternary(_locs, _typ, expr1, expr2, expr3) => {
+            ast::Expression::ConditionalOperator(_locs, _typ, expr1, expr2, expr3) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
                 SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
                 SolangServer::construct_expr(expr3, lookup_tbl, symtab, ns);
@@ -685,7 +685,7 @@ impl SolangServer {
             }
 
             // Array operation expression
-            ast::Expression::AllocDynamicArray(_locs, _typ, expr1, _valvec) => {
+            ast::Expression::AllocDynamicBytes(_locs, _typ, expr1, _valvec) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
             }
             ast::Expression::StorageArrayLength { array, .. } => {
@@ -923,11 +923,11 @@ impl SolangServer {
     // Traverses namespace to build messages stored in the lookup table for hover feature.
     fn traverse(ns: &ast::Namespace, lookup_tbl: &mut Vec<HoverEntry>) {
         for enm in &ns.enums {
-            for (nam, vals) in &enm.values {
-                let val = format!("{} {}, \n\n", nam, vals.1);
+            for (idx, (nam, loc)) in enm.values.iter().enumerate() {
+                let val = format!("{} {}, \n\n", nam, idx);
                 lookup_tbl.push(HoverEntry {
-                    start: vals.0.start(),
-                    stop: vals.0.end(),
+                    start: loc.start(),
+                    stop: loc.end(),
                     val,
                 });
             }
@@ -1078,8 +1078,8 @@ impl SolangServer {
                 let mut values = Vec::new();
                 values.resize(enm.values.len(), "");
 
-                for (name, value) in &enm.values {
-                    values[value.1] = name;
+                for (idx, value) in enm.values.iter().enumerate() {
+                    values[idx] = value.0;
                 }
 
                 let mut iter = values.iter().peekable();

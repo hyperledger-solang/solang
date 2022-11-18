@@ -271,11 +271,16 @@ pub fn variable_decl<'a>(
         if matches!(contract.ty, pt::ContractTy::Interface(_))
             || (matches!(contract.ty, pt::ContractTy::Library(_)) && !constant)
         {
+            if contract.name.is_none() || def.name.is_none() {
+                return None;
+            }
             ns.diagnostics.push(Diagnostic::error(
                 def.loc,
                 format!(
                     "{} '{}' is not allowed to have contract variable '{}'",
-                    contract.ty, contract.name.name, def.name.name
+                    contract.ty,
+                    contract.name.as_ref().unwrap().name,
+                    def.name.as_ref().unwrap().name
                 ),
             ));
             return None;
@@ -384,7 +389,7 @@ pub fn variable_decl<'a>(
     };
 
     let tags = resolve_tags(
-        def.name.loc.file_no(),
+        def.name.as_ref().unwrap().loc.file_no(),
         if contract_no.is_none() {
             "global variable"
         } else {
@@ -398,7 +403,7 @@ pub fn variable_decl<'a>(
     );
 
     let sdecl = Variable {
-        name: def.name.name.to_string(),
+        name: def.name.as_ref().unwrap().name.to_string(),
         loc: def.loc,
         tags,
         visibility: visibility.clone(),
@@ -437,7 +442,7 @@ pub fn variable_decl<'a>(
     let success = ns.add_symbol(
         file_no,
         contract_no,
-        &def.name,
+        def.name.as_ref().unwrap(),
         Symbol::Variable(def.loc, contract_no, var_no),
     );
 
@@ -476,18 +481,18 @@ pub fn variable_decl<'a>(
             }
 
             let mut func = Function::new(
-                def.name.loc,
-                def.name.name.to_owned(),
+                def.name.as_ref().unwrap().loc,
+                def.name.as_ref().unwrap().name.to_owned(),
                 Some(contract_no),
                 Vec::new(),
                 pt::FunctionTy::Function,
                 // accessors for constant variables have view mutability
-                Some(pt::Mutability::View(def.name.loc)),
+                Some(pt::Mutability::View(def.name.as_ref().unwrap().loc)),
                 visibility,
                 params,
                 vec![Parameter {
                     id: None,
-                    loc: def.name.loc,
+                    loc: def.name.as_ref().unwrap().loc,
                     ty: ty.clone(),
                     ty_loc: Some(def.ty.loc()),
                     indexed: false,
@@ -525,7 +530,7 @@ pub fn variable_decl<'a>(
                 (
                     def.loc.file_no(),
                     Some(contract_no),
-                    def.name.name.to_owned(),
+                    def.name.as_ref().unwrap().name.to_owned(),
                 ),
                 symbol,
             );

@@ -41,7 +41,7 @@ impl ast::Contract {
             virtual_functions: HashMap::new(),
             variables: Vec::new(),
             creates: Vec::new(),
-            sends_events: Vec::new(),
+            emits_events: Vec::new(),
             initializer: None,
             default_constructor: None,
             cfg: Vec::new(),
@@ -930,7 +930,7 @@ fn resolve_declarations<'a>(
 ) {
     ns.diagnostics.push(ast::Diagnostic::debug(
         def.loc,
-        format!("found {} '{}'", def.ty, def.name.name),
+        format!("found {} '{}'", def.ty, def.name.as_ref().unwrap().name),
     ));
 
     let mut function_no_bodies = Vec::new();

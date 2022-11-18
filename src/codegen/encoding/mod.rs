@@ -721,7 +721,7 @@ fn allocate_array(
         Instr::Set {
             loc: Loc::Codegen,
             res: array_var,
-            expr: Expression::AllocDynamicArray(
+            expr: Expression::AllocDynamicBytes(
                 Loc::Codegen,
                 ty.clone(),
                 Box::new(Expression::Variable(
