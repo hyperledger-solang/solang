@@ -435,7 +435,7 @@ contract c1 {
         b3 = bytes("d");
         for(int p=0; p<a; ++p) {
             doNothing(b1);
-            // CHECK: ty:bytes32 %b2.155 = bytes from:bytes32 (%b3)
+            // CHECK: ty:bytes32 %b2.155 = bytes32 from:bytes (%b3)
             bytes32 b2 = bytes32(b3);
             doNothing(b2);
         }
