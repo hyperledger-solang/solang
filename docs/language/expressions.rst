@@ -37,15 +37,8 @@ x :superscript:`y`. This can only be done for unsigned types.
 Overflow checking is limited to types of 64 bits and smaller, if the `--math-overflow` command
 line argument is specified. No overflow checking is generated in `unchecked` blocks, like so:
 
-.. code-block:: solidity
-
-    contract foo {
-        function f(int64 n) public {
-            unchecked {
-                int64 j = n - 1;
-            }
-        }
-    }
+.. include:: ../../examples/expression_unchecked.sol
+  :code: solidity
 
 Bitwise operators
 _________________
@@ -120,30 +113,15 @@ ____
 The keyword ``this`` evaluates to the current contract. The type of this is the type of the
 current contract. It can be cast to ``address`` or ``address payable`` using a cast.
 
-.. code-block:: solidity
-
-    contract kadowari {
-        function nomi() public {
-            kadowari c = this;
-            address a = address(this);
-        }
-    }
+.. include:: ../../examples/expression_this.sol
+  :code: solidity
 
 Function calls made via this are function calls through the external call mechanism; i.e. they
 have to serialize and deserialise the arguments and have the external call overhead. In addition,
 this only works with public functions.
 
-.. code-block:: solidity
-
-    contract kadowari {
-        function nomi() public {
-            this.nokogiri(102);
-        }
-
-        function nokogiri(int a) public {
-            // ...
-        }
-    }
+.. include:: ../../examples/expression_this_external_call.sol
+  :code: solidity
 
 .. note::
 
@@ -157,19 +135,8 @@ For integer values, the minimum and maximum values the types can hold are availa
 ``type(...).min`` and ``type(...).max`` operators. For unsigned integers, ``type(..).min``
 will always be 0.
 
-.. code-block:: javascript
-
-    contract example {
-        int16 stored;
-
-        function func(int x) public {
-            if (x < type(int16).min || x > type(int16).max) {
-                revert("value will not fit");
-            }
-
-            stored = int16(x);
-        }
-    }
+.. include:: ../../examples/type_operator.sol
+  :code: solidity
 
 The `EIP-165 <https://eips.ethereum.org/EIPS/eip-165>`_ interface value can be retrieved using the
 syntax ``type(...).interfaceId``. This is only permitted on interfaces. The interfaceId is simply
@@ -183,17 +150,8 @@ the constructor code is in the ``creationCode`` and all the functions are in
 the ``runtimeCode``. Parity Substrate and Solana use the same
 code for both, so those fields will evaluate to the same value.
 
-.. code-block:: solidity
-
-    contract example {
-        function test() public {
-            bytes runtime = type(other).runtimeCode;
-        }
-    }
-
-    contract other {
-        bool foo;
-    }
+.. include:: ../../examples/retrieve_contract_code.sol
+  :code: solidity
 
 .. note::
     ``type().creationCode`` and ``type().runtimeCode`` are compile time constants.
