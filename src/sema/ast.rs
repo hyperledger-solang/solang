@@ -6,6 +6,7 @@ use crate::diagnostics::Diagnostics;
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
 use crate::sema::Recurse;
 use crate::{codegen, Target};
+use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_rational::BigRational;
 pub use solang_parser::diagnostics::*;
@@ -174,7 +175,7 @@ pub struct EnumDecl {
     pub contract: Option<String>,
     pub loc: pt::Loc,
     pub ty: Type,
-    pub values: HashMap<String, (pt::Loc, usize)>,
+    pub values: IndexMap<String, pt::Loc>,
 }
 
 impl fmt::Display for EnumDecl {
