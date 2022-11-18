@@ -9,7 +9,6 @@ use ink_metadata::{
     MessageSpec, ReturnTypeSpec, TypeSpec,
 };
 
-use itertools::Itertools;
 use serde_json::Value;
 
 use num_bigint::BigInt;
@@ -175,15 +174,14 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
         }
         ast::Type::Enum(n) => {
             let decl = &ns.enums[*n];
-            let mut variants = decl.values.iter().collect_vec();
-            // sort by discriminant
-            variants.sort_by(|a, b| a.1 .1.cmp(&b.1 .1));
-            let variants = variants
-                .into_iter()
-                .map(|(k, v)| Variant {
+            let variants = decl
+                .values
+                .iter()
+                .enumerate()
+                .map(|(idx, (k, _))| Variant {
                     name: k.clone(),
                     fields: Default::default(),
-                    index: v.1 as u8,
+                    index: idx as u8,
                     docs: Default::default(),
                 })
                 .collect::<Vec<_>>();
