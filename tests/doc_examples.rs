@@ -39,6 +39,12 @@ fn try_compile(path: &str, target: Target) -> Result<(), Diagnostics> {
     codegen(
         &mut ns,
         &Options {
+            dead_storage: true,
+            constant_folding: true,
+            strength_reduce: true,
+            vector_to_slice: true,
+            math_overflow_check: true,
+            common_subexpression_elimination: true,
             opt_level: OptimizationLevel::Default,
             ..Default::default()
         },

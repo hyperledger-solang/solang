@@ -45,20 +45,8 @@ of arithmetic may be replaced:
 - 256 or 128 bit divide maybe replaced by 64 bit divide or shift
 - 256 or 128 bit modulo maybe replaced by 64 bit modulo or bitwise and
 
-.. code-block:: solidity
-
-    contract test {
-        function f() public {
-            for (uint i = 0; i < 10; i++) {
-                // this multiply can be done with a 64 bit instruction
-                g(i * 100));
-            }
-        }
-
-        function g(uint256 v) internal {
-            // ...
-        }
-    }
+.. include:: ../examples/strength_reduce.sol
+  :code: solidity
 
 Solang uses reaching definitions to track the known bits of the variables; here solang knows that i can have
 the values 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 and the other operand is always 100. So, the multiplication can be
@@ -75,23 +63,8 @@ redundant load from and store to contract storage. If the same variable is read 
 the first load is re-used. Similarly, if there is are two successive stores to the same variable, the first
 one is removed as it is redundant. For example:
 
-.. code-block:: solidity
-
-    contract test {
-        int a;
-
-        // this function reads a twice; this can be reduced to one load
-        function redundant_load() public returns (int) {
-            return a + a;
-        }
-
-        // this function writes to contract storage thrice. This can be reduced to one
-        function redundant_store() public {
-            delete a;
-            a = 1;
-            a = 2;
-        }
-    }
+.. include:: ../examples/dead_storage_elimination.sol
+  :code: solidity
 
 This optimization pass can be disabled by running `solang --no-dead-storage`. You can see the difference between
 having this optimization pass on by comparing the output of `solang --no-dead-storage --emit cfg foo.sol` with
@@ -106,29 +79,8 @@ A `bytes` or `string` variable can be stored in a vector, which is a modifyable 
 which is a pointer to readonly memory and an a length. Since a vector is modifyable, each instance requires
 a allocation. For example:
 
-.. code-block:: solidity
-
-    contract test {
-        function can_be_slice() public {
-            // v can just be a pointer to constant memory and an a length indicator
-            string v = "Hello, World!";
-
-            print(v);
-        }
-
-        function must_be_vector() public {
-            // if v is a vector, then it needs to allocated and default value copied.
-            string v = "Hello, World!";
-
-            // bs is copied by reference is now modifyable
-            bytes bs = v;
-
-
-            bs[1] = 97;
-
-            print(v);
-        }
-    }
+.. include:: ../examples/vector_to_slice_optimization.sol
+  :code: solidity
 
 This optimization pass can be disabled by running `solang --no-vector-to-slice`. You can see the difference between
 having this optimization pass on by comparing the output of `solang --no-vector-to-slice --emit cfg foo.sol` with
@@ -143,22 +95,8 @@ Unused Variable Elimination
 During the semantic analysis, Solang detects unused variables and raises warnings for them.
 During codegen, we remove all assignments that have been made to this unused variable. There is an example below:
 
-.. code-block:: solidity
-
-    contract test {
-
-        function test1(int a) public pure returns (int) {
-            int x = 5;
-            x++;
-            if (a > 0) {
-                x = 5;
-            }
-
-            a = (x=3) + a*4;
-
-            return a;
-        }
-    }
+.. include:: ../examples/unused_variable_elimination.sol
+  :code: solidity
 
 The variable 'x' will be removed from the function, as it has never been used. The removal won't affect any
 expressions inside the function.
@@ -176,21 +114,8 @@ of the expression. To disable this feature, use `solang --no-cse`.
 
 Check out the example below. It contains multiple common subexpressions:
 
-.. code-block:: solidity
-
-     contract test {
-
-         function csePass(int a, int b) public pure returns (int) {
-             int x = a*b-5;
-             if (x > 0) {
-                 x = a*b-19;
-             } else {
-                 x = a*b*a;
-             }
-
-             return x+a*b;
-         }
-     }
+.. include:: ../examples/common_subexpression_elimination.sol
+  :code: solidity
 
 The expression `a*b` is repeated throughout the function and will be saved to a temporary variable.
 This temporary will be placed wherever there is an expression `a*b`. You can see the pass in action when you compile
@@ -204,16 +129,8 @@ Array Bound checks optimization
 Whenever an array access is done, there must be a check for ensuring we are not accessing
 beyond the end of an array. Sometimes, the array length could be known. For example:
 
-.. code-block::
-
-    contract c {
-    
-        function test() public returns (int256[]) {
-            int256[] array = new int256[](3);
-            array[1] = 1;
-            return array;
-        }
-    }
+.. include:: ../examples/array_bounds_check_optimization.sol
+  :code: solidity
 
 In this example we access ``array`` element 1, while the array length is 3. So, no bounds
 checks are necessary and the code will more efficient if we do not emit the bounds check in
