@@ -78,6 +78,7 @@ path-slash = "0.2"
 pretty_assertions = "1.2"
 byte-slice-cast = "1.2.1"
 borsh = "0.9.3"
+walkdir = "2"
 
 [package.metadata.docs.rs]
 no-default-features = true
