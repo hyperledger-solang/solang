@@ -5,31 +5,8 @@ A function can be declared inside a contract, in which case it has access to the
 contract storage variables, other contract functions etc. Functions can be also be declared outside
 a contract.
 
-.. code-block:: solidity
-
-    /// get_initial_bound is called from the constructor
-    function get_initial_bound() returns (uint value) {
-        value = 102;
-    }
-
-    contact foo {
-        uint bound = get_initial_bound();
-
-        /** set bound for get with bound */
-        function set_bound(uint _bound) public {
-            bound = _bound;
-        }
-
-        /// Clamp a value within a bound.
-        /// The bound can be set with set_bound().
-        function get_with_bound(uint value) view public returns (uint) {
-            if (value < bound) {
-                return value;
-            } else {
-                return bound;
-            }
-        }
-    }
+.. include:: ../../examples/functions.sol
+  :code: solidity
 
 Function can have any number of arguments. Function arguments may have names;
 if they do not have names then they cannot be used in the function body, but they will
@@ -57,67 +34,23 @@ Function arguments can be passed either by position or by name. When they are ca
 by name, arguments can be in any order. However, functions with anonymous arguments
 (arguments without name) cannot be called this way.
 
-.. code-block:: solidity
-
-    contract foo {
-        function bar(uint32 x, bool y) public returns (uint32) {
-            if (y) {
-                return 2;
-            }
-
-            return 3;
-        }
-
-        function test() public {
-            uint32 a = bar(102, false);
-            a = bar({ y: true, x: 302 });
-        }
-    }
+.. include:: ../../examples/function_arguments.sol
+  :code: solidity
 
 If the function has a single return value, this can be assigned to a variable. If
 the function has multiple return values, these can be assigned using the :ref:`destructuring`
 assignment statement:
 
-.. code-block:: solidity
-
-    contract foo {
-        function bar1(uint32 x, bool y) public returns (address, byte32) {
-            return (address(3), hex"01020304");
-        }
-
-        function bar2(uint32 x, bool y) public returns (bool) {
-            return !y;
-        }
-
-        function test() public {
-            (address f1, bytes32 f2) = bar1(102, false);
-            bool f3 = bar2({x: 255, y: true})
-        }
-    }
+.. include:: ../../examples/function_destructing_arguments.sol
+  :code: solidity
 
 It is also possible to call functions on other contracts, which is also known as calling
 external functions. The called function must be declared public.
 Calling external functions requires ABI encoding the arguments, and ABI decoding the
 return values. This much more costly than an internal function call.
 
-.. code-block:: solidity
-
-    contract foo {
-        function bar1(uint32 x, bool y) public returns (address, byte32) {
-            return (address(3), hex"01020304");
-        }
-
-        function bar2(uint32 x, bool y) public returns (bool) {
-            return !y;
-        }
-    }
-
-    contract bar {
-        function test(foo f) public {
-            (address f1, bytes32 f2) = f.bar1(102, false);
-            bool f3 = f.bar2({x: 255, y: true})
-        }
-    }
+.. include:: ../../examples/function_call_external.sol
+  :code: solidity
 
 The syntax for calling external call is the same as the external call, except for
 that it must be done on a contract type variable. Any error in an external call can
@@ -144,39 +77,8 @@ The Solana runtime allows you the specify the accounts to be passed for an
 external call. This is specified in an array of the struct ``AccountMeta``,
 see the section on :ref:`account_meta`.
 
-.. code-block:: solidity
-
-    import {AccountMeta} from 'solana';
-
-    contract SplToken {
-        address constant tokenProgramId = address"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-        address constant SYSVAR_RENT_PUBKEY = address"SysvarRent111111111111111111111111111111111";
-
-        struct InitializeMintInstruction {
-            uint8 instruction;
-            uint8 decimals;
-            address mintAuthority;
-            uint8 freezeAuthorityOption;
-            address freezeAuthority;
-        }
-
-        function create_mint_with_freezeauthority(uint8 decimals, address mintAuthority, address freezeAuthority) public {
-            InitializeMintInstruction instr = InitializeMintInstruction({
-                instruction: 0,
-                decimals: decimals,
-                mintAuthority: mintAuthority,
-                freezeAuthorityOption: 1,
-                freezeAuthority: freezeAuthority
-            });
-
-            AccountMeta[2] metas = [
-                AccountMeta({pubkey: instr.mintAuthority, is_writable: true, is_signer: false}),
-                AccountMeta({pubkey: SYSVAR_RENT_PUBKEY, is_writable: false, is_signer: false})
-            ];
-
-            tokenProgramId.call{accounts: metas}(instr);
-        }
-    }
+.. include:: ../../examples/solana/function_call_external_accounts.sol
+  :code: solidity
 
 If ``{accounts}`` is not specified, then all account are passed.
 
@@ -189,26 +91,8 @@ hashed with the calling program id to create program derived addresses.
 They will automatically have the signer bit set, which allows a contract to
 sign without using any private keys.
 
-.. code-block:: solidity
-
-    import 'solana';
-
-    contract c {
-        address constant program_id = address"mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68";
-
-        function test(address addr, address addr2, bytes seed) public {
-            bytes instr = new bytes(1);
-
-            instr[0] = 1;
-
-            AccountMeta[2] metas = [
-                AccountMeta({pubkey: addr, is_writable: true, is_signer: true}),
-                AccountMeta({pubkey: addr2, is_writable: true, is_signer: true})
-            ];
-
-            token.call{accounts: metas, seeds: [ [ "test", seed ], [ "foo", "bar "] ]}(instr);
-        }
-    }
+.. include:: ../../examples/solana/function_call_external_seeds.sol
+  :code: solidity
 
 Now if the program derived address for the running program id and the seeds match the address
 ``addr`` and ``addr2``, then then the called program will run with signer and writable bits
@@ -232,21 +116,8 @@ _________________________________________
 For external calls, value can be sent along with the call. The callee must be
 ``payable``. Likewise, a gas limit can be set.
 
-.. code-block:: solidity
-
-    contract foo {
-        function bar() public {
-            other o = new other();
-
-            o.feh{value: 102, gas: 5000}(102);
-        }
-    }
-
-    contract other {
-        function feh(uint32 x) public payable {
-            // ...
-        }
-    }
+.. include:: ../../examples/substrate/function_call_external_gas.sol
+  :code: solidity
 
 .. note::
     The gas cannot be set on Solana for external calls.
@@ -291,13 +162,8 @@ name and the arguments types.
 The selector value can be overriden with the ``selector=hex"deadbea1"`` syntax,
 for example:
 
-.. code-block:: solidity
-
-    contract foo {
-        function get_foo() selector=hex"01020304" public returns (int) {
-            return 102;
-        }
-    }
+.. include:: ../../examples/function_selector_override.sol
+  :code: solidity
 
 Only ``public`` and ``external`` functions have a selector, and can have their
 selector overriden. On Substrate, constructors have selectors too, so they
@@ -324,31 +190,8 @@ different in at least one of two ways:
 A function cannot be overloaded by changing the return types or number of returned
 values. Here is an example of an overloaded function:
 
-.. code-block:: solidity
-
-  contract shape {
-      int64 bar;
-
-      function abs(int val) public returns (int) {
-          if (val >= 0) {
-              return val;
-          } else {
-              return -val;
-          }
-      }
-
-      function abs(int64 val) public returns (int64) {
-          if (val >= 0) {
-              return val;
-          } else {
-              return -val;
-          }
-      }
-
-      function foo(int64 x) public {
-          bar = abs(x);
-      }
-  }
+.. include:: ../../examples/function_overloading.sol
+  :code: solidity
 
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
@@ -363,21 +206,8 @@ of the function abs() is called.
 
   The following example illustrates some overloaded functions and their mangled name:
 
-  .. code-block:: solidity
-    
-    enum E { v1, v2 }
-    struct S { int256 i; bool b; address a; }
-
-    contract C {
-        // foo_
-        function foo() public pure {}
-
-        // foo_uint256_addressArray2Array
-        function foo(uint256 i, address[2][] memory a) public pure {}
-
-        // foo_uint8Array2__int256_bool_address
-        function foo(E[2] memory e, S memory s) public pure {}
-    }
+  .. include:: ../../examples/substrate/function_name_mangling.sol
+    :code: solidity
 
 
 Function Modifiers
@@ -387,21 +217,8 @@ Function modifiers are used to check pre-conditions or post-conditions for a fun
 new modifier must be declared which looks much like a function, but uses the ``modifier``
 keyword rather than ``function``.
 
-.. code-block:: solidity
-
-    contract example {
-        address owner;
-
-        modifier only_owner() {
-            require(msg.sender == owner);
-            _;
-            // insert post conditions here
-        }
-
-        function foo() only_owner public {
-            // ...
-        }
-    }
+.. include:: ../../examples/function_modifier.sol
+  :code: solidity
 
 The function `foo` can only be run by the owner of the contract, else the ``require()`` in its
 modifier will fail. The special symbol ``_;`` will be replaced by body of the function. In fact,
@@ -416,19 +233,8 @@ than 50, `foo()` itself will never be executed, and execution will return to the
 nothing done since ``_;`` is not reached in the modifier and as result foo() is never
 executed.
 
-.. code-block:: solidity
-
-    contract example {
-        modifier check_price(int64 price) {
-            if (price >= 50) {
-                _;
-            }
-        }
-
-        function foo(int64 price) check_price(price) public {
-            // ...
-        }
-    }
+.. include:: ../../examples/function_modifier_arguments.sol
+  :code: solidity
 
 Multiple modifiers can be applied to single function. The modifiers are executed in the
 order of the modifiers specified on the function declaration. Execution will continue to the next modifier
@@ -437,60 +243,14 @@ this example, the `only_owner` modifier is run first, and if that reaches ``_;``
 `check_price` is executed. The body of function `foo()` is only reached once `check_price()`
 reaches ``_;``.
 
-.. code-block:: solidity
-
-    contract example {
-        address owner;
-
-        // a modifier with no arguments does not need "()" in its declaration
-        modifier only_owner {
-            require(msg.sender == owner);
-            _;
-        }
-
-        modifier check_price(int64 price) {
-            if (price >= 50) {
-                _;
-            }
-        }
-
-        function foo(int64 price) only_owner check_price(price) public {
-            // ...
-        }
-    }
+.. include:: ../../examples/function_multiple_modifiers.sol
+  :code: solidity
 
 Modifiers can be inherited or declared ``virtual`` in a base contract and then overriden, exactly like
 functions can be.
 
-.. code-block:: solidity
-
-    contract base {
-        address owner;
-
-        modifier only_owner {
-            require(msg.sender == owner);
-            _;
-        }
-
-        modifier check_price(int64 price) virtual {
-            if (price >= 10) {
-                _;
-            }
-        }
-    }
-
-    contract example is base {
-        modifier check_price(int64 price) override {
-            if (price >= 50) {
-                _;
-            }
-        }
-
-        function foo(int64 price) only_owner check_price(price) public {
-            // ...
-        }
-    }
-
+.. include:: ../../examples/function_override_modifiers.sol
+  :code: solidity
 
 Calling an external function using ``call()``
 _____________________________________________
@@ -504,33 +264,8 @@ This takes a single argument, which should be the ABI encoded arguments. The ret
 values are a ``boolean`` which indicates success if true, and the ABI encoded
 return value in ``bytes``.
 
-.. code-block:: solidity
-
-    contract a {
-        function test() public {
-            b v = new b();
-
-            // the following four lines are equivalent to "uint32 res = v.foo(3,5);"
-
-            // Note that the signature is only hashed and not parsed. So, ensure that the
-            // arguments are of the correct type.
-            bytes data = abi.encodeWithSignature("foo(uint32,uint32)", uint32(3), uint32(5));
-
-            (bool success, bytes rawresult) = address(v).call(data);
-
-            assert(success == true);
-
-            uint32 res = abi.decode(rawresult, (uint32));
-
-            assert(res == 8);
-        }
-    }
-
-    contract b {
-        function foo(uint32 a, uint32 b) public returns (uint32) {
-            return a + b;
-        }
-    }
+.. include:: ../../examples/function_call.sol
+  :code: solidity
 
 Any value or gas limit can be specified for the external call. Note that no check is done to see
 if the called function is ``payable``, since the compiler does not know what function you are
@@ -560,24 +295,10 @@ call is made without value and no ``fallback()`` is defined, then the call also 
 
 Both functions must be declared ``external``.
 
-.. code-block:: solidity
-
-    contract test {
-        int32 bar;
-
-        function foo(uint32 x) public {
-            bar = x;
-        }
-
-        fallback() external {
-            // execute if function selector does not match "foo(uint32)" and no value sent
-        }
-
-        receive() payable external {
-            // execute if function selector does not match "foo(uint32)" and value sent
-        }
-    }
+.. include:: ../../examples/substrate/function_fallback_and_receive.sol
+  :code: solidity
 
 ..  note::
     On Solana, there is no mechanism to have some code executed if an account
     gets credited. So, `receive()` functions are not supported.
+    
