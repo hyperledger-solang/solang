@@ -33,46 +33,16 @@ known value.
 
 An event can be declared in a contract, or outside.
 
-.. code-block:: solidity
-
-    event CounterpartySigned (
-        address indexed party,
-        address counter_party,
-        uint contract_no
-    );
-
-    contract Signer {
-        funtion sign(address counter_party, uint contract_no) internal {
-            emit CounterpartySigned(address(this), counter_party, contract_no);
-        }
-    }
+.. include:: ../../examples/events.sol
+  :code: solidity
 
 Like function calls, the emit statement can have the fields specified by position, or by field name. Using
 field names rather than position may be useful in case the event name is overloaded, since the field names
 make it clearer which exact event is being emitted.
 
 
-.. code-block:: solidity
-
-    event UserModified(
-        address user,
-        string name
-    ) anonymous;
-
-    event UserModified(
-        address user,
-        uint64 groupid
-    );
-
-    contract user {
-        function set_name(string name) public {
-            emit UserModified({ user: msg.sender, name: name });
-        }
-
-        function set_groupid(uint64 id) public {
-            emit UserModified({ user: msg.sender, groupid: id });
-        }
-    }
+.. include:: ../../examples/event_positional_fields.sol
+  :code: solidity
 
 In the transaction log, the first topic of an event is the keccak256 hash of the signature of the
 event. The signature is the event name, followed by the fields types in a comma separated list in parentheses. So
