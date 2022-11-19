@@ -15,6 +15,17 @@ use std::{
 /// Poppulates a file resolver with all imports that could be used by some example.
 fn file_resolver(target: Target) -> FileResolver {
     let mut result = FileResolver::new();
+    result.set_file_contents(
+        "examples/user.sol",
+        r##"
+        struct User { string name; uint count; }
+        function clear_count(User memory user) {
+            user.count = 0;
+        }
+        using {clear_count} for User global;"##
+            .into(),
+    );
+
     if let Target::Solana = target {
         result.set_file_contents(
                 "examples/solana/bobcat.sol",

@@ -14,25 +14,8 @@ ______________________________________
 First, declare a function with one or more arguments. Once the function
 is bound with ``using``, it can be called like a method.
 
-.. code-block:: javascript
-
-    function mask(uint v, uint bits) returns (uint) {
-        return v & ((1 << bits) - 1);
-    }
-
-    function odd(uint v) returns (bool) {
-        return (v & 1) != 0;
-    }
-
-    contract c {
-        using {mask, odd} for *;
-
-        int v;
-
-        function set_v(int n) public {
-            v = n.mask(16);
-        }
-    }
+.. include:: ../../examples/using.sol
+  :code: solidity
 
 The ``using`` declaration can be done on file scope. In this case, the type must
 be specified in place of ``*``. The first argument must match the type that is
@@ -42,31 +25,13 @@ If a user-defined type is used, the the ``global`` keyword can be used. This
 means the ``using`` binding can be used in any file, even when the type is
 imported.
 
-.. code-block:: solidity
-
-    struct User {
-        string name;
-        uint count;
-    }
-
-    function clear_count(User memory user) {
-        user.count = 0;
-    }
-
-    using {clear_count} for User global;
+.. include:: ../../examples/using_global.sol
+  :code: solidity
 
 Now even when ``User`` is imported, the clear_count() method can be used.
 
-
-.. code-block:: solidity
-
-    import {User} from "user.sol";
-
-    contract c {
-        function foo(User memory user) {
-            user.clear_count();
-        }
-    }
+.. include:: ../../examples/using_imports.sol
+  :code: solidity
 
 ``using`` with libraries
 ________________________

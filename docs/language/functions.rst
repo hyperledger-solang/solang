@@ -301,4 +301,3 @@ Both functions must be declared ``external``.
 ..  note::
     On Solana, there is no mechanism to have some code executed if an account
     gets credited. So, `receive()` functions are not supported.
-    
