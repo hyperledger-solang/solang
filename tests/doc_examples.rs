@@ -25,7 +25,6 @@ fn file_resolver(target: Target) -> FileResolver {
         using {clear_count} for User global;"##
             .into(),
     );
-
     if let Target::Solana = target {
         result.set_file_contents(
                 "examples/solana/bobcat.sol",
@@ -81,7 +80,7 @@ fn try_compile(path: &str, target: Target) -> Result<(), Diagnostics> {
     Ok(())
 }
 
-/// Assert no compilation errors for for all `.sol` files found in `dir`.
+/// Assert no compilation errors for all `.sol` files found in `dir`.
 fn assert_compile(dir: &str, target: Target) {
     let errors = get_source_files(dir)
         .par_iter()
