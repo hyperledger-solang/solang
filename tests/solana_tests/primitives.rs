@@ -1566,3 +1566,40 @@ fn truncate_bigint(n: &mut BigInt, width: usize) {
     }
     *n = BigInt::from_signed_bytes_le(&bytes_le);
 }
+
+#[test]
+fn bytes_cast() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            function to_bytes(bytes4 b) public returns (bytes) {
+                return b;
+            }
+
+            function to_bytes5(bytes b) public returns (bytes5) {
+                return b;
+            }
+        }
+        "#,
+    );
+
+    vm.constructor("foo", &[]);
+
+    let returns = vm.function(
+        "to_bytes",
+        &[BorshToken::FixedBytes(b"abcd".to_vec())],
+        &[],
+        None,
+    );
+
+    assert_eq!(returns, vec![BorshToken::Bytes(b"abcd".to_vec())]);
+
+    let returns = vm.function(
+        "to_bytes5",
+        &[BorshToken::Bytes(b"abcde".to_vec())],
+        &[],
+        None,
+    );
+
+    assert_eq!(returns, vec![BorshToken::FixedBytes(b"abcde".to_vec())]);
+}

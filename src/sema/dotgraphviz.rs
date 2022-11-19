@@ -641,7 +641,7 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::BytesCast(loc, from, to, expr) => {
+            Expression::BytesCast(loc, to, from, expr) => {
                 let node = self.add_node(
                     Node::new(
                         "bytes_cast",

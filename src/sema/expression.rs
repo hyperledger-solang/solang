@@ -75,7 +75,7 @@ impl RetrieveType for Expression {
             | Expression::Trunc(_, ty, _)
             | Expression::CheckingTrunc(_, ty, _)
             | Expression::Cast(_, ty, _)
-            | Expression::BytesCast(_, _, ty, _)
+            | Expression::BytesCast(_, ty, ..)
             | Expression::Complement(_, ty, _)
             | Expression::UnaryMinus(_, ty, _)
             | Expression::ConditionalOperator(_, ty, ..)
@@ -839,7 +839,7 @@ impl Expression {
                 Ok(Expression::Cast(*loc, to.clone(), Box::new(self.clone())))
             }
             (Type::Bytes(_), Type::DynamicBytes) | (Type::DynamicBytes, Type::Bytes(_)) => Ok(
-                Expression::BytesCast(*loc, from.clone(), to.clone(), Box::new(self.clone())),
+                Expression::BytesCast(*loc, to.clone(), from.clone(), Box::new(self.clone())),
             ),
             // Explicit conversion from bytesN to int/uint only allowed with expliciy
             // cast and if it is the same size (i.e. no conversion required)
