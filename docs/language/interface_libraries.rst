@@ -7,48 +7,8 @@ __________
 An interface is a contract sugar type with restrictions. This type cannot be instantiated; it can only define the
 functions prototypes for a contract. This is useful as a generic interface.
 
-.. code-block:: solidity
-
-    interface operator {
-        function op1(int32 a, int32 b) external returns (int32);
-        function op2(int32 a, int32 b) external returns (int32);
-    }
-
-    contract ferqu {
-        operator op;
-
-        constructor(bool do_adds) {
-            if (do_adds) {
-                op = new m1();
-            } else {
-                op = new m2();
-            }
-        }
-
-        function x(int32 b) public returns (int32) {
-            return op.op1(102, b);
-        }
-    }
-
-    contract m1 is operator {
-        function op1(int32 a, int32 b) public override returns (int32) {
-            return a + b;
-        }
-
-        function op2(int32 a, int32 b) public override returns (int32) {
-            return a - b;
-        }
-    }
-
-    contract m2 is operator {
-        function op1(int32 a, int32 b) public override returns (int32) {
-            return a * b;
-        }
-
-        function op2(int32 a, int32 b) public override returns (int32) {
-            return a / b;
-        }
-    }
+.. include:: ../../examples/interface.sol
+  :code: solidity
 
 - Interfaces can only have other interfaces as a base contract
 - All functions must the ``external`` visibilty
@@ -63,19 +23,8 @@ Libraries are a special type of contract which can be reused in multiple contrac
 be called with the ``library.function()`` syntax. When the library has been imported or declared, any contract
 can use its functions simply by using its name.
 
-.. code-block:: javascript
-
-    contract test {
-        function foo(uint64 x) public pure returns (uint64) {
-            return ints.max(x, 65536);
-        }
-    }
-
-    library ints {
-        function max(uint64 a, uint64 b) public pure returns (uint64) {
-            return a > b ? a : b;
-        }
-    }
+.. include:: ../../examples/library.sol
+  :code: solidity
 
 When writing libraries there are restrictions compared to contracts:
 
@@ -99,23 +48,8 @@ Libraries can be used as method calls on variables. The type of the variable nee
 library, and the type of the first parameter of the function of the library must match the type of a
 variable.
 
-.. code-block:: solidity
-
-    contract test {
-        using lib for int32[100];
-
-        int32[100] bar;
-
-        function foo() public returns (int64) {
-            bar.set(10, 571);
-        }
-    }
-
-    library lib {
-        function set(int32[100] storage a, uint index, int32 val) internal {
-            a[index] = val;
-        }
-    }
+.. include:: ../../examples/library_using_for.sol
+  :code: solidity
 
 The syntax ``using`` `library` ``for`` `Type` ``;`` is the syntax that binds the library to the type. This
 must be specified on the contract. This binds library ``lib`` to any variable with type ``int32[100]``.
