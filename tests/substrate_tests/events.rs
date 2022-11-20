@@ -1,10 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use ink_primitives::Hash;
+use ink_env::{
+    hash::{Blake2x256, CryptoHash},
+    topics::PrefixedValue,
+};
 use parity_scale_codec::{self as scale, Decode, Encode};
 use solang::{file_resolver::FileResolver, Target};
 use std::ffi::OsStr;
+
+pub(crate) fn topic_hash(encoded: &[u8]) -> Vec<u8> {
+    let mut buf = [0; 32];
+    if encoded.len() <= 32 {
+        buf[..encoded.len()].copy_from_slice(encoded);
+    } else {
+        <Blake2x256 as CryptoHash>::hash(encoded, &mut buf);
+    };
+    buf.into()
+}
 
 #[test]
 fn emit() {
@@ -32,8 +45,8 @@ fn emit() {
     let mut runtime = build_solidity(
         r##"
         contract a {
-            event foo(bool,uint32,int64 indexed);
-            event bar(uint32,uint64,string indexed);
+            event foo(bool,uint32,int64 indexed i);
+            event bar(uint32,uint64,string indexed s);
             function emit_event() public {
                 emit foo(true, 102, 1);
                 emit bar(0xdeadcafe, 102, "foobar");
@@ -46,19 +59,39 @@ fn emit() {
 
     assert_eq!(runtime.events.len(), 2);
     let event = &runtime.events[0];
-    assert_eq!(event.topics.len(), 1);
+    assert_eq!(event.topics.len(), 2);
     let mut t = [0u8; 32];
     t[0] = 1;
-
-    assert_eq!(event.topics[0], t);
+    let mut event_topic = scale::Encode::encode(&String::from("a::foo"));
+    event_topic[0] = 0;
+    assert_eq!(event.topics[0], topic_hash(&event_topic[..])[..]);
+    let topic = PrefixedValue {
+        prefix: b"a::foo::i",
+        value: &1i64,
+    }
+    .encode();
+    assert_eq!(event.topics[1], topic_hash(&topic[..])[..]);
     assert_eq!(event.data, Foo(0, true, 102).encode());
 
     let event = &runtime.events[1];
-    assert_eq!(event.topics.len(), 1);
-    assert_eq!(
-        event.topics[0].to_vec(),
-        hex::decode("38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e").unwrap()
+    assert_eq!(event.topics.len(), 2);
+    println!(
+        "topic hash: {}",
+        std::str::from_utf8(&event.topics[0]).unwrap()
     );
+    println!(
+        "topic hash: {}",
+        std::str::from_utf8(&event.topics[0]).unwrap()
+    );
+    let mut event_topic = scale::Encode::encode(&String::from("a::bar"));
+    event_topic[0] = 0;
+    assert_eq!(event.topics[0], topic_hash(&event_topic[..])[..]);
+    let topic = PrefixedValue {
+        prefix: b"a::bar::s",
+        value: &String::from("foobar"),
+    }
+    .encode();
+    assert_eq!(event.topics[1].to_vec(), topic_hash(&topic[..]));
     assert_eq!(event.data, (1u8, 0xdeadcafeu32, 102u64).encode());
 }
 

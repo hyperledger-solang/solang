@@ -6,8 +6,7 @@ use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::ast::{self, Function, Namespace, RetrieveType, StringLocation, Type};
-use ink_env::hash::{Blake2x256, CryptoHash, HashOutput};
-use ink_primitives::{Clear, Hash};
+use ink_env::hash::{Blake2x256, CryptoHash};
 use parity_scale_codec as scale;
 use scale::Encode;
 use solang_parser::pt;
@@ -21,24 +20,15 @@ pub(super) struct SubstrateEventEmitter<'a> {
     pub(super) event_no: usize,
 }
 
-/// Taken from the ink erc20 example test
-pub(crate) fn _encoded_into_hash<T>(entity: &T) -> Hash
-where
-    T: scale::Encode,
-{
-    let mut result = Hash::clear();
-    let len_result = result.as_ref().len();
-    let encoded = entity.encode();
-    let len_encoded = encoded.len();
-    if len_encoded <= len_result {
-        result.as_mut()[..len_encoded].copy_from_slice(&encoded);
-        return result;
-    }
-    let mut hash_output = <<Blake2x256 as HashOutput>::Type as Default>::default();
-    <Blake2x256 as CryptoHash>::hash(&encoded, &mut hash_output);
-    let copy_len = core::cmp::min(hash_output.len(), len_result);
-    result.as_mut()[0..copy_len].copy_from_slice(&hash_output[0..copy_len]);
-    result
+/// Takes a scale-encoded topic and makes it into a topic hash.
+pub(crate) fn topic_hash(encoded: &[u8]) -> Vec<u8> {
+    let mut buf = [0; 32];
+    if encoded.len() <= 32 {
+        buf[..encoded.len()].copy_from_slice(encoded);
+    } else {
+        <Blake2x256 as CryptoHash>::hash(encoded, &mut buf);
+    };
+    buf.into()
 }
 
 impl EventEmitter for SubstrateEventEmitter<'_> {
@@ -57,35 +47,21 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
         let loc = pt::Loc::Builtin;
         let event = &self.ns.events[self.event_no];
-        let topic_ty = || Type::DynamicBytes;
+        let hash_len = || Box::new(Expression::NumberLiteral(loc, Type::Uint(32), 32.into()));
 
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
         if !event.anonymous {
             let mut encoded =
                 format!("{}::{}", &self.ns.contracts[contract_no].name, &event.name).encode();
-            encoded[0] = 0; // Set the prefix
-            let len_encoded = encoded.len();
-            let mut result = Hash::clear();
-            let len_result = result.as_ref().len();
-            let result = if len_encoded <= len_result {
-                result.as_mut()[..len_encoded].copy_from_slice(&encoded);
-                result
-            } else {
-                let mut hash_output = <<Blake2x256 as HashOutput>::Type as Default>::default();
-                <Blake2x256 as CryptoHash>::hash(&encoded, &mut hash_output);
-                let copy_len = core::cmp::min(hash_output.len(), len_result);
-                result.as_mut()[0..copy_len].copy_from_slice(&hash_output[0..copy_len]);
-                result
-            };
-            let result = result.as_ref().to_vec();
+            encoded[0] = 0; // Set the prefix (there is no prefix for the event topic)
             topics.push(Expression::AllocDynamicBytes(
                 loc,
                 Type::Slice(Type::Uint(8).into()),
-                Expression::NumberLiteral(loc, Type::Uint(32), result.len().into()).into(),
-                Some(result),
+                hash_len(),
+                Some(topic_hash(&encoded[..])),
             ));
-            topic_tys.push(topic_ty());
+            topic_tys.push(Type::DynamicBytes);
         };
 
         // Topic prefixes are static and can be calculated at compile time.
@@ -107,24 +83,19 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
         for (i, arg) in self.args.iter().enumerate() {
             if self.ns.events[self.event_no].fields[i].indexed {
-                //let ty = arg.ty();
-
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
-
                 let e = Expression::AbiEncode {
                     loc,
                     tys: vec![e.ty()],
                     packed: vec![],
                     args: vec![e],
                 };
-
                 let concatenated = Expression::StringConcat(
                     loc,
                     Type::DynamicBytes,
                     StringLocation::CompileTime(topic_prefixes.remove(0)), // TODO not efficient
                     StringLocation::RunTime(e.into()),
                 );
-                assert_eq!(concatenated.ty(), Type::DynamicBytes);
 
                 vartab.new_dirty_tracker();
                 let var = vartab.temp_anonymous(&Type::DynamicBytes);
@@ -136,7 +107,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                         expr: concatenated,
                     },
                 );
-                let unhashed = Expression::Variable(loc, topic_ty(), var);
+                let unhashed = Expression::Variable(loc, Type::DynamicBytes, var);
                 let compare = Expression::UnsignedMore(
                     loc,
                     Expression::Builtin(
@@ -146,7 +117,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                         vec![unhashed.clone()],
                     )
                     .into(),
-                    Expression::NumberLiteral(loc, Type::Uint(32), 32.into()).into(),
+                    hash_len(),
                 );
 
                 let bigger = cfg.new_basic_block("bigger".into());
@@ -181,7 +152,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 cfg.set_phis(done, vartab.pop_dirty_tracker());
 
                 topics.push(unhashed);
-                topic_tys.push(topic_ty());
+                topic_tys.push(Type::DynamicBytes);
             } else {
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
 
