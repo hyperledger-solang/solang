@@ -1,4 +1,3 @@
-
 type Value is uint128;
 
 function inc_and_wrap(int128 v) returns (Value) {
