@@ -19,7 +19,7 @@ If a contract is expected to receive value on instantiation, the constructor sho
 .. note::
     Solang allows naming constructors in the Substrate target:
 
-    .. include:: ../../examples/substrate/constructor_named.sol
+    .. include:: ../examples/substrate/constructor_named.sol
       :code: solidity
 
     Constructors without a name will be called ``new`` in the metadata.
@@ -33,7 +33,7 @@ _______________________
 Contracts can be created using the ``new`` keyword. The contract that is being created might have
 constructor arguments, which need to be provided.
 
-.. include:: ../../examples/contract_new.sol
+.. include:: ../examples/contract_new.sol
   :code: solidity
 
 The constructor might fail for various reasons, for example ``require()`` might fail here. This can
@@ -47,7 +47,7 @@ _________________________________
 It is possible to send value to the new contract. This can be done with the ``{value: 500}``
 syntax, like so:
 
-.. include:: ../../examples/substrate/contract_payable.sol
+.. include:: ../examples/substrate/contract_payable.sol
   :code: solidity
 
 The constructor should be declared ``payable`` for this to work.
@@ -77,7 +77,7 @@ a contract twice with the same salt and arguments will fail. The salt is of type
 If gas is specified, this limits the amount gas the constructor for the new contract
 can use. gas is a ``uint64``.
 
-.. include:: ../../examples/substrate/contract_gas_limit.sol
+.. include:: ../examples/substrate/contract_gas_limit.sol
   :code: solidity
 
 When creating contract on Solana, the size of the new account can be specified using
@@ -86,7 +86,7 @@ plus the size required for any fixed-size fields. When you specify space, this i
 the space in addition to the fixed-size fields. So, if you specify `space: 0`, then there is
 no space for any dynamicially allocated fields.
 
-.. include:: ../../examples/solana/contract_space.sol
+.. include:: ../examples/solana/contract_space.sol
   :code: solidity
 
 Base contracts, abstract contracts and interfaces
@@ -101,7 +101,7 @@ _________________________
 To inherit from another contract, you have to specify it as a base contract. Multiple contracts can
 be specified here.
 
-.. include:: ../../examples/contract_inheritance.sol
+.. include:: ../examples/contract_inheritance.sol
   :code: solidity
 
 In this case, contract ``a`` inherits from both ``b`` and ``c``. Both ``func1()`` and ``func2()``
@@ -112,7 +112,7 @@ Inheriting contracts is recursive; this means that if you inherit a contract, yo
 that that contract inherits. In this example, contract ``a`` inherits ``b`` directly, and inherits ``c``
 through ``b``. This means that contract ``b`` also has a variable ``bar``.
 
-.. include:: ../../examples/contract_recursive_inheritance.sol
+.. include:: ../examples/contract_recursive_inheritance.sol
   :code: solidity
 
 Virtual Functions
@@ -123,13 +123,13 @@ For this to be possible, the base contract must have specified the function as `
 inheriting contract must then specify the same function with the same name, arguments and return values, and
 add the ``override`` keyword.
 
-.. include:: ../../examples/virtual_functions.sol
+.. include:: ../examples/virtual_functions.sol
   :code: solidity
 
 If the function is present in more than one base contract, the ``override`` attribute must list all the base
 contracts it is overriding.
 
-.. include:: ../../examples/virtual_functions_override.sol
+.. include:: ../examples/virtual_functions_override.sol
   :code: solidity
 
 Calling function in base contract
@@ -138,19 +138,19 @@ _________________________________
 When a virtual function is called, the dispatch is *virtual*. If the function being called is
 overriden in another contract, then the overriding function is called. For example:
 
-.. include:: ../../examples/base_contract_function_call.sol
+.. include:: ../examples/base_contract_function_call.sol
   :code: solidity
 
 Rather than specifying the base contract, use ``super`` as the contract to call the base contract
 function.
 
-.. include:: ../../examples/super_contract_function_call.sol
+.. include:: ../examples/super_contract_function_call.sol
   :code: solidity
 
 If there are multiple base contracts which the define the same function, the function of the first base
 contract is called.
 
-.. include:: ../../examples/contract_multiple_inheritance.sol
+.. include:: ../examples/contract_multiple_inheritance.sol
   :code: solidity
 
 Specifying constructor arguments
@@ -159,7 +159,7 @@ ________________________________
 If a contract inherits another contract, then when it is instantiated or deployed, then the constructor for
 its inherited contracts is called. The constructor arguments can be specified on the base contract itself.
 
-.. include:: ../../examples/inherited_constructor_arguments.sol
+.. include:: ../examples/inherited_constructor_arguments.sol
   :code: solidity
 
 When ``a`` is deployed, the constructor for ``c`` is executed first, then ``b``, and lastly ``a``. When the
@@ -167,7 +167,7 @@ constructor arguments are specified on the base contract, the values must be con
 the base arguments on the constructor for inheriting contract. Now we have access to the constructor arguments,
 which means we can have runtime-defined arguments to the inheriting constructors.
 
-.. include:: ../../examples/inherited_constructor_runtime_arguments.sol
+.. include:: ../examples/inherited_constructor_runtime_arguments.sol
   :code: solidity
 
 The execution is not entirely intuitive in this case. When contract ``a`` is deployed with an int argument of 10,
@@ -184,7 +184,7 @@ which can be instantiated. A contract can be abstract because the functions it d
 for example:
 
 
-.. include:: ../../examples/abstract_contract.sol
+.. include:: ../examples/abstract_contract.sol
   :code: solidity
 
 This contract cannot be instantiated, since there is no body or implementation for ``func2``. Another contract
@@ -195,5 +195,5 @@ instantiate contract ``a`` we would not know what the constructor arguments to i
 Note that contract ``c`` does inherit from ``a`` and can specify the arguments for ``b`` on its constructor,
 even though ``c`` does not directly inherit ``b`` (but does indirectly).
 
-.. include:: ../../examples/abstract_contract_inheritance.sol
+.. include:: ../examples/abstract_contract_inheritance.sol
   :code: solidity

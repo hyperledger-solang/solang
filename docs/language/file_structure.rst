@@ -5,7 +5,7 @@ A single Solidity source file may define multiple contracts. A contract is defin
 with the ``contract`` keyword, following by the contract name and then the definition
 of the contract in between curly braces ``{`` and ``}``.
 
-.. include:: ../../examples/multiple_contracts.sol
+.. include:: ../examples/multiple_contracts.sol
   :code: solidity
 
 When compiling this, Solang will output contract code for both `A` and `B`, irrespective of

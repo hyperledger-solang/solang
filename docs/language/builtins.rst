@@ -104,7 +104,7 @@ address ``tx.origin``
 AccountInfo[] ``tx.accounts``
     Only available on Solana. See :ref:`account_info`. Here is an example:
 
-.. include:: ../../examples/solana/accountinfo.sol
+.. include:: ../examples/solana/accountinfo.sol
   :code: solidity
 
 address ``tx.program_id``
@@ -172,7 +172,7 @@ Assert takes a boolean argument. If that evaluates to false, execution is aborte
 
 .. code-block:: solidity
 
-.. include:: ../../examples/revert.sol
+.. include:: ../examples/revert.sol
   :code: solidity
 
 revert() or revert(string)
@@ -186,7 +186,7 @@ a function.
 If the caller is another contract, it can use the `ReasonCode` in a :ref:`try-catch`
 statement.
 
-.. include:: ../../examples/assert.sol
+.. include:: ../examples/assert.sol
   :code: solidity
 
 require(bool) or require(bool, string)
@@ -198,7 +198,7 @@ if the `bool` arguments is `false`, then execution is aborted. There is an optio
 `string` argument which is called the `ReasonCode`, which can be used by the caller
 to identify what the problem is.
 
-.. include:: ../../examples/require.sol
+.. include:: ../examples/require.sol
   :code: solidity
 
 ABI encoding and decoding
@@ -280,7 +280,7 @@ abi.encodeCall(function, ...)
 ABI encodes the function call to the function which should be specified as ``ContractName.FunctionName``. The arguments
 are cast and checked against the function specified as the first argument.
 
-.. include:: ../../examples/abi_encode_call.sol
+.. include:: ../examples/abi_encode_call.sol
   :code: solidity
 
 Hash
@@ -289,7 +289,7 @@ Hash
 Only available on Substrate, it represents the ``Hash`` type from ``ink_primitives`` via user type definition.
 Its underlying type is ``bytes32``, but it will be reported correctly as the ``Hash`` type in the metadata.
 
-.. include:: ../../examples/substrate/hash_type.sol
+.. include:: ../examples/substrate/hash_type.sol
   :code: solidity
 
 Cryptography
@@ -523,7 +523,7 @@ print(string)
 
 print() takes a string argument.
 
-.. include:: ../../examples/print.sol
+.. include:: ../examples/print.sol
   :code: solidity
 
 .. note::

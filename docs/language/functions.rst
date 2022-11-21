@@ -5,7 +5,7 @@ A function can be declared inside a contract, in which case it has access to the
 contract storage variables, other contract functions etc. Functions can be also be declared outside
 a contract.
 
-.. include:: ../../examples/functions.sol
+.. include:: ../examples/functions.sol
   :code: solidity
 
 Function can have any number of arguments. Function arguments may have names;
@@ -34,14 +34,14 @@ Function arguments can be passed either by position or by name. When they are ca
 by name, arguments can be in any order. However, functions with anonymous arguments
 (arguments without name) cannot be called this way.
 
-.. include:: ../../examples/function_arguments.sol
+.. include:: ../examples/function_arguments.sol
   :code: solidity
 
 If the function has a single return value, this can be assigned to a variable. If
 the function has multiple return values, these can be assigned using the :ref:`destructuring`
 assignment statement:
 
-.. include:: ../../examples/function_destructing_arguments.sol
+.. include:: ../examples/function_destructing_arguments.sol
   :code: solidity
 
 It is also possible to call functions on other contracts, which is also known as calling
@@ -49,7 +49,7 @@ external functions. The called function must be declared public.
 Calling external functions requires ABI encoding the arguments, and ABI decoding the
 return values. This much more costly than an internal function call.
 
-.. include:: ../../examples/function_call_external.sol
+.. include:: ../examples/function_call_external.sol
   :code: solidity
 
 The syntax for calling external call is the same as the external call, except for
@@ -77,7 +77,7 @@ The Solana runtime allows you the specify the accounts to be passed for an
 external call. This is specified in an array of the struct ``AccountMeta``,
 see the section on :ref:`account_meta`.
 
-.. include:: ../../examples/solana/function_call_external_accounts.sol
+.. include:: ../examples/solana/function_call_external_accounts.sol
   :code: solidity
 
 If ``{accounts}`` is not specified, then all account are passed.
@@ -91,7 +91,7 @@ hashed with the calling program id to create program derived addresses.
 They will automatically have the signer bit set, which allows a contract to
 sign without using any private keys.
 
-.. include:: ../../examples/solana/function_call_external_seeds.sol
+.. include:: ../examples/solana/function_call_external_seeds.sol
   :code: solidity
 
 Now if the program derived address for the running program id and the seeds match the address
@@ -116,7 +116,7 @@ _________________________________________
 For external calls, value can be sent along with the call. The callee must be
 ``payable``. Likewise, a gas limit can be set.
 
-.. include:: ../../examples/substrate/function_call_external_gas.sol
+.. include:: ../examples/substrate/function_call_external_gas.sol
   :code: solidity
 
 .. note::
@@ -162,7 +162,7 @@ name and the arguments types.
 The selector value can be overriden with the ``selector=hex"deadbea1"`` syntax,
 for example:
 
-.. include:: ../../examples/function_selector_override.sol
+.. include:: ../examples/function_selector_override.sol
   :code: solidity
 
 Only ``public`` and ``external`` functions have a selector, and can have their
@@ -190,7 +190,7 @@ different in at least one of two ways:
 A function cannot be overloaded by changing the return types or number of returned
 values. Here is an example of an overloaded function:
 
-.. include:: ../../examples/function_overloading.sol
+.. include:: ../examples/function_overloading.sol
   :code: solidity
 
 In the function foo, abs() is called with an ``int64`` so the second implementation
@@ -206,7 +206,7 @@ of the function abs() is called.
 
   The following example illustrates some overloaded functions and their mangled name:
 
-  .. include:: ../../examples/substrate/function_name_mangling.sol
+  .. include:: ../examples/substrate/function_name_mangling.sol
     :code: solidity
 
 
@@ -217,7 +217,7 @@ Function modifiers are used to check pre-conditions or post-conditions for a fun
 new modifier must be declared which looks much like a function, but uses the ``modifier``
 keyword rather than ``function``.
 
-.. include:: ../../examples/function_modifier.sol
+.. include:: ../examples/function_modifier.sol
   :code: solidity
 
 The function `foo` can only be run by the owner of the contract, else the ``require()`` in its
@@ -233,7 +233,7 @@ than 50, `foo()` itself will never be executed, and execution will return to the
 nothing done since ``_;`` is not reached in the modifier and as result foo() is never
 executed.
 
-.. include:: ../../examples/function_modifier_arguments.sol
+.. include:: ../examples/function_modifier_arguments.sol
   :code: solidity
 
 Multiple modifiers can be applied to single function. The modifiers are executed in the
@@ -243,13 +243,13 @@ this example, the `only_owner` modifier is run first, and if that reaches ``_;``
 `check_price` is executed. The body of function `foo()` is only reached once `check_price()`
 reaches ``_;``.
 
-.. include:: ../../examples/function_multiple_modifiers.sol
+.. include:: ../examples/function_multiple_modifiers.sol
   :code: solidity
 
 Modifiers can be inherited or declared ``virtual`` in a base contract and then overriden, exactly like
 functions can be.
 
-.. include:: ../../examples/function_override_modifiers.sol
+.. include:: ../examples/function_override_modifiers.sol
   :code: solidity
 
 Calling an external function using ``call()``
@@ -264,7 +264,7 @@ This takes a single argument, which should be the ABI encoded arguments. The ret
 values are a ``boolean`` which indicates success if true, and the ABI encoded
 return value in ``bytes``.
 
-.. include:: ../../examples/function_call.sol
+.. include:: ../examples/function_call.sol
   :code: solidity
 
 Any value or gas limit can be specified for the external call. Note that no check is done to see
@@ -295,7 +295,7 @@ call is made without value and no ``fallback()`` is defined, then the call also 
 
 Both functions must be declared ``external``.
 
-.. include:: ../../examples/substrate/function_fallback_and_receive.sol
+.. include:: ../examples/substrate/function_fallback_and_receive.sol
   :code: solidity
 
 ..  note::

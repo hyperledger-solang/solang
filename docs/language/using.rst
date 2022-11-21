@@ -14,7 +14,7 @@ ______________________________________
 First, declare a function with one or more arguments. Once the function
 is bound with ``using``, it can be called like a method.
 
-.. include:: ../../examples/using.sol
+.. include:: ../examples/using.sol
   :code: solidity
 
 The ``using`` declaration can be done on file scope. In this case, the type must
@@ -25,12 +25,12 @@ If a user-defined type is used, the the ``global`` keyword can be used. This
 means the ``using`` binding can be used in any file, even when the type is
 imported.
 
-.. include:: ../../examples/using_global.sol
+.. include:: ../examples/using_global.sol
   :code: solidity
 
 Now even when ``User`` is imported, the clear_count() method can be used.
 
-.. include:: ../../examples/using_imports.sol
+.. include:: ../examples/using_imports.sol
   :code: solidity
 
 ``using`` with libraries

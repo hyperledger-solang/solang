@@ -15,7 +15,7 @@ The Parity Substrate has the following differences to Ethereum Solidity:
 - An `assert()`, `require()`, or `revert()` executes the wasm unreachable instruction. The reason code is lost
 
 There is an solidity example which can be found in the
-`examples <https://github.com/hyperledger/solang/tree/main/examples>`_
+`examples <https://github.com/hyperledger/solang/tree/ma./examples>`_
 directory. Write this to flipper.sol and run:
 
 .. code-block:: bash

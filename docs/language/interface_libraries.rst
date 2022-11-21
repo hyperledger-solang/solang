@@ -7,7 +7,7 @@ __________
 An interface is a contract sugar type with restrictions. This type cannot be instantiated; it can only define the
 functions prototypes for a contract. This is useful as a generic interface.
 
-.. include:: ../../examples/interface.sol
+.. include:: ../examples/interface.sol
   :code: solidity
 
 - Interfaces can only have other interfaces as a base contract
@@ -23,7 +23,7 @@ Libraries are a special type of contract which can be reused in multiple contrac
 be called with the ``library.function()`` syntax. When the library has been imported or declared, any contract
 can use its functions simply by using its name.
 
-.. include:: ../../examples/library.sol
+.. include:: ../examples/library.sol
   :code: solidity
 
 When writing libraries there are restrictions compared to contracts:
@@ -48,7 +48,7 @@ Libraries can be used as method calls on variables. The type of the variable nee
 library, and the type of the first parameter of the function of the library must match the type of a
 variable.
 
-.. include:: ../../examples/library_using_for.sol
+.. include:: ../examples/library_using_for.sol
   :code: solidity
 
 The syntax ``using`` `library` ``for`` `Type` ``;`` is the syntax that binds the library to the type. This

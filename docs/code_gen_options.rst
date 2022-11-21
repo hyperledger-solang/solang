@@ -45,7 +45,7 @@ of arithmetic may be replaced:
 - 256 or 128 bit divide maybe replaced by 64 bit divide or shift
 - 256 or 128 bit modulo maybe replaced by 64 bit modulo or bitwise and
 
-.. include:: ../examples/strength_reduce.sol
+.. include:: ./examples/strength_reduce.sol
   :code: solidity
 
 Solang uses reaching definitions to track the known bits of the variables; here solang knows that i can have
@@ -63,7 +63,7 @@ redundant load from and store to contract storage. If the same variable is read 
 the first load is re-used. Similarly, if there is are two successive stores to the same variable, the first
 one is removed as it is redundant. For example:
 
-.. include:: ../examples/dead_storage_elimination.sol
+.. include:: ./examples/dead_storage_elimination.sol
   :code: solidity
 
 This optimization pass can be disabled by running `solang --no-dead-storage`. You can see the difference between
@@ -79,7 +79,7 @@ A `bytes` or `string` variable can be stored in a vector, which is a modifyable 
 which is a pointer to readonly memory and an a length. Since a vector is modifyable, each instance requires
 a allocation. For example:
 
-.. include:: ../examples/vector_to_slice_optimization.sol
+.. include:: ./examples/vector_to_slice_optimization.sol
   :code: solidity
 
 This optimization pass can be disabled by running `solang --no-vector-to-slice`. You can see the difference between
@@ -95,7 +95,7 @@ Unused Variable Elimination
 During the semantic analysis, Solang detects unused variables and raises warnings for them.
 During codegen, we remove all assignments that have been made to this unused variable. There is an example below:
 
-.. include:: ../examples/unused_variable_elimination.sol
+.. include:: ./examples/unused_variable_elimination.sol
   :code: solidity
 
 The variable 'x' will be removed from the function, as it has never been used. The removal won't affect any
@@ -114,7 +114,7 @@ of the expression. To disable this feature, use `solang --no-cse`.
 
 Check out the example below. It contains multiple common subexpressions:
 
-.. include:: ../examples/common_subexpression_elimination.sol
+.. include:: ./examples/common_subexpression_elimination.sol
   :code: solidity
 
 The expression `a*b` is repeated throughout the function and will be saved to a temporary variable.
@@ -129,7 +129,7 @@ Array Bound checks optimization
 Whenever an array access is done, there must be a check for ensuring we are not accessing
 beyond the end of an array. Sometimes, the array length could be known. For example:
 
-.. include:: ../examples/array_bounds_check_optimization.sol
+.. include:: ./examples/array_bounds_check_optimization.sol
   :code: solidity
 
 In this example we access ``array`` element 1, while the array length is 3. So, no bounds

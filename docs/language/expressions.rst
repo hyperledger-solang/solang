@@ -37,7 +37,7 @@ x :superscript:`y`. This can only be done for unsigned types.
 Overflow checking is limited to types of 64 bits and smaller, if the `--math-overflow` command
 line argument is specified. No overflow checking is generated in `unchecked` blocks, like so:
 
-.. include:: ../../examples/expression_unchecked.sol
+.. include:: ../examples/expression_unchecked.sol
   :code: solidity
 
 Bitwise operators
@@ -113,14 +113,14 @@ ____
 The keyword ``this`` evaluates to the current contract. The type of this is the type of the
 current contract. It can be cast to ``address`` or ``address payable`` using a cast.
 
-.. include:: ../../examples/expression_this.sol
+.. include:: ../examples/expression_this.sol
   :code: solidity
 
 Function calls made via this are function calls through the external call mechanism; i.e. they
 have to serialize and deserialise the arguments and have the external call overhead. In addition,
 this only works with public functions.
 
-.. include:: ../../examples/expression_this_external_call.sol
+.. include:: ../examples/expression_this_external_call.sol
   :code: solidity
 
 .. note::
@@ -135,7 +135,7 @@ For integer values, the minimum and maximum values the types can hold are availa
 ``type(...).min`` and ``type(...).max`` operators. For unsigned integers, ``type(..).min``
 will always be 0.
 
-.. include:: ../../examples/type_operator.sol
+.. include:: ../examples/type_operator.sol
   :code: solidity
 
 The `EIP-165 <https://eips.ethereum.org/EIPS/eip-165>`_ interface value can be retrieved using the
@@ -150,7 +150,7 @@ the constructor code is in the ``creationCode`` and all the functions are in
 the ``runtimeCode``. Parity Substrate and Solana use the same
 code for both, so those fields will evaluate to the same value.
 
-.. include:: ../../examples/retrieve_contract_code.sol
+.. include:: ../examples/retrieve_contract_code.sol
   :code: solidity
 
 .. note::

@@ -194,7 +194,7 @@ Solidity enums types need to have a definition which lists the possible values i
 has a type name, and a list of unique values. Enum types can used in public functions, but the value
 is represented as a ``uint8`` in the ABI. Enum are limited to 256 values.
 
-.. include:: ../../examples/enum_type.sol
+.. include:: ../examples/enum_type.sol
   :code: solidity
 
 An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
@@ -204,7 +204,7 @@ If enum is declared in another contract, the type can be refered to with `contra
 individual enum values are `contractname.typename.value`. The enum declaration does not have to appear
 in a contract, in which case it can be used without the contract name prefix.
 
-.. include:: ../../examples/enum_type_external.sol
+.. include:: ../examples/enum_type_external.sol
   :code: solidity
 
 Struct Type
@@ -212,14 +212,14 @@ ___________
 
 A struct is composite type of several other types. This is used to group related items together.
 
-.. include:: ../../examples/struct_type.sol
+.. include:: ../examples/struct_type.sol
   :code: solidity
 
 A struct has one or more fields, each with a unique name. Structs can be function arguments and return
 values. Structs can contain other structs. There is a struct literal syntax to create a struct with
 all the fields set.
 
-.. include:: ../../examples/struct_type_arguments.sol
+.. include:: ../examples/struct_type_arguments.sol
   :code: solidity
 
 The two contract storage variables ``card1`` and ``card2`` have initializers using struct literals. Struct
@@ -231,7 +231,7 @@ Struct definitions from other contracts can be used, by referring to them with t
 prefix. Struct definitions can appear outside of contract definitions, in which case they can be used
 in any contract without the prefix.
 
-.. include:: ../../examples/struct_type_arguments_external.sol
+.. include:: ../examples/struct_type_arguments_external.sol
   :code: solidity
 
 The `users` struct contains an array of `user`, which is another struct. The `users` struct is
@@ -254,7 +254,7 @@ are passed around, just the memory address or storage slot is passed around inte
 it very cheap, but it does mean that if a called function modifies the struct, then this is
 visible in the caller as well.
 
-.. include:: ../../examples/struct_type_variable_references.sol
+.. include:: ../examples/struct_type_variable_references.sol
   :code: solidity
 
 Fixed Length Arrays
@@ -264,13 +264,13 @@ Arrays can be declared by adding [length] to the type name, where length is a
 constant expression. Any type can be made into an array, including arrays themselves (also
 known as arrays of arrays). For example:
 
-.. include:: ../../examples/array_type_fixed_length.sol
+.. include:: ../examples/array_type_fixed_length.sol
   :code: solidity
 
 Note the length of the array can be read with the ``.length`` member. The length is readonly.
 Arrays can be initialized with an array literal. For example:
 
-.. include:: ../../examples/array_type_initialized.sol
+.. include:: ../examples/array_type_initialized.sol
   :code: solidity
 
 Any array subscript which is out of bounds (either an negative array index, or an index past the
@@ -280,7 +280,7 @@ fail; the first prime number is indexed by 0, and the last by 9.
 Arrays are passed by reference. If you modify the array in another function, those changes will
 be reflected in the current function. For example:
 
-.. include:: ../../examples/array_type_references.sol
+.. include:: ../examples/array_type_references.sol
   :code: solidity
 
 On Solang, it is not necessary to cast the first element of the array literal.
@@ -308,7 +308,7 @@ Memory dynamic arrays must be allocated with ``new`` before they can be used. Th
 expression requires a single unsigned integer argument. The length can be read using
 ``length`` member variable.
 
-.. include:: ../../examples/array_type_dynamic.sol
+.. include:: ../examples/array_type_dynamic.sol
   :code: solidity
 
 .. note::
@@ -319,7 +319,7 @@ Storage dynamic memory arrays do not have to be allocated. By default, they have
 length of zero and elements can be added and removed using the ``push()`` and ``pop()``
 methods.
 
-.. include:: ../../examples/array_type_dynamic_storage.sol
+.. include:: ../examples/array_type_dynamic_storage.sol
   :code: solidity
 
 Calling the method ``pop()`` on an empty array is an error and contract execution will abort,
@@ -328,7 +328,7 @@ just like when accessing an element beyond the end of an array.
 ``push()`` without any arguments returns a storage reference. This is only available for types
 that support storage references (see below).
 
-.. include:: ../../examples/array_type_dynamic_push.sol
+.. include:: ../examples/array_type_dynamic_push.sol
   :code: solidity
 
 Depending on the array element, ``pop()`` can be costly. It has to first copy the element to
@@ -340,7 +340,7 @@ ______
 Strings can be initialized with a string literal or a hex literal. Strings can be concatenated and
 compared, and formatted using `.format()`; no other operations are allowed on strings.
 
-.. include:: ../../examples/string_type.sol
+.. include:: ../examples/string_type.sol
   :code: solidity
 
 Strings can be cast to `bytes`. This cast has no runtime cost, since both types use
@@ -359,7 +359,7 @@ The ``bytes`` datatype is a dynamic length array of bytes. It can be created wit
 the ``new`` operator, or from an string or hex initializer. Unlike the ``string`` type,
 it is possible to index the ``bytes`` datatype like an array.
 
-.. include:: ../../examples/dynamic_bytes_type.sol
+.. include:: ../examples/dynamic_bytes_type.sol
   :code: solidity
 
 If the ``bytes`` variable is a storage variable, there is a ``push()`` and ``pop()``
@@ -388,7 +388,7 @@ limitations:
 
 Mappings are declared with ``mapping(keytype => valuetype)``, for example:
 
-.. include:: ../../examples/mapping_type.sol
+.. include:: ../examples/mapping_type.sol
   :code: solidity
 
 .. tip::
@@ -437,7 +437,7 @@ sugar for calling functions on it.
 A contract can be created with the new statement, followed by the name of the contract. The
 arguments to the constructor must be provided.
 
-.. include:: ../../examples/contract_type.sol
+.. include:: ../examples/contract_type.sol
   :code: solidity
 
 Since child does not have a constructor, no arguments are needed for the new statement. The variable
@@ -447,7 +447,7 @@ this type. The contract type can be cast to and from address, provided an explic
 The expression ``this`` evaluates to the current contract, which can be cast to ``address`` or
 ``address payable``.
 
-.. include:: ../../examples/contract_type_cast_address.sol
+.. include:: ../examples/contract_type_cast_address.sol
   :code: solidity
 
 Function Types
@@ -461,7 +461,7 @@ An external function is a reference to a public or external function on any cont
 When declaring a function type, you must specify the parameters types, return types, mutability,
 and whether it is external or internal. The parameters or return types cannot have names.
 
-.. include:: ../../examples/function_type.sol
+.. include:: ../examples/function_type.sol
   :code: solidity
 
 If the ``internal`` or ``external`` keyword is omitted, the type defaults to internal.
@@ -475,7 +475,7 @@ the contract, and the function selector. An internal function type only stores t
 assigning a value to an external function selector, the contract and function must be specified, by using
 a function on particular contract instance.
 
-.. include:: ../../examples/function_type_callback.sol
+.. include:: ../examples/function_type_callback.sol
   :code: solidity
 
 Storage References
@@ -485,7 +485,7 @@ Parameters, return types, and variables can be declared storage references by ad
 ``storage`` after the type name. This means that the variable holds a references to a
 particular contract storage variable.
 
-.. include:: ../../examples/storage_ref_type.sol
+.. include:: ../examples/storage_ref_type.sol
   :code: solidity
 
 Functions which have either storage parameter or return types cannot be public; when a function
@@ -500,7 +500,7 @@ A user defined type is a new type which simply wraps an existing primitive type.
 is declared with the ``type`` syntax. The name of the type can now be used anywhere where a type
 is used, for example in function arguments or return values.
 
-.. include:: ../../examples/user_defined_type.sol
+.. include:: ../examples/user_defined_type.sol
   :code: solidity
 
 Note that the wrapped value ``Value v`` cannot be used in any type of arithmetic or comparision. It needs to

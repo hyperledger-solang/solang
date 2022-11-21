@@ -5,7 +5,7 @@ Any variables declared at the contract level (so not declared in a function or c
 will automatically become contract storage. Contract storage is maintained on chain, so they
 retain their values between calls. These are declared so:
 
-.. include:: ../../examples/contract_storage.sol
+.. include:: ../examples/contract_storage.sol
   :code: solidity
 
 The ``counter`` is maintained for each deployed ``hitcount`` contract. When the contract is deployed,
@@ -18,7 +18,7 @@ ___________________
 A variable can be declared `immutable`. This means that it may only be modified in a constructor,
 and not in any other function or modifier.
 
-.. include:: ../../examples/contract_storage_immutable.sol
+.. include:: ../examples/contract_storage_immutable.sol
   :code: solidity
 
 This is purely a compiler syntax feature, the generated code is exactly the same.
@@ -33,7 +33,7 @@ retrieved by calling a function called ``counter``, which returns ``uint``.
 If the type is either an array or a mapping, the key or array indices become arguments to the accessor
 function.
 
-.. include:: ../../examples/contract_storage_accessor.sol
+.. include:: ../examples/contract_storage_accessor.sol
   :code: solidity
 
 The accessor function may override a method on a base contract by specifying ``override``. The base function
@@ -41,7 +41,7 @@ must be virtual and have the same signature as the accessor. The ``override`` ke
 accessor function, so it can only be used in combination with public variables and cannot be used to
 override a variable in the base contract.
 
-.. include:: ../../examples/contract_storage_accessor_override.sol
+.. include:: ../examples/contract_storage_accessor_override.sol
   :code: solidity
 
 How to clear Contract Storage
@@ -52,5 +52,5 @@ operator. This can be done on any type; a simple integer, an array element, or t
 array itself. Contract storage has to be cleared slot (i.e. primitive) at a time, so if there are
 many primitives, this can be costly.
 
-.. include:: ../../examples/contract_storage_clear.sol
+.. include:: ../examples/contract_storage_clear.sol
   :code: solidity

@@ -87,7 +87,7 @@ the :ref:`idl_command`. Then, import the Solidity file in your Solidity using th
 ``import "...";`` syntax. Say you have an anchor program called `bobcat` with a
 function `pounce`, you can call it like so:
 
-.. include:: ../../examples/solana/call_anchor.sol
+.. include:: ../examples/solana/call_anchor.sol
   :code: solidity
 
 .. _value_transfer:
@@ -203,7 +203,7 @@ This function returns the program derived address for a program address and
 the provided seeds. See the Solana documentation on
 `program derived adddresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
 
-.. include:: ../../examples/solana/builtin_create_program_address.sol
+.. include:: ../examples/solana/builtin_create_program_address.sol
   :code: solidity
 
 Builtin try_find_program_address
@@ -213,7 +213,7 @@ This function returns the program derived address for a program address and
 the provided seeds, along with a seed bump. See the Solana documentation on
 `program derived adddresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
 
-.. include:: ../../examples/solana/builtin_try_find_program_address.sol
+.. include:: ../examples/solana/builtin_try_find_program_address.sol
   :code: solidity
 
 Solana Library

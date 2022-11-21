@@ -33,7 +33,7 @@ known value.
 
 An event can be declared in a contract, or outside.
 
-.. include:: ../../examples/events.sol
+.. include:: ../examples/events.sol
   :code: solidity
 
 Like function calls, the emit statement can have the fields specified by position, or by field name. Using
@@ -41,7 +41,7 @@ field names rather than position may be useful in case the event name is overloa
 make it clearer which exact event is being emitted.
 
 
-.. include:: ../../examples/event_positional_fields.sol
+.. include:: ../examples/event_positional_fields.sol
   :code: solidity
 
 In the transaction log, the first topic of an event is the keccak256 hash of the signature of the
