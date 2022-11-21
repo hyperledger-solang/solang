@@ -5,6 +5,7 @@ use ink_env::{
     hash::{Blake2x256, CryptoHash},
     topics::PrefixedValue,
 };
+use ink_primitives::AccountId;
 use parity_scale_codec::{self as scale, Decode, Encode};
 use solang::{file_resolver::FileResolver, Target};
 use std::ffi::OsStr;
@@ -20,11 +21,11 @@ fn topic_hash(encoded: &[u8]) -> Vec<u8> {
 }
 
 #[test]
-fn emit() {
+fn anonymous() {
     let mut runtime = build_solidity(
         r##"
         contract a {
-            event foo(bool) anonymous;
+            event foo(bool b) anonymous;
             function emit_event() public {
                 emit foo(true);
             }
@@ -38,7 +39,10 @@ fn emit() {
     let event = &runtime.events[0];
     assert_eq!(event.topics.len(), 0);
     assert_eq!(event.data, (0u8, true).encode());
+}
 
+#[test]
+fn emit() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     enum Event {
         Foo(bool, u32, i64),
@@ -63,8 +67,6 @@ fn emit() {
     assert_eq!(runtime.events.len(), 2);
     let event = &runtime.events[0];
     assert_eq!(event.topics.len(), 2);
-    let mut t = [0u8; 32];
-    t[0] = 1;
     let mut event_topic = scale::Encode::encode(&String::from("a::foo"));
     event_topic[0] = 0;
     assert_eq!(event.topics[0], topic_hash(&event_topic[..])[..]);
@@ -222,4 +224,61 @@ fn event_imported() {
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
     assert!(!ns.diagnostics.any_errors());
+}
+
+/// FIXME: Use the exact same event structure once the `Option<T>` type is available
+#[test]
+fn erc20_ink_example() {
+    #[derive(Encode, Decode)]
+    enum Event {
+        Transfer(AccountId, AccountId, u128),
+    }
+
+    #[derive(Encode, Decode)]
+    struct Transfer {
+        from: AccountId,
+        to: AccountId,
+        value: u128,
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract Erc20 {
+            event Transfer(
+                address indexed from,
+                address indexed to,
+                uint128 value
+            );
+        
+            function emit_event(address from, address to, uint128 value) public {
+                emit Transfer(from, to, value);
+            }
+        }"##,
+    );
+    runtime.constructor(0, Vec::new());
+    let from = AccountId::from([1; 32]);
+    let to = AccountId::from([2; 32]);
+    let value = 10;
+    runtime.function("emit_event", Transfer { from, to, value }.encode());
+
+    assert_eq!(runtime.events.len(), 1);
+    let event = &runtime.events[0];
+    assert_eq!(event.data, Event::Transfer(from, to, value).encode());
+
+    assert_eq!(event.topics.len(), 3);
+    let mut expected_event_topic = scale::Encode::encode(&String::from("Erc20::Transfer"));
+    expected_event_topic[0] = 0;
+    assert_eq!(event.topics[0], topic_hash(&expected_event_topic[..])[..]);
+
+    let expected_topic = PrefixedValue {
+        prefix: b"Erc20::Transfer::from",
+        value: &from,
+    };
+    assert_eq!(event.topics[1], topic_hash(&expected_topic.encode())[..]);
+
+    let expected_topic = PrefixedValue {
+        prefix: b"Erc20::Transfer::to",
+        value: &to,
+    };
+    assert_eq!(event.topics[2], topic_hash(&expected_topic.encode())[..]);
 }
