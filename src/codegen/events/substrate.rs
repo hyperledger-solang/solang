@@ -21,7 +21,7 @@ pub(super) struct SubstrateEventEmitter<'a> {
 }
 
 /// Takes a scale-encoded topic and makes it into a topic hash.
-pub(crate) fn topic_hash(encoded: &[u8]) -> Vec<u8> {
+fn topic_hash(encoded: &[u8]) -> Vec<u8> {
     let mut buf = [0; 32];
     if encoded.len() <= 32 {
         buf[..encoded.len()].copy_from_slice(encoded);
@@ -81,83 +81,85 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             })
             .collect();
 
-        for (i, arg) in self.args.iter().enumerate() {
-            let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
-            data.push(e);
-            data_tys.push(arg.ty());
+        for (ast_exp, field) in self.args.iter().zip(event.fields.iter()) {
+            let value_exp = expression(ast_exp, cfg, contract_no, Some(func), self.ns, vartab, opt);
+            data_tys.push(value_exp.ty());
+            data.push(value_exp);
 
-            if self.ns.events[self.event_no].fields[i].indexed {
-                let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
-                let e = Expression::AbiEncode {
-                    loc,
-                    tys: vec![e.ty()],
-                    packed: vec![],
-                    args: vec![e],
-                };
-                let concatenated = Expression::StringConcat(
-                    loc,
-                    Type::DynamicBytes,
-                    StringLocation::CompileTime(topic_prefixes.remove(0)), // TODO not efficient
-                    StringLocation::RunTime(e.into()),
-                );
-
-                vartab.new_dirty_tracker();
-                let var = vartab.temp_anonymous(&Type::DynamicBytes);
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc,
-                        res: var,
-                        expr: concatenated,
-                    },
-                );
-                let unhashed = Expression::Variable(loc, Type::DynamicBytes, var);
-                let compare = Expression::UnsignedMore(
-                    loc,
-                    Expression::Builtin(
-                        loc,
-                        vec![Type::Uint(32)],
-                        Builtin::ArrayLength,
-                        vec![unhashed.clone()],
-                    )
-                    .into(),
-                    hash_len(),
-                );
-
-                let bigger = cfg.new_basic_block("bigger".into());
-                let done = cfg.new_basic_block("done".into());
-                cfg.add(
-                    vartab,
-                    Instr::BranchCond {
-                        cond: compare,
-                        true_block: bigger,
-                        false_block: done,
-                    },
-                );
-
-                cfg.set_basic_block(bigger);
-                cfg.add(
-                    vartab,
-                    Instr::WriteBuffer {
-                        buf: unhashed.clone(),
-                        offset: Expression::NumberLiteral(loc, Type::Uint(32), 0.into()),
-                        value: Expression::Builtin(
-                            loc,
-                            vec![Type::Bytes(32)],
-                            Builtin::Blake2_256,
-                            vec![unhashed.clone()],
-                        ),
-                    },
-                );
-                vartab.set_dirty(var);
-                cfg.add(vartab, Instr::Branch { block: done });
-
-                cfg.set_basic_block(done);
-                cfg.set_phis(done, vartab.pop_dirty_tracker());
-
-                topics.push(unhashed);
-                topic_tys.push(Type::DynamicBytes);
+            if !field.indexed {
+                continue;
             }
+
+            let value_exp = expression(ast_exp, cfg, contract_no, Some(func), self.ns, vartab, opt);
+            let encoded = Expression::AbiEncode {
+                loc,
+                tys: vec![value_exp.ty()],
+                packed: vec![],
+                args: vec![value_exp],
+            };
+            let concatenated = Expression::StringConcat(
+                loc,
+                Type::DynamicBytes,
+                StringLocation::CompileTime(topic_prefixes.remove(0)), // TODO not efficient
+                StringLocation::RunTime(encoded.into()),
+            );
+
+            vartab.new_dirty_tracker();
+            let var_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc,
+                    res: var_buffer,
+                    expr: concatenated,
+                },
+            );
+            let buffer = Expression::Variable(loc, Type::DynamicBytes, var_buffer);
+            let compare = Expression::UnsignedMore(
+                loc,
+                Expression::Builtin(
+                    loc,
+                    vec![Type::Uint(32)],
+                    Builtin::ArrayLength,
+                    vec![buffer.clone()],
+                )
+                .into(),
+                hash_len(),
+            );
+
+            let bigger = cfg.new_basic_block("bigger".into());
+            let done = cfg.new_basic_block("done".into());
+            cfg.add(
+                vartab,
+                Instr::BranchCond {
+                    cond: compare,
+                    true_block: bigger,
+                    false_block: done,
+                },
+            );
+
+            cfg.set_basic_block(bigger);
+            cfg.add(
+                vartab,
+                Instr::WriteBuffer {
+                    buf: buffer.clone(),
+                    offset: Expression::NumberLiteral(loc, Type::Uint(32), 0.into()),
+                    value: Expression::Builtin(
+                        loc,
+                        vec![Type::Bytes(32)],
+                        Builtin::Blake2_256,
+                        vec![buffer.clone()],
+                    ),
+                },
+            );
+            vartab.set_dirty(var_buffer);
+            cfg.add(vartab, Instr::Branch { block: done });
+
+            cfg.set_basic_block(done);
+            cfg.set_phis(done, vartab.pop_dirty_tracker());
+
+            topic_tys.push(Type::DynamicBytes);
+            topics.push(buffer);
         }
 
         cfg.add(

@@ -9,7 +9,7 @@ use parity_scale_codec::{self as scale, Decode, Encode};
 use solang::{file_resolver::FileResolver, Target};
 use std::ffi::OsStr;
 
-pub(crate) fn topic_hash(encoded: &[u8]) -> Vec<u8> {
+fn topic_hash(encoded: &[u8]) -> Vec<u8> {
     let mut buf = [0; 32];
     if encoded.len() <= 32 {
         buf[..encoded.len()].copy_from_slice(encoded);
@@ -42,6 +42,7 @@ fn emit() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     enum Event {
         Foo(bool, u32, i64),
+        Bar(u32, u64, String),
     }
 
     let mut runtime = build_solidity(
@@ -94,7 +95,10 @@ fn emit() {
     }
     .encode();
     assert_eq!(event.topics[1].to_vec(), topic_hash(&topic[..]));
-    assert_eq!(event.data, (1u8, 0xdeadcafeu32, 102u64).encode());
+    assert_eq!(
+        event.data,
+        Event::Bar(0xdeadcafe, 102, "foobar".into()).encode()
+    );
 }
 
 #[test]
