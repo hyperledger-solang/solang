@@ -599,19 +599,19 @@ impl SolangServer {
             ast::Expression::StorageLoad(_locs, _typ, expr1) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
             }
-            ast::Expression::ZeroExt(_locs, _typ, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
+            ast::Expression::ZeroExt { expr, .. } => {
+                SolangServer::construct_expr(expr, lookup_tbl, symtab, ns);
             }
-            ast::Expression::SignExt(_locs, _typ, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
+            ast::Expression::SignExt { expr, .. } => {
+                SolangServer::construct_expr(expr, lookup_tbl, symtab, ns);
             }
-            ast::Expression::Trunc(_locs, _typ, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
+            ast::Expression::Trunc { expr, .. } => {
+                SolangServer::construct_expr(expr, lookup_tbl, symtab, ns);
             }
-            ast::Expression::Cast(_locs, _typ, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
+            ast::Expression::Cast { expr, .. } => {
+                SolangServer::construct_expr(expr, lookup_tbl, symtab, ns);
             }
-            ast::Expression::BytesCast(_loc, _typ1, _typ2, expr) => {
+            ast::Expression::BytesCast { expr, .. } => {
                 SolangServer::construct_expr(expr, lookup_tbl, symtab, ns);
             }
 

@@ -496,63 +496,69 @@ pub fn expression(
         ast::Expression::And(loc, left, right) => {
             and(left, cfg, contract_no, func, ns, vartab, loc, right, opt)
         }
-        ast::Expression::CheckingTrunc(loc, ty, e) => {
-            checking_trunc(loc, e, ty, cfg, contract_no, func, ns, vartab, opt)
+        ast::Expression::CheckingTrunc { loc, to, expr } => {
+            checking_trunc(loc, expr, to, cfg, contract_no, func, ns, vartab, opt)
         }
-        ast::Expression::Trunc(loc, ty, e) => Expression::Trunc(
+        ast::Expression::Trunc { loc, to, expr } => Expression::Trunc(
             *loc,
-            ty.clone(),
-            Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
+            to.clone(),
+            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::ZeroExt(loc, ty, e) => Expression::ZeroExt(
+        ast::Expression::ZeroExt { loc, to, expr } => Expression::ZeroExt(
             *loc,
-            ty.clone(),
-            Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
+            to.clone(),
+            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::SignExt(loc, ty, e) => Expression::SignExt(
+        ast::Expression::SignExt { loc, to, expr } => Expression::SignExt(
             *loc,
-            ty.clone(),
-            Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
+            to.clone(),
+            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::Cast(loc, ty @ Type::Address(_), e) => {
-            if let Ok((_, address)) = eval_const_number(e, ns) {
-                Expression::NumberLiteral(*loc, ty.clone(), address)
+        ast::Expression::Cast { loc, to, expr } if matches!(to, Type::Address(_)) => {
+            if let Ok((_, address)) = eval_const_number(expr, ns) {
+                Expression::NumberLiteral(*loc, to.clone(), address)
             } else {
                 Expression::Cast(
                     *loc,
-                    ty.clone(),
-                    Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
+                    to.clone(),
+                    Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
                 )
             }
         }
-        ast::Expression::Cast(loc, ty @ Type::Array(..), e)
-            if matches!(**e, ast::Expression::ArrayLiteral(..)) =>
+        ast::Expression::Cast { loc, to, expr }
+            if matches!(to, Type::Array(..))
+                && matches!(**expr, ast::Expression::ArrayLiteral(..)) =>
         {
-            let codegen_expr = expression(e, cfg, contract_no, func, ns, vartab, opt);
-            array_literal_to_memory_array(loc, &codegen_expr, ty, cfg, vartab)
+            let codegen_expr = expression(expr, cfg, contract_no, func, ns, vartab, opt);
+            array_literal_to_memory_array(loc, &codegen_expr, to, cfg, vartab)
         }
-        ast::Expression::Cast(loc, ty, e) => {
-            if e.ty() == Type::Rational {
-                let (_, n) = eval_const_rational(e, ns).unwrap();
+        ast::Expression::Cast { loc, to, expr } => {
+            if expr.ty() == Type::Rational {
+                let (_, n) = eval_const_rational(expr, ns).unwrap();
 
-                Expression::NumberLiteral(*loc, ty.clone(), n.to_integer())
-            } else if matches!(ty, Type::String | Type::DynamicBytes)
+                Expression::NumberLiteral(*loc, to.clone(), n.to_integer())
+            } else if matches!(to, Type::String | Type::DynamicBytes)
                 && matches!(expr.ty(), Type::String | Type::DynamicBytes)
             {
-                expression(e, cfg, contract_no, func, ns, vartab, opt)
+                expression(expr, cfg, contract_no, func, ns, vartab, opt)
             } else {
                 Expression::Cast(
                     *loc,
-                    ty.clone(),
-                    Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
+                    to.clone(),
+                    Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
                 )
             }
         }
-        ast::Expression::BytesCast(loc, ty, from, e) => Expression::BytesCast(
+        ast::Expression::BytesCast {
+            loc,
+            to,
+            from,
+            expr,
+        } => Expression::BytesCast(
             *loc,
-            ty.clone(),
+            to.clone(),
             from.clone(),
-            Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
+            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         ),
         ast::Expression::Load(loc, ty, e) => Expression::Load(
             *loc,

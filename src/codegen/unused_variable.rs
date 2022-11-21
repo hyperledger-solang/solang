@@ -42,9 +42,9 @@ pub fn should_remove_assignment(
 
         Expression::StorageLoad(_, _, expr)
         | Expression::Load(_, _, expr)
-        | Expression::Trunc(_, _, expr)
-        | Expression::Cast(_, _, expr)
-        | Expression::BytesCast(_, _, _, expr) => should_remove_assignment(ns, expr, func, opt),
+        | Expression::Trunc { expr, .. }
+        | Expression::Cast { expr, .. }
+        | Expression::BytesCast { expr, .. } => should_remove_assignment(ns, expr, func, opt),
 
         _ => false,
     }
