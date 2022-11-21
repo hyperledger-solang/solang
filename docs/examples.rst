@@ -10,7 +10,7 @@ General examples
 Flipper
 _______
 
-This is the `ink! flipper example <https://github.com/paritytech/ink/blob/v3.3./examples/flipper/lib.rs>`_
+This is the `ink! flipper example <https://github.com/paritytech/ink/blob/v3.3.0/examples/flipper/lib.rs>`_
 written in Solidity:
 
 .. include:: ../examples/flipper.sol

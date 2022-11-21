@@ -1,5 +1,5 @@
 contract ethereum {
-    // As a public mapping,this creates accessor function called balance, which takes
+    // As a public mapping, this creates accessor function called balance, which takes
     // an address as an argument, and returns an uint
     mapping(address => uint256) public balances;
 
