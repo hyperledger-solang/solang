@@ -82,6 +82,10 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             .collect();
 
         for (i, arg) in self.args.iter().enumerate() {
+            let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
+            data.push(e);
+            data_tys.push(arg.ty());
+
             if self.ns.events[self.event_no].fields[i].indexed {
                 let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
                 let e = Expression::AbiEncode {
@@ -153,11 +157,6 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
                 topics.push(unhashed);
                 topic_tys.push(Type::DynamicBytes);
-            } else {
-                let e = expression(arg, cfg, contract_no, Some(func), self.ns, vartab, opt);
-
-                data.push(e);
-                data_tys.push(arg.ty());
             }
         }
 
