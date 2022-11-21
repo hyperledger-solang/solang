@@ -40,7 +40,9 @@ fn emit() {
     assert_eq!(event.data, (0u8, true).encode());
 
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Foo(u8, bool, u32);
+    enum Event {
+        Foo(bool, u32, i64),
+    }
 
     let mut runtime = build_solidity(
         r##"
@@ -71,7 +73,7 @@ fn emit() {
     }
     .encode();
     assert_eq!(event.topics[1], topic_hash(&topic[..])[..]);
-    assert_eq!(event.data, Foo(0, true, 102).encode());
+    assert_eq!(event.data, Event::Foo(true, 102, 1).encode());
 
     let event = &runtime.events[1];
     assert_eq!(event.topics.len(), 2);
