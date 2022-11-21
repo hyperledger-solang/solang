@@ -1503,16 +1503,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
 
             for topic in topics.iter() {
-                let data = dest;
-
-                binary.builder.build_call(
-                    binary.module.get_function("__memcpy").unwrap(),
+                call!(
+                    "__memcpy",
                     &[
-                        data.into(),
+                        dest.into(),
                         binary.vector_bytes(*topic).into(),
                         binary.vector_len(*topic).into(),
-                    ],
-                    "",
+                    ]
                 );
 
                 dest = unsafe { binary.builder.build_gep(dest, &[i32_const!(32)], "dest") };
