@@ -16,7 +16,7 @@ use std::{
 fn file_resolver(target: Target) -> FileResolver {
     let mut result = FileResolver::new();
     result.set_file_contents(
-        "examples/user.sol",
+        "docs/examples/user.sol",
         r##"
         struct User { string name; uint count; }
         function clear_count(User memory user) {
@@ -27,7 +27,7 @@ fn file_resolver(target: Target) -> FileResolver {
     );
     if let Target::Solana = target {
         result.set_file_contents(
-                "examples/solana/bobcat.sol",
+                "docs/examples/solana/bobcat.sol",
                 r##"
                 anchor_anchor constant bobcat = anchor_anchor(address'z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq');
                 interface anchor_anchor {
@@ -92,20 +92,22 @@ fn assert_compile(dir: &str, target: Target) {
 
 #[test]
 fn substrate_general() {
-    assert_compile("examples/", Target::default_substrate())
+    assert_compile("examples", Target::default_substrate());
+    assert_compile("docs/examples/", Target::default_substrate());
 }
 
 #[test]
 fn substrate_specific() {
-    assert_compile("examples/substrate/", Target::default_substrate())
+    assert_compile("docs/examples/substrate/", Target::default_substrate());
 }
 
 #[test]
 fn solana_general() {
-    assert_compile("examples/", Target::Solana)
+    assert_compile("examples", Target::Solana);
+    assert_compile("docs/examples/", Target::Solana);
 }
 
 #[test]
 fn solana_specific() {
-    assert_compile("examples/solana", Target::Solana)
+    assert_compile("docs/examples/solana", Target::Solana);
 }
