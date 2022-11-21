@@ -39,54 +39,47 @@ describe('Deploy events contract and test event data, docs and topics', () => {
         expect(events[2].event.identifier).toBe("ThisEventTopicShouldGetHashed");
         expect(events[2].args.map(a => a.toJSON())).toEqual([alice.address]);
 
-        expect(events[3].event.identifier).toBe("Event");
-        expect(events[3].args.map(a => a.toJSON())).toEqual([true]);
-
-        // #[ink(event)]
-        // pub struct ThisEventTopicShouldGetHashed {
-        //     #[ink(topic)]
-        //     caller: AccountId,
-        // }
-        // event: {
-        //    method: ContractEmitted
-        //    section: contracts
-        //    index: 0x0703
-        //    data: {
-        //      contract: 5DBSdC9P2gL8mGGcE2p9ub21ZCpSvMr2RYkfZasLZ52cVSEH
-        //      data: 0x00d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
-        //    }
+        // In ink! the 3rd event does look like this:
+        //
+        //  #[ink(event)]
+        //  pub struct ThisEventTopicShouldGetHashed {
+        //      #[ink(topic)]
+        //      caller: AccountId,
         //  }
+        //
+        // It yields the following event topics:
+        //
         //  topics: [
-        //    0x5dde952854d38c37cff349bfc574a48a831de385b82457a5c25d9d39c220f3a7
-        //    0xa5af79de4a26a64813f980ffbb64ac0d7c278f67b17721423daed26ec5d3fe51
+        //      0x5dde952854d38c37cff349bfc574a48a831de385b82457a5c25d9d39c220f3a7
+        //      0xa5af79de4a26a64813f980ffbb64ac0d7c278f67b17721423daed26ec5d3fe51
         //  ]
-        // }
+        //
+        // So we expect our solidity contract to produce the exact same topics:
 
         let hashed_event_topics = await conn.query.system.eventTopics("0x5dde952854d38c37cff349bfc574a48a831de385b82457a5c25d9d39c220f3a7");
         expect(hashed_event_topics.length).toBe(1);
         let hashed_topics = await conn.query.system.eventTopics("0xa5af79de4a26a64813f980ffbb64ac0d7c278f67b17721423daed26ec5d3fe51");
         expect(hashed_topics.length).toBe(1);
 
-        // #[ink(event)]
-        // pub struct Event {
-        //     #[ink(topic)]
-        //     something: bool,
-        // }
-        // });
-        // event: {
-        //    method: ContractEmitted
-        //    section: contracts
-        //    index: 0x0703
-        //    data: {
-        //      contract: 5DBSdC9P2gL8mGGcE2p9ub21ZCpSvMr2RYkfZasLZ52cVSEH
-        //      data: 0x0101
-        //    }
+        expect(events[3].event.identifier).toBe("Event");
+        expect(events[3].args.map(a => a.toJSON())).toEqual([true]);
+
+        // In ink! the 4th event does look like this:
+        //
+        //  #[ink(event)]
+        //  pub struct Event {
+        //      #[ink(topic)]
+        //      something: bool,
         //  }
+        //
+        // It yields the following event topics:
+        //
         //  topics: [
-        //    0x004576656e74733a3a4576656e74000000000000000000000000000000000000
-        //    0x604576656e74733a3a4576656e743a3a736f6d657468696e6701000000000000
+        //      0x004576656e74733a3a4576656e74000000000000000000000000000000000000
+        //      0x604576656e74733a3a4576656e743a3a736f6d657468696e6701000000000000
         //  ]
-        // }
+        //
+        // So we expect our solidity contract to produce the exact same topics:
 
         let unhashed_event_topics = await conn.query.system.eventTopics("0x004576656e74733a3a4576656e74000000000000000000000000000000000000");
         expect(unhashed_event_topics.length).toBe(1);
