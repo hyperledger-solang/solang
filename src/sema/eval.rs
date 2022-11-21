@@ -109,9 +109,9 @@ pub fn eval_const_number(
             Ok((*loc, l >> r))
         }
         Expression::NumberLiteral(loc, _, n) => Ok((*loc, n.clone())),
-        Expression::ZeroExt(loc, _, n) => Ok((*loc, eval_const_number(n, ns)?.1)),
-        Expression::SignExt(loc, _, n) => Ok((*loc, eval_const_number(n, ns)?.1)),
-        Expression::Cast(loc, _, n) => Ok((*loc, eval_const_number(n, ns)?.1)),
+        Expression::ZeroExt { loc, expr, .. } => Ok((*loc, eval_const_number(expr, ns)?.1)),
+        Expression::SignExt { loc, expr, .. } => Ok((*loc, eval_const_number(expr, ns)?.1)),
+        Expression::Cast { loc, expr, .. } => Ok((*loc, eval_const_number(expr, ns)?.1)),
         Expression::Not(loc, n) => Ok((*loc, !eval_const_number(n, ns)?.1)),
         Expression::Complement(loc, _, n) => Ok((*loc, !eval_const_number(n, ns)?.1)),
         Expression::UnaryMinus(loc, _, n) => Ok((*loc, -eval_const_number(n, ns)?.1)),
@@ -174,7 +174,7 @@ pub fn eval_const_rational(
         }
         Expression::NumberLiteral(loc, _, n) => Ok((*loc, BigRational::from_integer(n.clone()))),
         Expression::RationalNumberLiteral(loc, _, n) => Ok((*loc, n.clone())),
-        Expression::Cast(loc, _, n) => Ok((*loc, eval_const_rational(n, ns)?.1)),
+        Expression::Cast { loc, expr, .. } => Ok((*loc, eval_const_rational(expr, ns)?.1)),
         Expression::UnaryMinus(loc, _, n) => Ok((*loc, -eval_const_rational(n, ns)?.1)),
         Expression::ConstantVariable(_, _, Some(contract_no), var_no) => {
             let expr = ns.contracts[*contract_no].variables[*var_no]
@@ -495,18 +495,18 @@ fn eval_constants_in_expression(
                 (None, true)
             }
         }
-        Expression::ZeroExt(loc, ty, expr) => {
+        Expression::ZeroExt { loc, to, expr } => {
             let expr = eval_constants_in_expression(expr, ns).0;
             if let Some(Expression::NumberLiteral(_, _, n)) = expr {
-                (Some(Expression::NumberLiteral(*loc, ty.clone(), n)), true)
+                (Some(Expression::NumberLiteral(*loc, to.clone(), n)), true)
             } else {
                 (None, true)
             }
         }
-        Expression::SignExt(loc, ty, expr) => {
+        Expression::SignExt { loc, to, expr } => {
             let expr = eval_constants_in_expression(expr, ns).0;
             if let Some(Expression::NumberLiteral(_, _, n)) = expr {
-                (Some(Expression::NumberLiteral(*loc, ty.clone(), n)), true)
+                (Some(Expression::NumberLiteral(*loc, to.clone(), n)), true)
             } else {
                 (None, true)
             }

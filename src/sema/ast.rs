@@ -686,13 +686,37 @@ pub enum Expression {
     Load(pt::Loc, Type, Box<Expression>),
     GetRef(pt::Loc, Type, Box<Expression>),
     StorageLoad(pt::Loc, Type, Box<Expression>),
-    ZeroExt(pt::Loc, Type, Box<Expression>),
-    SignExt(pt::Loc, Type, Box<Expression>),
-    Trunc(pt::Loc, Type, Box<Expression>),
-    CheckingTrunc(pt::Loc, Type, Box<Expression>),
-    Cast(pt::Loc, Type, Box<Expression>),
-    BytesCast(pt::Loc, Type, Type, Box<Expression>),
-
+    ZeroExt {
+        loc: pt::Loc,
+        to: Type,
+        expr: Box<Expression>,
+    },
+    SignExt {
+        loc: pt::Loc,
+        to: Type,
+        expr: Box<Expression>,
+    },
+    Trunc {
+        loc: pt::Loc,
+        to: Type,
+        expr: Box<Expression>,
+    },
+    CheckingTrunc {
+        loc: pt::Loc,
+        to: Type,
+        expr: Box<Expression>,
+    },
+    Cast {
+        loc: pt::Loc,
+        to: Type,
+        expr: Box<Expression>,
+    },
+    BytesCast {
+        loc: pt::Loc,
+        from: Type,
+        to: Type,
+        expr: Box<Expression>,
+    },
     PreIncrement(pt::Loc, Type, bool, Box<Expression>),
     PreDecrement(pt::Loc, Type, bool, Box<Expression>),
     PostIncrement(pt::Loc, Type, bool, Box<Expression>),
@@ -842,11 +866,11 @@ impl Recurse for Expression {
                 }
                 Expression::Load(_, _, expr)
                 | Expression::StorageLoad(_, _, expr)
-                | Expression::ZeroExt(_, _, expr)
-                | Expression::SignExt(_, _, expr)
-                | Expression::Trunc(_, _, expr)
-                | Expression::Cast(_, _, expr)
-                | Expression::BytesCast(_, _, _, expr)
+                | Expression::ZeroExt { expr, .. }
+                | Expression::SignExt { expr, .. }
+                | Expression::Trunc { expr, .. }
+                | Expression::Cast { expr, .. }
+                | Expression::BytesCast { expr, .. }
                 | Expression::PreIncrement(_, _, _, expr)
                 | Expression::PreDecrement(_, _, _, expr)
                 | Expression::PostIncrement(_, _, _, expr)
@@ -971,12 +995,12 @@ impl CodeLocation for Expression {
             | Expression::Load(loc, ..)
             | Expression::GetRef(loc, ..)
             | Expression::StorageLoad(loc, ..)
-            | Expression::ZeroExt(loc, ..)
-            | Expression::SignExt(loc, ..)
-            | Expression::Trunc(loc, ..)
-            | Expression::CheckingTrunc(loc, ..)
-            | Expression::Cast(loc, ..)
-            | Expression::BytesCast(loc, ..)
+            | Expression::ZeroExt { loc, .. }
+            | Expression::SignExt { loc, .. }
+            | Expression::Trunc { loc, .. }
+            | Expression::CheckingTrunc { loc, .. }
+            | Expression::Cast { loc, .. }
+            | Expression::BytesCast { loc, .. }
             | Expression::More(loc, ..)
             | Expression::Less(loc, ..)
             | Expression::MoreEqual(loc, ..)
