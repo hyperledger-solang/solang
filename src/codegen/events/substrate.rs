@@ -85,19 +85,28 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
         for (ast_exp, field) in self.args.iter().zip(event.fields.iter()) {
             let value_exp = expression(ast_exp, cfg, contract_no, Some(func), self.ns, vartab, opt);
-            data_tys.push(value_exp.ty());
-            data.push(value_exp);
+            let value_var = vartab.temp_anonymous(&value_exp.ty());
+            let value = Expression::Variable(loc, value_exp.ty(), value_var);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc,
+                    res: value_var,
+                    expr: value_exp,
+                },
+            );
+            data_tys.push(value.ty());
+            data.push(value.clone());
 
             if !field.indexed {
                 continue;
             }
 
-            let value_exp = expression(ast_exp, cfg, contract_no, Some(func), self.ns, vartab, opt);
             let encoded = Expression::AbiEncode {
                 loc,
-                tys: vec![value_exp.ty()],
+                tys: vec![value.ty()],
                 packed: vec![],
-                args: vec![value_exp],
+                args: vec![value],
             };
             let concatenated = Expression::StringConcat(
                 loc,
