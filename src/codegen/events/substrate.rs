@@ -51,18 +51,18 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         let event = &self.ns.events[self.event_no];
         // For freestanding events the name of the emitting contract is used
         let contract_name = &self.ns.contracts[event.contract.unwrap_or(contract_no)].name;
-        let hash_len = || Box::new(Expression::NumberLiteral(loc, Type::Uint(32), 32.into()));
+        let hash_len = Box::new(Expression::NumberLiteral(loc, Type::Uint(32), 32.into()));
 
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
         if !event.anonymous {
-            let mut encoded = format!("{}::{}", contract_name, &event.name).encode();
-            encoded[0] = 0; // Set the prefix (there is no prefix for the event topic)
+            // First byte is 0 because there is no prefix for the event topic
+            let encoded = format!("\0{}::{}", contract_name, &event.name);
             topics.push(Expression::AllocDynamicBytes(
                 loc,
                 Type::Slice(Type::Uint(8).into()),
-                hash_len(),
-                Some(topic_hash(&encoded[..])),
+                hash_len.clone(),
+                Some(topic_hash(encoded.as_bytes())),
             ));
             topic_tys.push(Type::DynamicBytes);
         };
@@ -136,7 +136,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     vec![buffer.clone()],
                 )
                 .into(),
-                hash_len(),
+                hash_len.clone(),
             );
 
             let hash_topic_block = cfg.new_basic_block("hash_topic".into());
