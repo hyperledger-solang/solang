@@ -12,19 +12,8 @@ lists all the types, contracts, functions, and state variables along with their 
 The tags use a special comment format. They can either be specified in block comments or single
 line comments.
 
-.. code-block:: solidity
-
-    /**
-     * @title Hello, World!
-     * @notice Just an example.
-     * @author Sean Young <sean@mess.org>
-     */
-    contract c {
-        /// @param name The name which will be greeted
-        function say_hello(string name) {
-            print("Hello, " + name + "!");
-        }
-    }
+.. include:: ../examples/tags.sol
+  :code: solidity
 
 The tags which are allowed:
 

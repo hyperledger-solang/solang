@@ -194,15 +194,8 @@ Solidity enums types need to have a definition which lists the possible values i
 has a type name, and a list of unique values. Enum types can used in public functions, but the value
 is represented as a ``uint8`` in the ABI. Enum are limited to 256 values.
 
-.. code-block:: javascript
-
-  contract enum_example {
-      enum Weekday { Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
-
-      function is_weekend(Weekday day) public pure returns (bool) {
-          return (day == Weekday.Saturday || day == Weekday.Sunday);
-      }
-  }
+.. include:: ../examples/enum_type.sol
+  :code: solidity
 
 An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
 is numbered from 0, like in C and Rust.
@@ -211,94 +204,23 @@ If enum is declared in another contract, the type can be refered to with `contra
 individual enum values are `contractname.typename.value`. The enum declaration does not have to appear
 in a contract, in which case it can be used without the contract name prefix.
 
-.. code-block:: javascript
-
-    enum planets { Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune }
-
-    contract timeofday {
-        enum time { Night, Day, Dawn, Dusk }
-    }
-
-    contract stargazing {
-        function look_for(timeofday.time when) public returns (planets[]) {
-            if (when == timeofday.time.Dawn || when == timeofday.time.Dusk) {
-                planets[] x = new planets[](2);
-                x[0] = planets.Mercury;
-                x[1] = planets.Venus;
-                return x;
-            } else if (when == timeofday.time.Night) {
-                planets[] x = new planets[](5);
-                x[0] = planets.Mars;
-                x[1] = planets.Jupiter;
-                x[2] = planets.Saturn;
-                x[3] = planets.Uranus;
-                x[4] = planets.Neptune;
-                return x;
-            } else {
-                planets[] x = new planets[](1);
-                x[0] = planets.Earth;
-                return x;
-            }
-        }
-    }
+.. include:: ../examples/enum_type_external.sol
+  :code: solidity
 
 Struct Type
 ___________
 
 A struct is composite type of several other types. This is used to group related items together.
 
-.. code-block:: solidity
-
-  contract deck {
-      enum suit { club, diamonds, hearts, spades }
-      enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
-      struct card {
-          value v;
-          suit s;
-      }
-
-      function score(card c) public returns (uint32 score) {
-          if (c.s == suit.hearts) {
-              if (c.v == value.ace) {
-                  score = 14;
-              }
-              if (c.v == value.king) {
-                  score = 13;
-              }
-              if (c.v == value.queen) {
-                  score = 12;
-              }
-              if (c.v == value.jack) {
-                  score = 11;
-              }
-          }
-          // all others score 0
-      }
-  }
+.. include:: ../examples/struct_type.sol
+  :code: solidity
 
 A struct has one or more fields, each with a unique name. Structs can be function arguments and return
 values. Structs can contain other structs. There is a struct literal syntax to create a struct with
 all the fields set.
 
-.. code-block:: solidity
-
-  contract deck {
-      enum suit { club, diamonds, hearts, spades }
-      enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
-      struct card {
-          value v;
-          suit s;
-      }
-
-      card card1 = card(value.two, suit.club);
-      card card2 = card({s: suit.club, v: value.two});
-
-      // This function does a lot of copying
-      function set_card1(card c) public returns (card previous) {
-          previous = card1;
-          card1 = c;
-      }
-  }
+.. include:: ../examples/struct_type_arguments.sol
+  :code: solidity
 
 The two contract storage variables ``card1`` and ``card2`` have initializers using struct literals. Struct
 literals can either set fields by their position, or field name. In either syntax, all the fields must
@@ -309,25 +231,8 @@ Struct definitions from other contracts can be used, by referring to them with t
 prefix. Struct definitions can appear outside of contract definitions, in which case they can be used
 in any contract without the prefix.
 
-.. code-block:: solidity
-
-    struct user {
-        string name;
-        bool active;
-    }
-
-    contract auth {
-        function authenticate(string name, db.users storage users) public returns (bool) {
-            // ...
-        }
-    }
-
-    contract db {
-        struct users {
-            user[] field1;
-            int32 count;
-        }
-    }
+.. include:: ../examples/struct_type_arguments_external.sol
+  :code: solidity
 
 The `users` struct contains an array of `user`, which is another struct. The `users` struct is
 defined in contract `db`, and can be used in another contract with the type name `db.users`.
@@ -349,29 +254,8 @@ are passed around, just the memory address or storage slot is passed around inte
 it very cheap, but it does mean that if a called function modifies the struct, then this is
 visible in the caller as well.
 
-.. code-block:: solidity
-
-  contract foo {
-      struct bar {
-          bytes32 f1;
-          bytes32 f2;
-          bytes32 f3;
-          bytes32 f4;
-      }
-
-      function f(bar b) public {
-          b.f4 = "foobar";
-      }
-
-      function example() public {
-          bar bar1;
-
-          // bar1 is passed by reference; just its pointer is passed
-          f(bar1);
-
-          assert(bar1.f4 == "foobar");
-      }
-  }
+.. include:: ../examples/struct_type_variable_references.sol
+  :code: solidity
 
 Fixed Length Arrays
 ___________________
@@ -380,37 +264,14 @@ Arrays can be declared by adding [length] to the type name, where length is a
 constant expression. Any type can be made into an array, including arrays themselves (also
 known as arrays of arrays). For example:
 
-.. code-block:: solidity
-
-    contract foo {
-        /// In a vote with 11 voters, do the ayes have it?
-        function f(bool[11] votes) public pure returns (bool) {
-            uint32 i;
-            uint32 ayes = 0;
-
-            for (i=0; i<votes.length; i++) {
-                if (votes[i]) {
-                    ayes += 1;
-                }
-            }
-
-            // votes.length is odd; integer truncation means that 11 / 2 = 5
-            return ayes > votes.length / 2;
-        }
-    }
+.. include:: ../examples/array_type_fixed_length.sol
+  :code: solidity
 
 Note the length of the array can be read with the ``.length`` member. The length is readonly.
 Arrays can be initialized with an array literal. For example:
 
-.. code-block:: solidity
-
-    contract primes {
-        function primenumber(uint32 n) public pure returns (uint64) {
-            uint64[10] primes = [ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29 ];
-
-            return primes[n];
-        }
-    }
+.. include:: ../examples/array_type_initialized.sol
+  :code: solidity
 
 Any array subscript which is out of bounds (either an negative array index, or an index past the
 last element) will cause a runtime exception. In this example, calling ``primenumber(10)`` will
@@ -419,22 +280,8 @@ fail; the first prime number is indexed by 0, and the last by 9.
 Arrays are passed by reference. If you modify the array in another function, those changes will
 be reflected in the current function. For example:
 
-.. code-block:: solidity
-
-    contract reference {
-        function set_2(int8[4] a) pure private {
-            a[2] = 102;
-        }
-
-        function foo() private {
-            int8[4] val = [ 1, 2, 3, 4 ];
-
-            set_2(val);
-
-            // val was passed by reference, so was modified
-            assert(val[2] == 102);
-        }
-    }
+.. include:: ../examples/array_type_references.sol
+  :code: solidity
 
 On Solang, it is not necessary to cast the first element of the array literal.
 
@@ -461,20 +308,8 @@ Memory dynamic arrays must be allocated with ``new`` before they can be used. Th
 expression requires a single unsigned integer argument. The length can be read using
 ``length`` member variable.
 
-.. code-block:: solidity
-
-    contract dynamicarray {
-        function test(uint32 size) public {
-            int64[] memory a = new int64[](size);
-
-            for (uint32 i = 0; i < size; i++) {
-                a[i] = 1 << i;
-            }
-
-            assert(a.length == size);
-        }
-    }
-
+.. include:: ../examples/array_type_dynamic.sol
+  :code: solidity
 
 .. note::
 
@@ -484,26 +319,8 @@ Storage dynamic memory arrays do not have to be allocated. By default, they have
 length of zero and elements can be added and removed using the ``push()`` and ``pop()``
 methods.
 
-.. code-block:: javascript
-
-    contract s {
-        int64[] a;
-
-        function test() public {
-            // push takes a single argument with the item to be added
-            a.push(128);
-            // push with no arguments adds 0
-            a.push();
-            // now we have two elements in our array, 128 and 0
-            assert(a.length == 2);
-            a[0] |= 64;
-            // pop removes the last element
-            a.pop();
-            // you can assign the return value of pop
-            int64 v = a.pop();
-            assert(v == 192);
-        }
-    }
+.. include:: ../examples/array_type_dynamic_storage.sol
+  :code: solidity
 
 Calling the method ``pop()`` on an empty array is an error and contract execution will abort,
 just like when accessing an element beyond the end of an array.
@@ -511,23 +328,8 @@ just like when accessing an element beyond the end of an array.
 ``push()`` without any arguments returns a storage reference. This is only available for types
 that support storage references (see below).
 
-.. code-block:: solidity
-
-    contract example {
-        struct user {
-            address who;
-            uint32 hitcount;
-        }
-        s[] foo;
-
-        function test() public {
-            // foo.push() creates an empty entry and returns a reference to it
-            user storage x = foo.push();
-
-            x.who = address(1);
-            x.hitcount = 1;
-        }
-    }
+.. include:: ../examples/array_type_dynamic_push.sol
+  :code: solidity
 
 Depending on the array element, ``pop()`` can be costly. It has to first copy the element to
 memory, and then clear storage.
@@ -538,19 +340,8 @@ ______
 Strings can be initialized with a string literal or a hex literal. Strings can be concatenated and
 compared, and formatted using `.format()`; no other operations are allowed on strings.
 
-.. code-block:: solidity
-
-    contract example {
-        function test1(string s) public returns (bool) {
-            string str = "Hello, " + s + "!";
-
-            return (str == "Hello, World!");
-        }
-
-        function test2(string s, int64 n) public returns (string res) {
-            res = "Hello, {}! #{}".format(s, n);
-        }
-    }
+.. include:: ../examples/string_type.sol
+  :code: solidity
 
 Strings can be cast to `bytes`. This cast has no runtime cost, since both types use
 the same underlying data structure.
@@ -568,18 +359,8 @@ The ``bytes`` datatype is a dynamic length array of bytes. It can be created wit
 the ``new`` operator, or from an string or hex initializer. Unlike the ``string`` type,
 it is possible to index the ``bytes`` datatype like an array.
 
-.. code-block:: solidity
-
-    contract b {
-        function test() public {
-            bytes a = hex"0000_00fa";
-            bytes b = new bytes(4);
-
-            b[3] = hex"fa";
-
-            assert(a == b);
-        }
-    }
+.. include:: ../examples/dynamic_bytes_type.sol
+  :code: solidity
 
 If the ``bytes`` variable is a storage variable, there is a ``push()`` and ``pop()``
 method available to add and remove bytes from the array. Array elements in a
@@ -607,34 +388,8 @@ limitations:
 
 Mappings are declared with ``mapping(keytype => valuetype)``, for example:
 
-.. code-block:: solidity
-
-    contract b {
-        struct user {
-            bool exists;
-            address addr;
-        }
-        mapping(string => user) users;
-
-        function add(string name, address addr) public {
-            // assigning to a storage variable creates a reference
-            user storage s = users[name];
-
-            s.exists = true;
-            s.addr = addr;
-        }
-
-        function get(string name) public view returns (bool, address) {
-            // assigning to a memory variable creates a copy
-            user s = users[name];
-
-            return (s.exists, s.addr);
-        }
-
-        function rm(string name) public {
-            delete users[name];
-        }
-    }
+.. include:: ../examples/mapping_type.sol
+  :code: solidity
 
 .. tip::
 
@@ -682,21 +437,8 @@ sugar for calling functions on it.
 A contract can be created with the new statement, followed by the name of the contract. The
 arguments to the constructor must be provided.
 
-.. code-block:: solidity
-
-    contract child {
-        function announce() public {
-            print("Greetings from child contract");
-        }
-    }
-
-    contract creator {
-        function test() public {
-            child c = new child();
-
-            c.announce();
-        }
-    }
+.. include:: ../examples/contract_type.sol
+  :code: solidity
 
 Since child does not have a constructor, no arguments are needed for the new statement. The variable
 `c` of the contract `child` type, which simply holds its address. Functions can be called on
@@ -705,13 +447,8 @@ this type. The contract type can be cast to and from address, provided an explic
 The expression ``this`` evaluates to the current contract, which can be cast to ``address`` or
 ``address payable``.
 
-.. code-block:: solidity
-
-    contract example {
-        function get_address() public returns (address) {
-            return address(this);
-        }
-    }
+.. include:: ../examples/contract_type_cast_address.sol
+  :code: solidity
 
 Function Types
 ______________
@@ -724,33 +461,8 @@ An external function is a reference to a public or external function on any cont
 When declaring a function type, you must specify the parameters types, return types, mutability,
 and whether it is external or internal. The parameters or return types cannot have names.
 
-.. code-block:: solidity
-
-    contract ft {
-        function test() public {
-            // reference to an internal function with two argments, returning bool
-            // with the default mutability (i.e. cannot be payable)
-            function(int32, bool) internal returns (bool) x;
-
-            // the local function func1 can be assigned to this type; mutability
-            // can be more restrictive than the type.
-            x = func1;
-
-            // now you can call func1 via the x
-            bool res = x(102, false);
-
-            // reference to an internal function with no return values, must be pure
-            function(int32 arg1, bool arg2) internal pure y;
-
-            // Does not compile: wrong number of return types and mutability
-            // is not compatible.
-            y = func1;
-        }
-
-        function func1(int32 arg, bool arg2) view internal returns (bool) {
-            return false;
-        }
-    }
+.. include:: ../examples/function_type.sol
+  :code: solidity
 
 If the ``internal`` or ``external`` keyword is omitted, the type defaults to internal.
 
@@ -763,33 +475,8 @@ the contract, and the function selector. An internal function type only stores t
 assigning a value to an external function selector, the contract and function must be specified, by using
 a function on particular contract instance.
 
-.. code-block:: solidity
-
-    contract ft {
-        function test(paffling p) public {
-            // this.callback can be used as an external function type value
-            p.set_callback(this.callback);
-        }
-
-        function callback(int32 count, string foo) public {
-            // ...
-        }
-    }
-
-    contract paffling {
-        // the first visibility "external" is for the function type, the second "internal" is
-        // for the callback variables
-        function(int32, string) external internal callback;
-
-        function set_callback(function(int32, string) external c) public {
-            callback = c;
-        }
-
-        function piffle() public {
-            callback(1, "paffled");
-        }
-    }
-
+.. include:: ../examples/function_type_callback.sol
+  :code: solidity
 
 Storage References
 __________________
@@ -798,40 +485,8 @@ Parameters, return types, and variables can be declared storage references by ad
 ``storage`` after the type name. This means that the variable holds a references to a
 particular contract storage variable.
 
-.. code-block:: solidity
-
-    contract felix {
-        enum Felines { None, Lynx, Felis, Puma, Catopuma };
-        Felines[100] group_a;
-        Felines[100] group_b;
-
-
-        function count_pumas(Felines[100] storage cats) private returns (uint32)
-    {
-            uint32 count = 0;
-            uint32 i = 0;
-
-            for (i = 0; i < cats.length; i++) {
-                if (cats[i] == Felines.Puma) {
-                    ++count;
-                }
-            }
-
-            return count;
-        }
-
-        function all_pumas() public returns (uint32) {
-            Felines[100] storage ref = group_a;
-
-            uint32 total = count_pumas(ref);
-
-            ref = group_b;
-
-            total += count_pumas(ref);
-
-            return total;
-        }
-    }
+.. include:: ../examples/storage_ref_type.sol
+  :code: solidity
 
 Functions which have either storage parameter or return types cannot be public; when a function
 is called via the ABI encoder/decoder, it is not possible to pass references, just values.
@@ -845,17 +500,8 @@ A user defined type is a new type which simply wraps an existing primitive type.
 is declared with the ``type`` syntax. The name of the type can now be used anywhere where a type
 is used, for example in function arguments or return values.
 
-.. code-block:: solidity
-
-    type Value is uint128;
-
-    function inc_and_wrap(int128 v) returns (Value) {
-        return Value.wrap(v + 1);
-    }
-
-    function dec_and_unwrap(Value v) returns (uint128) {
-        return Value.unwrap(v) - 1;
-    }
+.. include:: ../examples/user_defined_type.sol
+  :code: solidity
 
 Note that the wrapped value ``Value v`` cannot be used in any type of arithmetic or comparision. It needs to
 be unwrapped before it can be used.
