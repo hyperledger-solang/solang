@@ -281,15 +281,15 @@ fn erc20_ink_example() {
 fn freestanding() {
     let mut runtime = build_solidity(
         r##"
-    event A(bool indexed b);
-    function foo() {
-        emit A(true);
-    }
-    contract a {
-        function emit_event() public {
-            foo();
+        event A(bool indexed b);
+        function foo() {
+            emit A(true);
         }
-    }"##,
+        contract a {
+            function emit_event() public {
+                foo();
+            }
+        }"##,
     );
 
     runtime.constructor(0, Vec::new());
