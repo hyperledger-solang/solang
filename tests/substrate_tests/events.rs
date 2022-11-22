@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use ink_env::{
+use ink::env::{
     hash::{Blake2x256, CryptoHash},
     topics::PrefixedValue,
 };
-use ink_primitives::AccountId;
+use ink::primitives::AccountId;
 use parity_scale_codec::Encode;
 use solang::{file_resolver::FileResolver, Target};
 use std::ffi::OsStr;
