@@ -104,28 +104,8 @@ address ``tx.origin``
 AccountInfo[] ``tx.accounts``
     Only available on Solana. See :ref:`account_info`. Here is an example:
 
-.. code-block:: solidity
-
-    import {AccountInfo} from 'solana';
-
-    contract SplToken {
-       function get_token_account(address token) internal view returns (AccountInfo) {
-               for (uint64 i = 0; i < tx.accounts.length; i++) {
-                       AccountInfo ai = tx.accounts[i];
-                       if (ai.key == token) {
-                               return ai;
-                       }
-               }
-
-               revert("token not found");
-       }
-
-        function total_supply(address token) public view returns (uint64) {
-                AccountInfo account = get_token_account(token);
-
-                return account.data.readUint64LE(33);
-        }
-    }
+.. include:: ../examples/solana/accountinfo.sol
+  :code: solidity
 
 address ``tx.program_id``
     The address or account of the currently executing program. Only available on
@@ -192,11 +172,8 @@ Assert takes a boolean argument. If that evaluates to false, execution is aborte
 
 .. code-block:: solidity
 
-    contract c {
-        constructor(int x) {
-            assert(x > 0);
-        }
-    }
+.. include:: ../examples/revert.sol
+  :code: solidity
 
 revert() or revert(string)
 ++++++++++++++++++++++++++
@@ -209,15 +186,8 @@ a function.
 If the caller is another contract, it can use the `ReasonCode` in a :ref:`try-catch`
 statement.
 
-.. code-block:: solidity
-
-    contract x {
-        constructor(address foobar) {
-            if (a == address(0)) {
-                revert("foobar must a valid address");
-            }
-        }
-    }
+.. include:: ../examples/assert.sol
+  :code: solidity
 
 require(bool) or require(bool, string)
 ++++++++++++++++++++++++++++++++++++++
@@ -228,14 +198,8 @@ if the `bool` arguments is `false`, then execution is aborted. There is an optio
 `string` argument which is called the `ReasonCode`, which can be used by the caller
 to identify what the problem is.
 
-.. code-block:: solidity
-
-    contract x {
-        constructor(address foobar) {
-            require(foobar != address(0), "foobar must a valid address");
-        }
-    }
-
+.. include:: ../examples/require.sol
+  :code: solidity
 
 ABI encoding and decoding
 _________________________
@@ -316,15 +280,8 @@ abi.encodeCall(function, ...)
 ABI encodes the function call to the function which should be specified as ``ContractName.FunctionName``. The arguments
 are cast and checked against the function specified as the first argument.
 
-.. code-block:: solidity
-
-    contract c {
-        function f1() public {
-            bytes foo = abi.encodeCall(c.bar, 102, true);
-        }
-
-        function bar(int a, bool b) public {}
-    }
+.. include:: ../examples/abi_encode_call.sol
+  :code: solidity
 
 Hash
 ++++
@@ -332,18 +289,8 @@ Hash
 Only available on Substrate, it represents the ``Hash`` type from ``ink_primitives`` via user type definition.
 Its underlying type is ``bytes32``, but it will be reported correctly as the ``Hash`` type in the metadata.
 
-.. code-block:: solidity
-
-    import 'substrate';
-
-    contract c {
-        bytes32 current;
-
-        function set(Hash h) public returns (Hash) {
-            current = Hash.unwrap(h);
-            return Hash.wrap(current);
-        }
-    }
+.. include:: ../examples/substrate/hash_type.sol
+  :code: solidity
 
 Cryptography
 ____________
@@ -576,13 +523,8 @@ print(string)
 
 print() takes a string argument.
 
-.. code-block:: solidity
-
-    contract c {
-        constructor() {
-            print("Hello, world!");
-        }
-    }
+.. include:: ../examples/print.sol
+  :code: solidity
 
 .. note::
 
