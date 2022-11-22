@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::VecDeque;
+
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
@@ -65,7 +67,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         };
 
         // Topic prefixes are static and can be calculated at compile time.
-        let mut topic_prefixes: Vec<Vec<u8>> = event
+        let mut topic_prefixes: VecDeque<Vec<u8>> = event
             .fields
             .iter()
             .filter(|field| field.indexed)
@@ -100,7 +102,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             let concatenated = Expression::StringConcat(
                 loc,
                 Type::DynamicBytes,
-                StringLocation::CompileTime(topic_prefixes.remove(0)), // TODO not efficient
+                StringLocation::CompileTime(topic_prefixes.pop_front().unwrap()),
                 StringLocation::RunTime(encoded.into()),
             );
 
@@ -127,18 +129,18 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 hash_len(),
             );
 
-            let bigger = cfg.new_basic_block("bigger".into());
-            let done = cfg.new_basic_block("done".into());
+            let hash_topic_block = cfg.new_basic_block("hash_topic".into());
+            let done_block = cfg.new_basic_block("done".into());
             cfg.add(
                 vartab,
                 Instr::BranchCond {
                     cond: compare,
-                    true_block: bigger,
-                    false_block: done,
+                    true_block: hash_topic_block,
+                    false_block: done_block,
                 },
             );
 
-            cfg.set_basic_block(bigger);
+            cfg.set_basic_block(hash_topic_block);
             cfg.add(
                 vartab,
                 Instr::WriteBuffer {
@@ -153,10 +155,10 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 },
             );
             vartab.set_dirty(var_buffer);
-            cfg.add(vartab, Instr::Branch { block: done });
+            cfg.add(vartab, Instr::Branch { block: done_block });
 
-            cfg.set_basic_block(done);
-            cfg.set_phis(done, vartab.pop_dirty_tracker());
+            cfg.set_basic_block(done_block);
+            cfg.set_phis(done_block, vartab.pop_dirty_tracker());
 
             topic_tys.push(Type::DynamicBytes);
             topics.push(buffer);
