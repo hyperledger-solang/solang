@@ -29,9 +29,9 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
 
         Expression::StorageLoad(_, _, expr)
         | Expression::Load(_, _, expr)
-        | Expression::Trunc(_, _, expr)
-        | Expression::Cast(_, _, expr)
-        | Expression::BytesCast(_, _, _, expr) => {
+        | Expression::Trunc { expr, .. }
+        | Expression::Cast { expr, .. }
+        | Expression::BytesCast { expr, .. } => {
             assigned_variable(ns, expr, symtable);
         }
 
@@ -91,11 +91,11 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
 
         Expression::StorageLoad(_, _, expr)
         | Expression::Load(_, _, expr)
-        | Expression::SignExt(_, _, expr)
-        | Expression::ZeroExt(_, _, expr)
-        | Expression::Trunc(_, _, expr)
-        | Expression::Cast(_, _, expr)
-        | Expression::BytesCast(_, _, _, expr) => {
+        | Expression::SignExt { expr, .. }
+        | Expression::ZeroExt { expr, .. }
+        | Expression::Trunc { expr, .. }
+        | Expression::Cast { expr, .. }
+        | Expression::BytesCast { expr, .. } => {
             used_variable(ns, expr, symtable);
         }
 

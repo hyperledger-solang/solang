@@ -569,12 +569,12 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::ZeroExt(loc, ty, expr) => {
+            Expression::ZeroExt { loc, to, expr } => {
                 let node = self.add_node(
                     Node::new(
                         "zero_ext",
                         vec![
-                            format!("zero extend {}", ty.to_string(ns)),
+                            format!("zero extend {}", to.to_string(ns)),
                             ns.loc_to_string(loc),
                         ],
                     ),
@@ -584,12 +584,12 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::SignExt(loc, ty, expr) => {
+            Expression::SignExt { loc, to, expr } => {
                 let node = self.add_node(
                     Node::new(
                         "sign_ext",
                         vec![
-                            format!("sign extend {}", ty.to_string(ns)),
+                            format!("sign extend {}", to.to_string(ns)),
                             ns.loc_to_string(loc),
                         ],
                     ),
@@ -599,12 +599,12 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::Trunc(loc, ty, expr) => {
+            Expression::Trunc { loc, to, expr } => {
                 let node = self.add_node(
                     Node::new(
                         "trunc",
                         vec![
-                            format!("truncate {}", ty.to_string(ns)),
+                            format!("truncate {}", to.to_string(ns)),
                             ns.loc_to_string(loc),
                         ],
                     ),
@@ -614,12 +614,12 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::CheckingTrunc(loc, ty, expr) => {
+            Expression::CheckingTrunc { loc, to, expr } => {
                 let node = self.add_node(
                     Node::new(
                         "trunc",
                         vec![
-                            format!("checking truncate {}", ty.to_string(ns)),
+                            format!("checking truncate {}", to.to_string(ns)),
                             ns.loc_to_string(loc),
                         ],
                     ),
@@ -629,11 +629,11 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::Cast(loc, ty, expr) => {
+            Expression::Cast { loc, to, expr } => {
                 let node = self.add_node(
                     Node::new(
                         "cast",
-                        vec![format!("cast {}", ty.to_string(ns)), ns.loc_to_string(loc)],
+                        vec![format!("cast {}", to.to_string(ns)), ns.loc_to_string(loc)],
                     ),
                     Some(parent),
                     Some(parent_rel),
@@ -641,7 +641,12 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::BytesCast(loc, to, from, expr) => {
+            Expression::BytesCast {
+                loc,
+                to,
+                from,
+                expr,
+            } => {
                 let node = self.add_node(
                     Node::new(
                         "bytes_cast",
