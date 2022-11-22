@@ -3,7 +3,7 @@ use contract_metadata::{
     CodeHash, Compiler, Contract, ContractMetadata, Language, Source, SourceCompiler,
     SourceLanguage, SourceWasm,
 };
-use ink_metadata::{
+use ink::metadata::{
     layout::{FieldLayout, Layout, LayoutKey, LeafLayout, RootLayout, StructLayout},
     ConstructorSpec, ContractSpec, EventParamSpec, EventSpec, InkProject, MessageParamSpec,
     MessageSpec, ReturnTypeSpec, TypeSpec,
