@@ -49,13 +49,14 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
 
         let loc = pt::Loc::Builtin;
         let event = &self.ns.events[self.event_no];
+        // For freestanding events the name of the emitting contract is used
+        let contract_name = &self.ns.contracts[event.contract.unwrap_or(contract_no)].name;
         let hash_len = || Box::new(Expression::NumberLiteral(loc, Type::Uint(32), 32.into()));
 
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
         if !event.anonymous {
-            let mut encoded =
-                format!("{}::{}", &self.ns.contracts[contract_no].name, &event.name).encode();
+            let mut encoded = format!("{}::{}", contract_name, &event.name).encode();
             encoded[0] = 0; // Set the prefix (there is no prefix for the event topic)
             topics.push(Expression::AllocDynamicBytes(
                 loc,
@@ -74,7 +75,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             .map(|field| {
                 format!(
                     "{}::{}::{}",
-                    &self.ns.contracts[contract_no].name,
+                    contract_name,
                     &event.name,
                     &field.name_as_str()
                 )

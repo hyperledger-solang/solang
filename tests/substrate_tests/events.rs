@@ -6,7 +6,7 @@ use ink_env::{
     topics::PrefixedValue,
 };
 use ink_primitives::AccountId;
-use parity_scale_codec::{self as scale, Decode, Encode};
+use parity_scale_codec::Encode;
 use solang::{file_resolver::FileResolver, Target};
 use std::ffi::OsStr;
 
@@ -43,7 +43,7 @@ fn anonymous() {
 
 #[test]
 fn emit() {
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
+    #[derive(Encode)]
     enum Event {
         Foo(bool, u32, i64),
         Bar(u32, u64, String),
@@ -67,9 +67,7 @@ fn emit() {
     assert_eq!(runtime.events.len(), 2);
     let event = &runtime.events[0];
     assert_eq!(event.topics.len(), 2);
-    let mut event_topic = scale::Encode::encode(&String::from("a::foo"));
-    event_topic[0] = 0;
-    assert_eq!(event.topics[0], topic_hash(&event_topic[..])[..]);
+    assert_eq!(event.topics[0], topic_hash(b"\0a::foo")[..]);
     let topic = PrefixedValue {
         prefix: b"a::foo::i",
         value: &1i64,
@@ -88,9 +86,7 @@ fn emit() {
         "topic hash: {}",
         std::str::from_utf8(&event.topics[0]).unwrap()
     );
-    let mut event_topic = scale::Encode::encode(&String::from("a::bar"));
-    event_topic[0] = 0;
-    assert_eq!(event.topics[0], topic_hash(&event_topic[..])[..]);
+    assert_eq!(event.topics[0], topic_hash(b"\0a::bar")[..]);
     let topic = PrefixedValue {
         prefix: b"a::bar::s",
         value: &String::from("foobar"),
@@ -229,12 +225,12 @@ fn event_imported() {
 /// FIXME: Use the exact same event structure once the `Option<T>` type is available
 #[test]
 fn erc20_ink_example() {
-    #[derive(Encode, Decode)]
+    #[derive(Encode)]
     enum Event {
         Transfer(AccountId, AccountId, u128),
     }
 
-    #[derive(Encode, Decode)]
+    #[derive(Encode)]
     struct Transfer {
         from: AccountId,
         to: AccountId,
@@ -266,9 +262,7 @@ fn erc20_ink_example() {
     assert_eq!(event.data, Event::Transfer(from, to, value).encode());
 
     assert_eq!(event.topics.len(), 3);
-    let mut expected_event_topic = scale::Encode::encode(&String::from("Erc20::Transfer"));
-    expected_event_topic[0] = 0;
-    assert_eq!(event.topics[0], topic_hash(&expected_event_topic[..])[..]);
+    assert_eq!(event.topics[0], topic_hash(b"\0Erc20::Transfer")[..]);
 
     let expected_topic = PrefixedValue {
         prefix: b"Erc20::Transfer::from",
@@ -281,4 +275,54 @@ fn erc20_ink_example() {
         value: &to,
     };
     assert_eq!(event.topics[2], topic_hash(&expected_topic.encode())[..]);
+}
+
+#[test]
+fn freestanding() {
+    let mut runtime = build_solidity(
+        r##"
+    event A(bool indexed b);
+    function foo() {
+        emit A(true);
+    }
+    contract a {
+        function emit_event() public {
+            foo();
+        }
+    }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("emit_event", Vec::new());
+
+    assert_eq!(runtime.events.len(), 1);
+    let event = &runtime.events[0];
+    assert_eq!(event.data, (0u8, true).encode());
+    assert_eq!(event.topics[0], topic_hash(b"\0a::A")[..]);
+    let expected_topic = PrefixedValue {
+        prefix: b"a::A::b",
+        value: &true,
+    };
+    assert_eq!(event.topics[1], topic_hash(&expected_topic.encode())[..]);
+}
+
+#[test]
+fn different_contract() {
+    let mut runtime = build_solidity(
+        r##"abstract contract A { event X(bool indexed foo); }
+        contract B { function emit_event() public { emit A.X(true); } }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("emit_event", Vec::new());
+
+    assert_eq!(runtime.events.len(), 1);
+    let event = &runtime.events[0];
+    assert_eq!(event.data, (0u8, true).encode());
+    assert_eq!(event.topics[0], topic_hash(b"\0A::X")[..]);
+    let expected_topic = PrefixedValue {
+        prefix: b"A::X::foo",
+        value: &true,
+    };
+    assert_eq!(event.topics[1], topic_hash(&expected_topic.encode())[..]);
 }
