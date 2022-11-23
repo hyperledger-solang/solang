@@ -1,16 +1,31 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use parity_scale_codec::{Decode, Encode};
+use ink::env::{
+    hash::{Blake2x256, CryptoHash},
+    topics::PrefixedValue,
+};
+use ink::primitives::AccountId;
+use parity_scale_codec::Encode;
 use solang::{file_resolver::FileResolver, Target};
 use std::ffi::OsStr;
 
+fn topic_hash(encoded: &[u8]) -> Vec<u8> {
+    let mut buf = [0; 32];
+    if encoded.len() <= 32 {
+        buf[..encoded.len()].copy_from_slice(encoded);
+    } else {
+        <Blake2x256 as CryptoHash>::hash(encoded, &mut buf);
+    };
+    buf.into()
+}
+
 #[test]
-fn emit() {
+fn anonymous() {
     let mut runtime = build_solidity(
         r##"
         contract a {
-            event foo(bool) anonymous;
+            event foo(bool b) anonymous;
             function emit_event() public {
                 emit foo(true);
             }
@@ -24,15 +39,21 @@ fn emit() {
     let event = &runtime.events[0];
     assert_eq!(event.topics.len(), 0);
     assert_eq!(event.data, (0u8, true).encode());
+}
 
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Foo(u8, bool, u32);
+#[test]
+fn emit() {
+    #[derive(Encode)]
+    enum Event {
+        Foo(bool, u32, i64),
+        Bar(u32, u64, String),
+    }
 
     let mut runtime = build_solidity(
         r##"
         contract a {
-            event foo(bool,uint32,int64 indexed);
-            event bar(uint32,uint64,string indexed);
+            event foo(bool,uint32,int64 indexed i);
+            event bar(uint32,uint64,string indexed s);
             function emit_event() public {
                 emit foo(true, 102, 1);
                 emit bar(0xdeadcafe, 102, "foobar");
@@ -45,20 +66,37 @@ fn emit() {
 
     assert_eq!(runtime.events.len(), 2);
     let event = &runtime.events[0];
-    assert_eq!(event.topics.len(), 1);
-    let mut t = [0u8; 32];
-    t[0] = 1;
-
-    assert_eq!(event.topics[0], t);
-    assert_eq!(event.data, Foo(0, true, 102).encode());
+    assert_eq!(event.topics.len(), 2);
+    assert_eq!(event.topics[0], topic_hash(b"\0a::foo")[..]);
+    let topic = PrefixedValue {
+        prefix: b"a::foo::i",
+        value: &1i64,
+    }
+    .encode();
+    assert_eq!(event.topics[1], topic_hash(&topic[..])[..]);
+    assert_eq!(event.data, Event::Foo(true, 102, 1).encode());
 
     let event = &runtime.events[1];
-    assert_eq!(event.topics.len(), 1);
-    assert_eq!(
-        event.topics[0].to_vec(),
-        hex::decode("38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e").unwrap()
+    assert_eq!(event.topics.len(), 2);
+    println!(
+        "topic hash: {}",
+        std::str::from_utf8(&event.topics[0]).unwrap()
     );
-    assert_eq!(event.data, (1u8, 0xdeadcafeu32, 102u64).encode());
+    println!(
+        "topic hash: {}",
+        std::str::from_utf8(&event.topics[0]).unwrap()
+    );
+    assert_eq!(event.topics[0], topic_hash(b"\0a::bar")[..]);
+    let topic = PrefixedValue {
+        prefix: b"a::bar::s",
+        value: &String::from("foobar"),
+    }
+    .encode();
+    assert_eq!(event.topics[1].to_vec(), topic_hash(&topic[..]));
+    assert_eq!(
+        event.data,
+        Event::Bar(0xdeadcafe, 102, "foobar".into()).encode()
+    );
 }
 
 #[test]
@@ -182,4 +220,109 @@ fn event_imported() {
         solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
 
     assert!(!ns.diagnostics.any_errors());
+}
+
+/// FIXME: Use the exact same event structure once the `Option<T>` type is available
+#[test]
+fn erc20_ink_example() {
+    #[derive(Encode)]
+    enum Event {
+        Transfer(AccountId, AccountId, u128),
+    }
+
+    #[derive(Encode)]
+    struct Transfer {
+        from: AccountId,
+        to: AccountId,
+        value: u128,
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract Erc20 {
+            event Transfer(
+                address indexed from,
+                address indexed to,
+                uint128 value
+            );
+        
+            function emit_event(address from, address to, uint128 value) public {
+                emit Transfer(from, to, value);
+            }
+        }"##,
+    );
+    runtime.constructor(0, Vec::new());
+    let from = AccountId::from([1; 32]);
+    let to = AccountId::from([2; 32]);
+    let value = 10;
+    runtime.function("emit_event", Transfer { from, to, value }.encode());
+
+    assert_eq!(runtime.events.len(), 1);
+    let event = &runtime.events[0];
+    assert_eq!(event.data, Event::Transfer(from, to, value).encode());
+
+    assert_eq!(event.topics.len(), 3);
+    assert_eq!(event.topics[0], topic_hash(b"\0Erc20::Transfer")[..]);
+
+    let expected_topic = PrefixedValue {
+        prefix: b"Erc20::Transfer::from",
+        value: &from,
+    };
+    assert_eq!(event.topics[1], topic_hash(&expected_topic.encode())[..]);
+
+    let expected_topic = PrefixedValue {
+        prefix: b"Erc20::Transfer::to",
+        value: &to,
+    };
+    assert_eq!(event.topics[2], topic_hash(&expected_topic.encode())[..]);
+}
+
+#[test]
+fn freestanding() {
+    let mut runtime = build_solidity(
+        r##"
+        event A(bool indexed b);
+        function foo() {
+            emit A(true);
+        }
+        contract a {
+            function emit_event() public {
+                foo();
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("emit_event", Vec::new());
+
+    assert_eq!(runtime.events.len(), 1);
+    let event = &runtime.events[0];
+    assert_eq!(event.data, (0u8, true).encode());
+    assert_eq!(event.topics[0], topic_hash(b"\0a::A")[..]);
+    let expected_topic = PrefixedValue {
+        prefix: b"a::A::b",
+        value: &true,
+    };
+    assert_eq!(event.topics[1], topic_hash(&expected_topic.encode())[..]);
+}
+
+#[test]
+fn different_contract() {
+    let mut runtime = build_solidity(
+        r##"abstract contract A { event X(bool indexed foo); }
+        contract B { function emit_event() public { emit A.X(true); } }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("emit_event", Vec::new());
+
+    assert_eq!(runtime.events.len(), 1);
+    let event = &runtime.events[0];
+    assert_eq!(event.data, (0u8, true).encode());
+    assert_eq!(event.topics[0], topic_hash(b"\0A::X")[..]);
+    let expected_topic = PrefixedValue {
+        prefix: b"A::X::foo",
+        value: &true,
+    };
+    assert_eq!(event.topics[1], topic_hash(&expected_topic.encode())[..]);
 }

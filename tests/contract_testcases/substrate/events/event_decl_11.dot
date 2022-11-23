@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/events/event_decl_11.sol" {
+	foo [label="name:foo\ncontract: 0\ntests/contract_testcases/substrate/events/event_decl_11.sol:2:11-14\nfield name:x ty:bool indexed:no\nfield name:y ty:uint32 indexed:no\nfield name: ty:address indexed:yes"]
+	contract [label="contract c\ntests/contract_testcases/substrate/events/event_decl_11.sol:1:1-3:2"]
+	diagnostic [label="found abstract contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/event_decl_11.sol:1:1-3:2"]
+	diagnostic_6 [label="indexed event fields must have a name on substrate\nlevel Error\ntests/contract_testcases/substrate/events/event_decl_11.sol:2:33-48"]
+	events -> foo
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+}
