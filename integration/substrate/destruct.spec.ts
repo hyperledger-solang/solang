@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { weight, createConnection, deploy, transaction, aliceKeypair, daveKeypair } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, daveKeypair, query } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -25,7 +25,7 @@ describe('Deploy destruct contract and test', () => {
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
-        let hello = await contract.query.hello(alice.address, {});
+        let hello = await query(conn, alice, contract, "hello");
 
         expect(hello.output?.toJSON()).toBe('Hello');
 
