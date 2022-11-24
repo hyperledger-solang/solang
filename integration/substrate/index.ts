@@ -12,13 +12,6 @@ import { ContractExecResultResult, WeightV2 } from '@polkadot/types/interfaces';
 
 const default_url: string = "ws://127.0.0.1:9944";
 
-export async function weight(api: ApiPromise, contract: ContractPromise, message: string, args?: unknown[], value?: number) {
-  const ALICE = new Keyring({ type: 'sr25519' }).addFromUri('//Alice').address;
-  let msg = contract.abi.findMessage(message);
-  let dry = await api.call.contractsApi.call(ALICE, contract.address, value ? value : 0, null, null, msg.toU8a(args ? args : []));
-  return dry.gasRequired;
-}
-
 export function aliceKeypair(): KeyringPair {
   const keyring = new Keyring({ type: 'sr25519' });
   return keyring.addFromUri('//Alice');
@@ -85,6 +78,14 @@ export async function transaction(tx: SubmittableExtrinsic<"promise", ISubmittab
       }
     });
   });
+}
+
+// Returns the required gas estimated from a dry run
+export async function weight(api: ApiPromise, contract: ContractPromise, message: string, args?: unknown[], value?: number) {
+  const ALICE = new Keyring({ type: 'sr25519' }).addFromUri('//Alice').address;
+  let msg = contract.abi.findMessage(message);
+  let dry = await api.call.contractsApi.call(ALICE, contract.address, value ? value : 0, null, null, msg.toU8a(args ? args : []));
+  return dry.gasRequired;
 }
 
 // The old contract.query API does not support WeightV2 yet
