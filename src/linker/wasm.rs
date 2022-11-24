@@ -70,11 +70,14 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
         while ind < imports.len() {
             if imports[ind].field().starts_with("seal") {
                 let module_name = match imports[ind].field() {
-                    "seal_instantiate" | "seal_terminate" | "seal_random" | "seal_call" => "seal1",
-                    "seal_set_storage"
-                    | "seal_clear_storage"
+                    "seal_set_storage" => "seal2",
+                    "seal_clear_storage"
                     | "seal_contains_storage"
-                    | "seal_get_storage" => "__unstable__",
+                    | "seal_get_storage"
+                    | "seal_instantiate"
+                    | "seal_terminate"
+                    | "seal_random"
+                    | "seal_call" => "seal1",
                     _ => "seal0",
                 };
                 *imports[ind].module_mut() = module_name.to_owned();
