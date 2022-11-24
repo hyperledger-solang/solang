@@ -1,5 +1,5 @@
 import expect from "expect";
-import { aliceKeypair, createConnection, deploy, weight, transaction } from "./index";
+import { aliceKeypair, createConnection, deploy, weight, transaction, query } from "./index";
 import { ContractPromise } from "@polkadot/api-contract";
 import { DecodedEvent } from "@polkadot/api-contract/types";
 import { ApiPromise } from "@polkadot/api";
@@ -23,10 +23,10 @@ describe('Deploy mytoken contract and test', () => {
         let deployed_contract = await deploy(conn, alice, 'mytoken.contract', BigInt(0));
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 
-        let res = await contract.query.test(alice.address, {}, alice.address, true);
+        let res = await query(conn, alice, contract, "test", [alice.address, true]);
         expect(res.output?.toJSON()).toEqual(alice.address);
 
-        res = await contract.query.test(alice.address, {}, alice.address, false);
+        res = await query(conn, alice, contract, "test", [alice.address, false]);
         expect(res.output?.toJSON()).toEqual(alice.address);
     });
 

@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { weight, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -37,32 +37,32 @@ describe('Deploy external_call contract and test', () => {
 
         await transaction(tx1, alice);
 
-        let res1 = await callee_contract.query.getX(alice.address, {});
+        let res1 = await query(conn, alice, callee_contract, "getX");
 
         expect(res1.output?.toJSON()).toStrictEqual(102);
 
-        let res2 = await caller_contract.query.whoAmI(alice.address, {});
+        let res2 = await query(conn, alice, caller_contract, "whoAmI");
 
         expect(res2.output?.toString()).toEqual(caller_res.address.toString());
 
-        var gasLimit = await weight(conn, caller_contract, "doCall"[callee_contract.address, 13123]);
+        var gasLimit = await weight(conn, caller_contract, "doCall", [callee_contract.address, 13123]);
         let tx2 = caller_contract.tx.doCall({ gasLimit }, callee_contract.address, 13123);
 
         await transaction(tx2, alice);
 
-        let res3 = await callee_contract.query.getX(alice.address, {});
+        let res3 = await query(conn, alice, callee_contract, "getX");
 
         expect(res3.output?.toJSON()).toStrictEqual(13123);
 
-        let res4 = await caller_contract.query.doCall2(alice.address, {}, callee_contract.address, 20000);
+        let res4 = await query(conn, alice, caller_contract, "doCall2", [callee_contract.address, 20000]);
 
         expect(res4.output?.toJSON()).toStrictEqual(33123);
 
-        let res5 = await caller_contract.query.doCall3(alice.address, {}, callee_contract.address, callee2_contract.address, [3, 5, 7, 9], "yo");
+        let res5 = await query(conn, alice, caller_contract, "doCall3", [callee_contract.address, callee2_contract.address, [3, 5, 7, 9], "yo"]);
 
         expect(res5.output?.toJSON()).toEqual([24, "my name is callee"]);
 
-        let res6 = await caller_contract.query.doCall4(alice.address, {}, callee_contract.address, callee2_contract.address, [1, 2, 3, 4], "asda");
+        let res6 = await query(conn, alice, caller_contract, "doCall4", [callee_contract.address, callee2_contract.address, [1, 2, 3, 4], "asda"]);
 
         expect(res6.output?.toJSON()).toEqual([10, "x:asda"]);
     });

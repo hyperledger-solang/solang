@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { weight, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 
 describe('Deploy flipper contract and test', () => {
@@ -13,7 +13,7 @@ describe('Deploy flipper contract and test', () => {
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 
-        let init_value = await contract.query.get(alice.address, {});
+        let init_value = await query(conn, alice, contract, "get");
 
         expect(init_value.output?.toJSON()).toBe(true);
 
@@ -22,7 +22,7 @@ describe('Deploy flipper contract and test', () => {
 
         await transaction(tx, alice);
 
-        let flipped_value = await contract.query.get(alice.address, {});
+        let flipped_value = await query(conn, alice, contract, "get");
 
         expect(flipped_value.output?.toJSON()).toBe(false);
 
