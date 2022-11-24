@@ -8,7 +8,7 @@ import { AnyJson, Codec, ISubmittableResult, Registry } from '@polkadot/types/ty
 import { KeyringPair } from '@polkadot/keyring/types';
 import expect from 'expect';
 import { ContractCallResult } from '@polkadot/api-contract/base/types';
-import { ContractExecResultResult } from '@polkadot/types/interfaces';
+import { ContractExecResultResult, WeightV2 } from '@polkadot/types/interfaces';
 
 const default_url: string = "ws://127.0.0.1:9944";
 
@@ -88,9 +88,17 @@ export async function transaction(tx: SubmittableExtrinsic<"promise", ISubmittab
 }
 
 // The old contract.query API does not support WeightV2 yet
-export async function query(api: ApiPromise, account: KeyringPair, contract: ContractPromise, message: string, args?: unknown[], value?: number): Promise<{ output: Codec | null, result: ContractExecResultResult }> {
+export async function query(
+  api: ApiPromise,
+  account: KeyringPair,
+  contract: ContractPromise,
+  message: string,
+  args?: unknown[],
+  value?: number,
+  gasLimit?: WeightV2 | { refTime?: any; proofSize?: any; }
+): Promise<{ output: Codec | null, result: ContractExecResultResult }> {
   let msg = contract.abi.findMessage(message);
-  let callResult = await api.call.contractsApi.call(account.address, contract.address, value ? value : 0, null, null, msg.toU8a(args ? args : []));
+  let callResult = await api.call.contractsApi.call(account.address, contract.address, value ? value : 0, gasLimit ? gasLimit : null, null, msg.toU8a(args ? args : []));
   // Source: https://github.com/paritytech/contracts-ui/blob/e343221a0d5c1ae67122fe99028246e5bdf38c46/src/ui/hooks/useDecodedOutput.ts
   let output = callResult.result.isOk && msg.returnType
     ? contract.abi.registry.createTypeUnsafe(
