@@ -32,7 +32,7 @@ describe('Deploy external_call contract and test', () => {
 
         let callee2_contract = new ContractPromise(conn, callee2_res.abi, callee2_res.address);
 
-        var gasLimit = await weight(conn, callee_contract, "setX", [102]);
+        let gasLimit = await weight(conn, callee_contract, "setX", [102]);
         let tx1 = callee_contract.tx.setX({ gasLimit }, 102);
 
         await transaction(tx1, alice);
@@ -45,7 +45,7 @@ describe('Deploy external_call contract and test', () => {
 
         expect(res2.output?.toString()).toEqual(caller_res.address.toString());
 
-        var gasLimit = await weight(conn, caller_contract, "doCall", [callee_contract.address, 13123]);
+        gasLimit = await weight(conn, caller_contract, "doCall", [callee_contract.address, 13123]);
         let tx2 = caller_contract.tx.doCall({ gasLimit }, callee_contract.address, 13123);
 
         await transaction(tx2, alice);

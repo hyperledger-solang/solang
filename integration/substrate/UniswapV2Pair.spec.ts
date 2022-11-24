@@ -3,7 +3,6 @@ import { weight, query, createConnection, deploy, transaction, aliceKeypair, dav
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
-import type { Codec } from '@polkadot/types/types';
 
 const MINIMUM_LIQUIDITY = BigInt(1000);
 const TOTAL_SUPPLY = BigInt(10000e18);
@@ -41,7 +40,7 @@ describe('UniswapV2Pair', () => {
 
         const tokenB = new ContractPromise(conn, tokenB_contract.abi, tokenB_contract.address);
 
-        var gasLimit = await weight(conn, factory, "createPair", [tokenA.address, tokenB.address]);
+        let gasLimit = await weight(conn, factory, "createPair", [tokenA.address, tokenB.address]);
         let tx = factory.tx.createPair({ gasLimit }, tokenA.address, tokenB.address);
 
         await transaction(tx, alice);
@@ -70,17 +69,15 @@ describe('UniswapV2Pair', () => {
         const token0Amount = BigInt(1e18)
         const token1Amount = BigInt(4e18)
 
-        var gasLimit = await weight(conn, token0, "transfer", [pair.address, token0Amount]);
-        console.log(gasLimit.toString());
+        let gasLimit = await weight(conn, token0, "transfer", [pair.address, token0Amount]);
         let tx = token0.tx.transfer({ gasLimit }, pair.address, token0Amount);
         await transaction(tx, alice);
-        var gasLimit = await weight(conn, token1, "transfer", [pair.address, token1Amount]);
-        console.log(gasLimit.toString());
+        gasLimit = await weight(conn, token1, "transfer", [pair.address, token1Amount]);
         tx = token1.tx.transfer({ gasLimit }, pair.address, token1Amount);
         await transaction(tx, alice);
         const expectedLiquidity = BigInt(2e18)
 
-        var gasLimit = await weight(conn, pair, "mint", [alice.address]);
+        gasLimit = await weight(conn, pair, "mint", [alice.address]);
         tx = pair.tx.mint({ gasLimit }, alice.address);
         await transaction(tx, alice);
 
@@ -100,13 +97,13 @@ describe('UniswapV2Pair', () => {
     })
 
     async function addLiquidity(token0Amount: BigInt, token1Amount: BigInt) {
-        var gasLimit = await weight(conn, token0, "transfer", [pair.address, token0Amount]);
+        let gasLimit = await weight(conn, token0, "transfer", [pair.address, token0Amount]);
         let tx = token0.tx.transfer({ gasLimit }, pair.address, token0Amount);
         await transaction(tx, alice);
-        var gasLimit = await weight(conn, token1, "transfer", [pair.address, token1Amount]);
+        gasLimit = await weight(conn, token1, "transfer", [pair.address, token1Amount]);
         tx = token1.tx.transfer({ gasLimit }, pair.address, token1Amount);
         await transaction(tx, alice);
-        var gasLimit = await weight(conn, pair, "mint", [alice.address]);
+        gasLimit = await weight(conn, pair, "mint", [alice.address]);
         tx = pair.tx.mint({ gasLimit }, alice.address);
         await transaction(tx, alice);
     }
@@ -119,11 +116,11 @@ describe('UniswapV2Pair', () => {
         const swapAmount = BigInt(1e18)
         const expectedOutputAmount = BigInt(1662497915624478906)
 
-        var gasLimit = await weight(conn, token0, "transfer", [pair.address, swapAmount]);
+        let gasLimit = await weight(conn, token0, "transfer", [pair.address, swapAmount]);
         let tx = token0.tx.transfer({ gasLimit }, pair.address, swapAmount);
         await transaction(tx, alice);
 
-        var gasLimit = await weight(conn, pair, "swap", [0, expectedOutputAmount, alice.address, '']);
+        gasLimit = await weight(conn, pair, "swap", [0, expectedOutputAmount, alice.address, '']);
         tx = pair.tx.swap({ gasLimit }, 0, expectedOutputAmount, alice.address, '');
         await transaction(tx, alice);
 
@@ -158,11 +155,11 @@ describe('UniswapV2Pair', () => {
         const swapAmount = BigInt(1e18)
         const expectedOutputAmount = BigInt(453305446940074565)
 
-        var gasLimit = await weight(conn, token1, "transfer", [pair.address, swapAmount]);
+        let gasLimit = await weight(conn, token1, "transfer", [pair.address, swapAmount]);
         let tx = token1.tx.transfer({ gasLimit }, pair.address, swapAmount);
         await transaction(tx, alice);
 
-        var gasLimit = await weight(conn, pair, "swap", [expectedOutputAmount, 0, alice.address, '']);
+        gasLimit = await weight(conn, pair, "swap", [expectedOutputAmount, 0, alice.address, '']);
         tx = pair.tx.swap({ gasLimit }, expectedOutputAmount, 0, alice.address, '');
         await transaction(tx, alice);
 
@@ -196,13 +193,11 @@ describe('UniswapV2Pair', () => {
 
         const expectedLiquidity = BigInt(3e18)
 
-        var gasLimit = await weight(conn, pair, "transferAddressUint256", [pair.address, expectedLiquidity - MINIMUM_LIQUIDITY]);
-        console.log(gasLimit);
+        let gasLimit = await weight(conn, pair, "transferAddressUint256", [pair.address, expectedLiquidity - MINIMUM_LIQUIDITY]);
         let tx = pair.tx.transferAddressUint256({ gasLimit }, pair.address, expectedLiquidity - MINIMUM_LIQUIDITY);
         await transaction(tx, alice);
 
-        var gasLimit = await weight(conn, pair, "burn", [alice.address]);
-        console.log(gasLimit);
+        gasLimit = await weight(conn, pair, "burn", [alice.address]);
         tx = pair.tx.burn({ gasLimit }, alice.address);
         await transaction(tx, alice);
 

@@ -51,7 +51,7 @@ describe('UniswapV2Factory', () => {
   })
 
   async function createPair(tokens: [string, string]) {
-    var gasLimit = await weight(conn, factory, "createPair", [tokens[0], tokens[1]]);
+    let gasLimit = await weight(conn, factory, "createPair", [tokens[0], tokens[1]]);
     let tx = factory.tx.createPair({ gasLimit }, ...tokens);
 
     let res0: any = await transaction(tx, alice);
@@ -98,7 +98,7 @@ describe('UniswapV2Factory', () => {
   })
 
   it('setFeeTo', async () => {
-    var gasLimit = await weight(conn, factory, "setFeeTo", [dave.address]);
+    let gasLimit = await weight(conn, factory, "setFeeTo", [dave.address]);
     let tx = factory.tx.setFeeTo({ gasLimit }, dave.address);
     await transaction(tx, alice);
 
@@ -107,7 +107,7 @@ describe('UniswapV2Factory', () => {
   })
 
   it('setFeeToSetter', async () => {
-    var gasLimit = await weight(conn, factory, "setFeeToSetter", [dave.address]);
+    let gasLimit = await weight(conn, factory, "setFeeToSetter", [dave.address]);
     let tx = factory.tx.setFeeToSetter({ gasLimit }, dave.address);
     await transaction(tx, alice);
 

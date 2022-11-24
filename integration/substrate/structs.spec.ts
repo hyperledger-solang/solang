@@ -23,7 +23,7 @@ describe('Deploy struct contract and test', () => {
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 
-        var gasLimit = await weight(conn, contract, "setFoo1");
+        let gasLimit = await weight(conn, contract, "setFoo1");
         const tx1 = contract.tx.setFoo1({ gasLimit });
 
         await transaction(tx1, alice);
@@ -59,7 +59,7 @@ describe('Deploy struct contract and test', () => {
                 "in1": true, "in2": "Drive someone up the wall"
             }
         };
-        var gasLimit = await weight(conn, contract, "setFoo2", [arg1, "nah"]);
+        gasLimit = await weight(conn, contract, "setFoo2", [arg1, "nah"]);
         const tx2 = contract.tx.setFoo2({ gasLimit }, arg1, "nah");
 
         await transaction(tx2, alice);
@@ -100,7 +100,7 @@ describe('Deploy struct contract and test', () => {
             }
         ]);
 
-        var gasLimit = await weight(conn, contract, "deleteFoo", [true]);
+        gasLimit = await weight(conn, contract, "deleteFoo", [true]);
         const tx3 = contract.tx.deleteFoo({ gasLimit }, true);
 
         await transaction(tx3, alice);
@@ -118,7 +118,7 @@ describe('Deploy struct contract and test', () => {
             },
         );
 
-        var gasLimit = await weight(conn, contract, "structLiteral");
+        gasLimit = await weight(conn, contract, "structLiteral");
         const tx4 = contract.tx.structLiteral({ gasLimit });
 
         await transaction(tx4, alice);
