@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { createConnection, deploy, transaction, aliceKeypair, weight, } from './index';
+import { createConnection, deploy, transaction, aliceKeypair, weight, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -28,7 +28,7 @@ describe('Deploy struct contract and test', () => {
 
         await transaction(tx1, alice);
 
-        let res1 = await contract.query.getBothFoos(alice.address, {});
+        let res1 = await query(conn, alice, contract, "getBothFoos");
 
         expect(res1.output?.toJSON()).toStrictEqual([
             {
@@ -49,25 +49,23 @@ describe('Deploy struct contract and test', () => {
             }
         ]);
 
-        var gasLimit = await weight(conn, contract, "setFoo2");
-        const tx2 = contract.tx.setFoo2({ gasLimit },
-            {
-                "f1": "bar2",
-                "f2": "0xb52b073595ccb35eaebb87178227b779",
-                "f3": -123112321,
-                "f4": "0x123456",
-                "f5": "Barking up the wrong tree",
-                "f6": {
-                    "in1": true, "in2": "Drive someone up the wall"
-                }
-            },
-            "nah"
-        );
+        const arg1 = {
+            "f1": "bar2",
+            "f2": "0xb52b073595ccb35eaebb87178227b779",
+            "f3": -123112321,
+            "f4": "0x123456",
+            "f5": "Barking up the wrong tree",
+            "f6": {
+                "in1": true, "in2": "Drive someone up the wall"
+            }
+        };
+        var gasLimit = await weight(conn, contract, "setFoo2", [arg1, "nah"]);
+        const tx2 = contract.tx.setFoo2({ gasLimit }, arg1, "nah");
 
         await transaction(tx2, alice);
 
         if (1) {
-            let res3 = await contract.query.getFoo(alice.address, {}, false);
+            let res3 = await query(conn, alice, contract, "getFoo", [false]);
 
             expect(res3.output?.toJSON()).toStrictEqual(
                 {
@@ -81,7 +79,7 @@ describe('Deploy struct contract and test', () => {
             );
         }
 
-        let res2 = await contract.query.getBothFoos(alice.address, {});
+        let res2 = await query(conn, alice, contract, "getBothFoos");
 
         expect(res2.output?.toJSON()).toStrictEqual([
             {
@@ -107,7 +105,7 @@ describe('Deploy struct contract and test', () => {
 
         await transaction(tx3, alice);
 
-        let res3 = await contract.query.getFoo(alice.address, {}, false);
+        let res3 = await query(conn, alice, contract, "getFoo", [false]);
 
         expect(res3.output?.toJSON()).toStrictEqual(
             {
@@ -125,7 +123,7 @@ describe('Deploy struct contract and test', () => {
 
         await transaction(tx4, alice);
 
-        let res4 = await contract.query.getFoo(alice.address, {}, true);
+        let res4 = await query(conn, alice, contract, "getFoo", [true]);
 
         expect(res4.output?.toJSON()).toStrictEqual(
             {
