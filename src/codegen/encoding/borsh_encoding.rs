@@ -148,13 +148,13 @@ impl AbiEncoding for BorshEncoding {
 
     fn get_encoding_size(&self, expr: &Expression, ty: &Type, ns: &Namespace) -> Expression {
         match ty {
-            Type::Enum(_)
-            | Type::Uint(_)
-            | Type::Int(_)
-            | Type::Contract(_)
-            | Type::Bool
-            | Type::Address(_)
-            | Type::Bytes(_) => {
+            Type::Uint(n) | Type::Int(n) => Expression::NumberLiteral(
+                Loc::Codegen,
+                Type::Uint(32),
+                BigInt::from(n.next_power_of_two() / 8),
+            ),
+
+            Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
                 let size = ty.memory_size_of(ns);
                 Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), size)
             }
@@ -235,17 +235,40 @@ impl BorshEncoding {
                 Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(1u8))
             }
 
-            Type::Uint(length) | Type::Int(length) => {
+            Type::Uint(width) | Type::Int(width) => {
+                let encoding_size = width.next_power_of_two();
+                let expr = if encoding_size != *width {
+                    if expr_ty.is_signed_int() {
+                        Expression::SignExt(
+                            Loc::Codegen,
+                            Type::Int(encoding_size),
+                            Box::new(expr.clone()),
+                        )
+                    } else {
+                        Expression::ZeroExt(
+                            Loc::Codegen,
+                            Type::Uint(encoding_size),
+                            Box::new(expr.clone()),
+                        )
+                    }
+                } else {
+                    expr.clone()
+                };
+
                 cfg.add(
                     vartab,
                     Instr::WriteBuffer {
                         buf: buffer.clone(),
                         offset: offset.clone(),
-                        value: expr.clone(),
+                        value: expr,
                     },
                 );
 
-                Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(length / 8))
+                Expression::NumberLiteral(
+                    Loc::Codegen,
+                    Type::Uint(32),
+                    BigInt::from(encoding_size / 8),
+                )
             }
 
             Type::Value => {
@@ -768,9 +791,42 @@ impl BorshEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> (Expression, Expression) {
         match ty {
-            Type::Uint(_)
-            | Type::Int(_)
-            | Type::Bool
+            Type::Uint(width) | Type::Int(width) => {
+                let encoding_size = width.next_power_of_two();
+
+                let size = Expression::NumberLiteral(
+                    Loc::Codegen,
+                    Type::Uint(32),
+                    BigInt::from(encoding_size / 8),
+                );
+                validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
+
+                let read_value = Expression::Builtin(
+                    Loc::Codegen,
+                    vec![ty.clone()],
+                    Builtin::ReadFromBuffer,
+                    vec![buffer.clone(), offset.clone()],
+                );
+                let read_var = vartab.temp_anonymous(ty);
+
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: Loc::Codegen,
+                        res: read_var,
+                        expr: if encoding_size == *width {
+                            read_value
+                        } else {
+                            Expression::Trunc(Loc::Codegen, ty.clone(), Box::new(read_value))
+                        },
+                    },
+                );
+
+                let read_expr = Expression::Variable(Loc::Codegen, ty.clone(), read_var);
+                (read_expr, size)
+            }
+
+            Type::Bool
             | Type::Address(_)
             | Type::Contract(_)
             | Type::Enum(_)

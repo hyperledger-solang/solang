@@ -20,7 +20,7 @@ contract EncodingTest {
         uint104 l2 = 23;
         int256 m = 12;
 
-        // CHECK: ty:bytes %abi_encoded.temp.55 = (alloc bytes len uint32 204)
+        // CHECK: ty:bytes %abi_encoded.temp.55 = (alloc bytes len uint32 207)
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 0 value:%myAddr
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 32 value:(builtin GetAddress ())
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 64 value:(arg #0)
@@ -35,8 +35,8 @@ contract EncodingTest {
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 131 value:int32 9
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 135 value:int64 10
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 143 value:int128 11
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 159 value:uint104 23
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 172 value:int256 12
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 159 value:uint128 23
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 175 value:int256 12
         // CHECK: ty:bytes %n = %abi_encoded.temp.55
 
         bytes memory n = abi.encode(myAddr, this, a, b, 
