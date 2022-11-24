@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "tsc; ts-mocha -t 20000 *.spec.ts",
-    "build": "solang compile *.sol test/*.sol --target substrate -v"
+    "evt": "tsc; ts-mocha -t 20000 store.spec.ts",
+    "build": "parallel solang compile -v --target substrate ::: *.sol test/*.sol"
   },
   "author": "Sean Young <sean@mess.org>",
   "license": "Apache-2.0",

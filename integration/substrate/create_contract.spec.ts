@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -27,6 +27,7 @@ describe('Deploy create_contract contract and test', () => {
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
+        let gasLimit = await weight(conn, contract, "createChild");
         let tx = contract.tx.createChild({ gasLimit });
 
         await transaction(tx, alice);

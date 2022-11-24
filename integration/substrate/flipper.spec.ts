@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 
 describe('Deploy flipper contract and test', () => {
@@ -17,6 +17,7 @@ describe('Deploy flipper contract and test', () => {
 
         expect(init_value.output?.toJSON()).toBe(true);
 
+        let gasLimit = await weight(conn, contract, "flip");
         const tx = contract.tx.flip({ gasLimit });
 
         await transaction(tx, alice);

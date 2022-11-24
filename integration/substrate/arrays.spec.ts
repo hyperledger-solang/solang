@@ -1,6 +1,6 @@
 import expect from 'expect';
 import crypto from 'crypto';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { createConnection, deploy, transaction, aliceKeypair, weight, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -38,6 +38,7 @@ describe('Deploy arrays contract and test', () => {
                 perms.push(`Perm${p + 1}`);
             }
 
+            let gasLimit = await weight(conn, contract, "addUser", [id, addr, name, perms]);
             const tx1 = contract.tx.addUser({ gasLimit }, id, addr, name, perms);
 
             await transaction(tx1, alice);
@@ -67,6 +68,7 @@ describe('Deploy arrays contract and test', () => {
 
         expect(res3.output?.toJSON()).toStrictEqual(user);
 
+        let gasLimit = await weight(conn, contract, "removeUser", [user.id]);
         const tx2 = contract.tx.removeUser({ gasLimit }, user.id);
 
         await transaction(tx2, alice);

@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, daveKeypair } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, daveKeypair } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -32,6 +32,7 @@ describe('Deploy destruct contract and test', () => {
         let { data: { free: daveBalBefore } } = await conn.query.system.account(dave.address);
         let { data: { free: contractBalBefore } } = await conn.query.system.account(String(deploy_contract.address));
 
+        let gasLimit = await weight(conn, contract, "selfterminate", [dave.address]);
         let tx = contract.tx.selfterminate({ gasLimit }, dave.address);
 
         await transaction(tx, alice);

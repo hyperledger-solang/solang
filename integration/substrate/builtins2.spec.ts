@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { createConnection, deploy, aliceKeypair, gasLimit } from './index';
+import { createConnection, deploy, aliceKeypair, weight } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 
 describe('Deploy builtins2 contract and test', () => {
@@ -12,6 +12,8 @@ describe('Deploy builtins2 contract and test', () => {
         let deployed_contract = await deploy(conn, alice, 'builtins2.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
+
+        let gasLimit = await weight(conn, contract, "burnGas", [0]);
 
         let { output: blake2_128 } = await contract.query.hashBlake2128(alice.address, {}, '0x' + Buffer.from('Call me Ishmael.', 'utf8').toString('hex'));
 
@@ -31,17 +33,17 @@ describe('Deploy builtins2 contract and test', () => {
 
         let { output: gas_left } = await contract.query.burnGas(alice.address, { gasLimit }, 0);
         let gas = BigInt(gas_left!.toString());
-        expect(gasLimit).toBeGreaterThan(gas);
-        let previous_diff = gasLimit - gas;
+        expect(gasLimit.toJSON().refTime).toBeGreaterThan(gas);
+        let previous_diff = gasLimit.toJSON().refTime - gas;
 
         // Gas metering is based on execution time:
         // Expect each call to burn between 10000..1000000 more gas than the previous iteration.
         for (let i = 1; i < 100; i++) {
             let { output: gas_left } = await contract.query.burnGas(alice.address, { gasLimit }, i);
             let gas = BigInt(gas_left!.toString());
-            expect(gasLimit).toBeGreaterThan(gas);
+            expect(gasLimit.toJSON().refTime).toBeGreaterThan(gas);
 
-            let diff = gasLimit - gas;
+            let diff = gasLimit.toJSON().refTime - gas;
             expect(diff).toBeGreaterThan(previous_diff);
             expect(diff - previous_diff).toBeLessThan(1e6);
             expect(diff - previous_diff).toBeGreaterThan(1e4);

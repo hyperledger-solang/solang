@@ -9,10 +9,10 @@ import { KeyringPair } from '@polkadot/keyring/types';
 
 const default_url: string = "ws://127.0.0.1:9944";
 
-export async function weight(api: ApiPromise, contract: ContractPromise, message: string, args: object) {
+export async function weight(api: ApiPromise, contract: ContractPromise, message: string, args?: unknown[], value?: number) {
   const ALICE = new Keyring({ type: 'sr25519' }).addFromUri('//Alice').address;
   let msg = contract.abi.findMessage(message);
-  let dry = await api.call.contractsApi.call(ALICE, contract.address, 0n, null, null, msg.toU8a([]));
+  let dry = await api.call.contractsApi.call(ALICE, contract.address, value ? value : 0, null, null, msg.toU8a(args ? args : []));
   return dry.gasRequired;
 }
 
@@ -37,7 +37,8 @@ export async function deploy(api: ApiPromise, pair: KeyringPair, file: PathLike,
 
   const code = new CodePromise(api, contractJson, null);
 
-  const tx = code.tx.new({ gasLimit: api.registry.createType('WeightV2', convertWeight(200000n * 1000000n).v2Weight), value }, ...params);
+  let gasLimit = api.registry.createType('WeightV2', convertWeight(200000n * 1000000n).v2Weight);
+  const tx = code.tx.new({ gasLimit, value }, ...params);
 
   return new Promise(async (resolve, reject) => {
     const unsub = await tx.signAndSend(pair, (result: any) => {

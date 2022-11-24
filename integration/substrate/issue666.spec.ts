@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -28,6 +28,7 @@ describe('issue666 flip and inc', () => {
 
         let contract = new ContractPromise(conn, inc_contract.abi, inc_contract.address);
 
+        let gasLimit = await weight(conn, contract, "superFlip");
         contract.tx.superFlip({ gasLimit });
     });
 });

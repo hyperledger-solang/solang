@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -31,6 +31,7 @@ describe('Deploy asserts contract and test', () => {
         let res1 = await contract.query.testAssertRpc(alice.address, {});
         expect(res1.result.toHuman()).toEqual({ "Err": { "Module": { "error": "0x0b000000", "index": "7" } } });
 
+        let gasLimit = await weight(conn, contract, "testAssert");
         let tx = contract.tx.testAssert({ gasLimit });
 
         let res2 = await transaction(tx, alice).then(() => {

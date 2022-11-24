@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { createConnection, deploy, transaction, aliceKeypair, weight, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -23,6 +23,7 @@ describe('Deploy struct contract and test', () => {
 
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 
+        var gasLimit = await weight(conn, contract, "setFoo1");
         const tx1 = contract.tx.setFoo1({ gasLimit });
 
         await transaction(tx1, alice);
@@ -48,6 +49,7 @@ describe('Deploy struct contract and test', () => {
             }
         ]);
 
+        var gasLimit = await weight(conn, contract, "setFoo2");
         const tx2 = contract.tx.setFoo2({ gasLimit },
             {
                 "f1": "bar2",
@@ -100,6 +102,7 @@ describe('Deploy struct contract and test', () => {
             }
         ]);
 
+        var gasLimit = await weight(conn, contract, "deleteFoo", [true]);
         const tx3 = contract.tx.deleteFoo({ gasLimit }, true);
 
         await transaction(tx3, alice);
@@ -117,6 +120,7 @@ describe('Deploy struct contract and test', () => {
             },
         );
 
+        var gasLimit = await weight(conn, contract, "structLiteral");
         const tx4 = contract.tx.structLiteral({ gasLimit });
 
         await transaction(tx4, alice);

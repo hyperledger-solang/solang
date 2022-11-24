@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, aliceKeypair, transaction } from './index';
+import { weight, createConnection, deploy, aliceKeypair, transaction } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 
 describe('Deploy array_struct_mapping_storage contract and test', () => {
@@ -14,6 +14,7 @@ describe('Deploy array_struct_mapping_storage contract and test', () => {
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 
         // first set a canary
+        let gasLimit = await weight(conn, contract, "setNumber");
         let tx = contract.tx.setNumber({ gasLimit }, 2147483647);
 
         await transaction(tx, alice);

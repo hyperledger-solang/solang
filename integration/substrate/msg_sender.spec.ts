@@ -1,5 +1,5 @@
 import expect from "expect";
-import { aliceKeypair, createConnection, deploy, gasLimit, transaction } from "./index";
+import { aliceKeypair, createConnection, deploy, weight, transaction } from "./index";
 import { ContractPromise } from "@polkadot/api-contract";
 import { DecodedEvent } from "@polkadot/api-contract/types";
 import { ApiPromise } from "@polkadot/api";
@@ -37,6 +37,7 @@ describe('Deploy mytoken contract and test', () => {
 
         let deployed_contract = await deploy(conn, alice, 'mytokenEvent.contract', BigInt(0));
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
+        let gasLimit = await weight(conn, contract, "test");
         let tx = contract.tx.test({ gasLimit });
         let res0: any = await transaction(tx, alice);
 

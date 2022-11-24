@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -33,6 +33,7 @@ describe.skip('Deploy store contract and test', () => {
 
         expect(res2.output?.toJSON()).toStrictEqual([0, "", "0xb00b1e", "0x00000000", "bar1"]);
 
+        var gasLimit = await weight(conn, contract, "setValues");
         const tx1 = contract.tx.setValues({ gasLimit });
 
         await transaction(tx1, alice);
@@ -55,6 +56,7 @@ describe.skip('Deploy store contract and test', () => {
             "bar2",
         ]);
 
+        var gasLimit = await weight(conn, contract, "doOps");
         const tx2 = contract.tx.doOps({ gasLimit });
 
         await transaction(tx2, alice);
@@ -78,6 +80,7 @@ describe.skip('Deploy store contract and test', () => {
             "bar4",
         ]);
 
+        var gasLimit = await weight(conn, contract, "pushZero");
         const tx3 = contract.tx.pushZero({ gasLimit });
 
         await transaction(tx3, alice);
@@ -94,6 +97,7 @@ describe.skip('Deploy store contract and test', () => {
 
                 val = val.length == 1 ? "0" + val : val;
 
+                var gasLimit = await weight(conn, contract, "push", ["0x" + val]);
                 const tx = contract.tx.push({ gasLimit }, ["0x" + val]);
 
                 await transaction(tx, alice);
