@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { weight, createConnection, deploy, aliceKeypair, transaction } from './index';
+import { weight, createConnection, deploy, aliceKeypair, transaction, query } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 
 describe('Deploy array_struct_mapping_storage contract and test', () => {
@@ -14,7 +14,7 @@ describe('Deploy array_struct_mapping_storage contract and test', () => {
         let contract = new ContractPromise(conn, deployed_contract.abi, deployed_contract.address);
 
         // first set a canary
-        let gasLimit = await weight(conn, contract, "setNumber");
+        let gasLimit = await weight(conn, contract, "setNumber", [2147483647]);
         let tx = contract.tx.setNumber({ gasLimit }, 2147483647);
 
         await transaction(tx, alice);
@@ -40,7 +40,7 @@ describe('Deploy array_struct_mapping_storage contract and test', () => {
         // test our values
         for (let array_no = 0; array_no < 2; array_no += 1) {
             for (let i = 0; i < 10; i += 1) {
-                let { output } = await contract.query.get(alice.address, {}, array_no, 102 + i + array_no * 500);
+                let { output } = await query(conn, alice, contract, "get", [array_no, 102 + i + array_no * 500]);
 
                 let number = Number.parseInt(output!.toString());
 
@@ -54,7 +54,7 @@ describe('Deploy array_struct_mapping_storage contract and test', () => {
         await transaction(tx, alice);
 
         for (let i = 0; i < 10; i += 1) {
-            let { output } = await contract.query.get(alice.address, {}, 0, 102 + i);
+            let { output } = await query(conn, alice, contract, "get", [0, 102 + i]);
 
             let number = Number.parseInt(output!.toString());
 
@@ -66,7 +66,7 @@ describe('Deploy array_struct_mapping_storage contract and test', () => {
         }
 
         // test our canary
-        let { output } = await contract.query.number(alice.address, {});
+        let { output } = await query(conn, alice, contract, "number");
 
         let number = Number.parseInt(output!.toString());
 
