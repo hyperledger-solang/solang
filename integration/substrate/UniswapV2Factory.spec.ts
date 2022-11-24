@@ -68,24 +68,24 @@ describe('UniswapV2Factory', () => {
     const { output: get_pair } = await query(conn, alice, factory, "getPair", [tokens[0], tokens[1]]);
     expect(get_pair?.eq(pair_address)).toBeTruthy();
 
-    const { output: pairRev } = await query(conn, alice, factory, "getPair", [...tokens.slice().reverse()[0], ...tokens.slice().reverse()[1]]);
+    const { output: pairRev } = await query(conn, alice, factory, "getPair", [tokens[1], tokens[0]]);
     expect(pairRev?.eq(pair_address)).toBeTruthy();
 
     const { output: pair0 } = await query(conn, alice, factory, "allPairs", [0]);
     expect(pair0?.eq(pair_address)).toBeTruthy();
 
-    const { output: pairLength } = await query(conn, alice, factory, "connallPairsLength");
+    const { output: pairLength } = await query(conn, alice, factory, "allPairsLength");
     expect(pairLength?.eq(1)).toBeTruthy();
 
     const pair = new ContractPromise(conn, pairAbi, pair_address);
 
-    const { output: pair_factory } = await query(conn, alice, factory, "factory");
+    const { output: pair_factory } = await query(conn, alice, pair, "factory");
     expect(pair_factory?.eq(factory.address)).toBeTruthy();
 
-    const { output: token0 } = await query(conn, alice, factory, "token0");
+    const { output: token0 } = await query(conn, alice, pair, "token0");
     expect(token0?.eq(TEST_ADDRESSES[0])).toBeTruthy();
 
-    const { output: token1 } = await query(conn, alice, factory, "token1");
+    const { output: token1 } = await query(conn, alice, pair, "token1");
     expect(token1?.eq(TEST_ADDRESSES[1])).toBeTruthy();
   }
 
@@ -98,7 +98,7 @@ describe('UniswapV2Factory', () => {
   })
 
   it('setFeeTo', async () => {
-    var gasLimit = await weight(conn, factory, "createPair", [dave.address]);
+    var gasLimit = await weight(conn, factory, "setFeeTo", [dave.address]);
     let tx = factory.tx.setFeeTo({ gasLimit }, dave.address);
     await transaction(tx, alice);
 
@@ -107,7 +107,7 @@ describe('UniswapV2Factory', () => {
   })
 
   it('setFeeToSetter', async () => {
-    var gasLimit = await weight(conn, factory, "createPair", [dave.address]);
+    var gasLimit = await weight(conn, factory, "setFeeToSetter", [dave.address]);
     let tx = factory.tx.setFeeToSetter({ gasLimit }, dave.address);
     await transaction(tx, alice);
 
