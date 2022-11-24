@@ -4,8 +4,9 @@ import { ApiPromise, WsProvider, Keyring } from '@polkadot/api';
 import { convertWeight } from '@polkadot/api-contract/base/util';
 import { CodePromise, ContractPromise } from '@polkadot/api-contract';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import { ISubmittableResult } from '@polkadot/types/types';
+import { AnyJson, Codec, ISubmittableResult, Registry } from '@polkadot/types/types';
 import { KeyringPair } from '@polkadot/keyring/types';
+import expect from 'expect';
 
 const default_url: string = "ws://127.0.0.1:9944";
 
@@ -82,4 +83,20 @@ export async function transaction(tx: SubmittableExtrinsic<"promise", ISubmittab
       }
     });
   });
+}
+
+// The old contract.query API does not support WeightV2 yet
+export async function query(api: ApiPromise, account: KeyringPair, contract: ContractPromise, message: string, args?: unknown[], value?: number): Promise<{ output: Codec | null }> {
+  let msg = contract.abi.findMessage(message);
+  let callResult = await api.call.contractsApi.call(account.address, contract.address, value ? value : 0, null, null, msg.toU8a(args ? args : []));
+  // Source: https://github.com/paritytech/contracts-ui/blob/e343221a0d5c1ae67122fe99028246e5bdf38c46/src/ui/hooks/useDecodedOutput.ts
+  let output = callResult.result.isOk && msg.returnType
+    ? contract.abi.registry.createTypeUnsafe(
+      msg.returnType.lookupName || msg.returnType.type,
+      [callResult.result.asOk.data.toU8a(true)],
+      { isPedantic: true }
+    )
+    : null;
+  expect(output !== null && typeof output === 'object' && 'Err' in output).toBeFalsy();
+  return { output };
 }
