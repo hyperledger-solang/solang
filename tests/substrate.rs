@@ -948,7 +948,7 @@ impl MockSubstrate {
                 .with_resolver("env", self)
                 .with_resolver("seal0", self)
                 .with_resolver("seal1", self)
-                .with_resolver("__unstable__", self),
+                .with_resolver("seal2", self),
         )
         .expect("Failed to instantiate module")
         .run_start(&mut NopExternals)
