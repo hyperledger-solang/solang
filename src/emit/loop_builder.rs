@@ -22,7 +22,7 @@ pub struct LoopBuilder<'a> {
 impl<'a> LoopBuilder<'a> {
     /// Create a new loop. This creates the basic blocks and inserts a branch to start of the loop at
     /// the current location. This function should be called first.
-    pub fn new(binary: &Binary<'a>, function: FunctionValue) -> Self {
+    pub fn new(binary: &Binary<'a>, function: FunctionValue<'a>) -> Self {
         let entry_block = binary.builder.get_insert_block().unwrap();
         let condition_block = binary.context.append_basic_block(function, "cond");
         let body_block = binary.context.append_basic_block(function, "body");
