@@ -107,29 +107,29 @@ impl BorshToken {
 /// Encode a signed integer
 fn encode_int(width: u16, value: &BigInt, buffer: &mut Vec<u8>) {
     match width {
-        8 => {
+        1..=8 => {
             let val = value.to_i8().unwrap();
             buffer.extend_from_slice(&val.to_le_bytes());
         }
-        16 => {
+        9..=16 => {
             let val = value.to_i16().unwrap();
             buffer.extend_from_slice(&val.to_le_bytes());
         }
-        32 => {
+        17..=32 => {
             let val = value.to_i32().unwrap();
             buffer.extend_from_slice(&val.to_le_bytes());
         }
-        64 => {
+        33..=64 => {
             let val = value.to_i64().unwrap();
             buffer.extend_from_slice(&val.to_le_bytes());
         }
-        128 => {
+        65..=128 => {
             let val = value.to_i128().unwrap();
             buffer.extend_from_slice(&val.to_le_bytes());
         }
-        n if n <= 256 => {
+        129..=256 => {
             let mut val = value.to_signed_bytes_le();
-            let byte_width = (width / 8) as usize;
+            let byte_width = 32;
             match val.len().cmp(&byte_width) {
                 Ordering::Greater => {
                     while val.len() > byte_width {
@@ -149,37 +149,36 @@ fn encode_int(width: u16, value: &BigInt, buffer: &mut Vec<u8>) {
 
             buffer.extend_from_slice(&val);
         }
-
-        _ => unimplemented!("bit width not supported"),
+        _ => unreachable!("bit width not supported"),
     }
 }
 
 /// Encode an unsigned integer
 fn encode_uint(width: u16, value: &BigInt, buffer: &mut Vec<u8>) {
     match width {
-        8 => {
+        1..=8 => {
             let val = value.to_u8().unwrap();
             buffer.push(val);
         }
-        16 => {
+        9..=16 => {
             let val = value.to_u16().unwrap();
             buffer.extend_from_slice(&val.to_le_bytes());
         }
-        32 => {
+        17..=32 => {
             let val = value.to_u32().unwrap();
             buffer.extend_from_slice(&val.to_le_bytes());
         }
-        64 => {
+        33..=64 => {
             let val = value.to_u64().unwrap();
             buffer.extend_from_slice(&val.to_le_bytes());
         }
-        128 => {
+        65..=128 => {
             let val = value.to_u128().unwrap();
             buffer.extend_from_slice(&val.to_le_bytes());
         }
-        n if n <= 256 => {
+        129..=256 => {
             let mut val = value.to_signed_bytes_le();
-            let bytes_width = (width / 8) as usize;
+            let bytes_width = 32;
             match val.len().cmp(&bytes_width) {
                 Ordering::Greater => {
                     while val.len() > bytes_width {
@@ -195,6 +194,7 @@ fn encode_uint(width: u16, value: &BigInt, buffer: &mut Vec<u8>) {
 
             buffer.extend_from_slice(&val);
         }
+
         _ => unreachable!("bit width not supported"),
     }
 }
@@ -230,16 +230,19 @@ fn decode_at_offset(data: &[u8], offset: &mut usize, ty: &ParamType) -> BorshTok
             BorshToken::Address(<[u8; 32]>::try_from(read).unwrap())
         }
         ParamType::Uint(width) => {
-            let bigint = BigInt::from_bytes_le(Sign::Plus, &data[*offset..(*offset + width / 8)]);
-            (*offset) += width / 8;
+            let decoding_width = width.next_power_of_two() / 8;
+            let bigint =
+                BigInt::from_bytes_le(Sign::Plus, &data[*offset..(*offset + decoding_width)]);
+            (*offset) += decoding_width;
             BorshToken::Uint {
                 width: *width as u16,
                 value: bigint,
             }
         }
         ParamType::Int(width) => {
-            let bigint = BigInt::from_signed_bytes_le(&data[*offset..(*offset + width / 8)]);
-            (*offset) += width / 8;
+            let decoding_width = width.next_power_of_two() / 8;
+            let bigint = BigInt::from_signed_bytes_le(&data[*offset..(*offset + decoding_width)]);
+            (*offset) += decoding_width;
             BorshToken::Int {
                 width: *width as u16,
                 value: bigint,
