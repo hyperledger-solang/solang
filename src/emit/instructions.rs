@@ -1198,7 +1198,7 @@ fn add_or_retrieve_block<'a>(
     block_no: usize,
     pos: inkwell::basic_block::BasicBlock<'a>,
     bin: &Binary<'a>,
-    function: FunctionValue,
+    function: FunctionValue<'a>,
     blocks: &mut HashMap<usize, BasicBlock<'a>>,
     work: &mut VecDeque<Work<'a>>,
     w: &mut Work<'a>,

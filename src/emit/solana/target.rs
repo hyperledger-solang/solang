@@ -540,7 +540,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary: &Binary<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'a> {
         let data = self.contract_storage_data(binary);

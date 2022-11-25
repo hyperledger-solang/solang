@@ -220,7 +220,7 @@ pub(super) fn create_block<'a>(
     block_no: usize,
     bin: &Binary<'a>,
     cfg: &ControlFlowGraph,
-    function: FunctionValue,
+    function: FunctionValue<'a>,
     ns: &Namespace,
 ) -> BasicBlock<'a> {
     let cfg_bb = &cfg.blocks[block_no];
