@@ -80,10 +80,10 @@ describe('Deploy UniswapV2ERC20 contract and test', () => {
         expect(daveBal?.eq(TEST_AMOUNT)).toBeTruthy();
     })
 
-    //it('transfer:fail', async () => {
-    //    await expect(token.transfer(other.address, TOTAL_SUPPLY.add(1))).to.be.reverted // ds-math-sub-underflow
-    //    await expect(token.connect(other).transfer(wallet.address, 1)).to.be.reverted // ds-math-sub-underflow
-    //})
+    // it('transfer:fail', async () => {
+    //     await expect(token.transfer(other.address, TOTAL_SUPPLY.add(1))).to.be.reverted // ds-math-sub-underflow
+    //     await expect(token.connect(other).transfer(wallet.address, 1)).to.be.reverted // ds-math-sub-underflow
+    // })
 
     it('transferFrom', async () => {
         let gasLimit = await weight(conn, token, "approve", [dave.address, TEST_AMOUNT]);
