@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -24,13 +24,14 @@ describe('Deploy asserts contract and test', () => {
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
-        let res0 = await contract.query.var(alice.address, {});
+        let res0 = await query(conn, alice, contract, "var");
 
         expect(res0.output?.toJSON()).toEqual(1);
 
-        let res1 = await contract.query.testAssertRpc(alice.address, {});
+        let res1 = await query(conn, alice, contract, "testAssertRpc");
         expect(res1.result.toHuman()).toEqual({ "Err": { "Module": { "error": "0x0b000000", "index": "7" } } });
 
+        let gasLimit = await weight(conn, contract, "testAssert");
         let tx = contract.tx.testAssert({ gasLimit });
 
         let res2 = await transaction(tx, alice).then(() => {
@@ -39,7 +40,7 @@ describe('Deploy asserts contract and test', () => {
 
         expect(res2.dispatchError.toHuman()).toEqual({ "Module": { "error": "0x0b000000", "index": "7" } });
 
-        let res3 = await contract.query.var(alice.address, {});
+        let res3 = await query(conn, alice, contract, "var");
 
         expect(res3.output?.toJSON()).toEqual(1);
     });

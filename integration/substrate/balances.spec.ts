@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, daveKeypair } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, daveKeypair, query } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -25,11 +25,12 @@ describe('Deploy balances contract and test', () => {
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
-        let { output: contractRpcBal } = await contract.query.getBalance(alice.address, {});
+        let { output: contractRpcBal } = await query(conn, alice, contract, "getBalance");
         let { data: { free: contractQueryBalBefore } } = await conn.query.system.account(String(deploy_contract.address));
 
         expect(contractRpcBal?.toString()).toBe(contractQueryBalBefore.toString());
 
+        let gasLimit = await weight(conn, contract, "payMe");
         let tx = contract.tx.payMe({ gasLimit, value: 1000000n });
 
         await transaction(tx, alice);

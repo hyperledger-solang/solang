@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, daveKeypair } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, daveKeypair, query } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
@@ -39,18 +39,19 @@ describe('UniswapV2Factory', () => {
   });
 
   it('feeTo, feeToSetter, allPairsLength', async () => {
-    const { output: feeTo } = await factory.query.feeTo(alice.address, {});
+    const { output: feeTo } = await query(conn, alice, factory, "feeTo");
     // This is the 32-byte 0-address in ss58 format
     expect(feeTo?.eq('5C4hrfjw9DjXZTzV3MwzrrAr9P1MJhSrvWGWqi1eSuyUpnhM')).toBeTruthy();
 
-    const { output: feeToSetter } = await factory.query.feeToSetter(alice.address, {});
+    const { output: feeToSetter } = await query(conn, alice, factory, "feeToSetter");
     expect(feeToSetter?.eq(alice.address)).toBeTruthy();
 
-    const { output: allPairsLength } = await factory.query.allPairsLength(alice.address, {});
+    const { output: allPairsLength } = await query(conn, alice, factory, "allPairsLength");
     expect(allPairsLength?.eq(0)).toBeTruthy();
   })
 
   async function createPair(tokens: [string, string]) {
+    let gasLimit = await weight(conn, factory, "createPair", [tokens[0], tokens[1]]);
     let tx = factory.tx.createPair({ gasLimit }, ...tokens);
 
     let res0: any = await transaction(tx, alice);
@@ -64,27 +65,27 @@ describe('UniswapV2Factory', () => {
 
     let pair_address = events[0].args[2].toString();
 
-    const { output: get_pair } = await factory.query.getPair(alice.address, {}, ...tokens);
+    const { output: get_pair } = await query(conn, alice, factory, "getPair", [tokens[0], tokens[1]]);
     expect(get_pair?.eq(pair_address)).toBeTruthy();
 
-    const { output: pairRev } = await factory.query.getPair(alice.address, {}, ...tokens.slice().reverse());
+    const { output: pairRev } = await query(conn, alice, factory, "getPair", [tokens[1], tokens[0]]);
     expect(pairRev?.eq(pair_address)).toBeTruthy();
 
-    const { output: pair0 } = await factory.query.allPairs(alice.address, {}, 0);
+    const { output: pair0 } = await query(conn, alice, factory, "allPairs", [0]);
     expect(pair0?.eq(pair_address)).toBeTruthy();
 
-    const { output: pairLength } = await factory.query.allPairsLength(alice.address, {});
+    const { output: pairLength } = await query(conn, alice, factory, "allPairsLength");
     expect(pairLength?.eq(1)).toBeTruthy();
 
     const pair = new ContractPromise(conn, pairAbi, pair_address);
 
-    const { output: pair_factory } = await pair.query.factory(alice.address, {});
+    const { output: pair_factory } = await query(conn, alice, pair, "factory");
     expect(pair_factory?.eq(factory.address)).toBeTruthy();
 
-    const { output: token0 } = await pair.query.token0(alice.address, {});
+    const { output: token0 } = await query(conn, alice, pair, "token0");
     expect(token0?.eq(TEST_ADDRESSES[0])).toBeTruthy();
 
-    const { output: token1 } = await pair.query.token1(alice.address, {});
+    const { output: token1 } = await query(conn, alice, pair, "token1");
     expect(token1?.eq(TEST_ADDRESSES[1])).toBeTruthy();
   }
 
@@ -97,18 +98,20 @@ describe('UniswapV2Factory', () => {
   })
 
   it('setFeeTo', async () => {
+    let gasLimit = await weight(conn, factory, "setFeeTo", [dave.address]);
     let tx = factory.tx.setFeeTo({ gasLimit }, dave.address);
     await transaction(tx, alice);
 
-    const { output: feeTo } = await factory.query.feeTo(alice.address, {});
+    const { output: feeTo } = await query(conn, alice, factory, "feeTo");
     expect(feeTo?.eq(dave.address)).toBeTruthy();
   })
 
   it('setFeeToSetter', async () => {
+    let gasLimit = await weight(conn, factory, "setFeeToSetter", [dave.address]);
     let tx = factory.tx.setFeeToSetter({ gasLimit }, dave.address);
     await transaction(tx, alice);
 
-    const { output: feeTo } = await factory.query.feeToSetter(alice.address, {});
+    const { output: feeTo } = await query(conn, alice, factory, "feeToSetter");
     expect(feeTo?.eq(dave.address)).toBeTruthy();
   })
 })

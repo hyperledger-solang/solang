@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -27,16 +27,17 @@ describe('Deploy create_contract contract and test', () => {
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
+        let gasLimit = await weight(conn, contract, "createChild");
         let tx = contract.tx.createChild({ gasLimit });
 
         await transaction(tx, alice);
 
-        let res2 = await contract.query.callChild(alice.address, {});
+        let res2 = await query(conn, alice, contract, "callChild");
 
         expect(res2.output?.toJSON()).toStrictEqual("child");
 
         // child was created with a balance of 1e15, verify
-        res2 = await contract.query.c(alice.address, {});
+        res2 = await query(conn, alice, contract, "c");
 
         let child = res2.output!.toString();
 

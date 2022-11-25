@@ -1,6 +1,6 @@
 import expect from 'expect';
 import crypto from 'crypto';
-import { gasLimit, createConnection, deploy, transaction, aliceKeypair, } from './index';
+import { createConnection, deploy, transaction, aliceKeypair, weight, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -38,6 +38,7 @@ describe('Deploy arrays contract and test', () => {
                 perms.push(`Perm${p + 1}`);
             }
 
+            let gasLimit = await weight(conn, contract, "addUser", [id, addr, name, perms]);
             const tx1 = contract.tx.addUser({ gasLimit }, id, addr, name, perms);
 
             await transaction(tx1, alice);
@@ -47,7 +48,7 @@ describe('Deploy arrays contract and test', () => {
 
         let user = users[Math.floor(Math.random() * users.length)];
 
-        let res1 = await contract.query.getUserById(alice.address, {}, user.id);
+        let res1 = await query(conn, alice, contract, "getUserById", [user.id]);
 
         expect(res1.output?.toJSON()).toStrictEqual(user);
 
@@ -56,22 +57,23 @@ describe('Deploy arrays contract and test', () => {
 
             let p = perms[Math.floor(Math.random() * perms.length)];
 
-            let res2 = await contract.query.hasPermission(alice.address, {}, user.id, p);
+            let res2 = await query(conn, alice, contract, "hasPermission", [user.id, p]);
 
             expect(res2.output?.toJSON()).toBe(true);
         }
 
         user = users[Math.floor(Math.random() * users.length)];
 
-        let res3 = await contract.query.getUserByAddress(alice.address, {}, user.addr);
+        let res3 = await query(conn, alice, contract, "getUserByAddress", [user.addr]);
 
         expect(res3.output?.toJSON()).toStrictEqual(user);
 
+        let gasLimit = await weight(conn, contract, "removeUser", [user.id]);
         const tx2 = contract.tx.removeUser({ gasLimit }, user.id);
 
         await transaction(tx2, alice);
 
-        let res4 = await contract.query.userExists(alice.address, {}, user.id);
+        let res4 = await query(conn, alice, contract, "userExists", [user.id]);
 
         expect(res4.output?.toJSON()).toBe(false);
     });

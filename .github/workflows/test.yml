@@ -309,7 +309,7 @@ jobs:
       # We can't run substrate as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
-      run: docker run -d -p 9944:9944 paritytech/contracts-ci-linux:production substrate-contracts-node --dev --ws-external
+      run: docker run -d -p 9944:9944 paritytech/contracts-ci-linux:latest substrate-contracts-node --dev --ws-external
     - uses: actions/setup-node@v3
       with:
         node-version: '14'

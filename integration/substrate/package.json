@@ -5,9 +5,18 @@
   "main": "index.js",
   "scripts": {
     "test": "tsc; ts-mocha -t 20000 *.spec.ts",
-    "build": "solang compile *.sol test/*.sol --target substrate -v"
+    "build": "parallel solang compile -v --target substrate ::: *.sol test/*.sol"
   },
-  "author": "Sean Young <sean@mess.org>",
+  "contributors": [
+    {
+      "name": "Sean Young",
+      "email": "sean@mess.org"
+    },
+    {
+      "name": "Cyrill Leutwiler",
+      "email": "me@09f9.org"
+    }
+  ],
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/mocha": "^9.1.0",
