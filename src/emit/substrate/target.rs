@@ -28,7 +28,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ) {
         emit_context!(binary);
 
-        let ret = seal_set_storage!(
+        let ret = set_storage!(
             cast_byte_ptr!(slot).into(),
             i32_const!(32).into(),
             cast_byte_ptr!(dest).into(),
@@ -40,7 +40,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .into()
         );
 
-        log_return_code(binary, "seal_set_storage", ret);
+        log_return_code(binary, "set_storage", ret);
     }
 
     fn get_storage_extfunc(
@@ -78,7 +78,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         binary.builder.build_store(scratch_len, len);
 
         let ret = call!(
-            "seal_get_storage",
+            "get_storage",
             &[
                 cast_byte_ptr!(slot).into(),
                 i32_const!(32).into(),
@@ -91,7 +91,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_get_storage: ", ret);
+        log_return_code(binary, "get_storage: ", ret);
 
         // TODO: decide behaviour if not exist
 
@@ -128,21 +128,21 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.position_at_end(set_block);
 
-        let ret = seal_set_storage!(
+        let ret = set_storage!(
             cast_byte_ptr!(slot).into(),
             i32_const!(32).into(),
             cast_byte_ptr!(data).into(),
             len.into()
         );
 
-        log_return_code(binary, "seal_set_storage", ret);
+        log_return_code(binary, "set_storage", ret);
 
         binary.builder.build_unconditional_branch(done_storage);
 
         binary.builder.position_at_end(delete_block);
 
         let ret = call!(
-            "seal_clear_storage",
+            "clear_storage",
             &[cast_byte_ptr!(slot).into(), i32_const!(32).into()]
         )
         .try_as_basic_value()
@@ -150,7 +150,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_clear_storage", ret);
+        log_return_code(binary, "clear_storage", ret);
 
         binary.builder.build_unconditional_branch(done_storage);
 
@@ -171,14 +171,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let ty_len = ty.size_of().const_cast(binary.context.i32_type(), false);
         binary.builder.build_store(scratch_len, ty_len);
 
-        let exists = seal_get_storage!(
+        let exists = get_storage!(
             cast_byte_ptr!(slot).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage: ", exists);
+        log_return_code(binary, "get_storage: ", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -231,14 +231,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
-        let exists = seal_get_storage!(
+        let exists = get_storage!(
             cast_byte_ptr!(slot).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage: ", exists);
+        log_return_code(binary, "get_storage: ", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -319,14 +319,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
-        let exists = seal_get_storage!(
+        let exists = get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
+        log_return_code(binary, "get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -393,14 +393,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
-        let exists = seal_get_storage!(
+        let exists = get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
+        log_return_code(binary, "get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -448,14 +448,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // set the result
         binary.builder.build_store(offset, val);
 
-        let ret = seal_set_storage!(
+        let ret = set_storage!(
             cast_byte_ptr!(slot_ptr).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             length.into()
         );
 
-        log_return_code(binary, "seal_set_storage", ret);
+        log_return_code(binary, "set_storage", ret);
     }
 
     /// Push a byte onto a bytes string in storage
@@ -483,14 +483,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64 - 1));
 
-        let exists = seal_get_storage!(
+        let exists = get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
+        log_return_code(binary, "get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -525,14 +525,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_int_add(length, i32_const!(1), "new_length");
 
-        let ret = seal_set_storage!(
+        let ret = set_storage!(
             cast_byte_ptr!(slot_ptr).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             length.into()
         );
 
-        log_return_code(binary, "seal_set_storage", ret);
+        log_return_code(binary, "set_storage", ret);
 
         val
     }
@@ -558,14 +558,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
-        let exists = seal_get_storage!(
+        let exists = get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
+        log_return_code(binary, "get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -623,14 +623,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             None
         };
 
-        let ret = seal_set_storage!(
+        let ret = set_storage!(
             cast_byte_ptr!(slot_ptr).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             new_length.into()
         );
 
-        log_return_code(binary, "seal_set_storage", ret);
+        log_return_code(binary, "set_storage", ret);
 
         val
     }
@@ -655,14 +655,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
-        let exists = seal_get_storage!(
+        let exists = get_storage!(
             cast_byte_ptr!(slot_ptr).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
+        log_return_code(binary, "get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -686,7 +686,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         call!(
-            "seal_return",
+            "return",
             &[
                 i32_zero!().into(),
                 byte_ptr!().const_zero().into(),
@@ -716,7 +716,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         call!(
-            "seal_hash_keccak_256",
+            "hash_keccak_256",
             &[
                 cast_byte_ptr!(src).into(),
                 length.into(),
@@ -728,10 +728,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
         emit_context!(binary);
 
-        call!(
-            "seal_return",
-            &[i32_zero!().into(), data.into(), length.into()]
-        );
+        call!("return", &[i32_zero!().into(), data.into(), length.into()]);
 
         binary.builder.build_unreachable();
     }
@@ -745,7 +742,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         call!(
-            "seal_return",
+            "return",
             &[i32_zero!().into(), data.into(), data_len.into()]
         );
 
@@ -1033,16 +1030,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
         emit_context!(binary);
 
-        let ret = call!(
-            "seal_debug_message",
-            &[string_ptr.into(), string_len.into()]
-        )
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value();
+        let ret = call!("debug_message", &[string_ptr.into(), string_len.into()])
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
-        log_return_code(binary, "seal_debug_message", ret);
+        log_return_code(binary, "debug_message", ret);
     }
 
     fn create_contract<'b>(
@@ -1093,7 +1087,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             binary.builder.build_store(scratch_len, i32_const!(36));
 
             call!(
-                "seal_random",
+                "random",
                 &[ptr.into(), len.into(), salt_buf.into(), scratch_len.into()],
                 "random"
             );
@@ -1116,7 +1110,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
             call!(
-                "seal_minimum_balance",
+                "minimum_balance",
                 &[cast_byte_ptr!(value_ptr).into(), scratch_len.into()],
                 "minimum_balance"
             );
@@ -1144,7 +1138,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64 * 32));
 
         let ret = call!(
-            "seal_instantiate",
+            "instantiate",
             &[
                 codehash.into(),
                 gas.into(),
@@ -1164,7 +1158,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_instantiate", ret);
+        log_return_code(binary, "instantiate", ret);
 
         let is_success =
             binary
@@ -1301,7 +1295,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         // do the actual call
         let ret = call!(
-            "seal_transfer",
+            "transfer",
             &[
                 address.into(),
                 i32_const!(ns.address_length as u64).into(),
@@ -1314,7 +1308,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_transfer", ret);
+        log_return_code(binary, "transfer", ret);
 
         let is_success =
             binary
@@ -1373,7 +1367,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_store(value_len, i32_const!(ns.value_length as u64));
 
         call!(
-            "seal_value_transferred",
+            "value_transferred",
             &[cast_byte_ptr!(value).into(), value_len.into()],
             "value_transferred"
         );
@@ -1394,11 +1388,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.build_store(address, addr);
 
-        call!(
-            "seal_terminate",
-            &[cast_byte_ptr!(address).into()],
-            "terminated"
-        );
+        call!("terminate", &[cast_byte_ptr!(address).into()], "terminated");
 
         binary.builder.build_unreachable();
     }
@@ -1417,11 +1407,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         let (fname, hashlen) = match hash {
-            HashTy::Keccak256 => ("seal_hash_keccak_256", 32),
+            HashTy::Keccak256 => ("hash_keccak_256", 32),
             HashTy::Ripemd160 => ("ripemd160", 20),
-            HashTy::Sha256 => ("seal_hash_sha2_256", 32),
-            HashTy::Blake2_128 => ("seal_hash_blake2_128", 16),
-            HashTy::Blake2_256 => ("seal_hash_blake2_256", 32),
+            HashTy::Sha256 => ("hash_sha2_256", 32),
+            HashTy::Blake2_128 => ("hash_blake2_128", 16),
+            HashTy::Blake2_256 => ("hash_blake2_256", 32),
         };
 
         let res =
@@ -1531,7 +1521,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         call!(
-            "seal_deposit_event",
+            "deposit_event",
             &[
                 topic_buf.into(),
                 topic_size.into(),
@@ -1552,7 +1542,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ) -> BasicValueEnum<'b> {
         emit_context!(binary);
 
-        macro_rules! get_seal_value {
+        macro_rules! get_value {
             ($name:literal, $func:literal, $width:expr) => {{
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
@@ -1622,7 +1612,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 // retrieve the data
                 call!(
-                    "seal_input",
+                    "input",
                     &[cast_byte_ptr!(data).into(), scratch_len.into()],
                     "data"
                 );
@@ -1630,8 +1620,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 v
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::BlockNumber, _) => {
-                let block_number =
-                    get_seal_value!("block_number", "seal_block_number", 32).into_int_value();
+                let block_number = get_value!("block_number", "block_number", 32).into_int_value();
 
                 // Cast to 64 bit
                 binary
@@ -1644,7 +1633,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .into()
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Timestamp, _) => {
-                let milliseconds = get_seal_value!("timestamp", "seal_now", 64).into_int_value();
+                let milliseconds = get_value!("timestamp", "now", 64).into_int_value();
 
                 // Solidity expects the timestamp in seconds, not milliseconds
                 binary
@@ -1657,7 +1646,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .into()
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Gasleft, _) => {
-                get_seal_value!("gas_left", "seal_gas_left", 64)
+                get_value!("gas_left", "gas_left", 64)
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Gasprice, expr) => {
                 // gasprice is available as "tx.gasprice" which will give you the price for one unit
@@ -1675,7 +1664,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
                 call!(
-                    "seal_weight_to_fee",
+                    "weight_to_fee",
                     &[gas.into(), scratch_buf.into(), scratch_len.into()],
                     "gas_price"
                 );
@@ -1700,7 +1689,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
                 call!(
-                    "seal_caller",
+                    "caller",
                     &[scratch_buf.into(), scratch_len.into()],
                     "caller"
                 );
@@ -1718,9 +1707,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 self.value_transferred(binary, ns).into()
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::MinimumBalance, _) => {
-                get_seal_value!(
+                get_value!(
                     "minimum_balance",
-                    "seal_minimum_balance",
+                    "minimum_balance",
                     ns.value_length as u32 * 8
                 )
             }
@@ -1745,7 +1734,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 binary.builder.build_store(scratch_len, i32_const!(36));
 
                 call!(
-                    "seal_random",
+                    "random",
                     &[
                         cast_byte_ptr!(subject_data, "subject_data").into(),
                         binary.builder.build_load(subject_len, "subject_len").into(),
@@ -1775,7 +1764,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
                 call!(
-                    "seal_address",
+                    "address",
                     &[scratch_buf.into(), scratch_len.into()],
                     "address"
                 );
@@ -1797,7 +1786,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
                 call!(
-                    "seal_balance",
+                    "balance",
                     &[scratch_buf.into(), scratch_len.into()],
                     "balance"
                 );

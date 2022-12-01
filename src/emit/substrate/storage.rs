@@ -32,14 +32,14 @@ impl StorageSlot for SubstrateTarget {
                 .const_cast(binary.context.i32_type(), false)
         };
 
-        let ret = seal_set_storage!(
+        let ret = set_storage!(
             cast_byte_ptr!(slot).into(),
             i32_const!(32).into(),
             cast_byte_ptr!(dest).into(),
             dest_size.into()
         );
 
-        log_return_code(binary, "seal_set_storage", ret);
+        log_return_code(binary, "set_storage", ret);
     }
 
     fn get_storage_address<'a>(
@@ -56,14 +56,14 @@ impl StorageSlot for SubstrateTarget {
             .builder
             .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
-        let exists = seal_get_storage!(
+        let exists = get_storage!(
             cast_byte_ptr!(slot).into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
         );
 
-        log_return_code(binary, "seal_get_storage", exists);
+        log_return_code(binary, "get_storage", exists);
 
         let exists = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -97,7 +97,7 @@ impl StorageSlot for SubstrateTarget {
         emit_context!(binary);
 
         let ret = call!(
-            "seal_clear_storage",
+            "clear_storage",
             &[cast_byte_ptr!(slot).into(), i32_const!(32).into()]
         )
         .try_as_basic_value()
@@ -105,7 +105,7 @@ impl StorageSlot for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "seal_clear_storage", ret);
+        log_return_code(binary, "clear_storage", ret);
     }
 
     fn storage_load_slot<'a>(

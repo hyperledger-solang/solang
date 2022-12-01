@@ -75,30 +75,24 @@ macro_rules! emit_context {
         }
 
         #[allow(unused_macros)]
-        macro_rules! seal_get_storage {
+        macro_rules! get_storage {
             ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
-                call!(
-                    "seal_get_storage",
-                    &[$key_ptr, $key_len, $value_ptr, $value_len]
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value()
+                call!("get_storage", &[$key_ptr, $key_len, $value_ptr, $value_len])
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value()
             };
         }
 
         #[allow(unused_macros)]
-        macro_rules! seal_set_storage {
+        macro_rules! set_storage {
             ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
-                call!(
-                    "seal_set_storage",
-                    &[$key_ptr, $key_len, $value_ptr, $value_len]
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value()
+                call!("set_storage", &[$key_ptr, $key_len, $value_ptr, $value_len])
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value()
             };
         }
 
@@ -182,32 +176,32 @@ impl SubstrateTarget {
         binary.internalize(&[
             "deploy",
             "call",
-            "seal_input",
-            "seal_set_storage",
-            "seal_get_storage",
-            "seal_clear_storage",
-            "seal_hash_keccak_256",
-            "seal_hash_sha2_256",
-            "seal_hash_blake2_128",
-            "seal_hash_blake2_256",
-            "seal_return",
-            "seal_debug_message",
-            "seal_instantiate",
+            "input",
+            "set_storage",
+            "get_storage",
+            "clear_storage",
+            "hash_keccak_256",
+            "hash_sha2_256",
+            "hash_blake2_128",
+            "hash_blake2_256",
+            "return",
+            "debug_message",
+            "instantiate",
             "seal_call",
-            "seal_value_transferred",
-            "seal_minimum_balance",
-            "seal_weight_to_fee",
-            "seal_random",
-            "seal_address",
-            "seal_balance",
-            "seal_block_number",
-            "seal_now",
-            "seal_gas_price",
-            "seal_gas_left",
-            "seal_caller",
-            "seal_terminate",
-            "seal_deposit_event",
-            "seal_transfer",
+            "value_transferred",
+            "minimum_balance",
+            "weight_to_fee",
+            "random",
+            "address",
+            "balance",
+            "block_number",
+            "now",
+            "gas_price",
+            "gas_left",
+            "caller",
+            "terminate",
+            "deposit_event",
+            "transfer",
         ]);
 
         binary
@@ -251,7 +245,7 @@ impl SubstrateTarget {
         );
 
         binary.builder.build_call(
-            binary.module.get_function("seal_input").unwrap(),
+            binary.module.get_function("input").unwrap(),
             &[scratch_buf.into(), scratch_len.into()],
             "",
         );
@@ -289,33 +283,19 @@ impl SubstrateTarget {
             };
         }
 
-        external!("seal_input", void_type, u8_ptr, u32_ptr);
-        external!("seal_hash_keccak_256", void_type, u8_ptr, u32_val, u8_ptr);
-        external!("seal_hash_sha2_256", void_type, u8_ptr, u32_val, u8_ptr);
-        external!("seal_hash_blake2_128", void_type, u8_ptr, u32_val, u8_ptr);
-        external!("seal_hash_blake2_256", void_type, u8_ptr, u32_val, u8_ptr);
-        external!("seal_random", void_type, u8_ptr, u32_val, u8_ptr, u32_ptr);
+        external!("input", void_type, u8_ptr, u32_ptr);
+        external!("hash_keccak_256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("hash_sha2_256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("hash_blake2_128", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("hash_blake2_256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("random", void_type, u8_ptr, u32_val, u8_ptr, u32_ptr);
+        external!("set_storage", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
+        external!("debug_message", i32_type, u8_ptr, u32_val);
+        external!("clear_storage", i32_type, u8_ptr, u32_val);
+        external!("get_storage", i32_type, u8_ptr, u32_val, u8_ptr, u32_ptr);
+        external!("return", void_type, u32_val, u8_ptr, u32_val);
         external!(
-            "seal_set_storage",
-            i32_type,
-            u8_ptr,
-            u32_val,
-            u8_ptr,
-            u32_val
-        );
-        external!("seal_debug_message", i32_type, u8_ptr, u32_val);
-        external!("seal_clear_storage", i32_type, u8_ptr, u32_val);
-        external!(
-            "seal_get_storage",
-            i32_type,
-            u8_ptr,
-            u32_val,
-            u8_ptr,
-            u32_ptr
-        );
-        external!("seal_return", void_type, u32_val, u8_ptr, u32_val);
-        external!(
-            "seal_instantiate",
+            "instantiate",
             i32_type,
             u8_ptr,
             u64_val,
@@ -341,25 +321,18 @@ impl SubstrateTarget {
             u8_ptr,
             u32_ptr
         );
-        external!("seal_transfer", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
-        external!("seal_value_transferred", void_type, u8_ptr, u32_ptr);
-        external!("seal_address", void_type, u8_ptr, u32_ptr);
-        external!("seal_balance", void_type, u8_ptr, u32_ptr);
-        external!("seal_minimum_balance", void_type, u8_ptr, u32_ptr);
-        external!("seal_block_number", void_type, u8_ptr, u32_ptr);
-        external!("seal_now", void_type, u8_ptr, u32_ptr);
-        external!("seal_weight_to_fee", void_type, u64_val, u8_ptr, u32_ptr);
-        external!("seal_gas_left", void_type, u8_ptr, u32_ptr);
-        external!("seal_caller", void_type, u8_ptr, u32_ptr);
-        external!("seal_terminate", void_type, u8_ptr);
-        external!(
-            "seal_deposit_event",
-            void_type,
-            u8_ptr,
-            u32_val,
-            u8_ptr,
-            u32_val
-        );
+        external!("transfer", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
+        external!("value_transferred", void_type, u8_ptr, u32_ptr);
+        external!("address", void_type, u8_ptr, u32_ptr);
+        external!("balance", void_type, u8_ptr, u32_ptr);
+        external!("minimum_balance", void_type, u8_ptr, u32_ptr);
+        external!("block_number", void_type, u8_ptr, u32_ptr);
+        external!("now", void_type, u8_ptr, u32_ptr);
+        external!("weight_to_fee", void_type, u64_val, u8_ptr, u32_ptr);
+        external!("gas_left", void_type, u8_ptr, u32_ptr);
+        external!("caller", void_type, u8_ptr, u32_ptr);
+        external!("terminate", void_type, u8_ptr);
+        external!("deposit_event", void_type, u8_ptr, u32_val, u8_ptr, u32_val);
     }
 
     fn emit_deploy(&mut self, binary: &mut Binary, contract: &ast::Contract, ns: &ast::Namespace) {
@@ -1868,7 +1841,7 @@ fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: IntValue) {
     let out_buf =
         binary
             .builder
-            .build_array_alloca(binary.context.i8_type(), length, "seal_ret_code_buf");
+            .build_array_alloca(binary.context.i8_type(), length, "ret_code_buf");
     let mut out_buf_offset = out_buf;
 
     let msg_string = binary.emit_global_string(&fmt, msg, true);
@@ -1897,5 +1870,5 @@ fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: IntValue) {
             .build_ptr_to_int(out_buf, binary.context.i32_type(), "out_buf_ptr"),
         "msg_len",
     );
-    call!("seal_debug_message", &[out_buf.into(), msg_len.into()]);
+    call!("debug_message", &[out_buf.into(), msg_len.into()]);
 }

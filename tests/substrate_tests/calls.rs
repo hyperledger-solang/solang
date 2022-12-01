@@ -790,6 +790,6 @@ fn log_api_call_return_values_works() {
     runtime.function("test", vec![]);
     assert_eq!(
         &runtime.printbuf,
-        "seal_instantiate=0hi!seal_debug_message=0seal_call=0"
+        "instantiate=0hi!debug_message=0seal_call=0"
     );
 }
