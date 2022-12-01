@@ -17,7 +17,7 @@ describe('Deploy flipper contract and test', () => {
         conn = await createConnection();
         alice = aliceKeypair();
 
-        let ink_deployment = await deploy(conn, alice, 'ink/caller.contract', 0n);
+        let ink_deployment = await deploy(conn, alice, 'ink/caller/target/ink/caller.contract', 0n);
         ink_contract = new ContractPromise(conn, ink_deployment.abi, ink_deployment.address);
 
         let sol_deployment = await deploy(conn, alice, 'Inkee.contract', 0n);

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[ink::contract]
