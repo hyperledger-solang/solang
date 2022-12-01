@@ -4,7 +4,7 @@ import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
 
-describe('Deploy flipper contract and test', () => {
+describe('Test cross contract calls between ink and solidity', () => {
     let conn: ApiPromise;
     let alice: KeyringPair;
 
