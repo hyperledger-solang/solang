@@ -147,7 +147,7 @@ contract testing {
             // CHECK: ty:uint256 %q = uint256((load (struct %fPtr field 1)))
             let q := fPtr.address
 
-            // CHECK: ty:uint256 %r = (zext uint256 (load (struct %fPtr field 0)))
+            // CHECK: ty:uint256 %r = (zext uint256 bytes8((load (struct %fPtr field 0))))
             let r := fPtr.selector
 
             // CHECK: ty:uint256 %s = (arg #1)

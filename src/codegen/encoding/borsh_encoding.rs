@@ -15,7 +15,7 @@ use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
-use std::ops::{AddAssign, MulAssign};
+use std::ops::{Add, AddAssign, MulAssign};
 
 /// This struct implements the trait AbiEncoding for Borsh encoding
 pub(super) struct BorshEncoding {
@@ -409,16 +409,24 @@ impl BorshEncoding {
                     },
                 );
 
+                let mut size = Type::FunctionSelector.memory_size_of(ns);
+                let new_offset = Expression::Add(
+                    Loc::Codegen,
+                    Type::Uint(32),
+                    false,
+                    offset.clone().into(),
+                    Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), size.clone()).into(),
+                );
+
                 cfg.add(
                     vartab,
                     Instr::WriteBuffer {
                         buf: buffer.clone(),
-                        offset: increment_four(offset.clone()),
+                        offset: new_offset,
                         value: address,
                     },
                 );
 
-                let mut size = BigInt::from(4);
                 size.add_assign(BigInt::from(ns.address_length));
 
                 Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), size)
@@ -428,6 +436,23 @@ impl BorshEncoding {
             | Type::Void
             | Type::BufferPointer
             | Type::Mapping(..) => unreachable!("This type cannot be encoded"),
+
+            Type::FunctionSelector => {
+                cfg.add(
+                    vartab,
+                    Instr::WriteBuffer {
+                        offset: offset.clone(),
+                        value: expr.clone(),
+                        buf: buffer.clone(),
+                    },
+                );
+
+                Expression::NumberLiteral(
+                    Loc::Codegen,
+                    Type::Uint(32),
+                    BigInt::from(ns.target.selector_length()),
+                )
+            }
 
             Type::Ref(r) => {
                 if let Type::Struct(struct_ty) = &**r {
@@ -911,27 +936,36 @@ impl BorshEncoding {
             }
 
             Type::ExternalFunction { .. } => {
+                let selector_size = Type::FunctionSelector.memory_size_of(ns);
                 // Extneral function has selector + address
                 let size = Expression::NumberLiteral(
                     Loc::Codegen,
                     Type::Uint(32),
-                    BigInt::from(ns.address_length + 4),
+                    BigInt::from(ns.address_length).add(&selector_size),
                 );
 
                 validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
 
                 let selector = Expression::Builtin(
                     Loc::Codegen,
-                    vec![Type::Bytes(4)],
+                    vec![Type::FunctionSelector],
                     Builtin::ReadFromBuffer,
                     vec![buffer.clone(), offset.clone()],
+                );
+
+                let new_offset = Expression::Add(
+                    Loc::Codegen,
+                    Type::Uint(32),
+                    false,
+                    offset.clone().into(),
+                    Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), selector_size).into(),
                 );
 
                 let address = Expression::Builtin(
                     Loc::Codegen,
                     vec![Type::Address(false)],
                     Builtin::ReadFromBuffer,
-                    vec![buffer.clone(), increment_four(offset.clone())],
+                    vec![buffer.clone(), new_offset],
                 );
 
                 let external_func = Expression::Cast(
@@ -977,6 +1011,7 @@ impl BorshEncoding {
             | Type::InternalFunction { .. }
             | Type::Unreachable
             | Type::Void
+            | Type::FunctionSelector
             | Type::Mapping(..) => unreachable!("Type should not appear on an encoded buffer"),
         }
     }

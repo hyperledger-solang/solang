@@ -9,7 +9,7 @@ fn interfaceid() {
     let mut vm = build_solidity(
         r#"
         contract foo {
-            function get() public returns (bytes4) {
+            function get() public returns (bytes8) {
                 return type(I).interfaceId;
             }
         }
@@ -26,7 +26,9 @@ fn interfaceid() {
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedBytes(0xc78d9f3au32.to_be_bytes().to_vec())]
+        vec![BorshToken::FixedBytes(
+            0x88632631fac67239u64.to_be_bytes().to_vec()
+        )]
     );
 }
 

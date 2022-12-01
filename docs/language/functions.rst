@@ -155,15 +155,18 @@ ____________________________
 
 When a function is called, the function selector and the arguments are serialized
 (also known as abi encoded) and passed to the program. The function selector is
-what the runtime program uses to determine what function was called. Usually the
+what the runtime program uses to determine what function was called. On Substrate, the
 function selector is generated using a deterministic hash value of the function
-name and the arguments types.
+name and the arguments types. On Solana, the selector is a SHA-256 hash of the function name
+preceded by the ``global:`` prefix.
 
 The selector value can be overriden with the ``selector=hex"deadbea1"`` syntax,
 for example:
 
-.. include:: ../examples/function_selector_override.sol
+.. include:: ../examples/substrate/function_selector_override.sol
   :code: solidity
+
+The given example only works for Substrate, whose selectors are four bytes wide. On Solana, they are eight bytes wide.
 
 Only ``public`` and ``external`` functions have a selector, and can have their
 selector overriden. On Substrate, constructors have selectors too, so they
@@ -181,16 +184,19 @@ base contract, then the selector of both must match.
 Function overloading
 ____________________
 
-Multiple functions with the same name can be declared, as long as the arguments are
+On Substrate, multiple functions with the same name can be declared, as long as the arguments are
 different in at least one of two ways:
 
 - The number of arguments must be different
 - The type of at least one of the arguments is different
 
+.. note::
+    Function overloading is not available on Solana.
+
 A function cannot be overloaded by changing the return types or number of returned
 values. Here is an example of an overloaded function:
 
-.. include:: ../examples/function_overloading.sol
+.. include:: ../examples/substrate/function_overloading.sol
   :code: solidity
 
 In the function foo, abs() is called with an ``int64`` so the second implementation

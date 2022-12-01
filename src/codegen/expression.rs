@@ -400,7 +400,7 @@ pub fn expression(
             match &func_expr[0] {
                 ast::Expression::ExternalFunction { function_no, .. }
                 | ast::Expression::InternalFunction { function_no, .. } => {
-                    let selector = ns.functions[*function_no].selector();
+                    let selector = ns.functions[*function_no].selector(ns);
                     Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector)
                 }
                 _ => {
@@ -429,7 +429,7 @@ pub fn expression(
             let selector = Expression::BytesLiteral(
                 *loc,
                 Type::Uint(32),
-                ns.functions[*function_no].selector(),
+                ns.functions[*function_no].selector(ns),
             );
             let struct_literal = Expression::StructLiteral(
                 *loc,
@@ -1357,14 +1357,20 @@ fn abi_encode_with_signature(
     opt: &Options,
 ) -> Expression {
     let mut args_iter = args.iter();
+    let hash_algorithm = if ns.target == Target::Solana {
+        ast::Builtin::Sha256
+    } else {
+        ast::Builtin::Keccak256
+    };
+
     let hash = ast::Expression::Builtin(
         *loc,
         vec![Type::Bytes(32)],
-        ast::Builtin::Keccak256,
+        hash_algorithm,
         vec![args_iter.next().unwrap().clone()],
     );
     let hash = expression(&hash, cfg, contract_no, func, ns, vartab, opt);
-    let selector = hash.cast(&Type::Bytes(4), ns);
+    let selector = hash.cast(&Type::FunctionSelector, ns);
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
@@ -1385,7 +1391,7 @@ fn abi_encode_call(
     let selector = expression(
         &ast::Expression::Builtin(
             *loc,
-            vec![Type::Bytes(4)],
+            vec![Type::FunctionSelector],
             ast::Builtin::FunctionSelector,
             vec![args_iter.next().unwrap().clone()],
         ),
@@ -1906,12 +1912,13 @@ fn conditional_operator(
 }
 
 fn interfaceid(ns: &Namespace, contract_no: &usize, loc: &pt::Loc) -> Expression {
-    let mut id = vec![0u8; 4];
+    let selector_len = ns.target.selector_length();
+    let mut id = vec![0u8; selector_len as usize];
     for func_no in &ns.contracts[*contract_no].functions {
         let func = &ns.functions[*func_no];
 
         if func.ty == pt::FunctionTy::Function {
-            let selector = func.selector();
+            let selector = func.selector(ns);
             debug_assert_eq!(id.len(), selector.len());
 
             for (i, e) in id.iter_mut().enumerate() {
@@ -1919,7 +1926,7 @@ fn interfaceid(ns: &Namespace, contract_no: &usize, loc: &pt::Loc) -> Expression
             }
         }
     }
-    Expression::BytesLiteral(*loc, Type::Bytes(4), id.to_vec())
+    Expression::BytesLiteral(*loc, Type::Bytes(selector_len as u8), id.to_vec())
 }
 
 pub fn assign_single(
@@ -2269,7 +2276,7 @@ pub fn emit_function_call(
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
 
-                let selector = dest_func.selector();
+                let selector = dest_func.selector(ns);
 
                 tys.insert(0, Type::Bytes(selector.len() as u8));
 

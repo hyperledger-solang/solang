@@ -801,7 +801,7 @@ fn null_pointer() {
 fn external_function() {
     #[derive(Debug, BorshDeserialize)]
     struct Res {
-        item_1: [u8; 4],
+        item_1: [u8; 8],
         item_2: [u8; 32],
     }
 
@@ -812,7 +812,7 @@ fn external_function() {
             return a+b;
         }
 
-        function doThat() public view returns (bytes4, address, bytes memory) {
+        function doThat() public view returns (bytes8, address, bytes memory) {
             function (int64, int64) external returns (int64) fPtr = this.doThis;
 
             bytes memory b = abi.encode(fPtr);

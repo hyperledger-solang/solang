@@ -1,0 +1,91 @@
+
+contract Test1 {
+    function sum(int32 a, int32 b) public pure returns (int32) {
+        return a + b;
+    }
+
+    // This is not allowed on Solana, because the discriminator for both functions is exactly the same.
+    function sum(int64 a, int64 b) public pure returns (int64) {
+        return a + b;
+    }
+}
+
+contract Test2 {
+    constructor() {
+
+    }
+
+    function sub(int32 d) public pure returns (int32) {
+        return d-2;
+    }
+
+    function multiply(int32 a, int32 b) public pure returns (int32) {
+        return a*b;
+    }
+}
+
+contract Test3 is Test2 {
+    int32 state;
+    constructor(int32 state_var) {
+        state = state_var;
+    }
+
+    // We cannot overload multiply, because it is already defined in Test2
+    function multiply(int32 c) public pure returns (int32) {
+        return c*state;
+    }
+}
+
+contract Test4 is Test2 {
+    int32 state;
+    constructor(int32 state_var) {
+        state = state_var;
+    }
+
+    // We cannot redfined multiply from Test2
+    function multiply(int32 a, int32 b) public pure returns (int32) {
+        return a*state*b;
+    }
+}
+
+contract Test5 is Test3 {
+    constructor(int32 state_var) Test3(state_var) {}
+
+    // sub is already defined in Test2
+    function sub(int64 e) public pure returns (int64) {
+        return e-2;
+    }
+}
+
+abstract contract Test6 {
+    constructor() {}
+
+    function doThis() public virtual returns (int32);
+}
+
+contract Test7 is Test6 {
+    constructor() {
+
+    }
+
+    // This should be allowed
+    function doThis() public override(Test6) returns (int32) {
+        return 7;
+    }
+}
+
+contract Base1
+{
+    function foo() virtual public {}
+}
+
+contract Base2
+{
+    function foo() virtual public {}
+}
+
+contract Inherited is Base1, Base2
+{
+    // This should be allowed
+    function foo() public override(Base1, Base2) {}
+}

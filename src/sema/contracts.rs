@@ -1,5 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use num_bigint::BigInt;
+use num_traits::Zero;
+use solang_parser::pt::FunctionTy;
+use solang_parser::{
+    doccomment::parse_doccomments,
+    pt::{self, CodeLocation, Statement},
+};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::convert::TryInto;
+use tiny_keccak::{Hasher, Keccak};
+
 use super::{
     annotions_not_allowed, ast,
     diagnostics::Diagnostics,
@@ -17,6 +28,7 @@ use solang_parser::pt::{self, CodeLocation};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
+use crate::Target;
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
@@ -511,7 +523,11 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 for prev in previous_defs.into_iter() {
                     let func_prev = &ns.functions[prev];
 
-                    if Some(base_contract_no) == func_prev.contract_no {
+                    if Some(base_contract_no) == func_prev.contract_no
+                        && ns.target != Target::Solana
+                    {
+                        // It is not possible to override a function in the same contract on Solana,
+                        // because we do not allow functions with duplicate names.
                         diagnostics.push(ast::Diagnostic::error_with_note(
                             cur.loc,
                             format!(
@@ -626,17 +642,19 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     .insert(signature, function_no);
             }
 
-            let selector = cur.selector();
+            let selector = cur.selector(ns);
+            let selector_len = ns.target.selector_length();
 
-            // On Solana, concrete contracts have selectors of 4 bytes
+            // On Solana, concrete contracts have selectors of 8 bytes
             // TODO: this will change with the switch to borsh!
-            if ns.contracts[contract_no].is_concrete() && selector.len() != 4 {
+            if ns.contracts[contract_no].is_concrete() && selector.len() != selector_len as usize {
                 diagnostics.push(ast::Diagnostic::error(
                     cur.loc,
                     format!(
-                        "function '{}' selector '{}' must be 4 bytes rather than {} bytes",
+                        "function '{}' selector '{}' must be {} bytes rather than {} bytes",
                         cur.name,
                         hex::encode(&selector),
+                        selector_len,
                         selector.len()
                     ),
                 ));
@@ -644,8 +662,29 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
 
             if let Some(other_func_no) = selectors.get(&selector) {
                 let other = &ns.functions[*other_func_no];
-
-                if other.signature != cur.signature {
+                // On Solana, repeated selectors mean same function name.
+                // We should only raise an error about function overloading, when one of the functions
+                // is not an override or virtual
+                if ns.target == Target::Solana
+                    && other.name == cur.name
+                    && cur.is_override.is_none()
+                    && other.is_override.is_none()
+                    && !cur.is_virtual
+                    && !other.is_virtual
+                {
+                    if cur.ty != FunctionTy::Constructor {
+                        diagnostics.push(ast::Diagnostic::error_with_note(
+                            cur.loc,
+                            format!(
+                                "function '{}' is already defined. Function overloading \
+                        is not allowed on Solana",
+                                cur.name
+                            ),
+                            other.loc,
+                            format!("duplicate definition of '{}'", other.name),
+                        ));
+                    }
+                } else if other.signature != cur.signature {
                     diagnostics.push(ast::Diagnostic::error_with_note(
                         cur.loc,
                         format!(
@@ -772,8 +811,7 @@ fn check_mangled_function_names(contract_no: usize, ns: &mut ast::Namespace) {
 fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespace) {
     let contract = &mut ns.contracts[contract_no];
 
-    if ns.target.is_substrate()
-        && !ns.diagnostics.any_errors()
+    if !ns.diagnostics.any_errors()
         && contract.is_concrete()
         && !contract.all_functions.keys().any(|func_no| {
             let func = &ns.functions[*func_no];
@@ -797,7 +835,7 @@ fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespa
 /// This function checks that all constructors and function names are unique.
 /// Overloading (mangled function or constructor names) is taken into account.
 fn substrate_unique_constructor_names(contract_no: usize, ns: &mut ast::Namespace) {
-    if !ns.target.is_substrate() || ns.diagnostics.any_errors() {
+    if ns.diagnostics.any_errors() {
         return;
     }
 

@@ -119,7 +119,7 @@ contract testing  {
             },
             BorshToken::Uint {
                 width: 256,
-                value: BigInt::from(2081714652u32)
+                value: BigInt::from(799097422081508461u64)
             },
         ]
     );
@@ -417,7 +417,7 @@ fn external_function() {
 
         }
 
-        function test(uint256 newAddress, bytes4 newSelector) public view returns (bytes4, address) {
+        function test(uint256 newAddress, bytes8 newSelector) public view returns (bytes8, address) {
             function() external fun = this.myFun;
             address myAddr = address(newAddress);
             assembly {
@@ -441,13 +441,13 @@ fn external_function() {
                 width: 256,
                 value: BigInt::from_bytes_le(Sign::Plus, addr.as_slice()),
             },
-            BorshToken::FixedBytes(vec![1, 2, 3, 4]),
+            BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7, 8]),
         ],
         None,
     );
 
     let selector = returns[0].clone().into_fixed_bytes().unwrap();
-    assert_eq!(selector, vec![1, 2, 3, 4]);
+    assert_eq!(selector, vec![1, 2, 3, 4, 5, 6, 7, 8]);
     let addr = returns[1].clone().into_fixed_bytes().unwrap();
     assert_eq!(addr[26], 90);
 }

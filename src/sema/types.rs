@@ -944,6 +944,7 @@ impl Type {
             Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
             Type::Unresolved => "unresolved".into(),
             Type::BufferPointer => "buffer_pointer".into(),
+            Type::FunctionSelector => "function_selector".into(),
         }
     }
 
@@ -1058,6 +1059,7 @@ impl Type {
             Type::ExternalFunction { .. } => false,
             Type::Slice(_) => false,
             Type::Unresolved => false,
+            Type::FunctionSelector => false,
             _ => unreachable!("{:?}", self),
         }
     }
@@ -1142,6 +1144,7 @@ impl Type {
             }
             Type::Unresolved | Type::Mapping(..) => BigInt::zero(),
             Type::UserType(no) => ns.user_types[*no].ty.memory_size_of(ns),
+            Type::FunctionSelector => BigInt::from(ns.target.selector_length()),
             _ => unimplemented!("sizeof on {:?}", self),
         }
     }

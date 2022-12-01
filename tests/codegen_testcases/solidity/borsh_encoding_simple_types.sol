@@ -179,10 +179,10 @@ contract EncodingTest {
         function (int64, int64) external returns (int64) fPtr = this.doThis;
         uint64 pr = 9234;
 
-        // CHECK: ty:bytes %abi_encoded.temp.74 = (alloc bytes len uint32 44)
+        // CHECK: ty:bytes %abi_encoded.temp.74 = (alloc bytes len uint32 48)
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.74 offset:uint32 0 value:(load (struct %fPtr field 0))
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.74 offset:uint32 4 value:(load (struct %fPtr field 1))
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.74 offset:uint32 36 value:uint64 9234
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.74 offset:uint32 8 value:(load (struct %fPtr field 1))
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.74 offset:uint32 40 value:uint64 9234
 
         bytes memory b = abi.encode(fPtr, pr);
         return b;

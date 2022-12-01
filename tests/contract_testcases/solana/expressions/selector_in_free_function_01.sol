@@ -4,7 +4,7 @@
         }
 
         contract X {
-            function x() public returns (bytes4) {
+            function x() public returns (bytes8) {
                 return I.X.selector;
             }
         }

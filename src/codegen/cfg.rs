@@ -1417,7 +1417,7 @@ pub fn generate_cfg(
 
             cfg.public = public;
             cfg.nonpayable = nonpayable;
-            cfg.selector = ns.functions[func_no].selector();
+            cfg.selector = ns.functions[func_no].selector(ns);
         }
     }
 
@@ -1535,7 +1535,7 @@ fn function_cfg(
             format!(
                 "{}::constructor::{}",
                 contract_name,
-                hex::encode(func.selector())
+                hex::encode(func.selector(ns))
             )
         }
         _ => format!("{}::{}", contract_name, func.ty),
@@ -1552,7 +1552,7 @@ fn function_cfg(
 
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();
-    cfg.selector = func.selector();
+    cfg.selector = func.selector(ns);
 
     // a function is public if is not a library and not a base constructor
     cfg.public = if let Some(base_contract_no) = func.contract_no {

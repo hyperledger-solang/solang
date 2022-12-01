@@ -2,9 +2,8 @@
 
 use anchor_syn::idl::{Idl, IdlInstruction, IdlType, IdlTypeDefinitionTy};
 use clap::ArgMatches;
-use convert_case::{Boundary, Case, Casing};
 use serde_json::Value as JsonValue;
-use sha2::{Digest, Sha256};
+use solang::abi::anchor::discriminator;
 use solang_parser::lexer::is_keyword;
 use std::{
     ffi::{OsStr, OsString},
@@ -347,21 +346,6 @@ fn docs(f: &mut File, indent: usize, docs: &Option<Vec<String>>) -> std::io::Res
     }
 
     Ok(())
-}
-
-/// Generate discriminator based on the name of the function. This is the 8 byte
-/// value anchor uses to dispatch function calls on. This should match
-/// anchor's behaviour - we need to match the discriminator exactly
-fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-    // must match snake-case npm library, see
-    // https://github.com/coral-xyz/anchor/blob/master/ts/packages/anchor/src/coder/borsh/instruction.ts#L389
-    let normalized = name
-        .from_case(Case::Camel)
-        .without_boundaries(&[Boundary::LowerDigit])
-        .to_case(Case::Snake);
-    hasher.update(format!("{}:{}", namespace, normalized));
-    hasher.finalize()[..8].to_vec()
 }
 
 fn idltype_to_solidity(ty: &IdlType, ty_names: &[(String, String)]) -> Result<String, String> {

@@ -15,6 +15,7 @@ Solana has the following differences to Ethereum Solidity:
 - Solana uses different accounts for the program code, and the contract data.
 - Programs are upgradable. There is no need to implement upgrades in Solidity.
 - Solana provides different builtins, e.g. ``tx.program_id`` and ``tx.accounts``.
+- Selectors are eight bytes wide and often called "discriminators".
 
 This is how to build your Solidity for Solana:
 

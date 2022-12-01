@@ -100,8 +100,8 @@ contract example {
 		return State(n % uint64(State.StateCount));
 	}
 
-	/// Overloaded function with different return value!
-	function get_pid_state() view private returns (uint32) {
+	/// Overloaded functions are not allowed on Solana
+	function get_pid_state_1() view private returns (uint32) {
 		return reaped;
 	}
 

@@ -848,7 +848,7 @@ impl<'a> Binary<'a> {
                 }
                 Type::ExternalFunction { .. } => {
                     let address = self.llvm_type(&Type::Address(false), ns);
-                    let selector = self.llvm_type(&Type::Uint(32), ns);
+                    let selector = self.llvm_type(&Type::FunctionSelector, ns);
 
                     BasicTypeEnum::PointerType(
                         self.context
@@ -875,6 +875,9 @@ impl<'a> Binary<'a> {
                     .i8_type()
                     .ptr_type(AddressSpace::Generic)
                     .as_basic_type_enum(),
+                Type::FunctionSelector => {
+                    self.llvm_type(&Type::Bytes(ns.target.selector_length()), ns)
+                }
                 _ => unreachable!(),
             }
         }

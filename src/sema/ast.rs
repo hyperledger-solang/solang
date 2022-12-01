@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::symtable::Symtable;
+use crate::abi::anchor::discriminator;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::diagnostics::Diagnostics;
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
@@ -11,7 +12,7 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
-use solang_parser::pt::{CodeLocation, OptionalCodeLocation};
+use solang_parser::pt::{CodeLocation, FunctionTy, OptionalCodeLocation};
 use std::sync::Arc;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -66,6 +67,8 @@ pub enum Type {
     /// e.g. Type::Bytes is a pointer to struct.vector. When we advance it, it is a pointer
     /// to latter's data region.
     BufferPointer,
+    /// The function selector (or discriminator) type is 4 bytes on Substrate and 8 bytes on Solana
+    FunctionSelector,
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
@@ -378,9 +381,15 @@ impl Function {
     }
 
     /// Generate selector for this function
-    pub fn selector(&self) -> Vec<u8> {
+    pub fn selector(&self, ns: &Namespace) -> Vec<u8> {
         if let Some(selector) = &self.selector {
             selector.clone()
+        } else if ns.target == Target::Solana {
+            match self.ty {
+                FunctionTy::Constructor => discriminator("global", "new"),
+                FunctionTy::Receive => discriminator("global", "receive()"),
+                _ => discriminator("global", self.name.as_str()),
+            }
         } else {
             let mut res = [0u8; 32];
 

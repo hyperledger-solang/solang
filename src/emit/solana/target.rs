@@ -2175,13 +2175,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let selector = binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         input,
-                        binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i64_type().ptr_type(AddressSpace::Generic),
                         "selector",
                     ),
                     "selector",
                 );
 
-                let bswap = binary.llvm_bswap(32);
+                let bswap = binary.llvm_bswap(64);
 
                 binary
                     .builder

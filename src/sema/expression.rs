@@ -103,7 +103,7 @@ impl RetrieveType for Expression {
                 list[0].ty()
             }
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
-            Expression::InterfaceId(..) => Type::Bytes(4),
+            Expression::InterfaceId(..) => Type::FunctionSelector,
             Expression::FormatString(..) => Type::String,
             // codegen Expressions
             Expression::InternalFunction { ty, .. } => ty.clone(),
@@ -515,6 +515,14 @@ impl Expression {
                     }),
                 }
             }
+            (Type::Bytes(n), Type::FunctionSelector) if *n == ns.target.selector_length() as u8 => {
+                Ok(Expression::Cast {
+                    loc: *loc,
+                    to: to.clone(),
+                    expr: Box::new(self.clone()),
+                })
+            }
+
             (Type::Bytes(1), Type::Uint(8)) | (Type::Uint(8), Type::Bytes(1)) => Ok(self.clone()),
             (Type::Uint(from_len), Type::Uint(to_len)) => match from_len.cmp(to_len) {
                 Ordering::Greater => {
@@ -1237,6 +1245,55 @@ impl Expression {
                     to: to.clone(),
                     expr: Box::new(self.clone()),
                 })
+            }
+            (Type::FunctionSelector, Type::Bytes(n)) => {
+                let selector_length = ns.target.selector_length() as u8;
+                if *n < selector_length {
+                    diagnostics.push(Diagnostic::cast_error(
+                        *loc,
+                        format!(
+                            "function selector can only be casted to bytes{} or larger",
+                            selector_length
+                        ),
+                    ));
+                    Err(())
+                } else if *n == selector_length {
+                    Ok(Expression::Cast {
+                        loc: *loc,
+                        to: to.clone(),
+                        expr: self.clone().into(),
+                    })
+                } else {
+                    self.cast_types(
+                        loc,
+                        &Type::Bytes(selector_length),
+                        to,
+                        implicit,
+                        ns,
+                        diagnostics,
+                    )
+                }
+            }
+            (Type::FunctionSelector, Type::Uint(n) | Type::Int(n)) => {
+                let selector_width = ns.target.selector_length() * 8;
+                if *n < selector_width as u16 {
+                    diagnostics.push(Diagnostic::cast_error(
+                        *loc,
+                        format!(
+                            "function select needs a bit width of at least {} bits",
+                            selector_width
+                        ),
+                    ));
+                    return Err(());
+                }
+                self.cast_types(
+                    loc,
+                    &Type::Bytes(ns.target.selector_length() as u8),
+                    to,
+                    implicit,
+                    ns,
+                    diagnostics,
+                )
             }
             _ => {
                 diagnostics.push(Diagnostic::cast_error(
@@ -5046,7 +5103,7 @@ fn member_access(
                 used_variable(ns, &expr, symtable);
                 return Ok(Expression::Builtin(
                     e.loc(),
-                    vec![Type::Bytes(4)],
+                    vec![Type::FunctionSelector],
                     Builtin::FunctionSelector,
                     vec![expr],
                 ));
@@ -5058,7 +5115,7 @@ fn member_access(
                     used_variable(ns, &expr, symtable);
                     return Ok(Expression::Builtin(
                         e.loc(),
-                        vec![Type::Bytes(4)],
+                        vec![Type::FunctionSelector],
                         Builtin::FunctionSelector,
                         vec![expr],
                     ));

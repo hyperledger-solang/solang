@@ -115,11 +115,11 @@ fn external_raw_call_with_returns() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            bytes4 private constant SELECTOR = bytes4(keccak256(bytes('test_bar(int64)')));
+            bytes8 private constant SELECTOR = bytes8(sha256(bytes('global:test_bar')));
 
             function test_other(bar1 x) public returns (int64) {
                 bytes select = abi.encodeWithSelector(SELECTOR, int64(7));
-                bytes signature = abi.encodeWithSignature("test_bar(int64)", int64(7));
+                bytes signature = abi.encodeWithSignature("global:test_bar", int64(7));
                 require(select == signature, "must be the same");
                 (, bytes raw) = address(x).call(signature);
                 (int64 v) = abi.decode(raw, (int64));
@@ -282,7 +282,7 @@ fn encode_call() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            bytes4 private constant SELECTOR = bytes4(keccak256(bytes('test_bar(int64)')));
+            bytes8 private constant SELECTOR = bytes8(sha256(bytes('global:test_bar')));
 
             function test_other(bar1 x) public returns (int64) {
                 bytes select = abi.encodeWithSelector(SELECTOR, int64(7));

@@ -7,6 +7,7 @@ use solang_parser::pt;
 use crate::sema::ast::Namespace;
 use crate::Target;
 
+pub mod anchor;
 pub mod ethereum;
 pub mod substrate;
 

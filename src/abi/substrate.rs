@@ -301,7 +301,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
 
         ConstructorSpec::from_label(if f.name.is_empty() { "new" } else { &f.name }.into())
-            .selector(f.selector().try_into().unwrap())
+            .selector(f.selector(ns).try_into().unwrap())
             .payable(payable)
             .args(args)
             .docs(vec![render(&f.tags).as_str()])
@@ -391,7 +391,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             &f.name
         };
         MessageSpec::from_label(label.into())
-            .selector(f.selector().try_into().unwrap())
+            .selector(f.selector(ns).try_into().unwrap())
             .mutates(mutates)
             .payable(payable)
             .args(args)
