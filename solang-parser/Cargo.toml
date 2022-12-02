@@ -1,6 +1,6 @@
 [package]
 name = "solang-parser"
-version = "0.1.18"
+version = "0.2.0"
 authors = ["Sean Young <sean@mess.org>"]
 homepage = "https://github.com/hyperledger/solang"
 documentation = "https://solang.readthedocs.io/"
