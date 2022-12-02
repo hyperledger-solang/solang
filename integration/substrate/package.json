@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "tsc; ts-mocha -t 20000 *.spec.ts",
-    "build": "parallel solang compile -v --target substrate ::: *.sol test/*.sol"
+    "build": "parallel solang compile -v --target substrate ::: *.sol test/*.sol",
+    "build-ink": "docker run --rm -v $(pwd)/ink/caller:/opt/contract paritytech/contracts-ci-linux:latest cargo contract build --manifest-path /opt/contract/Cargo.toml"
   },
   "contributors": [
     {

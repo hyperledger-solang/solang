@@ -320,6 +320,9 @@ jobs:
         echo "$(pwd)/bin" >> $GITHUB_PATH
     - run: npm install
       working-directory: ./integration/substrate
+    - name: Build ink! contracts
+      run: npm run build-ink
+      working-directory: ./integration/substrate
     - name: Build Solang contracts
       run: npm run build
       working-directory: ./integration/substrate
