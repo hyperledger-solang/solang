@@ -13,7 +13,7 @@ We are happy to release solang `v0.2.0` codename `Berlin` today. Aside from cont
   a Solidity interface file from an Anchor IDL file. This can be used for calling
   Anchor Contracts on Solana. [seanyoung](https://github.com/seanyoung)
 - **Substrate:** Provide specific Substrate builtins via a "substrate" file. The
-  `Hash` type from `ink!` is the first type made available for solidity contracts.
+  `Hash` type from `ink!` is the first type made available for Solidity contracts.
   [xermicus](https://github.com/xermicus)
 - **Substrate:** Introduce the `--log-api-return-codes` CLI flag, which changes the
   emitted code to print return codes for `seal` API calls into the debug buffer.
