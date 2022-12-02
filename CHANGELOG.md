@@ -36,7 +36,7 @@ We are happy to release solang `v0.2.0` codename `Berlin` today. Aside from cont
    [salaheldinsoliman](https://github.com/salaheldinsoliman)
  - Constant expressions are checked for overflow.
    [salaheldinsoliman](https://github.com/salaheldinsoliman)
- - AddMod and MulMod were broken, this is now fixed.
+ - AddMod and MulMod were broken. This is now fixed.
    [LucasSte](https://github.com/LucasSte)
 - **Substrate / breaking:** Solang is now compatible with `ink!` version 4 (beta).
   [xermicus](https://github.com/xermicus)
