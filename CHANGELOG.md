@@ -24,7 +24,7 @@ We are happy to release solang `v0.2.0` codename `Berlin` today. Aside from cont
 
 ### Changed
  - The Solana target now uses Borsh encoding rather than eth abi
-   encoding. This is towards making Solang contracts Anchor compatible.
+   encoding. This is aimed at making Solang contracts Anchor compatible.
    [LucasSte](https://github.com/LucasSte)
 - **Substrate / breaking:** Supported node version is now pallet contracts `v0.22.1`.
   [xermicus](https://github.com/xermicus)
