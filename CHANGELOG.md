@@ -32,7 +32,7 @@ We are happy to release solang `v0.2.0` codenamed `Berlin` today. Aside from con
   [xermicus](https://github.com/xermicus)
 
 ### Fixed
- - The parser does not give up after the first error, when possible.
+ - Whenever possible, the parser does not give up after the first error.
    [salaheldinsoliman](https://github.com/salaheldinsoliman)
  - Constant expressions are checked for overflow.
    [salaheldinsoliman](https://github.com/salaheldinsoliman)
