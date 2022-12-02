@@ -103,7 +103,7 @@ jobs:
       with:
         submodules: recursive
     - name: Download LLVM
-      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang/releases/download/v0.1.13/llvm13.0-win.zip
+      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang/releases/download/v0.2.0/llvm13.0-win.zip
     - name: Extract LLVM
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
@@ -141,7 +141,7 @@ jobs:
           default: true
           profile: minimal
     - name: Get LLVM
-      run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.13/llvm13.0-mac-arm.tar.xz
+      run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.0/llvm13.0-mac-arm.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-arm.tar.xz
     - name: Add LLVM to Path
@@ -169,7 +169,7 @@ jobs:
           default: true
           profile: minimal
     - name: Get LLVM
-      run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.1.13/llvm13.0-mac-intel.tar.xz
+      run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.0/llvm13.0-mac-intel.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm13.0-mac-intel.tar.xz
     - name: Add LLVM to Path
