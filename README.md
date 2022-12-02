@@ -145,8 +145,8 @@ Here is a brief description of what we envision for the next versions.
 | Solana SPL tokens compatibility            | Completed   |
 | Parse and resolve inline assembly          | Completed   |
 | Generate code for inline assembly          | Completed   |
-| Support Solana's Program Derived Addresses | Completed   |
 | Support latest Substrate production target | Completed   |
+| Improve parser resilience                  | Completed   |
 
 
 ### V0.3
@@ -155,10 +155,12 @@ Here is a brief description of what we envision for the next versions.
 |--------------------------------------------|-------------|
 | Call Solana's Rust contracts from Solidity | In progress |
 | Improvements in overflow checking          | In progress |
+| Support Solana's Program Derived Addresses | In Progress |
 | Call Solidity from Solana's Rust contracts | Not started |
-| Improve parser resilience                  | Not started |
 | Improve developer experience for Substrate | Not started |
 | Tooling for calls between ink! <> solidity | Not started |
+| Support chain extensions for Substrate     | Not started |
+| Provide CLI for node interactions          | Not started |
 
 
 ### V0.4
