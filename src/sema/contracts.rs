@@ -2,7 +2,6 @@
 
 use num_bigint::BigInt;
 use num_traits::Zero;
-use solang_parser::pt::FunctionTy;
 use solang_parser::{
     doccomment::parse_doccomments,
     pt::{self, CodeLocation, Statement},
@@ -117,6 +116,7 @@ pub fn resolve(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::N
         let contract_no = contract.contract_no;
 
         check_inheritance(contract_no, ns);
+        check_mangled_function_names(contract_no, ns);
         substrate_requires_public_functions(contract_no, ns);
         substrate_unique_constructor_names(contract_no, ns);
         check_mangled_function_names(contract_no, ns);
@@ -523,11 +523,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 for prev in previous_defs.into_iter() {
                     let func_prev = &ns.functions[prev];
 
-                    if Some(base_contract_no) == func_prev.contract_no
-                        && ns.target != Target::Solana
-                    {
-                        // It is not possible to override a function in the same contract on Solana,
-                        // because we do not allow functions with duplicate names.
+                    if Some(base_contract_no) == func_prev.contract_no {
                         diagnostics.push(ast::Diagnostic::error_with_note(
                             cur.loc,
                             format!(
@@ -662,29 +658,8 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
 
             if let Some(other_func_no) = selectors.get(&selector) {
                 let other = &ns.functions[*other_func_no];
-                // On Solana, repeated selectors mean same function name.
-                // We should only raise an error about function overloading, when one of the functions
-                // is not an override or virtual
-                if ns.target == Target::Solana
-                    && other.name == cur.name
-                    && cur.is_override.is_none()
-                    && other.is_override.is_none()
-                    && !cur.is_virtual
-                    && !other.is_virtual
-                {
-                    if cur.ty != FunctionTy::Constructor {
-                        diagnostics.push(ast::Diagnostic::error_with_note(
-                            cur.loc,
-                            format!(
-                                "function '{}' is already defined. Function overloading \
-                        is not allowed on Solana",
-                                cur.name
-                            ),
-                            other.loc,
-                            format!("duplicate definition of '{}'", other.name),
-                        ));
-                    }
-                } else if other.signature != cur.signature {
+
+                if other.signature != cur.signature {
                     diagnostics.push(ast::Diagnostic::error_with_note(
                         cur.loc,
                         format!(
