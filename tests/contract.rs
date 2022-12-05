@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use path_slash::PathExt;
+use rayon::prelude::*;
 use solang::{codegen, file_resolver::FileResolver, parse_and_resolve, Target};
 use std::{
     ffi::OsStr,
@@ -33,6 +34,8 @@ fn contract_tests(file_path: &str, target: Target) -> io::Result<()> {
 }
 
 fn recurse_directory(path: PathBuf, target: Target) -> io::Result<()> {
+    let mut entries = Vec::new();
+
     for entry in read_dir(path)? {
         let path = entry?.path();
 
@@ -40,10 +43,14 @@ fn recurse_directory(path: PathBuf, target: Target) -> io::Result<()> {
             recurse_directory(path, target)?;
         } else if let Some(ext) = path.extension() {
             if ext.to_string_lossy() == "sol" {
-                parse_file(path, target)?;
+                entries.push(path);
             }
         }
     }
+
+    entries.into_par_iter().for_each(|entry| {
+        parse_file(entry, target).unwrap();
+    });
 
     Ok(())
 }

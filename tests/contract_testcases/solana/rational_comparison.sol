@@ -1,0 +1,21 @@
+// Ensure that rational comparisons are not permitted
+contract c {
+	function foo1(uint64 a, uint64 b) public returns (bool) {
+		return (a/b) >= 0.05;
+	}
+	function foo2(uint64 a, uint64 b) public returns (bool) {
+		return 002.2 > a;
+	}
+	function foo3(uint64 a, uint64 b) public returns (bool) {
+		return 1 == 0.05;
+	}
+	function foo4(uint64 a, uint64 b) public returns (bool) {
+		return a*2.1 < b;
+	}
+	function foo5(uint64 a, uint64 b) public returns (bool) {
+		return (a << b) <= 0.05;
+	}
+	function foo6(uint64 a, uint64 b) public returns (bool) {
+		return 1.2 != (a ^ b);
+	}
+}
