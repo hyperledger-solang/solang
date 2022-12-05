@@ -108,11 +108,8 @@ jobs:
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
       run: echo "c:\llvm13.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
-    - uses: actions-rs/toolchain@v1
+    - uses: dtolnay/rust-toolchain@1.63.0
       with:
-        profile: minimal
-        toolchain: 1.63.0
-        default: true
         components: clippy
     # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
     - name: Run cargo clippy
@@ -135,11 +132,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         submodules: recursive
-    - uses: actions-rs/toolchain@v1
-      with:
-          toolchain: 1.63.0
-          default: true
-          profile: minimal
+    - uses: dtolnay/rust-toolchain@1.63.0
     - name: Get LLVM
       run: curl -L --output llvm13.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.0/llvm13.0-mac-arm.tar.xz
     - name: Extract LLVM
@@ -157,17 +150,13 @@ jobs:
 
   mac-intel:
     name: Mac Intel
-    runs-on: macos-latest
+    runs-on: macos-11
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
       with:
         submodules: recursive
-    - uses: actions-rs/toolchain@v1
-      with:
-          toolchain: 1.63.0
-          default: true
-          profile: minimal
+    - uses: dtolnay/rust-toolchain@1.63.0
     - name: Get LLVM
       run: wget -q -O llvm13.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.0/llvm13.0-mac-intel.tar.xz
     - name: Extract LLVM
@@ -185,7 +174,7 @@ jobs:
 
   mac-universal:
     name: Mac Universal Binary
-    runs-on: macos-latest
+    runs-on: macos-11
     needs: [mac-arm, mac-intel]
     steps:
     - uses: actions/download-artifact@master
@@ -353,10 +342,8 @@ jobs:
     - run: npm run compile
       working-directory: ./vscode
     - name: Run headless test
-      uses: GabrielBB/xvfb-action@v1
-      with:
-        working-directory: ./vscode
-        run: npm test
+      run: xvfb-run npm test
+      working-directory: ./vscode
     - run: npm install -g vsce
       working-directory: ./vscode
     - run: vsce package
