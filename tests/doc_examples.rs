@@ -12,7 +12,7 @@ use std::{
     fs::{read_dir, read_to_string},
 };
 
-/// Poppulates a file resolver with all imports that could be used by some example.
+/// Populates a file resolver with all imports that could be used by some example.
 fn file_resolver(target: Target) -> FileResolver {
     let mut result = FileResolver::new();
     result.set_file_contents(

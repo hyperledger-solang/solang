@@ -1851,11 +1851,19 @@ pub fn expression(
                 diagnostics,
             )?;
 
-            Ok(Expression::More(
+            let expr = Expression::More(
                 *loc,
                 Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
                 Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            ))
+            );
+
+            if ty.is_rational() {
+                if let Err(diag) = eval_const_rational(&expr, ns) {
+                    diagnostics.push(diag);
+                }
+            }
+
+            Ok(expr)
         }
         pt::Expression::Less(loc, l, r) => {
             let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
@@ -1874,11 +1882,19 @@ pub fn expression(
                 diagnostics,
             )?;
 
-            Ok(Expression::Less(
+            let expr = Expression::Less(
                 *loc,
                 Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
                 Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            ))
+            );
+
+            if ty.is_rational() {
+                if let Err(diag) = eval_const_rational(&expr, ns) {
+                    diagnostics.push(diag);
+                }
+            }
+
+            Ok(expr)
         }
         pt::Expression::MoreEqual(loc, l, r) => {
             let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
@@ -1896,11 +1912,19 @@ pub fn expression(
                 diagnostics,
             )?;
 
-            Ok(Expression::MoreEqual(
+            let expr = Expression::MoreEqual(
                 *loc,
                 Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
                 Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            ))
+            );
+
+            if ty.is_rational() {
+                if let Err(diag) = eval_const_rational(&expr, ns) {
+                    diagnostics.push(diag);
+                }
+            }
+
+            Ok(expr)
         }
         pt::Expression::LessEqual(loc, l, r) => {
             let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
@@ -1918,11 +1942,19 @@ pub fn expression(
                 diagnostics,
             )?;
 
-            Ok(Expression::LessEqual(
+            let expr = Expression::LessEqual(
                 *loc,
                 Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
                 Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            ))
+            );
+
+            if ty.is_rational() {
+                if let Err(diag) = eval_const_rational(&expr, ns) {
+                    diagnostics.push(diag);
+                }
+            }
+
+            Ok(expr)
         }
         pt::Expression::Equal(loc, l, r) => equal(loc, l, r, context, ns, symtable, diagnostics),
 
@@ -3905,11 +3937,19 @@ fn equal(
 
     let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, diagnostics)?;
 
-    Ok(Expression::Equal(
+    let expr = Expression::Equal(
         *loc,
         Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
         Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    );
+
+    if ty.is_rational() {
+        if let Err(diag) = eval_const_rational(&expr, ns) {
+            diagnostics.push(diag);
+        }
+    }
+
+    Ok(expr)
 }
 
 /// Try string concatenation
