@@ -6,8 +6,6 @@ use clap::{
     value_parser, Arg, ArgMatches, Command,
 };
 use clap_complete::{generate, Shell};
-use itertools::Itertools;
-use num_traits::cast::ToPrimitive;
 use solang::{
     abi,
     codegen::{codegen, OptimizationLevel, Options},
@@ -423,8 +421,6 @@ fn compile(matches: &ArgMatches) {
         }
     }
 
-    let namespaces = namespaces.iter().collect::<Vec<_>>();
-
     if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         exit(0);
     }
@@ -436,83 +432,6 @@ fn compile(matches: &ArgMatches) {
         } else {
             eprintln!("error: not all contracts are valid");
             exit(1);
-        }
-    }
-
-    if target == solang::Target::Solana {
-        let context = inkwell::context::Context::create();
-
-        let binary = solang::compile_many(
-            &context,
-            &namespaces,
-            "bundle.sol",
-            opt_level.into(),
-            math_overflow_check,
-            generate_debug_info,
-            opt.log_api_return_codes,
-        );
-
-        if !save_intermediates(&binary, matches) {
-            let bin_filename = output_file(matches, "bundle", target.file_extension());
-
-            if *matches.get_one::<bool>("VERBOSE").unwrap() {
-                eprintln!(
-                    "info: Saving binary {} for contracts: {}",
-                    bin_filename.display(),
-                    namespaces
-                        .iter()
-                        .flat_map(|ns| {
-                            ns.contracts.iter().filter_map(|contract| {
-                                if contract.instantiable {
-                                    Some(contract.name.as_str())
-                                } else {
-                                    None
-                                }
-                            })
-                        })
-                        .sorted()
-                        .dedup()
-                        .join(", "),
-                );
-            }
-
-            let code = binary
-                .code(Generate::Linked)
-                .expect("llvm code emit should work");
-
-            if matches.contains_id("STD-JSON") {
-                json.program = hex::encode_upper(&code);
-            } else {
-                let mut file = create_file(&bin_filename);
-                file.write_all(&code).unwrap();
-
-                // Write all ABI files
-                for ns in &namespaces {
-                    for contract_no in 0..ns.contracts.len() {
-                        let contract = &ns.contracts[contract_no];
-
-                        if !contract.instantiable {
-                            continue;
-                        }
-
-                        let (abi_bytes, abi_ext) =
-                            abi::generate_abi(contract_no, ns, &code, verbose);
-                        let abi_filename = output_file(matches, &contract.name, abi_ext);
-
-                        if verbose {
-                            eprintln!(
-                                "info: Saving ABI {} for contract {}",
-                                abi_filename.display(),
-                                contract.name
-                            );
-                        }
-
-                        let mut file = create_file(&abi_filename);
-
-                        file.write_all(abi_bytes.as_bytes()).unwrap();
-                    }
-                }
-            }
         }
     }
 
@@ -602,29 +521,14 @@ fn process_file(
             continue;
         }
 
-        if target == solang::Target::Solana {
-            if matches.contains_id("STD-JSON") {
-                json_contracts.insert(
-                    resolved_contract.name.to_owned(),
-                    JsonContract {
-                        abi: abi::ethereum::gen_abi(contract_no, &ns),
-                        ewasm: None,
-                        minimum_space: Some(resolved_contract.fixed_layout_size.to_u32().unwrap()),
-                    },
-                );
-            }
-
-            if verbose {
+        if verbose {
+            if target == solang::Target::Solana {
                 eprintln!(
                     "info: contract {} uses at least {} bytes account data",
                     resolved_contract.name, resolved_contract.fixed_layout_size,
                 );
             }
-            // we don't generate llvm here; this is done in one go for all contracts
-            continue;
-        }
 
-        if verbose {
             eprintln!(
                 "info: Generating LLVM IR for contract {} with target {}",
                 resolved_contract.name, ns.target

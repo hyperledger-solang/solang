@@ -152,6 +152,7 @@ pub enum SourceUnitPart {
     FunctionDefinition(Box<FunctionDefinition>),
     VariableDefinition(Box<VariableDefinition>),
     TypeDefinition(Box<TypeDefinition>),
+    Annotation(Box<Annotation>),
     Using(Box<Using>),
     StraySemicolon(Loc),
 }
@@ -170,6 +171,7 @@ impl SourceUnitPart {
             SourceUnitPart::VariableDefinition(def) => &def.loc,
             SourceUnitPart::TypeDefinition(def) => &def.loc,
             SourceUnitPart::Using(def) => &def.loc,
+            SourceUnitPart::Annotation(def) => &def.loc,
             SourceUnitPart::StraySemicolon(loc) => loc,
         }
     }
@@ -272,6 +274,7 @@ pub enum ContractPart {
     VariableDefinition(Box<VariableDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
     TypeDefinition(Box<TypeDefinition>),
+    Annotation(Box<Annotation>),
     StraySemicolon(Loc),
     Using(Box<Using>),
 }
@@ -287,6 +290,7 @@ impl ContractPart {
             ContractPart::VariableDefinition(def) => &def.loc,
             ContractPart::FunctionDefinition(def) => &def.loc,
             ContractPart::TypeDefinition(def) => &def.loc,
+            ContractPart::Annotation(def) => &def.loc,
             ContractPart::StraySemicolon(loc) => loc,
             ContractPart::Using(def) => &def.loc,
         }
@@ -415,6 +419,14 @@ pub struct TypeDefinition {
     pub loc: Loc,
     pub name: Identifier,
     pub ty: Expression,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
+pub struct Annotation {
+    pub loc: Loc,
+    pub id: Identifier,
+    pub value: Expression,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

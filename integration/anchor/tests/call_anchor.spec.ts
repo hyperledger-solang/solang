@@ -1,5 +1,5 @@
 import expect from 'expect';
-import {Contract, publicKeyToHex} from '@solana/solidity';
+import { Contract, publicKeyToHex } from '@solana/solidity';
 import {
     SystemProgram,
     PublicKey,
@@ -13,12 +13,12 @@ import * as fs from "fs";
 
 async function newAccountWithLamports(connection: Connection): Promise<Keypair> {
     const account = Keypair.generate();
-    let signature = await connection.requestAirdrop(account.publicKey, 16*LAMPORTS_PER_SOL);
+    let signature = await connection.requestAirdrop(account.publicKey, 16 * LAMPORTS_PER_SOL);
     await connection.confirmTransaction(signature, 'confirmed');
     return account;
 }
 
-describe('Call Anchor program from Solidity via IDL',  () => {
+describe('Call Anchor program from Solidity via IDL', () => {
 
     it('call_anchor', async function () {
         // This program instantiates an anchor program, calls various functions on it and checks the return values
@@ -30,7 +30,7 @@ describe('Call Anchor program from Solidity via IDL',  () => {
 
         const payer = await newAccountWithLamports(connection);
         const program = Keypair.generate();
-        await BpfLoader.load(connection, payer, program, fs.readFileSync("./tests/bundle.so"), BPF_LOADER_PROGRAM_ID);
+        await BpfLoader.load(connection, payer, program, fs.readFileSync("./tests/call_anchor.so"), BPF_LOADER_PROGRAM_ID);
 
         const file_name = "call_anchor";
         const abi = JSON.parse(fs.readFileSync("tests/" + file_name + ".abi", 'utf8'));

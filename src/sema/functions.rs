@@ -9,7 +9,7 @@ use super::{
     diagnostics::Diagnostics,
     expression::{expression, ExprContext, ResolveTo},
     tags::resolve_tags,
-    Symtable,
+    ContractDefinition, Symtable,
 };
 use crate::Target;
 use solang_parser::{
@@ -20,14 +20,14 @@ use solang_parser::{
 
 /// Resolve function declaration in a contract
 pub fn contract_function(
-    contract: &pt::ContractDefinition,
+    contract: &ContractDefinition,
     func: &pt::FunctionDefinition,
     tags: &[DocComment],
     file_no: usize,
-    contract_no: usize,
     ns: &mut Namespace,
 ) -> Option<usize> {
     let mut success = true;
+    let contract_no = contract.contract_no;
 
     // The parser allows constructors to have return values. This is so that we can give a
     // nicer error message than "returns unexpected"
@@ -532,9 +532,9 @@ pub fn contract_function(
         .map(|base| format!("{}", base.name))
         .collect();
 
-    let doc = resolve_tags(
+    let tags = resolve_tags(
         func.loc.file_no(),
-        "function",
+        &func.ty.to_string(),
         tags,
         Some(&params),
         Some(&returns),
@@ -546,7 +546,7 @@ pub fn contract_function(
         func.loc,
         name,
         Some(contract_no),
-        doc,
+        tags,
         func.ty,
         mutability,
         visibility,

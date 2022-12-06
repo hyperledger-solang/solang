@@ -1057,7 +1057,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
         salt: Option<IntValue<'b>>,
-        _space: Option<IntValue<'b>>,
+        _seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         ns: &ast::Namespace,
     ) {
         emit_context!(binary);

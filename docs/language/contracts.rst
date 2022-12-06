@@ -33,11 +33,21 @@ _______________________
 Contracts can be created using the ``new`` keyword. The contract that is being created might have
 constructor arguments, which need to be provided.
 
-.. include:: ../examples/contract_new.sol
+.. include:: ../examples/substrate/contract_new.sol
+  :code: solidity
+
+On Solana, the contract being created must have the ``@program_id()`` annotation, and the address
+of the new account must be specified using the ``{address: new_address}`` syntax.
+
+.. include:: ../examples/substrate/contract_new.sol
   :code: solidity
 
 The constructor might fail for various reasons, for example ``require()`` might fail here. This can
 be handled using the :ref:`try-catch` statement, else errors cause the transaction to fail.
+
+.. note::
+  On Solana, the :ref:`try-catch` statement is not supported, as any failure will
+  cause the entire transaction to fail.
 
 .. _sending_values:
 
@@ -59,12 +69,12 @@ The constructor should be declared ``payable`` for this to work.
 .. note::
     On Solana, this functionality is not available.
 
-Setting the salt, gas, and space for the new contract
-_____________________________________________________
+Setting the salt, gas, and address for the new contract
+_______________________________________________________
 
 .. note::
     The gas or salt cannot be set on Solana. However, when creating a contract
-    on Solana, the size of the new account can be set using `space:`.
+    on Solana, the address of the new account must be set using ``address:``.
 
 When a new contract is created, the address for the new contract is a hash of the input
 (the constructor arguments) to the new contract. So, a contract cannot be created twice
@@ -80,13 +90,10 @@ can use. gas is a ``uint64``.
 .. include:: ../examples/substrate/contract_gas_limit.sol
   :code: solidity
 
-When creating contract on Solana, the size of the new account can be specified using
-`space:`. By default, the new account is created with a size of 1 kilobyte (1024 bytes)
-plus the size required for any fixed-size fields. When you specify space, this is
-the space in addition to the fixed-size fields. So, if you specify `space: 0`, then there is
-no space for any dynamicially allocated fields.
+When creating a contract on Solana, the address of the new account must be
+specified using ```address:``.
 
-.. include:: ../examples/solana/contract_space.sol
+.. include:: ../examples/solana/contract_address.sol
   :code: solidity
 
 Base contracts, abstract contracts and interfaces

@@ -31,34 +31,38 @@ pub fn parse(
     let mut lex = lexer::Lexer::new(src, file_no, &mut comments, &mut lexer_errors);
 
     let parser_errors = &mut Vec::new();
-    let errors = &mut Vec::new();
+    let diagnostics = &mut Vec::new();
 
     let s = solidity::SourceUnitParser::new().parse(src, file_no, parser_errors, &mut lex);
 
     for lexical_error in lex.errors {
-        errors.push(Diagnostic::parser_error(
+        diagnostics.push(Diagnostic::parser_error(
             lexical_error.loc(),
             lexical_error.to_string(),
         ))
     }
 
     for e in parser_errors {
-        errors.push(parser_error(&e.error, file_no));
+        diagnostics.push(parser_error_to_diagnostic(&e.error, file_no));
     }
 
     if let Err(e) = s {
-        errors.push(parser_error(&e, file_no));
-        return Err(errors.to_vec());
+        diagnostics.push(parser_error_to_diagnostic(&e, file_no));
+        return Err(diagnostics.to_vec());
     }
 
-    if !errors.is_empty() {
-        Err(errors.to_vec())
+    if !diagnostics.is_empty() {
+        Err(diagnostics.to_vec())
     } else {
         Ok((s.unwrap(), comments))
     }
 }
 
-fn parser_error(error: &ParseError<usize, Token, LexicalError>, file_no: usize) -> Diagnostic {
+/// Convert lalrop parser error to a Diagnostic
+fn parser_error_to_diagnostic(
+    error: &ParseError<usize, Token, LexicalError>,
+    file_no: usize,
+) -> Diagnostic {
     match &error {
         ParseError::InvalidToken { location } => Diagnostic::parser_error(
             Loc::File(file_no, *location, *location),

@@ -21,16 +21,14 @@ use solana_rbpf::{
         Config, EbpfVm, SyscallObject, SyscallRegistry, TestInstructionMeter, VerifiedExecutable,
     },
 };
-use solang::{
-    abi::generate_abi,
-    codegen::{codegen, Options},
-    compile_many,
-    emit::Generate,
-    file_resolver::FileResolver,
-    Target,
-};
+use solang::{compile, file_resolver::FileResolver, Target};
 use std::{
-    cell::RefCell, collections::HashMap, convert::TryInto, ffi::OsStr, io::Write, mem::size_of,
+    cell::{RefCell, RefMut},
+    collections::HashMap,
+    convert::TryInto,
+    ffi::OsStr,
+    io::Write,
+    mem::size_of,
     rc::Rc,
 };
 use tiny_keccak::{Hasher, Keccak};
@@ -126,52 +124,46 @@ fn build_solidity_with_overflow_check(src: &str, math_overflow_flag: bool) -> Vi
 
     cache.set_file_contents("test.sol", src.to_string());
 
-    let mut ns = solang::parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
-
-    // codegen all the contracts; some additional errors/warnings will be detected here
-    codegen(&mut ns, &Options::default());
-
-    ns.print_diagnostics_in_plain(&cache, false);
-
-    let context = inkwell::context::Context::create();
-    let namespaces = &[&ns];
-
-    let binary = compile_many(
-        &context,
-        namespaces,
-        "bundle.sol",
+    let (res, ns) = compile(
+        OsStr::new("test.sol"),
+        &mut cache,
         inkwell::OptimizationLevel::Default,
+        Target::Solana,
         math_overflow_flag,
-        false,
         false,
     );
 
-    let code = binary
-        .code(Generate::Linked)
-        .expect("llvm code emit should work");
+    ns.print_diagnostics_in_plain(&cache, false);
+
+    assert!(!res.is_empty());
 
     let mut account_data = HashMap::new();
     let mut programs = Vec::new();
 
     for contract_no in 0..ns.contracts.len() {
-        if !ns.contracts[contract_no].instantiable {
+        let contract = &ns.contracts[contract_no];
+
+        if contract.code.is_empty() {
             continue;
         }
 
-        let (abi, _) = generate_abi(contract_no, &ns, &code, false);
+        let (abistr, _) = solang::abi::generate_abi(contract_no, &ns, &contract.code, false);
+        let abi = ethabi::Contract::load(abistr.as_bytes()).unwrap();
 
-        let program = account_new();
+        let program = if let Some(program_id) = &contract.program_id {
+            program_id.clone().try_into().unwrap()
+        } else {
+            account_new()
+        };
 
         account_data.insert(
             program,
             AccountState {
-                data: code.clone(),
+                data: contract.code.clone(),
                 owner: None,
                 lamports: 0,
             },
         );
-
-        let abi = ethabi::Contract::load(abi.as_bytes()).unwrap();
 
         let data = account_new();
 
@@ -244,15 +236,12 @@ const MAX_PERMITTED_DATA_INCREASE: usize = 10 * 1024;
 
 struct AccountRef {
     account: Account,
-    offset: usize,
+    owner_offset: usize,
+    data_offset: usize,
     length: usize,
 }
 
-fn serialize_parameters(
-    input: &[u8],
-    vm: &VirtualMachine,
-    seeds: &[&(Account, Vec<u8>)],
-) -> (Vec<u8>, Vec<AccountRef>) {
+fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> (Vec<u8>, Vec<AccountRef>) {
     let mut refs = Vec::new();
     let mut v: Vec<u8> = Vec::new();
 
@@ -276,6 +265,8 @@ fn serialize_parameters(
         // key
         v.write_all(key).unwrap();
         // owner
+        let owner_offset = v.len();
+
         v.write_all(&acc.owner.unwrap_or([0u8; 32])).unwrap();
         // lamports
         v.write_u64::<LittleEndian>(acc.lamports).unwrap();
@@ -285,7 +276,8 @@ fn serialize_parameters(
 
         refs.push(AccountRef {
             account: *key,
-            offset: v.len(),
+            owner_offset,
+            data_offset: v.len(),
             length: acc.data.len(),
         });
 
@@ -316,18 +308,9 @@ fn serialize_parameters(
         &vm.account_data[data_account],
     );
 
-    // second do the seeds
-    for (acc, _) in seeds {
-        let data = &vm.account_data[acc];
-
-        assert!(data.data.is_empty());
-
-        serialize_account(&mut v, &mut refs, acc, data);
-    }
-
     // then the rest of the accounts
     for (acc, data) in &vm.account_data {
-        if !seeds.iter().any(|seed| seed.0 == *acc) && acc != data_account {
+        if acc != data_account {
             serialize_account(&mut v, &mut refs, acc, data);
         }
     }
@@ -350,11 +333,14 @@ fn deserialize_parameters(
 ) {
     for r in refs {
         if let Some(entry) = accounts_data.get_mut(&r.account) {
-            let data = input[r.offset..r.offset + r.length].to_vec();
+            let data = input[r.data_offset..r.data_offset + r.length].to_vec();
 
             entry.data = data;
-            entry.lamports =
-                u64::from_ne_bytes(input[r.offset - 16..r.offset - 8].try_into().unwrap());
+            entry.lamports = u64::from_ne_bytes(
+                input[r.data_offset - 16..r.data_offset - 8]
+                    .try_into()
+                    .unwrap(),
+            );
         }
     }
 }
@@ -362,15 +348,16 @@ fn deserialize_parameters(
 // We want to extract the account data
 fn update_parameters(
     input: &[u8],
-    refs: &[AccountRef],
+    mut refs: RefMut<&mut Vec<AccountRef>>,
     accounts_data: &HashMap<Account, AccountState>,
 ) {
-    for r in refs {
+    for r in refs.iter_mut() {
         if let Some(entry) = accounts_data.get(&r.account) {
+            r.length = entry.data.len();
             unsafe {
                 std::ptr::copy(
                     r.length.to_le_bytes().as_ptr(),
-                    input[r.offset - 8..].as_ptr() as *mut u8,
+                    input[r.data_offset - 8..].as_ptr() as *mut u8,
                     8,
                 );
             }
@@ -378,9 +365,19 @@ fn update_parameters(
             unsafe {
                 std::ptr::copy(
                     entry.data.as_ptr(),
-                    input[r.offset..].as_ptr() as *mut u8,
+                    input[r.data_offset..].as_ptr() as *mut u8,
                     r.length,
                 );
+            }
+
+            if let Some(owner) = &entry.owner {
+                unsafe {
+                    std::ptr::copy(
+                        owner.as_ptr(),
+                        input[r.owner_offset..].as_ptr() as *mut u8,
+                        32,
+                    );
+                }
             }
         }
     }
@@ -1293,11 +1290,16 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 
                         let address = &instruction.accounts[1].pubkey;
 
+                        assert!(instruction.accounts[1].is_signer);
+
                         println!("new address: {}", address.0.to_base58());
                         for s in &signers {
                             println!("signer: {}", s.0.to_base58());
                         }
-                        assert!(signers.contains(address));
+
+                        if !signers.is_empty() {
+                            assert!(signers.contains(address));
+                        }
 
                         assert_eq!(create_account.instruction, 0);
 
@@ -1332,6 +1334,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                         for s in &signers {
                             println!("signer: {}", s.0.to_base58());
                         }
+
                         assert!(signers.contains(address));
 
                         assert_eq!(assign.instruction, 1);
@@ -1423,27 +1426,29 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 
                 println!(
                     "calling {} program_id {}",
-                    hex::encode(data_id),
-                    hex::encode(instruction.program_id.0)
+                    data_id.to_base58(),
+                    instruction.program_id.0.to_base58()
                 );
 
                 assert_eq!(data_id, instruction.accounts[0].pubkey.0);
 
-                let p = vm
+                let mut p = vm
                     .programs
                     .iter()
-                    .find(|p| p.program == instruction.program_id.0 && p.data == data_id)
+                    .find(|p| p.program == instruction.program_id.0)
                     .unwrap()
                     .clone();
 
+                p.data = data_id;
+
                 vm.stack.insert(0, p);
 
-                let res = vm.execute(&instruction.data, &[]);
+                let res = vm.execute(&instruction.data);
                 assert_eq!(res, Ok(0));
 
-                let refs = self.context.refs.try_borrow().unwrap();
+                let refs = self.context.refs.try_borrow_mut().unwrap();
 
-                update_parameters(self.context.input, &refs, &vm.account_data);
+                update_parameters(self.context.input, refs, &vm.account_data);
 
                 vm.stack.remove(0);
             }
@@ -1454,14 +1459,10 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 }
 
 impl VirtualMachine {
-    fn execute(
-        &mut self,
-        calldata: &[u8],
-        seeds: &[&(Account, Vec<u8>)],
-    ) -> Result<u64, EbpfError<UserError>> {
+    fn execute(&mut self, calldata: &[u8]) -> Result<u64, EbpfError<UserError>> {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
-        let (mut parameter_bytes, mut refs) = serialize_parameters(calldata, self, seeds);
+        let (mut parameter_bytes, mut refs) = serialize_parameters(calldata, self);
         let mut heap = vec![0_u8; DEFAULT_HEAP_SIZE];
 
         let program = &self.stack[0];
@@ -1539,6 +1540,9 @@ impl VirtualMachine {
             .register_syscall_by_name(b"sol_log_data", SyscallLogData::init, SyscallLogData::call)
             .unwrap();
 
+        // program.program
+        println!("program: {}", program.program.to_base58());
+
         let executable = Executable::<UserError, TestInstructionMeter>::from_elf(
             &self.account_data[&program.program].data,
             Config::default(),
@@ -1592,13 +1596,13 @@ impl VirtualMachine {
         let program = &self.stack[0];
         println!("constructor for {}", hex::encode(program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, &self.origin, name, &[]);
+        let mut calldata = VirtualMachine::input(&program.data, &self.origin, name);
         if program.abi.as_ref().unwrap().constructor.is_some() {
             let mut encoded_data = encode_arguments(args);
             calldata.append(&mut encoded_data);
         };
 
-        let res = self.execute(&calldata, &[]);
+        let res = self.execute(&calldata);
 
         println!("res:{:?}", res);
         assert_eq!(res, Ok(expected));
@@ -1608,7 +1612,6 @@ impl VirtualMachine {
         &mut self,
         name: &str,
         args: &[BorshToken],
-        seeds: &[&(Account, Vec<u8>)],
         sender: Option<&Account>,
     ) -> Vec<BorshToken> {
         let program = &self.stack[0];
@@ -1623,10 +1626,9 @@ impl VirtualMachine {
                 &self.origin
             },
             name,
-            seeds,
         );
 
-        println!("input: {} seeds {:?}", hex::encode(&calldata), seeds);
+        println!("input: {} ", hex::encode(&calldata));
 
         let selector = program.abi.as_ref().unwrap().functions[name][0].short_signature();
         calldata.extend_from_slice(&selector);
@@ -1635,7 +1637,7 @@ impl VirtualMachine {
 
         println!("input: {}", hex::encode(&calldata));
 
-        let res = self.execute(&calldata, seeds);
+        let res = self.execute(&calldata);
         match res {
             Ok(0) => (),
             Ok(error_code) => panic!("unexpected return {:#x}", error_code),
@@ -1656,7 +1658,6 @@ impl VirtualMachine {
         &mut self,
         name: &str,
         args: &[BorshToken],
-        seeds: &[&(Account, Vec<u8>)],
         sender: Option<&Account>,
     ) -> Result<u64, EbpfError<UserError>> {
         let program = &self.stack[0];
@@ -1671,10 +1672,9 @@ impl VirtualMachine {
                 &self.origin
             },
             name,
-            seeds,
         );
 
-        println!("input: {} seeds {:?}", hex::encode(&calldata), seeds);
+        println!("input: {}", hex::encode(&calldata));
 
         let selector = program.abi.as_ref().unwrap().functions[name][0].short_signature();
         calldata.extend_from_slice(&selector);
@@ -1683,15 +1683,10 @@ impl VirtualMachine {
 
         println!("input: {}", hex::encode(&calldata));
 
-        self.execute(&calldata, seeds)
+        self.execute(&calldata)
     }
 
-    fn input(
-        recv: &Account,
-        sender: &Account,
-        name: &str,
-        seeds: &[&(Account, Vec<u8>)],
-    ) -> Vec<u8> {
+    fn input(recv: &Account, sender: &Account, name: &str) -> Vec<u8> {
         let mut calldata: Vec<u8> = recv.to_vec();
         calldata.extend_from_slice(sender);
         calldata.extend_from_slice(&0u64.to_le_bytes());
@@ -1702,16 +1697,9 @@ impl VirtualMachine {
         hasher.finalize(&mut hash);
         calldata.extend(&hash[0..4]);
 
-        let seeds_len = seeds.len() as u8;
+        let seeds_len = 0u8;
 
-        calldata.extend([seeds_len]);
-
-        for (_, seed) in seeds {
-            let seed_len = seed.len() as u8;
-
-            calldata.extend([seed_len]);
-            calldata.extend_from_slice(seed);
-        }
+        calldata.push(seeds_len);
 
         calldata
     }
@@ -1728,14 +1716,14 @@ impl VirtualMachine {
         self.stack = vec![cur];
     }
 
-    fn create_empty_account(&mut self) -> (Account, Vec<u8>) {
+    fn create_pda(&mut self, program_id: &Account) -> (Account, Vec<u8>) {
         let mut rng = rand::thread_rng();
 
         let mut seed = [0u8; 7];
 
         rng.fill(&mut seed[..]);
 
-        let pk = create_program_address(&self.stack[0].program, &[&seed]);
+        let pk = create_program_address(program_id, &[&seed]);
 
         let account = pk.0;
 
@@ -1745,8 +1733,14 @@ impl VirtualMachine {
             hex::encode(seed)
         );
 
+        self.create_empty_account(&account, program_id);
+
+        (account, seed.to_vec())
+    }
+
+    fn create_empty_account(&mut self, account: &Account, program_id: &Account) {
         self.account_data.insert(
-            account,
+            *account,
             AccountState {
                 data: vec![],
                 owner: Some([0u8; 32]),
@@ -1755,19 +1749,21 @@ impl VirtualMachine {
         );
 
         self.programs.push(Contract {
-            program: self.stack[0].program,
+            program: *program_id,
             abi: None,
-            data: account,
+            data: *account,
         });
-
-        (account, seed.to_vec())
     }
 
     fn validate_account_data_heap(&self) -> usize {
-        let data = &self.account_data[&self.stack[0].data].data;
+        if let Some(acc) = self.account_data.get(&self.stack[0].data) {
+            let data = &acc.data;
 
-        if LittleEndian::read_u32(&data[0..]) != 0 {
             let mut count = 0;
+
+            if data.len() < 4 || LittleEndian::read_u32(&data[0..]) == 0 {
+                return count;
+            }
 
             let mut prev_offset = 0;
             let return_len = LittleEndian::read_u32(&data[4..]) as usize;
@@ -1783,6 +1779,10 @@ impl VirtualMachine {
                 offset - 16,
                 hex::encode(&data[16..offset])
             );
+
+            if offset >= data.len() {
+                return count;
+            }
 
             loop {
                 let next = LittleEndian::read_u32(&data[offset..]) as usize;

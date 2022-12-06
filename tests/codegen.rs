@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use assert_cmd::Command;
+use rayon::prelude::*;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -17,14 +18,18 @@ fn yul_testcases() {
 }
 
 fn run_test_for_path(path: &str) {
+    let mut tests = Vec::new();
+
     let ext = OsString::from("sol");
     for entry in fs::read_dir(path).unwrap() {
         let path = entry.unwrap().path();
 
         if path.is_file() && path.extension() == Some(&ext) {
-            testcase(path);
+            tests.push(path);
         }
     }
+
+    tests.into_par_iter().for_each(testcase);
 }
 
 #[derive(Debug)]

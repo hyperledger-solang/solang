@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/tags/enum_tag.sol" {
 	x [label="name: x\ntests/contract_testcases/substrate/tags/enum_tag.sol:3:9-5:10\nvalue: foo1"]
-	diagnostic [label="tag '@param' is not valid for enum\nlevel Error\ntests/contract_testcases/substrate/tags/enum_tag.sol:2:14-19"]
+	diagnostic [label="tag '@param' is not valid for enum\nlevel Error\ntests/contract_testcases/substrate/tags/enum_tag.sol:2:14-3:1"]
 	enums -> x
 	diagnostics -> diagnostic [label="Error"]
 }

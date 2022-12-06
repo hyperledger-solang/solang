@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { TransactionError } from '@solana/solidity';
 import expect from 'expect';
 import { loadContract } from './setup';
@@ -6,7 +8,7 @@ describe('Testing errors', function () {
     this.timeout(500000);
 
     it('errors', async function () {
-        const { contract } = await loadContract('errors', 'errors.abi')
+        const { contract } = await loadContract('errors');
 
         let res = await contract.functions.do_revert(false);
 

@@ -7,7 +7,7 @@ __________
 An interface is a contract sugar type with restrictions. This type cannot be instantiated; it can only define the
 functions prototypes for a contract. This is useful as a generic interface.
 
-.. include:: ../examples/interface.sol
+.. include:: ../examples/substrate/interface.sol
   :code: solidity
 
 - Interfaces can only have other interfaces as a base contract

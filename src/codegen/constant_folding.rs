@@ -194,7 +194,8 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     value,
                     gas,
                     salt,
-                    space,
+                    address,
+                    seeds,
                 } => {
                     let encoded_args = expression(encoded_args, Some(&vars), cfg, ns).0;
                     let encoded_args_len = expression(encoded_args_len, Some(&vars), cfg, ns).0;
@@ -205,7 +206,10 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let salt = salt
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
-                    let space = space
+                    let address = address
+                        .as_ref()
+                        .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
+                    let seeds = seeds
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
@@ -218,7 +222,8 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         value,
                         gas,
                         salt,
-                        space,
+                        address,
+                        seeds,
                     };
                 }
                 Instr::ExternalCall {
@@ -228,8 +233,8 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     value,
                     gas,
                     accounts,
-                    seeds,
                     callty,
+                    seeds,
                 } => {
                     let value = expression(value, Some(&vars), cfg, ns).0;
                     let gas = expression(gas, Some(&vars), cfg, ns).0;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anchor_lang::prelude::*;
+use std::str::FromStr;
 
 declare_id!("z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq");
 
@@ -23,6 +24,21 @@ pub mod anchor {
         my_accounts.data2 = data2;
         my_accounts.data3 = data3;
         my_accounts.data4 = data4;
+        Ok(())
+    }
+
+    // initialize with seed
+    pub fn initialize_seed(
+        ctx: Context<InitializeSeed>,
+        _seed_a: Vec<u8>,
+        _bump: u8,
+    ) -> Result<()> {
+        let my_accounts = &mut ctx.accounts.my_account;
+        my_accounts.data1 = true;
+        my_accounts.data2 = -102;
+        my_accounts.data3 = 0xdeadcafebeef;
+        my_accounts.data4 =
+            Pubkey::from_str("AddressLookupTab1e1111111111111111111111111").unwrap();
         Ok(())
     }
 
@@ -133,6 +149,16 @@ pub struct returns {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(init, payer = user, space = 8 + 64)]
+    pub my_account: Account<'info, MyAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(seed_a: Vec<u8>)]
+pub struct InitializeSeed<'info> {
+    #[account(init, seeds = [seed_a.as_ref()], bump, payer = user, space = 8 + 64)]
     pub my_account: Account<'info, MyAccount>,
     #[account(mut)]
     pub user: Signer<'info>,

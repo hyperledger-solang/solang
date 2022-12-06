@@ -8,6 +8,7 @@ contract ferqu {
     operator op;
 
     constructor(bool do_adds) {
+        // Note: on Solana, new Contract() requires an address
         if (do_adds) {
             op = new m1();
         } else {

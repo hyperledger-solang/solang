@@ -22,9 +22,9 @@ This is how to build your Solidity for Solana:
 
   solang compile --target solana flipper.sol -v
 
-This will produce two files called `flipper.abi` and `bundle.so`. The first is an ethereum style abi file and the latter being
-the ELF BPF shared object which can be deployed on Solana. For each contract, an abi file will be created; a single `bundle.so`
-is created which contains the code all the contracts provided on the command line.
+This will produce two files called `flipper.abi` and `flipper.so`. The former is an ethereum style abi file and the latter is
+the ELF BPF shared object which can be deployed on Solana. For each contract, Solang will create an ABI file and a binary file
+`contract-name.so`, which contains the code.
 
 .. code-block:: bash
 
@@ -39,7 +39,7 @@ Now run the following javascript by saving it to `flipper.js` and running it wit
     const { readFileSync } = require('fs');
 
     const FLIPPER_ABI = JSON.parse(readFileSync('./flipper.abi', 'utf8'));
-    const PROGRAM_SO = readFileSync('./bundle.so');
+    const PROGRAM_SO = readFileSync('./flipper.so');
 
     (async function () {
         console.log('Connecting to your local Solana node ...');
@@ -89,6 +89,69 @@ function `pounce`, you can call it like so:
 
 .. include:: ../examples/solana/call_anchor.sol
   :code: solidity
+
+Setting the program_id for a contract
+_____________________________________
+
+When developing contracts for Solana, programs are usually deployed to a well
+known account. The account can be specified in the source code using an annotation
+``@program_id``. If you want to instantiate a contract using the
+``new ContractName()`` syntax, then the contract must have a program_id annotation.
+
+.. include:: ../examples/solana/program_id.sol
+  :code: solidity
+
+.. note::
+
+    The program_id `Foo5mMfYo5RhRcWa4NZ2bwFn4Kdhe8rNK5jchxsKrivA` was generated using
+    the command line:
+
+    .. code-block:: bash
+
+        solana-keygen grind --starts-with Foo:1
+
+Setting the payer, seeds, bump, and space for a contract
+_________________________________________________________
+
+When a contract is instantiated, there are two accounts required: the program account to hold
+the executable code and the data account to save the state variables of the contract. The
+program account is deployed once and can be reused for updating the contract. When each
+Solidity contract is instantiated (also known as deployed), the data account has to be
+created. This can be done by the client-side code, and then the created blank account
+is passed to the transaction that runs the constructor code.
+
+Alternatively, the data account can be created by the constructor, on chain. When
+this method is used, some parameters must be specified for the account
+using annotations. Those are placed before the constructor. If there is no
+constructor present, then an empty constructor can be added. The constructor
+arguments can be used in the annotations.
+
+.. include:: ../examples/solana/constructor_annotations.sol
+  :code: solidity
+
+Creating an account needs a payer, so at a minimum the ``@payer`` annotation must be
+specified. If it is missing, then the data account must be created client-side.
+The ``@payer`` requires an address. This can be a constructor argument or
+an address literal.
+
+The size of the data account can be specified with ``@space``. This is a
+``uint64`` expression which can either be a constant or use one of the constructor
+arguments. The ``@space`` should at least be the size given when you run ``solang -v``:
+
+.. code-block:: bash
+
+    $ solang compile --target solana -v examples/flipper.sol
+    ...
+    info: contract flipper uses at least 17 bytes account data
+    ...
+
+If the data account is going to be a
+`program derived address <https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_,
+then the seeds and bump have to be provided. There can be multiple seeds, and an optional
+single bump. If the bump is not provided, then the seeds must not create an
+account that falls on the curve. The ``@seed`` can be a string literal,
+or a hex string with the format ``hex"4142"``, or a constructor argument of type
+``bytes``. The ``@bump`` must a single byte of type ``bytes1``.
 
 .. _value_transfer:
 

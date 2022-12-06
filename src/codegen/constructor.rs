@@ -44,8 +44,12 @@ pub(super) fn call_constructor(
         .salt
         .as_ref()
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
-    let space = call_args
-        .space
+    let address = call_args
+        .address
+        .as_ref()
+        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
+    let seeds = call_args
+        .seeds
         .as_ref()
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
 
@@ -100,7 +104,8 @@ pub(super) fn call_constructor(
             value,
             gas,
             salt,
-            space,
+            address,
+            seeds,
         },
     );
 }

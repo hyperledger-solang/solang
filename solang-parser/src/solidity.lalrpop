@@ -19,6 +19,7 @@ SourceUnitPart: SourceUnitPart = {
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
     TypeDefinition => SourceUnitPart::TypeDefinition(<>),
+    Annotation => SourceUnitPart::Annotation(<>),
     Using => SourceUnitPart::Using(<>),
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::File(file_no, l, r)),
 }
@@ -34,9 +35,9 @@ ImportDirective: SourceUnitPart = {
                 },
                 dropped_tokens: Vec::new(),
             };
-            parser_errors.push(error);   
+            parser_errors.push(error);
         }
-        SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r)))   
+        SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r)))
     },
     <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
         if from.name != "from" {
@@ -61,7 +62,7 @@ PragmaDirective: SourceUnitPart = {
     // The lexer does special parsing for String literal; it isn't really a string literal
     <l:@L> "pragma" <i:SolIdentifier> <s:StringLiteral> <r:@R> ";" => SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), Some(i), Some(s)) ,
     <l:@L> "pragma" <false_token:!> <r:@R> ";" => {
-        parser_errors.push(false_token);     
+        parser_errors.push(false_token);
         SourceUnitPart::PragmaDirective(Loc::File(file_no, l, r), None, None)
     },
 }
@@ -185,6 +186,7 @@ ContractPart: ContractPart = {
     ModifierDefinition => ContractPart::FunctionDefinition(<>),
     ConstructorDefinition => ContractPart::FunctionDefinition(<>),
     TypeDefinition => ContractPart::TypeDefinition(<>),
+    Annotation => ContractPart::Annotation(<>),
     <l:@L> ";" <r:@R> => ContractPart::StraySemicolon(Loc::File(file_no, l, r)),
     Using => ContractPart::Using(<>),
 }
@@ -255,7 +257,6 @@ VariableDefinition: Box<VariableDefinition> = {
             loc: Loc::File(file_no, l, r), ty, attrs, name: Some(name), initializer: None,
         })
     },
-    
     <l:@L> "error" <er:@R> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
         let ty = Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()});
 
@@ -281,6 +282,14 @@ TypeDefinition: Box<TypeDefinition> = {
             loc: Loc::File(file_no, l, r), name, ty
         })
     },
+}
+
+Annotation: Box<Annotation> = {
+    <l:@L> "@" <id:SolIdentifier> "(" <value:Expression> ")" <r:@R> => {
+        Box::new(Annotation {
+            loc: Loc::File(file_no, l, r), id, value
+        })
+    }
 }
 
 Visibility: Visibility = {
@@ -401,6 +410,11 @@ Precedence2: Expression = {
 
 NamedArgument: NamedArgument = {
     <l:@L> <name:SolIdentifier> ":" <expr:Expression> <r:@R> => {
+        NamedArgument{ loc: Loc::File(file_no, l, r), name, expr }
+    },
+    <l:@L> "address" <ar:@R> ":" <expr:Expression> <r:@R> => {
+        let name = Identifier { loc:  Loc::File(file_no, l, ar), name: "address".into() };
+
         NamedArgument{ loc: Loc::File(file_no, l, r), name, expr }
     }
 }
@@ -569,7 +583,7 @@ FunctionAttribute: FunctionAttribute = {
         FunctionAttribute::NameValue(Loc::File(file_no, l, r), name, value)
     },
     <l:@L> <false_token:!> <r:@R> => {
-        parser_errors.push(false_token); 
+        parser_errors.push(false_token);
         FunctionAttribute::Error(Loc::File(file_no, l ,r))
     },
 }
@@ -1080,6 +1094,7 @@ extern {
         "]" => Token::CloseBracket,
         "." => Token::Member,
         "," => Token::Comma,
+        "@" => Token::At,
         Uint => Token::Uint(<u16>),
         Int => Token::Int(<u16>),
         Bytes => Token::Bytes(<u8>),

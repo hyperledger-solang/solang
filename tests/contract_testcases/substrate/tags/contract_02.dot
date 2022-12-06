@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/tags/contract_02.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/tags/contract_02.sol:10:9-34"]
-	tags [label="notice: So Hello, World\ntitle: Test\nauthor: Mr Foo\ndev: this is a contract"]
+	tags [label="notice: So Hello, World\ntitle: Test\nauthor: Mr Foo\ndev: this is\na contract"]
 	diagnostic [label="found abstract contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/tags/contract_02.sol:10:9-34"]
 	contracts -> contract
 	contract -> tags [label="tags"]

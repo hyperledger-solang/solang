@@ -63,7 +63,7 @@ Alternatively if you want to use the solang container, run:
 docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang compile -v -o /sources --target solana /sources/flipper.sol
 ```
 
-A file called `flipper.abi` and `bundle.so`. Now install `@solana/solidity`:
+A file called `flipper.abi` and `flipper.so`. Now install `@solana/solidity`:
 
 ```
 npm install @solana/solidity
@@ -76,7 +76,7 @@ const { Contract, Program } = require('@solana/solidity');
 const { readFileSync } = require('fs');
 
 const FLIPPER_ABI = JSON.parse(readFileSync('./flipper.abi', 'utf8'));
-const PROGRAM_SO = readFileSync('./bundle.so');
+const PROGRAM_SO = readFileSync('./flipper.so');
 
 (async function () {
     console.log('Connecting to your local Solana node ...');

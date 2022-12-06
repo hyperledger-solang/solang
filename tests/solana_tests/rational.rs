@@ -23,7 +23,7 @@ fn rational() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function("test", &[], None);
 
     assert_eq!(
         returns,
@@ -33,7 +33,7 @@ fn rational() {
         }]
     );
 
-    let returns = vm.function("test2", &[], &[], None);
+    let returns = vm.function("test2", &[], None);
 
     assert_eq!(
         returns,
@@ -55,7 +55,7 @@ fn rational() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function("test", &[], None);
 
     assert_eq!(
         returns,
@@ -77,7 +77,7 @@ fn rational() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function("test", &[], None);
 
     assert_eq!(
         returns,
@@ -99,7 +99,7 @@ fn rational() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function("test", &[], None);
 
     assert_eq!(
         returns,
@@ -121,7 +121,7 @@ fn rational() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function("test", &[], None);
 
     assert_eq!(
         returns,
@@ -142,7 +142,7 @@ fn rational() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function("test", &[], None);
 
     assert_eq!(
         returns,
@@ -163,7 +163,7 @@ fn rational() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function("test", &[], None);
 
     assert_eq!(
         returns,
@@ -190,7 +190,6 @@ fn rational() {
             width: 64,
             value: BigInt::from(982451653u32),
         }],
-        &[],
         None,
     );
 

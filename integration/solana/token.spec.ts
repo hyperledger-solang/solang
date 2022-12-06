@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import { getOrCreateAssociatedTokenAccount, createMint, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Keypair } from '@solana/web3.js';
-import { publicKeyToHex } from '@solana/solidity';
 import { loadContract } from './setup';
 import expect from 'expect';
 
@@ -8,7 +9,7 @@ describe('Create spl-token and use from solidity', function () {
     this.timeout(500000);
 
     it('spl-token', async function name() {
-        const { contract, connection, payer, program } = await loadContract('Token', 'Token.abi');
+        const { contract, connection, payer, program } = await loadContract('Token');
 
         const mintAuthority = Keypair.generate();
         const freezeAuthority = Keypair.generate();

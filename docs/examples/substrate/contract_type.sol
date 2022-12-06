@@ -6,6 +6,7 @@ contract child {
 
 contract creator {
     function test() public {
+        // Note: on Solana, new Contract() requires an address
         child c = new child();
 
         c.announce();

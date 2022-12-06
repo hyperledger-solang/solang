@@ -77,13 +77,13 @@ contract c3 {
         c2 ct = new c2();
 
         return 3;
-// CHECK: constructor salt: value: gas:uint64 0 space: c2 (encoded buffer: %temp.79, buffer len: (builtin ArrayLength (%temp.79)))
+// CHECK: constructor salt: value: gas:uint64 0 address: seeds: c2 (encoded buffer: %temp.79, buffer len: (builtin ArrayLength (%temp.79)))
     }
 
 // BEGIN-CHECK: c3::function::test7
     function test7() public returns (int32) {
         c2 ct = new c2();
-// CHECK: constructor salt: value: gas:uint64 0 space: c2 (encoded buffer: %temp.81, buffer len: (builtin ArrayLength (%temp.81)))
+// CHECK: constructor salt: value: gas:uint64 0 address: seeds: c2 (encoded buffer: %temp.81, buffer len: (builtin ArrayLength (%temp.81)))
         address ad = address(ct);
         (bool p, ) = ad.call(hex'ba');
 // CHECK: external call::regular address:%ad payload:(alloc bytes uint32 1 hex"ba") value:uint128 0 gas:uint64 0

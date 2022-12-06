@@ -30,12 +30,7 @@ fn simple_external_call() {
 
     vm.constructor("bar1", &[]);
 
-    vm.function(
-        "test_bar",
-        &[BorshToken::String(String::from("yo"))],
-        &[],
-        None,
-    );
+    vm.function("test_bar", &[BorshToken::String(String::from("yo"))], None);
 
     assert_eq!(vm.logs, "bar1 says: yo");
 
@@ -50,7 +45,6 @@ fn simple_external_call() {
     vm.function(
         "test_bar",
         &[BorshToken::String(String::from("uncle beau"))],
-        &[],
         None,
     );
 
@@ -58,12 +52,7 @@ fn simple_external_call() {
 
     vm.logs.truncate(0);
 
-    vm.function(
-        "test_other",
-        &[BorshToken::Address(bar1_account)],
-        &[],
-        None,
-    );
+    vm.function("test_other", &[BorshToken::Address(bar1_account)], None);
 
     assert_eq!(vm.logs, "bar1 says: cross contract call");
 }
@@ -93,7 +82,6 @@ fn external_call_with_returns() {
             width: 64,
             value: BigInt::from(21),
         }],
-        &[],
         None,
     );
 
@@ -111,12 +99,7 @@ fn external_call_with_returns() {
 
     vm.constructor("bar0", &[]);
 
-    let res = vm.function(
-        "test_other",
-        &[BorshToken::Address(bar1_account)],
-        &[],
-        None,
-    );
+    let res = vm.function("test_other", &[BorshToken::Address(bar1_account)], None);
 
     assert_eq!(
         res,
@@ -159,7 +142,6 @@ fn external_raw_call_with_returns() {
             width: 64,
             value: BigInt::from(21u8),
         }],
-        &[],
         None,
     );
 
@@ -177,12 +159,7 @@ fn external_raw_call_with_returns() {
 
     vm.constructor("bar0", &[]);
 
-    let res = vm.function(
-        "test_other",
-        &[BorshToken::Address(bar1_account)],
-        &[],
-        None,
-    );
+    let res = vm.function("test_other", &[BorshToken::Address(bar1_account)], None);
 
     assert_eq!(
         res,
@@ -215,7 +192,7 @@ fn call_external_func_type() {
 
     vm.constructor("testing", &[]);
 
-    let res = vm.function("doTest", &[], &[], None);
+    let res = vm.function("doTest", &[], None);
 
     assert_eq!(
         res,
@@ -276,7 +253,6 @@ fn external_call_with_string_returns() {
             width: 64,
             value: BigInt::from(22u8),
         }],
-        &[],
         None,
     );
 
@@ -290,23 +266,13 @@ fn external_call_with_string_returns() {
 
     let bar0_account = vm.stack[0].data;
 
-    let res = vm.function(
-        "test_other",
-        &[BorshToken::Address(bar1_account)],
-        &[],
-        None,
-    );
+    let res = vm.function("test_other", &[BorshToken::Address(bar1_account)], None);
 
     assert_eq!(res, vec![BorshToken::String(String::from("foo:7"))]);
 
-    vm.function("test_this", &[BorshToken::Address(bar1_account)], &[], None);
+    vm.function("test_this", &[BorshToken::Address(bar1_account)], None);
 
-    let res = vm.function(
-        "test_sender",
-        &[BorshToken::Address(bar1_account)],
-        &[],
-        None,
-    );
+    let res = vm.function("test_sender", &[BorshToken::Address(bar1_account)], None);
 
     assert_eq!(res[0], BorshToken::FixedBytes(bar0_account.to_vec()));
 }
@@ -343,7 +309,6 @@ fn encode_call() {
             width: 64,
             value: BigInt::from(21u8),
         }],
-        &[],
         None,
     );
 
@@ -361,12 +326,7 @@ fn encode_call() {
 
     vm.constructor("bar0", &[]);
 
-    let res = vm.function(
-        "test_other",
-        &[BorshToken::Address(bar1_account)],
-        &[],
-        None,
-    );
+    let res = vm.function("test_other", &[BorshToken::Address(bar1_account)], None);
 
     assert_eq!(
         res,
@@ -408,7 +368,7 @@ fn internal_function_storage() {
 
     vm.constructor("ft", &[]);
 
-    let res = vm.function("set_op", &[BorshToken::Bool(true)], &[], None);
+    let res = vm.function("set_op", &[BorshToken::Bool(true)], None);
 
     assert_eq!(res, vec![]);
 
@@ -424,7 +384,6 @@ fn internal_function_storage() {
                 value: BigInt::from(5u8),
             },
         ],
-        &[],
         None,
     );
 
@@ -436,7 +395,7 @@ fn internal_function_storage() {
         },]
     );
 
-    let res = vm.function("set_op", &[BorshToken::Bool(false)], &[], None);
+    let res = vm.function("set_op", &[BorshToken::Bool(false)], None);
 
     assert_eq!(res, vec![]);
 
@@ -452,7 +411,6 @@ fn internal_function_storage() {
                 value: BigInt::from(5u8),
             },
         ],
-        &[],
         None,
     );
 
@@ -558,7 +516,6 @@ fn raw_call_accounts() {
             BorshToken::Address(b"quinquagintaquadringentilliardth".to_owned()),
             BorshToken::Address(b"quinquagintaquadringentillionths".to_owned()),
         ],
-        &[],
         None,
     );
 }
@@ -608,5 +565,5 @@ fn pda() {
 
     vm.call_params_check.insert(token, test_args);
 
-    vm.function("test", &[], &[], None);
+    vm.function("test", &[], None);
 }

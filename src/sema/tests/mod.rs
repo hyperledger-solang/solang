@@ -146,44 +146,44 @@ fn constant_overflow_checks() {
         function test_params(uint8 usesa, int8 sesa) public returns(uint8) {
             return usesa + uint8(sesa);
         }
-    
+
         function test_add(int8 input) public returns (uint8) {
             // value 133 does not fit into type int8.
             int8 add_ovf = 127 + 6;
-    
+
             // negative value -1 does not fit into type uint8. Cannot implicitly convert signed literal to unsigned type.
             uint8 negative = 3 - 4;
-    
+
             // value 133 does not fit into type int8.
             int8 mixed = 126 + 7 + input;
-    
+
             // negative value -1 does not fit into type uint8. Cannot implicitly convert signed literal to unsigned type.
             return 1 - 2;
         }
-    
+
         function test_mul(int8 input) public {
             // value 726 does not fit into type int8.
             int8 mul_ovf = 127 * 6;
-    
+
             // value 882 does not fit into type int8.
             int8 mixed = 126 * 7 * input;
         }
-    
+
         function test_shift(int8 input) public {
             // value 128 does not fit into type int8.
             // warning: left shift by 7 may overflow the final result.
             int8 mul_ovf = 1 << 7;
-    
+
             // value 128 does not fit into type int8.
             // warning: left shift by 7 may overflow the final result
             int8 mixed = (1 << 7) + input;
         }
-    
+
         function test_call() public {
             // negative value -1 does not fit into type uint8. Cannot implicitly convert signed literal to unsigned type.
             // value 129 does not fit into type int8.
             test_params(1 - 2, 127 + 2);
-    
+
             // negative value -1 does not fit into type uint8. Cannot implicitly convert signed literal to unsigned type.
             // value 129 does not fit into type int8.
             test_params({usesa: 1 - 2, sesa: 127 + 2});
@@ -203,7 +203,7 @@ fn constant_overflow_checks() {
         function composite(int8 a, bytes input) public{
 
             uint8 sesa = 500- 400 + test_params(100+200, 0) + (200+101) + input.readUint8(4294967296);
-            int8 seas = (120 + 120) + a + (120 + 125);  
+            int8 seas = (120 + 120) + a + (120 + 125);
 
             // no diagnostic
             uint8 b = 255 - 255/5 ;
@@ -250,7 +250,7 @@ fn constant_overflow_checks() {
 
         }
     }
-    
+
         "#;
     let ns = parse(file);
     let errors = ns.diagnostics.errors();
@@ -340,29 +340,29 @@ fn test_types() {
         function test_types32(bytes input) public {
             // value 2147483648 does not fit into type int32.
             int32 add_ovf = 2147483647 + 1;
-    
+
             // value 2147483648 does not fit into type int32.
             int32 add_normal = 2147483647 + 0;
-    
+
             // value 2147483648 does not fit into type int32.
             int32 mixed = 2147483647 + 1 + input.readInt32LE(2);
         }
-    
+
         function test_types64(bytes input) public {
             // value 9223372036854775808 does not fit into type int64.
             int64 add_ovf = 9223372036854775807 + 1;
-    
+
             int64 add_normal = 9223372036854775807;
-    
+
             // value 9223372036854775808 does not fit into type int64.
             int64 mixed = 9223372036854775807 + 1 + input.readInt64LE(2);
-    
+
             // value 18446744073709551616 does not fit into type uint64.
             uint64 pow_ovf = 2**64;
-    
+
             uint64 normal_pow = (2**64) - 1;
         }
-    
+
         function test_types_128_256(bytes input) public {
             while (true) {
                 // value 340282366920938463463374607431768211456 does not fit into type uint64.
@@ -375,24 +375,24 @@ fn test_types() {
             uint128 access = arr[1 - 2] + 1 + (2**128);
             // value 3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 does not fit into type uint256.
             uint256 num = 3e255;
-    
+
             uint256 num_2 = 115792089237316195423570985008687907853269984665640564039457584007913129639935 *
                     4;
         }
-    
+
         function foo() public {
             uint16 x = 0;
             x += 450000;
-    
+
             for (uint16 i = 0; i < (2**32); i += 65546) {}
-    
+
             uint8 y = 0;
             y *= 120 + 250;
             y -= 500;
             y /= 300 + 200 - 200 + y;
         }
     }
-    
+
         "#;
     let ns = parse(file);
     let errors = ns.diagnostics.errors();
@@ -456,15 +456,16 @@ fn test_types() {
 #[test]
 fn try_catch_solana() {
     let file = r#"
-    contract aborting {
+@program_id("GTW14QhXXafodyHp6RTaoVKKUgG4G2YgVYg2dBfp6FK4")
+contract aborting {
     function abort() public returns (int32, bool) {
         revert("bar");
     }
 }
 
 contract runner {
-    function test() public pure {
-        aborting abort = new aborting();
+    function test(address a) public pure {
+        aborting abort = new aborting{address: a}();
 
         try abort.abort() returns (int32 a, bool b) {
             // call succeeded; return values are in a and b

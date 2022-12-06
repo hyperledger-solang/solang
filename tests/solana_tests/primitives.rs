@@ -30,7 +30,7 @@ fn assert_false() {
 
     vm.constructor("foo", &[]);
 
-    vm.function("assert_fails", &[], &[], None);
+    vm.function("assert_fails", &[], None);
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn assert_true() {
 
     vm.constructor("foo", &[]);
 
-    vm.function("assert_fails", &[], &[], None);
+    vm.function("assert_fails", &[], None);
 }
 
 #[test]
@@ -79,16 +79,16 @@ fn boolean() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_true", &[], &[], None);
+    let returns = vm.function("return_true", &[], None);
 
     assert_eq!(returns, vec![BorshToken::Bool(true),]);
 
-    let returns = vm.function("return_false", &[], &[], None);
+    let returns = vm.function("return_false", &[], None);
 
     assert_eq!(returns, vec![BorshToken::Bool(false),]);
 
-    vm.function("true_arg", &[BorshToken::Bool(true)], &[], None);
-    vm.function("false_arg", &[BorshToken::Bool(false)], &[], None);
+    vm.function("true_arg", &[BorshToken::Bool(true)], None);
+    vm.function("false_arg", &[BorshToken::Bool(false)], None);
 }
 
 #[test]
@@ -113,7 +113,7 @@ fn address() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_address", &[], &[], None);
+    let returns = vm.function("return_address", &[], None);
 
     assert_eq!(
         returns,
@@ -129,7 +129,6 @@ fn address() {
             75, 161, 209, 89, 47, 84, 50, 13, 23, 127, 94, 21, 50, 249, 250, 185, 117, 49, 186,
             134, 82, 130, 112, 97, 218, 24, 157, 198, 40, 105, 118, 27,
         ])],
-        &[],
         None,
     );
 }
@@ -157,7 +156,7 @@ fn test_enum() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_enum", &[], &[], None);
+    let returns = vm.function("return_enum", &[], None);
 
     assert_eq!(
         returns,
@@ -173,7 +172,6 @@ fn test_enum() {
             width: 8,
             value: BigInt::from(6u8),
         }],
-        &[],
         None,
     );
 }
@@ -219,7 +217,7 @@ fn bytes() {
 
         vm.constructor("test", &[]);
 
-        let returns = vm.function("return_literal", &[], &[], None);
+        let returns = vm.function("return_literal", &[], None);
 
         assert_eq!(
             returns,
@@ -229,7 +227,6 @@ fn bytes() {
         let returns = vm.function(
             "return_arg",
             &[BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
-            &[],
             None,
         );
 
@@ -254,7 +251,6 @@ fn bytes() {
                     BorshToken::FixedBytes(a.to_vec()),
                     BorshToken::FixedBytes(b.to_vec()),
                 ],
-                &[],
                 None,
             );
 
@@ -275,7 +271,6 @@ fn bytes() {
                     BorshToken::FixedBytes(a.to_vec()),
                     BorshToken::FixedBytes(b.to_vec()),
                 ],
-                &[],
                 None,
             );
 
@@ -289,7 +284,6 @@ fn bytes() {
                     BorshToken::FixedBytes(a.to_vec()),
                     BorshToken::FixedBytes(b.to_vec()),
                 ],
-                &[],
                 None,
             );
 
@@ -310,7 +304,6 @@ fn bytes() {
                         value: BigInt::from(r),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -335,7 +328,6 @@ fn bytes() {
                         value: BigInt::from(r),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -431,7 +423,6 @@ fn uint() {
                     width: width as u16,
                     value: a.to_bigint().unwrap(),
                 }],
-                &[],
                 None,
             );
 
@@ -449,7 +440,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -478,7 +468,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -505,7 +494,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -534,7 +522,6 @@ fn uint() {
                             value: BigInt::from(n),
                         },
                     ],
-                    &[],
                     None,
                 );
 
@@ -563,7 +550,6 @@ fn uint() {
                             value: b.to_bigint().unwrap(),
                         },
                     ],
-                    &[],
                     None,
                 );
 
@@ -591,7 +577,6 @@ fn uint() {
                             value: b.to_bigint().unwrap(),
                         },
                     ],
-                    &[],
                     None,
                 );
 
@@ -620,7 +605,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -647,7 +631,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -674,7 +657,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -703,7 +685,6 @@ fn uint() {
                         value: BigInt::from(r),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -731,7 +712,6 @@ fn uint() {
                         value: BigInt::from(r),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -790,7 +770,6 @@ fn test_power_overflow_boundaries() {
                     value: BigInt::from(width - 1),
                 },
             ],
-            &[],
             None,
         );
 
@@ -816,7 +795,6 @@ fn test_power_overflow_boundaries() {
                     value: BigInt::from(width + 1),
                 },
             ],
-            &[],
             None,
         );
 
@@ -857,7 +835,6 @@ fn test_overflow_boundaries() {
                     value: second_op.clone(),
                 },
             ],
-            &[],
             None,
         );
         assert_eq!(
@@ -880,7 +857,6 @@ fn test_overflow_boundaries() {
                     value: second_op.clone(),
                 },
             ],
-            &[],
             None,
         );
         assert_eq!(
@@ -914,7 +890,6 @@ fn test_overflow_boundaries() {
                     value: BigInt::from(2u8),
                 },
             ],
-            &[],
             None,
         );
 
@@ -932,7 +907,6 @@ fn test_overflow_boundaries() {
                     value: BigInt::from(2),
                 },
             ],
-            &[],
             None,
         );
 
@@ -950,7 +924,6 @@ fn test_overflow_boundaries() {
                     value: upper_boundary.clone(),
                 },
             ],
-            &[],
             None,
         );
 
@@ -968,7 +941,6 @@ fn test_overflow_boundaries() {
                     value: lower_boundary.clone(),
                 },
             ],
-            &[],
             None,
         );
 
@@ -986,7 +958,6 @@ fn test_overflow_boundaries() {
                     value: lower_boundary.clone(),
                 },
             ],
-            &[],
             None,
         );
 
@@ -1031,7 +1002,6 @@ fn test_mul_within_range_signed() {
                     value: second_op.clone(),
                 },
             ],
-            &[],
             None,
         );
 
@@ -1083,7 +1053,6 @@ fn test_mul_within_range() {
                         value: second_operand_rand.to_bigint().unwrap(),
                     },
                 ],
-                &[],
                 None,
             );
             let res = first_operand_rand * second_operand_rand;
@@ -1137,7 +1106,6 @@ fn test_overflow_detect_signed() {
                     value: second_operand_rand.clone(),
                 },
             ],
-            &[],
             None,
         );
 
@@ -1164,7 +1132,6 @@ fn test_overflow_detect_signed() {
                     value: second_operand_rand.clone(),
                 },
             ],
-            &[],
             None,
         );
 
@@ -1211,7 +1178,6 @@ fn test_overflow_detect_unsigned() {
                         value: second_operand_rand.to_bigint().unwrap(),
                     },
                 ],
-                &[],
                 None,
             );
             assert_ne!(res, Ok(0));
@@ -1290,7 +1256,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -1317,7 +1282,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -1344,7 +1308,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -1372,7 +1335,6 @@ fn int() {
                             value: b.clone(),
                         },
                     ],
-                    &[],
                     None,
                 );
 
@@ -1399,7 +1361,6 @@ fn int() {
                             value: b.clone(),
                         },
                     ],
-                    &[],
                     None,
                 );
 
@@ -1427,7 +1388,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -1454,7 +1414,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -1481,7 +1440,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -1510,7 +1468,6 @@ fn int() {
                         value: BigInt::from(r),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -1538,7 +1495,6 @@ fn int() {
                         value: BigInt::from(r),
                     },
                 ],
-                &[],
                 None,
             );
 
@@ -1588,18 +1544,12 @@ fn bytes_cast() {
     let returns = vm.function(
         "to_bytes",
         &[BorshToken::FixedBytes(b"abcd".to_vec())],
-        &[],
         None,
     );
 
     assert_eq!(returns, vec![BorshToken::Bytes(b"abcd".to_vec())]);
 
-    let returns = vm.function(
-        "to_bytes5",
-        &[BorshToken::Bytes(b"abcde".to_vec())],
-        &[],
-        None,
-    );
+    let returns = vm.function("to_bytes5", &[BorshToken::Bytes(b"abcde".to_vec())], None);
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(b"abcde".to_vec())]);
 }

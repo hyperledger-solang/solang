@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import expect from 'expect';
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
@@ -13,20 +15,22 @@ describe("Anchor", () => {
 
   it("test anchor program with anchor tests", async () => {
     // The Account to create.
-    const myAccount = anchor.web3.Keypair.generate();
+    const seed = Buffer.from('ChiaSeeds', 'utf8');
 
     const program = anchor.workspace.Anchor;
+
+    const [myAccount, bump] = await anchor.web3.PublicKey.findProgramAddress([seed], program.programId);
 
     const myPubkey = new anchor.web3.PublicKey("AddressLookupTab1e1111111111111111111111111");
 
     const { SystemProgram } = anchor.web3;
 
     // Add your test here.
-    const tx = await program.methods.initialize(true, -102, (new anchor.BN(0xdeadcafebeef)), myPubkey).accounts({
-      myAccount: myAccount.publicKey,
+    const tx = await program.methods.initializeSeed(seed, bump).accounts({
+      myAccount: myAccount,
       user: provider.wallet.publicKey,
       systemProgram: SystemProgram.programId,
-    }).signers([myAccount]).rpc();
+    }).rpc();
 
     // string est
     expect(await program.methods.strings("Hello, World!", 102).view()).toBe("input:Hello, World! data:102");
@@ -52,7 +56,7 @@ describe("Anchor", () => {
 
     // states
     const states = await program.methods.states().accounts({
-      myAccount: myAccount.publicKey
+      myAccount: myAccount
     }).view();
 
     expect(states.default).toBe(true);

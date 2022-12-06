@@ -1,0 +1,16 @@
+strict digraph "tests/contract_testcases/substrate/constructor_seeds.sol" {
+	contract [label="contract c\ntests/contract_testcases/substrate/constructor_seeds.sol:1:1-5:2"]
+	new [label="constructor new\ncontract: c\ntests/contract_testcases/substrate/constructor_seeds.sol:4:2-37\nsignature new(bytes,uint8)\nvisibility public\nmutability nonpayable"]
+	parameters [label="parameters\nbytes foo\nuint8 bump"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/constructor_seeds.sol:1:1-5:2"]
+	diagnostic_6 [label="contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract c'\nlevel Error\ntests/contract_testcases/substrate/constructor_seeds.sol:1:1-5:2"]
+	diagnostic_7 [label="unknown annotation seed for constructor\nlevel Error\ntests/contract_testcases/substrate/constructor_seeds.sol:2:2-12"]
+	diagnostic_8 [label="unknown annotation bump for constructor\nlevel Error\ntests/contract_testcases/substrate/constructor_seeds.sol:3:2-12"]
+	contracts -> contract
+	contract -> new [label="constructor"]
+	new -> parameters [label="parameters"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_6 [label="Error"]
+	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostics -> diagnostic_8 [label="Error"]
+}

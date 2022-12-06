@@ -17,6 +17,10 @@ pub fn resolve_tags(
     let mut res: Vec<Tag> = Vec::new();
 
     for c in tags.iter().flat_map(DocComment::comments) {
+        let tag_loc = pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len() + 1);
+        let value_loc = pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len());
+        let loc = pt::Loc::File(file_no, c.tag_offset, c.value_offset + c.value.len());
+
         match c.tag.as_str() {
             "notice" | "author" | "title" | "dev" => {
                 // fold fields with the same name
@@ -25,6 +29,7 @@ pub fn resolve_tags(
                     prev.value.push_str(&c.value);
                 } else {
                     res.push(Tag {
+                        loc,
                         tag: c.tag.to_owned(),
                         value: c.value.to_owned(),
                         no: 0,
@@ -46,11 +51,12 @@ pub fn resolve_tags(
                 if let Some(no) = params.unwrap().iter().position(|p| p.name_as_str() == name) {
                     if res.iter().any(|e| e.tag == "param" && e.no == no) {
                         ns.diagnostics.push(Diagnostic::error(
-                            pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
+                            tag_loc,
                             format!("duplicate tag '@param' for '{}'", name),
                         ));
                     } else {
                         res.push(Tag {
+                            loc,
                             tag: String::from("param"),
                             no,
                             value,
@@ -58,7 +64,7 @@ pub fn resolve_tags(
                     }
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
-                        pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
+                        value_loc,
                         format!("tag '@param' no field '{}'", name),
                     ));
                 }
@@ -68,17 +74,18 @@ pub fn resolve_tags(
 
                 if returns.is_empty() {
                     ns.diagnostics.push(Diagnostic::error(
-                        pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
+                        tag_loc,
                         "tag '@return' for function with no return values".to_string(),
                     ));
                 } else if returns.len() == 1 {
                     if res.iter().any(|e| e.tag == "return") {
                         ns.diagnostics.push(Diagnostic::error(
-                            pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
+                            tag_loc,
                             "duplicate tag '@return'".to_string(),
                         ));
                     } else {
                         res.push(Tag {
+                            loc,
                             tag: String::from("return"),
                             no: 0,
                             value: c.value.to_owned(),
@@ -88,7 +95,7 @@ pub fn resolve_tags(
                     let v: Vec<&str> = c.value.splitn(2, char::is_whitespace).collect();
                     if v.is_empty() || v[0].is_empty() {
                         ns.diagnostics.push(Diagnostic::error(
-                            pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
+                            value_loc,
                             "tag '@return' missing parameter name".to_string(),
                         ));
                         continue;
@@ -102,11 +109,12 @@ pub fn resolve_tags(
                     {
                         if res.iter().any(|e| e.tag == "return" && e.no == no) {
                             ns.diagnostics.push(Diagnostic::error(
-                                pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
+                                tag_loc,
                                 format!("duplicate tag '@return' for '{}'", name),
                             ));
                         } else {
                             res.push(Tag {
+                                loc,
                                 tag: String::from("return"),
                                 no,
                                 value,
@@ -117,6 +125,7 @@ pub fn resolve_tags(
                         p.id.is_none() && !res.iter().any(|e| e.tag == "return" && e.no == *no)
                     }) {
                         res.push(Tag {
+                            loc,
                             tag: String::from("return"),
                             no,
                             value,
@@ -132,25 +141,26 @@ pub fn resolve_tags(
             "inheritdoc" if bases.is_some() => {
                 if c.value.is_empty() {
                     ns.diagnostics.push(Diagnostic::error(
-                        pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
+                        tag_loc,
                         "missing contract for tag '@inheritdoc'".to_string(),
                     ));
                 } else if bases.unwrap().iter().any(|s| &c.value == s) {
                     res.push(Tag {
+                        loc,
                         tag: String::from("inheritdoc"),
                         no: 0,
                         value: c.value.to_owned(),
                     });
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
-                        pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
+                        value_loc,
                         format!("base contract '{}' not found in tag '@inheritdoc'", c.value),
                     ));
                 }
             }
             _ => {
                 ns.diagnostics.push(Diagnostic::error(
-                    pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len()),
+                    tag_loc,
                     format!("tag '@{}' is not valid for {}", c.tag, ty),
                 ));
             }
@@ -165,19 +175,19 @@ pub fn render(tags: &[Tag]) -> String {
     let mut s = String::new();
 
     if let Some(tag) = tags.iter().find(|e| e.tag == "title") {
-        s.push_str(&tag.value);
+        s.push_str(&tag.value.to_string());
         s.push('\n');
         s.push('\n');
     }
 
     if let Some(tag) = tags.iter().find(|e| e.tag == "notice") {
-        s.push_str(&tag.value);
+        s.push_str(&tag.value.to_string());
         s.push('\n');
         s.push('\n');
     }
 
     if let Some(tag) = tags.iter().find(|e| e.tag == "author") {
-        write!(s, "Author: {}", &tag.value).unwrap();
+        write!(s, "Author: {}", tag.value).unwrap();
     }
 
     s

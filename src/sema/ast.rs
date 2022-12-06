@@ -253,9 +253,9 @@ pub struct Function {
     pub visibility: pt::Visibility,
     pub params: Arc<Vec<Parameter>>,
     pub returns: Arc<Vec<Parameter>>,
-    // constructor arguments for base contracts, only present on constructors
+    /// Constructor arguments for base contracts, only present on constructors
     pub bases: BTreeMap<usize, (pt::Loc, usize, Vec<Expression>)>,
-    // modifiers for functions
+    /// Modifiers for functions
     pub modifiers: Vec<Expression>,
     pub is_virtual: bool,
     /// Is this function an acccesor function created by a public variable
@@ -268,10 +268,30 @@ pub struct Function {
     /// The resolved body (if any)
     pub body: Vec<Statement>,
     pub symtable: Symtable,
-    // What events are emitted by the body of this function
+    /// What events are emitted by the body of this function
     pub emits_events: Vec<usize>,
-    // For overloaded functions this is the mangled (unique) name.
+    /// For overloaded functions this is the mangled (unique) name.
     pub mangled_name: String,
+    /// Solana constructors may have seeds specified using @seed tags
+    pub annotations: Vec<ConstructorAnnotation>,
+}
+
+pub enum ConstructorAnnotation {
+    Seed(Expression),
+    Payer(Expression),
+    Space(Expression),
+    Bump(Expression),
+}
+
+impl CodeLocation for ConstructorAnnotation {
+    fn loc(&self) -> pt::Loc {
+        match self {
+            ConstructorAnnotation::Seed(expr) => expr.loc(),
+            ConstructorAnnotation::Payer(expr) => expr.loc(),
+            ConstructorAnnotation::Space(expr) => expr.loc(),
+            ConstructorAnnotation::Bump(expr) => expr.loc(),
+        }
+    }
 }
 
 /// This trait provides a single interface for fetching paramenters, returns and the symbol table
@@ -353,6 +373,7 @@ impl Function {
             symtable: Symtable::new(),
             emits_events: Vec::new(),
             mangled_name,
+            annotations: Vec::new(),
         }
     }
 
@@ -616,6 +637,8 @@ pub struct Contract {
     pub dispatch_no: usize,
     /// CFG number of this contract's constructor dispatch
     pub constructor_dispatch: Option<usize>,
+    /// Account of deployed program code on Solana
+    pub program_id: Option<Vec<u8>>,
 }
 
 impl Contract {
@@ -815,7 +838,7 @@ pub struct CallArgs {
     pub gas: Option<Box<Expression>>,
     pub salt: Option<Box<Expression>>,
     pub value: Option<Box<Expression>>,
-    pub space: Option<Box<Expression>>,
+    pub address: Option<Box<Expression>>,
     pub accounts: Option<Box<Expression>>,
     pub seeds: Option<Box<Expression>>,
 }
@@ -1392,6 +1415,7 @@ impl Statement {
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Tag {
+    pub loc: pt::Loc,
     pub tag: String,
     pub no: usize,
     pub value: String,

@@ -3,15 +3,16 @@
 use crate::codegen::encoding::create_encoder;
 use crate::codegen::{
     cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
+    solana_deploy::solana_deploy,
     vartable::Vartable,
-    Builtin, Expression,
+    Builtin, Expression, Options,
 };
 use crate::{
-    sema::ast::{ArrayLength, Namespace, Parameter, StructType, Type},
+    sema::ast::{Namespace, Parameter, Type},
     Target,
 };
 use num_bigint::{BigInt, Sign};
-use num_traits::{ToPrimitive, Zero};
+use num_traits::Zero;
 use solang_parser::pt;
 use solang_parser::pt::{FunctionTy, Loc};
 use std::sync::Arc;
@@ -276,6 +277,7 @@ pub(super) fn constructor_dispatch(
     constructor_cfg_no: usize,
     all_cfg: &[ControlFlowGraph],
     ns: &mut Namespace,
+    opt: &Options,
 ) -> ControlFlowGraph {
     let mut vartab = Vartable::new(ns.next_id);
     let mut func_name = format!("constructor_dispatch_{}", all_cfg[constructor_cfg_no].name);
@@ -331,7 +333,16 @@ pub(super) fn constructor_dispatch(
     }
 
     if ns.target == Target::Solana {
-        solana_deploy(contract_no, &mut vartab, &mut cfg, ns);
+        if let ASTFunction::SolidityFunction(function_no) = all_cfg[constructor_cfg_no].function_no
+        {
+            let func = &ns.functions[function_no];
+
+            solana_deploy(func, &returns, contract_no, &mut vartab, &mut cfg, ns, opt);
+        } else if let Some((func, _)) = &ns.contracts[contract_no].default_constructor {
+            solana_deploy(func, &returns, contract_no, &mut vartab, &mut cfg, ns, opt);
+        } else {
+            unreachable!();
+        }
     }
 
     // Call storage initializer
@@ -369,116 +380,4 @@ pub(super) fn constructor_dispatch(
     vartab.finalize(ns, &mut cfg);
 
     cfg
-}
-
-/// On Solana, prepare the data account after deploy; ensure the account is
-/// large enough and write magic to it to show the account has been deployed.
-fn solana_deploy(
-    contract_no: usize,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-    ns: &mut Namespace,
-) {
-    // Make sure that the data account is large enough. Read the size of the
-    // account via `tx.accounts[0].data.length`.
-    let account_length = Expression::Builtin(
-        Loc::Codegen,
-        vec![Type::Uint(32)],
-        Builtin::ArrayLength,
-        vec![Expression::StructMember(
-            Loc::Codegen,
-            Type::DynamicBytes,
-            Expression::Subscript(
-                Loc::Codegen,
-                Type::Struct(StructType::AccountInfo),
-                Type::Array(
-                    Type::Struct(StructType::AccountInfo).into(),
-                    vec![ArrayLength::Dynamic],
-                ),
-                Expression::Builtin(
-                    Loc::Codegen,
-                    vec![Type::Array(
-                        Type::Struct(StructType::AccountInfo).into(),
-                        vec![ArrayLength::Dynamic],
-                    )],
-                    Builtin::Accounts,
-                    vec![],
-                )
-                .into(),
-                Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::zero()).into(),
-            )
-            .into(),
-            2,
-        )],
-    );
-
-    let is_enough = Expression::MoreEqual(
-        Loc::Codegen,
-        Box::new(account_length),
-        Box::new(Expression::NumberLiteral(
-            Loc::Codegen,
-            Type::Uint(32),
-            ns.contracts[contract_no].fixed_layout_size.clone(),
-        )),
-    );
-
-    let enough = cfg.new_basic_block("enough".into());
-    let not_enough = cfg.new_basic_block("not_enough".into());
-
-    cfg.add(
-        vartab,
-        Instr::BranchCond {
-            cond: is_enough,
-            true_block: enough,
-            false_block: not_enough,
-        },
-    );
-
-    cfg.set_basic_block(not_enough);
-
-    cfg.add(
-        vartab,
-        Instr::ReturnCode {
-            code: ReturnCode::AccountDataTooSmall,
-        },
-    );
-
-    cfg.set_basic_block(enough);
-
-    // Write contract magic number to offset 0
-    cfg.add(
-        vartab,
-        Instr::SetStorage {
-            ty: Type::Uint(32),
-            value: Expression::NumberLiteral(
-                pt::Loc::Codegen,
-                Type::Uint(64),
-                BigInt::from(ns.contracts[contract_no].selector()),
-            ),
-            storage: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(64), BigInt::zero()),
-        },
-    );
-
-    // Calculate heap offset
-    let fixed_fields_size = ns.contracts[contract_no]
-        .fixed_layout_size
-        .to_u64()
-        .unwrap();
-
-    // align on 8 byte boundary (round up to nearest multiple of 8)
-    let heap_offset = (fixed_fields_size + 7) & !7;
-
-    // Write heap offset to 12
-    cfg.add(
-        vartab,
-        Instr::SetStorage {
-            ty: Type::Uint(32),
-            value: Expression::NumberLiteral(
-                pt::Loc::Codegen,
-                Type::Uint(64),
-                BigInt::from(heap_offset),
-            ),
-            storage: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(64), BigInt::from(12)),
-        },
-    );
 }

@@ -28,7 +28,7 @@ fn get_balance() {
         },
     );
 
-    let returns = vm.function("test", &[], &[], Some(&new));
+    let returns = vm.function("test", &[], Some(&new));
 
     assert_eq!(
         returns,
@@ -72,7 +72,6 @@ fn send_fails() {
                 value: BigInt::from(102u8),
             },
         ],
-        &[],
         None,
     );
 
@@ -116,7 +115,6 @@ fn send_succeeds() {
                 value: BigInt::from(102u8),
             },
         ],
-        &[],
         None,
     );
 
@@ -165,7 +163,6 @@ fn send_overflows() {
                 value: BigInt::from(102u8),
             },
         ],
-        &[],
         None,
     );
 
@@ -217,7 +214,6 @@ fn transfer_succeeds() {
                 value: BigInt::from(102u8),
             },
         ],
-        &[],
         None,
     );
 
@@ -264,7 +260,6 @@ fn transfer_fails_not_enough() {
                 value: BigInt::from(104u8),
             },
         ],
-        &[],
         None,
     );
     std::println!("{:?}", res);
@@ -308,7 +303,6 @@ fn transfer_fails_overflow() {
                 value: BigInt::from(104u8),
             },
         ],
-        &[],
         None,
     );
     assert!(res.is_err());
@@ -347,7 +341,7 @@ fn fallback() {
         vm.stack[0].abi = Some(abi);
     }
 
-    vm.function("extinct", &[], &[], None);
+    vm.function("extinct", &[], None);
 
     assert_eq!(vm.logs, "fallback");
 }
@@ -389,7 +383,6 @@ fn value_overflows() {
                 value: BigInt::from(u64::MAX as u128 + 1),
             },
         ],
-        &[],
         None,
     );
     assert_eq!(res.ok(), Some(4294967296));
@@ -403,7 +396,6 @@ fn value_overflows() {
                 value: BigInt::from(u128::MAX),
             },
         ],
-        &[],
         None,
     );
     assert_eq!(res.ok(), Some(4294967296));
@@ -417,7 +409,6 @@ fn value_overflows() {
                 value: BigInt::from(102u8),
             },
         ],
-        &[],
         None,
     );
 

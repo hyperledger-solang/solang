@@ -1600,6 +1600,7 @@ impl Namespace {
         let type_no = self.user_types.len();
         self.user_types.push(UserTypeDecl {
             tags: vec![Tag {
+                loc: pt::Loc::Builtin,
                 tag: "notice".into(),
                 no: 0,
                 value: "The Hash type from ink primitives".into(),
