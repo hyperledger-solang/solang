@@ -105,7 +105,7 @@ jobs:
   mac-intel:
     name: Mac Intel
     needs: create
-    runs-on: macos-latest
+    runs-on: macos-11
     steps:
     - run: git clone --depth 1 --branch solana-rustc/13.0-2021-08-08 https://github.com/solana-labs/llvm-project.git
     - name: Install Ninja
