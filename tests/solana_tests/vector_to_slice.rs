@@ -21,7 +21,7 @@ fn test_slice_in_phi() {
 
     let mut vm = build_solidity(file);
     vm.constructor("c1", &[]);
-    let returns = vm.function("test", &[], None);
+    let returns = vm.function("test", &[]);
 
     assert_eq!(returns, vec![BorshToken::String(String::from("Hello!"))]);
 }

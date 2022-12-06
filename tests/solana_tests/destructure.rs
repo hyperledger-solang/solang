@@ -20,7 +20,7 @@ fn conditional_destructure() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("f", &[BorshToken::Bool(true), BorshToken::Bool(true)], None);
+    let returns = vm.function("f", &[BorshToken::Bool(true), BorshToken::Bool(true)]);
 
     assert_eq!(
         returns,
@@ -36,11 +36,7 @@ fn conditional_destructure() {
         ]
     );
 
-    let returns = vm.function(
-        "f",
-        &[BorshToken::Bool(true), BorshToken::Bool(false)],
-        None,
-    );
+    let returns = vm.function("f", &[BorshToken::Bool(true), BorshToken::Bool(false)]);
 
     assert_eq!(
         returns,
@@ -56,11 +52,7 @@ fn conditional_destructure() {
         ]
     );
 
-    let returns = vm.function(
-        "f",
-        &[BorshToken::Bool(false), BorshToken::Bool(false)],
-        None,
-    );
+    let returns = vm.function("f", &[BorshToken::Bool(false), BorshToken::Bool(false)]);
 
     assert_eq!(
         returns,
@@ -76,11 +68,7 @@ fn conditional_destructure() {
         ]
     );
 
-    let returns = vm.function(
-        "f",
-        &[BorshToken::Bool(false), BorshToken::Bool(true)],
-        None,
-    );
+    let returns = vm.function("f", &[BorshToken::Bool(false), BorshToken::Bool(true)]);
 
     assert_eq!(
         returns,
@@ -115,7 +103,7 @@ fn casting_destructure() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]);
 
     assert_eq!(
         returns,
@@ -143,7 +131,7 @@ fn casting_destructure() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]);
 
     assert_eq!(returns, vec![BorshToken::String(String::from("Hello")),]);
 }

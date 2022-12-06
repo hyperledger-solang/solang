@@ -33,7 +33,7 @@ fn return_single() {
     );
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -42,7 +42,7 @@ fn return_single() {
         },]
     );
 
-    let returns = vm.function("g", &[], None);
+    let returns = vm.function("g", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -51,7 +51,7 @@ fn return_single() {
         },]
     );
 
-    let returns = vm.function("h", &[], None);
+    let returns = vm.function("h", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -60,7 +60,7 @@ fn return_single() {
         },]
     );
 
-    let returns = vm.function("i", &[], None);
+    let returns = vm.function("i", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -69,7 +69,7 @@ fn return_single() {
         },]
     );
 
-    let returns = vm.function("j", &[], None);
+    let returns = vm.function("j", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -91,7 +91,7 @@ fn return_ternary() {
     );
 
     vm.constructor("foo", &[]);
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]);
 
     assert_eq!(
         returns,
@@ -117,7 +117,7 @@ fn return_ternary() {
     );
 
     vm.constructor("foo", &[]);
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]);
 
     assert_eq!(
         returns,
@@ -157,9 +157,9 @@ fn return_nothing() {
     );
 
     vm.constructor("foo", &[]);
-    let _returns = vm.function("strange", &[], None);
-    let _returns = vm.function("inc", &[], None);
-    let returns = vm.function("get", &[], None);
+    let _returns = vm.function("strange", &[]);
+    let _returns = vm.function("inc", &[]);
+    let returns = vm.function("get", &[]);
 
     assert_eq!(
         returns,
@@ -193,8 +193,8 @@ fn return_nothing() {
     );
 
     vm.constructor("foo", &[]);
-    let _returns = vm.function("f", &[], None);
-    let returns = vm.function("get", &[], None);
+    let _returns = vm.function("f", &[]);
+    let returns = vm.function("get", &[]);
 
     assert_eq!(
         returns,
@@ -221,7 +221,7 @@ fn return_function() {
     );
 
     vm.constructor("foo", &[]);
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]);
 
     assert_eq!(
         returns,
@@ -251,7 +251,7 @@ fn return_function() {
     );
 
     vm.constructor("foo", &[]);
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]);
 
     assert_eq!(
         returns,

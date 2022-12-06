@@ -17,7 +17,7 @@ contract c {
 
 	function notpub(AccountInfo) private returns (AccountInfo) {
 		AccountInfo ai = tx.accounts[1];
-		ai.key = msg.sender;
+		ai.key = address(this);
 		ai.lamports += 1;
 		return tx.accounts[1];
 	}

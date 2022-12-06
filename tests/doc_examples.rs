@@ -100,6 +100,7 @@ fn substrate_general() {
 #[test]
 fn substrate_specific() {
     assert_compile("docs/examples/substrate/", Target::default_substrate());
+    assert_compile("examples/substrate/", Target::default_substrate());
 }
 
 #[test]

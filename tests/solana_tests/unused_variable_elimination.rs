@@ -38,8 +38,8 @@ fn test_returns() {
 
     let mut vm = build_solidity(file);
     vm.constructor("c1", &[]);
-    let _ = vm.function("assign", &[], None);
-    let returns = vm.function("pb1", &[], None);
+    let _ = vm.function("assign", &[]);
+    let returns = vm.function("pb1", &[]);
 
     assert_eq!(
         returns,
@@ -49,7 +49,7 @@ fn test_returns() {
         }]
     );
 
-    let returns = vm.function("test1", &[], None);
+    let returns = vm.function("test1", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Int {
@@ -57,7 +57,7 @@ fn test_returns() {
             value: BigInt::from(52u8)
         }]
     );
-    let returns = vm.function("test2", &[], None);
+    let returns = vm.function("test2", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Int {

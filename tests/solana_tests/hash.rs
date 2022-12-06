@@ -16,7 +16,7 @@ fn constants_hash_tests() {
     );
 
     runtime.constructor("tester", &[]);
-    runtime.function("test", &[], None);
+    runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
         r##"
@@ -30,7 +30,7 @@ fn constants_hash_tests() {
     );
 
     runtime.constructor("tester", &[]);
-    runtime.function("test", &[], None);
+    runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
         r##"
@@ -44,7 +44,7 @@ fn constants_hash_tests() {
     );
 
     runtime.constructor("tester", &[]);
-    runtime.function("test", &[], None);
+    runtime.function("test", &[]);
 }
 
 #[test]
@@ -61,11 +61,7 @@ fn hash_tests() {
     );
 
     runtime.constructor("tester", &[]);
-    let hash = runtime.function(
-        "test",
-        &[BorshToken::Bytes(b"Hello, World!".to_vec())],
-        None,
-    );
+    let hash = runtime.function("test", &[BorshToken::Bytes(b"Hello, World!".to_vec())]);
 
     assert_eq!(
         hash,
@@ -86,11 +82,7 @@ fn hash_tests() {
     );
 
     runtime.constructor("tester", &[]);
-    let hash = runtime.function(
-        "test",
-        &[BorshToken::Bytes(b"Hello, World!".to_vec())],
-        None,
-    );
+    let hash = runtime.function("test", &[BorshToken::Bytes(b"Hello, World!".to_vec())]);
 
     assert_eq!(
         hash,
@@ -112,11 +104,7 @@ fn hash_tests() {
     );
 
     runtime.constructor("tester", &[]);
-    let hash = runtime.function(
-        "test",
-        &[BorshToken::Bytes(b"Hello, World!".to_vec())],
-        None,
-    );
+    let hash = runtime.function("test", &[BorshToken::Bytes(b"Hello, World!".to_vec())]);
 
     assert_eq!(
         hash,

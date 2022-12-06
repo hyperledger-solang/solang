@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_new, build_solidity, BorshToken};
+use crate::{build_solidity, BorshToken};
 use num_bigint::{BigInt, Sign};
 use num_traits::{One, Zero};
 
@@ -62,7 +62,7 @@ contract testing  {
 
     vm.constructor("testing", &[]);
 
-    let returns = vm.function("test_slot", &[], None);
+    let returns = vm.function("test_slot", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -91,7 +91,6 @@ contract testing  {
                 value: BigInt::from(11u8),
             },
         ])],
-        None,
     );
 
     assert_eq!(
@@ -109,7 +108,7 @@ contract testing  {
         ]
     );
 
-    let returns = vm.function("selector_address", &[], None);
+    let returns = vm.function("selector_address", &[]);
     assert_eq!(
         returns,
         vec![
@@ -173,7 +172,6 @@ contract testing  {
             width: 64,
             value: BigInt::from(5u8),
         }],
-        None,
     );
     assert_eq!(
         returns,
@@ -195,7 +193,6 @@ contract testing  {
             width: 64,
             value: BigInt::from(78u8),
         }],
-        None,
     );
     assert_eq!(
         returns,
@@ -217,7 +214,6 @@ contract testing  {
             width: 64,
             value: BigInt::from(259u16),
         }],
-        None,
     );
     assert_eq!(
         returns,
@@ -276,7 +272,6 @@ contract c {
             width: 256,
             value: BigInt::from_bytes_be(Sign::Plus, &num),
         }],
-        None,
     );
     assert_eq!(
         returns,
@@ -298,7 +293,6 @@ contract c {
                 value: BigInt::from(3u8),
             },
         ],
-        None,
     );
     assert_eq!(
         returns,
@@ -326,7 +320,6 @@ contract c {
                 value: BigInt::zero(),
             },
         ],
-        None,
     );
     assert_eq!(
         returns,
@@ -358,7 +351,6 @@ contract c {
                 value: BigInt::from(3u8),
             },
         ],
-        None,
     );
     assert_eq!(
         returns,
@@ -390,7 +382,6 @@ contract c {
                 value: BigInt::zero(),
             },
         ],
-        None,
     );
     assert_eq!(
         returns,
@@ -443,7 +434,6 @@ fn external_function() {
             },
             BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7, 8]),
         ],
-        None,
     );
 
     let selector = returns[0].clone().into_fixed_bytes().unwrap();
@@ -477,18 +467,11 @@ contract testing  {
             ret := a
         }
     }
-
-    function test_caller() public view returns (uint256 ret) {
-        assembly {
-            let a := caller()
-            ret := a
-        }
-    }
 }"#,
     );
 
     runtime.constructor("testing", &[]);
-    let returns = runtime.function("test_address", &[], None);
+    let returns = runtime.function("test_address", &[]);
     let addr = returns[0].clone().into_bigint().unwrap();
     let b_vec = addr.to_bytes_be().1;
     assert_eq!(&b_vec, runtime.stack[0].data.as_ref());
@@ -498,7 +481,7 @@ contract testing  {
         .get_mut(&runtime.stack[0].data)
         .unwrap()
         .lamports = 102;
-    let returns = runtime.function("test_balance", &[], None);
+    let returns = runtime.function("test_balance", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -507,7 +490,7 @@ contract testing  {
         },]
     );
 
-    let returns = runtime.function("test_selfbalance", &[], None);
+    let returns = runtime.function("test_selfbalance", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -515,13 +498,6 @@ contract testing  {
             value: BigInt::from(102u8),
         },]
     );
-
-    let sender = account_new();
-
-    let returns = runtime.function("test_caller", &[], Some(&sender));
-    let addr = returns[0].clone().into_bigint().unwrap();
-    let b_vec = addr.to_bytes_be().1;
-    assert_eq!(b_vec, sender.to_vec());
 }
 
 #[test]
@@ -546,7 +522,7 @@ fn addmod_mulmod() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("testMod", &[], None);
+    let returns = vm.function("testMod", &[]);
     assert_eq!(
         returns,
         vec![
@@ -630,7 +606,6 @@ contract Testing {
             width: 256,
             value: BigInt::one(),
         }],
-        None,
     );
     assert_eq!(
         returns[0],
@@ -646,7 +621,6 @@ contract Testing {
             width: 256,
             value: BigInt::from(2u8),
         }],
-        None,
     );
     assert_eq!(
         returns[0],
@@ -662,7 +636,6 @@ contract Testing {
             width: 256,
             value: BigInt::from(6u8),
         }],
-        None,
     );
     assert_eq!(
         returns[0],
@@ -678,7 +651,6 @@ contract Testing {
             width: 256,
             value: BigInt::one(),
         }],
-        None,
     );
     assert_eq!(
         returns[0],
@@ -694,7 +666,6 @@ contract Testing {
             width: 256,
             value: BigInt::from(2u8),
         }],
-        None,
     );
     assert_eq!(
         returns[0],
@@ -710,7 +681,6 @@ contract Testing {
             width: 256,
             value: BigInt::from(6u8),
         }],
-        None,
     );
     assert_eq!(
         returns[0],
@@ -726,7 +696,6 @@ contract Testing {
             width: 256,
             value: BigInt::from(3u8),
         }],
-        None,
     );
     assert_eq!(
         returns[0],

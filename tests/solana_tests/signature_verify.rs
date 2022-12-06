@@ -66,7 +66,6 @@ fn verify() {
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs.clone()),
         ],
-        None,
     );
 
     assert_eq!(returns, vec![BorshToken::Bool(false)]);
@@ -96,7 +95,6 @@ fn verify() {
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs.clone()),
         ],
-        None,
     );
 
     assert_eq!(returns, vec![BorshToken::Bool(true)]);
@@ -125,7 +123,6 @@ fn verify() {
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs),
         ],
-        None,
     );
 
     assert_eq!(returns, vec![BorshToken::Bool(false)]);

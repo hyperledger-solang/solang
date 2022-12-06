@@ -19,7 +19,7 @@ contract DeleteTest {
     mapping(uint => savedTest) example2;
 
     function addData() public  {
-        data_struct dt = data_struct({addr1: address(this), addr2: msg.sender});
+        data_struct dt = data_struct({addr1: address(this), addr2: tx.program_id});
         uint id = 1;
         example[id] = dt;
         savedTest tt = new savedTest(4);
@@ -31,7 +31,7 @@ contract DeleteTest {
         delete example[id];
         //delete example2[id];
     }
-    
+
     function get() public view returns (data_struct calldata) {
         uint id = 1;
         return example[id];

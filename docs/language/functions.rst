@@ -221,12 +221,18 @@ Function modifiers are used to check pre-conditions or post-conditions for a fun
 new modifier must be declared which looks much like a function, but uses the ``modifier``
 keyword rather than ``function``.
 
-.. include:: ../examples/function_modifier.sol
+.. include:: ../examples/substrate/function_modifier.sol
   :code: solidity
 
 The function `foo` can only be run by the owner of the contract, else the ``require()`` in its
 modifier will fail. The special symbol ``_;`` will be replaced by body of the function. In fact,
 if you specify ``_;`` twice, the function will execute twice, which might not be a good idea.
+
+On Solana, ``msg.sender`` does not exist, so the usual way to implement a similar test is using
+an `authority` accounts rather than an owner account.
+
+.. include:: ../examples/solana/use_authority.sol
+  :code: solidity
 
 A modifier cannot have visibility (e.g. ``public``) or mutability (e.g. ``view``) specified,
 since a modifier is never externally callable. Modifiers can only be used by attaching them
@@ -247,13 +253,13 @@ this example, the `only_owner` modifier is run first, and if that reaches ``_;``
 `check_price` is executed. The body of function `foo()` is only reached once `check_price()`
 reaches ``_;``.
 
-.. include:: ../examples/function_multiple_modifiers.sol
+.. include:: ../examples/substrate/function_multiple_modifiers.sol
   :code: solidity
 
 Modifiers can be inherited or declared ``virtual`` in a base contract and then overriden, exactly like
 functions can be.
 
-.. include:: ../examples/function_override_modifiers.sol
+.. include:: ../examples/substrate/function_override_modifiers.sol
   :code: solidity
 
 Calling an external function using ``call()``

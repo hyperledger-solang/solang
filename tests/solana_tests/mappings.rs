@@ -40,7 +40,6 @@ fn simple_mapping() {
                     value: BigInt::from(300331 + i),
                 },
             ],
-            None,
         );
     }
 
@@ -51,7 +50,6 @@ fn simple_mapping() {
                 width: 64,
                 value: BigInt::from(102 + i),
             }],
-            None,
         );
 
         assert_eq!(
@@ -69,7 +67,6 @@ fn simple_mapping() {
             width: 64,
             value: BigInt::from(101u8),
         }],
-        None,
     );
 
     assert_eq!(
@@ -86,7 +83,6 @@ fn simple_mapping() {
             width: 64,
             value: BigInt::from(104u8),
         }],
-        None,
     );
 
     for i in 0..10 {
@@ -96,7 +92,6 @@ fn simple_mapping() {
                 width: 64,
                 value: BigInt::from(102 + i),
             }],
-            None,
         );
 
         if 102 + i != 104 {
@@ -159,7 +154,7 @@ fn less_simple_mapping() {
                 value: BigInt::from(12313132131321312311213131u128)
             },
             BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-        ],  None
+        ],
     );
 
     vm.function(
@@ -174,7 +169,6 @@ fn less_simple_mapping() {
                 value: BigInt::from(102u8),
             },
         ],
-        None,
     );
 
     let returns = vm.function(
@@ -183,7 +177,6 @@ fn less_simple_mapping() {
             width: 256,
             value: BigInt::from(12313132131321312311213131u128),
         }],
-        None,
     );
 
     assert_eq!(
@@ -237,7 +230,7 @@ fn string_mapping() {
         &[
             BorshToken::String(String::from("a")),
             BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-        ], None
+        ],
     );
 
     vm.function(
@@ -249,10 +242,9 @@ fn string_mapping() {
                 value: BigInt::from(102u8),
             },
         ],
-        None,
     );
 
-    let returns = vm.function("get", &[BorshToken::String(String::from("a"))], None);
+    let returns = vm.function("get", &[BorshToken::String(String::from("a"))]);
 
     assert_eq!(
         returns,
@@ -300,19 +292,18 @@ fn contract_mapping() {
         &[
             index.clone(),
             BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-        ], None
-    );
+        ], );
 
-    let returns = vm.function("get", &[index.clone()], None);
+    let returns = vm.function("get", &[index.clone()]);
 
     assert_eq!(
         returns,
         vec![BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder"))]
     );
 
-    vm.function("rm", &[index.clone()], None);
+    vm.function("rm", &[index.clone()]);
 
-    let returns = vm.function("get", &[index], None);
+    let returns = vm.function("get", &[index]);
 
     assert_eq!(returns, vec![BorshToken::String(String::from(""))]);
 }
@@ -342,7 +333,6 @@ fn mapping_in_mapping() {
             },
             BorshToken::FixedBytes(vec![0x98]),
         ],
-        None,
     );
 
     let returns = vm.function(
@@ -354,7 +344,6 @@ fn mapping_in_mapping() {
                 value: BigInt::from(102u8),
             },
         ],
-        None,
     );
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(vec![0x98])]);
@@ -368,7 +357,6 @@ fn mapping_in_mapping() {
                 value: BigInt::from(103u8),
             },
         ],
-        None,
     );
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(vec![0])]);
@@ -382,7 +370,6 @@ fn mapping_in_mapping() {
                 value: BigInt::from(102u8),
             },
         ],
-        None,
     );
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(vec![0])]);
@@ -428,8 +415,7 @@ fn sparse_array() {
                 value: BigInt::from(909090909u64)
             },
             BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-        ], None
-    );
+        ], );
 
     vm.function(
         "add_int",
@@ -443,7 +429,6 @@ fn sparse_array() {
                 value: BigInt::from(102u8),
             },
         ],
-        None,
     );
 
     let returns = vm.function(
@@ -452,7 +437,6 @@ fn sparse_array() {
             width: 256,
             value: BigInt::from(909090909u64),
         }],
-        None,
     );
 
     assert_eq!(
@@ -509,8 +493,7 @@ fn massive_sparse_array() {
                 value: BigInt::from(786868768768678687686877u128)
             },
             BorshToken::String(String::from("This is a string which should be a little longer than 32 bytes so we the the abi encoder")),
-        ], None
-    );
+        ], );
 
     vm.function(
         "add_int",
@@ -524,7 +507,6 @@ fn massive_sparse_array() {
                 value: BigInt::from(102u8),
             },
         ],
-        None,
     );
 
     let returns = vm.function(
@@ -533,7 +515,6 @@ fn massive_sparse_array() {
             width: 256,
             value: BigInt::from(786868768768678687686877u128),
         }],
-        None,
     );
 
     assert_eq!(
@@ -592,11 +573,10 @@ fn mapping_in_dynamic_array() {
             width: 64,
             value: BigInt::from(2147483647),
         }],
-        None,
     );
 
-    vm.function("push", &[], None);
-    vm.function("push", &[], None);
+    vm.function("push", &[]);
+    vm.function("push", &[]);
 
     for array_no in 0..2 {
         for i in 0..10 {
@@ -616,7 +596,6 @@ fn mapping_in_dynamic_array() {
                         value: BigInt::from(300331 + i),
                     },
                 ],
-                None,
             );
         }
     }
@@ -635,7 +614,6 @@ fn mapping_in_dynamic_array() {
                         value: BigInt::from(102 + i + array_no * 500),
                     },
                 ],
-                None,
             );
 
             assert_eq!(
@@ -660,7 +638,6 @@ fn mapping_in_dynamic_array() {
                 value: BigInt::from(101u8),
             },
         ],
-        None,
     );
 
     assert_eq!(
@@ -683,7 +660,6 @@ fn mapping_in_dynamic_array() {
                 value: BigInt::from(104u8),
             },
         ],
-        None,
     );
 
     for i in 0..10 {
@@ -699,7 +675,6 @@ fn mapping_in_dynamic_array() {
                     value: BigInt::from(102 + i),
                 },
             ],
-            None,
         );
 
         if 102 + i != 104 {
@@ -721,7 +696,7 @@ fn mapping_in_dynamic_array() {
         }
     }
 
-    let returns = vm.function("length", &[], None);
+    let returns = vm.function("length", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -730,9 +705,9 @@ fn mapping_in_dynamic_array() {
         }]
     );
 
-    vm.function("pop", &[], None);
+    vm.function("pop", &[]);
 
-    let returns = vm.function("length", &[], None);
+    let returns = vm.function("length", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -741,9 +716,9 @@ fn mapping_in_dynamic_array() {
         }]
     );
 
-    vm.function("pop", &[], None);
+    vm.function("pop", &[]);
 
-    let returns = vm.function("length", &[], None);
+    let returns = vm.function("length", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Uint {
@@ -752,7 +727,7 @@ fn mapping_in_dynamic_array() {
         }]
     );
 
-    let returns = vm.function("number", &[], None);
+    let returns = vm.function("number", &[]);
 
     assert_eq!(
         returns,
@@ -809,11 +784,10 @@ fn mapping_in_struct_in_dynamic_array() {
             width: 64,
             value: BigInt::from(2147483647),
         }],
-        None,
     );
 
-    vm.function("push", &[], None);
-    vm.function("push", &[], None);
+    vm.function("push", &[]);
+    vm.function("push", &[]);
 
     for array_no in 0..2 {
         for i in 0..10 {
@@ -833,7 +807,6 @@ fn mapping_in_struct_in_dynamic_array() {
                         value: BigInt::from(300331 + i),
                     },
                 ],
-                None,
             );
         }
     }
@@ -852,7 +825,6 @@ fn mapping_in_struct_in_dynamic_array() {
                         value: BigInt::from(102 + i + array_no * 500),
                     },
                 ],
-                None,
             );
 
             assert_eq!(
@@ -877,7 +849,6 @@ fn mapping_in_struct_in_dynamic_array() {
                 value: BigInt::from(101u8),
             },
         ],
-        None,
     );
 
     assert_eq!(
@@ -900,7 +871,6 @@ fn mapping_in_struct_in_dynamic_array() {
                 value: BigInt::from(104u8),
             },
         ],
-        None,
     );
 
     for i in 0..10 {
@@ -916,7 +886,6 @@ fn mapping_in_struct_in_dynamic_array() {
                     value: BigInt::from(102 + i),
                 },
             ],
-            None,
         );
 
         if 102 + i != 104 {
@@ -938,10 +907,10 @@ fn mapping_in_struct_in_dynamic_array() {
         }
     }
 
-    vm.function("pop", &[], None);
-    vm.function("pop", &[], None);
+    vm.function("pop", &[]);
+    vm.function("pop", &[]);
 
-    let returns = vm.function("number", &[], None);
+    let returns = vm.function("number", &[]);
 
     assert_eq!(
         returns,
@@ -965,8 +934,8 @@ contract DeleteTest {
 
     mapping(uint => data_struct) example;
 
-    function addData() public  {
-        data_struct dt = data_struct({addr1: address(this), addr2: msg.sender});
+    function addData(address sender) public  {
+        data_struct dt = data_struct({addr1: address(this), addr2: sender});
         uint id = 1;
         example[id] = dt;
     }
@@ -984,10 +953,12 @@ contract DeleteTest {
         "#,
     );
 
+    let sender = account_new();
+
     vm.constructor("DeleteTest", &[]);
-    let _ = vm.function("addData", &[], None);
-    let _ = vm.function("deltest", &[], None);
-    let returns = vm.function("get", &[], None);
+    let _ = vm.function("addData", &[BorshToken::Address(sender)]);
+    let _ = vm.function("deltest", &[]);
+    let returns = vm.function("get", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Tuple(vec![
@@ -1022,11 +993,11 @@ contract CrowdFunding {
     mapping (uint => Campaign) campaigns;
 
 
-function newCampaign() public returns (uint campaignID) {
+function newCampaign(address sender) public returns (uint campaignID) {
     campaignID = numCampaigns++;
     Campaign storage _campaign = campaigns[campaignID];
-    _campaign.funders[0] = Funder(msg.sender, 100);
-    _campaign.arr_mp[1][0] = Funder(msg.sender, 105);
+    _campaign.funders[0] = Funder(sender, 100);
+    _campaign.arr_mp[1][0] = Funder(sender, 105);
 }
 
 function getAmt() public view returns (uint) {
@@ -1043,9 +1014,11 @@ function getArrAmt() public view returns (uint) {
         "#,
     );
 
+    let sender = account_new();
+
     vm.constructor("CrowdFunding", &[]);
 
-    let ret = vm.function("newCampaign", &[], None);
+    let ret = vm.function("newCampaign", &[BorshToken::Address(sender)]);
 
     assert_eq!(
         ret,
@@ -1055,7 +1028,7 @@ function getArrAmt() public view returns (uint) {
         }]
     );
 
-    let ret = vm.function("getAmt", &[], None);
+    let ret = vm.function("getAmt", &[]);
     assert_eq!(
         ret,
         vec![BorshToken::Uint {
@@ -1064,7 +1037,7 @@ function getArrAmt() public view returns (uint) {
         }]
     );
 
-    let ret = vm.function("getArrAmt", &[], None);
+    let ret = vm.function("getArrAmt", &[]);
     assert_eq!(
         ret,
         vec![BorshToken::Uint {

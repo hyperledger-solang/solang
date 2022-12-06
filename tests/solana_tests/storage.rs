@@ -19,7 +19,7 @@ fn simple() {
     );
 
     vm.constructor("foo", &[]);
-    let returns = vm.function("boom", &[], None);
+    let returns = vm.function("boom", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Int {
@@ -49,7 +49,7 @@ fn simple() {
     );
 
     vm.constructor("c", &[]);
-    let returns = vm.function("func", &[], None);
+    let returns = vm.function("func", &[]);
     assert_eq!(
         returns,
         vec![BorshToken::Int {
@@ -83,15 +83,11 @@ fn string() {
         vec![65, 177, 160, 100, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0]
     );
 
-    let returns = vm.function("get", &[], None);
+    let returns = vm.function("get", &[]);
 
     assert_eq!(returns, vec![BorshToken::String(String::from(""))]);
 
-    vm.function(
-        "set",
-        &[BorshToken::String(String::from("Hello, World!"))],
-        None,
-    );
+    vm.function("set", &[BorshToken::String(String::from("Hello, World!"))]);
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
@@ -100,7 +96,7 @@ fn string() {
 
     assert_eq!(vm.data()[40..53].to_vec(), b"Hello, World!");
 
-    let returns = vm.function("get", &[], None);
+    let returns = vm.function("get", &[]);
 
     assert_eq!(
         returns,
@@ -109,13 +105,9 @@ fn string() {
 
     // try replacing it with a string of the same length. This is a special
     // fast-path handling
-    vm.function(
-        "set",
-        &[BorshToken::String(String::from("Hallo, Werld!"))],
-        None,
-    );
+    vm.function("set", &[BorshToken::String(String::from("Hallo, Werld!"))]);
 
-    let returns = vm.function("get", &[], None);
+    let returns = vm.function("get", &[]);
 
     assert_eq!(
         returns,
@@ -129,9 +121,9 @@ fn string() {
 
     // Try setting this to an empty string. This is also a special case where
     // the result should be offset 0
-    vm.function("set", &[BorshToken::String(String::from(""))], None);
+    vm.function("set", &[BorshToken::String(String::from(""))]);
 
-    let returns = vm.function("get", &[], None);
+    let returns = vm.function("get", &[]);
 
     assert_eq!(returns, vec![BorshToken::String(String::from(""))]);
 
@@ -173,7 +165,7 @@ fn bytes() {
         vec![11, 66, 182, 57, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0]
     );
 
-    let returns = vm.function("foo_length", &[], None);
+    let returns = vm.function("foo_length", &[]);
 
     assert_eq!(
         returns,
@@ -188,7 +180,6 @@ fn bytes() {
         &[BorshToken::Bytes(
             b"The shoemaker always wears the worst shoes".to_vec(),
         )],
-        None,
     );
 
     assert_eq!(
@@ -206,7 +197,6 @@ fn bytes() {
                 width: 32,
                 value: BigInt::from(i),
             }],
-            None,
         );
 
         assert_eq!(returns, vec![BorshToken::FixedBytes(vec![*b])]);
@@ -221,7 +211,6 @@ fn bytes() {
             },
             BorshToken::FixedBytes(b"E".to_vec()),
         ],
-        None,
     );
 
     vm.function(
@@ -233,7 +222,6 @@ fn bytes() {
             },
             BorshToken::FixedBytes(b"E".to_vec()),
         ],
-        None,
     );
 
     for (i, b) in b"ThE shoEmaker always wears the worst shoes"
@@ -246,7 +234,6 @@ fn bytes() {
                 width: 32,
                 value: BigInt::from(i),
             }],
-            None,
         );
 
         assert_eq!(returns, vec![BorshToken::FixedBytes(vec![*b])]);
@@ -290,7 +277,6 @@ fn bytes_set_subscript_range() {
             },
             BorshToken::FixedBytes(b"E".to_vec()),
         ],
-        None,
     );
 }
 
@@ -327,7 +313,6 @@ fn bytes_get_subscript_range() {
         &[BorshToken::Bytes(
             b"The shoemaker always wears the worst shoes".to_vec(),
         )],
-        None,
     );
 
     vm.function(
@@ -336,7 +321,6 @@ fn bytes_get_subscript_range() {
             width: 32,
             value: BigInt::from(0x80000000u64),
         }],
-        None,
     );
 }
 
@@ -387,29 +371,29 @@ fn bytes_push_pop() {
 
     vm.constructor("c", &[]);
 
-    let returns = vm.function("get_bs", &[], None);
+    let returns = vm.function("get_bs", &[]);
 
     assert_eq!(returns, vec![BorshToken::Bytes(vec!(0x0e, 0xda))]);
 
-    let returns = vm.function("pop", &[], None);
+    let returns = vm.function("pop", &[]);
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(vec!(0xda))]);
 
-    let returns = vm.function("get_bs", &[], None);
+    let returns = vm.function("get_bs", &[]);
 
     assert_eq!(returns, vec![BorshToken::Bytes(vec!(0x0e))]);
 
-    vm.function("push", &[BorshToken::FixedBytes(vec![0x41])], None);
+    vm.function("push", &[BorshToken::FixedBytes(vec![0x41])]);
 
     println!("data:{}", hex::encode(vm.data()));
 
-    let returns = vm.function("get_bs", &[], None);
+    let returns = vm.function("get_bs", &[]);
 
     assert_eq!(returns, vec![BorshToken::Bytes(vec!(0x0e, 0x41))]);
 
-    vm.function("push", &[BorshToken::FixedBytes(vec![0x01])], None);
+    vm.function("push", &[BorshToken::FixedBytes(vec![0x01])]);
 
-    let returns = vm.function("get_bs", &[], None);
+    let returns = vm.function("get_bs", &[]);
 
     assert_eq!(returns, vec![BorshToken::Bytes(vec!(0x0e, 0x41, 0x01))]);
 }
@@ -430,7 +414,7 @@ fn bytes_empty_pop() {
 
     vm.constructor("c", &[]);
 
-    vm.function("pop", &[], None);
+    vm.function("pop", &[]);
 }
 
 #[test]
@@ -462,7 +446,7 @@ fn simple_struct() {
 
     vm.constructor("c", &[]);
 
-    vm.function("set_s2", &[], None);
+    vm.function("set_s2", &[]);
 
     assert_eq!(
         vm.data()[0..32].to_vec(),
@@ -472,7 +456,7 @@ fn simple_struct() {
         ]
     );
 
-    let returns = vm.function("get_s1", &[], None);
+    let returns = vm.function("get_s1", &[]);
 
     assert_eq!(
         returns,
@@ -500,10 +484,9 @@ fn simple_struct() {
                 value: BigInt::from(3240121u32),
             },
         ])],
-        None,
     );
 
-    let returns = vm.function("get_s1", &[], None);
+    let returns = vm.function("get_s1", &[]);
 
     assert_eq!(
         returns,
@@ -555,7 +538,7 @@ fn struct_in_struct() {
 
     vm.constructor("c", &[]);
 
-    vm.function("set_s2", &[], None);
+    vm.function("set_s2", &[]);
 
     assert_eq!(
         vm.data()[0..52].to_vec(),
@@ -566,7 +549,7 @@ fn struct_in_struct() {
         ]
     );
 
-    let returns = vm.function("get_s1", &[], None);
+    let returns = vm.function("get_s1", &[]);
 
     assert_eq!(
         returns,
@@ -608,10 +591,9 @@ fn struct_in_struct() {
                 value: BigInt::from(12345678901234567890u64),
             },
         ])],
-        None,
     );
 
-    let returns = vm.function("get_s1", &[], None);
+    let returns = vm.function("get_s1", &[]);
 
     assert_eq!(
         returns,
@@ -665,7 +647,7 @@ fn string_in_struct() {
 
     vm.constructor("c", &[]);
 
-    vm.function("set_s2", &[], None);
+    vm.function("set_s2", &[]);
 
     assert_eq!(
         vm.data()[0..64].to_vec(),
@@ -676,7 +658,7 @@ fn string_in_struct() {
         ]
     );
 
-    let returns = vm.function("get_s1", &[], None);
+    let returns = vm.function("get_s1", &[]);
 
     assert_eq!(
         returns,
@@ -706,10 +688,9 @@ fn string_in_struct() {
                 value: BigInt::from(12345678901234567890u64),
             },
         ])],
-        None,
     );
 
-    let returns = vm.function("get_s1", &[], None);
+    let returns = vm.function("get_s1", &[]);
 
     assert_eq!(
         returns,
@@ -781,9 +762,9 @@ fn complex_struct() {
 
     vm.constructor("c", &[]);
 
-    vm.function("set_s2", &[], None);
+    vm.function("set_s2", &[]);
 
-    let returns = vm.function("get_s1", &[], None);
+    let returns = vm.function("get_s1", &[]);
 
     assert_eq!(
         returns,
@@ -845,10 +826,9 @@ fn complex_struct() {
             ]),
             BorshToken::String(String::from("yadayada")),
         ],
-        None,
     );
 
-    let returns = vm.function("get_s1", &[], None);
+    let returns = vm.function("get_s1", &[]);
 
     assert_eq!(
         returns,
@@ -880,9 +860,9 @@ fn complex_struct() {
         ]
     );
 
-    vm.function("rm", &[], None);
+    vm.function("rm", &[]);
 
-    let returns = vm.function("get_s1", &[], None);
+    let returns = vm.function("get_s1", &[]);
 
     assert_eq!(
         returns,

@@ -53,7 +53,6 @@ fn safe_math() {
                 value: BigInt::from_str("4000000000000000000").unwrap(),
             },
         ],
-        None,
     );
 
     assert_eq!(
@@ -76,7 +75,6 @@ fn safe_math() {
                 value: BigInt::from_str("4000000000000000000").unwrap(),
             },
         ],
-        None,
     );
 
     assert_eq!(
@@ -99,7 +97,6 @@ fn safe_math() {
                 value: BigInt::from_str("1000000000000000000").unwrap(),
             },
         ],
-        None,
     );
 
     assert_eq!(
@@ -122,7 +119,6 @@ fn safe_math() {
                 value: BigInt::from_str("400000000000000000000000000000000000000").unwrap(),
             },
         ],
-        None,
     );
 
     assert_ne!(res, Ok(0));
@@ -139,7 +135,6 @@ fn safe_math() {
                 value: BigInt::from_str("100000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap(),
             },
         ],
-       None,
     );
 
     assert_ne!(res, Ok(0));
@@ -156,7 +151,6 @@ fn safe_math() {
                 value: BigInt::from_str("4000000000000000000").unwrap(),
             },
         ],
-        None,
     );
 
     assert_ne!(res, Ok(0));

@@ -244,7 +244,11 @@ struct AccountRef {
     length: usize,
 }
 
-fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> (Vec<u8>, Vec<AccountRef>) {
+fn serialize_parameters(
+    input: &[u8],
+    metas: &[AccountMeta],
+    vm: &VirtualMachine,
+) -> (Vec<u8>, Vec<AccountRef>) {
     let mut refs = Vec::new();
     let mut v: Vec<u8> = Vec::new();
 
@@ -252,21 +256,21 @@ fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> (Vec<u8>, Vec<Acco
     fn serialize_account(
         v: &mut Vec<u8>,
         refs: &mut Vec<AccountRef>,
-        key: &Account,
+        meta: &AccountMeta,
         acc: &AccountState,
     ) {
         // dup_info
         v.write_u8(0xff).unwrap();
         // signer
-        v.write_u8(0).unwrap();
+        v.write_u8(meta.is_signer.into()).unwrap();
         // is_writable
-        v.write_u8(1).unwrap();
+        v.write_u8(meta.is_writable.into()).unwrap();
         // executable
         v.write_u8(1).unwrap();
         // padding
         v.write_all(&[0u8; 4]).unwrap();
         // key
-        v.write_all(key).unwrap();
+        v.write_all(&meta.pubkey.0).unwrap();
         // owner
         let owner_offset = v.len();
 
@@ -278,7 +282,7 @@ fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> (Vec<u8>, Vec<Acco
         v.write_u64::<LittleEndian>(acc.data.len() as u64).unwrap();
 
         refs.push(AccountRef {
-            account: *key,
+            account: meta.pubkey.0,
             owner_offset,
             data_offset: v.len(),
             length: acc.data.len(),
@@ -298,24 +302,15 @@ fn serialize_parameters(input: &[u8], vm: &VirtualMachine) -> (Vec<u8>, Vec<Acco
     }
 
     // ka_num
-    v.write_u64::<LittleEndian>(vm.account_data.len() as u64)
-        .unwrap();
+    v.write_u64::<LittleEndian>(metas.len() as u64).unwrap();
 
-    // first do the account data
-    let data_account = &vm.stack[0].data;
-
-    serialize_account(
-        &mut v,
-        &mut refs,
-        data_account,
-        &vm.account_data[data_account],
-    );
-
-    // then the rest of the accounts
-    for (acc, data) in &vm.account_data {
-        if acc != data_account {
-            serialize_account(&mut v, &mut refs, acc, data);
-        }
+    for account in metas {
+        serialize_account(
+            &mut v,
+            &mut refs,
+            account,
+            &vm.account_data[&account.pubkey.0],
+        );
     }
 
     // calldata
@@ -1446,7 +1441,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 
                 vm.stack.insert(0, p);
 
-                let res = vm.execute(&instruction.data);
+                let res = vm.execute(&instruction.accounts, &instruction.data);
                 assert_eq!(res, Ok(0));
 
                 let refs = self.context.refs.try_borrow_mut().unwrap();
@@ -1462,10 +1457,14 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 }
 
 impl VirtualMachine {
-    fn execute(&mut self, calldata: &[u8]) -> Result<u64, EbpfError<UserError>> {
+    fn execute(
+        &mut self,
+        metas: &[AccountMeta],
+        calldata: &[u8],
+    ) -> Result<u64, EbpfError<UserError>> {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
-        let (mut parameter_bytes, mut refs) = serialize_parameters(calldata, self);
+        let (mut parameter_bytes, mut refs) = serialize_parameters(calldata, metas, self);
         let mut heap = vec![0_u8; DEFAULT_HEAP_SIZE];
 
         let program = &self.stack[0];
@@ -1599,37 +1598,37 @@ impl VirtualMachine {
         let program = &self.stack[0];
         println!("constructor for {}", hex::encode(program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, &self.origin, name);
+        let mut calldata = VirtualMachine::input(&program.data, name);
         if program.abi.as_ref().unwrap().constructor.is_some() {
             let mut encoded_data = encode_arguments(args);
             calldata.append(&mut encoded_data);
         };
 
-        let res = self.execute(&calldata);
+        let default_metas = self.default_metas();
+
+        let res = self.execute(&default_metas, &calldata);
 
         println!("res:{:?}", res);
         assert_eq!(res, Ok(expected));
     }
 
-    fn function(
+    fn function(&mut self, name: &str, args: &[BorshToken]) -> Vec<BorshToken> {
+        let default_metas = self.default_metas();
+
+        self.function_metas(&default_metas, name, args)
+    }
+
+    fn function_metas(
         &mut self,
+        metas: &[AccountMeta],
         name: &str,
         args: &[BorshToken],
-        sender: Option<&Account>,
     ) -> Vec<BorshToken> {
         let program = &self.stack[0];
 
         println!("function for {}", hex::encode(program.data));
 
-        let mut calldata = VirtualMachine::input(
-            &program.data,
-            if let Some(sender) = sender {
-                sender
-            } else {
-                &self.origin
-            },
-            name,
-        );
+        let mut calldata = VirtualMachine::input(&program.data, name);
 
         println!("input: {} ", hex::encode(&calldata));
 
@@ -1640,7 +1639,7 @@ impl VirtualMachine {
 
         println!("input: {}", hex::encode(&calldata));
 
-        let res = self.execute(&calldata);
+        let res = self.execute(metas, &calldata);
         match res {
             Ok(0) => (),
             Ok(error_code) => panic!("unexpected return {:#x}", error_code),
@@ -1661,21 +1660,12 @@ impl VirtualMachine {
         &mut self,
         name: &str,
         args: &[BorshToken],
-        sender: Option<&Account>,
     ) -> Result<u64, EbpfError<UserError>> {
         let program = &self.stack[0];
 
         println!("function for {}", hex::encode(program.data));
 
-        let mut calldata = VirtualMachine::input(
-            &program.data,
-            if let Some(sender) = sender {
-                sender
-            } else {
-                &self.origin
-            },
-            name,
-        );
+        let mut calldata = VirtualMachine::input(&program.data, name);
 
         println!("input: {}", hex::encode(&calldata));
 
@@ -1684,14 +1674,16 @@ impl VirtualMachine {
         let mut encoded = encode_arguments(args);
         calldata.append(&mut encoded);
 
+        let default_metas = self.default_metas();
+
         println!("input: {}", hex::encode(&calldata));
 
-        self.execute(&calldata)
+        self.execute(&default_metas, &calldata)
     }
 
-    fn input(recv: &Account, sender: &Account, name: &str) -> Vec<u8> {
+    fn input(recv: &Account, name: &str) -> Vec<u8> {
         let mut calldata: Vec<u8> = recv.to_vec();
-        calldata.extend_from_slice(sender);
+        calldata.extend_from_slice(&[0u8; 32]);
         calldata.extend_from_slice(&0u64.to_le_bytes());
 
         let mut hasher = Keccak::v256();
@@ -1705,6 +1697,27 @@ impl VirtualMachine {
         calldata.push(seeds_len);
 
         calldata
+    }
+
+    fn default_metas(&self) -> Vec<AccountMeta> {
+        // Just include everything
+        let mut accounts = vec![AccountMeta {
+            pubkey: Pubkey(self.stack[0].data),
+            is_writable: true,
+            is_signer: false,
+        }];
+
+        for acc in self.account_data.keys() {
+            if *acc != accounts[0].pubkey.0 {
+                accounts.push(AccountMeta {
+                    pubkey: Pubkey(*acc),
+                    is_signer: false,
+                    is_writable: true,
+                });
+            }
+        }
+
+        accounts
     }
 
     fn data(&self) -> &Vec<u8> {

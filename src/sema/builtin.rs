@@ -854,6 +854,14 @@ pub fn builtin_var(
                     ),
                 ));
             }
+            if ns.target == Target::Solana && p.builtin == Builtin::Sender {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    String::from(
+                        "'msg.sender' is not available on Solana. See https://solang.readthedocs.io/en/latest/targets/solana.html#msg-sender-solana",
+                    ),
+                ));
+            }
             return Some((p.builtin, p.ret[0].clone()));
         }
     }

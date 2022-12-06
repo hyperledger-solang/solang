@@ -25,7 +25,7 @@ fn simple_event() {
 
     vm.constructor("c", &[]);
 
-    vm.function("go", &[], None);
+    vm.function("go", &[]);
 
     let log = vm.events();
 
@@ -81,7 +81,7 @@ fn less_simple_event() {
 
     vm.constructor("c", &[]);
 
-    vm.function("go", &[], None);
+    vm.function("go", &[]);
 
     let log = vm.events();
     assert_eq!(log.len(), 1);

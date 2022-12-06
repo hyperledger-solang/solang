@@ -30,7 +30,7 @@ fn assert_false() {
 
     vm.constructor("foo", &[]);
 
-    vm.function("assert_fails", &[], None);
+    vm.function("assert_fails", &[]);
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn assert_true() {
 
     vm.constructor("foo", &[]);
 
-    vm.function("assert_fails", &[], None);
+    vm.function("assert_fails", &[]);
 }
 
 #[test]
@@ -79,16 +79,16 @@ fn boolean() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_true", &[], None);
+    let returns = vm.function("return_true", &[]);
 
     assert_eq!(returns, vec![BorshToken::Bool(true),]);
 
-    let returns = vm.function("return_false", &[], None);
+    let returns = vm.function("return_false", &[]);
 
     assert_eq!(returns, vec![BorshToken::Bool(false),]);
 
-    vm.function("true_arg", &[BorshToken::Bool(true)], None);
-    vm.function("false_arg", &[BorshToken::Bool(false)], None);
+    vm.function("true_arg", &[BorshToken::Bool(true)]);
+    vm.function("false_arg", &[BorshToken::Bool(false)]);
 }
 
 #[test]
@@ -113,7 +113,7 @@ fn address() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_address", &[], None);
+    let returns = vm.function("return_address", &[]);
 
     assert_eq!(
         returns,
@@ -129,7 +129,6 @@ fn address() {
             75, 161, 209, 89, 47, 84, 50, 13, 23, 127, 94, 21, 50, 249, 250, 185, 117, 49, 186,
             134, 82, 130, 112, 97, 218, 24, 157, 198, 40, 105, 118, 27,
         ])],
-        None,
     );
 }
 
@@ -156,7 +155,7 @@ fn test_enum() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("return_enum", &[], None);
+    let returns = vm.function("return_enum", &[]);
 
     assert_eq!(
         returns,
@@ -172,7 +171,6 @@ fn test_enum() {
             width: 8,
             value: BigInt::from(6u8),
         }],
-        None,
     );
 }
 
@@ -217,7 +215,7 @@ fn bytes() {
 
         vm.constructor("test", &[]);
 
-        let returns = vm.function("return_literal", &[], None);
+        let returns = vm.function("return_literal", &[]);
 
         assert_eq!(
             returns,
@@ -227,7 +225,6 @@ fn bytes() {
         let returns = vm.function(
             "return_arg",
             &[BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
-            None,
         );
 
         assert_eq!(
@@ -251,7 +248,6 @@ fn bytes() {
                     BorshToken::FixedBytes(a.to_vec()),
                     BorshToken::FixedBytes(b.to_vec()),
                 ],
-                None,
             );
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a | b).collect();
@@ -271,7 +267,6 @@ fn bytes() {
                     BorshToken::FixedBytes(a.to_vec()),
                     BorshToken::FixedBytes(b.to_vec()),
                 ],
-                None,
             );
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a & b).collect();
@@ -284,7 +279,6 @@ fn bytes() {
                     BorshToken::FixedBytes(a.to_vec()),
                     BorshToken::FixedBytes(b.to_vec()),
                 ],
-                None,
             );
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a ^ b).collect();
@@ -304,7 +298,6 @@ fn bytes() {
                         value: BigInt::from(r),
                     },
                 ],
-                None,
             );
 
             let mut res = (BigUint::from_bytes_be(&a) << r).to_bytes_be();
@@ -328,7 +321,6 @@ fn bytes() {
                         value: BigInt::from(r),
                     },
                 ],
-                None,
             );
 
             let mut res = (BigUint::from_bytes_be(&a) >> r).to_bytes_be();
@@ -423,7 +415,6 @@ fn uint() {
                     width: width as u16,
                     value: a.to_bigint().unwrap(),
                 }],
-                None,
             );
 
             println!("{:x} = {:?} o", a, res);
@@ -440,7 +431,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().add(&b);
@@ -468,7 +458,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().sub(&b);
@@ -494,7 +483,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().mul(&b);
@@ -522,7 +510,6 @@ fn uint() {
                             value: BigInt::from(n),
                         },
                     ],
-                    None,
                 );
 
                 let mut res = a.clone().pow(n);
@@ -550,7 +537,6 @@ fn uint() {
                             value: b.to_bigint().unwrap(),
                         },
                     ],
-                    None,
                 );
 
                 let mut res = a.clone().div(&b);
@@ -577,7 +563,6 @@ fn uint() {
                             value: b.to_bigint().unwrap(),
                         },
                     ],
-                    None,
                 );
 
                 let mut res = a.clone().rem(&b);
@@ -605,7 +590,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().bitor(&b);
@@ -631,7 +615,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().bitand(&b);
@@ -657,7 +640,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().bitxor(&b);
@@ -685,7 +667,6 @@ fn uint() {
                         value: BigInt::from(r),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone();
@@ -712,7 +693,6 @@ fn uint() {
                         value: BigInt::from(r),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone();
@@ -770,7 +750,6 @@ fn test_power_overflow_boundaries() {
                     value: BigInt::from(width - 1),
                 },
             ],
-            None,
         );
 
         let res = BigUint::from(2_u32).pow((width - 1) as u32);
@@ -795,7 +774,6 @@ fn test_power_overflow_boundaries() {
                     value: BigInt::from(width + 1),
                 },
             ],
-            None,
         );
 
         assert_ne!(sesa, Ok(0));
@@ -835,7 +813,6 @@ fn test_overflow_boundaries() {
                     value: second_op.clone(),
                 },
             ],
-            None,
         );
         assert_eq!(
             return_value,
@@ -857,7 +834,6 @@ fn test_overflow_boundaries() {
                     value: second_op.clone(),
                 },
             ],
-            None,
         );
         assert_eq!(
             return_value,
@@ -890,7 +866,6 @@ fn test_overflow_boundaries() {
                     value: BigInt::from(2u8),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -907,7 +882,6 @@ fn test_overflow_boundaries() {
                     value: BigInt::from(2),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -924,7 +898,6 @@ fn test_overflow_boundaries() {
                     value: upper_boundary.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -941,7 +914,6 @@ fn test_overflow_boundaries() {
                     value: lower_boundary.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -958,7 +930,6 @@ fn test_overflow_boundaries() {
                     value: lower_boundary.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -1002,7 +973,6 @@ fn test_mul_within_range_signed() {
                     value: second_op.clone(),
                 },
             ],
-            None,
         );
 
         let res = first_operand_rand.mul(second_op);
@@ -1053,7 +1023,6 @@ fn test_mul_within_range() {
                         value: second_operand_rand.to_bigint().unwrap(),
                     },
                 ],
-                None,
             );
             let res = first_operand_rand * second_operand_rand;
 
@@ -1106,7 +1075,6 @@ fn test_overflow_detect_signed() {
                     value: second_operand_rand.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -1132,7 +1100,6 @@ fn test_overflow_detect_signed() {
                     value: second_operand_rand.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -1178,7 +1145,6 @@ fn test_overflow_detect_unsigned() {
                         value: second_operand_rand.to_bigint().unwrap(),
                     },
                 ],
-                None,
             );
             assert_ne!(res, Ok(0));
         }
@@ -1256,7 +1222,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().add(&b);
@@ -1282,7 +1247,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().sub(&b);
@@ -1308,7 +1272,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().mul(&b);
@@ -1335,7 +1298,6 @@ fn int() {
                             value: b.clone(),
                         },
                     ],
-                    None,
                 );
 
                 let mut res = a.clone().div(&b);
@@ -1361,7 +1323,6 @@ fn int() {
                             value: b.clone(),
                         },
                     ],
-                    None,
                 );
 
                 let mut res = a.clone().rem(&b);
@@ -1388,7 +1349,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().bitor(&b);
@@ -1414,7 +1374,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().bitand(&b);
@@ -1440,7 +1399,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().bitxor(&b);
@@ -1468,7 +1426,6 @@ fn int() {
                         value: BigInt::from(r),
                     },
                 ],
-                None,
             );
 
             let mut res = a.clone().shl(r);
@@ -1495,7 +1452,6 @@ fn int() {
                         value: BigInt::from(r),
                     },
                 ],
-                None,
             );
 
             let mut res = a.shr(r);
@@ -1541,15 +1497,11 @@ fn bytes_cast() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function(
-        "to_bytes",
-        &[BorshToken::FixedBytes(b"abcd".to_vec())],
-        None,
-    );
+    let returns = vm.function("to_bytes", &[BorshToken::FixedBytes(b"abcd".to_vec())]);
 
     assert_eq!(returns, vec![BorshToken::Bytes(b"abcd".to_vec())]);
 
-    let returns = vm.function("to_bytes5", &[BorshToken::Bytes(b"abcde".to_vec())], None);
+    let returns = vm.function("to_bytes5", &[BorshToken::Bytes(b"abcde".to_vec())]);
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(b"abcde".to_vec())]);
 }
