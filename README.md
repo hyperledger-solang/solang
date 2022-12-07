@@ -125,7 +125,7 @@ solang compile --target substrate flipper.sol
 Alternatively if you want to use the solang container, run:
 
 ```
-docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang -v -o /sources --target substrate /sources/flipper.sol
+docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang compile -v -o /sources --target substrate /sources/flipper.sol
 ```
 You will have a file called flipper.contract. You can use this directly in
 the [Contracts UI](https://contracts-ui.substrate.io/),
