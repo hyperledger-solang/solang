@@ -30,7 +30,6 @@ contract Test3 is Test2 {
         state = state_var;
     }
 
-    // We cannot overload multiply, because it is already defined in Test2
     function multiply(int32 c) public pure returns (int32) {
         return c*state;
     }

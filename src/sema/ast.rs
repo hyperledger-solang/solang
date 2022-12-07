@@ -278,6 +278,7 @@ pub struct Function {
     pub mangled_name: String,
     /// Solana constructors may have seeds specified using @seed tags
     pub annotations: Vec<ConstructorAnnotation>,
+    /// Which contracts should we use the mangled name in?
     pub use_mangle_name_on: HashSet<usize>,
 }
 

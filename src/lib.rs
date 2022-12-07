@@ -103,6 +103,7 @@ impl Target {
         }
     }
 
+    /// This function returns the byte length for a selector, given the target
     pub fn selector_length(&self) -> u8 {
         match self {
             Target::Solana => 8,

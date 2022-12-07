@@ -494,3 +494,37 @@ contract runner {
      supported on Solana. Please, go to \
      https://solang.readthedocs.io/en/latest/language/statements.html#try-catch-statement for more information"));
 }
+
+#[test]
+fn solana_discriminator_type() {
+    let src = r#"
+    contract test {
+    function foo() public pure returns (int32) {
+        return -3;
+    }
+
+    function testA() public returns (uint32) {
+        function () external returns (int32) fptr = this.foo;
+        return foo.selector;
+    }
+
+    function testB() public returns (bytes4) {
+        function () external returns (int32) fptr = this.foo;
+        return foo.selector;
+    }
+}
+    "#;
+
+    let mut cache = FileResolver::new();
+    cache.set_file_contents("test.sol", src.to_string());
+
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
+
+    assert_eq!(ns.diagnostics.len(), 3);
+    assert!(ns
+        .diagnostics
+        .contains_message("function selector needs a bit width of at least 64 bits"));
+    assert!(ns
+        .diagnostics
+        .contains_message("function selector can only be casted to bytes8 or larger"));
+}

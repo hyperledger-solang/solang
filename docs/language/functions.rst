@@ -199,18 +199,17 @@ values. Here is an example of an overloaded function:
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
 
-.. note::
-  The substrate target runtime requires function names to be unique.
-  Overloaded function names will be mangled in the ABI.
-  The function name will be concatenated with all of its argument types, separated by underscores.
-  Struct types are represented by their field types (preceded with an extra underscore).
-  Enum types are represented as their underlying ``uint8`` type. Array types are recognizable by
-  having ``Array`` appended; Fixed size arrays will additionally have their length appended as well.
+Both Substrate and Solana runtime require unique function names, so
+overloaded function names will be mangled in the ABI or the IDL.
+The function name will be concatenated with all of its argument types, separated by underscores.
+Struct types are represented by their field types (preceded by an extra underscore).
+Enum types are represented as their underlying ``uint8`` type. Array types are recognizable by
+having ``Array`` appended; fixed size arrays will additionally have their length appended as well.
 
-  The following example illustrates some overloaded functions and their mangled name:
+The following example illustrates some overloaded functions and their mangled name:
 
-  .. include:: ../examples/substrate/function_name_mangling.sol
-    :code: solidity
+.. include:: ../examples/function_name_mangling.sol
+  :code: solidity
 
 
 Function Modifiers

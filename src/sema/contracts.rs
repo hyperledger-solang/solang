@@ -1192,6 +1192,8 @@ fn compatible_visibility(left: &pt::Visibility, right: &pt::Visibility) -> bool 
     )
 }
 
+/// This function checks which function names must be mangled given a contract.
+/// Afterwards, it guarantees that each function has a unique selector.
 fn mangle_function_names_and_verify_selector(contract_no: usize, ns: &mut Namespace) {
     let mut repeated_names: HashMap<String, usize> = HashMap::new();
     let mut selectors: HashMap<Vec<u8>, usize> = HashMap::new();
@@ -1220,7 +1222,6 @@ fn mangle_function_names_and_verify_selector(contract_no: usize, ns: &mut Namesp
         let selector_len = ns.target.selector_length();
 
         // On Solana, concrete contracts have selectors of 8 bytes
-        // TODO: this will change with the switch to borsh!
         if ns.contracts[contract_no].is_concrete() && selector.len() != selector_len as usize {
             diagnostics.push(ast::Diagnostic::error(
                 func.loc,

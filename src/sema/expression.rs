@@ -1280,7 +1280,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
-                            "function select needs a bit width of at least {} bits",
+                            "function selector needs a bit width of at least {} bits",
                             selector_width
                         ),
                     ));
