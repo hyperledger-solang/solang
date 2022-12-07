@@ -400,7 +400,7 @@ pub fn expression(
             match &func_expr[0] {
                 ast::Expression::ExternalFunction { function_no, .. }
                 | ast::Expression::InternalFunction { function_no, .. } => {
-                    let selector = ns.functions[*function_no].selector(ns);
+                    let selector = ns.functions[*function_no].selector(ns, &contract_no);
                     Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector)
                 }
                 _ => {
@@ -429,7 +429,7 @@ pub fn expression(
             let selector = Expression::BytesLiteral(
                 *loc,
                 Type::Uint(32),
-                ns.functions[*function_no].selector(ns),
+                ns.functions[*function_no].selector(ns, &contract_no),
             );
             let struct_literal = Expression::StructLiteral(
                 *loc,
@@ -1918,7 +1918,7 @@ fn interfaceid(ns: &Namespace, contract_no: &usize, loc: &pt::Loc) -> Expression
         let func = &ns.functions[*func_no];
 
         if func.ty == pt::FunctionTy::Function {
-            let selector = func.selector(ns);
+            let selector = func.selector(ns, contract_no);
             debug_assert_eq!(id.len(), selector.len());
 
             for (i, e) in id.iter_mut().enumerate() {
@@ -2276,7 +2276,7 @@ pub fn emit_function_call(
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
 
-                let selector = dest_func.selector(ns);
+                let selector = dest_func.selector(ns, &callee_contract_no);
 
                 tys.insert(0, Type::Bytes(selector.len() as u8));
 

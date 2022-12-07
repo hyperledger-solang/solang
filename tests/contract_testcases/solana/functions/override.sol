@@ -1,4 +1,4 @@
-import "simple.sol" as IMP;
+import "../simple.sol" as IMP;
 
 int constant override no = 1;
 

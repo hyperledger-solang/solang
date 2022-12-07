@@ -42,7 +42,6 @@ contract Test4 is Test2 {
         state = state_var;
     }
 
-    // We cannot redfined multiply from Test2
     function multiply(int32 a, int32 b) public pure returns (int32) {
         return a*state*b;
     }
@@ -51,7 +50,6 @@ contract Test4 is Test2 {
 contract Test5 is Test3 {
     constructor(int32 state_var) Test3(state_var) {}
 
-    // sub is already defined in Test2
     function sub(int64 e) public pure returns (int64) {
         return e-2;
     }
@@ -68,7 +66,6 @@ contract Test7 is Test6 {
 
     }
 
-    // This should be allowed
     function doThis() public override(Test6) returns (int32) {
         return 7;
     }
@@ -88,4 +85,19 @@ contract Inherited is Base1, Base2
 {
     // This should be allowed
     function foo() public override(Base1, Base2) {}
+}
+
+contract ManglingInvalid {
+    function foo_bool() public pure returns (int32) {
+        return 2;
+    }
+
+    // This should not be allowed
+    function foo(bool a) public pure returns (int32) {
+        if (a) {
+            return 1;
+        } else {
+            return 3;
+        }
+    }
 }

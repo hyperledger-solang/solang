@@ -13,6 +13,7 @@ use num_rational::BigRational;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, FunctionTy, OptionalCodeLocation};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -277,6 +278,7 @@ pub struct Function {
     pub mangled_name: String,
     /// Solana constructors may have seeds specified using @seed tags
     pub annotations: Vec<ConstructorAnnotation>,
+    pub use_mangle_name_on: HashSet<usize>,
 }
 
 pub enum ConstructorAnnotation {
@@ -377,18 +379,25 @@ impl Function {
             emits_events: Vec::new(),
             mangled_name,
             annotations: Vec::new(),
+            use_mangle_name_on: HashSet::new(),
         }
     }
 
     /// Generate selector for this function
-    pub fn selector(&self, ns: &Namespace) -> Vec<u8> {
+    pub fn selector(&self, ns: &Namespace, contract_no: &usize) -> Vec<u8> {
         if let Some(selector) = &self.selector {
             selector.clone()
         } else if ns.target == Target::Solana {
             match self.ty {
                 FunctionTy::Constructor => discriminator("global", "new"),
-                FunctionTy::Receive => discriminator("global", "receive()"),
-                _ => discriminator("global", self.name.as_str()),
+                _ => {
+                    let discriminator_image = if self.use_mangle_name_on.contains(contract_no) {
+                        &self.mangled_name
+                    } else {
+                        &self.name
+                    };
+                    discriminator("global", discriminator_image.as_str())
+                }
             }
         } else {
             let mut res = [0u8; 32];
