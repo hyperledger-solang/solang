@@ -157,8 +157,8 @@ When a function is called, the function selector and the arguments are serialize
 (also known as abi encoded) and passed to the program. The function selector is
 what the runtime program uses to determine what function was called. On Substrate, the
 function selector is generated using a deterministic hash value of the function
-name and the arguments types. On Solana, the selector is a SHA-256 hash of the function name
-preceded by the ``global:`` prefix.
+name and the arguments types. On Solana, the selector is known as discriminator and
+is calculated as a SHA-256 hash of the function name preceded by the ``global:`` prefix.
 
 The selector value can be overriden with the ``selector=hex"deadbea1"`` syntax,
 for example:
@@ -201,10 +201,13 @@ of the function abs() is called.
 
 Both Substrate and Solana runtime require unique function names, so
 overloaded function names will be mangled in the ABI or the IDL.
-The function name will be concatenated with all of its argument types, separated by underscores.
-Struct types are represented by their field types (preceded by an extra underscore).
-Enum types are represented as their underlying ``uint8`` type. Array types are recognizable by
-having ``Array`` appended; fixed size arrays will additionally have their length appended as well.
+The function name will be concatenated with all of its argument types, separated by underscores, using the
+following rules:
+
+- Struct types are represented by their field types (preceded by an extra underscore).
+- Enum types are represented as their underlying ``uint8`` type.
+- Array types are recognizable by having ``Array`` appended.
+- Fixed size arrays will additionally have their length appended as well.
 
 The following example illustrates some overloaded functions and their mangled name:
 

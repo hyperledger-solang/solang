@@ -50,9 +50,10 @@ bytes ``msg.data``
     The raw ABI encoded arguments passed to the current call.
 
 bytes4 (Substrate) or bytes8 (Solana) ``msg.sig``
-    Function selector from the encoded calldata, e.g. the first four or eight bytes. This
-    might be 0 if no function selector was present. In Ethereum, constructor calls do not
-    have function selectors but in Parity Substrate they do.
+    Function selector (or discriminator for Solana) from the encoded calldata,
+    e.g. the first four or eight bytes. This might be 0 if no function selector was present.
+    In Ethereum, constructor calls do not have function selectors but in Parity Substrate they do.
+    On Solana, selectors are also called discriminators.
 
 address ``msg.sender``
     The sender of the current call. This is either the address of the contract
@@ -240,14 +241,16 @@ On Substrate, foo will be ``hex"f100"``. On Ethereum this will be ``hex"00000000
 abi.encodeWithSelector(selector, ...)
 ++++++++++++++++++++++++++++++++++++++++++++
 
-ABI encodes the arguments with the function selector first. After the selector, any number of arguments
-can be provided.
+ABI encodes the arguments with the function selector (or discriminator for Solana) first. After the selector,
+any number of arguments can be provided.
 
 .. code-block:: solidity
 
-    bytes foo = abi.encodeWithSelector(hex"0102030405060708", uint16(0xff00), "ABCD");
+    // An eight-byte selector (discriminator) is exclusive for Solana.
+    // On Substrate, the selector contains four bytes. hex"01020304" is an example.
+    bytes foo = abi.encodeWithSelector(hex"0102030405060708", uint16(0xff00));
 
-On Substrate, foo will be ``hex"0403020100ff"``. On Ethereum this will be ``hex"01020304000000000000000000000000000000000000000000000000000000000000ff00"``.
+On Solana, foo will be ``hex"080706050403020100ff"``.
 
 abi.encodeWithSignature(string signature, ...)
 ++++++++++++++++++++++++++++++++++++++++++++++

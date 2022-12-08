@@ -192,6 +192,14 @@ pub fn contract_function(
                     ));
                     success = false;
                 } else {
+                    if ns.target == Target::Solana {
+                        ns.diagnostics.push(Diagnostic::warning(
+                            *loc,
+                            "Selector (or discriminator) overriding does not work on Solana. \
+                              The IDL spec needs updating to make this feature available."
+                                .to_string(),
+                        ));
+                    }
                     has_selector = Some(value);
                 }
             }

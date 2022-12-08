@@ -119,9 +119,10 @@ pub fn resolve(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::N
         let contract_no = contract.contract_no;
 
         check_inheritance(contract_no, ns);
-        check_mangled_function_names(contract_no, ns);
+        mangle_function_names(contract_no, ns);
+        verify_unique_selector(contract_no, ns);
         substrate_requires_public_functions(contract_no, ns);
-        substrate_unique_constructor_names(contract_no, ns);
+        unique_constructor_names(contract_no, ns);
         check_mangled_function_names(contract_no, ns);
     }
 
@@ -752,7 +753,8 @@ fn check_mangled_function_names(contract_no: usize, ns: &mut ast::Namespace) {
 fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespace) {
     let contract = &mut ns.contracts[contract_no];
 
-    if !ns.diagnostics.any_errors()
+    if ns.target.is_substrate()
+        && !ns.diagnostics.any_errors()
         && contract.is_concrete()
         && !contract.all_functions.keys().any(|func_no| {
             let func = &ns.functions[*func_no];
@@ -1193,11 +1195,9 @@ fn compatible_visibility(left: &pt::Visibility, right: &pt::Visibility) -> bool 
 }
 
 /// This function checks which function names must be mangled given a contract.
-/// Afterwards, it guarantees that each function has a unique selector.
-fn mangle_function_names_and_verify_selector(contract_no: usize, ns: &mut Namespace) {
+/// Mangling happens when there is more than one function with the same name in a give contract.
+fn mangle_function_names(contract_no: usize, ns: &mut Namespace) {
     let mut repeated_names: HashMap<String, usize> = HashMap::new();
-    let mut selectors: HashMap<Vec<u8>, usize> = HashMap::new();
-    let mut diagnostics: Vec<Diagnostic> = Vec::new();
 
     for func_no in ns.contracts[contract_no].all_functions.keys() {
         if !ns.functions[*func_no].is_public()
@@ -1214,7 +1214,12 @@ fn mangle_function_names_and_verify_selector(contract_no: usize, ns: &mut Namesp
                 .insert(contract_no);
         }
     }
+}
 
+/// This check guarantees that each public Solidity function has a unique selector.
+fn verify_unique_selector(contract_no: usize, ns: &mut Namespace) {
+    let mut selectors: HashMap<Vec<u8>, usize> = HashMap::new();
+    let mut diagnostics: Vec<Diagnostic> = Vec::new();
     for func_no in ns.contracts[contract_no].all_functions.keys() {
         let func = &ns.functions[*func_no];
 
