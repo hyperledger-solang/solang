@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.7.0 <0.9.0;
+pragma solidity >=0.7.0 <0.9.0;	// Ignored on solang
+
 /// @title Voting with delegation.
 contract Ballot {
     // This declares a new complex type which will
@@ -51,7 +52,7 @@ contract Ballot {
     function giveRightToVote(address voter) external {
         // If the first argument of `require` evaluates
         // to `false`, execution terminates and all
-        // changes to the state and to Ether balances
+        // changes to the state and to account balances
         // are reverted.
         // This used to consume all gas in old EVM versions, but
         // not anymore.
