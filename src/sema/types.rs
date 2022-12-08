@@ -403,67 +403,7 @@ fn contract_annotations(
     let mut seen_program_id = None;
 
     for note in annotations {
-        if note.id.name == "program_id" && ns.target == Target::Solana {
-            if let Some(prev_loc) = seen_program_id {
-                ns.diagnostics.push(Diagnostic::error_with_note(
-                    note.loc,
-                    "duplicate program_id annotation".into(),
-                    prev_loc,
-                    "location of previous program_id annotation".into(),
-                ));
-
-                continue;
-            }
-
-            match &note.value {
-                pt::Expression::StringLiteral(values) if values.len() == 1 => {
-                    let string = &values[0].string;
-                    let mut loc = values[0].loc;
-
-                    match string.from_base58() {
-                        Ok(v) => {
-                            if v.len() != ns.address_length {
-                                ns.diagnostics.push(Diagnostic::error(
-                                    loc,
-                                    format!(
-                                        "address literal {} incorrect length of {}",
-                                        string,
-                                        v.len()
-                                    ),
-                                ));
-                            } else {
-                                seen_program_id = Some(note.loc);
-
-                                ns.contracts[contract_no].program_id = Some(v);
-                            }
-                        }
-                        Err(FromBase58Error::InvalidBase58Length) => {
-                            ns.diagnostics.push(Diagnostic::error(
-                                loc,
-                                format!("address literal {} invalid base58 length", string),
-                            ));
-                        }
-                        Err(FromBase58Error::InvalidBase58Character(ch, pos)) => {
-                            if let pt::Loc::File(_, start, end) = &mut loc {
-                                *start += pos + 1; // location includes quotes
-                                *end = *start;
-                            }
-                            ns.diagnostics.push(Diagnostic::error(
-                                loc,
-                                format!("address literal {} invalid character '{}'", string, ch),
-                            ));
-                        }
-                    }
-                }
-                _ => {
-                    ns.diagnostics.push(Diagnostic::error(
-                        note.loc,
-                            r#"annotion takes an account, for example '@program_id("BBH7Xi5ddus5EoQhzJLgyodVxJJGkvBRCY5AhBA1jwUr")'"#
-                        .into(),
-                    ));
-                }
-            }
-        } else {
+        if ns.target != Target::Solana || note.id.name != "program_id" {
             ns.diagnostics.push(Diagnostic::error(
                 note.loc,
                 format!(
@@ -471,6 +411,67 @@ fn contract_annotations(
                     note.id.name, ns.contracts[contract_no].name,
                 ),
             ));
+            continue;
+        }
+
+        if let Some(prev_loc) = seen_program_id {
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                note.loc,
+                "duplicate program_id annotation".into(),
+                prev_loc,
+                "location of previous program_id annotation".into(),
+            ));
+
+            continue;
+        }
+
+        match &note.value {
+            pt::Expression::StringLiteral(values) if values.len() == 1 => {
+                let string = &values[0].string;
+                let mut loc = values[0].loc;
+
+                match string.from_base58() {
+                    Ok(v) => {
+                        if v.len() != ns.address_length {
+                            ns.diagnostics.push(Diagnostic::error(
+                                loc,
+                                format!(
+                                    "address literal {} incorrect length of {}",
+                                    string,
+                                    v.len()
+                                ),
+                            ));
+                        } else {
+                            seen_program_id = Some(note.loc);
+
+                            ns.contracts[contract_no].program_id = Some(v);
+                        }
+                    }
+                    Err(FromBase58Error::InvalidBase58Length) => {
+                        ns.diagnostics.push(Diagnostic::error(
+                            loc,
+                            format!("address literal {} invalid base58 length", string),
+                        ));
+                    }
+                    Err(FromBase58Error::InvalidBase58Character(ch, pos)) => {
+                        if let pt::Loc::File(_, start, end) = &mut loc {
+                            *start += pos + 1; // location includes quotes
+                            *end = *start;
+                        }
+                        ns.diagnostics.push(Diagnostic::error(
+                            loc,
+                            format!("address literal {} invalid character '{}'", string, ch),
+                        ));
+                    }
+                }
+            }
+            _ => {
+                ns.diagnostics.push(Diagnostic::error(
+                        note.loc,
+                            r#"annotion takes an account, for example '@program_id("BBH7Xi5ddus5EoQhzJLgyodVxJJGkvBRCY5AhBA1jwUr")'"#
+                        .into(),
+                    ));
+            }
         }
     }
 }
