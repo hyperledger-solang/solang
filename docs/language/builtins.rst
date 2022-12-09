@@ -241,8 +241,8 @@ On Substrate, foo will be ``hex"f100"``. On Ethereum this will be ``hex"00000000
 abi.encodeWithSelector(selector, ...)
 ++++++++++++++++++++++++++++++++++++++++++++
 
-ABI encodes the arguments with the function selector (or discriminator for Solana) first. After the selector,
-any number of arguments can be provided.
+ABI encodes the arguments with the function selector, which is known as the discriminator on Solana.
+After the selector, any number of arguments can be provided.
 
 .. code-block:: solidity
 
