@@ -28,7 +28,7 @@ pub fn function_annotations(
     // @bump(param2)
     // constructor(bytes param1, uint8 param2) {}
 
-    let mut parsed_annotations = Vec::new();
+    let mut resolved_annotations = Vec::new();
     let mut bump = None;
     let mut space = None;
     let mut payer = None;
@@ -60,7 +60,7 @@ pub fn function_annotations(
                             ));
                         } else {
                             used_variable(ns, &expr, symtable);
-                            parsed_annotations.push(ConstructorAnnotation::Seed(expr));
+                            resolved_annotations.push(ConstructorAnnotation::Seed(expr));
                         }
                     }
                 }
@@ -88,7 +88,7 @@ pub fn function_annotations(
                         } else {
                             bump = Some(loc);
                             used_variable(ns, &expr, symtable);
-                            parsed_annotations.push(ConstructorAnnotation::Bump(expr));
+                            resolved_annotations.push(ConstructorAnnotation::Bump(expr));
                         }
                     }
                 }
@@ -116,7 +116,7 @@ pub fn function_annotations(
                         } else {
                             space = Some(loc);
                             used_variable(ns, &expr, symtable);
-                            parsed_annotations.push(ConstructorAnnotation::Space(expr));
+                            resolved_annotations.push(ConstructorAnnotation::Space(expr));
                         }
                     }
                 }
@@ -144,7 +144,7 @@ pub fn function_annotations(
                         } else {
                             payer = Some(loc);
                             used_variable(ns, &expr, symtable);
-                            parsed_annotations.push(ConstructorAnnotation::Payer(expr));
+                            resolved_annotations.push(ConstructorAnnotation::Payer(expr));
                         }
                     }
                 }
@@ -159,14 +159,14 @@ pub fn function_annotations(
         };
     }
 
-    if !parsed_annotations.is_empty() && diagnostics.is_empty() && payer.is_none() {
+    if !resolved_annotations.is_empty() && diagnostics.is_empty() && payer.is_none() {
         diagnostics.push(Diagnostic::error(
-            parsed_annotations[0].loc(),
+            resolved_annotations[0].loc(),
             "@payer annotation required for constructor".into(),
         ));
     }
 
     ns.diagnostics.extend(diagnostics);
 
-    ns.functions[function_no].annotations = parsed_annotations;
+    ns.functions[function_no].annotations = resolved_annotations;
 }
