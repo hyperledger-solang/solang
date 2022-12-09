@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import expect from 'expect';
 import { loadContract } from './setup';
 import { PublicKey } from '@solana/web3.js';
@@ -6,7 +8,7 @@ describe('Testing builtins', function () {
     this.timeout(500000);
 
     it('builtins', async function () {
-        let { contract, connection } = await loadContract('builtins', 'builtins.abi');
+        let { contract, connection } = await loadContract('builtins');
 
         // call the constructor
         let res = await contract.functions.hash_ripemd160(new Uint8Array(Buffer.from('Call me Ishmael.', 'utf8')));

@@ -1256,7 +1256,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _gas: IntValue<'b>,
         _value: Option<IntValue<'b>>,
         _salt: Option<IntValue<'b>>,
-        space: Option<IntValue<'b>>,
+        seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         ns: &ast::Namespace,
     ) {
         let address_length = binary
@@ -1296,27 +1296,57 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             "",
         );
 
-        let space = binary.builder.build_int_add(
-            binary.context.i64_type().const_int(
-                ns.contracts[contract_no]
-                    .fixed_layout_size
-                    .to_u64()
-                    .unwrap(),
-                false,
+        let const_program_id = binary.builder.build_pointer_cast(
+            binary.emit_global_string(
+                "const_program_id",
+                ns.contracts[contract_no].program_id.as_ref().unwrap(),
+                true,
             ),
-            space.unwrap_or_else(|| binary.context.i64_type().const_int(1024, false)),
-            "space",
+            binary
+                .module
+                .get_struct_type("struct.SolPubkey")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "const_program_id",
         );
 
         let sol_params = function.get_last_param().unwrap().into_pointer_value();
 
         let create_contract = binary.module.get_function("create_contract").unwrap();
 
-        let arg4 = binary.builder.build_pointer_cast(
-            sol_params,
-            create_contract.get_type().get_param_types()[3].into_pointer_type(),
-            "",
+        let address = binary.builder.build_pointer_cast(
+            address,
+            binary
+                .module
+                .get_struct_type("struct.SolPubkey")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "address",
         );
+
+        let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = seeds {
+            (
+                binary.builder.build_pointer_cast(
+                    seeds,
+                    create_contract.get_type().get_param_types()[4].into_pointer_type(),
+                    "seeds",
+                ),
+                binary.builder.build_int_cast(
+                    len,
+                    create_contract.get_type().get_param_types()[5].into_int_type(),
+                    "len",
+                ),
+            )
+        } else {
+            (
+                create_contract.get_type().get_param_types()[4]
+                    .const_zero()
+                    .into_pointer_value(),
+                create_contract.get_type().get_param_types()[5]
+                    .const_zero()
+                    .into_int_value(),
+            )
+        };
 
         let ret = binary
             .builder
@@ -1325,8 +1355,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 &[
                     payload.into(),
                     malloc_length.into(),
-                    space.into(),
-                    arg4.into(),
+                    address.into(),
+                    const_program_id.into(),
+                    signer_seeds.into(),
+                    signer_seeds_len.into(),
+                    sol_params.into(),
                 ],
                 "",
             )
@@ -1334,34 +1367,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .left()
             .unwrap()
             .into_int_value();
-
-        binary.builder.build_call(
-            binary.module.get_function("__memcpy8").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        address,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        payload,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                binary
-                    .context
-                    .i32_type()
-                    .const_int(ns.address_length as u64 / 8, false)
-                    .into(),
-            ],
-            "",
-        );
 
         let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,

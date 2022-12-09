@@ -11,6 +11,7 @@ mod events;
 mod expression;
 mod external_functions;
 mod reaching_definitions;
+mod solana_deploy;
 mod statements;
 mod storage;
 mod strength_reduce;
@@ -147,8 +148,8 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
                 return;
             }
 
-            // Solana creates a single bundle, EVM has no emitter implemented yet
-            if ns.target != Target::Solana && ns.target != Target::EVM {
+            // EVM has no emitter implemented yet
+            if ns.target != Target::EVM {
                 #[cfg(not(feature = "llvm"))]
                 panic!("LLVM feature is not enabled");
                 #[cfg(feature = "llvm")]
@@ -252,7 +253,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
 
             for cfg_no in 0..all_cfg.len() {
                 if all_cfg[cfg_no].ty == FunctionTy::Constructor && all_cfg[cfg_no].public {
-                    let dispatch_cfg = constructor_dispatch(contract_no, cfg_no, &all_cfg, ns);
+                    let dispatch_cfg = constructor_dispatch(contract_no, cfg_no, &all_cfg, ns, opt);
                     ns.contracts[contract_no].constructor_dispatch = Some(all_cfg.len());
                     all_cfg.push(dispatch_cfg);
                     break;

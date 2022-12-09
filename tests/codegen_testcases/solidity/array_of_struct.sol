@@ -1,5 +1,5 @@
 // RUN: --target solana --emit llvm-ir
-// READ: bundle.ll
+// READ: c.ll
 contract c {
     struct S {
         int8[2] f1;

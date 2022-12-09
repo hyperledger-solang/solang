@@ -1,3 +1,4 @@
+@program_id("5kQ3iJ43gHNDjqmSAtE1vDu18CiSAfNbRe4v5uoobh3U")
 contract hatchling {
     string name;
 
@@ -8,7 +9,7 @@ contract hatchling {
 }
 
 contract adult {
-    function test() public {
-        hatchling h = new hatchling{space: 10240}("luna");
+    function test(address addr) public {
+        hatchling h = new hatchling{address: addr}("luna");
     }
 }

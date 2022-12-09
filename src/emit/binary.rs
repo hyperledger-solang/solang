@@ -99,31 +99,6 @@ impl<'a> Binary<'a> {
         }
     }
 
-    /// Build the LLVM IR for a set of contracts in a single namespace
-    pub fn build_bundle(
-        context: &'a Context,
-        namespaces: &'a [&Namespace],
-        filename: &str,
-        opt: OptimizationLevel,
-        math_overflow_check: bool,
-        generate_debug_info: bool,
-        log_api_return_codes: bool,
-    ) -> Self {
-        assert!(namespaces.iter().all(|ns| ns.target == Target::Solana));
-
-        let std_lib = load_stdlib(context, &Target::Solana);
-        solana::SolanaTarget::build_bundle(
-            context,
-            &std_lib,
-            namespaces,
-            filename,
-            opt,
-            math_overflow_check,
-            generate_debug_info,
-            log_api_return_codes,
-        )
-    }
-
     /// Compile the bin and return the code as bytes. The result is
     /// cached, since this function can be called multiple times (e.g. one for
     /// each time a bin of this type is created).

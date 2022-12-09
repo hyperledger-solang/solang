@@ -437,7 +437,7 @@ sugar for calling functions on it.
 A contract can be created with the new statement, followed by the name of the contract. The
 arguments to the constructor must be provided.
 
-.. include:: ../examples/contract_type.sol
+.. include:: ../examples/substrate/contract_type.sol
   :code: solidity
 
 Since child does not have a constructor, no arguments are needed for the new statement. The variable

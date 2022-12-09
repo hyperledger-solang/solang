@@ -26,7 +26,7 @@ fn simple() {
 
     vm.logs.truncate(0);
 
-    vm.function("test", &[], &[], None);
+    vm.function("test", &[], None);
 
     assert_eq!(vm.logs, "Hello from function");
 }
@@ -83,7 +83,6 @@ fn parameters() {
                 value: BigInt::from(10u8),
             },
         ],
-        &[],
         None,
     );
 
@@ -103,7 +102,6 @@ fn parameters() {
                 value: BigInt::from(102u8),
             },
         ],
-        &[],
         None,
     );
 
@@ -129,7 +127,6 @@ fn returns() {
             width: 32,
             value: BigInt::from(10u8),
         }],
-        &[],
         None,
     );
 
@@ -158,7 +155,6 @@ fn returns() {
             width: 64,
             value: BigInt::from(982451653u64),
         }],
-        &[],
         None,
     );
 
@@ -207,18 +203,18 @@ fn flipper() {
         hex::decode("6fc90ec500000000000000001800000001").unwrap()
     );
 
-    let returns = vm.function("get", &[], &[], None);
+    let returns = vm.function("get", &[], None);
 
     assert_eq!(returns, vec![BorshToken::Bool(true)]);
 
-    vm.function("flip", &[], &[], None);
+    vm.function("flip", &[], None);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000000").unwrap()
     );
 
-    let returns = vm.function("get", &[], &[], None);
+    let returns = vm.function("get", &[], None);
 
     assert_eq!(returns, vec![BorshToken::Bool(false)]);
 }
@@ -262,7 +258,7 @@ fn incrementer() {
         }],
     );
 
-    let returns = vm.function("get", &[], &[], None);
+    let returns = vm.function("get", &[], None);
 
     assert_eq!(
         returns,
@@ -278,11 +274,10 @@ fn incrementer() {
             width: 32,
             value: BigInt::from(5u8),
         }],
-        &[],
         None,
     );
 
-    let returns = vm.function("get", &[], &[], None);
+    let returns = vm.function("get", &[], None);
 
     assert_eq!(
         returns,
@@ -364,7 +359,7 @@ fn dead_storage_bug() {
 
     vm.constructor("deadstorage", &[]);
 
-    let returns = vm.function("v", &[], &[], None);
+    let returns = vm.function("v", &[], None);
 
     assert_eq!(
         returns,
@@ -432,7 +427,6 @@ contract test3 {
                 width: 32,
                 value: BigInt::from(i),
             }],
-            &[],
             None,
         );
 
@@ -457,7 +451,6 @@ contract test3 {
                 },
                 BorshToken::Bool(true),
             ],
-            &[],
             None,
         );
 
@@ -486,7 +479,6 @@ contract test3 {
                 },
                 BorshToken::Bool(false),
             ],
-            &[],
             None,
         );
 
@@ -516,7 +508,6 @@ contract test3 {
                 width: 32,
                 value: BigInt::from(i),
             }],
-            &[],
             None,
         );
 

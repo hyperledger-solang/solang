@@ -179,6 +179,7 @@ pub enum Token<'input> {
     Case,
     Default,
     YulArrow,
+    At,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -324,6 +325,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Case => write!(f, "case"),
             Token::Default => write!(f, "default"),
             Token::YulArrow => write!(f, "->"),
+            Token::At => write!(f, "@"),
         }
     }
 }
@@ -983,6 +985,7 @@ impl<'input> Lexer<'input> {
                         return Some(parse_result);
                     }
                 }
+                Some((i, '@')) => return Some(Ok((i, Token::At, i + 1))),
                 Some((i, ';')) => return Some(Ok((i, Token::Semicolon, i + 1))),
                 Some((i, ',')) => return Some(Ok((i, Token::Comma, i + 1))),
                 Some((i, '(')) => return Some(Ok((i, Token::OpenParenthesis, i + 1))),

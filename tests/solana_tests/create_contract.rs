@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{build_solidity, BorshToken};
+use crate::{
+    account_new, build_solidity, create_program_address, Account, AccountState, BorshToken,
+};
+use base58::{FromBase58, ToBase58};
 
 #[test]
-fn simple_create_contract() {
+fn simple_create_contract_no_seed() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other() public returns (bar1) {
-                bar1 x = new bar1("yo from bar0");
+            function test_other(address foo, address payer) public returns (bar1) {
+                bar1 x = new bar1{address: foo}("yo from bar0", payer);
 
                 return x;
             }
@@ -18,8 +21,10 @@ fn simple_create_contract() {
             }
         }
 
+        @program_id("CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT")
         contract bar1 {
-            constructor(string v) {
+            @payer(payer)
+            constructor(string v, address payer) {
                 print("bar1 says: " + v);
             }
 
@@ -33,9 +38,94 @@ fn simple_create_contract() {
 
     vm.constructor("bar0", &[]);
 
-    let seed = vm.create_empty_account();
+    let program_id: Account = "CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT"
+        .from_base58()
+        .unwrap()
+        .try_into()
+        .unwrap();
 
-    let bar1 = vm.function("test_other", &[], &[&seed], None);
+    let acc = account_new();
+    let payer = account_new();
+
+    println!("new account: {}", acc.to_base58());
+
+    vm.account_data.insert(
+        acc,
+        AccountState {
+            data: Vec::new(),
+            owner: Some(program_id),
+            lamports: 0,
+        },
+    );
+
+    let bar1 = vm.function(
+        "test_other",
+        &[BorshToken::Address(acc), BorshToken::Address(payer)],
+        None,
+    );
+
+    assert_eq!(vm.logs, "bar1 says: yo from bar0");
+
+    assert_eq!(vm.account_data[&acc].data.len(), 16);
+
+    vm.logs.truncate(0);
+
+    vm.function(
+        "call_bar1_at_address",
+        &[bar1[0].clone(), BorshToken::String(String::from("xywoleh"))],
+        None,
+    );
+
+    assert_eq!(vm.logs, "Hello xywoleh");
+}
+
+#[test]
+fn simple_create_contract() {
+    let mut vm = build_solidity(
+        r#"
+        contract bar0 {
+            function test_other(address foo, address payer) public returns (bar1) {
+                bar1 x = new bar1{address: foo}("yo from bar0", payer);
+
+                return x;
+            }
+
+            function call_bar1_at_address(bar1 a, string x) public {
+                a.say_hello(x);
+            }
+        }
+
+        @program_id("CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT")
+        contract bar1 {
+            @payer(pay)
+            constructor(string v, address pay) {
+                print("bar1 says: " + v);
+            }
+
+            function say_hello(string v) public {
+                print("Hello {}".format(v));
+            }
+        }"#,
+    );
+
+    vm.set_program(0);
+
+    vm.constructor("bar0", &[]);
+
+    let program_id: Account = "CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT"
+        .from_base58()
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    let seed = vm.create_pda(&program_id);
+    let payer = account_new();
+
+    let bar1 = vm.function(
+        "test_other",
+        &[BorshToken::Address(seed.0), BorshToken::Address(payer)],
+        None,
+    );
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0");
 
@@ -46,11 +136,78 @@ fn simple_create_contract() {
     vm.function(
         "call_bar1_at_address",
         &[bar1[0].clone(), BorshToken::String(String::from("xywoleh"))],
-        &[],
         None,
     );
 
     assert_eq!(vm.logs, "Hello xywoleh");
+}
+
+#[test]
+fn create_contract_wrong_program_id() {
+    let mut vm = build_solidity(
+        r#"
+        @program_id("CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT")
+        contract bar0 {}
+        "#,
+    );
+
+    vm.constructor("bar0", &[]);
+
+    let program = &vm.programs[0].program;
+    let code = vm.account_data[program].data.clone();
+
+    let mut vm = build_solidity(
+        r#"
+        @program_id("25UGQeMKp1YH8dR1WBtaj26iqfc49xjwfvLnUKavcz8E")
+        contract bar0 {}
+        "#,
+    );
+
+    let program = &vm.programs[0].program;
+    vm.account_data.get_mut(program).unwrap().data = code;
+
+    vm.constructor_expected(7 << 32, "bar0", &[]);
+
+    assert_eq!(
+        vm.logs,
+        "program_id should be CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT"
+    );
+}
+
+#[test]
+fn create_contract_with_payer() {
+    let mut vm = build_solidity(
+        r#"
+        contract x {
+            uint64 v;
+
+            @payer(p)
+            constructor(address p) {
+                v = 102;
+            }
+
+            function f() public returns (uint64) {
+                return v;
+            }
+        }"#,
+    );
+
+    // 'remove' the data account
+    let data = vm.programs[0].data;
+    vm.account_data.get_mut(&data).unwrap().data.truncate(0);
+    let payer = account_new();
+
+    vm.constructor("x", &[BorshToken::Address(payer)]);
+
+    let ret = vm.function("f", &[], None);
+
+    assert_eq!(
+        ret[0],
+        BorshToken::Uint {
+            width: 64,
+            value: 102.into()
+        }
+    );
 }
 
 #[test]
@@ -59,8 +216,8 @@ fn missing_contract() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other() public returns (bar1) {
-                bar1 x = new bar1("yo from bar0");
+            function test_other(address foo) public returns (bar1) {
+                bar1 x = new bar1{address: foo}("yo from bar0");
 
                 return x;
             }
@@ -70,6 +227,7 @@ fn missing_contract() {
             }
         }
 
+        @program_id("7vJKRaKLGCNUPuHWdeHCTknkYf3dHXXEZ6ri7dc6ngeV")
         contract bar1 {
             constructor(string v) {
                 print("bar1 says: " + v);
@@ -85,7 +243,9 @@ fn missing_contract() {
 
     vm.constructor("bar0", &[]);
 
-    let res = vm.function_must_fail("test_other", &[], &[], None);
+    let missing = account_new();
+
+    let res = vm.function_must_fail("test_other", &[BorshToken::Address(missing)], None);
     assert_eq!(res, Ok(64424509440));
 }
 
@@ -94,15 +254,17 @@ fn two_contracts() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other() public returns (bar1) {
-                bar1 x = new bar1("yo from bar0");
-                bar1 y = new bar1("hi from bar0");
+            function test_other(address a, address b) public returns (bar1) {
+                bar1 x = new bar1{address: a}("yo from bar0");
+                bar1 y = new bar1{address: b}("hi from bar0");
 
                 return x;
             }
         }
 
+        @program_id("CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT")
         contract bar1 {
+            @payer(address"3wvhRNAJSDCk5Mub8NEcShszRrHHVDHsuSUdAcL2aaMV")
             constructor(string v) {
                 print("bar1 says: " + v);
             }
@@ -113,10 +275,20 @@ fn two_contracts() {
 
     vm.constructor("bar0", &[]);
 
-    let seed1 = vm.create_empty_account();
-    let seed2 = vm.create_empty_account();
+    let program_id: Account = "CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT"
+        .from_base58()
+        .unwrap()
+        .try_into()
+        .unwrap();
 
-    let _bar1 = vm.function("test_other", &[], &[&seed1, &seed2], None);
+    let seed1 = vm.create_pda(&program_id);
+    let seed2 = vm.create_pda(&program_id);
+
+    let _bar1 = vm.function(
+        "test_other",
+        &[BorshToken::Address(seed1.0), BorshToken::Address(seed2.0)],
+        None,
+    );
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0bar1 says: hi from bar0");
 
@@ -137,4 +309,226 @@ fn account_too_small() {
     vm.account_data.get_mut(&data).unwrap().data.truncate(100);
 
     vm.constructor_expected(5 << 32, "bar", &[]);
+}
+
+#[test]
+fn account_with_space() {
+    let mut vm = build_solidity(
+        r#"
+        contract bar {
+
+            @space(102 * x)
+            @payer(payer)
+            constructor(uint64 x, address payer) {}
+
+            function hello() public returns (bool) {
+                return true;
+            }
+        }
+        "#,
+    );
+
+    let data = vm.stack[0].data;
+
+    vm.account_data.get_mut(&data).unwrap().data.truncate(0);
+
+    let payer = account_new();
+
+    vm.constructor(
+        "bar",
+        &[
+            BorshToken::Uint {
+                width: 64,
+                value: 3.into(),
+            },
+            BorshToken::Address(payer),
+        ],
+    );
+
+    assert_eq!(vm.account_data.get_mut(&data).unwrap().data.len(), 3 * 102);
+
+    let ret = vm.function("hello", &[], None);
+
+    assert_eq!(ret[0], BorshToken::Bool(true));
+}
+
+#[test]
+fn account_with_seed() {
+    let mut vm = build_solidity(
+        r#"
+        contract bar {
+
+            @space(511 + 102)
+            @seed(seed)
+            @payer(payer)
+            constructor(bytes seed, address payer) {}
+
+            function hello() public returns (bool) {
+                return true;
+            }
+        }
+        "#,
+    );
+
+    let program_id = vm.stack[0].program;
+
+    let seed = vm.create_pda(&program_id);
+
+    vm.stack[0].data = seed.0;
+
+    let payer = account_new();
+
+    vm.constructor(
+        "bar",
+        &[BorshToken::Bytes(seed.1), BorshToken::Address(payer)],
+    );
+
+    assert_eq!(
+        vm.account_data.get_mut(&seed.0).unwrap().data.len(),
+        511 + 102
+    );
+
+    let ret = vm.function("hello", &[], None);
+
+    assert_eq!(ret[0], BorshToken::Bool(true));
+}
+
+#[test]
+fn account_with_seed_bump() {
+    let mut vm = build_solidity(
+        r#"
+        contract bar {
+
+            @space(511 + 102)
+            @seed(seed)
+            @bump(b)
+            @payer(payer)
+            constructor(bytes seed, address payer, byte b) {}
+
+            function hello() public returns (bool) {
+                return true;
+            }
+        }
+        "#,
+    );
+
+    let program_id = vm.stack[0].program;
+
+    let mut seed = vm.create_pda(&program_id);
+
+    let bump = seed.1.pop().unwrap();
+
+    vm.stack[0].data = seed.0;
+
+    let payer = account_new();
+
+    vm.constructor(
+        "bar",
+        &[
+            BorshToken::Bytes(seed.1),
+            BorshToken::Address(payer),
+            BorshToken::Uint {
+                width: 8,
+                value: bump.into(),
+            },
+        ],
+    );
+
+    assert_eq!(
+        vm.account_data.get_mut(&seed.0).unwrap().data.len(),
+        511 + 102
+    );
+
+    let ret = vm.function("hello", &[], None);
+
+    assert_eq!(ret[0], BorshToken::Bool(true));
+}
+
+#[test]
+fn account_with_seed_bump_literals() {
+    let mut vm = build_solidity(
+        r#"
+        @program_id("vS5Tf8mnHGbUCMLQWrnvsFvwHLfA5p3yQM3ozxPckn8")
+        contract bar {
+            @space(2 << 8 + 4)
+            @seed("meh")
+            @bump(33) // 33 = ascii !
+            @payer(address"vS5Tf8mnHGbUCMLQWrnvsFvwHLfA5p3yQM3ozxPckn8")
+            constructor() {}
+
+            function hello() public returns (bool) {
+                return true;
+            }
+        }
+        "#,
+    );
+
+    let program_id = vm.stack[0].program;
+
+    let account = create_program_address(&program_id, &[b"meh!"]);
+
+    vm.create_empty_account(&account.0, &program_id);
+
+    vm.stack[0].data = account.0;
+
+    vm.constructor("bar", &[]);
+
+    assert_eq!(
+        vm.account_data.get_mut(&account.0).unwrap().data.len(),
+        8192
+    );
+
+    let ret = vm.function("hello", &[], None);
+
+    assert_eq!(ret[0], BorshToken::Bool(true));
+}
+
+#[test]
+fn create_child() {
+    let mut vm = build_solidity(
+        r#"
+        contract creator {
+            Child public c;
+
+            function create_child(address child, address payer) public {
+                print("Going to create child");
+                c = new Child{address: child}(payer);
+
+                c.say_hello();
+            }
+        }
+
+        @program_id("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT")
+        contract Child {
+            @payer(payer)
+            @space(511 + 7)
+            constructor(address payer) {
+                print("In child constructor");
+            }
+
+            function say_hello() pure public {
+                print("Hello there");
+            }
+        }"#,
+    );
+
+    vm.set_program(0);
+    vm.constructor("creator", &[]);
+
+    let payer = account_new();
+
+    let program_id = vm.stack[0].program;
+
+    let seed = vm.create_pda(&program_id);
+
+    vm.function(
+        "create_child",
+        &[BorshToken::Address(seed.0), BorshToken::Address(payer)],
+        None,
+    );
+
+    assert_eq!(
+        vm.logs,
+        "Going to create childIn child constructorHello there"
+    );
 }

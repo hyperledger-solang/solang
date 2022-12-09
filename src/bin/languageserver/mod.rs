@@ -855,8 +855,11 @@ impl SolangServer {
                 if let Some(optsalt) = &call_args.salt {
                     SolangServer::construct_expr(optsalt, lookup_tbl, symtab, ns);
                 }
-                if let Some(space) = &call_args.space {
-                    SolangServer::construct_expr(space, lookup_tbl, symtab, ns);
+                if let Some(address) = &call_args.address {
+                    SolangServer::construct_expr(address, lookup_tbl, symtab, ns);
+                }
+                if let Some(seeds) = &call_args.seeds {
+                    SolangServer::construct_expr(seeds, lookup_tbl, symtab, ns);
                 }
             }
             ast::Expression::Builtin(_locs, _typ, _builtin, expr) => {
@@ -955,13 +958,24 @@ impl SolangServer {
             }
         }
 
-        for fnc in &ns.functions {
-            if fnc.is_accessor || fnc.loc == pt::Loc::Builtin {
+        for func in &ns.functions {
+            if func.is_accessor || func.loc == pt::Loc::Builtin {
                 // accessor functions are synthetic; ignore them, all the locations are fake
                 continue;
             }
 
-            for parm in &*fnc.params {
+            for note in &func.annotations {
+                match note {
+                    ast::ConstructorAnnotation::Bump(expr)
+                    | ast::ConstructorAnnotation::Seed(expr)
+                    | ast::ConstructorAnnotation::Payer(expr)
+                    | ast::ConstructorAnnotation::Space(expr) => {
+                        SolangServer::construct_expr(expr, lookup_tbl, &func.symtable, ns)
+                    }
+                }
+            }
+
+            for parm in &*func.params {
                 let val = SolangServer::expanded_ty(&parm.ty, ns);
                 lookup_tbl.push(HoverEntry {
                     start: parm.loc.start(),
@@ -970,7 +984,7 @@ impl SolangServer {
                 });
             }
 
-            for ret in &*fnc.returns {
+            for ret in &*func.returns {
                 let val = SolangServer::expanded_ty(&ret.ty, ns);
                 lookup_tbl.push(HoverEntry {
                     start: ret.loc.start(),
@@ -979,8 +993,8 @@ impl SolangServer {
                 });
             }
 
-            for stmt in &fnc.body {
-                SolangServer::construct_stmt(stmt, lookup_tbl, &fnc.symtable, ns);
+            for stmt in &func.body {
+                SolangServer::construct_stmt(stmt, lookup_tbl, &func.symtable, ns);
             }
         }
 

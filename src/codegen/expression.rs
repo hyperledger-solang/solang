@@ -2178,7 +2178,6 @@ pub fn emit_function_call(
                 .accounts
                 .as_ref()
                 .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
-
             let seeds = call_args
                 .seeds
                 .as_ref()
@@ -2217,8 +2216,8 @@ pub fn emit_function_call(
                     payload,
                     value,
                     accounts,
-                    gas,
                     seeds,
+                    gas,
                     callty: ty.clone(),
                 },
             );
@@ -2259,6 +2258,11 @@ pub fn emit_function_call(
                     .accounts
                     .as_ref()
                     .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+                let seeds = call_args
+                    .seeds
+                    .as_ref()
+                    .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+
                 let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
                 } else {
@@ -2313,9 +2317,9 @@ pub fn emit_function_call(
                     Instr::ExternalCall {
                         success: None,
                         accounts,
-                        seeds: None,
                         address,
                         payload,
+                        seeds,
                         value,
                         gas,
                         callty: CallTy::Regular,

@@ -47,38 +47,38 @@ fn packed() {
 
     vm.constructor("bar", &[]);
 
-    vm.function("test", &[], &[], None);
-    vm.function("test2", &[], &[], None);
-    vm.function("test3", &[], &[], None);
-    vm.function("test4", &[], &[], None);
+    vm.function("test", &[], None);
+    vm.function("test2", &[], None);
+    vm.function("test3", &[], None);
+    vm.function("test4", &[], None);
 }
 
 #[test]
 fn inherited() {
     let mut vm = build_solidity(
         r#"
-        contract bar is foo { }
-
         contract foo {
             function test() public {
             }
-        }"#,
+        }
+
+        contract bar is foo { }"#,
     );
 
     vm.constructor("bar", &[]);
 
-    vm.function("test", &[], &[], None);
+    vm.function("test", &[], None);
 
     let mut vm = build_solidity(
         r#"
-            contract bar is foo { }
-
             contract foo {
                 int public test;
-            }"#,
+            }
+
+            contract bar is foo { }"#,
     );
 
     vm.constructor("bar", &[]);
 
-    vm.function("test", &[], &[], None);
+    vm.function("test", &[], None);
 }

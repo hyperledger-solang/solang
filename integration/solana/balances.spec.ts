@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import expect from 'expect';
 import * as web3 from '@solana/web3.js';
 import { loadContract } from './setup';
@@ -6,7 +8,7 @@ describe('Deploy solang contract and test', function () {
     this.timeout(500000);
 
     it('balances', async function () {
-        let { contract, connection, payer, storage } = await loadContract('balances', 'balances.abi');
+        let { contract, connection, payer, storage } = await loadContract('balances');
 
         let res = await contract.functions.get_balance(payer.publicKey.toBytes(), {
             accounts: [payer.publicKey],

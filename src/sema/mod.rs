@@ -8,7 +8,10 @@ use self::{
 use crate::file_resolver::{FileResolver, ResolvedFile};
 use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_variables};
 use num_bigint::BigInt;
-use solang_parser::{doccomment::parse_doccomments, parse, pt};
+use solang_parser::{
+    doccomment::{parse_doccomments, DocComment},
+    parse, pt,
+};
 use std::ffi::OsStr;
 
 mod address;
@@ -22,6 +25,7 @@ pub(crate) mod eval;
 pub(crate) mod expression;
 mod file;
 mod format;
+mod function_annotation;
 mod functions;
 mod mutability;
 mod namespace;
@@ -40,6 +44,34 @@ pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 // small prime number
 pub const SOLANA_BUCKET_SIZE: u64 = 251;
 pub const SOLANA_SPARSE_ARRAY_SIZE: u64 = 1024;
+
+pub struct SourceUnit<'a> {
+    items: Vec<SourceUnitPart<'a>>,
+    contracts: Vec<ContractDefinition<'a>>,
+}
+
+pub struct SourceUnitPart<'a> {
+    pub doccomments: Vec<DocComment>,
+    pub annotations: Vec<&'a pt::Annotation>,
+    pub part: &'a pt::SourceUnitPart,
+}
+
+pub struct ContractPart<'a> {
+    pub doccomments: Vec<DocComment>,
+    pub annotations: Vec<&'a pt::Annotation>,
+    pub part: &'a pt::ContractPart,
+}
+
+pub struct ContractDefinition<'a> {
+    pub contract_no: usize,
+    pub loc: pt::Loc,
+    pub ty: pt::ContractTy,
+    pub doccomments: Vec<DocComment>,
+    pub annotations: Vec<&'a pt::Annotation>,
+    pub name: Option<&'a pt::Identifier>,
+    pub base: Vec<pt::Base>,
+    pub parts: Vec<ContractPart<'a>>,
+}
 
 /// Load a file file from the cache, parse and resolve it. The file must be present in
 /// the cache.
@@ -74,38 +106,26 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
         }
     };
 
-    // We need to iterate over the parsed contracts a few times, so create a temporary vector
-    // This should be done before the contract types are created so the contract type numbers line up
-    let contracts_to_resolve =
-        pt.0.iter()
-            .filter_map(|part| {
-                if let pt::SourceUnitPart::ContractDefinition(def) = part {
-                    Some(def)
-                } else {
-                    None
-                }
-            })
-            .enumerate()
-            .map(|(no, def)| (no + ns.contracts.len(), def.as_ref()))
-            .collect::<Vec<(usize, &pt::ContractDefinition)>>();
+    let tree = collect_annotations_doccomments(&pt, &comments, ns);
 
     // first resolve all the types we can find
-    let fields = types::resolve_typenames(&pt, &comments, file_no, ns);
-
+    let fields = types::resolve_typenames(&tree, file_no, ns);
     // resolve pragmas and imports
-    for part in &pt.0 {
-        match part {
+    for item in &tree.items {
+        match &item.part {
             pt::SourceUnitPart::PragmaDirective(loc, name, value) => {
+                annotions_not_allowed(&item.annotations, "pragma", ns);
                 resolve_pragma(loc, name.as_ref().unwrap(), value.as_ref().unwrap(), ns);
             }
             pt::SourceUnitPart::ImportDirective(import) => {
+                annotions_not_allowed(&item.annotations, "import", ns);
                 resolve_import(import, Some(file), file_no, resolver, ns);
             }
             _ => (),
         }
     }
 
-    contracts::resolve_base_contracts(&contracts_to_resolve, file_no, ns);
+    contracts::resolve_base_contracts(&tree.contracts, file_no, ns);
 
     // once all the types are resolved, we can resolve the structs and events. This is because
     // struct fields or event fields can have types defined elsewhere.
@@ -113,36 +133,38 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
 
     // resolve functions/constants outside of contracts
     let mut resolve_bodies = Vec::new();
-    let mut doc_comment_start = 0;
 
-    for part in &pt.0 {
-        match part {
+    for item in &tree.items {
+        match item.part {
             pt::SourceUnitPart::FunctionDefinition(func) => {
-                let tags = parse_doccomments(&comments, doc_comment_start, func.loc.start());
+                annotions_not_allowed(&item.annotations, "function", ns);
 
-                if let Some(func_no) = functions::function(func, file_no, &tags, ns) {
+                if let Some(func_no) = functions::function(func, file_no, &item.doccomments, ns) {
                     resolve_bodies.push((func_no, func));
-                }
-
-                if let Some(pt::Statement::Block { loc, .. }) = &func.body {
-                    doc_comment_start = loc.end();
-                    continue;
                 }
             }
             pt::SourceUnitPart::VariableDefinition(var) => {
-                let tags = parse_doccomments(&comments, doc_comment_start, var.loc.start());
+                annotions_not_allowed(&item.annotations, "variable", ns);
 
-                variable_decl(None, var, file_no, &tags, None, ns, &mut Symtable::new());
+                variable_decl(
+                    None,
+                    var,
+                    file_no,
+                    &item.doccomments,
+                    None,
+                    ns,
+                    &mut Symtable::new(),
+                );
             }
             _ => (),
         }
-
-        doc_comment_start = part.loc().end();
     }
 
     // Now we can resolve the global using directives
-    for part in &pt.0 {
-        if let pt::SourceUnitPart::Using(using) = part {
+    for item in &tree.items {
+        if let pt::SourceUnitPart::Using(using) = item.part {
+            annotions_not_allowed(&item.annotations, "using", ns);
+
             if let Ok(using) = using::using_decl(using, file_no, None, ns) {
                 ns.using.push(using);
             }
@@ -150,11 +172,11 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
     }
 
     // now resolve the contracts
-    contracts::resolve(&contracts_to_resolve, &comments, file_no, ns);
+    contracts::resolve(&tree.contracts, file_no, ns);
 
     // now we can resolve the body of functions outside of contracts
     for (func_no, func) in resolve_bodies {
-        let _ = statements::resolve_function_body(func, file_no, None, func_no, ns);
+        let _ = statements::resolve_function_body(func, &[], file_no, None, func_no, ns);
     }
 
     // check for stray semi colons
@@ -382,6 +404,122 @@ fn resolve_pragma(
                 "unknown pragma '{}' with value '{}' ignored",
                 name.name, value.string
             ),
+        ));
+    }
+}
+
+/// Walk through the parse tree and collect all the annotations and doccomments for
+/// each item, also inside contracts.
+fn collect_annotations_doccomments<'a>(
+    pt: &'a pt::SourceUnit,
+    comments: &'a [pt::Comment],
+    ns: &mut ast::Namespace,
+) -> SourceUnit<'a> {
+    let mut items = Vec::new();
+    let mut annotations: Vec<&pt::Annotation> = Vec::new();
+    let mut contract_no = ns.contracts.len();
+    let mut contracts = Vec::new();
+    let mut doc_comment_start = 0;
+
+    for part in &pt.0 {
+        if let pt::SourceUnitPart::Annotation(anno) = part {
+            annotations.push(anno);
+            continue;
+        }
+
+        let loc = part.loc();
+
+        let doccomments = parse_doccomments(comments, doc_comment_start, loc.start());
+
+        if let pt::SourceUnitPart::ContractDefinition(contract) = part {
+            let mut parts = Vec::new();
+            let mut parts_annotations: Vec<&pt::Annotation> = Vec::new();
+            let mut doc_comment_start = contract.loc.start();
+
+            for part in &contract.parts {
+                match part {
+                    pt::ContractPart::Annotation(note) => parts_annotations.push(note),
+                    _ => {
+                        let tags =
+                            parse_doccomments(comments, doc_comment_start, part.loc().start());
+
+                        parts.push(ContractPart {
+                            part,
+                            doccomments: tags,
+                            annotations: parts_annotations,
+                        });
+                        parts_annotations = Vec::new();
+                    }
+                }
+
+                if let pt::ContractPart::FunctionDefinition(f) = &part {
+                    if let Some(pt::Statement::Block { loc, .. }) = &f.body {
+                        doc_comment_start = loc.end();
+                        continue;
+                    }
+                }
+
+                doc_comment_start = part.loc().end();
+            }
+
+            if !parts_annotations.is_empty() {
+                for note in parts_annotations {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        note.loc,
+                        "annotations should precede 'constructor' or other item".into(),
+                    ));
+                }
+            }
+
+            contracts.push(ContractDefinition {
+                contract_no,
+                loc: contract.loc,
+                ty: contract.ty.clone(),
+                annotations,
+                doccomments,
+                name: contract.name.as_ref(),
+                base: contract.base.clone(),
+                parts,
+            });
+
+            contract_no += 1;
+        } else {
+            items.push(SourceUnitPart {
+                doccomments,
+                annotations,
+                part,
+            });
+        }
+        annotations = Vec::new();
+
+        if let pt::SourceUnitPart::FunctionDefinition(f) = part {
+            if let Some(pt::Statement::Block { loc, .. }) = &f.body {
+                doc_comment_start = loc.end();
+                continue;
+            }
+        }
+
+        doc_comment_start = part.loc().end();
+    }
+
+    if !annotations.is_empty() {
+        for note in annotations {
+            ns.diagnostics.push(ast::Diagnostic::error(
+                note.loc,
+                "annotations should precede 'contract' or other item".into(),
+            ));
+        }
+    }
+
+    SourceUnit { items, contracts }
+}
+
+/// If an item does not allow annotations, then generate diagnostic errors for any annotions
+fn annotions_not_allowed(annotations: &[&pt::Annotation], item: &str, ns: &mut ast::Namespace) {
+    for note in annotations {
+        ns.diagnostics.push(ast::Diagnostic::error(
+            note.loc,
+            format!("annotations not allowed on {}", item),
         ));
     }
 }

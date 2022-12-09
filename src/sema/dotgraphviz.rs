@@ -115,7 +115,7 @@ impl Dot {
         if !tags.is_empty() {
             let labels = tags
                 .iter()
-                .map(|tag| format!("{}: {}", tag.tag, tag.value.replace('\n', " ")))
+                .map(|tag| format!("{}: {}", tag.tag, tag.value.to_string().escape_debug()))
                 .collect();
 
             self.add_node(
@@ -205,6 +205,32 @@ impl Dot {
                 Some(func_node),
                 Some(String::from("returns")),
             );
+        }
+
+        // Annotations
+        if !func.annotations.is_empty() {
+            let node = self.add_node(
+                Node::new("annotations", vec!["annotations".into()]),
+                Some(func_node),
+                Some(String::from("annotations")),
+            );
+
+            for note in &func.annotations {
+                match note {
+                    ConstructorAnnotation::Seed(expr) => {
+                        self.add_expression(expr, Some(func), ns, node, "seed".into());
+                    }
+                    ConstructorAnnotation::Space(expr) => {
+                        self.add_expression(expr, Some(func), ns, node, "space".into());
+                    }
+                    ConstructorAnnotation::Bump(expr) => {
+                        self.add_expression(expr, Some(func), ns, node, "bump".into());
+                    }
+                    ConstructorAnnotation::Payer(expr) => {
+                        self.add_expression(expr, Some(func), ns, node, "payer".into());
+                    }
+                };
+            }
         }
 
         // bases
@@ -1197,8 +1223,8 @@ impl Dot {
         if let Some(salt) = &call_args.salt {
             self.add_expression(salt, func, ns, node, String::from("salt"));
         }
-        if let Some(space) = &call_args.space {
-            self.add_expression(space, func, ns, node, String::from("space"));
+        if let Some(address) = &call_args.address {
+            self.add_expression(address, func, ns, node, String::from("address"));
         }
         if let Some(accounts) = &call_args.accounts {
             self.add_expression(accounts, func, ns, node, String::from("accounts"));
@@ -2295,7 +2321,10 @@ impl Namespace {
             let diagnostics = dot.add_node(Node::new("diagnostics", Vec::new()), None, None);
 
             for diag in self.diagnostics.iter() {
-                let mut labels = vec![diag.message.to_string(), format!("level {:?}", diag.level)];
+                let mut labels = vec![
+                    diag.message.to_string().replace('"', "\\\""),
+                    format!("level {:?}", diag.level),
+                ];
 
                 labels.push(self.loc_to_string(&diag.loc));
 

@@ -83,23 +83,12 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     }
 
     if !ns.diagnostics.any_errors() {
-        let context = inkwell::context::Context::create();
-
         // let's try and emit
         match ns.target {
-            Target::Solana => {
-                solang::emit::binary::Binary::build_bundle(
-                    &context,
-                    &[&ns],
-                    &filename,
-                    Default::default(),
-                    false,
-                    false,
-                    false,
-                );
-            }
-            Target::Substrate { .. } => {
+            Target::Solana | Target::Substrate { .. } => {
                 for contract in &ns.contracts {
+                    let context = inkwell::context::Context::create();
+
                     if contract.instantiable {
                         solang::emit::binary::Binary::build(
                             &context,

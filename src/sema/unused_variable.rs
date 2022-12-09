@@ -206,11 +206,14 @@ fn check_call_args(ns: &mut Namespace, call_args: &CallArgs, symtable: &mut Symt
     if let Some(value) = &call_args.value {
         used_variable(ns, value.as_ref(), symtable);
     }
-    if let Some(space) = &call_args.space {
-        used_variable(ns, space.as_ref(), symtable);
+    if let Some(address) = &call_args.address {
+        used_variable(ns, address.as_ref(), symtable);
     }
     if let Some(accounts) = &call_args.accounts {
         used_variable(ns, accounts.as_ref(), symtable);
+    }
+    if let Some(seeds) = &call_args.seeds {
+        used_variable(ns, seeds.as_ref(), symtable);
     }
 }
 

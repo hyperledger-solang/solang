@@ -3245,6 +3245,16 @@ fn constructor(
         return Err(());
     }
 
+    if ns.target == Target::Solana && ns.contracts[no].program_id.is_none() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            format!(
+                "in order to instantiate contract '{}', a @program_id is required on contract '{}'",
+                ns.contracts[no].name, ns.contracts[no].name
+            ),
+        ));
+    }
+
     // check for circular references
     if circular_reference(no, context_contract_no, ns) {
         diagnostics.push(Diagnostic::error(
@@ -3397,7 +3407,7 @@ pub fn constructor_named_args(
 ) -> Result<Expression, ()> {
     let (ty, call_args, _) = collect_call_args(ty, diagnostics)?;
 
-    let call_args = parse_call_args(&call_args, false, context, ns, symtable, diagnostics)?;
+    let call_args = parse_call_args(loc, &call_args, false, context, ns, symtable, diagnostics)?;
 
     let no = match ns.resolve_type(context.file_no, context.contract_no, false, ty, diagnostics)? {
         Type::Contract(n) => n,
@@ -3671,6 +3681,26 @@ pub fn type_name_expr(
                 Ok(Expression::InterfaceId(*loc, *n))
             }
         }
+        (Type::Contract(no), "program_id") => {
+            let contract = &ns.contracts[*no];
+
+            if let Some(v) = &contract.program_id {
+                Ok(Expression::NumberLiteral(
+                    *loc,
+                    Type::Address(false),
+                    BigInt::from_bytes_be(Sign::Plus, v),
+                ))
+            } else {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "{} '{}' has no declared program_id",
+                        contract.ty, contract.name
+                    ),
+                ));
+                Err(())
+            }
+        }
         (Type::Contract(no), "creationCode") | (Type::Contract(no), "runtimeCode") => {
             let contract_no = match context.contract_no {
                 Some(contract_no) => contract_no,
@@ -3776,7 +3806,8 @@ pub fn new(
         }
         Type::String | Type::DynamicBytes => {}
         Type::Contract(n) => {
-            let call_args = parse_call_args(&call_args, false, context, ns, symtable, diagnostics)?;
+            let call_args =
+                parse_call_args(loc, &call_args, false, context, ns, symtable, diagnostics)?;
 
             return constructor(loc, *n, args, call_args, context, ns, symtable, diagnostics);
         }
@@ -5368,7 +5399,7 @@ fn call_function_type(
         mutability,
     } = ty
     {
-        let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
+        let call_args = parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
 
         if let Some(value) = &call_args.value {
             if !value.const_zero(ns) && !matches!(mutability, Mutability::Payable(_)) {
@@ -6419,7 +6450,7 @@ fn method_call_pos_args(
     }
 
     if let Type::Contract(ext_contract_no) = &var_ty.deref_any() {
-        let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
+        let call_args = parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
 
         let mut errors = Diagnostics::default();
         let mut name_matches: Vec<usize> = Vec::new();
@@ -6638,7 +6669,8 @@ fn method_call_pos_args(
         };
 
         if let Some(ty) = ty {
-            let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
+            let call_args =
+                parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
 
             if ty != CallTy::Regular && call_args.value.is_some() {
                 diagnostics.push(Diagnostic::error(
@@ -6886,7 +6918,7 @@ fn method_call_named_args(
     let var_ty = var_expr.ty();
 
     if let Type::Contract(external_contract_no) = &var_ty.deref_any() {
-        let call_args = parse_call_args(call_args, true, context, ns, symtable, diagnostics)?;
+        let call_args = parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
 
         let mut arguments = HashMap::new();
 
@@ -7371,6 +7403,7 @@ pub fn collect_call_args<'a>(
 
 /// Parse call arguments for external calls
 fn parse_call_args(
+    loc: &pt::Loc,
     call_args: &[&pt::NamedArgument],
     external_call: bool,
     context: &ExprContext,
@@ -7464,12 +7497,12 @@ fn parse_call_args(
                     diagnostics,
                 )?));
             }
-            "space" => {
+            "address" => {
                 if ns.target != Target::Solana {
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
                         format!(
-                            "'space' not permitted for external calls or constructors on {}",
+                            "'address' not permitted for external calls or constructors on {}",
                             ns.target
                         ),
                     ));
@@ -7479,12 +7512,12 @@ fn parse_call_args(
                 if external_call {
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
-                        "'space' not valid for external calls".to_string(),
+                        "'address' not valid for external calls".to_string(),
                     ));
                     return Err(());
                 }
 
-                let ty = Type::Uint(64);
+                let ty = Type::Address(false);
 
                 let expr = expression(
                     &arg.expr,
@@ -7495,7 +7528,7 @@ fn parse_call_args(
                     ResolveTo::Type(&ty),
                 )?;
 
-                res.space = Some(Box::new(expr.cast(
+                res.address = Some(Box::new(expr.cast(
                     &arg.expr.loc(),
                     &ty,
                     true,
@@ -7621,6 +7654,15 @@ fn parse_call_args(
                 return Err(());
             }
         }
+    }
+
+    // address is required on solana constructors
+    if ns.target == Target::Solana && !external_call && res.address.is_none() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            format!("'address' call argument required on {}", ns.target),
+        ));
+        return Err(());
     }
 
     Ok(res)

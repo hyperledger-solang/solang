@@ -1,7 +1,5 @@
-contract a {
-    function test() public {
-        b v = new b();
-
+contract A {
+    function test(B v) public {
         // the following four lines are equivalent to "uint32 res = v.foo(3,5);"
 
         // Note that the signature is only hashed and not parsed. So, ensure that the
@@ -22,8 +20,8 @@ contract a {
     }
 }
 
-contract b {
-    function foo(uint32 a, uint32 b) public returns (uint32) {
+contract B {
+    function foo(uint32 a, uint32 b) pure public returns (uint32) {
         return a + b;
     }
 }

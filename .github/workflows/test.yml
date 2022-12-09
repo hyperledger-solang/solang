@@ -266,8 +266,6 @@ jobs:
         node-version: '14'
     - name: Rust Stable
       run: rustup default stable
-    - name: Setup yarn
-      run: npm install -g yarn
     - uses: actions/download-artifact@master
       with:
         name: solang-linux-x86-64

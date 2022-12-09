@@ -31,7 +31,7 @@ fn lamports() {
 
     vm.account_data.get_mut(&vm.origin).unwrap().lamports = 17672630920854456917u64;
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function("test", &[], None);
 
     assert_eq!(
         returns[0],
@@ -64,7 +64,7 @@ fn owner() {
 
     vm.constructor("c", &[]);
 
-    let returns = vm.function("test", &[], &[], None);
+    let returns = vm.function("test", &[], None);
 
     let owner = vm.stack[0].program.to_vec();
 
@@ -112,7 +112,6 @@ fn data() {
                 width: 32,
                 value: BigInt::from(i),
             }],
-            &[],
             None,
         );
 
@@ -129,7 +128,7 @@ fn data() {
         );
     }
 
-    let returns = vm.function("test2", &[], &[], None);
+    let returns = vm.function("test2", &[], None);
 
     let this = &vm.stack[0].data;
 

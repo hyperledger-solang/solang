@@ -16,7 +16,7 @@ fn constants_hash_tests() {
     );
 
     runtime.constructor("tester", &[]);
-    runtime.function("test", &[], &[], None);
+    runtime.function("test", &[], None);
 
     let mut runtime = build_solidity(
         r##"
@@ -30,7 +30,7 @@ fn constants_hash_tests() {
     );
 
     runtime.constructor("tester", &[]);
-    runtime.function("test", &[], &[], None);
+    runtime.function("test", &[], None);
 
     let mut runtime = build_solidity(
         r##"
@@ -44,7 +44,7 @@ fn constants_hash_tests() {
     );
 
     runtime.constructor("tester", &[]);
-    runtime.function("test", &[], &[], None);
+    runtime.function("test", &[], None);
 }
 
 #[test]
@@ -64,7 +64,6 @@ fn hash_tests() {
     let hash = runtime.function(
         "test",
         &[BorshToken::Bytes(b"Hello, World!".to_vec())],
-        &[],
         None,
     );
 
@@ -90,7 +89,6 @@ fn hash_tests() {
     let hash = runtime.function(
         "test",
         &[BorshToken::Bytes(b"Hello, World!".to_vec())],
-        &[],
         None,
     );
 
@@ -117,7 +115,6 @@ fn hash_tests() {
     let hash = runtime.function(
         "test",
         &[BorshToken::Bytes(b"Hello, World!".to_vec())],
-        &[],
         None,
     );
 

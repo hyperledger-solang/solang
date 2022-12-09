@@ -13,6 +13,7 @@ contract C {
 	}
 }
 
+@program_id("A2tWahcQqU7Mic5o4nGWPKt9rQaLVyh7cyF4MmCXksJt")
 contract D {
 	constructor() payable {}
 	function func() payable public {}

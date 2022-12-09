@@ -93,7 +93,7 @@ impl AvailableExpressionSet {
                 value,
                 gas,
                 salt,
-                space,
+                address,
                 ..
             } => {
                 let _ = self.gen_expression(encoded_args, ave, cst);
@@ -108,7 +108,7 @@ impl AvailableExpressionSet {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
 
-                if let Some(expr) = space {
+                if let Some(expr) = address {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
             }
@@ -319,7 +319,8 @@ impl AvailableExpressionSet {
                 value,
                 gas,
                 salt,
-                space,
+                address,
+                seeds,
             } => {
                 let new_value = value
                     .as_ref()
@@ -329,7 +330,11 @@ impl AvailableExpressionSet {
                     .as_ref()
                     .map(|expr| self.regenerate_expression(expr, ave, cst).1);
 
-                let new_space = space
+                let new_address = address
+                    .as_ref()
+                    .map(|expr| self.regenerate_expression(expr, ave, cst).1);
+
+                let new_seeds = seeds
                     .as_ref()
                     .map(|expr| self.regenerate_expression(expr, ave, cst).1);
 
@@ -342,7 +347,8 @@ impl AvailableExpressionSet {
                     value: new_value,
                     gas: self.regenerate_expression(gas, ave, cst).1,
                     salt: new_salt,
-                    space: new_space,
+                    address: new_address,
+                    seeds: new_seeds,
                 }
             }
 
@@ -350,11 +356,11 @@ impl AvailableExpressionSet {
                 success,
                 address,
                 accounts,
-                seeds,
                 payload,
                 value,
                 gas,
                 callty,
+                seeds,
             } => {
                 let new_address = address
                     .as_ref()

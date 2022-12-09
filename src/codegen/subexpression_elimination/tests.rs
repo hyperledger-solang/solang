@@ -340,7 +340,8 @@ fn string() {
         value: Some(compare.clone()),
         gas: concat2.clone(),
         salt: Some(compare2.clone()),
-        space: None,
+        address: None,
+        seeds: None,
     };
 
     let mut ave = AvailableExpression::default();

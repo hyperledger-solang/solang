@@ -118,7 +118,8 @@ pub enum Instr {
         value: Option<Expression>,
         gas: Expression,
         salt: Option<Expression>,
-        space: Option<Expression>,
+        address: Option<Expression>,
+        seeds: Option<Expression>,
     },
     /// Call external functions. If the call fails, set the success failure
     /// or abort if this is None
@@ -198,6 +199,7 @@ pub enum ReturnCode {
     AbiEncodingInvalid,
     InvalidDataError,
     AccountDataTooSmall,
+    InvalidProgramId,
 }
 
 impl Instr {
@@ -270,7 +272,7 @@ impl Instr {
                 value,
                 gas,
                 salt,
-                space,
+                address,
                 ..
             } => {
                 encoded_args.recurse(cx, f);
@@ -284,7 +286,7 @@ impl Instr {
                     expr.recurse(cx, f);
                 }
 
-                if let Some(expr) = space {
+                if let Some(expr) = address {
                     expr.recurse(cx, f);
                 }
             }
@@ -678,7 +680,13 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Variable(_, _, res) => format!("%{}", self.vars[res].id.name),
+            Expression::Variable(_, _, res) => {
+                if let Some(var) = self.vars.get(res) {
+                    format!("%{}", var.id.name)
+                } else {
+                    panic!("error: non-existing variable {} in CFG", res);
+                }
+            }
             Expression::Load(_, _, expr) => {
                 format!("(load {})", self.expr_to_string(contract, ns, expr))
             }
@@ -757,20 +765,36 @@ impl ControlFlowGraph {
             Expression::Complement(_, _, e) => format!("~{}", self.expr_to_string(contract, ns, e)),
             Expression::UnaryMinus(_, _, e) => format!("-{}", self.expr_to_string(contract, ns, e)),
             Expression::Poison => "☠".to_string(),
-            Expression::AllocDynamicBytes(_, ty, size, None) => format!(
-                "(alloc {} len {})",
-                ty.to_string(ns),
-                self.expr_to_string(contract, ns, size)
-            ),
-            Expression::AllocDynamicBytes(_, ty, size, Some(init)) => format!(
-                "(alloc {} {} {})",
-                ty.to_string(ns),
-                self.expr_to_string(contract, ns, size),
-                match str::from_utf8(init) {
-                    Ok(s) => format!("\"{}\"", s.escape_debug()),
-                    Err(_) => format!("hex\"{}\"", hex::encode(init)),
-                }
-            ),
+            Expression::AllocDynamicBytes(_, ty, size, None) => {
+                let ty = if let Type::Slice(ty) = ty {
+                    format!("slice {}", ty.to_string(ns))
+                } else {
+                    ty.to_string(ns)
+                };
+
+                format!(
+                    "(alloc {} len {})",
+                    ty,
+                    self.expr_to_string(contract, ns, size)
+                )
+            }
+            Expression::AllocDynamicBytes(_, ty, size, Some(init)) => {
+                let ty = if let Type::Slice(ty) = ty {
+                    format!("slice {}", ty.to_string(ns))
+                } else {
+                    ty.to_string(ns)
+                };
+
+                format!(
+                    "(alloc {} {} {})",
+                    ty,
+                    self.expr_to_string(contract, ns, size),
+                    match str::from_utf8(init) {
+                        Ok(s) => format!("\"{}\"", s.escape_debug()),
+                        Err(_) => format!("hex\"{}\"", hex::encode(init)),
+                    }
+                )
+            }
             Expression::StringCompare(_, l, r) => format!(
                 "(strcmp ({}) ({}))",
                 self.location_to_string(contract, ns, l),
@@ -1148,9 +1172,10 @@ impl ControlFlowGraph {
                 gas,
                 salt,
                 value,
-                space,
+                address,seeds
+
             } => format!(
-                "%{}, {} = constructor salt:{} value:{} gas:{} space:{} {} (encoded buffer: {}, buffer len: {})",
+                "%{}, {} = constructor salt:{} value:{} gas:{} address:{} seeds:{} {} (encoded buffer: {}, buffer len: {})",
                 self.vars[res].id.name,
                 match success {
                     Some(i) => format!("%{}", self.vars[i].id.name),
@@ -1165,9 +1190,14 @@ impl ControlFlowGraph {
                     None => "".to_string(),
                 },
                 self.expr_to_string(contract, ns, gas),
-                match space {
-                    Some(space) => self.expr_to_string(contract, ns, space),
+                match address {
+                    Some(address) => self.expr_to_string(contract, ns, address),
                     None => "".to_string(),
+                },
+                if let Some(seeds) = seeds {
+                    self.expr_to_string(contract, ns, seeds)
+                } else {
+                    String::new()
                 },
                 ns.contracts[*contract_no].name,
                 self.expr_to_string(contract, ns, encoded_args),

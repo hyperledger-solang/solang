@@ -66,7 +66,6 @@ fn verify() {
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs.clone()),
         ],
-        &[],
         None,
     );
 
@@ -97,7 +96,6 @@ fn verify() {
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs.clone()),
         ],
-        &[],
         None,
     );
 
@@ -127,7 +125,6 @@ fn verify() {
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs),
         ],
-        &[],
         None,
     );
 

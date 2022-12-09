@@ -75,6 +75,25 @@ impl Vartable {
         }
     }
 
+    /// Add variable with known variable no (e.g. from different function)
+    pub fn add_known(&mut self, var_no: usize, id: &pt::Identifier, ty: &Type) {
+        let id = Vartable::make_unique(&self.vars, id, var_no);
+
+        assert!(
+            self.vars
+                .insert(
+                    var_no,
+                    Variable {
+                        id,
+                        ty: ty.clone(),
+                        storage: Storage::Local,
+                    },
+                )
+                .is_none(),
+            "var_no should not already exist"
+        );
+    }
+
     fn make_unique(vars: &Vars, id: &pt::Identifier, no: usize) -> pt::Identifier {
         let mut id = id.clone();
 

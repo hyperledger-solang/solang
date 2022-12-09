@@ -153,28 +153,6 @@ pub fn compile(
     (results, ns)
 }
 
-/// Build a single binary out of multiple contracts. This is only possible on Solana
-#[cfg(feature = "llvm")]
-pub fn compile_many<'a>(
-    context: &'a inkwell::context::Context,
-    namespaces: &'a [&sema::ast::Namespace],
-    filename: &str,
-    opt: inkwell::OptimizationLevel,
-    math_overflow_check: bool,
-    generate_debug_info: bool,
-    log_api_return_codes: bool,
-) -> emit::binary::Binary<'a> {
-    emit::binary::Binary::build_bundle(
-        context,
-        namespaces,
-        filename,
-        opt,
-        math_overflow_check,
-        generate_debug_info,
-        log_api_return_codes,
-    )
-}
-
 /// Parse and resolve the Solidity source code provided in src, for the target chain as specified in target.
 /// The result is a list of resolved contracts (if successful) and a list of compiler warnings, errors and
 /// informational messages like `found contact N`.

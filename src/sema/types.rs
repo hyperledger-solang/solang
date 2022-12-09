@@ -1,24 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::tags::resolve_tags;
-use super::SOLANA_BUCKET_SIZE;
+use super::{annotions_not_allowed, ast, SourceUnit, SOLANA_BUCKET_SIZE};
 use super::{
     ast::{
         ArrayLength, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
         StructType, Symbol, Tag, Type, UserTypeDecl,
     },
     diagnostics::Diagnostics,
-    SOLANA_SPARSE_ARRAY_SIZE,
+    ContractDefinition, SOLANA_SPARSE_ARRAY_SIZE,
 };
 use crate::Target;
+use base58::{FromBase58, FromBase58Error};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
-use solang_parser::{
-    doccomment::{parse_doccomments, DocComment},
-    pt,
-    pt::CodeLocation,
-};
+use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
 use std::collections::HashSet;
 use std::{fmt::Write, ops::Mul};
 
@@ -45,8 +42,7 @@ struct ResolveStructFields<'a> {
 /// Resolve all the types we can find (enums, structs, contracts). structs can have other
 /// structs as fields, including ones that have not been declared yet.
 pub fn resolve_typenames<'a>(
-    s: &'a pt::SourceUnit,
-    comments: &[pt::Comment],
+    tree: &'a SourceUnit,
     file_no: usize,
     ns: &mut Namespace,
 ) -> ResolveFields<'a> {
@@ -55,25 +51,15 @@ pub fn resolve_typenames<'a>(
         events: Vec::new(),
     };
 
-    // Find all the types: contracts, enums, and structs. Either in a contract or not
-    // We do not resolve the struct fields yet as we do not know all the possible types until we're
-    // done
-    let mut doc_comment_start = 0;
-
-    for part in &s.0 {
-        match part {
-            pt::SourceUnitPart::ContractDefinition(def) => {
-                let tags = parse_doccomments(comments, doc_comment_start, def.loc.start());
-
-                resolve_contract(def, comments, &tags, file_no, &mut delay, ns);
-            }
+    for item in &tree.items {
+        match &item.part {
             pt::SourceUnitPart::EnumDefinition(def) => {
-                let tags = parse_doccomments(comments, doc_comment_start, def.loc.start());
+                annotions_not_allowed(&item.annotations, "enum", ns);
 
-                let _ = enum_decl(def, file_no, &tags, None, ns);
+                let _ = enum_decl(def, file_no, &item.doccomments, None, ns);
             }
             pt::SourceUnitPart::StructDefinition(def) => {
-                let tags = parse_doccomments(comments, doc_comment_start, def.loc.start());
+                annotions_not_allowed(&item.annotations, "struct", ns);
 
                 let struct_no = ns.structs.len();
 
@@ -99,15 +85,15 @@ pub fn resolve_typenames<'a>(
                     delay.structs.push(ResolveStructFields {
                         struct_no,
                         pt: def,
-                        comments: tags,
+                        comments: item.doccomments.clone(),
                         contract: None,
                     });
                 }
             }
             pt::SourceUnitPart::EventDefinition(def) => {
-                let event_no = ns.events.len();
+                annotions_not_allowed(&item.annotations, "event", ns);
 
-                let tags = parse_doccomments(comments, doc_comment_start, def.loc.start());
+                let event_no = ns.events.len();
 
                 if let Some(Symbol::Event(events)) = ns.variable_symbols.get_mut(&(
                     file_no,
@@ -138,25 +124,21 @@ pub fn resolve_typenames<'a>(
                 delay.events.push(ResolveEventFields {
                     event_no,
                     pt: def,
-                    comments: tags,
+                    comments: item.doccomments.clone(),
                     contract: None,
                 });
             }
             pt::SourceUnitPart::TypeDefinition(ty) => {
-                let tags = parse_doccomments(comments, doc_comment_start, ty.loc.start());
+                annotions_not_allowed(&item.annotations, "type", ns);
 
-                type_decl(ty, file_no, &tags, None, ns);
-            }
-            pt::SourceUnitPart::FunctionDefinition(f) => {
-                if let Some(pt::Statement::Block { loc, .. }) = &f.body {
-                    doc_comment_start = loc.end();
-                    continue;
-                }
+                type_decl(ty, file_no, &item.doccomments, None, ns);
             }
             _ => (),
         }
+    }
 
-        doc_comment_start = part.loc().end();
+    for contract in &tree.contracts {
+        resolve_contract(contract, file_no, &mut delay, ns);
     }
 
     delay
@@ -277,30 +259,29 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 
 /// Resolve all the types in a contract
 fn resolve_contract<'a>(
-    def: &'a pt::ContractDefinition,
-    comments: &[pt::Comment],
-    contract_tags: &[DocComment],
+    def: &'a ContractDefinition,
     file_no: usize,
     delay: &mut ResolveFields<'a>,
     ns: &mut Namespace,
 ) -> bool {
-    let contract_no = ns.contracts.len();
+    let name = def.name.as_ref().unwrap();
+
+    let contract_no = def.contract_no;
+
     let doc = resolve_tags(
-        def.name.as_ref().unwrap().loc.file_no(),
+        name.loc.file_no(),
         "contract",
-        contract_tags,
+        &def.doccomments,
         None,
         None,
         None,
         ns,
     );
 
-    ns.contracts.push(Contract::new(
-        &def.name.as_ref().unwrap().name,
-        def.ty.clone(),
-        doc,
-        def.loc,
-    ));
+    ns.contracts
+        .push(Contract::new(&name.name, def.ty.clone(), doc, def.loc));
+
+    contract_annotations(contract_no, &def.annotations, ns);
 
     let mut broken = !ns.add_symbol(
         file_no,
@@ -319,21 +300,19 @@ fn resolve_contract<'a>(
         ));
     }
 
-    let mut doc_comment_start = def.loc.start();
-
     for parts in &def.parts {
-        match parts {
+        match parts.part {
             pt::ContractPart::EnumDefinition(ref e) => {
-                let tags = parse_doccomments(comments, doc_comment_start, e.loc.start());
+                annotions_not_allowed(&parts.annotations, "enum", ns);
 
-                if !enum_decl(e, file_no, &tags, Some(contract_no), ns) {
+                if !enum_decl(e, file_no, &parts.doccomments, Some(contract_no), ns) {
                     broken = true;
                 }
             }
             pt::ContractPart::StructDefinition(ref pt) => {
-                let struct_no = ns.structs.len();
+                annotions_not_allowed(&parts.annotations, "struct", ns);
 
-                let tags = parse_doccomments(comments, doc_comment_start, pt.loc.start());
+                let struct_no = ns.structs.len();
 
                 if ns.add_symbol(
                     file_no,
@@ -357,7 +336,7 @@ fn resolve_contract<'a>(
                     delay.structs.push(ResolveStructFields {
                         struct_no,
                         pt,
-                        comments: tags,
+                        comments: parts.doccomments.clone(),
                         contract: Some(contract_no),
                     });
                 } else {
@@ -365,7 +344,7 @@ fn resolve_contract<'a>(
                 }
             }
             pt::ContractPart::EventDefinition(ref pt) => {
-                let tags = parse_doccomments(comments, doc_comment_start, pt.loc.start());
+                annotions_not_allowed(&parts.annotations, "event", ns);
 
                 let event_no = ns.events.len();
 
@@ -399,28 +378,102 @@ fn resolve_contract<'a>(
                 delay.events.push(ResolveEventFields {
                     event_no,
                     pt,
-                    comments: tags,
+                    comments: parts.doccomments.clone(),
                     contract: Some(contract_no),
                 });
             }
             pt::ContractPart::TypeDefinition(ty) => {
-                let tags = parse_doccomments(comments, doc_comment_start, ty.loc.start());
+                annotions_not_allowed(&parts.annotations, "type", ns);
 
-                type_decl(ty, file_no, &tags, Some(contract_no), ns);
-            }
-            pt::ContractPart::FunctionDefinition(f) => {
-                if let Some(pt::Statement::Block { loc, .. }) = &f.body {
-                    doc_comment_start = loc.end();
-                    continue;
-                }
+                type_decl(ty, file_no, &parts.doccomments, Some(contract_no), ns);
             }
             _ => (),
         }
-
-        doc_comment_start = parts.loc().end();
     }
 
     broken
+}
+
+/// Resolve annotations attached to a contract
+fn contract_annotations(
+    contract_no: usize,
+    annotations: &[&pt::Annotation],
+    ns: &mut ast::Namespace,
+) {
+    let mut seen_program_id = None;
+
+    for note in annotations {
+        if ns.target != Target::Solana || note.id.name != "program_id" {
+            ns.diagnostics.push(Diagnostic::error(
+                note.loc,
+                format!(
+                    "unknown annotation '{}' on contract {}",
+                    note.id.name, ns.contracts[contract_no].name,
+                ),
+            ));
+            continue;
+        }
+
+        if let Some(prev_loc) = seen_program_id {
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                note.loc,
+                "duplicate program_id annotation".into(),
+                prev_loc,
+                "location of previous program_id annotation".into(),
+            ));
+
+            continue;
+        }
+
+        match &note.value {
+            pt::Expression::StringLiteral(values) if values.len() == 1 => {
+                let string = &values[0].string;
+                let mut loc = values[0].loc;
+
+                match string.from_base58() {
+                    Ok(v) => {
+                        if v.len() != ns.address_length {
+                            ns.diagnostics.push(Diagnostic::error(
+                                loc,
+                                format!(
+                                    "address literal {} incorrect length of {}",
+                                    string,
+                                    v.len()
+                                ),
+                            ));
+                        } else {
+                            seen_program_id = Some(note.loc);
+
+                            ns.contracts[contract_no].program_id = Some(v);
+                        }
+                    }
+                    Err(FromBase58Error::InvalidBase58Length) => {
+                        ns.diagnostics.push(Diagnostic::error(
+                            loc,
+                            format!("address literal {} invalid base58 length", string),
+                        ));
+                    }
+                    Err(FromBase58Error::InvalidBase58Character(ch, pos)) => {
+                        if let pt::Loc::File(_, start, end) = &mut loc {
+                            *start += pos + 1; // location includes quotes
+                            *end = *start;
+                        }
+                        ns.diagnostics.push(Diagnostic::error(
+                            loc,
+                            format!("address literal {} invalid character '{}'", string, ch),
+                        ));
+                    }
+                }
+            }
+            _ => {
+                ns.diagnostics.push(Diagnostic::error(
+                        note.loc,
+                            r#"annotion takes an account, for example '@program_id("BBH7Xi5ddus5EoQhzJLgyodVxJJGkvBRCY5AhBA1jwUr")'"#
+                        .into(),
+                    ));
+            }
+        }
+    }
 }
 
 /// Resolve a parsed struct definition. The return value will be true if the entire
@@ -884,11 +937,13 @@ impl Type {
             Type::UserType(n) => format!("usertype {}", ns.user_types[*n]),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(_, ty) => format!("{} storage", ty.to_string(ns)),
-            Type::Void => "void".to_owned(),
-            Type::Unreachable => "unreachable".to_owned(),
+            Type::Void => "void".into(),
+            Type::Unreachable => "unreachable".into(),
+            // A slice of bytes1 is like bytes
+            Type::Slice(ty) if **ty == Type::Bytes(1) => "bytes".into(),
             Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
-            Type::Unresolved => "unresolved".to_owned(),
-            Type::BufferPointer => "buffer_pointer".to_owned(),
+            Type::Unresolved => "unresolved".into(),
+            Type::BufferPointer => "buffer_pointer".into(),
         }
     }
 

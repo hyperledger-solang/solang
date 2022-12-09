@@ -3,17 +3,16 @@
 // DISCLAIMER: This file is an example of how to mint and transfer NFTs on Solana. It is not production ready and has not been audited for security.
 // Use it at your own risk.
 
-import {loadContractWithExistingConnectionAndPayer, loadContract, newConnectionAndAccounts} from "./setup";
-import {Connection, Keypair, PublicKey, SystemProgram} from "@solana/web3.js";
-import {publicKeyToHex, HexToPublicKey} from "@solana/solidity";
-import {createMint, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID} from "@solana/spl-token";
+import { loadContractWithExistingConnectionAndPayer, loadContract, newConnectionAndAccounts } from "./setup";
+import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { createMint, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import expect from "expect";
 
-describe('Simple collectible', function() {
+describe('Simple collectible', function () {
     this.timeout(500000);
 
     it('nft example', async function mint_nft() {
-        const [connection, payer, program] = newConnectionAndAccounts();
+        const [connection, payer, program] = newConnectionAndAccounts('SimpleCollectible');
         const mint_authority = Keypair.generate();
         const freezeAuthority = Keypair.generate();
 
@@ -41,10 +40,8 @@ describe('Simple collectible', function() {
         // Each contract in this example is a unique NFT
         const contract = await loadContractWithExistingConnectionAndPayer(
             connection,
-            program,
             payer,
             "SimpleCollectible",
-            "SimpleCollectible.abi",
             [mint.toBytes(), metadata_authority.publicKey.toBytes()]
         );
 

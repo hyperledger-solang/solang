@@ -672,12 +672,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             value,
             gas,
             salt,
-            space,
+            address,
+            seeds,
         } => {
             let encoded_args = expression(target, bin, encoded_args, &w.vars, function, ns);
             let encoded_args_len = expression(target, bin, encoded_args_len, &w.vars, function, ns);
 
-            let address = bin.build_alloca(function, bin.address_type(ns), "address");
+            let address_stack = bin.build_alloca(function, bin.address_type(ns), "address");
 
             let gas = expression(target, bin, gas, &w.vars, function, ns).into_int_value();
             let value = value
@@ -686,9 +687,80 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let salt = salt
                 .as_ref()
                 .map(|v| expression(target, bin, v, &w.vars, function, ns).into_int_value());
-            let space = space
-                .as_ref()
-                .map(|v| expression(target, bin, v, &w.vars, function, ns).into_int_value());
+
+            if let Some(address) = address {
+                let address =
+                    expression(target, bin, address, &w.vars, function, ns).into_array_value();
+
+                bin.builder.build_store(address_stack, address);
+            }
+
+            let seeds = if let Some(seeds) = seeds {
+                let len = seeds.ty().array_length().unwrap().to_u64().unwrap();
+                let seeds_ty = bin.llvm_type(
+                    &Type::Slice(Box::new(Type::Slice(Box::new(Type::Bytes(1))))),
+                    ns,
+                );
+
+                let output_seeds = bin.build_array_alloca(
+                    function,
+                    seeds_ty,
+                    bin.context.i64_type().const_int(len, false),
+                    "seeds",
+                );
+
+                if let Expression::ArrayLiteral(_, _, _, exprs) = seeds {
+                    for i in 0..len {
+                        let val =
+                            expression(target, bin, &exprs[i as usize], &w.vars, function, ns);
+
+                        let seed_count = val
+                            .get_type()
+                            .into_pointer_type()
+                            .get_element_type()
+                            .into_array_type()
+                            .len();
+
+                        let dest = unsafe {
+                            bin.builder.build_gep(
+                                output_seeds,
+                                &[
+                                    bin.context.i32_type().const_int(i, false),
+                                    bin.context.i32_type().const_zero(),
+                                ],
+                                "dest",
+                            )
+                        };
+
+                        let val = bin.builder.build_pointer_cast(
+                            val.into_pointer_value(),
+                            dest.get_type().get_element_type().into_pointer_type(),
+                            "seeds",
+                        );
+
+                        bin.builder.build_store(dest, val);
+
+                        let dest = unsafe {
+                            bin.builder.build_gep(
+                                output_seeds,
+                                &[
+                                    bin.context.i32_type().const_int(i, false),
+                                    bin.context.i32_type().const_int(1, false),
+                                ],
+                                "dest",
+                            )
+                        };
+
+                        let val = bin.context.i64_type().const_int(seed_count as u64, false);
+
+                        bin.builder.build_store(dest, val);
+                    }
+                }
+
+                Some((output_seeds, bin.context.i64_type().const_int(len, false)))
+            } else {
+                None
+            };
 
             let success = match success {
                 Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
@@ -701,7 +773,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 success,
                 *contract_no,
                 bin.builder.build_pointer_cast(
-                    address,
+                    address_stack,
                     bin.context.i8_type().ptr_type(AddressSpace::Generic),
                     "address",
                 ),
@@ -710,11 +782,11 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 gas,
                 value,
                 salt,
-                space,
+                seeds,
                 ns,
             );
 
-            w.vars.get_mut(res).unwrap().value = bin.builder.build_load(address, "address");
+            w.vars.get_mut(res).unwrap().value = bin.builder.build_load(address_stack, "address");
         }
         Instr::ExternalCall {
             success,

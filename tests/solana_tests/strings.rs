@@ -25,10 +25,9 @@ fn storage_string_length() {
     let _ = vm.function(
         "setString",
         &[BorshToken::String("coffee_tastes_good".to_string())],
-        &[],
         None,
     );
-    let returns = vm.function("getLength", &[], &[], None);
+    let returns = vm.function("getLength", &[], None);
 
     assert_eq!(
         returns[0],
@@ -62,7 +61,7 @@ fn load_string_vector() {
     );
 
     vm.constructor("Testing", &[]);
-    let returns = vm.function("testLength", &[], &[], None);
+    let returns = vm.function("testLength", &[], None);
     assert_eq!(
         returns[0],
         BorshToken::Uint {
@@ -91,7 +90,6 @@ fn load_string_vector() {
             width: 32,
             value: BigInt::zero(),
         }],
-        &[],
         None,
     );
     assert_eq!(returns[0], BorshToken::String("tea".to_string()));
@@ -102,7 +100,6 @@ fn load_string_vector() {
             width: 32,
             value: BigInt::one(),
         }],
-        &[],
         None,
     );
     assert_eq!(returns[0], BorshToken::String("coffe".to_string()));
@@ -113,7 +110,6 @@ fn load_string_vector() {
             width: 32,
             value: BigInt::from(2u8),
         }],
-        &[],
         None,
     );
     assert_eq!(returns[0], BorshToken::String("sixsix".to_string()));

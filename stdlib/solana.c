@@ -10,8 +10,6 @@ extern void __init_heap();
 
 // The address 'SysvarC1ock11111111111111111111111111111111' base58 decoded
 static const SolPubkey clock_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0xc7, 0x74, 0xc9, 0x28, 0x56, 0x63, 0x98, 0x69, 0x1d, 0x5e, 0xb6, 0x8b, 0x5e, 0xb8, 0xa3, 0x9b, 0x4b, 0x6d, 0x5c, 0x73, 0x55, 0x5b, 0x21, 0x00, 0x00, 0x00, 0x00};
-// The address '1111111111111111111111111111111111111111111' base58 decoded
-static const SolPubkey system_address = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 // The address 'Sysvar1nstructions1111111111111111111111111' base58 decoded
 static const SolPubkey instructions_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0x7b, 0xd1, 0x66, 0x35, 0xda, 0xd4, 0x04, 0x55, 0xfd, 0xc2, 0xc0, 0xc1, 0x24, 0xc6, 0x8f, 0x21, 0x56, 0x75, 0xa5, 0xdb, 0xba, 0xcb, 0x5f, 0x08, 0x00, 0x00, 0x00};
 // The address 'Ed25519SigVerify111111111111111111111111111' base58 decoded
@@ -120,112 +118,36 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
 }
 
 // This function creates a new address and calls its constructor.
-uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t space, SolParameters *params)
+uint64_t create_contract(uint8_t *input, uint32_t input_len, SolPubkey *address,
+                         SolPubkey *program_id, const SolSignerSeeds *seeds,
+                         int seeds_len, SolParameters *params)
 {
-    SolAccountInfo *new_acc = NULL;
-    const SolSignerSeed *seed = NULL;
-
-    // find a suitable new account and seed
-    for (int i = 0; i < params->seeds_len; i++)
-    {
-        SolAccountInfo *acc = &params->ka[i + 1];
-
-        if (acc->data_len == 0 && SolPubkey_same(&system_address, acc->owner))
-        {
-            new_acc = acc;
-            seed = &params->seeds[i];
-        }
-    }
-
-    if (!new_acc)
-    {
-        sol_log("create contract requires a new account");
-
-        return ERROR_NEW_ACCOUNT_NEEDED;
-    }
-
-    SolAccountMeta create_metas[2] = {
-        {new_acc->key, true, true},
-        {params->account_id, true, true},
-    };
-
-    // FIXME we need to add our own seed if we have one in order to fund/approve it
-    SolSignerSeeds signer_seeds[1] = {
-        {seed, 1},
-    };
-
-    struct allocate
-    {
-        uint32_t instruction_allocate;
-        uint64_t space;
-    } __attribute__((__packed__)) allocate = {
-        8,
-        space,
-    };
-
-    struct assign
-    {
-        uint32_t instruction_assign;
-        SolPubkey owner;
-    } __attribute__((__packed__)) assign = {
-        1,
-        *params->ka[params->ka_cur].owner,
-    };
-
-    SolInstruction create_instruction = {
-        .program_id = (SolPubkey *)&system_address,
-        .accounts = create_metas,
-        .account_len = SOL_ARRAY_SIZE(create_metas),
-        .data = (uint8_t *)&allocate,
-        .data_len = sizeof(allocate),
-    };
-
-    uint64_t ret = sol_invoke_signed_c(&create_instruction, params->ka, params->ka_num,
-                                       signer_seeds, SOL_ARRAY_SIZE(signer_seeds));
-
-    if (ret != 0)
-    {
-        sol_log("failed to allocate new account");
-
-        sol_panic();
-    }
-
-    create_instruction.data = (uint8_t *)&assign;
-    create_instruction.data_len = sizeof(assign);
-
-    ret = sol_invoke_signed_c(&create_instruction, params->ka, params->ka_num,
-                              signer_seeds, SOL_ARRAY_SIZE(signer_seeds));
-
-    if (ret != 0)
-    {
-        sol_log("failed to assign new account");
-
-        sol_panic();
-    }
-
-    // Our new account now has some space
-    new_acc->data_len = space;
-
     SolAccountMeta metas[10];
     const SolInstruction instruction = {
-        .program_id = (SolPubkey *)params->program_id,
+        .program_id = program_id,
         .accounts = metas,
         .account_len = params->ka_num,
         .data = input,
         .data_len = input_len,
     };
 
-    metas[0].pubkey = new_acc->key;
-    metas[0].is_writable = true;
-    metas[0].is_signer = false;
-
     int meta_no = 1;
+    bool seen_new_address = false;
 
     for (int account_no = 0; account_no < params->ka_num; account_no++)
     {
-        const SolAccountInfo *acc = &params->ka[account_no];
+        SolAccountInfo *acc = &params->ka[account_no];
 
-        if (!SolPubkey_same(new_acc->key, acc->key))
+        // The address for the new contract should go first. Note that there
+        // may be duplicate entries, the order of those does not matter.
+        if (!seen_new_address && SolPubkey_same(address, acc->key))
+        {
+            metas[0].pubkey = acc->key;
+            metas[0].is_writable = acc->is_writable;
+            metas[0].is_signer = acc->is_signer;
+            seen_new_address = true;
+        }
+        else
         {
             metas[meta_no].pubkey = acc->key;
             metas[meta_no].is_writable = acc->is_writable;
@@ -234,12 +156,15 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, uint64_t space, Sol
         }
     }
 
-    params->ka_last_called = new_acc;
+    if (!seen_new_address)
+    {
+        return ERROR_NEW_ACCOUNT_NEEDED;
+    }
 
-    __memcpy8(input, new_acc->key->x, SIZE_PUBKEY / 8);
+    __memcpy8(input, address, SIZE_PUBKEY / 8);
     __memcpy8(input + SIZE_PUBKEY, params->account_id->x, SIZE_PUBKEY / 8);
 
-    return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
+    return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, seeds, seeds_len);
 }
 
 uint64_t *sol_account_lamport(

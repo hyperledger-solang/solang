@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 import expect from 'expect';
 import { loadContract, loadContractWithExistingConnectionAndPayer } from './setup';
 
@@ -5,12 +7,11 @@ describe('Testing calls', function () {
     this.timeout(100000);
 
     it('external_call', async function () {
-        const { contract: caller, connection, payer, program } = await loadContract('caller', 'caller.abi');
+        const { contract: caller, connection, payer, program } = await loadContract('caller');
 
-        const callee = await loadContractWithExistingConnectionAndPayer(connection, program, payer, 'callee', 'callee.abi');
+        const callee = await loadContractWithExistingConnectionAndPayer(connection, payer, 'callee');
 
-
-        const callee2 = await loadContractWithExistingConnectionAndPayer(connection, program, payer, 'callee2', 'callee2.abi');
+        const callee2 = await loadContractWithExistingConnectionAndPayer(connection, payer, 'callee2');
 
         await callee.functions.set_x(102);
 
@@ -28,7 +29,7 @@ describe('Testing calls', function () {
 
         await caller.functions.do_call(address_callee, 13123, {
             writableAccounts: [callee.storage],
-            accounts: [program.publicKey]
+            accounts: [program.publicKey, callee.program]
         });
 
         res = await callee.functions.get_x({ simulate: true });
@@ -37,12 +38,12 @@ describe('Testing calls', function () {
 
         res = await caller.functions.do_call2(address_callee, 20000, {
             simulate: true,
-            accounts: [callee.storage, program.publicKey]
+            accounts: [callee.storage, program.publicKey, callee.program]
         });
 
         expect(Number(res.result)).toBe(33123);
 
-        let all_keys = [program.publicKey, callee.storage, callee2.storage];
+        let all_keys = [program.publicKey, callee.storage, callee2.storage, callee.program, callee2.program];
 
         res = await caller.functions.do_call3(address_callee, address_callee2, [3, 5, 7, 9], "yo", { accounts: all_keys });
         console.log(res.logs);

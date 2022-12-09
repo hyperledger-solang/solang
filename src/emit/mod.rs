@@ -265,7 +265,7 @@ pub trait TargetRuntime<'a> {
         gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
         salt: Option<IntValue<'b>>,
-        space: Option<IntValue<'b>>,
+        seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         ns: &Namespace,
     );
 

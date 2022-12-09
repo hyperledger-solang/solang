@@ -1,13 +1,12 @@
 import expect from 'expect';
 import { loadContract } from './setup';
 import crypto from 'crypto';
-import { publicKeyToHex } from '@solana/solidity';
 
 describe('Simple solang tests', function () {
     this.timeout(500000);
 
     it('flipper', async function () {
-        let { contract } = await loadContract('flipper', 'flipper.abi', [true]);
+        let { contract } = await loadContract('flipper', [true]);
 
         let res = await contract.functions.get({ simulate: true });
 
@@ -21,7 +20,7 @@ describe('Simple solang tests', function () {
     });
 
     it('primitives', async function () {
-        let { contract, payer } = await loadContract('primitives', 'primitives.abi', []);
+        let { contract, payer } = await loadContract('primitives', []);
 
         // TEST Basic enums
         // in ethereum, an enum is described as an uint8 so can't use the enum
@@ -151,7 +150,7 @@ describe('Simple solang tests', function () {
     });
 
     it('store', async function () {
-        const { contract } = await loadContract('store', 'store.abi', []);
+        const { contract } = await loadContract('store', []);
 
         let res = await contract.functions.get_values1({ simulate: true });
 
@@ -238,7 +237,7 @@ describe('Simple solang tests', function () {
     });
 
     it('structs', async function () {
-        const { contract } = await loadContract('store', 'store.abi', []);
+        const { contract } = await loadContract('store', []);
 
         await contract.functions.set_foo1();
 
@@ -366,18 +365,18 @@ describe('Simple solang tests', function () {
                 "Antidisestablishmentarianism",
                 [true, "Pseudopseudohypoparathyroidism"],
             ]
-        .toString());
+                .toString());
     });
 
 
     it('account storage too small constructor', async function () {
-        await expect(loadContract('store', 'store.abi', [], 100))
+        await expect(loadContract('store', [], 100))
             .rejects
             .toThrowError(new Error('account data too small for instruction'));
     });
 
     it('account storage too small dynamic alloc', async function () {
-        const { contract } = await loadContract('store', 'store.abi', [], 233);
+        const { contract } = await loadContract('store', [], 233);
 
         // storage.sol needs 168 bytes on constructor, more for string data
 
@@ -388,7 +387,7 @@ describe('Simple solang tests', function () {
     });
 
     it('account storage too small dynamic realloc', async function () {
-        const { contract } = await loadContract('store', 'store.abi', [], 233);
+        const { contract } = await loadContract('store', [], 233);
 
         async function push_until_bang() {
             for (let i = 0; i < 100; i++) {
@@ -403,7 +402,7 @@ describe('Simple solang tests', function () {
     });
 
     it('arrays in account storage', async function () {
-        const { contract } = await loadContract('arrays', 'arrays.abi', []);
+        const { contract } = await loadContract('arrays', []);
 
         let users = [];
 
@@ -434,7 +433,7 @@ describe('Simple solang tests', function () {
         expect(res.result.toString()).toStrictEqual(user.toString());
 
         // @ts-ignore
-        const perms : string[] = user[3];
+        const perms: string[] = user[3];
         if (perms.length > 0) {
 
             let p = perms[Math.floor(Math.random() * perms.length)];

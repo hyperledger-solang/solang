@@ -1,31 +1,28 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use num_bigint::BigInt;
-use num_traits::Zero;
-use solang_parser::{
-    doccomment::parse_doccomments,
-    pt::{self, CodeLocation, Statement},
-};
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::convert::TryInto;
-use tiny_keccak::{Hasher, Keccak};
-
 use super::{
-    ast,
+    annotions_not_allowed, ast,
     diagnostics::Diagnostics,
     expression::{compatible_mutability, match_constructor_to_args, ExprContext},
     functions, statements,
     symtable::Symtable,
-    using, variables,
+    using, variables, ContractDefinition,
 };
 #[cfg(feature = "llvm")]
 use crate::emit;
 use crate::sema::unused_variable::emit_warning_local_variable;
+use num_bigint::BigInt;
+use num_traits::Zero;
+use solang_parser::pt::{self, CodeLocation};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::convert::TryInto;
+use tiny_keccak::{Hasher, Keccak};
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
     pub fn new(name: &str, ty: pt::ContractTy, tags: Vec<ast::Tag>, loc: pt::Loc) -> Self {
         let instantiable = matches!(ty, pt::ContractTy::Contract(_));
+
         ast::Contract {
             name: name.to_owned(),
             loc,
@@ -49,6 +46,7 @@ impl ast::Contract {
             instantiable,
             dispatch_no: 0,
             constructor_dispatch: None,
+            program_id: None,
         }
     }
 
@@ -88,31 +86,28 @@ impl ast::Contract {
 }
 
 /// Resolve the following contract
-pub fn resolve(
-    contracts: &[(usize, &pt::ContractDefinition)],
-    comments: &[pt::Comment],
-    file_no: usize,
-    ns: &mut ast::Namespace,
-) {
+pub fn resolve(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::Namespace) {
     resolve_using(contracts, file_no, ns);
 
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
     let mut delayed: ResolveLater = Default::default();
 
-    for (contract_no, def) in contracts {
-        resolve_declarations(def, comments, file_no, *contract_no, ns, &mut delayed);
+    for def in contracts {
+        resolve_declarations(def, file_no, ns, &mut delayed);
     }
 
     // Resolve base contract constructor arguments on contract definition (not constructor definitions)
     resolve_base_args(contracts, file_no, ns);
 
     // Now we have all the declarations, we can handle base contracts
-    for (contract_no, _) in contracts {
-        check_inheritance(*contract_no, ns);
-        substrate_requires_public_functions(*contract_no, ns);
-        substrate_unique_constructor_names(*contract_no, ns);
-        check_mangled_function_names(*contract_no, ns);
+    for contract in contracts {
+        let contract_no = contract.contract_no;
+
+        check_inheritance(contract_no, ns);
+        substrate_requires_public_functions(contract_no, ns);
+        substrate_unique_constructor_names(contract_no, ns);
+        check_mangled_function_names(contract_no, ns);
     }
 
     // Now we can resolve the initializers
@@ -121,8 +116,8 @@ pub fn resolve(
     // Now we can resolve the bodies
     if !resolve_bodies(delayed.function_bodies, file_no, ns) {
         // only if we could resolve all the bodies
-        for (contract_no, _) in contracts {
-            check_base_args(*contract_no, ns);
+        for contract in contracts {
+            check_base_args(contract.contract_no, ns);
         }
     }
 }
@@ -130,32 +125,32 @@ pub fn resolve(
 /// Resolve the base contracts list and check for cycles. Returns true if no
 /// issues where found.
 pub fn resolve_base_contracts(
-    contracts: &[(usize, &pt::ContractDefinition)],
+    contracts: &[ContractDefinition],
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
     let mut diagnostics = Diagnostics::default();
 
-    for (contract_no, def) in contracts {
-        for base in &def.base {
-            if ns.contracts[*contract_no].is_library() {
+    for contract in contracts {
+        for base in &contract.base {
+            if ns.contracts[contract.contract_no].is_library() {
                 ns.diagnostics.push(ast::Diagnostic::error(
                     base.loc,
                     format!(
                         "library '{}' cannot have a base contract",
-                        ns.contracts[*contract_no].name
+                        ns.contracts[contract.contract_no].name
                     ),
                 ));
                 continue;
             }
             let name = &base.name;
             if let Ok(no) = ns.resolve_contract_with_namespace(file_no, name, &mut diagnostics) {
-                if no == *contract_no {
+                if no == contract.contract_no {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         name.loc,
                         format!("contract '{}' cannot have itself as a base contract", name),
                     ));
-                } else if ns.contracts[*contract_no]
+                } else if ns.contracts[contract.contract_no]
                     .bases
                     .iter()
                     .any(|e| e.contract_no == no)
@@ -164,29 +159,29 @@ pub fn resolve_base_contracts(
                         name.loc,
                         format!(
                             "contract '{}' duplicate base '{}'",
-                            ns.contracts[*contract_no].name, name
+                            ns.contracts[contract.contract_no].name, name
                         ),
                     ));
-                } else if is_base(*contract_no, no, ns) {
+                } else if is_base(contract.contract_no, no, ns) {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         name.loc,
                         format!(
                             "base '{}' from contract '{}' is cyclic",
-                            name, ns.contracts[*contract_no].name
+                            name, ns.contracts[contract.contract_no].name
                         ),
                     ));
-                } else if ns.contracts[*contract_no].is_interface()
+                } else if ns.contracts[contract.contract_no].is_interface()
                     && !ns.contracts[no].is_interface()
                 {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         name.loc,
                         format!(
                             "interface '{}' cannot have {} '{}' as a base",
-                            ns.contracts[*contract_no].name, ns.contracts[no].ty, name
+                            ns.contracts[contract.contract_no].name, ns.contracts[no].ty, name
                         ),
                     ));
                 } else if ns.contracts[no].is_library() {
-                    let contract = &ns.contracts[*contract_no];
+                    let contract = &ns.contracts[contract.contract_no];
 
                     ns.diagnostics.push(ast::Diagnostic::error(
                         name.loc,
@@ -199,7 +194,7 @@ pub fn resolve_base_contracts(
                     // We do not resolve the constructor arguments here, since we have not
                     // resolved any variables. This means no constants can be used on base
                     // constructor args, so we delay this until resolve_base_args()
-                    ns.contracts[*contract_no].bases.push(ast::Base {
+                    ns.contracts[contract.contract_no].bases.push(ast::Base {
                         loc: base.loc,
                         contract_no: no,
                         constructor: None,
@@ -214,18 +209,14 @@ pub fn resolve_base_contracts(
 
 /// Resolve the base contracts list and check for cycles. Returns true if no
 /// issues where found.
-fn resolve_base_args(
-    contracts: &[(usize, &pt::ContractDefinition)],
-    file_no: usize,
-    ns: &mut ast::Namespace,
-) {
+fn resolve_base_args(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::Namespace) {
     let mut diagnostics = Diagnostics::default();
 
     // for every contract, if we have a base which resolved successfully, resolve any constructor args
-    for (contract_no, def) in contracts {
+    for contract in contracts {
         let context = ExprContext {
             function_no: None,
-            contract_no: Some(*contract_no),
+            contract_no: Some(contract.contract_no),
             file_no,
             unchecked: false,
             constant: false,
@@ -233,11 +224,11 @@ fn resolve_base_args(
             yul_function: false,
         };
 
-        for base in &def.base {
+        for base in &contract.base {
             let name = &base.name;
             if let Ok(base_no) = ns.resolve_contract_with_namespace(file_no, name, &mut diagnostics)
             {
-                if let Some(pos) = ns.contracts[*contract_no]
+                if let Some(pos) = ns.contracts[contract.contract_no]
                     .bases
                     .iter()
                     .position(|e| e.contract_no == base_no)
@@ -255,7 +246,7 @@ fn resolve_base_args(
                             &mut symtable,
                             &mut diagnostics,
                         ) {
-                            ns.contracts[*contract_no].bases[pos].constructor =
+                            ns.contracts[contract.contract_no].bases[pos].constructor =
                                 Some((constructor_no, args));
                         }
                     }
@@ -907,6 +898,7 @@ struct DelayedResolveFunction<'a> {
     function_no: usize,
     contract_no: usize,
     function: &'a pt::FunctionDefinition,
+    annotations: Vec<&'a pt::Annotation>,
 }
 
 #[derive(Default)]
@@ -921,58 +913,44 @@ struct ResolveLater<'a> {
 /// Resolve functions declarations, constructor declarations, and contract variables
 /// This returns a list of function bodies to resolve
 fn resolve_declarations<'a>(
-    def: &'a pt::ContractDefinition,
-    comments: &[pt::Comment],
+    def: &'a ContractDefinition,
     file_no: usize,
-    contract_no: usize,
     ns: &mut ast::Namespace,
     delayed: &mut ResolveLater<'a>,
 ) {
     ns.diagnostics.push(ast::Diagnostic::debug(
         def.loc,
-        format!("found {} '{}'", def.ty, def.name.as_ref().unwrap().name),
+        format!("found {} '{}'", def.ty, def.name.unwrap().name),
     ));
 
     let mut function_no_bodies = Vec::new();
 
     // resolve state variables. We may need a constant to resolve the array
     // dimension of a function argument.
-    delayed.initializers.extend(variables::contract_variables(
-        def,
-        comments,
-        file_no,
-        contract_no,
-        ns,
-    ));
+    delayed
+        .initializers
+        .extend(variables::contract_variables(def, file_no, ns));
 
     // resolve function signatures
-    let mut doc_comment_start = def.loc.start();
-
     for part in &def.parts {
-        if let pt::ContractPart::FunctionDefinition(ref f) = part {
-            let tags = parse_doccomments(comments, doc_comment_start, f.loc.start());
-
+        if let pt::ContractPart::FunctionDefinition(ref f) = &part.part {
             if let Some(function_no) =
-                functions::contract_function(def, f, &tags, file_no, contract_no, ns)
+                functions::contract_function(def, f, &part.doccomments, file_no, ns)
             {
                 if f.body.is_some() {
                     delayed.function_bodies.push(DelayedResolveFunction {
-                        contract_no,
+                        contract_no: def.contract_no,
                         function_no,
                         function: f.as_ref(),
+                        annotations: part.annotations.clone(),
                     });
                 } else {
+                    annotions_not_allowed(&part.annotations, &format!("{} with no body", f.ty), ns);
+
                     function_no_bodies.push(function_no);
                 }
             }
-
-            if let Some(Statement::Block { loc, .. }) = &f.body {
-                doc_comment_start = loc.end();
-                continue;
-            }
         }
-
-        doc_comment_start = part.loc().end();
     }
 
     if let pt::ContractTy::Contract(loc) = &def.ty {
@@ -1001,16 +979,15 @@ fn resolve_declarations<'a>(
 }
 
 /// Resolve the using declarations in a contract
-fn resolve_using(
-    contracts: &[(usize, &pt::ContractDefinition)],
-    file_no: usize,
-    ns: &mut ast::Namespace,
-) {
-    for (contract_no, def) in contracts {
-        for part in &def.parts {
-            if let pt::ContractPart::Using(using) = part {
-                if let Ok(using) = using::using_decl(using, file_no, Some(*contract_no), ns) {
-                    ns.contracts[*contract_no].using.push(using);
+fn resolve_using(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::Namespace) {
+    for contract in contracts {
+        for part in &contract.parts {
+            if let pt::ContractPart::Using(using) = &part.part {
+                annotions_not_allowed(&part.annotations, "using", ns);
+
+                if let Ok(using) = using::using_decl(using, file_no, Some(contract.contract_no), ns)
+                {
+                    ns.contracts[contract.contract_no].using.push(using);
                 }
             }
         }
@@ -1029,10 +1006,18 @@ fn resolve_bodies(
         contract_no,
         function_no,
         function,
+        annotations,
     } in bodies
     {
-        if statements::resolve_function_body(function, file_no, Some(contract_no), function_no, ns)
-            .is_err()
+        if statements::resolve_function_body(
+            function,
+            &annotations,
+            file_no,
+            Some(contract_no),
+            function_no,
+            ns,
+        )
+        .is_err()
         {
             broken = true;
         } else if !ns.diagnostics.any_errors() {

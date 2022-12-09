@@ -11,6 +11,7 @@ use super::expression::{
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::sema::builtin;
+use crate::sema::function_annotation::function_annotations;
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use crate::sema::yul::resolve_inline_assembly;
@@ -25,6 +26,7 @@ use std::sync::Arc;
 
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,
+    annotations: &[&pt::Annotation],
     file_no: usize,
     contract_no: Option<usize>,
     function_no: usize,
@@ -63,6 +65,8 @@ pub fn resolve_function_body(
             symtable.arguments.push(None);
         }
     }
+
+    function_annotations(function_no, annotations, &mut symtable, &context, ns);
 
     // now that the function arguments have been resolved, we can resolve the bases for
     // constructors.

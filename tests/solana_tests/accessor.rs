@@ -15,7 +15,7 @@ fn types() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("f1", &[], &[], None);
+    let returns = vm.function("f1", &[], None);
 
     assert_eq!(
         returns,
@@ -40,7 +40,6 @@ fn types() {
             width: 256,
             value: BigInt::from(2u8),
         }],
-        &[],
         None,
     );
 
@@ -80,7 +79,6 @@ fn types() {
                 value: BigInt::from(2u8),
             },
         ],
-        &[],
         None,
     );
 
@@ -112,7 +110,6 @@ fn types() {
             width: 64,
             value: BigInt::from(4000u16),
         }],
-        &[],
         None,
     );
 
@@ -141,7 +138,7 @@ fn interfaces() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("f1", &[], &[], None);
+    let returns = vm.function("f1", &[], None);
 
     assert_eq!(returns, vec![BorshToken::FixedBytes(b"ab".to_vec())]);
 }
@@ -157,7 +154,7 @@ fn constant() {
 
     vm.constructor("x", &[]);
 
-    let returns = vm.function("z", &[], &[], None);
+    let returns = vm.function("z", &[], None);
 
     assert_eq!(
         returns,
@@ -176,7 +173,7 @@ fn constant() {
 
     vm.constructor("x", &[]);
 
-    let returns = vm.function("z", &[], &[], None);
+    let returns = vm.function("z", &[], None);
 
     assert_eq!(
         returns,
@@ -195,7 +192,7 @@ fn constant() {
 
     vm.constructor("x", &[]);
 
-    let returns = vm.function("z", &[], &[], None);
+    let returns = vm.function("z", &[], None);
 
     assert_eq!(
         returns,

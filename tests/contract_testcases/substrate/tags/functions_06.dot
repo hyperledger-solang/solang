@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/tags/functions_06.sol" {
 	tags [label="return: asda"]
 	returns [label="returns\nint256 a\nbool b"]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/tags/functions_06.sol:2:9-6:10"]
-	diagnostic_7 [label="duplicate tag '@return' for 'a'\nlevel Error\ntests/contract_testcases/substrate/tags/functions_06.sol:4:18-24"]
+	diagnostic_7 [label="duplicate tag '@return' for 'a'\nlevel Error\ntests/contract_testcases/substrate/tags/functions_06.sol:4:18-25"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> tags [label="tags"]
