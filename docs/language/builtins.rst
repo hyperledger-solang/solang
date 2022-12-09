@@ -53,7 +53,7 @@ bytes4 (Substrate) or bytes8 (Solana) ``msg.sig``
     Function selector (or discriminator for Solana) from the encoded calldata,
     e.g. the first four or eight bytes. This might be 0 if no function selector was present.
     In Ethereum, constructor calls do not have function selectors but in Parity Substrate they do.
-    On Solana, selectors are also called discriminators.
+    On Solana, selectors are called discriminators.
 
 address ``msg.sender``
     The sender of the current call. This is either the address of the contract
