@@ -4,10 +4,7 @@ use num_bigint::BigInt;
 use num_traits::Zero;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt::FunctionTy;
-use solang_parser::{
-    doccomment::parse_doccomments,
-    pt::{self, CodeLocation, Statement},
-};
+use solang_parser::pt::{self, CodeLocation};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
 use tiny_keccak::{Hasher, Keccak};
@@ -24,13 +21,6 @@ use super::{
 use crate::emit;
 use crate::sema::ast::Namespace;
 use crate::sema::unused_variable::emit_warning_local_variable;
-use num_bigint::BigInt;
-use num_traits::Zero;
-use solang_parser::pt::{self, CodeLocation};
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::convert::TryInto;
-use tiny_keccak::{Hasher, Keccak};
-use crate::Target;
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
@@ -1208,9 +1198,11 @@ fn mangle_function_names(contract_no: usize, ns: &mut Namespace) {
         }
 
         if let Some(old_no) = repeated_names.insert(ns.functions[*func_no].name.clone(), *func_no) {
-            ns.functions[old_no].use_mangle_name_on.insert(contract_no);
+            ns.functions[old_no]
+                .mangled_name_contracts
+                .insert(contract_no);
             ns.functions[*func_no]
-                .use_mangle_name_on
+                .mangled_name_contracts
                 .insert(contract_no);
         }
     }

@@ -1350,11 +1350,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
 
             if matches!(returns[0], Type::Bytes(_) | Type::FunctionSelector) {
-                let n = match &returns[0] {
-                    Type::Bytes(n) => *n,
-                    Type::FunctionSelector => ns.target.selector_length(),
-                    _ => unreachable!(),
-                };
+                let n = returns[0].bytes(ns);
+
                 let store = bin.build_alloca(
                     function,
                     bin.context.custom_width_int_type(n as u32 * 8),

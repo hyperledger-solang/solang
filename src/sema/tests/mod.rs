@@ -520,11 +520,19 @@ fn solana_discriminator_type() {
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 5);
+    assert!(ns.diagnostics.contains_message("found contract 'test'"));
+    assert!(ns.diagnostics.contains_message(
+        "function selector needs an integer of at least 64 bits to avoid being truncated"
+    ));
     assert!(ns
         .diagnostics
-        .contains_message("function selector needs a bit width of at least 64 bits"));
+        .contains_message("implicit conversion to uint32 from bytes8 not allowed"));
+
     assert!(ns
         .diagnostics
-        .contains_message("function selector can only be casted to bytes8 or larger"));
+        .contains_message("function selector should only be casted to bytes8 or larger"));
+    assert!(ns
+        .diagnostics
+        .contains_message("implicit conversion would truncate from bytes8 to bytes4"));
 }

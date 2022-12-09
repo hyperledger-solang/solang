@@ -279,7 +279,7 @@ pub struct Function {
     /// Solana constructors may have seeds specified using @seed tags
     pub annotations: Vec<ConstructorAnnotation>,
     /// Which contracts should we use the mangled name in?
-    pub use_mangle_name_on: HashSet<usize>,
+    pub mangled_name_contracts: HashSet<usize>,
 }
 
 pub enum ConstructorAnnotation {
@@ -380,7 +380,7 @@ impl Function {
             emits_events: Vec::new(),
             mangled_name,
             annotations: Vec::new(),
-            use_mangle_name_on: HashSet::new(),
+            mangled_name_contracts: HashSet::new(),
         }
     }
 
@@ -392,7 +392,7 @@ impl Function {
             match self.ty {
                 FunctionTy::Constructor => discriminator("global", "new"),
                 _ => {
-                    let discriminator_image = if self.use_mangle_name_on.contains(contract_no) {
+                    let discriminator_image = if self.mangled_name_contracts.contains(contract_no) {
                         &self.mangled_name
                     } else {
                         &self.name

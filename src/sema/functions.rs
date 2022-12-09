@@ -195,8 +195,9 @@ pub fn contract_function(
                     if ns.target == Target::Solana {
                         ns.diagnostics.push(Diagnostic::warning(
                             *loc,
-                            "Selector (or discriminator) overriding does not work on Solana. \
-                              The IDL spec needs updating to make this feature available."
+                            "Selector (or discriminator) overriding may not have the \
+                              desired effect. The metadata file does not contains the overridden \
+                              selector, so the contract will be unused."
                                 .to_string(),
                         ));
                     }

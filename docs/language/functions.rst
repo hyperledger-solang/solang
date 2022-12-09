@@ -157,8 +157,7 @@ When a function is called, the function selector and the arguments are serialize
 (also known as abi encoded) and passed to the program. The function selector is
 what the runtime program uses to determine what function was called. On Substrate, the
 function selector is generated using a deterministic hash value of the function
-name and the arguments types. On Solana, the selector is known as discriminator and
-is calculated as a SHA-256 hash of the function name preceded by the ``global:`` prefix.
+name and the arguments types. On Solana, the selector is known as discriminator.
 
 The selector value can be overriden with the ``selector=hex"deadbea1"`` syntax,
 for example:

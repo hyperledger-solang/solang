@@ -1255,6 +1255,23 @@ impl Type {
         }
     }
 
+    pub fn bytes(&self, ns: &Namespace) -> u8 {
+        match self {
+            Type::Contract(_) | Type::Address(_) => ns.address_length as u8,
+            Type::Bool => 1,
+            Type::Int(n) => *n as u8,
+            Type::Uint(n) => *n as u8,
+            Type::Rational => unreachable!(),
+            Type::Bytes(n) => *n as u8,
+            Type::Enum(n) => ns.enums[*n].ty.bytes(ns),
+            Type::Value => ns.value_length as u8,
+            Type::StorageRef(..) => ns.storage_type().bytes(ns),
+            Type::Ref(ty) => ty.bytes(ns),
+            Type::FunctionSelector => ns.target.selector_length(),
+            _ => panic!("type not allowed"),
+        }
+    }
+
     pub fn bits(&self, ns: &Namespace) -> u16 {
         match self {
             Type::Contract(_) | Type::Address(_) => ns.address_length as u16 * 8,

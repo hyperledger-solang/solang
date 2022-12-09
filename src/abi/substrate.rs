@@ -382,7 +382,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     .done()
             })
             .collect::<Vec<MessageParamSpec<PortableForm>>>();
-        let label = if f.use_mangle_name_on.contains(&contract_no) {
+        let label = if f.mangled_name_contracts.contains(&contract_no) {
             &f.mangled_name
         } else {
             &f.name

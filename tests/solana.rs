@@ -21,16 +21,10 @@ use solana_rbpf::{
         Config, EbpfVm, SyscallObject, SyscallRegistry, TestInstructionMeter, VerifiedExecutable,
     },
 };
+use solang::compile;
 
 use solang::abi::anchor::discriminator;
-use solang::{
-    abi::generate_abi,
-    codegen::{codegen, Options},
-    compile_many,
-    emit::Generate,
-    file_resolver::FileResolver,
-    Target,
-};
+use solang::{file_resolver::FileResolver, Target};
 use std::{
     cell::{RefCell, RefMut},
     collections::HashMap,

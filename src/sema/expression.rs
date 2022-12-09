@@ -1248,22 +1248,22 @@ impl Expression {
             }
             (Type::FunctionSelector, Type::Bytes(n)) => {
                 let selector_length = ns.target.selector_length() as u8;
-                if *n < selector_length {
-                    diagnostics.push(Diagnostic::cast_error(
-                        *loc,
-                        format!(
-                            "function selector can only be casted to bytes{} or larger",
-                            selector_length
-                        ),
-                    ));
-                    Err(())
-                } else if *n == selector_length {
+                if *n == selector_length {
                     Ok(Expression::Cast {
                         loc: *loc,
                         to: to.clone(),
                         expr: self.clone().into(),
                     })
                 } else {
+                    if *n < selector_length {
+                        diagnostics.push(Diagnostic::warning(
+                            *loc,
+                            format!(
+                                "function selector should only be casted to bytes{} or larger",
+                                selector_length
+                            ),
+                        ));
+                    }
                     self.cast_types(
                         loc,
                         &Type::Bytes(selector_length),
@@ -1277,14 +1277,13 @@ impl Expression {
             (Type::FunctionSelector, Type::Uint(n) | Type::Int(n)) => {
                 let selector_width = ns.target.selector_length() * 8;
                 if *n < selector_width as u16 {
-                    diagnostics.push(Diagnostic::cast_error(
+                    diagnostics.push(Diagnostic::warning(
                         *loc,
                         format!(
-                            "function selector needs a bit width of at least {} bits",
+                            "function selector needs an integer of at least {} bits to avoid being truncated",
                             selector_width
                         ),
                     ));
-                    return Err(());
                 }
                 self.cast_types(
                     loc,
