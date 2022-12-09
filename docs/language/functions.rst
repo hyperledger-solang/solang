@@ -159,8 +159,8 @@ what the runtime program uses to determine what function was called. On Substrat
 function selector is generated using a deterministic hash value of the function
 name and the arguments types. On Solana, the selector is known as discriminator.
 
-The selector value can be overriden with the ``selector=hex"deadbea1"`` syntax,
-for example:
+The selector value can be overriden with the annotation
+``@selector([0xde, 0xad, 0xbe, 0xa1])``.
 
 .. include:: ../examples/substrate/function_selector_override.sol
   :code: solidity

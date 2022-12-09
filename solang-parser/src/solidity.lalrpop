@@ -579,9 +579,6 @@ FunctionAttribute: FunctionAttribute = {
         FunctionAttribute::Override(Loc::File(file_no, l, r), list)
     },
     <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc::File(file_no, l, r), base),
-    <l:@L> <name:SolIdentifier> "=" <value:LiteralExpression> <r:@R> => {
-        FunctionAttribute::NameValue(Loc::File(file_no, l, r), name, value)
-    },
     <l:@L> <false_token:!> <r:@R> => {
         parser_errors.push(false_token);
         FunctionAttribute::Error(Loc::File(file_no, l ,r))

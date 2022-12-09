@@ -1567,7 +1567,7 @@ pub fn coerce_number(
 }
 
 /// Resolve the given number literal, multiplied by value of unit
-fn number_literal(
+pub(super) fn number_literal(
     loc: &pt::Loc,
     integer: &str,
     exp: &str,
@@ -2502,7 +2502,7 @@ fn hex_literal(
     }
 }
 
-fn hex_number_literal(
+pub(super) fn hex_number_literal(
     loc: &pt::Loc,
     n: &str,
     ns: &mut Namespace,

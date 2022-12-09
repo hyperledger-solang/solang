@@ -704,7 +704,6 @@ pub enum FunctionAttribute {
     Immutable(Loc),
     Override(Loc, Vec<IdentifierPath>),
     BaseOrModifier(Loc, Base),
-    NameValue(Loc, Identifier, Expression),
     Error(Loc),
 }
 

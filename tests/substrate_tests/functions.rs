@@ -80,7 +80,8 @@ fn constructor_override_selector() {
         contract test {
             uint64 result;
 
-            constructor(uint64 x) selector=hex"01020304" {
+            @selector([1, 2, 3, 4])
+            constructor(uint64 x) {
                 result = x;
             }
 
@@ -110,7 +111,8 @@ fn function_override_selector() {
                 result = 1;
             }
 
-            function set(uint64 x) selector=hex"01020304" public {
+            @selector([1, 2, 3, 4])
+            function set(uint64 x) public {
                 result = x;
             }
 

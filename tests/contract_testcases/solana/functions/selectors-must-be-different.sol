@@ -1,32 +1,40 @@
 abstract contract c {
-	function f1() selector=hex"01" public {}
+	@selector([1])
+	function f1() public {}
 	// error: selector must be unique
-	function f2() selector=hex"01" public {}
+	@selector([1])
+	function f2() public {}
 	// error: selector must be unique
-	function f3() selector=hex"01" public {}
+	@selector([1])
+	function f3() public {}
 }
 
 contract d {
 	int public c;
 
 	// error: selector is the same as c
-	function f1() selector=hex"13fbd725feff6e10" public {}
+	@selector([0x13, 0xfb, 0xd7, 0x25, 0xfe, 0xff, 0x6e, 0x10])
+	function f1() public {}
 }
 
 contract e {
 	// error: selector must be 8 bytes
-	function f1() selector=hex"01" public {}
+	@selector([1])
+	function f1() public {}
 }
 
 contract f {
 	// error: selectors are the same
-	function f1() selector=hex"41424344caffee00" public {}
-	function f2() selector=hex"41424344caffee00" public {}
+	@selector([0x41, 0x42, 0x43, 0x44, 0xca, 0xff, 0xee, 0x00])
+	function f1() public {}
+	@selector([0x41, 0x42, 0x43, 0x44, 0xca, 0xff, 0xee, 0x00])
+	function f2() public {}
 	function f3() public {}
 }
 
 contract g {
 	function f1() public {}
 	// error: selector for f3 matches f1
-	function f3() selector=hex"1b494cee9c541e94" public {}
+	@selector([0x1b, 0x49, 0x4c, 0xee, 0x9c, 0x54, 0x1e, 0x94])
+	function f3() public {}
 }

@@ -2,6 +2,7 @@
 
 use anchor_syn::idl::{Idl, IdlInstruction, IdlType, IdlTypeDefinitionTy};
 use clap::ArgMatches;
+use itertools::Itertools;
 use serde_json::Value as JsonValue;
 use solang::abi::anchor::discriminator;
 use solang_parser::lexer::is_keyword;
@@ -280,9 +281,13 @@ fn instruction(
             .unwrap()
             .1;
 
+        // The anchor discriminator is what Solidity calls a selector
+        let selector = discriminator(if state { "state" } else { "global" }, &instr.name);
+
         write!(
             f,
-            "\tfunction {}(",
+            "\t@selector([{}])\n\tfunction {}(",
+            selector.iter().map(|v| format!("{:#04x}", v)).join(","),
             if instr.name == "new" {
                 "initialize"
             } else {
@@ -305,15 +310,7 @@ fn instruction(
             )?;
         }
 
-        // The anchor discriminator is what Solidity calls a selector
-        let selector = discriminator(if state { "state" } else { "global" }, &instr.name);
-
-        write!(
-            f,
-            ") selector=hex\"{}\" {}external",
-            hex::encode(selector),
-            if state { "" } else { "view " }
-        )?;
+        write!(f, ") {}external", if state { "" } else { "view " })?;
 
         if let Some(ty) = &instr.returns {
             writeln!(

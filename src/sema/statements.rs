@@ -11,7 +11,7 @@ use super::expression::{
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::sema::builtin;
-use crate::sema::function_annotation::function_annotations;
+use crate::sema::function_annotation::function_body_annotations;
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use crate::sema::yul::resolve_inline_assembly;
@@ -66,7 +66,7 @@ pub fn resolve_function_body(
         }
     }
 
-    function_annotations(function_no, annotations, &mut symtable, &context, ns);
+    function_body_annotations(function_no, annotations, &mut symtable, &context, ns);
 
     // now that the function arguments have been resolved, we can resolve the bases for
     // constructors.
