@@ -1425,6 +1425,16 @@ impl SubstrateTarget {
                     data,
                 );
             }
+            ast::Type::FunctionSelector => self.encode_ty(
+                binary,
+                ns,
+                load,
+                packed,
+                function,
+                &ast::Type::Bytes(4),
+                arg,
+                data,
+            ),
             _ => unreachable!(),
         };
     }
@@ -1452,6 +1462,10 @@ impl SubstrateTarget {
                 binary.context.i32_type().const_int(*n as u64 / 8, false)
             }
             ast::Type::Bytes(n) => binary.context.i32_type().const_int(*n as u64, false),
+            ast::Type::FunctionSelector => binary
+                .context
+                .i32_type()
+                .const_int(ns.target.selector_length() as u64, false),
             ast::Type::Address(_) | ast::Type::Contract(_) => binary
                 .context
                 .i32_type()

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::symtable::Symtable;
+use crate::abi::anchor::discriminator;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::diagnostics::Diagnostics;
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
@@ -11,7 +12,8 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
-use solang_parser::pt::{CodeLocation, OptionalCodeLocation};
+use solang_parser::pt::{CodeLocation, FunctionTy, OptionalCodeLocation};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -66,6 +68,8 @@ pub enum Type {
     /// e.g. Type::Bytes is a pointer to struct.vector. When we advance it, it is a pointer
     /// to latter's data region.
     BufferPointer,
+    /// The function selector (or discriminator) type is 4 bytes on Substrate and 8 bytes on Solana
+    FunctionSelector,
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
@@ -274,6 +278,8 @@ pub struct Function {
     pub mangled_name: String,
     /// Solana constructors may have seeds specified using @seed tags
     pub annotations: Vec<ConstructorAnnotation>,
+    /// Which contracts should we use the mangled name in?
+    pub mangled_name_contracts: HashSet<usize>,
 }
 
 pub enum ConstructorAnnotation {
@@ -374,13 +380,26 @@ impl Function {
             emits_events: Vec::new(),
             mangled_name,
             annotations: Vec::new(),
+            mangled_name_contracts: HashSet::new(),
         }
     }
 
     /// Generate selector for this function
-    pub fn selector(&self) -> Vec<u8> {
+    pub fn selector(&self, ns: &Namespace, contract_no: &usize) -> Vec<u8> {
         if let Some(selector) = &self.selector {
             selector.clone()
+        } else if ns.target == Target::Solana {
+            match self.ty {
+                FunctionTy::Constructor => discriminator("global", "new"),
+                _ => {
+                    let discriminator_image = if self.mangled_name_contracts.contains(contract_no) {
+                        &self.mangled_name
+                    } else {
+                        &self.name
+                    };
+                    discriminator("global", discriminator_image.as_str())
+                }
+            }
         } else {
             let mut res = [0u8; 32];
 

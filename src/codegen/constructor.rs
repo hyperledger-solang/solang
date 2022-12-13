@@ -73,13 +73,13 @@ pub(super) fn call_constructor(
         ];
     } else {
         let selector = match constructor_no {
-            Some(func_no) => ns.functions[*func_no].selector(),
+            Some(func_no) => ns.functions[*func_no].selector(ns, contract_no),
             None => ns.contracts[*contract_no]
                 .default_constructor
                 .as_ref()
                 .unwrap()
                 .0
-                .selector(),
+                .selector(ns, contract_no),
         };
 
         args = vec![Expression::NumberLiteral(

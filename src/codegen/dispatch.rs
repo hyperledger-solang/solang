@@ -59,7 +59,7 @@ pub(super) fn function_dispatch(
         Box::new(Expression::NumberLiteral(
             Loc::Codegen,
             Type::Uint(64),
-            BigInt::from(4u8),
+            BigInt::from(8u8),
         )),
     );
 
@@ -78,11 +78,11 @@ pub(super) fn function_dispatch(
 
     let fid = Expression::Builtin(
         Loc::Codegen,
-        vec![Type::Uint(32)],
+        vec![Type::Uint(64)],
         Builtin::ReadFromBuffer,
         vec![
             argsdata.clone(),
-            Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::zero()),
+            Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::zero()),
         ],
     );
 
@@ -91,7 +91,7 @@ pub(super) fn function_dispatch(
         bytes_offset: Box::new(Expression::NumberLiteral(
             Loc::Codegen,
             Type::Uint(32),
-            BigInt::from(4u8),
+            BigInt::from(8u8),
         )),
     };
     let argslen = Expression::Subtract(
@@ -102,7 +102,7 @@ pub(super) fn function_dispatch(
         Box::new(Expression::NumberLiteral(
             Loc::Codegen,
             Type::Uint(64),
-            BigInt::from(4u8),
+            BigInt::from(8u8),
         )),
     );
 
@@ -263,7 +263,7 @@ fn add_dispatch_case(
     cases.push((
         Expression::NumberLiteral(
             Loc::Codegen,
-            Type::Uint(32),
+            Type::Uint(64),
             BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector),
         ),
         bb,

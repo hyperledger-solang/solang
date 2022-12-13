@@ -167,7 +167,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                 Parameter {
                     loc: pt::Loc::Builtin,
                     id: None,
-                    ty: Type::Bytes(4),
+                    ty: Type::FunctionSelector,
                     ty_loc: None,
                     indexed: false,
                     readonly: false,

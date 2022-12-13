@@ -155,15 +155,17 @@ ____________________________
 
 When a function is called, the function selector and the arguments are serialized
 (also known as abi encoded) and passed to the program. The function selector is
-what the runtime program uses to determine what function was called. Usually the
+what the runtime program uses to determine what function was called. On Substrate, the
 function selector is generated using a deterministic hash value of the function
-name and the arguments types.
+name and the arguments types. On Solana, the selector is known as discriminator.
 
 The selector value can be overriden with the ``selector=hex"deadbea1"`` syntax,
 for example:
 
-.. include:: ../examples/function_selector_override.sol
+.. include:: ../examples/substrate/function_selector_override.sol
   :code: solidity
+
+The given example only works for Substrate, whose selectors are four bytes wide. On Solana, they are eight bytes wide.
 
 Only ``public`` and ``external`` functions have a selector, and can have their
 selector overriden. On Substrate, constructors have selectors too, so they
@@ -196,18 +198,20 @@ values. Here is an example of an overloaded function:
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
 
-.. note::
-  The substrate target runtime requires function names to be unique.
-  Overloaded function names will be mangled in the ABI.
-  The function name will be concatenated with all of its argument types, separated by underscores.
-  Struct types are represented by their field types (preceded with an extra underscore).
-  Enum types are represented as their underlying ``uint8`` type. Array types are recognizable by
-  having ``Array`` appended; Fixed size arrays will additionally have their length appended as well.
+Both Substrate and Solana runtime require unique function names, so
+overloaded function names will be mangled in the ABI or the IDL.
+The function name will be concatenated with all of its argument types, separated by underscores, using the
+following rules:
 
-  The following example illustrates some overloaded functions and their mangled name:
+- Struct types are represented by their field types (preceded by an extra underscore).
+- Enum types are represented as their underlying ``uint8`` type.
+- Array types are recognizable by having ``Array`` appended.
+- Fixed size arrays will additionally have their length appended as well.
 
-  .. include:: ../examples/substrate/function_name_mangling.sol
-    :code: solidity
+The following example illustrates some overloaded functions and their mangled name:
+
+.. include:: ../examples/function_name_mangling.sol
+  :code: solidity
 
 
 Function Modifiers

@@ -554,10 +554,10 @@ fn selector_suffix() {
         res,
         Expression::Load(
             loc,
-            Type::Bytes(4),
+            Type::FunctionSelector,
             Box::new(Expression::StructMember(
                 loc,
-                Type::Ref(Box::new(Type::Bytes(4))),
+                Type::Ref(Box::new(Type::FunctionSelector)),
                 Box::new(Expression::Variable(
                     loc,
                     Type::ExternalFunction {

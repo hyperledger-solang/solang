@@ -21,7 +21,10 @@ use solana_rbpf::{
         Config, EbpfVm, SyscallObject, SyscallRegistry, TestInstructionMeter, VerifiedExecutable,
     },
 };
-use solang::{compile, file_resolver::FileResolver, Target};
+use solang::compile;
+
+use solang::abi::anchor::discriminator;
+use solang::{file_resolver::FileResolver, Target};
 use std::{
     cell::{RefCell, RefMut},
     collections::HashMap,
@@ -1630,7 +1633,7 @@ impl VirtualMachine {
 
         println!("input: {} ", hex::encode(&calldata));
 
-        let selector = program.abi.as_ref().unwrap().functions[name][0].short_signature();
+        let selector = discriminator("global", name);
         calldata.extend_from_slice(&selector);
         let mut encoded_args = encode_arguments(args);
         calldata.append(&mut encoded_args);
@@ -1676,7 +1679,7 @@ impl VirtualMachine {
 
         println!("input: {}", hex::encode(&calldata));
 
-        let selector = program.abi.as_ref().unwrap().functions[name][0].short_signature();
+        let selector = discriminator("global", name);
         calldata.extend_from_slice(&selector);
         let mut encoded = encode_arguments(args);
         calldata.append(&mut encoded);

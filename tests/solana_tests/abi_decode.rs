@@ -790,14 +790,14 @@ fn empty_arrays() {
 fn external_function() {
     #[derive(Debug, BorshSerialize)]
     struct Input {
-        selector: [u8; 4],
+        selector: [u8; 8],
         address: [u8; 32],
     }
 
     let mut vm = build_solidity(
         r#"
     contract Testing {
-        function testExternalFunction(bytes memory buffer) public view returns (bytes4, address) {
+        function testExternalFunction(bytes memory buffer) public view returns (bytes8, address) {
             function (uint8) external returns (int8) fPtr = abi.decode(buffer, (function (uint8) external returns (int8)));
             return (fPtr.selector, fPtr.address);
         }
@@ -807,7 +807,7 @@ fn external_function() {
 
     vm.constructor("Testing", &[]);
     let input = Input {
-        selector: [1, 2, 3, 4],
+        selector: [1, 2, 3, 4, 5, 6, 7, 8],
         address: [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
             24, 25, 26, 27, 28, 29, 30, 31,

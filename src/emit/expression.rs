@@ -1349,10 +1349,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
 
-            if let Type::Bytes(n) = &returns[0] {
+            if matches!(returns[0], Type::Bytes(_) | Type::FunctionSelector) {
+                let n = returns[0].bytes(ns);
+
                 let store = bin.build_alloca(
                     function,
-                    bin.context.custom_width_int_type(*n as u32 * 8),
+                    bin.context.custom_width_int_type(n as u32 * 8),
                     "stack",
                 );
                 bin.builder.build_call(
@@ -1372,11 +1374,11 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                                 "",
                             )
                             .into(),
-                        bin.context.i32_type().const_int(*n as u64, false).into(),
+                        bin.context.i32_type().const_int(n as u64, false).into(),
                     ],
                     "",
                 );
-                bin.builder.build_load(store, &format!("bytes{}", *n))
+                bin.builder.build_load(store, &format!("bytes{}", n))
             } else {
                 let start = bin.builder.build_pointer_cast(
                     start,

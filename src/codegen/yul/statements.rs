@@ -276,7 +276,11 @@ fn cfg_single_assigment(
                     var_no,
                 ) => {
                     let (member_no, casted_expr, member_ty) = match suffix {
-                        YulSuffix::Selector => (0, rhs.cast(&Type::Uint(32), ns), Type::Uint(32)),
+                        YulSuffix::Selector => (
+                            0,
+                            rhs.cast(&Type::Bytes(ns.target.selector_length()), ns),
+                            Type::Bytes(ns.target.selector_length()),
+                        ),
                         YulSuffix::Address => {
                             (1, rhs.cast(&Type::Address(false), ns), Type::Address(false))
                         }

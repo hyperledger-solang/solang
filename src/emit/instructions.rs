@@ -1139,6 +1139,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let is_bytes = if let Type::Bytes(n) = value.ty() {
                 n
+            } else if value.ty() == Type::FunctionSelector {
+                ns.target.selector_length()
             } else {
                 0
             };

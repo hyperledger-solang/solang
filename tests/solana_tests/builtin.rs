@@ -21,7 +21,7 @@ fn builtins() {
             function msg_data(uint32 x) public returns (bytes) {
                 return msg.data;
             }
-            function sig() public returns (bytes4) {
+            function sig() public returns (bytes8) {
                 return msg.sig;
             }
             function prog() public returns (address) {
@@ -77,7 +77,9 @@ fn builtins() {
 
     assert_eq!(
         returns,
-        vec![BorshToken::Bytes(hex::decode("84da38e0fecaadde").unwrap())]
+        vec![BorshToken::Bytes(
+            hex::decode("a73fcaa3b216e85afecaadde").unwrap()
+        )]
     );
 
     let returns = vm.function("sig", &[], None);
@@ -88,7 +90,9 @@ fn builtins() {
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedBytes(hex::decode("00a7029b").unwrap())]
+        vec![BorshToken::FixedBytes(
+            hex::decode("4b22101a3c98d6cb").unwrap()
+        )]
     );
 
     let returns = vm.function("prog", &[], None);

@@ -494,3 +494,45 @@ contract runner {
      supported on Solana. Please, go to \
      https://solang.readthedocs.io/en/latest/language/statements.html#try-catch-statement for more information"));
 }
+
+#[test]
+fn solana_discriminator_type() {
+    let src = r#"
+    contract test {
+    function foo() public pure returns (int32) {
+        return -3;
+    }
+
+    function testA() public returns (uint32) {
+        function () external returns (int32) fptr = this.foo;
+        return foo.selector;
+    }
+
+    function testB() public returns (bytes4) {
+        function () external returns (int32) fptr = this.foo;
+        return foo.selector;
+    }
+}
+    "#;
+
+    let mut cache = FileResolver::new();
+    cache.set_file_contents("test.sol", src.to_string());
+
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
+
+    assert_eq!(ns.diagnostics.len(), 5);
+    assert!(ns.diagnostics.contains_message("found contract 'test'"));
+    assert!(ns.diagnostics.contains_message(
+        "function selector needs an integer of at least 64 bits to avoid being truncated"
+    ));
+    assert!(ns
+        .diagnostics
+        .contains_message("implicit conversion to uint32 from bytes8 not allowed"));
+
+    assert!(ns
+        .diagnostics
+        .contains_message("function selector should only be casted to bytes8 or larger"));
+    assert!(ns
+        .diagnostics
+        .contains_message("implicit conversion would truncate from bytes8 to bytes4"));
+}

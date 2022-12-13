@@ -940,6 +940,15 @@ impl Expression {
                 }
             }
 
+            (Type::FunctionSelector, _) => Expression::Cast(
+                self.loc(),
+                Type::Bytes(ns.target.selector_length()),
+                self.clone().into(),
+            )
+            .cast(to, ns),
+
+            (_, Type::FunctionSelector) => self.cast(&Type::Bytes(ns.target.selector_length()), ns),
+
             (Type::Uint(_), Type::Bytes(_))
             | (Type::Int(_), Type::Bytes(_))
             | (Type::Bytes(_), Type::Address(_))
@@ -1222,11 +1231,11 @@ impl Expression {
         let loc = self.loc();
         let struct_member = Expression::StructMember(
             loc,
-            Type::Ref(Box::new(Type::Bytes(4))),
+            Type::Ref(Box::new(Type::FunctionSelector)),
             Box::new(self.clone()),
             0,
         );
-        Expression::Load(loc, Type::Bytes(4), Box::new(struct_member))
+        Expression::Load(loc, Type::FunctionSelector, Box::new(struct_member))
     }
 
     fn external_function_address(&self) -> Expression {

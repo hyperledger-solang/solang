@@ -192,6 +192,15 @@ pub fn contract_function(
                     ));
                     success = false;
                 } else {
+                    if ns.target == Target::Solana {
+                        ns.diagnostics.push(Diagnostic::warning(
+                            *loc,
+                            "Selector (or discriminator) overriding may not have the \
+                              desired effect. The metadata file does not contains the overridden \
+                              selector, so the contract will not function."
+                                .to_string(),
+                        ));
+                    }
                     has_selector = Some(value);
                 }
             }
