@@ -197,7 +197,7 @@ pub fn contract_function(
                             *loc,
                             "Selector (or discriminator) overriding may not have the \
                               desired effect. The metadata file does not contains the overridden \
-                              selector, so the contract will be unused."
+                              selector, so the contract will not function."
                                 .to_string(),
                         ));
                     }

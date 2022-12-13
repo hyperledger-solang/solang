@@ -170,9 +170,6 @@ assert(bool)
 
 Assert takes a boolean argument. If that evaluates to false, execution is aborted.
 
-
-.. code-block:: solidity
-
 .. include:: ../examples/revert.sol
   :code: solidity
 
@@ -250,19 +247,38 @@ After the selector, any number of arguments can be provided.
     // On Substrate, the selector contains four bytes. hex"01020304" is an example.
     bytes foo = abi.encodeWithSelector(hex"0102030405060708", uint16(0xff00));
 
-On Solana, foo will be ``hex"080706050403020100ff"``.
+On Solana, foo will be ``hex"080706050403020100ff"``. In addition, a discriminator for a Solidity function on Solana
+are the first eight bytes of the sha-256 hash of its name converted to camel case and preceded
+by the prefix ``global:``, as the following:
+
+.. code-block:: solidity
+
+    bytes8 discriminator = bytes8(sha256(bytes("global:myFunctionName")));
 
 abi.encodeWithSignature(string signature, ...)
 ++++++++++++++++++++++++++++++++++++++++++++++
 
-ABI encodes the arguments with the ``bytes4`` hash of the signature. After the signature, any number of arguments
-can be provided. This is equivalent to ``abi.encodeWithSignature(bytes4(keccak256(signature)), ...)``.
+ABI encodes the arguments with the hash of the signature. After the signature, any number of arguments
+can be provided.
+
+On Substrate, the signature is the name of the function followed by its arguments, for example:
 
 .. code-block:: solidity
 
-    bytes foo = abi.encodeWithSignature("test2(uint64)", uint64(257));
+    bytes foo = abi.encodeWithSignature("foo_bar(uint64)", uint64(257));
 
-On Substrate, foo will be ``hex"296dacf0_0101_0000__0000_0000"``. On Ethereum this will be ``hex"296dacf0_0000000000000000000000000000000000000000000000000000000000000101"``.
+``foo`` will be ``hex"e934aa71_0101_0000__0000_0000"``.  This is equivalent to ``abi.encodeWithSelector(bytes4(keccak256("test2(uint64)")), ...)``.
+
+On Solana, the signature is known as the discriminator image. It is the function name without any arguments,
+converted to camel case, and preceded by the prefix ``global:``.
+For example, if you had the function ``foo_bar(uint64)``, the discriminator image would be ``global:fooBar``.
+
+.. code-block:: solidity
+
+    bytes foo = abi.encodeWithSignature("global:fooBar", uint64(257));
+
+This builtin is equivalent to
+``abi.encodeWithSelector(bytes8(sha256(bytes("global:fooBar"))), ...)`` for Solana.
 
 abi.encodePacked(...)
 +++++++++++++++++++++
