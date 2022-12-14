@@ -7,6 +7,8 @@ will be documented here.
 ### Changed
 - Overriding the function selector value is now done using the `@selector([1, 2, 3, 4])`
   syntax, and the old syntax `selector=hex"12345678"` has been removed.
+- 'msg.sender' was not implemented correctly on Solana, and
+  [has now been removed](https://solang.readthedocs.io/en/latest/targets/solana.html#msg-sender-solana).
   [seanyoung](https://github.com/seanyoung)
 
 ## v0.2.0.0 Berlin

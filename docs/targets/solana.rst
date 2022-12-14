@@ -184,6 +184,28 @@ this. The balance of an account can be credited without any code being executed.
 
 ``receive()`` functions are not permitted on the Solana target.
 
+.. _msg_sender_solana:
+
+``msg.sender`` not available on Solana
+______________________________________
+
+On Ethereum, ``msg.sender`` is used to identify either the account that submitted
+the transaction, or the caller when one contract calls another. On Ethereum, each
+contract execution can only use a single account, which provides the code and data.
+On Solana, each contract execution uses many accounts. Consider a rust contract which
+calls a Solidity contract: the rust contract can access a few data accounts, and which
+of those would be considered the caller? So in many cases there is not a single account
+which can be identified as a caller. In addition to that, the Solana VM has no
+mechanism for fetching the caller accounts. This means there is no way to implement
+``msg.sender``.
+
+The way to implement this on Solana is to have an authority account for the contract
+that must be a signer for the transaction (note that on Solana there
+can be many signers too). This is a common construct on Solana contracts.
+
+.. include:: ../examples/solana/use_authority.sol
+  :code: solidity
+
 Builtin Imports
 ________________
 

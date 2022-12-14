@@ -623,7 +623,7 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             doc: "Returns the call sender",
             ty: YulBuiltInFunction::Caller,
             stops_execution: false,
-            availability: [true, true, true],
+            availability: [true, true, false],
         },
         YulBuiltinPrototype {
             name: "callvalue",

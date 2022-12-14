@@ -9,7 +9,7 @@ fn lamports() {
         r#"
         import 'solana';
         contract c {
-            function test() public payable returns (uint64) {
+            function test(address needle) public payable returns (uint64) {
                 for (uint32 i = 0; i < tx.accounts.length; i++) {
                     AccountInfo ai = tx.accounts[i];
 
@@ -17,7 +17,7 @@ fn lamports() {
                     assert(!ai.is_signer);
                     assert(ai.executable);
 
-                    if (ai.key == msg.sender) {
+                    if (ai.key == needle) {
                         return ai.lamports;
                     }
                 }
@@ -31,7 +31,7 @@ fn lamports() {
 
     vm.account_data.get_mut(&vm.origin).unwrap().lamports = 17672630920854456917u64;
 
-    let returns = vm.function("test", &[], None);
+    let returns = vm.function("test", &[BorshToken::Address(vm.origin)]);
 
     assert_eq!(
         returns[0],
@@ -64,7 +64,7 @@ fn owner() {
 
     vm.constructor("c", &[]);
 
-    let returns = vm.function("test", &[], None);
+    let returns = vm.function("test", &[]);
 
     let owner = vm.stack[0].program.to_vec();
 
@@ -112,7 +112,6 @@ fn data() {
                 width: 32,
                 value: BigInt::from(i),
             }],
-            None,
         );
 
         let this = &vm.stack[0].data;
@@ -128,7 +127,7 @@ fn data() {
         );
     }
 
-    let returns = vm.function("test2", &[], None);
+    let returns = vm.function("test2", &[]);
 
     let this = &vm.stack[0].data;
 

@@ -10,7 +10,7 @@ contract MyContract {
         string Payment
     );
 
-    function send( 
+    function send(
         address[] calldata _receivers,
         uint64[] calldata _amounts,
         string calldata _payment,
@@ -35,7 +35,7 @@ contract MyContract {
         }
 
         emit Receipt(
-            msg.sender,
+            address(this),
             address"11111111111111111111111111111111",
             _receivers,
             _amounts,
