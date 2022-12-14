@@ -266,7 +266,7 @@ pub struct Function {
     pub is_accessor: bool,
     pub is_override: Option<(pt::Loc, Vec<usize>)>,
     /// The selector (known as discriminator on Solana/Anchor)
-    pub selector: Option<Vec<u8>>,
+    pub selector: Option<(pt::Loc, Vec<u8>)>,
     /// Was the function declared with a body
     pub has_body: bool,
     /// The resolved body (if any)
@@ -386,7 +386,7 @@ impl Function {
 
     /// Generate selector for this function
     pub fn selector(&self, ns: &Namespace, contract_no: &usize) -> Vec<u8> {
-        if let Some(selector) = &self.selector {
+        if let Some((_, selector)) = &self.selector {
             selector.clone()
         } else if ns.target == Target::Solana {
             match self.ty {

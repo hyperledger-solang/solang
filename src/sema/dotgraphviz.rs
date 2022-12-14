@@ -157,7 +157,7 @@ impl Dot {
             }
         }
 
-        if let Some(selector) = &func.selector {
+        if let Some((_, selector)) = &func.selector {
             labels.push(format!("selector {}", hex::encode(selector)));
         }
 

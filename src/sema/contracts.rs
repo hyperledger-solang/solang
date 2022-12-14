@@ -827,14 +827,12 @@ fn base_function_compatible(
         (cur, func) if cur == func => (),
         (Some(cur_selector), Some(func_selector)) => {
             diagnostics.push(ast::Diagnostic::error_with_note(
-                func.loc,
+                cur_selector.0,
                 format!(
-                    "selector '{}' of function '{}' different from base selector '{}'",
-                    hex::encode(cur_selector),
+                    "selector of function '{}' different from base selector",
                     func.name,
-                    hex::encode(func_selector)
                 ),
-                base.loc,
+                func_selector.0,
                 String::from("location of base function"),
             ));
         }
@@ -842,20 +840,18 @@ fn base_function_compatible(
             diagnostics.push(ast::Diagnostic::error_with_note(
                 func.loc,
                 format!(
-                    "selector of function '{}' must match base selector '{}'",
+                    "selector of function '{}' must match base selector",
                     func.name,
-                    hex::encode(func_selector)
                 ),
-                base.loc,
+                func_selector.0,
                 String::from("location of base function"),
             ));
         }
         (Some(cur_selector), None) => {
             diagnostics.push(ast::Diagnostic::error_with_note(
-                func.loc,
+                cur_selector.0,
                 format!(
-                    "base function needs same selector as selector '{}' of function '{}'",
-                    hex::encode(cur_selector),
+                    "base function needs same selector as selector of function '{}'",
                     func.name,
                 ),
                 base.loc,
@@ -909,9 +905,14 @@ fn resolve_declarations<'a>(
     // resolve function signatures
     for part in &def.parts {
         if let pt::ContractPart::FunctionDefinition(ref f) = &part.part {
-            if let Some(function_no) =
-                functions::contract_function(def, f, &part.doccomments, file_no, ns)
-            {
+            if let Some(function_no) = functions::contract_function(
+                def,
+                f,
+                &part.doccomments,
+                &part.annotations,
+                file_no,
+                ns,
+            ) {
                 if f.body.is_some() {
                     delayed.function_bodies.push(DelayedResolveFunction {
                         contract_no: def.contract_no,
@@ -920,8 +921,6 @@ fn resolve_declarations<'a>(
                         annotations: part.annotations.clone(),
                     });
                 } else {
-                    annotions_not_allowed(&part.annotations, &format!("{} with no body", f.ty), ns);
-
                     function_no_bodies.push(function_no);
                 }
             }
@@ -1220,12 +1219,17 @@ fn verify_unique_selector(contract_no: usize, ns: &mut Namespace) {
 
         // On Solana, concrete contracts have selectors of 8 bytes
         if ns.contracts[contract_no].is_concrete() && selector.len() != selector_len as usize {
+            let loc = if let Some((loc, _)) = &func.selector {
+                loc
+            } else {
+                &func.loc
+            };
+
             diagnostics.push(ast::Diagnostic::error(
-                func.loc,
+                *loc,
                 format!(
-                    "function '{}' selector '{}' must be {} bytes rather than {} bytes",
+                    "function '{}' selector must be {} bytes rather than {} bytes",
                     func.name,
-                    hex::encode(&selector),
                     selector_len,
                     selector.len()
                 ),

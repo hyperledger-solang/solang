@@ -52,7 +52,7 @@ strict digraph "tests/contract_testcases/solana/annotations_bad.sol" {
 	diagnostic_57 [label="annotations not allowed on type\nlevel Error\ntests/contract_testcases/solana/annotations_bad.sol:53:2-10"]
 	diagnostic_58 [label="unknown annotation method for constructor\nlevel Error\ntests/contract_testcases/solana/annotations_bad.sol:56:2-14"]
 	diagnostic_59 [label="unknown annotation fn for function\nlevel Error\ntests/contract_testcases/solana/annotations_bad.sol:60:2-31"]
-	diagnostic_60 [label="annotations not allowed on function with no body\nlevel Error\ntests/contract_testcases/solana/annotations_bad.sol:63:2-27"]
+	diagnostic_60 [label="annotation '@annotation' not allowed on function with no body\nlevel Error\ntests/contract_testcases/solana/annotations_bad.sol:63:2-27"]
 	enums -> EB
 	enums -> e
 	enums -> f
