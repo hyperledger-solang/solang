@@ -1,14 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use num_bigint::BigInt;
-use num_traits::Zero;
-use solang_parser::diagnostics::Diagnostic;
-use solang_parser::pt::FunctionTy;
-use solang_parser::pt::{self, CodeLocation};
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::convert::TryInto;
-use tiny_keccak::{Hasher, Keccak};
-
 use super::{
     annotions_not_allowed, ast,
     diagnostics::Diagnostics,
@@ -17,10 +8,16 @@ use super::{
     symtable::Symtable,
     using, variables, ContractDefinition,
 };
-#[cfg(feature = "llvm")]
-use crate::emit;
-use crate::sema::ast::Namespace;
-use crate::sema::unused_variable::emit_warning_local_variable;
+use crate::{sema::ast::Namespace, sema::unused_variable::emit_warning_local_variable};
+use num_bigint::BigInt;
+use num_traits::Zero;
+use once_cell::unsync::OnceCell;
+use solang_parser::diagnostics::Diagnostic;
+use solang_parser::pt::FunctionTy;
+use solang_parser::pt::{self, CodeLocation};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::convert::TryInto;
+use tiny_keccak::{Hasher, Keccak};
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
@@ -46,36 +43,12 @@ impl ast::Contract {
             initializer: None,
             default_constructor: None,
             cfg: Vec::new(),
-            code: Vec::new(),
+            code: OnceCell::new(),
             instantiable,
             dispatch_no: 0,
             constructor_dispatch: None,
             program_id: None,
         }
-    }
-
-    /// Generate contract code for this contract
-    #[cfg(feature = "llvm")]
-    pub fn emit<'a>(
-        &'a self,
-        ns: &'a ast::Namespace,
-        context: &'a inkwell::context::Context,
-        filename: &'a str,
-        opt: inkwell::OptimizationLevel,
-        math_overflow_check: bool,
-        generate_debug_info: bool,
-        log_api_return_codes: bool,
-    ) -> emit::binary::Binary {
-        emit::binary::Binary::build(
-            context,
-            self,
-            ns,
-            filename,
-            opt,
-            math_overflow_check,
-            generate_debug_info,
-            log_api_return_codes,
-        )
     }
 
     /// Selector for this contract. This is used by Solana contract bundle

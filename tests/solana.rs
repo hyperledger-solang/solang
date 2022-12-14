@@ -146,11 +146,13 @@ fn build_solidity_with_overflow_check(src: &str, math_overflow_flag: bool) -> Vi
     for contract_no in 0..ns.contracts.len() {
         let contract = &ns.contracts[contract_no];
 
-        if contract.code.is_empty() {
+        if !contract.instantiable {
             continue;
         }
 
-        let (abistr, _) = solang::abi::generate_abi(contract_no, &ns, &contract.code, false);
+        let code = contract.code.get().unwrap();
+
+        let (abistr, _) = solang::abi::generate_abi(contract_no, &ns, code, false);
         let abi = ethabi::Contract::load(abistr.as_bytes()).unwrap();
 
         let program = if let Some(program_id) = &contract.program_id {
@@ -162,7 +164,7 @@ fn build_solidity_with_overflow_check(src: &str, math_overflow_flag: bool) -> Vi
         account_data.insert(
             program,
             AccountState {
-                data: contract.code.clone(),
+                data: code.clone(),
                 owner: None,
                 lamports: 0,
             },

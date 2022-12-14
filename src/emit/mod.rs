@@ -25,7 +25,7 @@ mod storage;
 mod strings;
 pub mod substrate;
 
-use crate::codegen::cfg::HashTy;
+use crate::codegen::{cfg::HashTy, Options};
 use crate::emit::binary::Binary;
 use crate::sema::ast;
 
@@ -383,5 +383,35 @@ impl Target {
         } else {
             ""
         }
+    }
+}
+
+impl ast::Contract {
+    /// Generate the binary. This can be used to generate llvm text, object file
+    /// or final linked binary.
+    pub fn binary<'a>(
+        &'a self,
+        ns: &'a ast::Namespace,
+        context: &'a inkwell::context::Context,
+        filename: &'a str,
+        opt: &'a Options,
+    ) -> binary::Binary {
+        binary::Binary::build(context, self, ns, filename, opt)
+    }
+
+    /// Generate the final program code for the contract
+    pub fn emit(&self, ns: &ast::Namespace, opt: &Options) -> Vec<u8> {
+        if ns.target == Target::EVM {
+            return vec![];
+        }
+
+        self.code
+            .get_or_init(move || {
+                let context = inkwell::context::Context::create();
+                let filename = ns.files[self.loc.file_no()].path.to_string_lossy();
+                let binary = self.binary(ns, &context, &filename, opt);
+                binary.code(Generate::Linked).expect("llvm build")
+            })
+            .to_vec()
     }
 }

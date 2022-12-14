@@ -7,13 +7,13 @@ use crate::Target;
 use std::collections::HashMap;
 use std::str;
 
-use crate::codegen::cfg::ReturnCode;
+use crate::codegen::{cfg::ReturnCode, Options};
 use crate::sema::ast::Type;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::BasicType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress};
 use inkwell::{context::Context, types::BasicTypeEnum};
-use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
+use inkwell::{AddressSpace, IntPredicate};
 use num_traits::ToPrimitive;
 
 use crate::emit::functions::emit_functions;
@@ -39,10 +39,7 @@ impl SolanaTarget {
         contract: &'a ast::Contract,
         ns: &'a ast::Namespace,
         filename: &'a str,
-        opt: OptimizationLevel,
-        math_overflow_check: bool,
-        generate_debug_info: bool,
-        log_api_return_codes: bool,
+        opt: &'a Options,
     ) -> Binary<'a> {
         let mut target = SolanaTarget {
             magic: contract.selector(),
@@ -54,11 +51,8 @@ impl SolanaTarget {
             &contract.name,
             filename,
             opt,
-            math_overflow_check,
             std_lib,
             None,
-            generate_debug_info,
-            log_api_return_codes,
         );
 
         binary
@@ -108,104 +102,6 @@ impl SolanaTarget {
         );
 
         binary.internalize(&["entrypoint", "sol_log_"]);
-
-        binary
-    }
-
-    /// Build a bundle of contracts from the same namespace
-    pub fn build_bundle<'a>(
-        context: &'a Context,
-        std_lib: &Module<'a>,
-        namespaces: &'a [&ast::Namespace],
-        filename: &str,
-        opt: OptimizationLevel,
-        math_overflow_check: bool,
-        generate_debug_info: bool,
-        log_api_return_codes: bool,
-    ) -> Binary<'a> {
-        let mut target = SolanaTarget { magic: 0 };
-
-        let mut binary = Binary::new(
-            context,
-            Target::Solana,
-            "bundle",
-            filename,
-            opt,
-            math_overflow_check,
-            std_lib,
-            None,
-            generate_debug_info,
-            log_api_return_codes,
-        );
-
-        binary
-            .return_values
-            .insert(ReturnCode::Success, context.i64_type().const_zero());
-        binary.return_values.insert(
-            ReturnCode::FunctionSelectorInvalid,
-            context.i64_type().const_int(2u64 << 32, false),
-        );
-        binary.return_values.insert(
-            ReturnCode::AbiEncodingInvalid,
-            context.i64_type().const_int(2u64 << 32, false),
-        );
-        binary.return_values.insert(
-            ReturnCode::AccountDataTooSmall,
-            context.i64_type().const_int(5u64 << 32, false),
-        );
-
-        // externals
-        target.declare_externals(&mut binary, namespaces[0]);
-
-        let mut contracts: Vec<Contract> = Vec::new();
-
-        for ns in namespaces {
-            for contract in &ns.contracts {
-                // We need a magic number for our contract.
-                target.magic = contract.selector();
-
-                // Ignore abstract contracts or contract names we have already seen
-                if !contract.is_concrete() || contracts.iter().any(|c| c.magic == target.magic) {
-                    continue;
-                }
-
-                emit_functions(&mut target, &mut binary, contract, ns);
-
-                let constructor = contract
-                    .constructor_dispatch
-                    .map(|cfg_no| binary.functions[&cfg_no]);
-
-                let mut functions = HashMap::new();
-
-                std::mem::swap(&mut functions, &mut binary.functions);
-
-                contracts.push(Contract {
-                    magic: target.magic,
-                    contract,
-                    constructor,
-                    functions,
-                });
-
-                binary.functions.drain();
-            }
-        }
-
-        target.emit_dispatch(&mut binary, &contracts);
-
-        binary.internalize(&[
-            "entrypoint",
-            "sol_log_",
-            "sol_log_pubkey",
-            "sol_invoke_signed_c",
-            "sol_panic_",
-            "sol_get_return_data",
-            "sol_set_return_data",
-            "sol_create_program_address",
-            "sol_try_find_program_address",
-            "sol_sha256",
-            "sol_keccak256",
-            "sol_log_data",
-        ]);
 
         binary
     }

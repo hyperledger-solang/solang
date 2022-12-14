@@ -1166,7 +1166,6 @@ fn expression(
         | Expression::RationalNumberLiteral(..)
         | Expression::BoolLiteral(..)
         | Expression::BytesLiteral(..)
-        | Expression::CodeLiteral(..)
         | Expression::FunctionArg(..) => (expr.clone(), true),
 
         Expression::ReturnData(_)

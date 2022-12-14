@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy, ReturnCode};
-use crate::codegen::Expression;
+use crate::codegen::{
+    cfg::{ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
+    Expression,
+};
 use crate::emit::binary::Binary;
 use crate::emit::cfg::{create_block, BasicBlock, Work};
 use crate::emit::expression::expression;

@@ -10,7 +10,7 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
-use crate::codegen::cfg::ReturnCode;
+use crate::codegen::{cfg::ReturnCode, Options};
 use crate::emit::substrate;
 use crate::emit::{solana, BinaryOp, Generate};
 use crate::linker::link;
@@ -37,20 +37,17 @@ static LLVM_INIT: OnceCell<()> = OnceCell::new();
 pub struct Binary<'a> {
     pub name: String,
     pub module: Module<'a>,
+    pub(crate) options: &'a Options,
     pub runtime: Option<Box<Binary<'a>>>,
     target: Target,
     pub(crate) function_abort_value_transfers: bool,
     pub(crate) constructor_abort_value_transfers: bool,
-    pub(crate) math_overflow_check: bool,
-    pub(crate) generate_debug_info: bool,
-    pub(crate) log_api_return_codes: bool,
     pub builder: Builder<'a>,
     pub dibuilder: DebugInfoBuilder<'a>,
     pub compile_unit: DICompileUnit<'a>,
     pub(crate) context: &'a Context,
     pub(crate) functions: HashMap<usize, FunctionValue<'a>>,
     code: RefCell<Vec<u8>>,
-    pub(crate) opt: OptimizationLevel,
     pub(crate) selector: GlobalValue<'a>,
     pub(crate) calldata_len: GlobalValue<'a>,
     pub(crate) scratch_len: Option<GlobalValue<'a>>,
@@ -66,35 +63,16 @@ impl<'a> Binary<'a> {
         contract: &'a Contract,
         ns: &'a Namespace,
         filename: &'a str,
-        opt: OptimizationLevel,
-        math_overflow_check: bool,
-        generate_debug_info: bool,
-        log_api_return_codes: bool,
+        opt: &'a Options,
     ) -> Self {
         let std_lib = load_stdlib(context, &ns.target);
         match ns.target {
-            Target::Substrate { .. } => substrate::SubstrateTarget::build(
-                context,
-                &std_lib,
-                contract,
-                ns,
-                filename,
-                opt,
-                math_overflow_check,
-                generate_debug_info,
-                log_api_return_codes,
-            ),
-            Target::Solana => solana::SolanaTarget::build(
-                context,
-                &std_lib,
-                contract,
-                ns,
-                filename,
-                opt,
-                math_overflow_check,
-                generate_debug_info,
-                log_api_return_codes,
-            ),
+            Target::Substrate { .. } => {
+                substrate::SubstrateTarget::build(context, &std_lib, contract, ns, filename, opt)
+            }
+            Target::Solana => {
+                solana::SolanaTarget::build(context, &std_lib, contract, ns, filename, opt)
+            }
             Target::EVM => unimplemented!(),
         }
     }
@@ -109,7 +87,7 @@ impl<'a> Binary<'a> {
             return Ok(self.code.borrow().clone());
         }
 
-        match self.opt {
+        match self.options.opt_level.into() {
             OptimizationLevel::Default | OptimizationLevel::Aggressive => {
                 let pass_manager = PassManager::create(());
 
@@ -130,7 +108,7 @@ impl<'a> Binary<'a> {
                 &self.target.llvm_target_triple(),
                 "",
                 self.target.llvm_features(),
-                self.opt,
+                self.options.opt_level.into(),
                 RelocMode::Default,
                 CodeModel::Default,
             )
@@ -213,12 +191,9 @@ impl<'a> Binary<'a> {
         target: Target,
         name: &str,
         filename: &str,
-        opt: OptimizationLevel,
-        math_overflow_check: bool,
+        opt: &'a Options,
         std_lib: &Module<'a>,
         runtime: Option<Box<Binary<'a>>>,
-        generate_debug_info: bool,
-        log_api_return_codes: bool,
     ) -> Self {
         LLVM_INIT.get_or_init(|| {
             inkwell::targets::Target::initialize_webassembly(&Default::default());
@@ -290,9 +265,6 @@ impl<'a> Binary<'a> {
             runtime,
             function_abort_value_transfers: false,
             constructor_abort_value_transfers: false,
-            math_overflow_check,
-            generate_debug_info,
-            log_api_return_codes,
             builder,
             dibuilder,
             compile_unit,
@@ -300,7 +272,7 @@ impl<'a> Binary<'a> {
             target,
             functions: HashMap::new(),
             code: RefCell::new(Vec::new()),
-            opt,
+            options: opt,
             selector,
             calldata_len,
             scratch: None,
