@@ -162,7 +162,7 @@ fn create_contract_wrong_program_id() {
     let program = &vm.programs[0].program;
     vm.account_data.get_mut(program).unwrap().data = code;
 
-    vm.constructor_expected(7 << 32, "bar0", &[]);
+    vm.constructor_expected(7 << 32, &[]);
 
     assert_eq!(
         vm.logs,
@@ -303,7 +303,7 @@ fn account_too_small() {
 
     vm.account_data.get_mut(&data).unwrap().data.truncate(100);
 
-    vm.constructor_expected(5 << 32, "bar", &[]);
+    vm.constructor_expected(5 << 32, &[]);
 }
 
 #[test]

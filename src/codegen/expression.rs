@@ -2190,35 +2190,12 @@ pub fn emit_function_call(
 
             let success = vartab.temp_name("success", &Type::Bool);
 
-            let (payload, address) = if ns.target == Target::Solana && call_args.accounts.is_none()
-            {
-                let encoder_args = vec![
-                    address,
-                    Expression::Builtin(
-                        *loc,
-                        vec![Type::Address(false)],
-                        Builtin::GetAddress,
-                        vec![],
-                    ),
-                    value.clone(),
-                    Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
-                    Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
-                    args,
-                ];
-
-                let mut encoder = create_encoder(ns, true);
-                let (encoded, _) = encoder.abi_encode(loc, encoder_args, ns, vartab, cfg);
-                (encoded, None)
-            } else {
-                (args, Some(address))
-            };
-
             cfg.add(
                 vartab,
                 Instr::ExternalCall {
                     success: Some(success),
-                    address,
-                    payload,
+                    address: Some(address),
+                    payload: args,
                     value,
                     accounts,
                     seeds,
@@ -2278,41 +2255,10 @@ pub fn emit_function_call(
 
                 tys.insert(0, Type::Bytes(selector.len() as u8));
 
-                let address = if ns.target == Target::Solana && dest_func.selector.is_none() {
-                    let mut encoder_args: Vec<Expression> = Vec::with_capacity(6 + args.len());
-                    encoder_args.push(address);
-                    encoder_args.push(Expression::Builtin(
-                        *loc,
-                        vec![Type::Address(false)],
-                        Builtin::GetAddress,
-                        Vec::new(),
-                    ));
-                    encoder_args.push(value.clone());
-                    encoder_args.push(Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(4),
-                        BigInt::zero(),
-                    ));
-                    encoder_args.push(Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(1),
-                        BigInt::zero(),
-                    ));
-                    encoder_args.push(Expression::BytesLiteral(
-                        *loc,
-                        Type::Bytes(selector.len() as u8),
-                        selector,
-                    ));
-                    encoder_args.append(&mut args);
-                    args = encoder_args;
-                    None
-                } else {
-                    args.insert(
-                        0,
-                        Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector),
-                    );
-                    Some(address)
-                };
+                args.insert(
+                    0,
+                    Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector),
+                );
 
                 let mut encoder = create_encoder(ns, false);
                 let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
@@ -2322,7 +2268,7 @@ pub fn emit_function_call(
                     Instr::ExternalCall {
                         success: None,
                         accounts,
-                        address,
+                        address: Some(address),
                         payload,
                         seeds,
                         value,
@@ -2376,35 +2322,8 @@ pub fn emit_function_call(
                 let selector = function.external_function_selector();
                 let address = function.external_function_address();
 
-                let address = if ns.target == Target::Solana {
-                    let mut encoder_args: Vec<Expression> = Vec::with_capacity(6 + args.len());
-                    encoder_args.push(address);
-                    encoder_args.push(Expression::Builtin(
-                        *loc,
-                        vec![Type::Address(false)],
-                        Builtin::GetAddress,
-                        Vec::new(),
-                    ));
-                    encoder_args.push(value.clone());
-                    encoder_args.push(Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(4),
-                        BigInt::zero(),
-                    ));
-                    encoder_args.push(Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(1),
-                        BigInt::zero(),
-                    ));
-                    encoder_args.push(selector);
-                    encoder_args.append(&mut args);
-                    args = encoder_args;
-                    None
-                } else {
-                    tys.insert(0, Type::Bytes(4));
-                    args.insert(0, selector);
-                    Some(address)
-                };
+                tys.insert(0, Type::Bytes(ns.target.selector_length()));
+                args.insert(0, selector);
 
                 let mut encoder = create_encoder(ns, false);
                 let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
@@ -2415,7 +2334,7 @@ pub fn emit_function_call(
                         success: None,
                         accounts: None,
                         seeds: None,
-                        address,
+                        address: Some(address),
                         payload,
                         value,
                         gas,

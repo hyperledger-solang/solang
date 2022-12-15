@@ -1424,7 +1424,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                     instruction => panic!("instruction {} not supported", instruction),
                 }
             } else {
-                let data_id: Account = instruction.data[..32].try_into().unwrap();
+                let data_id: Account = instruction.accounts[0].pubkey.0;
 
                 println!(
                     "calling {} program_id {}",
@@ -1594,17 +1594,19 @@ impl VirtualMachine {
         res
     }
 
-    fn constructor(&mut self, name: &str, args: &[BorshToken]) {
-        self.constructor_expected(0, name, args)
+    /// FIXME: remove name argument
+    fn constructor(&mut self, _name: &str, args: &[BorshToken]) {
+        self.constructor_expected(0, args)
     }
 
-    fn constructor_expected(&mut self, expected: u64, name: &str, args: &[BorshToken]) {
+    fn constructor_expected(&mut self, expected: u64, args: &[BorshToken]) {
         self.return_data = None;
 
         let program = &self.stack[0];
         println!("constructor for {}", hex::encode(program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, name);
+        let mut calldata = discriminator("global", "new");
+
         if program.abi.as_ref().unwrap().constructor.is_some() {
             let mut encoded_data = encode_arguments(args);
             calldata.append(&mut encoded_data);
@@ -1639,10 +1641,7 @@ impl VirtualMachine {
 
         println!("function {} for {}", name, hex::encode(program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, name);
-
-        let selector = discriminator("global", name);
-        calldata.extend_from_slice(&selector);
+        let mut calldata = discriminator("global", name);
         let mut encoded_args = encode_arguments(args);
         calldata.append(&mut encoded_args);
 
@@ -1677,9 +1676,7 @@ impl VirtualMachine {
 
         println!("function for {}", hex::encode(program.data));
 
-        let mut calldata = VirtualMachine::input(&program.data, name);
-
-        println!("input: {}", hex::encode(&calldata));
+        let mut calldata = Vec::new();
 
         let selector = discriminator("global", name);
         calldata.extend_from_slice(&selector);
@@ -1691,24 +1688,6 @@ impl VirtualMachine {
         println!("input: {}", hex::encode(&calldata));
 
         self.execute(&default_metas, &calldata)
-    }
-
-    fn input(recv: &Account, name: &str) -> Vec<u8> {
-        let mut calldata: Vec<u8> = recv.to_vec();
-        calldata.extend_from_slice(&[0u8; 32]);
-        calldata.extend_from_slice(&0u64.to_le_bytes());
-
-        let mut hasher = Keccak::v256();
-        let mut hash = [0u8; 32];
-        hasher.update(name.as_bytes());
-        hasher.finalize(&mut hash);
-        calldata.extend(&hash[0..4]);
-
-        let seeds_len = 0u8;
-
-        calldata.push(seeds_len);
-
-        calldata
     }
 
     fn default_metas(&self) -> Vec<AccountMeta> {
