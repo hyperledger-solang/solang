@@ -36,48 +36,6 @@ pub(super) struct BorshEncoding {
 }
 
 impl AbiEncoding for BorshEncoding {
-    fn abi_encode(
-        &mut self,
-        loc: &Loc,
-        args: Vec<Expression>,
-        ns: &Namespace,
-        vartab: &mut Vartable,
-        cfg: &mut ControlFlowGraph,
-    ) -> (Expression, Expression) {
-        let size = calculate_size_args(self, &args, ns, vartab, cfg);
-
-        let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: *loc,
-                res: encoded_bytes,
-                expr: Expression::AllocDynamicBytes(
-                    *loc,
-                    Type::DynamicBytes,
-                    Box::new(size.clone()),
-                    None,
-                ),
-            },
-        );
-
-        let mut offset = Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::zero());
-        let buffer = Expression::Variable(*loc, Type::DynamicBytes, encoded_bytes);
-
-        for (arg_no, item) in args.iter().enumerate() {
-            let advance = self.encode(item, &buffer, &offset, arg_no, ns, vartab, cfg);
-            offset = Expression::Add(
-                Loc::Codegen,
-                Type::Uint(32),
-                false,
-                Box::new(offset),
-                Box::new(advance),
-            );
-        }
-
-        (buffer, size)
-    }
-
     fn abi_decode(
         &self,
         loc: &Loc,

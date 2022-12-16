@@ -18,6 +18,8 @@ use num_traits::{One, Zero};
 use solang_parser::pt::Loc;
 use std::ops::{AddAssign, MulAssign, Sub};
 
+pub(super) trait AbiEncode {}
+
 /// This trait should be implemented by all encoding methods (ethabi, Scale and Borsh), so that
 /// we have the same interface for creating encode and decode functions.
 pub(super) trait AbiEncoding {
@@ -29,7 +31,124 @@ pub(super) trait AbiEncoding {
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
-    ) -> (Expression, Expression);
+    ) -> (Expression, Expression) {
+        let size = calculate_size_args(&mut self, &args, ns, vartab, cfg);
+
+        let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc: *loc,
+                res: encoded_bytes,
+                expr: Expression::AllocDynamicBytes(
+                    *loc,
+                    Type::DynamicBytes,
+                    Box::new(size.clone()),
+                    None,
+                ),
+            },
+        );
+
+        let mut offset = Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::zero());
+        let buffer = Expression::Variable(*loc, Type::DynamicBytes, encoded_bytes);
+
+        for (arg_no, item) in args.iter().enumerate() {
+            //let advance = self.encode(item, &buffer, &offset, arg_no, ns, vartab, cfg);
+            let advance = expr.encode(&mut self, item, &buffer, &offset, arg_no, ns, vartab, cfg);
+            offset = Expression::Add(
+                Loc::Codegen,
+                Type::Uint(32),
+                false,
+                Box::new(offset),
+                Box::new(advance),
+            );
+        }
+        (buffer, size)
+    }
+
+    fn encode_linear(
+        &mut self,
+        expr: &Expression,
+        buffer: &Expression,
+        offset: &Expression,
+        arg_no: usize,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+        size: u32,
+    ) -> Expression {
+        cfg.add(
+            vartab,
+            Instr::WriteBuffer {
+                buf: buffer.clone(),
+                offset: offset.clone(),
+                value: expr.clone(),
+            },
+        );
+        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), size.into())
+    }
+
+    fn encode_int(
+        &mut self,
+        expr: &Expression,
+        buffer: &Expression,
+        offset: &Expression,
+        arg_no: usize,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+        width: u16,
+    ) -> Expression {
+        let encoding_size = width.next_power_of_two();
+        let expr = if encoding_size != width {
+            if expr.ty().is_signed_int() {
+                Expression::SignExt(
+                    Loc::Codegen,
+                    Type::Int(encoding_size),
+                    Box::new(expr.clone()),
+                )
+            } else {
+                Expression::ZeroExt(
+                    Loc::Codegen,
+                    Type::Uint(encoding_size),
+                    Box::new(expr.clone()),
+                )
+            }
+        } else {
+            expr.clone()
+        };
+
+        cfg.add(
+            vartab,
+            Instr::WriteBuffer {
+                buf: buffer.clone(),
+                offset: offset.clone(),
+                value: expr,
+            },
+        );
+
+        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), (encoding_size / 8).into())
+    }
+
+    fn encode_int_packed() {
+        todo!()
+    }
+
+    fn encode_bytes_linear() {
+        todo!()
+    }
+
+    fn encode_struct() {
+        todo!()
+    }
+
+    fn encode_array() {
+        todo!()
+    }
+
+    fn encode_external_function() {
+        todo!()
+    }
 
     fn abi_decode(
         &self,
