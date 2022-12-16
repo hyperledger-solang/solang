@@ -1262,7 +1262,7 @@ impl Type {
             Type::Int(n) => *n as u8,
             Type::Uint(n) => *n as u8,
             Type::Rational => unreachable!(),
-            Type::Bytes(n) => *n as u8,
+            Type::Bytes(n) => *n,
             Type::Enum(n) => ns.enums[*n].ty.bytes(ns),
             Type::Value => ns.value_length as u8,
             Type::StorageRef(..) => ns.storage_type().bytes(ns),

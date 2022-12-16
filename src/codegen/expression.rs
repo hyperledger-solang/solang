@@ -1926,7 +1926,7 @@ fn interfaceid(ns: &Namespace, contract_no: &usize, loc: &pt::Loc) -> Expression
             }
         }
     }
-    Expression::BytesLiteral(*loc, Type::Bytes(selector_len as u8), id.to_vec())
+    Expression::BytesLiteral(*loc, Type::Bytes(selector_len), id.to_vec())
 }
 
 pub fn assign_single(
