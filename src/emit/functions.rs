@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::emit::binary::Binary;
-use crate::emit::cfg::emit_cfg;
-use crate::emit::TargetRuntime;
-use crate::sema::ast::{Contract, Namespace, Type};
-use inkwell::module::Linkage;
-use inkwell::values::FunctionValue;
-use inkwell::{AddressSpace, IntPredicate};
+use crate::{
+    emit::{binary::Binary, cfg::emit_cfg, TargetRuntime},
+    sema::ast::{Contract, Namespace, Type},
+};
+use inkwell::{
+    module::Linkage,
+    values::FunctionValue,
+    {AddressSpace, IntPredicate},
+};
 
 /// Emit all functions, constructors, fallback and receiver
 pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(

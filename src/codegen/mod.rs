@@ -28,8 +28,6 @@ use self::{
     expression::expression,
     vartable::Vartable,
 };
-#[cfg(feature = "llvm")]
-use crate::emit::Generate;
 use crate::sema::ast::{
     FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
 };
@@ -146,34 +144,6 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
 
             if ns.diagnostics.any_errors() {
                 return;
-            }
-
-            // EVM has no emitter implemented yet
-            if ns.target != Target::EVM {
-                #[cfg(not(feature = "llvm"))]
-                panic!("LLVM feature is not enabled");
-                #[cfg(feature = "llvm")]
-                {
-                    let context = inkwell::context::Context::create();
-
-                    let filename = ns.files[0].path.to_string_lossy();
-
-                    let binary = ns.contracts[contract_no].emit(
-                        ns,
-                        &context,
-                        &filename,
-                        opt.opt_level.into(),
-                        opt.math_overflow_check,
-                        opt.generate_debug_information,
-                        opt.log_api_return_codes,
-                    );
-
-                    let code = binary.code(Generate::Linked).expect("llvm build");
-
-                    drop(binary);
-
-                    ns.contracts[contract_no].code = code;
-                }
             }
 
             contracts_done[contract_no] = true;
@@ -391,7 +361,6 @@ pub enum Expression {
     BytesCast(pt::Loc, Type, Type, Box<Expression>),
     BytesLiteral(pt::Loc, Type, Vec<u8>),
     Cast(pt::Loc, Type, Box<Expression>),
-    CodeLiteral(pt::Loc, usize, bool),
     Complement(pt::Loc, Type, Box<Expression>),
     ConstArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
     UnsignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
@@ -501,7 +470,6 @@ impl CodeLocation for Expression {
             | Expression::StringCompare(loc, ..)
             | Expression::StringConcat(loc, ..)
             | Expression::FunctionArg(loc, ..)
-            | Expression::CodeLiteral(loc, ..)
             | Expression::List(loc, ..)
             | Expression::ShiftRight(loc, ..)
             | Expression::ShiftLeft(loc, ..)
@@ -617,9 +585,7 @@ impl Recurse for Expression {
 impl RetrieveType for Expression {
     fn ty(&self) -> Type {
         match self {
-            Expression::AbiEncode { .. }
-            | Expression::CodeLiteral(..)
-            | Expression::ReturnData(_) => Type::DynamicBytes,
+            Expression::AbiEncode { .. } | Expression::ReturnData(_) => Type::DynamicBytes,
             Expression::Builtin(_, returns, ..) => {
                 assert_eq!(returns.len(), 1);
                 returns[0].clone()

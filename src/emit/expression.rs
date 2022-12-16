@@ -5,7 +5,7 @@ use crate::codegen::{Builtin, Expression};
 use crate::emit::binary::Binary;
 use crate::emit::math::{build_binary_op_with_overflow_check, multiply, power};
 use crate::emit::strings::{format_string, string_location};
-use crate::emit::{BinaryOp, Generate, TargetRuntime, Variable};
+use crate::emit::{BinaryOp, TargetRuntime, Variable};
 use crate::sema::ast::{Namespace, RetrieveType, StructType, Type};
 use crate::Target;
 use inkwell::module::Linkage;
@@ -120,61 +120,11 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap()
                 .into()
         }
-        Expression::CodeLiteral(_, bin_no, runtime) => {
-            let codegen_bin = &ns.contracts[*bin_no];
-
-            let target_bin = Binary::build(
-                bin.context,
-                codegen_bin,
-                ns,
-                "",
-                bin.opt,
-                bin.math_overflow_check,
-                bin.generate_debug_info,
-                bin.log_api_return_codes,
-            );
-
-            let code = if *runtime && target_bin.runtime.is_some() {
-                target_bin
-                    .runtime
-                    .unwrap()
-                    .code(Generate::Linked)
-                    .expect("compile should succeeed")
-            } else {
-                target_bin
-                    .code(Generate::Linked)
-                    .expect("compile should succeeed")
-            };
-
-            let size = bin.context.i32_type().const_int(code.len() as u64, false);
-
-            let elem_size = bin.context.i32_type().const_int(1, false);
-
-            let init = bin.emit_global_string(
-                &format!(
-                    "code_{}_{}",
-                    if *runtime { "runtime" } else { "deployer" },
-                    &codegen_bin.name
-                ),
-                &code,
-                true,
-            );
-
-            bin.builder
-                .build_call(
-                    bin.module.get_function("vector_new").unwrap(),
-                    &[size.into(), elem_size.into(), init.into()],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-        }
         Expression::Add(_, _, unchecked, l, r) => {
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
-            if bin.math_overflow_check && !*unchecked {
+            if bin.options.math_overflow_check && !*unchecked {
                 let signed = l.ty().is_signed_int();
                 build_binary_op_with_overflow_check(
                     target,
@@ -194,7 +144,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
-            if bin.math_overflow_check && !*unchecked {
+            if bin.options.math_overflow_check && !*unchecked {
                 let signed = l.ty().is_signed_int();
                 build_binary_op_with_overflow_check(
                     target,
@@ -704,7 +654,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             // Load the result pointer
             let res = bin.builder.build_load(o, "");
 
-            if !bin.math_overflow_check || *unchecked || ns.target != Target::Solana {
+            if !bin.options.math_overflow_check || *unchecked || ns.target != Target::Solana {
                 // In Substrate, overflow case will hit an unreachable expression, so no additional checks are needed.
                 res
             } else {

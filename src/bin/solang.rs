@@ -538,19 +538,13 @@ fn process_file(
         let context = inkwell::context::Context::create();
         let filename_string = filename.to_string_lossy();
 
-        let binary = resolved_contract.emit(
-            &ns,
-            &context,
-            &filename_string,
-            opt.opt_level.into(),
-            opt.math_overflow_check,
-            opt.generate_debug_information,
-            opt.log_api_return_codes,
-        );
+        let binary = resolved_contract.binary(&ns, &context, &filename_string, opt);
 
         if save_intermediates(&binary, matches) {
             continue;
         }
+
+        let code = binary.code(Generate::Linked).expect("llvm build");
 
         if matches.contains_id("STD-JSON") {
             json_contracts.insert(
@@ -558,7 +552,7 @@ fn process_file(
                 JsonContract {
                     abi: abi::ethereum::gen_abi(contract_no, &ns),
                     ewasm: Some(EwasmContract {
-                        wasm: hex::encode_upper(&resolved_contract.code),
+                        wasm: hex::encode_upper(code),
                     }),
                     minimum_space: None,
                 },
@@ -575,10 +569,10 @@ fn process_file(
             }
 
             let mut file = create_file(&bin_filename);
-            file.write_all(&resolved_contract.code).unwrap();
 
-            let (abi_bytes, abi_ext) =
-                abi::generate_abi(contract_no, &ns, &resolved_contract.code, verbose);
+            file.write_all(&code).unwrap();
+
+            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
             let abi_filename = output_file(matches, &binary.name, abi_ext);
 
             if verbose {

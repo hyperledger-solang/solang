@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::ControlFlowGraph;
-use crate::codegen::vartable::Storage;
+use crate::codegen::{cfg::ControlFlowGraph, vartable::Storage};
 use crate::emit::binary::Binary;
 use crate::emit::instructions::process_instruction;
 use crate::emit::{TargetRuntime, Variable};
@@ -39,7 +38,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
     let file = compile_unit.get_file();
     let mut di_func_scope: Option<DISubprogram<'_>> = None;
 
-    if bin.generate_debug_info {
+    if bin.options.generate_debug_information {
         let return_type = function.get_type().get_return_type();
         match return_type {
             None => {}
@@ -182,7 +181,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
         }
 
         for (_, ins) in &cfg.blocks[w.block_no].instr {
-            if bin.generate_debug_info {
+            if bin.options.generate_debug_information {
                 let debug_loc = ins.loc();
                 if let pt::Loc::File(file_offset, offset, _) = debug_loc {
                     let (line, col) = ns.files[file_offset].offset_to_line_column(offset);

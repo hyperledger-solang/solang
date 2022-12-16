@@ -816,15 +816,6 @@ impl ControlFlowGraph {
             Expression::InternalFunctionCfg(cfg_no) => {
                 format!("function {}", contract.cfg[*cfg_no].name)
             }
-            Expression::CodeLiteral(_, contract_no, runtime) => format!(
-                "({} code contract {})",
-                if *runtime {
-                    "runtimeCode"
-                } else {
-                    "creationCode"
-                },
-                ns.contracts[*contract_no].name,
-            ),
             Expression::ReturnData(_) => "(external call return data)".to_string(),
             Expression::Cast(_, ty, e) => format!(
                 "{}({})",

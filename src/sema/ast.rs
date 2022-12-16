@@ -10,6 +10,7 @@ use crate::{codegen, Target};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_rational::BigRational;
+use once_cell::unsync::OnceCell;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, FunctionTy, OptionalCodeLocation};
@@ -649,7 +650,8 @@ pub struct Contract {
     pub initializer: Option<usize>,
     pub default_constructor: Option<(Function, usize)>,
     pub cfg: Vec<ControlFlowGraph>,
-    pub code: Vec<u8>,
+    /// Compiled program. Only available after emit.
+    pub code: OnceCell<Vec<u8>>,
     /// Can the contract be instantiated, i.e. not abstract, no errors, etc.
     pub instantiable: bool,
     /// CFG number of this contract's dispatch function

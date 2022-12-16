@@ -722,9 +722,7 @@ pub fn expression(
         ast::Expression::BytesLiteral(loc, ty, arr) => {
             Expression::BytesLiteral(*loc, ty.clone(), arr.clone())
         }
-        ast::Expression::CodeLiteral(loc, pos, boolean) => {
-            Expression::CodeLiteral(*loc, *pos, *boolean)
-        }
+        ast::Expression::CodeLiteral(loc, contract_no, _) => code(loc, *contract_no, ns, opt),
         ast::Expression::NumberLiteral(loc, ty, n) => {
             Expression::NumberLiteral(*loc, ty.clone(), n.clone())
         }
@@ -2926,4 +2924,15 @@ pub(super) fn assert_failure(
             encoded_args: Some(encoded_buffer),
         },
     )
+}
+
+/// Generate the binary code for a contract
+fn code(loc: &Loc, contract_no: usize, ns: &Namespace, opt: &Options) -> Expression {
+    let contract = &ns.contracts[contract_no];
+
+    let code = contract.emit(ns, opt);
+
+    let size = Expression::NumberLiteral(*loc, Type::Uint(32), code.len().into());
+
+    Expression::AllocDynamicBytes(*loc, Type::DynamicBytes, size.into(), Some(code))
 }
