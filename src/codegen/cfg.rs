@@ -133,7 +133,7 @@ pub enum Instr {
         gas: Expression,
         callty: CallTy,
     },
-    /// Value transfer; either <address>.send() or <address>.transfer()
+    /// Value transfer; either address.send() or address.transfer()
     ValueTransfer {
         success: Option<usize>,
         address: Expression,

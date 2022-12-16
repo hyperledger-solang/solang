@@ -24,7 +24,6 @@ use num_rational::BigRational;
 use num_traits::{FromPrimitive, Num, One, Pow, ToPrimitive, Zero};
 use solang_parser::pt::{self, CodeLocation, Loc};
 use std::{
-    cmp,
     cmp::Ordering,
     collections::{BTreeMap, HashMap},
     ops::{Mul, Shl, Sub},
@@ -515,7 +514,7 @@ impl Expression {
                     }),
                 }
             }
-            (Type::Bytes(n), Type::FunctionSelector) if *n == ns.target.selector_length() as u8 => {
+            (Type::Bytes(n), Type::FunctionSelector) if *n == ns.target.selector_length() => {
                 Ok(Expression::Cast {
                     loc: *loc,
                     to: to.clone(),
@@ -1247,7 +1246,7 @@ impl Expression {
                 })
             }
             (Type::FunctionSelector, Type::Bytes(n)) => {
-                let selector_length = ns.target.selector_length() as u8;
+                let selector_length = ns.target.selector_length();
                 if *n == selector_length {
                     Ok(Expression::Cast {
                         loc: *loc,
@@ -1287,7 +1286,7 @@ impl Expression {
                 }
                 self.cast_types(
                     loc,
-                    &Type::Bytes(ns.target.selector_length() as u8),
+                    &Type::Bytes(ns.target.selector_length()),
                     to,
                     implicit,
                     ns,
@@ -1559,10 +1558,20 @@ pub fn coerce_number(
     let (right_len, right_signed) = get_int_length(r, r_loc, false, ns, diagnostics)?;
 
     Ok(match (left_signed, right_signed) {
-        (true, true) => Type::Int(cmp::max(left_len, right_len)),
-        (false, false) => Type::Uint(cmp::max(left_len, right_len)),
-        (true, false) => Type::Int(cmp::max(left_len, cmp::min(right_len + 8, 256))),
-        (false, true) => Type::Int(cmp::max(cmp::min(left_len + 8, 256), right_len)),
+        (true, true) => Type::Int(left_len.max(right_len)),
+        (false, false) => Type::Uint(left_len.max(right_len)),
+        (true, false) => {
+            // uint8 fits into int16
+            let len = left_len.max(right_len + 8);
+
+            Type::Int(len.min(256))
+        }
+        (false, true) => {
+            // uint8 fits into int16
+            let len = (left_len + 8).max(right_len);
+
+            Type::Int(len.min(256))
+        }
     })
 }
 
@@ -7218,7 +7227,7 @@ fn array_literal(
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
-    let mut dims = Box::new(Vec::new());
+    let mut dims = Vec::new();
     let mut flattened = Vec::new();
 
     let resolve_to = match resolve_to {
@@ -7345,9 +7354,9 @@ fn array_literal(
     );
 
     if context.constant {
-        Ok(Expression::ConstArrayLiteral(*loc, aty, *dims, exprs))
+        Ok(Expression::ConstArrayLiteral(*loc, aty, dims, exprs))
     } else {
-        Ok(Expression::ArrayLiteral(*loc, aty, *dims, exprs))
+        Ok(Expression::ArrayLiteral(*loc, aty, dims, exprs))
     }
 }
 
