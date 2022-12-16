@@ -875,6 +875,8 @@ impl<'a> SyscallObject<UserError> for SyscallSetReturnData<'a> {
 
         let buf = question_mark!(translate_slice::<u8>(memory_mapping, addr, len), result);
 
+        println!("sol_set_return_data: {}", hex::encode(buf));
+
         if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
             if len == 0 {
                 vm.return_data = None;
@@ -1597,6 +1599,8 @@ impl VirtualMachine {
     }
 
     fn constructor_expected(&mut self, expected: u64, name: &str, args: &[BorshToken]) {
+        self.return_data = None;
+
         let program = &self.stack[0];
         println!("constructor for {}", hex::encode(program.data));
 
@@ -1612,6 +1616,9 @@ impl VirtualMachine {
 
         println!("res:{:?}", res);
         assert_eq!(res, Ok(expected));
+        if let Some((_, return_data)) = &self.return_data {
+            assert_eq!(return_data.len(), 0);
+        }
     }
 
     fn function(&mut self, name: &str, args: &[BorshToken]) -> Vec<BorshToken> {
@@ -1626,13 +1633,13 @@ impl VirtualMachine {
         name: &str,
         args: &[BorshToken],
     ) -> Vec<BorshToken> {
+        self.return_data = None;
+
         let program = &self.stack[0];
 
-        println!("function for {}", hex::encode(program.data));
+        println!("function {} for {}", name, hex::encode(program.data));
 
         let mut calldata = VirtualMachine::input(&program.data, name);
-
-        println!("input: {} ", hex::encode(&calldata));
 
         let selector = discriminator("global", name);
         calldata.extend_from_slice(&selector);
@@ -1648,14 +1655,17 @@ impl VirtualMachine {
             Err(e) => panic!("error: {:?}", e),
         };
 
-        if let Some((_, return_data)) = &self.return_data {
-            println!("return: {}", hex::encode(return_data));
-
-            let func = &self.stack[0].abi.as_ref().unwrap().functions[name][0];
-            decode_output(&func.outputs, return_data)
+        let return_data = if let Some((_, return_data)) = &self.return_data {
+            return_data.as_slice()
         } else {
-            Vec::new()
+            &[]
+        };
+
+        let func = &self.stack[0].abi.as_ref().unwrap().functions[name][0];
+        if func.outputs.is_empty() {
+            assert_eq!(return_data.len(), 0);
         }
+        decode_output(&func.outputs, return_data)
     }
 
     fn function_must_fail(
