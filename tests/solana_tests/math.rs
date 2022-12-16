@@ -41,70 +41,76 @@ fn safe_math() {
 
     vm.constructor("math", &[]);
 
-    let returns = vm.function(
-        "mul_test",
-        &[
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from_str("1000000000000000000").unwrap(),
-            },
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from_str("4000000000000000000").unwrap(),
-            },
-        ],
-    );
+    let returns = vm
+        .function(
+            "mul_test",
+            &[
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from_str("1000000000000000000").unwrap(),
+                },
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from_str("4000000000000000000").unwrap(),
+                },
+            ],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from_str("4000000000000000000000000000000000000").unwrap(),
-        },]
+        },
     );
 
-    let returns = vm.function(
-        "add_test",
-        &[
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from_str("1000000000000000000").unwrap(),
-            },
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from_str("4000000000000000000").unwrap(),
-            },
-        ],
-    );
+    let returns = vm
+        .function(
+            "add_test",
+            &[
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from_str("1000000000000000000").unwrap(),
+                },
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from_str("4000000000000000000").unwrap(),
+                },
+            ],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from_str("5000000000000000000").unwrap(),
-        },]
+        },
     );
 
-    let returns = vm.function(
-        "sub_test",
-        &[
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from_str("4000000000000000000").unwrap(),
-            },
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from_str("1000000000000000000").unwrap(),
-            },
-        ],
-    );
+    let returns = vm
+        .function(
+            "sub_test",
+            &[
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from_str("4000000000000000000").unwrap(),
+                },
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from_str("1000000000000000000").unwrap(),
+                },
+            ],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from_str("3000000000000000000").unwrap(),
-        },]
+        },
     );
 
     let res = vm.function_must_fail(

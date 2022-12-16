@@ -6,6 +6,7 @@ use crate::Target;
 pub mod anchor;
 pub mod ethereum;
 pub mod substrate;
+mod tests;
 
 pub fn generate_abi(
     contract_no: usize,

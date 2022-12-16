@@ -39,30 +39,30 @@ fn test_returns() {
     let mut vm = build_solidity(file);
     vm.constructor("c1", &[]);
     let _ = vm.function("assign", &[]);
-    let returns = vm.function("pb1", &[]);
+    let returns = vm.function("pb1", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 256,
             value: BigInt::from(5u8)
-        }]
+        }
     );
 
-    let returns = vm.function("test1", &[]);
+    let returns = vm.function("test1", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 256,
             value: BigInt::from(52u8)
-        }]
+        }
     );
-    let returns = vm.function("test2", &[]);
+    let returns = vm.function("test2", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 256,
             value: BigInt::from(5u8)
-        }]
+        }
     );
 }

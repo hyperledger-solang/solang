@@ -232,8 +232,10 @@ fn returned_string() {
         rr: "cortado".to_string(),
     };
     let encoded = data.try_to_vec().unwrap();
-    let returns = vm.function("returnedString", &[BorshToken::Bytes(encoded)]);
-    let string = returns[0].clone().into_string().unwrap();
+    let returns = vm
+        .function("returnedString", &[BorshToken::Bytes(encoded)])
+        .unwrap();
+    let string = returns.into_string().unwrap();
     assert_eq!(string, "cortado");
 }
 
@@ -264,8 +266,11 @@ fn test_string_array() {
         ],
     };
     let encoded = data.try_to_vec().unwrap();
-    let returns = vm.function("testStringVector", &[BorshToken::Bytes(encoded)]);
-    let vec = returns[0].clone().into_array().unwrap();
+    let returns = vm
+        .function("testStringVector", &[BorshToken::Bytes(encoded)])
+        .unwrap();
+    let vec = returns.into_array().unwrap();
+
     assert_eq!(vec.len(), 3);
     assert_eq!(vec[0].clone().into_string().unwrap(), "coffee");
     assert_eq!(vec[1].clone().into_string().unwrap(), "tea");
@@ -814,7 +819,11 @@ fn external_function() {
         ],
     };
     let encoded = input.try_to_vec().unwrap();
-    let returns = vm.function("testExternalFunction", &[BorshToken::Bytes(encoded)]);
+
+    let returns = vm
+        .function("testExternalFunction", &[BorshToken::Bytes(encoded)])
+        .unwrap()
+        .unwrap_tuple();
 
     let selector = returns[0].clone().into_fixed_bytes().unwrap();
     assert_eq!(selector, input.selector);

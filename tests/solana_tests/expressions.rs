@@ -22,13 +22,11 @@ fn interfaceid() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedBytes(
-            0x88632631fac67239u64.to_be_bytes().to_vec()
-        )]
+        BorshToken::uint8_fixed_array(0x88632631fac67239u64.to_be_bytes().to_vec())
     );
 }
 
@@ -61,21 +59,19 @@ fn write_buffer() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("test1", &[]);
+    let returns = vm.function("test1", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Bytes(
-            [0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2, 1].to_vec()
-        )]
+        BorshToken::Bytes([0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2, 1].to_vec())
     );
 
-    let returns = vm.function("test2", &[]);
+    let returns = vm.function("test2", &[]).unwrap();
 
     let mut buf = vec![0x42u8, 0x41u8];
     buf.extend_from_slice(&vm.stack[0].program);
 
-    assert_eq!(returns, vec![BorshToken::Bytes(buf)]);
+    assert_eq!(returns, BorshToken::Bytes(buf));
 
     let res = vm.function_must_fail("test3", &[]);
     assert_eq!(res, Ok(4294967296));
@@ -98,12 +94,15 @@ fn read_buffer() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function(
-        "test1",
-        &[BorshToken::Bytes(
-            [0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2, 1].to_vec(),
-        )],
-    );
+    let returns = vm
+        .function(
+            "test1",
+            &[BorshToken::Bytes(
+                [0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2, 1].to_vec(),
+            )],
+        )
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -130,7 +129,10 @@ fn read_buffer() {
     let mut buf = vec![0x42u8, 0x41u8];
     buf.extend_from_slice(&vm.origin);
 
-    let returns = vm.function("test2", &[BorshToken::Bytes(buf.clone())]);
+    let returns = vm
+        .function("test2", &[BorshToken::Bytes(buf.clone())])
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -139,7 +141,7 @@ fn read_buffer() {
                 width: 16,
                 value: BigInt::from(0x4142u16)
             },
-            BorshToken::FixedBytes(vm.origin.to_vec())
+            BorshToken::Address(vm.origin)
         ]
     );
 
@@ -166,19 +168,23 @@ fn bytes_compare() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function(
-        "test1",
-        &[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())],
-    );
+    let returns = vm
+        .function(
+            "test1",
+            &[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())],
+        )
+        .unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bool(true)]);
+    assert_eq!(returns, BorshToken::Bool(true));
 
-    let returns = vm.function(
-        "test2",
-        &[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())],
-    );
+    let returns = vm
+        .function(
+            "test2",
+            &[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())],
+        )
+        .unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bool(false)]);
+    assert_eq!(returns, BorshToken::Bool(false));
 }
 
 #[test]
@@ -200,26 +206,28 @@ fn assignment_in_ternary() {
         let left = rng.gen::<u64>();
         let right = rng.gen::<u64>();
 
-        let returns = vm.function(
-            "minimum",
-            &[
-                BorshToken::Uint {
-                    width: 64,
-                    value: BigInt::from(left),
-                },
-                BorshToken::Uint {
-                    width: 64,
-                    value: BigInt::from(right),
-                },
-            ],
-        );
+        let returns = vm
+            .function(
+                "minimum",
+                &[
+                    BorshToken::Uint {
+                        width: 64,
+                        value: BigInt::from(left),
+                    },
+                    BorshToken::Uint {
+                        width: 64,
+                        value: BigInt::from(right),
+                    },
+                ],
+            )
+            .unwrap();
 
         assert_eq!(
             returns,
-            vec![BorshToken::Uint {
+            BorshToken::Uint {
                 width: 64,
                 value: BigInt::from(std::cmp::min(left, right))
-            },]
+            },
         );
     }
 }
@@ -237,13 +245,13 @@ fn power() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("power", &[]);
+    let returns = vm.function("power", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(2417851639229258349412352u128)
-        },]
+        }
     );
 }

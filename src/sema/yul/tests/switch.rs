@@ -100,9 +100,6 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    for item in ns.diagnostics.iter() {
-        std::println!("{}", item.message);
-    }
     assert_eq!(ns.diagnostics.len(), 1);
     assert_eq!(
         ns.diagnostics.iter().next().unwrap().message,

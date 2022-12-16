@@ -68,8 +68,8 @@ contract Testing {
     );
 
     vm.constructor("Testing", &[]);
-    let returns = vm.function("getThis", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("getThis", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.a, 45);
@@ -80,8 +80,8 @@ contract Testing {
     assert_eq!(decoded.day, WeekDay::Wednesday);
     assert!(!decoded.h);
 
-    let returns = vm.function("encodeEnum", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("encodeEnum", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.sunday, WeekDay::Sunday);
@@ -109,8 +109,8 @@ contract Testing {
         "#,
     );
     vm.constructor("Testing", &[]);
-    let returns = vm.function("getThis", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("getThis", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.address, vm.programs[0].data);
     assert_eq!(decoded.this, vm.programs[0].data);
@@ -139,8 +139,8 @@ contract Testing {
     );
 
     vm.constructor("Testing", &[]);
-    let returns = vm.function("getThis", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("getThis", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = MyStruct::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a, "coffe");
     assert_eq!(decoded.b, b"tea");
@@ -191,14 +191,15 @@ fn primitive_structs() {
         "#,
     );
     vm.constructor("Testing", &[]);
-    let returns = vm.function("getThis", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("getThis", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
+
     let decoded = NoPadStruct::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a, 1238);
     assert_eq!(decoded.b, 87123);
 
-    let returns = vm.function("getThat", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("getThat", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = PaddedStruct::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a, 12998);
     assert_eq!(decoded.b, 240);
@@ -226,8 +227,11 @@ contract Testing {
     );
 
     vm.constructor("Testing", &[]);
-    let returns = vm.function("testStruct", &[BorshToken::String("nihao".to_string())]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+
+    let returns = vm
+        .function("testStruct", &[BorshToken::String("nihao".to_string())])
+        .unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.rr, "nihao");
 }
@@ -258,14 +262,14 @@ fn test_string_array() {
     );
 
     vm.constructor("Testing", &[]);
-    let returns = vm.function("encode", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("encode", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a.len(), 0);
 
     let _ = vm.function("insertStrings", &[]);
-    let returns = vm.function("encode", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("encode", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a.len(), 2);
     assert_eq!(decoded.a[0], "tea");
@@ -335,8 +339,8 @@ contract Testing {
     );
 
     vm.constructor("Testing", &[]);
-    let returns = vm.function("testStruct", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("testStruct", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = NonConstantStruct::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.a, 890234);
@@ -439,8 +443,8 @@ fn struct_in_array() {
 
     vm.constructor("Testing", &[]);
     let _ = vm.function("addData", &[]);
-    let returns = vm.function("encodeStruct", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("encodeStruct", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item_1.a, 945);
@@ -450,8 +454,8 @@ fn struct_in_array() {
     let b: [u8; 21] = b"there_is_padding_here".to_owned();
     assert_eq!(&decoded.item_2.c[0..21], b);
 
-    let returns = vm.function("primitiveStruct", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("primitiveStruct", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item_1.len(), 3);
@@ -462,8 +466,8 @@ fn struct_in_array() {
     assert_eq!(decoded.item_3[0], NoPadStruct { a: 1, b: 2 });
     assert_eq!(decoded.item_3[1], NoPadStruct { a: 3, b: 4 });
 
-    let returns = vm.function("primitiveDynamicArray", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("primitiveDynamicArray", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res3::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item_1.len(), 2);
@@ -539,8 +543,8 @@ fn arrays() {
 
     vm.constructor("Testing", &[]);
     let _ = vm.function("addData", &[]);
-    let returns = vm.function("encodeArray", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("encodeArray", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.vec_1.len(), 3);
@@ -548,8 +552,8 @@ fn arrays() {
     assert_eq!(decoded.vec_1[1], 5523);
     assert_eq!(decoded.vec_1[2], -89);
 
-    let returns = vm.function("encodeComplex", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("encodeComplex", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.complex_array.len(), 2);
@@ -564,8 +568,8 @@ fn arrays() {
         vec!["cortado".to_string(), "cappuccino".to_string()]
     );
 
-    let returns = vm.function("multiDimArrays", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("multiDimArrays", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res3::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.multi_dim[0], [1, 2]);
@@ -651,8 +655,8 @@ contract Testing {
     );
 
     vm.constructor("Testing", &[]);
-    let returns = vm.function("getThis", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("getThis", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item_1.len(), 1);
@@ -709,16 +713,16 @@ contract Testing {
     );
     assert_eq!(decoded.item_2, 5);
 
-    let returns = vm.function("multiDim", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("multiDim", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item.len(), 1);
     assert_eq!(decoded.item[0][0], [1, 2, 3, 4]);
     assert_eq!(decoded.item[0][1], [5, 6, 7, 8]);
 
-    let returns = vm.function("uniqueDim", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("uniqueDim", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res3::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item.len(), 5);
@@ -772,8 +776,8 @@ fn null_pointer() {
     );
 
     vm.constructor("Testing", &[]);
-    let returns = vm.function("test1", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("test1", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item.len(), 5);
@@ -782,8 +786,8 @@ fn null_pointer() {
         assert!(decoded.item[i].f2.is_empty())
     }
 
-    let returns = vm.function("test2", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("test2", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
     assert_eq!(decoded.item.len(), 5);
@@ -820,7 +824,7 @@ fn external_function() {
 
     vm.constructor("Testing", &[]);
 
-    let returns = vm.function("doThat", &[]);
+    let returns = vm.function("doThat", &[]).unwrap().unwrap_tuple();
     let encoded = returns[2].clone().into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
 
@@ -854,8 +858,8 @@ fn bytes_arrays() {
         "#,
     );
     vm.constructor("Testing", &[]);
-    let returns = vm.function("testBytesArray", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("testBytesArray", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
 
     assert_eq!(&decoded.item_1[0], b"abcd");
@@ -893,8 +897,8 @@ fn uint8_arrays() {
     );
 
     vm.constructor("Testing", &[]);
-    let returns = vm.function("testBytesArray", &[]);
-    let encoded = returns[0].clone().into_bytes().unwrap();
+    let returns = vm.function("testBytesArray", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
 
     assert!(decoded.item_2.is_empty());
@@ -925,7 +929,7 @@ contract caller {
 
     vm.constructor("caller", &[]);
 
-    let returns = vm.function("do_call", &[]);
+    let returns = vm.function("do_call", &[]).unwrap().unwrap_tuple();
     assert_eq!(returns.len(), 2);
     assert_eq!(
         returns[0],

@@ -30,7 +30,10 @@ fn returns_and_phis_needed() {
 
     vm.constructor("c", &[]);
 
-    let returns = vm.function("func", &[BorshToken::Bool(false)]);
+    let returns = vm
+        .function("func", &[BorshToken::Bool(false)])
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -43,7 +46,10 @@ fn returns_and_phis_needed() {
         ]
     );
 
-    let returns = vm.function("func", &[BorshToken::Bool(true)]);
+    let returns = vm
+        .function("func", &[BorshToken::Bool(true)])
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,

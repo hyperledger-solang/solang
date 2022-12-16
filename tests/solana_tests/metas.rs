@@ -20,15 +20,15 @@ fn use_authority() {
     vm.constructor("AuthorityExample", &[BorshToken::Address(authority)]);
 
     let res = vm.function_must_fail("inc", &[]).unwrap();
-    assert!(res != 0);
+    assert_ne!(res, 0);
 
-    let res = vm.function("get", &[]);
+    let res = vm.function("get", &[]).unwrap();
     assert_eq!(
         res,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 64,
             value: 0.into()
-        }]
+        }
     );
 
     let mut metas = vm.default_metas();
@@ -40,12 +40,12 @@ fn use_authority() {
 
     vm.function_metas(&metas, "inc", &[]);
 
-    let res = vm.function("get", &[]);
+    let res = vm.function("get", &[]).unwrap();
     assert_eq!(
         res,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 64,
             value: 1.into()
-        }]
+        }
     );
 }

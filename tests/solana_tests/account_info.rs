@@ -31,10 +31,12 @@ fn lamports() {
 
     vm.account_data.get_mut(&vm.origin).unwrap().lamports = 17672630920854456917u64;
 
-    let returns = vm.function("test", &[BorshToken::Address(vm.origin)]);
+    let returns = vm
+        .function("test", &[BorshToken::Address(vm.origin)])
+        .unwrap();
 
     assert_eq!(
-        returns[0],
+        returns,
         BorshToken::Uint {
             width: 64,
             value: BigInt::from(17672630920854456917u64),
@@ -64,11 +66,11 @@ fn owner() {
 
     vm.constructor("c", &[]);
 
-    let returns = vm.function("test", &[]);
+    let returns = vm.function("test", &[]).unwrap();
 
-    let owner = vm.stack[0].program.to_vec();
+    let owner = vm.stack[0].program;
 
-    assert_eq!(returns[0], BorshToken::FixedBytes(owner));
+    assert_eq!(returns, BorshToken::Address(owner));
 }
 
 #[test]
@@ -106,20 +108,22 @@ fn data() {
     vm.constructor("c", &[]);
 
     for i in 0..10 {
-        let returns = vm.function(
-            "test",
-            &[BorshToken::Uint {
-                width: 32,
-                value: BigInt::from(i),
-            }],
-        );
+        let returns = vm
+            .function(
+                "test",
+                &[BorshToken::Uint {
+                    width: 32,
+                    value: BigInt::from(i),
+                }],
+            )
+            .unwrap();
 
         let this = &vm.stack[0].data;
 
         let val = vm.account_data[this].data[i];
 
         assert_eq!(
-            returns[0],
+            returns,
             BorshToken::Uint {
                 width: 8,
                 value: BigInt::from(val),
@@ -127,14 +131,14 @@ fn data() {
         );
     }
 
-    let returns = vm.function("test2", &[]);
+    let returns = vm.function("test2", &[]).unwrap();
 
     let this = &vm.stack[0].data;
 
     let val = u32::from_le_bytes(vm.account_data[this].data[1..5].try_into().unwrap());
 
     assert_eq!(
-        returns[0],
+        returns,
         BorshToken::Uint {
             width: 32,
             value: BigInt::from(val),

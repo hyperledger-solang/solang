@@ -58,10 +58,12 @@ fn simple_create_contract_no_seed() {
         },
     );
 
-    let bar1 = vm.function(
-        "test_other",
-        &[BorshToken::Address(acc), BorshToken::Address(payer)],
-    );
+    let bar1 = vm
+        .function(
+            "test_other",
+            &[BorshToken::Address(acc), BorshToken::Address(payer)],
+        )
+        .unwrap();
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0");
 
@@ -71,7 +73,7 @@ fn simple_create_contract_no_seed() {
 
     vm.function(
         "call_bar1_at_address",
-        &[bar1[0].clone(), BorshToken::String(String::from("xywoleh"))],
+        &[bar1, BorshToken::String(String::from("xywoleh"))],
     );
 
     assert_eq!(vm.logs, "Hello xywoleh");
@@ -119,10 +121,12 @@ fn simple_create_contract() {
     let seed = vm.create_pda(&program_id);
     let payer = account_new();
 
-    let bar1 = vm.function(
-        "test_other",
-        &[BorshToken::Address(seed.0), BorshToken::Address(payer)],
-    );
+    let bar1 = vm
+        .function(
+            "test_other",
+            &[BorshToken::Address(seed.0), BorshToken::Address(payer)],
+        )
+        .unwrap();
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0");
 
@@ -132,7 +136,7 @@ fn simple_create_contract() {
 
     vm.function(
         "call_bar1_at_address",
-        &[bar1[0].clone(), BorshToken::String(String::from("xywoleh"))],
+        &[bar1, BorshToken::String(String::from("xywoleh"))],
     );
 
     assert_eq!(vm.logs, "Hello xywoleh");
@@ -195,10 +199,10 @@ fn create_contract_with_payer() {
 
     vm.constructor("x", &[BorshToken::Address(payer)]);
 
-    let ret = vm.function("f", &[]);
+    let ret = vm.function("f", &[]).unwrap();
 
     assert_eq!(
-        ret[0],
+        ret,
         BorshToken::Uint {
             width: 64,
             value: 102.into()
@@ -342,9 +346,9 @@ fn account_with_space() {
 
     assert_eq!(vm.account_data.get_mut(&data).unwrap().data.len(), 3 * 102);
 
-    let ret = vm.function("hello", &[]);
+    let ret = vm.function("hello", &[]).unwrap();
 
-    assert_eq!(ret[0], BorshToken::Bool(true));
+    assert_eq!(ret, BorshToken::Bool(true));
 }
 
 #[test]
@@ -383,9 +387,9 @@ fn account_with_seed() {
         511 + 102
     );
 
-    let ret = vm.function("hello", &[]);
+    let ret = vm.function("hello", &[]).unwrap();
 
-    assert_eq!(ret[0], BorshToken::Bool(true));
+    assert_eq!(ret, BorshToken::Bool(true));
 }
 
 #[test]
@@ -434,9 +438,9 @@ fn account_with_seed_bump() {
         511 + 102
     );
 
-    let ret = vm.function("hello", &[]);
+    let ret = vm.function("hello", &[]).unwrap();
 
-    assert_eq!(ret[0], BorshToken::Bool(true));
+    assert_eq!(ret, BorshToken::Bool(true));
 }
 
 #[test]
@@ -473,9 +477,9 @@ fn account_with_seed_bump_literals() {
         8192
     );
 
-    let ret = vm.function("hello", &[]);
+    let ret = vm.function("hello", &[]).unwrap();
 
-    assert_eq!(ret[0], BorshToken::Bool(true));
+    assert_eq!(ret, BorshToken::Bool(true));
 }
 
 #[test]

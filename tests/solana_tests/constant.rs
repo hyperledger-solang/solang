@@ -22,13 +22,13 @@ fn constant() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("f", &[]);
+    let returns = vm.function("f", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(42u8)
-        }]
+        }
     );
 
     let mut vm = build_solidity(
@@ -48,12 +48,12 @@ fn constant() {
 
     vm.constructor("foo", &[]);
 
-    let returns = vm.function("f", &[]);
+    let returns = vm.function("f", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(42u8)
-        }]
+        }
     );
 }
