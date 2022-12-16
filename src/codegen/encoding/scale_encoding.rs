@@ -5,7 +5,10 @@ use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type};
+use num_bigint::BigInt;
 use solang_parser::pt::Loc;
+
+use super::calculate_size_args;
 
 /// This struct implements the trait AbiEncoding for Parity's Scale encoding
 pub(super) struct ScaleEncoding {
@@ -26,41 +29,75 @@ impl AbiEncoding for ScaleEncoding {
         &mut self,
         loc: &Loc,
         mut args: Vec<Expression>,
-        _ns: &Namespace,
+        ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> (Expression, Expression) {
-        let tys = args.iter().map(|e| e.ty()).collect::<Vec<Type>>();
+        //let size = calculate_size_args(self, &args, ns, vartab, cfg);
+        let size = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), (32 * 1024).into());
 
-        let encoded_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
-        let mut packed: Vec<Expression> = Vec::new();
-        if self.packed_encoder {
-            std::mem::swap(&mut packed, &mut args);
-        }
-
+        let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);
         cfg.add(
             vartab,
             Instr::Set {
                 loc: *loc,
-                res: encoded_buffer,
-                expr: Expression::AbiEncode {
-                    loc: *loc,
-                    packed,
-                    args,
-                    tys,
-                },
+                res: encoded_bytes,
+                expr: Expression::AllocDynamicBytes(
+                    *loc,
+                    Type::DynamicBytes,
+                    Box::new(size.clone()),
+                    None,
+                ),
             },
         );
 
-        let encoded_expr = Expression::Variable(*loc, Type::DynamicBytes, encoded_buffer);
-        let buffer_len = Expression::Builtin(
-            *loc,
-            vec![Type::Uint(32)],
-            Builtin::ArrayLength,
-            vec![encoded_expr.clone()],
-        );
+        let mut offset = Expression::NumberLiteral(*loc, Type::Uint(32), 0.into());
+        let buffer = Expression::Variable(*loc, Type::DynamicBytes, encoded_bytes);
 
-        (encoded_expr, buffer_len)
+        for (arg_no, item) in args.iter().enumerate() {
+            let advance = self.encode(item, &buffer, &offset, arg_no, ns, vartab, cfg);
+            offset = Expression::Add(
+                Loc::Codegen,
+                Type::Uint(32),
+                false,
+                Box::new(offset),
+                Box::new(advance),
+            );
+        }
+
+        (buffer, size)
+
+        //let tys = args.iter().map(|e| e.ty()).collect::<Vec<Type>>();
+
+        //let encoded_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
+        //let mut packed: Vec<Expression> = Vec::new();
+        //if self.packed_encoder {
+        //    std::mem::swap(&mut packed, &mut args);
+        //}
+
+        //cfg.add(
+        //    vartab,
+        //    Instr::Set {
+        //        loc: *loc,
+        //        res: encoded_buffer,
+        //        expr: Expression::AbiEncode {
+        //            loc: *loc,
+        //            packed,
+        //            args,
+        //            tys,
+        //        },
+        //    },
+        //);
+
+        //let encoded_expr = Expression::Variable(*loc, Type::DynamicBytes, encoded_buffer);
+        //let buffer_len = Expression::Builtin(
+        //    *loc,
+        //    vec![Type::Uint(32)],
+        //    Builtin::ArrayLength,
+        //    vec![encoded_expr.clone()],
+        //);
+
+        //(encoded_expr, buffer_len)
     }
 
     fn abi_decode(
@@ -118,5 +155,38 @@ impl AbiEncoding for ScaleEncoding {
 
     fn is_packed(&self) -> bool {
         self.packed_encoder
+    }
+}
+
+impl ScaleEncoding {
+    fn encode(
+        &mut self,
+        expr: &Expression,
+        buffer: &Expression,
+        offset: &Expression,
+        arg_no: usize,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        let expr_ty = expr.ty().unwrap_user_type(ns);
+        let mut size = 0.into();
+
+        match &expr.ty() {
+            Type::Bool => {
+                cfg.add(
+                    vartab,
+                    Instr::WriteBuffer {
+                        buf: buffer.clone(),
+                        offset: offset.clone(),
+                        value: expr.clone(),
+                    },
+                );
+                size = 1.into()
+            }
+            _ => todo!(),
+        }
+
+        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), size)
     }
 }
