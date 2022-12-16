@@ -256,9 +256,26 @@ fn add_dispatch_case(
                 data_len: zext_len,
             },
         );
+    } else {
+        // TODO: On Solana, we could elide setting the return data if this function calls no external functions
+        // and replace this with a simple Instr::Return, which does not set any return data.
+        //
+        // The return data buffer is empty when Solana VM first executes a program, but if another program is
+        // called via CPI then that program may set return data. We must clear this buffer, else return data
+        // from the CPI callee will be visible to this program's callee.
+        cfg.add(
+            vartab,
+            Instr::ReturnData {
+                data: Expression::AllocDynamicBytes(
+                    Loc::Codegen,
+                    Type::DynamicBytes,
+                    Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0.into()).into(),
+                    None,
+                ),
+                data_len: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), 0.into()),
+            },
+        );
     }
-
-    cfg.add(vartab, Instr::Return { value: vec![] });
 
     cases.push((
         Expression::NumberLiteral(
