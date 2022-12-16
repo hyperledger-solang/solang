@@ -257,8 +257,8 @@ fn add_dispatch_case(
             },
         );
     } else {
-        // TODO: On Solana, We could elide setting the return data if this function calls no external functions
-        // are called and replace this with a simple Instr::Return, which does not set any return data.
+        // TODO: On Solana, we could elide setting the return data if this function calls no external functions
+        // and replace this with a simple Instr::Return, which does not set any return data.
         //
         // The return data buffer is empty when Solana VM first executes a program, but if another program is
         // called via CPI then that program may set return data. We must clear this buffer, else return data
