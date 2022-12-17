@@ -3,6 +3,7 @@
 use num_bigint::BigInt;
 use std::collections::LinkedList;
 
+use super::encoding::abi_encode;
 use super::expression::{assign_single, default_gas, emit_function_call, expression};
 use super::Options;
 use super::{
@@ -10,7 +11,6 @@ use super::{
     vartable::Vartable,
 };
 use crate::codegen::constructor::call_constructor;
-use crate::codegen::encoding::create_encoder;
 use crate::codegen::events::new_event_emitter;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
@@ -1042,8 +1042,7 @@ fn try_catch(
                 let address = function.external_function_address();
 
                 args.insert(0, selector);
-                let mut encoder = create_encoder(ns, false);
-                let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
+                let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
                 cfg.add(
                     vartab,
