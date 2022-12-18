@@ -271,9 +271,8 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        let len_offset = offset.clone();
         let len = self.bytes_packed(expr, buffer, &increment_four(offset.clone()), vartab, cfg);
-        self.encode_int(&len, buffer, &len_offset, vartab, cfg, 32);
+        self.encode_int(&len, buffer, &offset, vartab, cfg, 32);
         increment_four(len)
     }
 
