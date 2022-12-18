@@ -96,9 +96,10 @@ pub(super) trait AbiEncoding {
                 let size = (*length).into();
                 self.encode_linear(expr, buffer, offset, vartab, cfg, size)
             }
-            Type::String | Type::DynamicBytes => {
-                self.encode_bytes_linear(expr, buffer, offset, vartab, cfg)
+            Type::String | Type::DynamicBytes if self.is_packed() => {
+                self.bytes_packed(expr, buffer, offset, vartab, cfg)
             }
+            Type::String | Type::DynamicBytes => self.bytes(expr, buffer, offset, vartab, cfg),
             Type::Enum(_) => self.encode_linear(expr, buffer, offset, vartab, cfg, 1.into()),
             Type::Struct(struct_ty) => self.encode_struct(
                 expr,
@@ -218,7 +219,7 @@ pub(super) trait AbiEncoding {
         todo!()
     }
 
-    fn encode_bytes_linear(
+    fn bytes_packed(
         &mut self,
         expr: &Expression,
         buffer: &Expression,
@@ -244,24 +245,10 @@ pub(super) trait AbiEncoding {
 
         let var = Expression::Variable(Loc::Codegen, Type::Uint(32), array_length);
 
-        let string_offset = if self.is_packed() {
-            offset.clone()
-        } else {
-            cfg.add(
-                vartab,
-                Instr::WriteBuffer {
-                    buf: buffer.clone(),
-                    offset: offset.clone(),
-                    value: var.clone(),
-                },
-            );
-            increment_four(offset.clone())
-        };
-
         // ptr + offset + size_of_integer
         let dest_address = Expression::AdvancePointer {
             pointer: Box::new(buffer.clone()),
-            bytes_offset: Box::new(string_offset),
+            bytes_offset: Box::new(offset.clone()),
         };
 
         cfg.add(
@@ -273,11 +260,21 @@ pub(super) trait AbiEncoding {
             },
         );
 
-        if self.is_packed() {
-            var
-        } else {
-            increment_four(var)
-        }
+        var
+    }
+
+    fn bytes(
+        &mut self,
+        expr: &Expression,
+        buffer: &Expression,
+        offset: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        let len_offset = offset.clone();
+        let len = self.bytes_packed(expr, buffer, &increment_four(offset.clone()), vartab, cfg);
+        self.encode_int(&len, buffer, &len_offset, vartab, cfg, 32);
+        increment_four(len)
     }
 
     /// Encode a struct and return its size in bytes
