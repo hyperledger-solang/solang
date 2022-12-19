@@ -402,15 +402,15 @@ pub(super) trait AbiEncoding {
                 let new_offset = if self.is_packed() {
                     offset.clone()
                 } else {
-                    cfg.add(
-                        vartab,
-                        Instr::WriteBuffer {
-                            buf: buffer.clone(),
-                            offset: offset.clone(),
-                            value: Expression::Variable(Loc::Codegen, Type::Uint(32), size_temp),
-                        },
-                    );
-                    increment_four(offset.clone())
+                    let value = Expression::Variable(Loc::Codegen, Type::Uint(32), size_temp);
+                    let size = self.encode_int(&value, buffer, offset, vartab, cfg, 32);
+                    Expression::Add(
+                        Loc::Codegen,
+                        Type::Uint(32),
+                        false,
+                        offset.clone().into(),
+                        size.into(),
+                    )
                 };
 
                 let size = calculate_array_bytes_size(size_temp, elem_ty, ns);
