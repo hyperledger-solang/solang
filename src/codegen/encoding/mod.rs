@@ -67,6 +67,10 @@ pub(super) fn abi_encode(
 /// This trait should be implemented by all encoding methods (ethabi, Scale and Borsh), so that
 /// we have the same interface for creating encode and decode functions.
 pub(super) trait AbiEncoding {
+    fn size_width(&self) -> u16 {
+        32
+    }
+
     /// Encode expression to buffer. Returns the size in bytes of the encoded item.
     fn encode(
         &mut self,
@@ -217,8 +221,26 @@ pub(super) trait AbiEncoding {
         Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), (encoding_size / 8).into())
     }
 
-    fn encode_int_packed(&mut self) {
-        todo!()
+    fn encode_size(
+        &mut self,
+        expr: &Expression,
+        buffer: &Expression,
+        offset: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        self.encode_int(expr, buffer, offset, vartab, cfg, self.size_width())
+    }
+
+    fn increment_by_size_width(&mut self, expr: Expression) -> Expression {
+        let width = self.size_width();
+        Expression::Add(
+            Loc::Codegen,
+            Type::Uint(32),
+            false,
+            expr.into(),
+            Expression::NumberLiteral(Loc::Codegen, Type::Uint(width), (width / 8).into()).into(),
+        )
     }
 
     fn encode_bytes_packed(
@@ -273,10 +295,10 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        let data_offset = increment_four(offset.clone());
+        let data_offset = self.increment_by_size_width(offset.clone());
         let len = self.encode_bytes_packed(expr, buffer, &data_offset, vartab, cfg);
-        self.encode_int(&len, buffer, &offset, vartab, cfg, 32);
-        increment_four(len)
+        self.encode_size(&len, buffer, &offset, vartab, cfg);
+        self.increment_by_size_width(len)
     }
 
     /// Encode a struct and return its size in bytes
@@ -402,15 +424,10 @@ pub(super) trait AbiEncoding {
                 let new_offset = if self.is_packed() {
                     offset.clone()
                 } else {
-                    let value = Expression::Variable(Loc::Codegen, Type::Uint(32), size_temp);
-                    let size = self.encode_int(&value, buffer, offset, vartab, cfg, 32);
-                    Expression::Add(
-                        Loc::Codegen,
-                        Type::Uint(32),
-                        false,
-                        offset.clone().into(),
-                        size.into(),
-                    )
+                    let size_ty = Type::Uint(self.size_width());
+                    let value = Expression::Variable(Loc::Codegen, size_ty, size_temp);
+                    self.encode_size(&value, buffer, offset, vartab, cfg);
+                    self.increment_by_size_width(offset.clone())
                 };
 
                 let size = calculate_array_bytes_size(size_temp, elem_ty, ns);
@@ -535,20 +552,13 @@ pub(super) trait AbiEncoding {
             );
 
             let offset_expr = Expression::Variable(Loc::Codegen, Type::Uint(32), offset_var);
-            cfg.add(
-                vartab,
-                Instr::WriteBuffer {
-                    buf: buffer.clone(),
-                    offset: offset_expr.clone(),
-                    value: size,
-                },
-            );
+            self.encode_size(&size, buffer, &offset_expr, vartab, cfg);
             cfg.add(
                 vartab,
                 Instr::Set {
                     loc: Loc::Codegen,
                     res: offset_var,
-                    expr: increment_four(offset_expr),
+                    expr: self.increment_by_size_width(offset_expr),
                 },
             );
         }
