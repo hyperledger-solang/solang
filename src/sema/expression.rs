@@ -2217,7 +2217,20 @@ pub fn expression(
 
                     res
                 }
-                _ => unreachable!(),
+                pt::Expression::Variable(id) => {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!("missing constructor arguments to {}", id.name),
+                    ));
+                    Err(())
+                }
+                expr => {
+                    diagnostics.push(Diagnostic::error(
+                        expr.loc(),
+                        "type with arguments expected".into(),
+                    ));
+                    Err(())
+                }
             }
         }
         pt::Expression::Delete(loc, _) => {
@@ -7861,16 +7874,22 @@ pub fn call_expr(
         {
             new(loc, ty, args, context, ns, symtable, diagnostics)?
         }
-        _ => function_call_expr(
-            loc,
-            ty,
-            args,
-            context,
-            ns,
-            symtable,
-            diagnostics,
-            resolve_to,
-        )?,
+        _ => {
+            if old_style_constructor_arguments(ty, diagnostics) {
+                return Err(());
+            }
+
+            function_call_expr(
+                loc,
+                ty,
+                args,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                resolve_to,
+            )?
+        }
     };
 
     check_function_call(ns, &expr, symtable);
@@ -7883,6 +7902,34 @@ pub fn call_expr(
     }
 
     Ok(expr)
+}
+
+/// is it an (new C).value(1).gas(2)(1, 2, 3) style constructor (not supported)
+fn old_style_constructor_arguments(expr: &pt::Expression, diagnostics: &mut Diagnostics) -> bool {
+    match expr.remove_parenthesis() {
+        pt::Expression::FunctionCall(func_loc, ty, _) => {
+            if let pt::Expression::MemberAccess(_, ty, call_arg) = ty.as_ref() {
+                if old_style_constructor_arguments(ty, diagnostics) {
+                    // location should be the identifier and the arguments
+                    let mut loc = call_arg.loc;
+                    if let pt::Loc::File(_, _, end) = &mut loc {
+                        *end = func_loc.end();
+                    }
+                    diagnostics.push(Diagnostic::error(
+                        loc,
+                        format!("old style call argument using '.{}(...)' is not supported, use '{{{}: ...}}' instead", call_arg.name, call_arg.name)
+                    ));
+                    return true;
+                }
+            }
+        }
+        pt::Expression::New(..) => {
+            return true;
+        }
+        _ => (),
+    }
+
+    false
 }
 
 /// Resolve function call
