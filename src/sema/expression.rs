@@ -3930,9 +3930,17 @@ pub fn new(
 
     let size_ty = size_expr.ty();
 
+    if !matches!(size_ty.deref_any(), Type::Uint(_)) {
+        diagnostics.push(Diagnostic::error(
+            size_expr.loc(),
+            "new dynamic array should have an unsigned length argument".to_string(),
+        ));
+        return Err(());
+    }
+
     let size = if size_ty.deref_any().bits(ns) > 32 {
         diagnostics.push(Diagnostic::warning(
-            *loc,
+            size_expr.loc(),
             format!(
                 "conversion truncates {} to {}, as memory size is type {} on target {}",
                 size_ty.deref_any().to_string(ns),
@@ -4471,7 +4479,7 @@ fn assign_expr(
             };
             Ok(Expression::Assign(
                 *loc,
-                Type::Void,
+                var_ty.clone(),
                 Box::new(var.clone()),
                 Box::new(op(var, &var_ty, ns, diagnostics)?),
             ))
@@ -4480,7 +4488,7 @@ fn assign_expr(
             Type::Ref(r_ty) => match r_ty.as_ref() {
                 Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign(
                     *loc,
-                    Type::Void,
+                    *r_ty.clone(),
                     Box::new(var.clone()),
                     Box::new(op(
                         var.cast(loc, r_ty, true, ns, diagnostics)?,
@@ -4513,7 +4521,7 @@ fn assign_expr(
                 match r_ty.as_ref() {
                     Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign(
                         *loc,
-                        Type::Void,
+                        *r_ty.clone(),
                         Box::new(var.clone()),
                         Box::new(op(
                             var.cast(loc, r_ty, true, ns, diagnostics)?,

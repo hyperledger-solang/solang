@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/solana/simple.sol" {
 	inc [label="function inc\ntests/contract_testcases/solana/simple.sol:7:1-23\nsignature inc((int64,bool))\nvisibility internal\nmutability pure"]
 	parameters [label="parameters\nstruct S s"]
 	expr [label="expression\ntests/contract_testcases/solana/simple.sol:7:26-35"]
-	assign [label="assign\nvoid\ntests/contract_testcases/solana/simple.sol:7:26-35"]
+	assign [label="assign\nint64\ntests/contract_testcases/solana/simple.sol:7:26-35"]
 	structmember [label="struct member #0 int64\ntests/contract_testcases/solana/simple.sol:7:28-30"]
 	variable [label="variable: s\nstruct S\ntests/contract_testcases/solana/simple.sol:7:26-27"]
 	add [label="add\nint64\ntests/contract_testcases/solana/simple.sol:7:26-35"]
