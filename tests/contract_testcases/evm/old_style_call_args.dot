@@ -1,0 +1,26 @@
+strict digraph "tests/contract_testcases/evm/old_style_call_args.sol" {
+	contract [label="contract c\ntests/contract_testcases/evm/old_style_call_args.sol:1:1-13:2"]
+	foo [label="function foo\ncontract: c\ntests/contract_testcases/evm/old_style_call_args.sol:2:2-23\nsignature foo()\nvisibility public\nmutability nonpayable"]
+	bar [label="function bar\ncontract: c\ntests/contract_testcases/evm/old_style_call_args.sol:6:2-23\nsignature bar()\nvisibility public\nmutability nonpayable"]
+	baz [label="function baz\ncontract: c\ntests/contract_testcases/evm/old_style_call_args.sol:10:2-23\nsignature baz()\nvisibility public\nmutability nonpayable"]
+	contract_5 [label="contract d\ntests/contract_testcases/evm/old_style_call_args.sol:15:1-14"]
+	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/evm/old_style_call_args.sol:1:1-13:2"]
+	diagnostic_8 [label="deprecated call argument syntax '.value(...)' is not supported, use '{value: ...}' instead\nlevel Error\ntests/contract_testcases/evm/old_style_call_args.sol:3:17-25"]
+	diagnostic_9 [label="deprecated call argument syntax '.gas(...)' is not supported, use '{gas: ...}' instead\nlevel Error\ntests/contract_testcases/evm/old_style_call_args.sol:3:26-32"]
+	diagnostic_10 [label="deprecated call argument syntax '.foo(...)' is not supported, use '{foo: ...}' instead\nlevel Error\ntests/contract_testcases/evm/old_style_call_args.sol:3:33-39"]
+	diagnostic_11 [label="type with arguments expected\nlevel Error\ntests/contract_testcases/evm/old_style_call_args.sol:7:13-14"]
+	diagnostic_12 [label="missing constructor arguments to d\nlevel Error\ntests/contract_testcases/evm/old_style_call_args.sol:11:9-14"]
+	diagnostic_13 [label="found contract 'd'\nlevel Debug\ntests/contract_testcases/evm/old_style_call_args.sol:15:1-14"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	contract -> bar [label="function"]
+	contract -> baz [label="function"]
+	contracts -> contract_5
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_8 [label="Error"]
+	diagnostics -> diagnostic_9 [label="Error"]
+	diagnostics -> diagnostic_10 [label="Error"]
+	diagnostics -> diagnostic_11 [label="Error"]
+	diagnostics -> diagnostic_12 [label="Error"]
+	diagnostics -> diagnostic_13 [label="Debug"]
+}
