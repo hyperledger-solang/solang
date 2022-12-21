@@ -46,7 +46,6 @@ impl ast::Contract {
             code: OnceCell::new(),
             instantiable,
             dispatch_no: 0,
-            constructor_dispatch: None,
             program_id: None,
         }
     }

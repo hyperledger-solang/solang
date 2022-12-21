@@ -33,11 +33,15 @@ pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(
                 ns,
             );
 
-            assert_eq!(bin.module.get_function(&cfg.name), None);
+            let func_decl = if let Some(func) = bin.module.get_function(&cfg.name) {
+                // must not have a body yet
+                assert_eq!(func.get_first_basic_block(), None);
 
-            let func_decl = bin
-                .module
-                .add_function(&cfg.name, ftype, Some(Linkage::Internal));
+                func
+            } else {
+                bin.module
+                    .add_function(&cfg.name, ftype, Some(Linkage::Internal))
+            };
 
             bin.functions.insert(cfg_no, func_decl);
 

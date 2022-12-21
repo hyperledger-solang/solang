@@ -5,7 +5,7 @@
 #include "stdlib.h"
 #include "solana_sdk.h"
 
-extern uint64_t solang_dispatch(const SolParameters *param);
+extern uint64_t solang_dispatch(SolParameters *param);
 extern void __init_heap();
 
 // The address 'SysvarC1ock11111111111111111111111111111111' base58 decoded
@@ -26,21 +26,14 @@ entrypoint(const uint8_t *input)
         return ret;
     }
 
-    int account_no;
-
     params.ka_clock = NULL;
     params.ka_instructions = NULL;
-    params.ka_cur = UINT64_MAX;
 
-    for (account_no = 0; account_no < params.ka_num; account_no++)
+    for (int account_no = 0; account_no < params.ka_num; account_no++)
     {
         const SolAccountInfo *acc = &params.ka[account_no];
 
-        if (SolPubkey_same(params.account_id, acc->key) && params.ka_cur == UINT64_MAX)
-        {
-            params.ka_cur = account_no;
-        }
-        else if (SolPubkey_same(&clock_address, acc->key))
+        if (SolPubkey_same(&clock_address, acc->key))
         {
             params.ka_clock = acc;
         }
@@ -48,11 +41,6 @@ entrypoint(const uint8_t *input)
         {
             params.ka_instructions = acc;
         }
-    }
-
-    if (params.ka_cur != 0)
-    {
-        return ERROR_INVALID_INSTRUCTION_DATA;
     }
 
     __init_heap();
@@ -67,11 +55,8 @@ uint64_t sol_invoke_signed_c(
     const SolSignerSeeds *signers_seeds,
     int signers_seeds_len);
 
-uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params)
+uint64_t external_call(const SolPubkey *address, uint8_t *input, uint32_t input_len, SolParameters *params)
 {
-    // The first 32 bytes of the input is the destination address
-    const SolPubkey *dest = (const SolPubkey *)input;
-
     SolAccountMeta metas[10];
     SolInstruction instruction = {
         .program_id = NULL,
@@ -87,13 +72,12 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolParameters *params
     {
         const SolAccountInfo *acc = &params->ka[account_no];
 
-        if (SolPubkey_same(dest, acc->key))
+        if (SolPubkey_same(address, acc->key))
         {
             metas[0].pubkey = acc->key;
             metas[0].is_writable = acc->is_writable;
             metas[0].is_signer = acc->is_signer;
             instruction.program_id = acc->owner;
-            params->ka_last_called = acc;
         }
         else
         {
@@ -161,9 +145,6 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, SolPubkey *address,
         return ERROR_NEW_ACCOUNT_NEEDED;
     }
 
-    __memcpy8(input, address, SIZE_PUBKEY / 8);
-    __memcpy8(input + SIZE_PUBKEY, params->account_id->x, SIZE_PUBKEY / 8);
-
     return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, seeds, seeds_len);
 }
 
@@ -190,7 +171,7 @@ uint64_t *sol_account_lamport(
 
 void sol_transfer(uint8_t *to_address, uint64_t lamports, SolParameters *params)
 {
-    uint64_t *from = params->ka[params->ka_cur].lamports;
+    uint64_t *from = params->ka[0].lamports;
     uint64_t *to = sol_account_lamport(to_address, params);
 
     if (__builtin_sub_overflow(*from, lamports, from))
@@ -208,7 +189,7 @@ void sol_transfer(uint8_t *to_address, uint64_t lamports, SolParameters *params)
 
 bool sol_try_transfer(uint8_t *to_address, uint64_t lamports, SolParameters *params)
 {
-    uint64_t *from = params->ka[params->ka_cur].lamports;
+    uint64_t *from = params->ka[0].lamports;
     uint64_t *to = sol_account_lamport(to_address, params);
 
     uint64_t from_balance;
