@@ -7904,7 +7904,7 @@ pub fn call_expr(
     Ok(expr)
 }
 
-/// is it an (new C).value(1).gas(2)(1, 2, 3) style constructor (not supported)
+/// Is it an (new C).value(1).gas(2)(1, 2, 3) style constructor (not supported)?
 fn old_style_constructor_arguments(expr: &pt::Expression, diagnostics: &mut Diagnostics) -> bool {
     match expr.remove_parenthesis() {
         pt::Expression::FunctionCall(func_loc, ty, _) => {
