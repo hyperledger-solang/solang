@@ -7875,9 +7875,7 @@ pub fn call_expr(
             new(loc, ty, args, context, ns, symtable, diagnostics)?
         }
         _ => {
-            if old_style_constructor_arguments(ty, diagnostics) {
-                return Err(());
-            }
+            deprecated_constructor_arguments(ty, diagnostics)?;
 
             function_call_expr(
                 loc,
@@ -7905,11 +7903,14 @@ pub fn call_expr(
 }
 
 /// Is it an (new C).value(1).gas(2)(1, 2, 3) style constructor (not supported)?
-fn old_style_constructor_arguments(expr: &pt::Expression, diagnostics: &mut Diagnostics) -> bool {
+fn deprecated_constructor_arguments(
+    expr: &pt::Expression,
+    diagnostics: &mut Diagnostics,
+) -> Result<(), ()> {
     match expr.remove_parenthesis() {
         pt::Expression::FunctionCall(func_loc, ty, _) => {
             if let pt::Expression::MemberAccess(_, ty, call_arg) = ty.as_ref() {
-                if old_style_constructor_arguments(ty, diagnostics) {
+                if deprecated_constructor_arguments(ty, diagnostics).is_err() {
                     // location should be the identifier and the arguments
                     let mut loc = call_arg.loc;
                     if let pt::Loc::File(_, _, end) = &mut loc {
@@ -7919,17 +7920,17 @@ fn old_style_constructor_arguments(expr: &pt::Expression, diagnostics: &mut Diag
                         loc,
                         format!("deprecated call argument syntax '.{}(...)' is not supported, use '{{{}: ...}}' instead", call_arg.name, call_arg.name)
                     ));
-                    return true;
+                    return Err(());
                 }
             }
         }
         pt::Expression::New(..) => {
-            return true;
+            return Err(());
         }
         _ => (),
     }
 
-    false
+    Ok(())
 }
 
 /// Resolve function call
