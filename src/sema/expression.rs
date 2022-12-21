@@ -7917,7 +7917,7 @@ fn old_style_constructor_arguments(expr: &pt::Expression, diagnostics: &mut Diag
                     }
                     diagnostics.push(Diagnostic::error(
                         loc,
-                        format!("old style call argument using '.{}(...)' is not supported, use '{{{}: ...}}' instead", call_arg.name, call_arg.name)
+                        format!("deprecated call argument syntax '.{}(...)' is not supported, use '{{{}: ...}}' instead", call_arg.name, call_arg.name)
                     ));
                     return true;
                 }
