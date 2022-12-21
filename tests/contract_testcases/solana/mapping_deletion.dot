@@ -5,7 +5,7 @@ strict digraph "tests/contract_testcases/solana/mapping_deletion.sol" {
 	node_5 [label="constructor \ncontract: savedTest\ntests/contract_testcases/solana/mapping_deletion.sol:3:5-25\nsignature (uint256)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint256 d"]
 	expr [label="expression\ntests/contract_testcases/solana/mapping_deletion.sol:4:9-14"]
-	assign [label="assign\nuint256 storage\ntests/contract_testcases/solana/mapping_deletion.sol:4:9-10"]
+	assign [label="assign\nuint256\ntests/contract_testcases/solana/mapping_deletion.sol:4:9-10"]
 	storage_var [label="storage variable\nsavedTest.b\nuint256 storage\ntests/contract_testcases/solana/mapping_deletion.sol:4:9-10"]
 	variable [label="variable: d\nuint256\ntests/contract_testcases/solana/mapping_deletion.sol:4:13-14"]
 	increment [label="function increment\ncontract: savedTest\ntests/contract_testcases/solana/mapping_deletion.sol:7:5-38\nsignature increment(uint256)\nvisibility public\nmutability nonpayable"]

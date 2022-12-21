@@ -15,7 +15,7 @@ strict digraph "tests/contract_testcases/substrate/contracts/external_call_03.so
 	new_14 [label="constructor new\ncontract: b\ntests/contract_testcases/substrate/contracts/external_call_03.sol:14:13-40\nsignature new(int32)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nint32 a"]
 	expr [label="expression\ntests/contract_testcases/substrate/contracts/external_call_03.sol:15:17-22"]
-	assign [label="assign\nint32 storage\ntests/contract_testcases/substrate/contracts/external_call_03.sol:15:17-18"]
+	assign [label="assign\nint32\ntests/contract_testcases/substrate/contracts/external_call_03.sol:15:17-18"]
 	storage_var_18 [label="storage variable\nb.x\nint32 storage\ntests/contract_testcases/substrate/contracts/external_call_03.sol:15:17-18"]
 	variable [label="variable: a\nint32\ntests/contract_testcases/substrate/contracts/external_call_03.sol:15:21-22"]
 	get_x [label="function get_x\ncontract: b\ntests/contract_testcases/substrate/contracts/external_call_03.sol:17:13-59\nsignature get_x(int32)\nvisibility public\nmutability nonpayable"]

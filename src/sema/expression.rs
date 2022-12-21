@@ -4260,11 +4260,13 @@ fn assign_single(
                 }
             }
 
+            let ty = ty.deref_any();
+
             Ok(Expression::Assign(
                 *loc,
                 ty.clone(),
                 Box::new(var.clone()),
-                Box::new(val.cast(&right.loc(), ty.deref_any(), true, ns, diagnostics)?),
+                Box::new(val.cast(&right.loc(), ty, true, ns, diagnostics)?),
             ))
         }
         Expression::Variable(_, var_ty, _) => Ok(Expression::Assign(
@@ -4276,7 +4278,7 @@ fn assign_single(
         _ => match &var_ty {
             Type::Ref(r_ty) => Ok(Expression::Assign(
                 *loc,
-                var_ty.clone(),
+                *r_ty.clone(),
                 Box::new(var),
                 Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
             )),
@@ -4295,7 +4297,7 @@ fn assign_single(
 
                 Ok(Expression::Assign(
                     *loc,
-                    var_ty.clone(),
+                    *r_ty.clone(),
                     Box::new(var),
                     Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
                 ))
