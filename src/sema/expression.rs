@@ -5591,7 +5591,9 @@ pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace)
                 .all_functions
                 .keys()
                 .filter_map(|func_no| {
-                    if ns.functions[*func_no].name == name {
+                    let func = &ns.functions[*func_no];
+
+                    if func.name == name && func.has_body {
                         Some(*func_no)
                     } else {
                         None
