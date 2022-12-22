@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contracts_ac
 	set [label="function set\ncontract: Base\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:4:5-42\nsignature set(uint256)\nvisibility public\nmutability pure"]
 	parameters [label="parameters\nuint256 val"]
 	expr [label="expression\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:5:9-24"]
-	assign [label="assign\nuint256 storage\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:5:9-18"]
+	assign [label="assign\nuint256\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:5:9-18"]
 	storage_var [label="storage variable\nBase.something\nuint256 storage\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:5:9-18"]
 	variable [label="variable: val\nuint256\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:5:21-24"]
 	contract_9 [label="contract A\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:9:1-13:2"]
