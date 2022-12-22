@@ -25,7 +25,7 @@ fn simple_mapping() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     for i in 0..10 {
         vm.function(
@@ -150,7 +150,7 @@ fn less_simple_mapping() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_string",
@@ -231,7 +231,7 @@ fn string_mapping() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_string",
@@ -293,7 +293,7 @@ fn contract_mapping() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let index = BorshToken::Address(account_new());
 
@@ -331,7 +331,7 @@ fn mapping_in_mapping() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set",
@@ -421,7 +421,7 @@ fn sparse_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_string",
@@ -501,7 +501,7 @@ fn massive_sparse_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_string",
@@ -585,7 +585,7 @@ fn mapping_in_dynamic_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "setNumber",
@@ -802,7 +802,7 @@ fn mapping_in_struct_in_dynamic_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "setNumber",
@@ -987,7 +987,7 @@ contract DeleteTest {
 
     let sender = account_new();
 
-    vm.constructor("DeleteTest", &[]);
+    vm.constructor(&[]);
     let _ = vm.function("addData", &[BorshToken::Address(sender)]);
     let _ = vm.function("deltest", &[]);
     let returns = vm.function("get", &[]).unwrap();
@@ -1048,7 +1048,7 @@ function getArrAmt() public view returns (uint) {
 
     let sender = account_new();
 
-    vm.constructor("CrowdFunding", &[]);
+    vm.constructor(&[]);
 
     let ret = vm
         .function("newCampaign", &[BorshToken::Address(sender)])

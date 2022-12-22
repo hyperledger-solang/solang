@@ -37,7 +37,7 @@ fn test_returns() {
     "#;
 
     let mut vm = build_solidity(file);
-    vm.constructor("c1", &[]);
+    vm.constructor(&[]);
     let _ = vm.function("assign", &[]);
     let returns = vm.function("pb1", &[]).unwrap();
 

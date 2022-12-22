@@ -20,7 +20,7 @@ fn interfaceid() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("get", &[]).unwrap();
 
@@ -57,7 +57,7 @@ fn write_buffer() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test1", &[]).unwrap();
 
@@ -92,7 +92,7 @@ fn read_buffer() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -166,7 +166,7 @@ fn bytes_compare() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -200,7 +200,7 @@ fn assignment_in_ternary() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     for _ in 0..10 {
         let left = rng.gen::<u64>();
@@ -243,7 +243,7 @@ fn power() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("power", &[]).unwrap();
 

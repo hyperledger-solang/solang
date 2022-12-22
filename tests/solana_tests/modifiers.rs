@@ -28,7 +28,7 @@ fn returns_and_phis_needed() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function("func", &[BorshToken::Bool(false)])

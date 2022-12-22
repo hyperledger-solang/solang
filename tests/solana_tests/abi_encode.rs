@@ -67,7 +67,7 @@ contract Testing {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("getThis", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
@@ -108,7 +108,7 @@ contract Testing {
 }
         "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("getThis", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
@@ -138,7 +138,7 @@ contract Testing {
       "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("getThis", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = MyStruct::try_from_slice(&encoded).unwrap();
@@ -190,7 +190,7 @@ fn primitive_structs() {
 }
         "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("getThis", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
 
@@ -226,7 +226,7 @@ contract Testing {
       "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function("testStruct", &[BorshToken::String("nihao".to_string())])
@@ -261,7 +261,7 @@ fn test_string_array() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("encode", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
@@ -338,7 +338,7 @@ contract Testing {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("testStruct", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = NonConstantStruct::try_from_slice(&encoded).unwrap();
@@ -441,7 +441,7 @@ fn struct_in_array() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let _ = vm.function("addData", &[]);
     let returns = vm.function("encodeStruct", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
@@ -541,7 +541,7 @@ fn arrays() {
       "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let _ = vm.function("addData", &[]);
     let returns = vm.function("encodeArray", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
@@ -654,7 +654,7 @@ contract Testing {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("getThis", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
@@ -775,7 +775,7 @@ fn null_pointer() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("test1", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
@@ -822,7 +822,7 @@ fn external_function() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("doThat", &[]).unwrap().unwrap_tuple();
     let encoded = returns[2].clone().into_bytes().unwrap();
@@ -857,7 +857,7 @@ fn bytes_arrays() {
     }
         "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("testBytesArray", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
@@ -896,7 +896,7 @@ fn uint8_arrays() {
     }"#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("testBytesArray", &[]).unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
@@ -927,7 +927,7 @@ contract caller {
 }"#,
     );
 
-    vm.constructor("caller", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("do_call", &[]).unwrap().unwrap_tuple();
     assert_eq!(returns.len(), 2);

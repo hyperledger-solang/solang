@@ -20,7 +20,7 @@ fn constant() {
         "#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("f", &[]).unwrap();
     assert_eq!(
@@ -46,7 +46,7 @@ fn constant() {
         "#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("f", &[]).unwrap();
     assert_eq!(

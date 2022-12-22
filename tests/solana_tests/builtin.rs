@@ -30,7 +30,7 @@ fn builtins() {
         }"#,
     );
 
-    vm.constructor("timestamp", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("mr_now", &[]).unwrap();
 
@@ -133,7 +133,7 @@ fn pda() {
         }"#,
     );
 
-    vm.constructor("pda", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function("create_pda", &[BorshToken::Bool(true)])
@@ -229,7 +229,7 @@ fn test_string_bytes_buffer_write() {
     }
         "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("testStringAndBytes", &[]).unwrap();
     let bytes = returns.into_bytes().unwrap();
 
@@ -254,7 +254,7 @@ fn out_of_bounds_bytes_write() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let _ = vm.function("testBytesOut", &[]);
 }
 
@@ -274,6 +274,6 @@ fn out_of_bounds_string_write() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let _ = vm.function("testStringOut", &[]);
 }

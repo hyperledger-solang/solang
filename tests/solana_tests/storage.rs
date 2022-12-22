@@ -18,7 +18,7 @@ fn simple() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("boom", &[]).unwrap();
     assert_eq!(
         returns,
@@ -48,7 +48,7 @@ fn simple() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("func", &[]).unwrap();
     assert_eq!(
         returns,
@@ -76,7 +76,7 @@ fn string() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
@@ -152,7 +152,7 @@ fn bytes() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     assert_eq!(
         vm.data()[0..20].to_vec(),
@@ -264,7 +264,7 @@ fn bytes_set_subscript_range() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_foo_offset",
@@ -304,7 +304,7 @@ fn bytes_get_subscript_range() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_foo",
@@ -335,7 +335,7 @@ fn storage_alignment() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     assert_eq!(
         vm.data()[0..40].to_vec(),
@@ -367,7 +367,7 @@ fn bytes_push_pop() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("get_bs", &[]).unwrap();
 
@@ -410,7 +410,7 @@ fn bytes_empty_pop() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     vm.function("pop", &[]);
 }
@@ -442,7 +442,7 @@ fn simple_struct() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     vm.function("set_s2", &[]);
 
@@ -534,7 +534,7 @@ fn struct_in_struct() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     vm.function("set_s2", &[]);
 
@@ -643,7 +643,7 @@ fn string_in_struct() {
             }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     vm.function("set_s2", &[]);
 
@@ -758,7 +758,7 @@ fn complex_struct() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     vm.function("set_s2", &[]);
 

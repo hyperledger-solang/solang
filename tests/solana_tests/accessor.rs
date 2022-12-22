@@ -13,7 +13,7 @@ fn types() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("f1", &[]).unwrap();
 
@@ -32,7 +32,7 @@ fn types() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -66,7 +66,7 @@ fn types() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -104,7 +104,7 @@ fn types() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -139,7 +139,7 @@ fn interfaces() {
         "#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("f1", &[]).unwrap();
 
@@ -155,7 +155,7 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor("x", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("z", &[]).unwrap();
 
@@ -174,7 +174,7 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor("x", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("z", &[]).unwrap();
 
@@ -193,7 +193,7 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor("x", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("z", &[]).unwrap();
 

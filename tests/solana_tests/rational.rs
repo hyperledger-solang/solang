@@ -21,7 +21,7 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test", &[]).unwrap();
 
@@ -53,7 +53,7 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test", &[]).unwrap();
 
@@ -75,7 +75,7 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test", &[]).unwrap();
 
@@ -97,7 +97,7 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test", &[]).unwrap();
 
@@ -119,7 +119,7 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test", &[]).unwrap();
 
@@ -140,7 +140,7 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test", &[]).unwrap();
 
@@ -161,7 +161,7 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test", &[]).unwrap();
 
@@ -182,7 +182,7 @@ fn rational() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(

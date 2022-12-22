@@ -60,7 +60,7 @@ contract testing  {
       "#,
     );
 
-    vm.constructor("testing", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test_slot", &[]).unwrap();
     assert_eq!(
@@ -167,7 +167,7 @@ contract testing  {
       "#,
     );
 
-    vm.constructor("testing", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -272,7 +272,7 @@ contract c {
         "#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
     let num: Vec<u8> = vec![
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
         0x11, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e,
@@ -448,7 +448,7 @@ fn external_function() {
         "#,
     );
 
-    vm.constructor("C", &[]);
+    vm.constructor(&[]);
     let mut addr: Vec<u8> = vec![0; 32];
     addr[5] = 90;
     let returns = vm
@@ -499,7 +499,7 @@ contract testing  {
 }"#,
     );
 
-    runtime.constructor("testing", &[]);
+    runtime.constructor(&[]);
     let returns = runtime.function("test_address", &[]).unwrap();
     let addr = returns.into_bigint().unwrap();
     let b_vec = addr.to_bytes_be().1;
@@ -549,7 +549,7 @@ fn addmod_mulmod() {
         "#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("testMod", &[]).unwrap().unwrap_tuple();
     assert_eq!(
@@ -627,7 +627,7 @@ contract Testing {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(

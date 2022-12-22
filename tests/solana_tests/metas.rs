@@ -17,7 +17,7 @@ fn use_authority() {
         },
     );
 
-    vm.constructor("AuthorityExample", &[BorshToken::Address(authority)]);
+    vm.constructor(&[BorshToken::Address(authority)]);
 
     let res = vm.function_must_fail("inc", &[]).unwrap();
     assert_ne!(res, 0);

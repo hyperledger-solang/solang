@@ -1593,8 +1593,7 @@ impl VirtualMachine {
         res
     }
 
-    /// FIXME: remove name argument
-    fn constructor(&mut self, _name: &str, args: &[BorshToken]) {
+    fn constructor(&mut self, args: &[BorshToken]) {
         self.constructor_expected(0, args)
     }
 
@@ -1646,9 +1645,8 @@ impl VirtualMachine {
         println!("function {} for {}", name, hex::encode(program.data));
 
         let mut calldata = discriminator("global", name);
-        println!("input: {} ", hex::encode(&calldata));
 
-        let instruction = if let Some(instr) = self.stack[0]
+        let instruction = if let Some(instr) = program
             .idl
             .as_ref()
             .unwrap()
@@ -1661,8 +1659,6 @@ impl VirtualMachine {
             panic!("Function '{}' not found", name);
         };
 
-        let selector = discriminator("global", name);
-        calldata.extend_from_slice(&selector);
         let mut encoded_args = encode_arguments(args);
         calldata.append(&mut encoded_args);
 
@@ -1683,12 +1679,14 @@ impl VirtualMachine {
 
         if let Some(ret) = &instruction.returns {
             let mut offset: usize = 0;
-            Some(decode_at_offset(
+            let decoded = decode_at_offset(
                 return_data,
                 &mut offset,
                 ret,
                 &self.stack[0].idl.as_ref().unwrap().types,
-            ))
+            );
+            assert_eq!(offset, return_data.len());
+            Some(decoded)
         } else {
             assert_eq!(return_data.len(), 0);
             None

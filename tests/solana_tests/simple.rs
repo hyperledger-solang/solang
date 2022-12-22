@@ -20,7 +20,7 @@ fn simple() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     assert_eq!(vm.logs, "Hello from constructor");
 
@@ -44,7 +44,7 @@ fn format() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     assert_eq!(
         vm.logs,
@@ -69,7 +69,7 @@ fn parameters() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "test",
@@ -117,7 +117,7 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -146,7 +146,7 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -197,7 +197,7 @@ fn flipper() {
         }"#,
     );
 
-    vm.constructor("flipper", &[BorshToken::Bool(true)]);
+    vm.constructor(&[BorshToken::Bool(true)]);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
@@ -251,13 +251,10 @@ fn incrementer() {
         }"#,
     );
 
-    vm.constructor(
-        "incrementer",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::from(5u8),
-        }],
-    );
+    vm.constructor(&[BorshToken::Uint {
+        width: 32,
+        value: BigInt::from(5u8),
+    }]);
 
     let returns = vm.function("get", &[]).unwrap();
 
@@ -332,7 +329,7 @@ fn two_arrays() {
         }"#,
     );
 
-    vm.constructor("two_arrays", &[]);
+    vm.constructor(&[]);
 }
 
 #[test]
@@ -357,7 +354,7 @@ fn dead_storage_bug() {
         }"#,
     );
 
-    vm.constructor("deadstorage", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("v", &[]).unwrap();
 
@@ -416,7 +413,7 @@ contract test3 {
     );
 
     // call constructor
-    runtime.constructor("test3", &[]);
+    runtime.constructor(&[]);
 
     for i in 0..=50 {
         let res = ((50 - i) * 100 + 5) + i * 1000;

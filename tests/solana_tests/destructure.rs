@@ -18,7 +18,7 @@ fn conditional_destructure() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function("f", &[BorshToken::Bool(true), BorshToken::Bool(true)])
@@ -113,7 +113,7 @@ fn casting_destructure() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
@@ -141,7 +141,7 @@ fn casting_destructure() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("f", &[]).unwrap();
 

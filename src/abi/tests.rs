@@ -164,6 +164,15 @@ fn instructions_and_types() {
         cte += 1;
         return (cte, my_string);
     }
+
+    modifier doSomething() {
+        require(msg.value >= 50);
+        _;
+    }
+
+    fallback() external {
+        setString("error2");
+    }
 }
     "#;
 
@@ -1082,4 +1091,388 @@ fn double_name_collision() {
             }
         }
     );
+}
+
+#[test]
+fn deduplication() {
+    let src = r#"
+    contract a {
+    event myEvent(uint32, uint32 field_0, uint32, int64 field_0_1, int64 field_1, uint128);
+
+    function myFunc(address ff, string) public returns (address, address return_0) {
+        emit myEvent(1, 2, 3, 4, 5, 6);
+
+        return (address(this), ff);
+    }
+}
+    "#;
+
+    let mut ns = generate_namespace(src);
+    // We need this to populate Contract.emit_events
+    codegen::codegen(
+        &mut ns,
+        &Options {
+            dead_storage: false,
+            constant_folding: false,
+            strength_reduce: false,
+            vector_to_slice: false,
+            math_overflow_check: false,
+            common_subexpression_elimination: false,
+            generate_debug_information: false,
+            opt_level: OptimizationLevel::None,
+            log_api_return_codes: false,
+        },
+    );
+
+    let idl = generate_anchor_idl(0, &ns);
+
+    assert_eq!(idl.instructions.len(), 2);
+    assert_eq!(idl.instructions[0].name, "new");
+
+    assert_eq!(idl.instructions[1].name, "myFunc");
+    assert_eq!(
+        idl.instructions[1].args,
+        vec![
+            IdlField {
+                name: "ff".to_string(),
+                docs: None,
+                ty: IdlType::PublicKey,
+            },
+            IdlField {
+                name: "arg_0".to_string(),
+                docs: None,
+                ty: IdlType::String,
+            }
+        ]
+    );
+
+    assert_eq!(idl.types.len(), 1);
+    assert_eq!(
+        idl.types[0],
+        IdlTypeDefinition {
+            name: "myFunc_returns".to_string(),
+            docs: Some(vec![
+                "Data structure to hold the multiple returns of function myFunc".to_owned()
+            ]),
+            ty: IdlTypeDefinitionTy::Struct {
+                fields: vec![
+                    IdlField {
+                        name: "return_0".to_string(),
+                        docs: None,
+                        ty: IdlType::PublicKey
+                    },
+                    IdlField {
+                        name: "return_0_1".to_string(),
+                        docs: None,
+                        ty: IdlType::PublicKey
+                    }
+                ]
+            }
+        }
+    );
+
+    assert!(idl.events.is_some());
+    assert_eq!(idl.events.as_ref().unwrap().len(), 1);
+    assert_eq!(
+        idl.events.as_ref().unwrap()[0],
+        IdlEvent {
+            name: "myEvent".to_string(),
+            fields: vec![
+                IdlEventField {
+                    name: "field_0".to_string(),
+                    ty: IdlType::U32,
+                    index: false,
+                },
+                IdlEventField {
+                    name: "field_0_1".to_string(),
+                    ty: IdlType::U32,
+                    index: false,
+                },
+                IdlEventField {
+                    name: "field_1".to_string(),
+                    ty: IdlType::U32,
+                    index: false,
+                },
+                IdlEventField {
+                    name: "field_0_1_1".to_string(),
+                    ty: IdlType::I64,
+                    index: false,
+                },
+                IdlEventField {
+                    name: "field_1_1".to_string(),
+                    ty: IdlType::I64,
+                    index: false,
+                },
+                IdlEventField {
+                    name: "field_2".to_string(),
+                    ty: IdlType::U128,
+                    index: false,
+                }
+            ]
+        }
+    );
+}
+
+#[test]
+fn duplicate_named_custom_types() {
+    // Other contract comes first
+    let src = r#"
+contract D {
+	struct Foo { int64 f1; }
+}
+contract C {
+	enum Foo { b1, b2, b3 }
+        function f(D.Foo x, Foo y) public pure returns (int64) { return x.f1; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 2);
+    assert_eq!(idl.types[0].name, "D_Foo");
+    assert_eq!(idl.types[1].name, "Foo");
+
+    // Current contract comes first
+    let src = r#"
+    contract D {
+	struct Foo { int64 f1; }
+}
+contract C {
+	enum Foo { b1, b2, b3 }
+        function f(Foo y, D.Foo x) public pure returns (int64) { return x.f1; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 2);
+    assert_eq!(idl.types[0].name, "Foo");
+    assert_eq!(idl.types[1].name, "D_Foo");
+
+    // Type outside a contract first
+    let src = r#"
+    contract D {
+	struct Foo { int64 f1; }
+}
+
+enum Foo { b1, b2, b3 }
+
+contract C {
+        function f(Foo y, D.Foo x) public pure returns (int64) { return x.f1; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+    assert_eq!(idl.types.len(), 2);
+    assert_eq!(idl.types[0].name, "Foo");
+    assert_eq!(idl.types[1].name, "D_Foo");
+
+    // Type outside contract second
+    let src = r#"
+    contract D {
+	struct Foo { int64 f1; }
+}
+
+enum Foo { b1, b2, b3 }
+
+contract C {
+        function f(D.Foo x, Foo y) public pure returns (int64) { return x.f1; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 2);
+    assert_eq!(idl.types[0].name, "D_Foo");
+    assert_eq!(idl.types[1].name, "Foo");
+
+    // Name already exists before
+    let src = r#"
+    contract D {
+	struct Foo { int64 f1; }
+}
+
+enum Foo { b1, b2, b3 }
+
+contract C {
+    struct D_Foo {
+        int64 f2;
+    }
+        function f(Foo y, D_Foo z, D.Foo x) public pure returns (int64) { return x.f1 + z.f2; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 3);
+    assert_eq!(idl.types[0].name, "Foo");
+    assert_eq!(idl.types[1].name, "D_Foo");
+    assert_eq!(idl.types[2].name, "D_Foo_1");
+
+    // Name already exists after
+    let src = r#"
+    contract D {
+	struct Foo { int64 f1; }
+}
+
+enum Foo { b1, b2, b3 }
+
+contract C {
+    struct D_Foo {
+        int64 f2;
+    }
+        function f(Foo y,  D.Foo x, D_Foo z) public pure returns (int64) { return x.f1 + z.f2; }
+}
+    "#;
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 3);
+    assert_eq!(idl.types[0].name, "Foo");
+    assert_eq!(idl.types[1].name, "D_Foo_1");
+    assert_eq!(idl.types[2].name, "D_Foo");
+
+    // Pathological name as first argument
+    let src = r#"
+    contract D {
+	struct Foo { int64 f1; }
+}
+
+enum Foo { b1, b2, b3 }
+
+contract C {
+    struct D_Foo {
+        int64 f2;
+    }
+        function f(D_Foo z, Foo y,  D.Foo x) public pure returns (int64) { return x.f1 + z.f2; }
+}
+    "#;
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 3);
+    assert_eq!(idl.types[0].name, "D_Foo");
+    assert_eq!(idl.types[1].name, "Foo");
+    assert_eq!(idl.types[2].name, "D_Foo_1");
+
+    let src = r#"
+contract D {
+	struct Foo { int64 f1; }
+}
+
+enum Foo { b1, b2, b3 }
+
+contract C {
+    struct D_Foo {
+        int64 f2;
+    }
+
+    struct D_Foo_1 {
+       int64 f3;
+    }
+
+    function f(D_Foo z, D_Foo_1 k, Foo y,  D.Foo x) public pure returns (int64) { return x.f1 + z.f2 + k.f3; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 4);
+    assert_eq!(idl.types[0].name, "D_Foo");
+    assert_eq!(idl.types[1].name, "D_Foo_1");
+    assert_eq!(idl.types[2].name, "Foo");
+    assert_eq!(idl.types[3].name, "D_Foo_2");
+
+    let src = r#"
+contract D {
+	struct Foo { int64 f1; }
+}
+
+enum Foo { b1, b2, b3 }
+
+contract C {
+    struct D_Foo {
+        int64 f2;
+    }
+
+    struct D_Foo_1 {
+       int64 f3;
+    }
+
+    function f(D_Foo_1 k, D_Foo z, Foo y,  D.Foo x) public pure returns (int64) { return x.f1 + z.f2 + k.f3; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 4);
+    assert_eq!(idl.types[0].name, "D_Foo_1");
+    assert_eq!(idl.types[1].name, "D_Foo");
+    assert_eq!(idl.types[2].name, "Foo");
+    assert_eq!(idl.types[3].name, "D_Foo_2");
+
+    let src = r#"
+contract D {
+	struct Foo { int64 f1; }
+}
+
+enum Foo { b1, b2, b3 }
+
+contract C {
+    struct D_Foo {
+        int64 f2;
+    }
+
+    struct D_Foo_1 {
+       int64 f3;
+    }
+
+    function f(D_Foo z, Foo y, D_Foo_1 k, D.Foo x) public pure returns (int64) { return x.f1 + z.f2 + k.f3; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 4);
+    assert_eq!(idl.types[0].name, "D_Foo");
+    assert_eq!(idl.types[1].name, "Foo");
+    assert_eq!(idl.types[2].name, "D_Foo_1");
+    assert_eq!(idl.types[3].name, "D_Foo_2");
+
+    let src = r#"
+contract D {
+	struct Foo { int64 f1; }
+}
+
+enum Foo { b1, b2, b3 }
+
+contract C {
+    struct D_Foo {
+        int64 f2;
+    }
+
+    struct D_Foo_1 {
+       int64 f3;
+    }
+
+    function f(D_Foo z, Foo y,  D.Foo x, D_Foo_1 k) public pure returns (int64) { return x.f1 + z.f2 + k.f3; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.types.len(), 4);
+    assert_eq!(idl.types[0].name, "D_Foo");
+    assert_eq!(idl.types[1].name, "Foo");
+    assert_eq!(idl.types[2].name, "D_Foo_2");
+    assert_eq!(idl.types[3].name, "D_Foo_1");
 }

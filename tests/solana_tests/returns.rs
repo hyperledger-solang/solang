@@ -31,7 +31,7 @@ fn return_single() {
             }
         }"#,
     );
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("f", &[]).unwrap();
     assert_eq!(
@@ -90,7 +90,7 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
@@ -116,7 +116,7 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
@@ -156,7 +156,7 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
     let _returns = vm.function("strange", &[]);
     let _returns = vm.function("inc", &[]);
     let returns = vm.function("get", &[]).unwrap();
@@ -192,7 +192,7 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
     let _returns = vm.function("f", &[]);
     let returns = vm.function("get", &[]).unwrap();
 
@@ -220,7 +220,7 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
@@ -250,7 +250,7 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(

@@ -15,7 +15,7 @@ fn get_balance() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let new = account_new();
 
@@ -50,7 +50,7 @@ fn send_fails() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let new = account_new();
 
@@ -94,7 +94,7 @@ fn send_succeeds() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let new = account_new();
 
@@ -143,7 +143,7 @@ fn send_overflows() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let new = account_new();
 
@@ -195,7 +195,7 @@ fn transfer_succeeds() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let new = account_new();
 
@@ -240,7 +240,7 @@ fn transfer_fails_not_enough() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let new = account_new();
 
@@ -281,7 +281,7 @@ fn transfer_fails_overflow() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let new = account_new();
 
@@ -320,7 +320,7 @@ fn fallback() {
 
     vm.account_data.get_mut(&vm.origin).unwrap().lamports = 312;
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     if let Some(idl) = &vm.stack[0].idl {
         let mut idl = idl.clone();
@@ -356,7 +356,7 @@ fn value_overflows() {
 
     vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let new = account_new();
 

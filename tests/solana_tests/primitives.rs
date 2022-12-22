@@ -28,7 +28,7 @@ fn assert_false() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function("assert_fails", &[]);
 }
@@ -45,7 +45,7 @@ fn assert_true() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function("assert_fails", &[]);
 }
@@ -77,7 +77,7 @@ fn boolean() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("return_true", &[]).unwrap();
 
@@ -111,7 +111,7 @@ fn address() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("return_address", &[]).unwrap();
 
@@ -153,7 +153,7 @@ fn test_enum() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("return_enum", &[]).unwrap();
 
@@ -213,7 +213,7 @@ fn bytes() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[]);
+        vm.constructor(&[]);
 
         let returns = vm.function("return_literal", &[]).unwrap();
 
@@ -410,7 +410,7 @@ fn uint() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[]);
+        vm.constructor(&[]);
 
         println!("width:{}", width);
         let returned_width = width.next_power_of_two();
@@ -771,7 +771,7 @@ fn test_power_overflow_boundaries() {
         .replace("intN", &format!("int{}", width));
 
         let mut contract = build_solidity_with_overflow_check(&src, true);
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
 
         let return_value = contract
             .function(
@@ -839,7 +839,7 @@ fn test_overflow_boundaries() {
         let returned_width = (width as u16).next_power_of_two();
 
         // Multiply the boundaries by 1.
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
         let return_value = contract
             .function(
                 "mul",
@@ -1003,7 +1003,7 @@ fn test_mul_within_range_signed() {
         let second_op = BigInt::from(*side.choose(&mut rng).unwrap());
         println!("second op : {:?}", second_op);
 
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
         let return_value = contract
             .function(
                 "mul",
@@ -1044,7 +1044,7 @@ fn test_mul_within_range() {
         .replace("intN", &format!("int{}", width));
 
         let mut contract = build_solidity_with_overflow_check(&src, true);
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
         for _ in 0..10 {
             // Max number to fit unsigned N bits is (2^N)-1
             let mut limit: BigUint = BigUint::from(2_u32).pow(width as u32);
@@ -1097,7 +1097,7 @@ fn test_overflow_detect_signed() {
         .replace("intN", &format!("int{}", width));
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
         let mut limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1166,7 +1166,7 @@ fn test_overflow_detect_unsigned() {
         .replace("intN", &format!("int{}", width));
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
 
         for _ in 0..10 {
             // N bits can hold the range [0, (2^N)-1]. Generate a value that overflows N bits
@@ -1251,7 +1251,7 @@ fn int() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[]);
+        vm.constructor(&[]);
 
         let returned_width = (width as u16).next_power_of_two();
 
@@ -1564,7 +1564,7 @@ fn bytes_cast() {
         "#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function("to_bytes", &[BorshToken::FixedBytes(b"abcd".to_vec())])

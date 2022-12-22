@@ -20,7 +20,7 @@ fn storage_string_length() {
     }
     "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let _ = vm.function(
         "setString",
@@ -59,7 +59,7 @@ fn load_string_vector() {
       "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let returns = vm.function("testLength", &[]).unwrap().unwrap_tuple();
     assert_eq!(
         returns[0],

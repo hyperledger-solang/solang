@@ -27,7 +27,7 @@ fn lamports() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     vm.account_data.get_mut(&vm.origin).unwrap().lamports = 17672630920854456917u64;
 
@@ -64,7 +64,7 @@ fn owner() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("test", &[]).unwrap();
 
@@ -105,7 +105,7 @@ fn data() {
         }"#,
     );
 
-    vm.constructor("c", &[]);
+    vm.constructor(&[]);
 
     for i in 0..10 {
         let returns = vm

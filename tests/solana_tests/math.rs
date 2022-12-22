@@ -39,7 +39,7 @@ fn safe_math() {
         }"#,
     );
 
-    vm.constructor("math", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(

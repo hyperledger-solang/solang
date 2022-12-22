@@ -20,7 +20,7 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("get", &[]).unwrap().unwrap_tuple();
 
@@ -66,7 +66,7 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("get", &[]).unwrap();
 
@@ -135,7 +135,7 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("get", &[]).unwrap();
 
@@ -230,7 +230,7 @@ fn dynamic_array_fixed_elements() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -338,7 +338,7 @@ fn fixed_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -425,7 +425,7 @@ fn dynamic_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm
         .function(
@@ -506,7 +506,7 @@ fn fixed_array_fixed_elements_storage() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_elem",
@@ -680,7 +680,7 @@ fn fixed_array_dynamic_elements_storage() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_elem",
@@ -810,7 +810,7 @@ fn storage_simple_dynamic_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("len", &[]).unwrap();
 
@@ -1031,7 +1031,7 @@ fn storage_pop_running_on_empty() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function("pop", &[]);
 }
@@ -1088,7 +1088,7 @@ fn storage_dynamic_array_of_structs() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("len", &[]).unwrap();
 
@@ -1364,7 +1364,7 @@ fn array_literal() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let returns = vm.function("list", &[]).unwrap();
 
@@ -1440,7 +1440,7 @@ fn storage_pop_push() {
     }"#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     vm.function("fn1", &[]);
     vm.function("fn2", &[]);
     vm.function("fn3", &[]);
@@ -1479,7 +1479,7 @@ fn initialization_with_literal() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let mut addr1: Vec<u8> = Vec::new();
     addr1.resize(32, 0);
@@ -1569,7 +1569,7 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1590,7 +1590,7 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1616,7 +1616,7 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1638,7 +1638,7 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     // push() returns a reference to the thing
@@ -1664,7 +1664,7 @@ fn dynamic_array_push() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }
 
@@ -1688,7 +1688,7 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1709,7 +1709,7 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1737,7 +1737,7 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1759,7 +1759,7 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }
 
@@ -1778,7 +1778,7 @@ fn dynamic_array_pop_empty_array() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }
 
@@ -1800,7 +1800,7 @@ fn dynamic_array_pop_bounds() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }
 
@@ -1840,7 +1840,7 @@ fn dynamic_array_push_pop_loop() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1879,6 +1879,6 @@ fn dynamic_array_push_pop_loop() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast::{
-    ArrayLength, Contract, Function, Mutability, Namespace, StructDecl, StructType, Tag, Type,
+    ArrayLength, Contract, Function, Mutability, Namespace, Parameter, StructDecl, StructType, Tag,
+    Type,
 };
 use anchor_syn::idl::{
     Idl, IdlAccount, IdlAccountItem, IdlEnumVariant, IdlEvent, IdlEventField, IdlField,
@@ -9,10 +10,11 @@ use anchor_syn::idl::{
 };
 use num_traits::ToPrimitive;
 use semver::Version;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use convert_case::{Boundary, Case, Casing};
 use sha2::{Digest, Sha256};
+use solang_parser::pt::FunctionTy;
 
 /// Generate discriminator based on the name of the function. This is the 8 byte
 /// value anchor uses to dispatch function calls on. This should match
@@ -33,7 +35,7 @@ pub fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
 pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace) -> Idl {
     let contract = &ns.contracts[contract_no];
     let docs = idl_docs(&contract.tags);
-    let mut type_manager = TypeManager::new(ns);
+    let mut type_manager = TypeManager::new(ns, contract_no);
 
     let instructions = idl_instructions(contract_no, contract, &mut type_manager, ns);
 
@@ -69,13 +71,9 @@ fn idl_events(
         for event_no in &contract.emits_events {
             let def = &ns.events[*event_no];
             let mut fields: Vec<IdlEventField> = Vec::with_capacity(def.fields.len());
-            for (item_no, item) in def.fields.iter().enumerate() {
-                let name = if item.id.is_none() {
-                    format!("field_{}", item_no)
-                } else {
-                    item.name_as_str().to_string()
-                };
-
+            let mut dedup = Deduplicate::new("field".to_owned());
+            for item in &def.fields {
+                let name = dedup.unique_name(item);
                 fields.push(IdlEventField {
                     name,
                     ty: type_manager.convert(&item.ty),
@@ -121,7 +119,12 @@ fn idl_instructions(
     }
 
     for func_no in contract.all_functions.keys() {
-        if !ns.functions[*func_no].is_public() {
+        if !ns.functions[*func_no].is_public()
+            || matches!(
+                ns.functions[*func_no].ty,
+                FunctionTy::Fallback | FunctionTy::Receive | FunctionTy::Modifier
+            )
+        {
             continue;
         }
 
@@ -157,12 +160,10 @@ fn idl_instructions(
         };
 
         let mut args: Vec<IdlField> = Vec::with_capacity(func.params.len());
-        for (item_no, item) in func.params.iter().enumerate() {
-            let name = if item.id.is_none() || item.id.as_ref().unwrap().name.is_empty() {
-                format!("arg_{}", item_no)
-            } else {
-                item.id.as_ref().unwrap().name.clone()
-            };
+        let mut dedup = Deduplicate::new("arg".to_owned());
+        for item in &*func.params {
+            let name = dedup.unique_name(item);
+
             args.push(IdlField {
                 name,
                 docs: None,
@@ -202,18 +203,24 @@ fn idl_instructions(
 /// in the IDL 'types' field.
 struct TypeManager<'a> {
     namespace: &'a Namespace,
+    contract_no: usize,
     added_types: HashSet<Type>,
+    /// This is a mapping between the IDL type and the tuple
+    /// (index into the types vector, is the type from the current contract?, original type name)
+    added_names: HashMap<String, (usize, Option<String>, String)>,
     returns_structs: Vec<IdlTypeDefinition>,
     types: Vec<IdlTypeDefinition>,
 }
 
 impl TypeManager<'_> {
-    fn new(ns: &Namespace) -> TypeManager {
+    fn new(ns: &Namespace, contract_no: usize) -> TypeManager {
         TypeManager {
             namespace: ns,
             added_types: HashSet::new(),
+            added_names: HashMap::new(),
             types: Vec::new(),
             returns_structs: Vec::new(),
+            contract_no,
         }
     }
 
@@ -221,12 +228,9 @@ impl TypeManager<'_> {
     /// struct containing all the returned types.
     fn build_struct_for_return(&mut self, func: &Function, effective_name: &String) -> IdlType {
         let mut fields: Vec<IdlField> = Vec::with_capacity(func.returns.len());
-        for (item_no, item) in func.returns.iter().enumerate() {
-            let name = if let Some(id) = &item.id {
-                id.name.clone()
-            } else {
-                format!("return_{}", item_no)
-            };
+        let mut dedup = Deduplicate::new("return".to_owned());
+        for item in &*func.returns {
+            let name = dedup.unique_name(item);
 
             fields.push(IdlField {
                 name,
@@ -248,6 +252,42 @@ impl TypeManager<'_> {
         IdlType::Defined(name)
     }
 
+    /// This function creates an unique name for either a custom struct or enum.
+    fn unique_custom_type_name(&mut self, type_name: &String, contract: &Option<String>) -> String {
+        let (idx, other_contract, real_name) =
+            if let Some((idx, other_contract, real_name)) = self.added_names.get(type_name) {
+                (*idx, other_contract.clone(), real_name.clone())
+            } else {
+                return type_name.clone();
+            };
+
+        // If the existing type was declared outside a contract or if it is from the current contract,
+        // we should change the name of the type we are adding now.
+        if other_contract.is_none()
+            || other_contract.as_ref().unwrap() == &self.namespace.contracts[self.contract_no].name
+        {
+            let new_name = if let Some(this_name) = contract {
+                format!("{}_{}", this_name, type_name)
+            } else {
+                type_name.clone()
+            };
+            self.unique_string(new_name)
+        } else {
+            // If the type we are adding now belongs to the current contract, we change the name
+            // of a previously added IDL type
+            let new_other_name = if let Some(other_name) = &other_contract {
+                format!("{}_{}", other_name, real_name)
+            } else {
+                format!("_{}", real_name)
+            };
+            let unique_name = self.unique_string(new_other_name);
+            self.types[idx].name = unique_name.clone();
+            self.added_names
+                .insert(unique_name, (idx, other_contract, real_name));
+            type_name.clone()
+        }
+    }
+
     /// Add a struct definition to the TypeManager
     fn add_struct_definition(&mut self, def: &StructDecl, ty: &Type) {
         if self.added_types.contains(ty) {
@@ -266,8 +306,15 @@ impl TypeManager<'_> {
             });
         }
 
+        let name = self.unique_custom_type_name(&def.name, &def.contract);
+
+        self.added_names.insert(
+            name.clone(),
+            (self.types.len(), def.contract.clone(), def.name.clone()),
+        );
+
         self.types.push(IdlTypeDefinition {
-            name: def.name.clone(),
+            name,
             docs,
             ty: IdlTypeDefinitionTy::Struct { fields },
         });
@@ -310,6 +357,12 @@ impl TypeManager<'_> {
 
         let docs = idl_docs(&def.tags);
 
+        let name = self.unique_custom_type_name(&def.name, &def.contract);
+        self.added_names.insert(
+            name.clone(),
+            (self.types.len(), def.contract.clone(), def.name.clone()),
+        );
+
         let variants = def
             .values
             .iter()
@@ -320,7 +373,7 @@ impl TypeManager<'_> {
             .collect::<Vec<IdlEnumVariant>>();
 
         self.types.push(IdlTypeDefinition {
-            name: def.name.clone(),
+            name,
             docs,
             ty: IdlTypeDefinitionTy::Enum { variants },
         });
@@ -386,6 +439,19 @@ impl TypeManager<'_> {
             _ => unreachable!("Type should not be in the IDL"),
         }
     }
+
+    /// This function ensures that the string we are generating is unique given the names we have in
+    /// self.added_names
+    fn unique_string(&mut self, name: String) -> String {
+        let mut num = 0;
+        let mut unique_name = name.clone();
+        while self.added_names.contains_key(&unique_name) {
+            num += 1;
+            unique_name = format!("{}_{}", name, num);
+        }
+
+        unique_name
+    }
 }
 
 /// Prepare the docs from doc comments.
@@ -398,5 +464,51 @@ fn idl_docs(tags: &[Tag]) -> Option<Vec<String>> {
                 .map(|tag| format!("{}: {}", tag.tag, tag.value))
                 .collect::<Vec<String>>(),
         )
+    }
+}
+
+struct Deduplicate {
+    prefix: String,
+    counter: u16,
+    existing_names: HashSet<String>,
+}
+
+impl Deduplicate {
+    fn new(prefix: String) -> Deduplicate {
+        Deduplicate {
+            prefix,
+            counter: 0,
+            existing_names: HashSet::new(),
+        }
+    }
+
+    fn unique_name(&mut self, param: &Parameter) -> String {
+        if param.id.is_none() || param.id.as_ref().unwrap().name.is_empty() {
+            self.try_prefix()
+        } else {
+            let mut name = param.id.as_ref().unwrap().name.clone();
+            self.try_name(&mut name);
+            name
+        }
+    }
+
+    fn try_prefix(&mut self) -> String {
+        let mut candidate = format!("{}_{}", self.prefix, self.counter);
+        while self.existing_names.contains(&candidate) {
+            self.counter += 1;
+            candidate = format!("{}_{}", self.prefix, self.counter);
+        }
+        self.existing_names.insert(candidate.clone());
+        candidate
+    }
+
+    fn try_name(&mut self, candidate: &mut String) {
+        let mut counter = 0;
+        let prefix = candidate.clone();
+        while self.existing_names.contains(candidate) {
+            counter += 1;
+            *candidate = format!("{}_{}", prefix, counter);
+        }
+        self.existing_names.insert(candidate.clone());
     }
 }
