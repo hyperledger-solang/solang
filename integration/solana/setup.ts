@@ -11,10 +11,10 @@ export async function loadContract(name: string, args: any[] = [], space: number
 
     const abi = JSON.parse(fs.readFileSync(`${name}.abi`, 'utf8'));
 
-    const connection = new Connection(endpoint, 'confirmed');
+    const connection = newConnection();
 
-    const payerAccount = load_key('payer.key');
-    const program = load_key(`${name}.key`);
+    const payerAccount = loadKey('payer.key');
+    const program = loadKey(`${name}.key`);
 
     const storage = Keypair.generate();
     const contract = new Contract(connection, program.publicKey, storage.publicKey, abi, payerAccount);
@@ -25,9 +25,9 @@ export async function loadContract(name: string, args: any[] = [], space: number
 }
 
 export function newConnectionAndAccounts(name: string): [Connection, Keypair, Keypair] {
-    const connection = new Connection(endpoint, 'confirmed');
-    const payerAccount = load_key('payer.key');
-    const program = load_key(`${name}.key`);
+    const connection = newConnection();
+    const payerAccount = loadKey('payer.key');
+    const program = loadKey(`${name}.key`);
     return [connection, payerAccount, program];
 }
 
@@ -35,7 +35,7 @@ export async function loadContractWithExistingConnectionAndPayer(connection: Con
     const abi = JSON.parse(fs.readFileSync(`${name}.abi`, 'utf8'));
 
     const storage = Keypair.generate();
-    const program = load_key(`${name}.key`);
+    const program = loadKey(`${name}.key`);
     const contract = new Contract(connection, program.publicKey, storage.publicKey, abi, payerAccount);
 
     await contract.deploy(name, args, storage, space);
@@ -43,7 +43,7 @@ export async function loadContractWithExistingConnectionAndPayer(connection: Con
     return contract;
 }
 
-function load_key(filename: string): Keypair {
+function loadKey(filename: string): Keypair {
     const contents = fs.readFileSync(filename).toString();
     const bs = Uint8Array.from(JSON.parse(contents));
 
@@ -65,10 +65,7 @@ async function setup() {
         fs.writeFileSync(file_name, JSON.stringify(Array.from(key.secretKey)));
     };
 
-    const connection = new Connection(endpoint, {
-        commitment: "confirmed",
-        confirmTransactionInitialTimeout: 100000,
-    });
+    const connection = newConnection();
     const payer = await newAccountWithLamports(connection);
 
     write_key('payer.key', payer);
@@ -82,7 +79,7 @@ async function setup() {
             let program;
 
             if (fs.existsSync(`${name}.key`)) {
-                program = load_key(`${name}.key`);
+                program = loadKey(`${name}.key`);
             } else {
                 program = Keypair.generate();
             }
@@ -95,6 +92,15 @@ async function setup() {
             write_key(`${name}.key`, program);
         }
     }
+}
+
+function newConnection(): Connection {
+    const connection = new Connection(endpoint, {
+        commitment: "confirmed",
+        confirmTransactionInitialTimeout: 1e6,
+    });
+
+    return connection;
 }
 
 if (require.main === module) {

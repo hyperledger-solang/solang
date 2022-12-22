@@ -19,13 +19,12 @@ async function newAccountWithLamports(connection: Connection): Promise<Keypair> 
 }
 
 describe('Call Anchor program from Solidity via IDL', () => {
-
     it('call_anchor', async function () {
         // This program instantiates an anchor program, calls various functions on it and checks the return values
 
         const connection = new Connection("http://localhost:8899", {
             commitment: "confirmed",
-            confirmTransactionInitialTimeout: 100000,
+            confirmTransactionInitialTimeout: 1e6,
         });
 
         const payer = await newAccountWithLamports(connection);
