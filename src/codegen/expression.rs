@@ -2028,7 +2028,7 @@ pub fn assign_single(
 /// Convert a function call expression to CFG in expression context
 pub fn emit_function_call(
     expr: &ast::Expression,
-    callee_contract_no: usize,
+    caller_contract_no: usize,
     cfg: &mut ControlFlowGraph,
     func: Option<&Function>,
     ns: &Namespace,
@@ -2045,11 +2045,11 @@ pub fn emit_function_call(
             {
                 let args = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
+                    .map(|a| expression(a, cfg, caller_contract_no, func, ns, vartab, opt))
                     .collect();
 
                 let function_no = if let Some(signature) = signature {
-                    ns.contracts[callee_contract_no].virtual_functions[signature]
+                    ns.contracts[caller_contract_no].virtual_functions[signature]
                 } else {
                     *function_no
                 };
@@ -2061,9 +2061,9 @@ pub fn emit_function_call(
                         ast_func_no: function_no,
                     }
                 } else {
-                    InternalCallTy::Static {
-                        cfg_no: ns.contracts[callee_contract_no].all_functions[&function_no],
-                    }
+                    let cfg_no = ns.contracts[caller_contract_no].all_functions[&function_no];
+
+                    InternalCallTy::Static { cfg_no }
                 };
 
                 if !ftype.returns.is_empty() {
@@ -2108,11 +2108,11 @@ pub fn emit_function_call(
                     vec![Expression::Poison]
                 }
             } else if let Type::InternalFunction { returns, .. } = function.ty().deref_any() {
-                let cfg_expr = expression(function, cfg, callee_contract_no, func, ns, vartab, opt);
+                let cfg_expr = expression(function, cfg, caller_contract_no, func, ns, vartab, opt);
 
                 let args = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
+                    .map(|a| expression(a, cfg, caller_contract_no, func, ns, vartab, opt))
                     .collect();
 
                 if !returns.is_empty() {
@@ -2167,26 +2167,26 @@ pub fn emit_function_call(
             call_args,
             ty,
         } => {
-            let args = expression(args, cfg, callee_contract_no, func, ns, vartab, opt);
-            let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
+            let args = expression(args, cfg, caller_contract_no, func, ns, vartab, opt);
+            let address = expression(address, cfg, caller_contract_no, func, ns, vartab, opt);
             let gas = if let Some(gas) = &call_args.gas {
-                expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+                expression(gas, cfg, caller_contract_no, func, ns, vartab, opt)
             } else {
                 default_gas(ns)
             };
             let value = if let Some(value) = &call_args.value {
-                expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
+                expression(value, cfg, caller_contract_no, func, ns, vartab, opt)
             } else {
                 Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
             };
             let accounts = call_args
                 .accounts
                 .as_ref()
-                .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+                .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
             let seeds = call_args
                 .seeds
                 .as_ref()
-                .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+                .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
             let success = vartab.temp_name("success", &Type::Bool);
 
@@ -2228,30 +2228,30 @@ pub fn emit_function_call(
                 let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
                 let mut args: Vec<Expression> = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
+                    .map(|a| expression(a, cfg, caller_contract_no, func, ns, vartab, opt))
                     .collect();
-                let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
+                let address = expression(address, cfg, caller_contract_no, func, ns, vartab, opt);
                 let gas = if let Some(gas) = &call_args.gas {
-                    expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+                    expression(gas, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
                     default_gas(ns)
                 };
                 let accounts = call_args
                     .accounts
                     .as_ref()
-                    .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+                    .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
                 let seeds = call_args
                     .seeds
                     .as_ref()
-                    .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+                    .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
                 let value = if let Some(value) = &call_args.value {
-                    expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
+                    expression(value, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
 
-                let selector = dest_func.selector(ns, &callee_contract_no);
+                let selector = dest_func.selector(ns, &caller_contract_no);
 
                 tys.insert(0, Type::Bytes(selector.len() as u8));
 
@@ -2305,16 +2305,16 @@ pub fn emit_function_call(
                 let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
                 let mut args = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
+                    .map(|a| expression(a, cfg, caller_contract_no, func, ns, vartab, opt))
                     .collect::<Vec<Expression>>();
-                let function = expression(function, cfg, callee_contract_no, func, ns, vartab, opt);
+                let function = expression(function, cfg, caller_contract_no, func, ns, vartab, opt);
                 let gas = if let Some(gas) = &call_args.gas {
-                    expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+                    expression(gas, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
                     default_gas(ns)
                 };
                 let value = if let Some(value) = &call_args.value {
-                    expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
+                    expression(value, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
@@ -2361,7 +2361,7 @@ pub fn emit_function_call(
             }
         }
         ast::Expression::Builtin(loc, tys, ast::Builtin::AbiDecode, args) => {
-            let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);
+            let data = expression(&args[0], cfg, caller_contract_no, func, ns, vartab, opt);
             let encoder = create_encoder(ns, false);
             encoder.abi_decode(loc, &data, tys, ns, vartab, cfg, None)
         }
