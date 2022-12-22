@@ -11,7 +11,7 @@ strict digraph "tests/contract_testcases/solana/mapping_deletion.sol" {
 	increment [label="function increment\ncontract: savedTest\ntests/contract_testcases/solana/mapping_deletion.sol:7:5-38\nsignature increment(uint256)\nvisibility public\nmutability nonpayable"]
 	parameters_12 [label="parameters\nuint256 f"]
 	expr_13 [label="expression\ntests/contract_testcases/solana/mapping_deletion.sol:8:9-15"]
-	assign_14 [label="assign\nvoid\ntests/contract_testcases/solana/mapping_deletion.sol:8:9-15"]
+	assign_14 [label="assign\nuint256\ntests/contract_testcases/solana/mapping_deletion.sol:8:9-15"]
 	storage_var_15 [label="storage variable\nsavedTest.b\nuint256 storage\ntests/contract_testcases/solana/mapping_deletion.sol:8:9-10"]
 	add [label="add\nuint256\ntests/contract_testcases/solana/mapping_deletion.sol:8:9-15"]
 	storage_load [label="storage load uint256\ntests/contract_testcases/solana/mapping_deletion.sol:8:9-15"]

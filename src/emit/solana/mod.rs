@@ -4,7 +4,6 @@ pub(super) mod target;
 
 use crate::sema::ast;
 use crate::Target;
-use std::collections::HashMap;
 use std::str;
 
 use crate::codegen::{cfg::ReturnCode, Options};
@@ -20,16 +19,7 @@ use crate::emit::functions::emit_functions;
 use crate::emit::loop_builder::LoopBuilder;
 use crate::emit::{Binary, TargetRuntime};
 
-pub struct SolanaTarget {
-    magic: u32,
-}
-
-pub struct Contract<'a> {
-    magic: u32,
-    contract: &'a ast::Contract,
-    constructor: Option<FunctionValue<'a>>,
-    functions: HashMap<usize, FunctionValue<'a>>,
-}
+pub struct SolanaTarget();
 
 // Implement the Solana target which uses BPF
 impl SolanaTarget {
@@ -41,9 +31,7 @@ impl SolanaTarget {
         filename: &'a str,
         opt: &'a Options,
     ) -> Binary<'a> {
-        let mut target = SolanaTarget {
-            magic: contract.selector(),
-        };
+        let mut target = SolanaTarget();
 
         let mut binary = Binary::new(
             context,
@@ -83,25 +71,20 @@ impl SolanaTarget {
 
         emit_functions(&mut target, &mut binary, contract, ns);
 
-        let constructor = contract
-            .constructor_dispatch
-            .map(|cfg_no| binary.functions[&cfg_no]);
-
-        let mut functions = HashMap::new();
-
-        std::mem::swap(&mut functions, &mut binary.functions);
-
-        target.emit_dispatch(
-            &mut binary,
-            &[Contract {
-                magic: target.magic,
-                contract,
-                constructor,
-                functions,
-            }],
-        );
-
-        binary.internalize(&["entrypoint", "sol_log_"]);
+        binary.internalize(&[
+            "entrypoint",
+            "sol_log_",
+            "sol_log_pubkey",
+            "sol_invoke_signed_c",
+            "sol_panic_",
+            "sol_get_return_data",
+            "sol_set_return_data",
+            "sol_create_program_address",
+            "sol_try_find_program_address",
+            "sol_sha256",
+            "sol_keccak256",
+            "sol_log_data",
+        ]);
 
         binary
     }
@@ -236,24 +219,13 @@ impl SolanaTarget {
     fn contract_storage_account<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
         let parameters = self.sol_parameters(binary);
 
-        let ka_cur = binary
-            .builder
-            .build_load(
-                binary
-                    .builder
-                    .build_struct_gep(parameters, 2, "ka_cur")
-                    .unwrap(),
-                "ka_cur",
-            )
-            .into_int_value();
-
         let account_info = unsafe {
             binary.builder.build_gep(
                 parameters,
                 &[
                     binary.context.i32_type().const_int(0, false),
                     binary.context.i32_type().const_int(0, false),
-                    ka_cur,
+                    binary.context.i32_type().const_int(0, false),
                 ],
                 "account",
             )
@@ -296,17 +268,6 @@ impl SolanaTarget {
     fn contract_storage_data<'b>(&self, binary: &Binary<'b>) -> PointerValue<'b> {
         let parameters = self.sol_parameters(binary);
 
-        let ka_cur = binary
-            .builder
-            .build_load(
-                binary
-                    .builder
-                    .build_struct_gep(parameters, 2, "ka_cur")
-                    .unwrap(),
-                "ka_cur",
-            )
-            .into_int_value();
-
         binary
             .builder
             .build_load(
@@ -316,7 +277,7 @@ impl SolanaTarget {
                         &[
                             binary.context.i32_type().const_int(0, false),
                             binary.context.i32_type().const_int(0, false),
-                            ka_cur,
+                            binary.context.i32_type().const_int(0, false),
                             binary.context.i32_type().const_int(3, false),
                         ],
                         "data",
@@ -325,169 +286,6 @@ impl SolanaTarget {
                 "data",
             )
             .into_pointer_value()
-    }
-
-    fn emit_dispatch<'b>(&mut self, binary: &mut Binary<'b>, contracts: &[Contract<'b>]) {
-        let function = binary.module.get_function("solang_dispatch").unwrap();
-
-        let entry = binary.context.append_basic_block(function, "entry");
-
-        binary.builder.position_at_end(entry);
-
-        let sol_params = function.get_nth_param(0).unwrap().into_pointer_value();
-
-        let input = binary
-            .builder
-            .build_load(
-                binary
-                    .builder
-                    .build_struct_gep(sol_params, 5, "input")
-                    .unwrap(),
-                "data",
-            )
-            .into_pointer_value();
-
-        let input_len = binary
-            .builder
-            .build_load(
-                binary
-                    .builder
-                    .build_struct_gep(sol_params, 6, "input_len")
-                    .unwrap(),
-                "data_len",
-            )
-            .into_int_value();
-
-        // load magic value of binary storage
-        binary.parameters = Some(sol_params);
-
-        let storage_data = self.contract_storage_data(binary);
-
-        let magic_value_ptr = binary.builder.build_pointer_cast(
-            storage_data,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
-            "magic_value_ptr",
-        );
-
-        let magic_value = binary
-            .builder
-            .build_load(magic_value_ptr, "magic")
-            .into_int_value();
-
-        let constructor_block = binary
-            .context
-            .append_basic_block(function, "constructor_call");
-        let badmagic_block = binary.context.append_basic_block(function, "bad_magic");
-
-        // if the magic is zero it's a virgin binary
-        // if the magic is our magic value, it's a function call
-        // if the magic is another magic value, it is an error
-
-        // Generate function call dispatch
-        let function_block = binary.builder.get_insert_block().unwrap();
-
-        let mut cases = vec![(binary.context.i32_type().const_zero(), constructor_block)];
-
-        for contract in contracts {
-            let dispatch_function = contract.functions[&contract.contract.dispatch_no];
-
-            let function_block = binary
-                .context
-                .append_basic_block(function, &format!("function_{}", contract.contract.name));
-
-            binary.builder.position_at_end(function_block);
-
-            let rc = binary
-                .builder
-                .build_call(
-                    dispatch_function,
-                    &[input.into(), input_len.into(), sol_params.into()],
-                    "res",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value();
-
-            binary.builder.build_return(Some(&rc));
-
-            cases.push((
-                binary
-                    .context
-                    .i32_type()
-                    .const_int(contract.magic as u64, false),
-                function_block,
-            ));
-        }
-
-        binary.builder.position_at_end(badmagic_block);
-
-        binary.builder.build_return(Some(
-            &binary.context.i64_type().const_int(4u64 << 32, false),
-        ));
-
-        binary.builder.position_at_end(function_block);
-
-        binary
-            .builder
-            .build_switch(magic_value, badmagic_block, &cases);
-
-        // generate constructor code
-        let mut cases = Vec::new();
-
-        binary.builder.position_at_end(constructor_block);
-
-        for contract in contracts {
-            let constructor_block = binary
-                .context
-                .append_basic_block(function, &format!("constructor_{}", contract.contract.name));
-
-            binary.builder.position_at_end(constructor_block);
-
-            cases.push((
-                binary
-                    .context
-                    .i32_type()
-                    .const_int(contract.magic as u64, false),
-                constructor_block,
-            ));
-
-            // There is only one possible constructor
-            let ret = if let Some(constructor_function) = contract.constructor {
-                binary
-                    .builder
-                    .build_call(
-                        constructor_function,
-                        &[input.into(), input_len.into(), sol_params.into()],
-                        "constructor_dispatch_call",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-            } else {
-                // return 0 for success
-                binary.context.i64_type().const_int(0, false).into()
-            };
-
-            binary.builder.build_return(Some(&ret));
-        }
-
-        binary.builder.position_at_end(constructor_block);
-
-        let magic_value = binary
-            .builder
-            .build_load(
-                binary
-                    .builder
-                    .build_struct_gep(sol_params, 9, "contract")
-                    .unwrap(),
-                "magic",
-            )
-            .into_int_value();
-
-        binary
-            .builder
-            .build_switch(magic_value, badmagic_block, &cases);
     }
 
     /// Free binary storage and zero out

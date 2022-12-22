@@ -8,59 +8,80 @@ use crate::codegen::{
     Builtin, Expression, Options,
 };
 use crate::{
-    sema::ast::{Namespace, Parameter, Type},
+    sema::ast::{Namespace, StructType, Type},
     Target,
 };
 use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
-use solang_parser::pt;
-use solang_parser::pt::{FunctionTy, Loc};
-use std::sync::Arc;
+use solang_parser::{pt, pt::Loc};
 
 /// Create the dispatch for the Solana target
 pub(super) fn function_dispatch(
     contract_no: usize,
     all_cfg: &[ControlFlowGraph],
     ns: &mut Namespace,
+    opt: &Options,
 ) -> ControlFlowGraph {
     let mut vartab = Vartable::new(ns.next_id);
-    let mut cfg = ControlFlowGraph::new(
-        format!("dispatch_{}", ns.contracts[contract_no].name),
-        ASTFunction::None,
-    );
-
-    cfg.params = Arc::new(vec![
-        Parameter {
-            loc: Loc::Codegen,
-            id: None,
-            ty: Type::BufferPointer,
-            ty_loc: None,
-            indexed: false,
-            readonly: false,
-            recursive: false,
-        },
-        Parameter {
-            loc: Loc::Codegen,
-            id: None,
-            ty: Type::Uint(64),
-            ty_loc: None,
-            indexed: false,
-            readonly: false,
-            recursive: false,
-        },
-    ]);
+    let mut cfg = ControlFlowGraph::new("solang_dispatch".into(), ASTFunction::None);
 
     let switch_block = cfg.new_basic_block("switch".to_string());
     let no_function_matched = cfg.new_basic_block("no_function_matched".to_string());
 
+    let argsdata_var = vartab.temp_name("input", &Type::BufferPointer);
+    let argslen_var = vartab.temp_name("input_len", &Type::Uint(64));
+
+    let sol_params =
+        Expression::FunctionArg(Loc::Codegen, Type::Struct(StructType::SolParameters), 0);
+
+    // ty:bufferptr argsdata_var = load ty:ref(ty:bufferptr) (structmember ty:ref(ty:bufferptr) (funcarg ty:struct(solparam), 2))
+    cfg.add(
+        &mut vartab,
+        Instr::Set {
+            res: argsdata_var,
+            loc: Loc::Codegen,
+            expr: Expression::Load(
+                Loc::Codegen,
+                Type::Ref(Type::BufferPointer.into()),
+                Expression::StructMember(
+                    Loc::Codegen,
+                    Type::Ref(Type::BufferPointer.into()),
+                    sol_params.clone().into(),
+                    2,
+                )
+                .into(),
+            ),
+        },
+    );
+
+    let argsdata = Expression::Variable(Loc::Codegen, Type::BufferPointer, argsdata_var);
+
+    // ty:uint64 argslen_var = load ref(ty:uint64) (structmember ref(ty:uin64) (funcarg ty:struct(solparam), 3))
+    cfg.add(
+        &mut vartab,
+        Instr::Set {
+            res: argslen_var,
+            loc: Loc::Codegen,
+            expr: Expression::Load(
+                Loc::Codegen,
+                Type::Ref(Type::Uint(64).into()),
+                Expression::StructMember(
+                    Loc::Codegen,
+                    Type::Ref(Type::Uint(64).into()),
+                    sol_params.into(),
+                    3,
+                )
+                .into(),
+            ),
+        },
+    );
+
+    let argslen = Expression::Variable(Loc::Codegen, Type::Uint(64), argslen_var);
+
     let not_fallback = Expression::MoreEqual(
         Loc::Codegen,
-        Box::new(Expression::FunctionArg(Loc::Codegen, Type::Uint(64), 1)),
-        Box::new(Expression::NumberLiteral(
-            Loc::Codegen,
-            Type::Uint(64),
-            BigInt::from(8u8),
-        )),
+        argslen.clone().into(),
+        Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(8u8)).into(),
     );
 
     cfg.add(
@@ -72,9 +93,6 @@ pub(super) fn function_dispatch(
         },
     );
     cfg.set_basic_block(switch_block);
-
-    let argsdata = Expression::FunctionArg(Loc::Codegen, Type::BufferPointer, 0);
-    let argslen = Expression::FunctionArg(Loc::Codegen, Type::Uint(64), 1);
 
     let fid = Expression::Builtin(
         Loc::Codegen,
@@ -106,22 +124,60 @@ pub(super) fn function_dispatch(
         )),
     );
 
+    let magic = vartab.temp_name("magic", &Type::Uint(32));
+
+    cfg.add(
+        &mut vartab,
+        Instr::LoadStorage {
+            res: magic,
+            ty: Type::Uint(32),
+            storage: Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0.into()),
+        },
+    );
+
     let mut cases = Vec::new();
+
     for (cfg_no, func_cfg) in all_cfg.iter().enumerate() {
-        if func_cfg.ty != pt::FunctionTy::Function || !func_cfg.public {
+        if !func_cfg.public {
             continue;
         }
 
-        add_dispatch_case(
-            cfg_no,
-            func_cfg,
-            &argsdata,
-            argslen.clone(),
-            &mut cases,
-            ns,
-            &mut vartab,
-            &mut cfg,
-        );
+        let entry = if func_cfg.ty == pt::FunctionTy::Function {
+            add_function_dispatch_case(
+                cfg_no,
+                func_cfg,
+                magic,
+                &argsdata,
+                argslen.clone(),
+                contract_no,
+                ns,
+                &mut vartab,
+                &mut cfg,
+            )
+        } else if func_cfg.ty == pt::FunctionTy::Constructor {
+            add_constructor_dispatch_case(
+                contract_no,
+                cfg_no,
+                &argsdata,
+                argslen.clone(),
+                func_cfg,
+                ns,
+                &mut vartab,
+                &mut cfg,
+                opt,
+            )
+        } else {
+            continue;
+        };
+
+        cases.push((
+            Expression::NumberLiteral(
+                Loc::Codegen,
+                Type::Uint(64),
+                BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector),
+            ),
+            entry,
+        ));
     }
 
     cfg.set_basic_block(switch_block);
@@ -195,18 +251,52 @@ pub(super) fn function_dispatch(
 }
 
 /// Add the dispatch for function given a matched selector
-fn add_dispatch_case(
+fn add_function_dispatch_case(
     cfg_no: usize,
     func_cfg: &ControlFlowGraph,
+    magic: usize,
     argsdata: &Expression,
     argslen: Expression,
-    cases: &mut Vec<(Expression, usize)>,
+    contract_no: usize,
     ns: &Namespace,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
-) {
-    let bb = cfg.new_basic_block(format!("function_cfg_{}", cfg_no));
-    cfg.set_basic_block(bb);
+) -> usize {
+    let entry = cfg.new_basic_block(format!("function_cfg_{}", cfg_no));
+    cfg.set_basic_block(entry);
+
+    // check for magic in data account, to see if data account is initialized
+    let magic_ok = cfg.new_basic_block("magic_ok".into());
+    let magic_bad = cfg.new_basic_block("magic_bad".into());
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: Expression::Equal(
+                Loc::Codegen,
+                Expression::Variable(Loc::Codegen, Type::Uint(32), magic).into(),
+                Expression::NumberLiteral(
+                    Loc::Codegen,
+                    Type::Uint(32),
+                    ns.contracts[contract_no].selector().into(),
+                )
+                .into(),
+            ),
+            true_block: magic_ok,
+            false_block: magic_bad,
+        },
+    );
+
+    cfg.set_basic_block(magic_bad);
+
+    cfg.add(
+        vartab,
+        Instr::ReturnCode {
+            code: ReturnCode::InvalidDataError,
+        },
+    );
+
+    cfg.set_basic_block(magic_ok);
 
     let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(argslen));
 
@@ -277,86 +367,53 @@ fn add_dispatch_case(
         );
     }
 
-    cases.push((
-        Expression::NumberLiteral(
-            Loc::Codegen,
-            Type::Uint(64),
-            BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector),
-        ),
-        bb,
-    ));
+    entry
 }
 
 /// Create the dispatch for a contract constructor. This case creates a new function in
 /// the CFG because we want to use the abi decoding implementation from codegen.
-pub(super) fn constructor_dispatch(
+fn add_constructor_dispatch_case(
     contract_no: usize,
-    constructor_cfg_no: usize,
-    all_cfg: &[ControlFlowGraph],
+    cfg_no: usize,
+    argsdata: &Expression,
+    argslen: Expression,
+    func_cfg: &ControlFlowGraph,
     ns: &mut Namespace,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
     opt: &Options,
-) -> ControlFlowGraph {
-    let mut vartab = Vartable::new(ns.next_id);
-    let mut func_name = format!("constructor_dispatch_{}", all_cfg[constructor_cfg_no].name);
-    for params in all_cfg[constructor_cfg_no].params.iter() {
-        func_name.push_str(format!("_{}", params.ty.to_string(ns)).as_str());
-    }
-    let mut cfg = ControlFlowGraph::new(func_name, ASTFunction::None);
-    cfg.ty = FunctionTy::Function;
-    cfg.public = all_cfg[constructor_cfg_no].public;
-
-    cfg.params = Arc::new(vec![
-        Parameter {
-            loc: Loc::Codegen,
-            id: None,
-            ty: Type::BufferPointer,
-            ty_loc: None,
-            indexed: false,
-            readonly: false,
-            recursive: false,
-        },
-        Parameter {
-            loc: Loc::Codegen,
-            id: None,
-            ty: Type::Uint(64),
-            ty_loc: None,
-            indexed: false,
-            readonly: false,
-            recursive: false,
-        },
-    ]);
-
-    let data = Expression::FunctionArg(Loc::Codegen, Type::BufferPointer, 0);
-    let data_len = Expression::FunctionArg(Loc::Codegen, Type::Uint(64), 1);
+) -> usize {
+    let entry = cfg.new_basic_block(format!("constructor_cfg_{}", cfg_no));
+    cfg.set_basic_block(entry);
 
     let mut returns: Vec<Expression> = Vec::new();
-    if !all_cfg[constructor_cfg_no].params.is_empty() {
-        let tys = all_cfg[constructor_cfg_no]
+
+    if !func_cfg.params.is_empty() {
+        let tys = func_cfg
             .params
             .iter()
             .map(|e| e.ty.clone())
             .collect::<Vec<Type>>();
         let encoder = create_encoder(ns, false);
-        let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(data_len));
+        let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(argslen));
         returns = encoder.abi_decode(
             &Loc::Codegen,
-            &data,
+            argsdata,
             &tys,
             ns,
-            &mut vartab,
-            &mut cfg,
+            vartab,
+            cfg,
             Some(truncated_len),
         );
     }
 
     if ns.target == Target::Solana {
-        if let ASTFunction::SolidityFunction(function_no) = all_cfg[constructor_cfg_no].function_no
-        {
+        if let ASTFunction::SolidityFunction(function_no) = func_cfg.function_no {
             let func = &ns.functions[function_no];
 
-            solana_deploy(func, &returns, contract_no, &mut vartab, &mut cfg, ns, opt);
+            solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt);
         } else if let Some((func, _)) = &ns.contracts[contract_no].default_constructor {
-            solana_deploy(func, &returns, contract_no, &mut vartab, &mut cfg, ns, opt);
+            solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt);
         } else {
             unreachable!();
         }
@@ -364,7 +421,7 @@ pub(super) fn constructor_dispatch(
 
     // Call storage initializer
     cfg.add(
-        &mut vartab,
+        vartab,
         Instr::Call {
             res: vec![],
             return_tys: vec![],
@@ -376,25 +433,21 @@ pub(super) fn constructor_dispatch(
     );
 
     cfg.add(
-        &mut vartab,
+        vartab,
         Instr::Call {
             res: vec![],
             return_tys: vec![],
-            call: InternalCallTy::Static {
-                cfg_no: constructor_cfg_no,
-            },
+            call: InternalCallTy::Static { cfg_no },
             args: returns,
         },
     );
 
     cfg.add(
-        &mut vartab,
+        vartab,
         Instr::ReturnCode {
             code: ReturnCode::Success,
         },
     );
 
-    vartab.finalize(ns, &mut cfg);
-
-    cfg
+    entry
 }

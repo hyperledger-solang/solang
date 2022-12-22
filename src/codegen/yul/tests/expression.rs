@@ -138,7 +138,6 @@ fn contract_constant_variable() {
         code: OnceCell::new(),
         instantiable: true,
         dispatch_no: 0,
-        constructor_dispatch: None,
         program_id: None,
     };
     ns.contracts.push(contract);
@@ -260,7 +259,6 @@ fn slot_suffix() {
         code: OnceCell::new(),
         instantiable: true,
         dispatch_no: 0,
-        constructor_dispatch: None,
         program_id: None,
     };
     ns.contracts.push(contract);

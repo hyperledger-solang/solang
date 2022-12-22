@@ -33,7 +33,7 @@ strict digraph "tests/contract_testcases/solana/destructure_assign_struct_member
 	diagnostic_34 [label="found interface 'IUniswapV2Pair'\nlevel Debug\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:4:1-6:2"]
 	diagnostic_35 [label="found contract 'Contract'\nlevel Debug\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:9:1-25:2"]
 	diagnostic_36 [label="local variable 'struct_1' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:20:26-34"]
-	diagnostic_37 [label="conversion truncates uint256 to uint32, as memory size is type uint32 on target solana\nlevel Warning\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:20:37-56"]
+	diagnostic_37 [label="conversion truncates uint256 to uint32, as memory size is type uint32 on target solana\nlevel Warning\ntests/contract_testcases/solana/destructure_assign_struct_member_2.sol:20:51-55"]
 	structs -> Struct1
 	contracts -> contract
 	contract -> getReserves [label="function"]

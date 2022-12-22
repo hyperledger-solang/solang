@@ -645,6 +645,35 @@ fn test_super() {
     runtime.function("bar", Vec::new());
 
     assert_eq!(runtime.vm.output, 112u64.encode());
+
+    // super should not consider interfaces
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a, aa {
+            function bar() public returns (uint64) {
+                return super.foo({x: 10});
+            }
+
+            function foo(uint64 x) public override(a, aa) returns (uint64) {
+                return 103 + x;
+            }
+        }
+
+        interface a {
+            function foo(uint64 x) external returns (uint64);
+        }
+
+        contract aa {
+            function foo(uint64 x) public virtual returns (uint64) {
+                return 202 + x;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.output, 212u64.encode());
 }
 
 #[test]

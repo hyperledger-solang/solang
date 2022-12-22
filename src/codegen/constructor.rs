@@ -5,11 +5,10 @@ use crate::codegen::encoding::create_encoder;
 use crate::codegen::expression::{default_gas, expression};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
-use crate::sema::ast;
-use crate::sema::ast::{CallArgs, Function, Namespace, Type};
-use crate::Target;
-use num_bigint::{BigInt, Sign};
-use num_traits::Zero;
+use crate::sema::{
+    ast,
+    ast::{CallArgs, Function, Namespace, Type},
+};
 use solang_parser::pt::Loc;
 
 /// This function encodes the constructor arguments and place an instruction in the CFG to
@@ -58,36 +57,22 @@ pub(super) fn call_constructor(
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
 
-    let mut args;
-    if ns.target == Target::Solana {
-        let value_arg = value.clone().unwrap_or_else(|| {
-            Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::zero())
-        });
-        let selector = ns.contracts[*contract_no].selector();
-        let padding = Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero());
-
-        args = vec![
-            value_arg,
-            Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::from(selector)),
-            padding,
-        ];
-    } else {
-        let selector = match constructor_no {
-            Some(func_no) => ns.functions[*func_no].selector(ns, contract_no),
-            None => ns.contracts[*contract_no]
-                .default_constructor
-                .as_ref()
-                .unwrap()
-                .0
-                .selector(ns, contract_no),
-        };
-
-        args = vec![Expression::NumberLiteral(
-            *loc,
-            Type::Uint(32),
-            BigInt::from_bytes_le(Sign::Plus, &selector),
-        )];
+    let selector = match constructor_no {
+        Some(func_no) => ns.functions[*func_no].selector(ns, contract_no),
+        None => ns.contracts[*contract_no]
+            .default_constructor
+            .as_ref()
+            .unwrap()
+            .0
+            .selector(ns, contract_no),
     };
+
+    let mut args = vec![Expression::BytesLiteral(
+        *loc,
+        Type::FunctionSelector,
+        selector,
+    )];
+
     args.append(&mut constructor_args);
 
     let mut encoder = create_encoder(ns, false);
