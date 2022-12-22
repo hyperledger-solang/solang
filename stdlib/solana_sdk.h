@@ -212,19 +212,11 @@ typedef struct
   SolAccountInfo ka[10]; /** Pointer to an array of SolAccountInfo, must already
                           point to an array of SolAccountInfos */
   uint64_t ka_num;       /** Number of SolAccountInfo entries in `ka` */
-  uint64_t ka_cur;
-  const SolAccountInfo *ka_last_called;
-  SolPubkey *account_id;
   const uint8_t *input;  /** pointer to the instruction data */
   uint64_t input_len;    /** Length in bytes of the instruction data */
   SolPubkey *program_id; /** program_id of the currently executing program */
   const SolAccountInfo *ka_clock;
-  uint32_t contract;
-  const SolPubkey *sender;
-  SolSignerSeed seeds[10];
-  int seeds_len;
   const SolAccountInfo *ka_instructions;
-  uint64_t value;
 } SolParameters;
 
 /**
@@ -339,48 +331,6 @@ static uint64_t sol_deserialize(
 
   uint64_t data_len = *(uint64_t *)input;
   input += sizeof(uint64_t);
-
-  if (data_len < SIZE_PUBKEY * 2 + sizeof(uint32_t) + 1)
-  {
-    return ERROR_INVALID_INSTRUCTION_DATA;
-  }
-
-  params->account_id = (SolPubkey *)input;
-  input += SIZE_PUBKEY;
-  data_len -= SIZE_PUBKEY;
-  params->sender = (SolPubkey *)input;
-  input += SIZE_PUBKEY;
-  data_len -= SIZE_PUBKEY;
-  params->value = *(uint64_t *)input;
-  input += sizeof(uint64_t);
-  data_len -= sizeof(uint64_t);
-
-  // FIXME: check that sender is a signer
-
-  params->contract = *(uint32_t *)input;
-  input += sizeof(uint32_t);
-  data_len -= sizeof(uint32_t);
-  uint8_t seeds_len = *input;
-  input += 1;
-  data_len -= 1;
-
-  for (int i = 0; i < seeds_len; i++)
-  {
-    uint8_t seed_len = *input;
-    input += 1;
-    data_len -= 1;
-
-    if (data_len < seed_len)
-    {
-      return ERROR_INVALID_INSTRUCTION_DATA;
-    }
-
-    params->seeds[i].len = seed_len;
-    params->seeds[i].addr = input;
-    input += seed_len;
-    data_len -= seed_len;
-  }
-  params->seeds_len = seeds_len;
 
   params->input_len = data_len;
   params->input = input;
@@ -580,7 +530,6 @@ static void sol_log_params(const SolParameters *params)
     sol_log_64(0, 0, 0, 0, params->ka[i].rent_epoch);
   }
   sol_log("- Eth abi Instruction data\0");
-  sol_log_pubkey(params->account_id);
   sol_log_array(params->input, params->input_len);
 }
 

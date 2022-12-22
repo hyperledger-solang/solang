@@ -26,7 +26,7 @@ strict digraph "tests/contract_testcases/solana/address_member_call.sol" {
 	post_increment [label="post increment\nuint8\ntests/contract_testcases/solana/address_member_call.sol:25:50-53"]
 	variable_27 [label="variable: i\nuint8\ntests/contract_testcases/solana/address_member_call.sol:25:50-51"]
 	expr_28 [label="expression\ntests/contract_testcases/solana/address_member_call.sol:26:13-33"]
-	assign [label="assign\nvoid\ntests/contract_testcases/solana/address_member_call.sol:26:13-33"]
+	assign [label="assign\nuint64\ntests/contract_testcases/solana/address_member_call.sol:26:13-33"]
 	variable_30 [label="variable: total\nuint64\ntests/contract_testcases/solana/address_member_call.sol:26:13-18"]
 	add [label="add\nuint64\ntests/contract_testcases/solana/address_member_call.sol:26:13-33"]
 	variable_32 [label="variable: total\nuint64\ntests/contract_testcases/solana/address_member_call.sol:26:13-18"]

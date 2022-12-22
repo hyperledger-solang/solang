@@ -656,8 +656,6 @@ pub struct Contract {
     pub instantiable: bool,
     /// CFG number of this contract's dispatch function
     pub dispatch_no: usize,
-    /// CFG number of this contract's constructor dispatch
-    pub constructor_dispatch: Option<usize>,
     /// Account of deployed program code on Solana
     pub program_id: Option<Vec<u8>>,
 }
