@@ -1459,3 +1459,31 @@ fn alloc_size_from_storage() {
     runtime.function("contfunc", Vec::new());
     assert_eq!(runtime.vm.output, vec![0u64].encode());
 }
+
+#[test]
+fn storage_bytes() {
+    let mut runtime = build_solidity(
+        r##"
+        contract Storage {
+            bytes32[] data;
+            constructor() {
+                data.push(hex"0000000000000000000000000000000000000000000000000000000000000000");
+                data.push(hex"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
+            }
+            function uploadData(uint8 i, uint8 j) public view returns(bytes1) {
+                return(data[j][i]);
+            }
+        }
+        "##,
+    );
+
+    runtime.constructor(0, vec![]);
+
+    for i in 0..32u8 {
+        runtime.function("uploadData", vec![i, 0]);
+        assert_eq!(runtime.vm.output[..], [0]);
+
+        runtime.function("uploadData", vec![i, 1]);
+        assert_eq!(runtime.vm.output[..], [31 - i]);
+    }
+}
