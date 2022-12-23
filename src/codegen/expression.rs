@@ -464,7 +464,7 @@ pub fn expression(
 
                 Expression::Add(
                     *loc,
-                    ty.clone(),
+                    ns.storage_type(),
                     true,
                     Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
                     Box::new(Expression::NumberLiteral(*loc, ns.storage_type(), offset)),
