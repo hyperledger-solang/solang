@@ -358,6 +358,8 @@ fn idltype_to_solidity(ty: &IdlType, ty_names: &[(String, String)]) -> Result<St
         IdlType::I64 => Ok("int64".to_string()),
         IdlType::U128 => Ok("uint128".to_string()),
         IdlType::I128 => Ok("int128".to_string()),
+        IdlType::U256 => Ok("uint256".to_string()),
+        IdlType::I256 => Ok("int256".to_string()),
         IdlType::F32 => Err("f32".to_string()),
         IdlType::F64 => Err("f64".to_string()),
         IdlType::Bytes => Ok("bytes".to_string()),

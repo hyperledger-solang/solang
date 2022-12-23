@@ -30,76 +30,71 @@ fn builtins() {
         }"#,
     );
 
-    vm.constructor("timestamp", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("mr_now", &[]);
+    let returns = vm.function("mr_now", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 64,
             value: BigInt::from(1620656423u64)
-        }]
+        }
     );
 
-    let returns = vm.function("mr_slot", &[]);
+    let returns = vm.function("mr_slot", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 64,
             value: BigInt::from(70818331u64),
-        }]
+        }
     );
 
-    let returns = vm.function("mr_blocknumber", &[]);
+    let returns = vm.function("mr_blocknumber", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 64,
             value: BigInt::from(70818331u64)
-        },]
+        },
     );
 
-    let returns = vm.function(
-        "msg_data",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::from(0xdeadcafeu32),
-        }],
-    );
+    let returns = vm
+        .function(
+            "msg_data",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(0xdeadcafeu32),
+            }],
+        )
+        .unwrap();
 
-    if let BorshToken::Bytes(v) = &returns[0] {
+    if let BorshToken::Bytes(v) = &returns {
         println!("{}", hex::encode(v));
     }
 
     assert_eq!(
         returns,
-        vec![BorshToken::Bytes(
-            hex::decode("a73fcaa3b216e85afecaadde").unwrap()
-        )]
+        BorshToken::Bytes(hex::decode("a73fcaa3b216e85afecaadde").unwrap())
     );
 
-    let returns = vm.function("sig", &[]);
+    let returns = vm.function("sig", &[]).unwrap();
 
-    if let BorshToken::FixedBytes(v) = &returns[0] {
+    if let Some(v) = returns.clone().into_fixed_bytes() {
         println!("{}", hex::encode(v));
     }
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedBytes(
-            hex::decode("4b22101a3c98d6cb").unwrap()
-        )]
+        BorshToken::uint8_fixed_array(hex::decode("4b22101a3c98d6cb").unwrap())
     );
 
-    let returns = vm.function("prog", &[]);
+    let returns = vm.function("prog", &[]).unwrap();
 
-    assert_eq!(
-        returns,
-        vec![BorshToken::FixedBytes(vm.stack[0].program.to_vec())]
-    );
+    assert_eq!(returns, BorshToken::Address(vm.stack[0].program));
 }
 
 #[test]
@@ -138,11 +133,13 @@ fn pda() {
         }"#,
     );
 
-    vm.constructor("pda", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("create_pda", &[BorshToken::Bool(true)]);
+    let returns = vm
+        .function("create_pda", &[BorshToken::Bool(true)])
+        .unwrap();
 
-    if let BorshToken::FixedBytes(bs) = &returns[0] {
+    if let Some(bs) = returns.clone().into_fixed_bytes() {
         assert_eq!(
             bs.to_base58(),
             "2fnQrngrQT4SeLcdToJAD96phoEjNL2man2kfRLCASVk"
@@ -151,9 +148,11 @@ fn pda() {
         panic!("{:?} not expected", returns);
     }
 
-    let returns = vm.function("create_pda", &[BorshToken::Bool(false)]);
+    let returns = vm
+        .function("create_pda", &[BorshToken::Bool(false)])
+        .unwrap();
 
-    if let BorshToken::FixedBytes(bs) = &returns[0] {
+    if let Some(bs) = returns.clone().into_fixed_bytes() {
         assert_eq!(
             bs.to_base58(),
             "7YgSsrAiAEJFqBNujFBRsEossqdpV31byeJLBsZ5QSJE"
@@ -162,15 +161,17 @@ fn pda() {
         panic!("{:?} not expected", returns);
     }
 
-    let returns = vm.function(
-        "create_pda2",
-        &[
-            BorshToken::Bytes(b"Talking".to_vec()),
-            BorshToken::Bytes(b"Squirrels".to_vec()),
-        ],
-    );
+    let returns = vm
+        .function(
+            "create_pda2",
+            &[
+                BorshToken::Bytes(b"Talking".to_vec()),
+                BorshToken::Bytes(b"Squirrels".to_vec()),
+            ],
+        )
+        .unwrap();
 
-    if let BorshToken::FixedBytes(bs) = &returns[0] {
+    if let Some(bs) = returns.clone().into_fixed_bytes() {
         assert_eq!(
             bs.to_base58(),
             "2fnQrngrQT4SeLcdToJAD96phoEjNL2man2kfRLCASVk"
@@ -179,11 +180,14 @@ fn pda() {
         panic!("{:?} not expected", returns);
     }
 
-    let returns = vm.function("create_pda2_bump", &[BorshToken::Bool(true)]);
+    let returns = vm
+        .function("create_pda2_bump", &[BorshToken::Bool(true)])
+        .unwrap()
+        .unwrap_tuple();
 
-    assert_eq!(returns[1], BorshToken::FixedBytes(vec![255]));
+    assert_eq!(returns[1], BorshToken::uint8_fixed_array(vec![255]));
 
-    if let BorshToken::FixedBytes(bs) = &returns[0] {
+    if let Some(bs) = returns[0].clone().into_fixed_bytes() {
         assert_eq!(
             bs.to_base58(),
             "DZpR2BwsPVtbXxUUbMx5tK58Ln2T9RUtAshtR2ePqDcu"
@@ -192,11 +196,14 @@ fn pda() {
         panic!("{:?} not expected", returns);
     }
 
-    let returns = vm.function("create_pda2_bump", &[BorshToken::Bool(false)]);
+    let returns = vm
+        .function("create_pda2_bump", &[BorshToken::Bool(false)])
+        .unwrap()
+        .unwrap_tuple();
 
-    assert_eq!(returns[1], BorshToken::FixedBytes(vec![255]));
+    assert_eq!(returns[1], BorshToken::uint8_fixed_array(vec![255]));
 
-    if let BorshToken::FixedBytes(bs) = &returns[0] {
+    if let Some(bs) = returns[0].clone().into_fixed_bytes() {
         assert_eq!(
             bs.to_base58(),
             "3Y19WiAiLD8kT8APmtk41NgHEpkYTzx28s1uwAX8LJq4"
@@ -222,9 +229,9 @@ fn test_string_bytes_buffer_write() {
     }
         "#,
     );
-    vm.constructor("Testing", &[]);
-    let returns = vm.function("testStringAndBytes", &[]);
-    let bytes = returns[0].clone().into_bytes().unwrap();
+    vm.constructor(&[]);
+    let returns = vm.function("testStringAndBytes", &[]).unwrap();
+    let bytes = returns.into_bytes().unwrap();
 
     assert_eq!(bytes.len(), 9);
     assert_eq!(&bytes[0..6], b"coffee");
@@ -247,7 +254,7 @@ fn out_of_bounds_bytes_write() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let _ = vm.function("testBytesOut", &[]);
 }
 
@@ -267,6 +274,6 @@ fn out_of_bounds_string_write() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let _ = vm.function("testStringOut", &[]);
 }

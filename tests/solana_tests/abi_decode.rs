@@ -67,7 +67,7 @@ fn integers_bool_enum() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let input = Res1 {
         a: 45,
         b: 9965956609890,
@@ -110,7 +110,7 @@ fn decode_address() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let input = Data {
         address: vm.programs[0].data,
         this: vm.programs[0].data,
@@ -140,7 +140,7 @@ fn string_and_bytes() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let data = Data {
         a: "coffee".to_string(),
         b: b"tea".to_vec(),
@@ -194,7 +194,7 @@ fn primitive_struct() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let data = NoPadStruct { a: 1238, b: 87123 };
     let encoded = data.try_to_vec().unwrap();
     let _ = vm.function("testNoPadStruct", &[BorshToken::Bytes(encoded)]);
@@ -227,13 +227,15 @@ fn returned_string() {
     }
         "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let data = Input {
         rr: "cortado".to_string(),
     };
     let encoded = data.try_to_vec().unwrap();
-    let returns = vm.function("returnedString", &[BorshToken::Bytes(encoded)]);
-    let string = returns[0].clone().into_string().unwrap();
+    let returns = vm
+        .function("returnedString", &[BorshToken::Bytes(encoded)])
+        .unwrap();
+    let string = returns.into_string().unwrap();
     assert_eq!(string, "cortado");
 }
 
@@ -255,7 +257,7 @@ fn test_string_array() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let data = Input {
         a: vec![
             "coffee".to_string(),
@@ -264,8 +266,11 @@ fn test_string_array() {
         ],
     };
     let encoded = data.try_to_vec().unwrap();
-    let returns = vm.function("testStringVector", &[BorshToken::Bytes(encoded)]);
-    let vec = returns[0].clone().into_array().unwrap();
+    let returns = vm
+        .function("testStringVector", &[BorshToken::Bytes(encoded)])
+        .unwrap();
+    let vec = returns.into_array().unwrap();
+
     assert_eq!(vec.len(), 3);
     assert_eq!(vec[0].clone().into_string().unwrap(), "coffee");
     assert_eq!(vec[1].clone().into_string().unwrap(), "tea");
@@ -332,7 +337,7 @@ fn struct_within_struct() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let no_pad = NoPadStruct { a: 89123, b: 12354 };
     let mut tea_is_good = b"tea_is_good".to_vec();
     tea_is_good.append(&mut vec![0; 21]);
@@ -444,7 +449,7 @@ fn struct_in_array() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let mut bytes_string = b"there_is_padding_here".to_vec();
     bytes_string.append(&mut vec![0; 11]);
     let input = Input1 {
@@ -547,7 +552,7 @@ fn arrays() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let input = Input1 {
         complex_array: vec![
             NonConstantStruct {
@@ -682,7 +687,7 @@ fn multi_dimensional_arrays() {
     }
         "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let mut response: Vec<u8> = vec![0; 32];
 
     let input = Input1 {
@@ -776,7 +781,7 @@ fn empty_arrays() {
     }
         "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let input = Input {
         vec_1: vec![],
@@ -805,7 +810,7 @@ fn external_function() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let input = Input {
         selector: [1, 2, 3, 4, 5, 6, 7, 8],
         address: [
@@ -814,7 +819,11 @@ fn external_function() {
         ],
     };
     let encoded = input.try_to_vec().unwrap();
-    let returns = vm.function("testExternalFunction", &[BorshToken::Bytes(encoded)]);
+
+    let returns = vm
+        .function("testExternalFunction", &[BorshToken::Bytes(encoded)])
+        .unwrap()
+        .unwrap_tuple();
 
     let selector = returns[0].clone().into_fixed_bytes().unwrap();
     assert_eq!(selector, input.selector);
@@ -848,7 +857,7 @@ fn bytes_arrays() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let input = Input {
         item_1: [b"abcd".to_owned(), b"efgh".to_owned()],
         item_2: vec![b"12345".to_owned(), b"67890".to_owned()],
@@ -883,7 +892,7 @@ fn different_types() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let input = Input1 { a: -789, b: 14234 };
     let encoded = input.try_to_vec().unwrap();
     let _ = vm.function("testByteArrays", &[BorshToken::Bytes(encoded)]);
@@ -909,7 +918,7 @@ fn more_elements() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let input = Input { vec: [1, 4, 5, 6] };
     let encoded = input.try_to_vec().unwrap();
@@ -937,7 +946,7 @@ fn extra_element() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let input = Input {
         vec: vec![-90, 89, -2341],
     };
@@ -966,7 +975,7 @@ fn invalid_type() {
     "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let input = Input { item: 5 };
     let encoded = input.try_to_vec().unwrap();
@@ -994,7 +1003,7 @@ fn longer_buffer() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let input = Input {
         item_1: 4,
@@ -1026,7 +1035,7 @@ fn longer_buffer_array() {
             }
         }        "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let input = Input {
         item_1: 23434,
@@ -1060,7 +1069,7 @@ fn dynamic_array_of_array() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let input = Input {
         vec: vec![[0, 1], [2, -3]],
     };
@@ -1105,7 +1114,7 @@ fn test_struct_validation() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let mut bytes_string = b"struct".to_vec();
     bytes_string.append(&mut vec![0; 26]);
 
@@ -1158,7 +1167,7 @@ fn test_struct_validation_invalid() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     let mut bytes_string = b"struct".to_vec();
     bytes_string.append(&mut vec![0; 26]);
 
@@ -1188,7 +1197,7 @@ fn string_fixed_array() {
 }
         "#,
     );
-    vm.constructor("test", &[]);
+    vm.constructor(&[]);
 
     #[derive(Debug, BorshSerialize)]
     struct Input {

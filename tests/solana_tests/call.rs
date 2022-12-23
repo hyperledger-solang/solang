@@ -28,7 +28,7 @@ fn simple_external_call() {
         }"#,
     );
 
-    vm.constructor("bar1", &[]);
+    vm.constructor(&[]);
 
     vm.function("test_bar", &[BorshToken::String(String::from("yo"))]);
 
@@ -40,7 +40,7 @@ fn simple_external_call() {
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "test_bar",
@@ -73,38 +73,42 @@ fn external_call_with_returns() {
         }"#,
     );
 
-    vm.constructor("bar1", &[]);
+    vm.constructor(&[]);
 
-    let res = vm.function(
-        "test_bar",
-        &[BorshToken::Int {
-            width: 64,
-            value: BigInt::from(21),
-        }],
-    );
+    let res = vm
+        .function(
+            "test_bar",
+            &[BorshToken::Int {
+                width: 64,
+                value: BigInt::from(21),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         res,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(24u8)
-        }]
+        }
     );
 
     let bar1_account = vm.stack[0].data;
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor(&[]);
 
-    let res = vm.function("test_other", &[BorshToken::Address(bar1_account)]);
+    let res = vm
+        .function("test_other", &[BorshToken::Address(bar1_account)])
+        .unwrap();
 
     assert_eq!(
         res,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(15u8)
-        }]
+        }
     );
 }
 
@@ -132,38 +136,42 @@ fn external_raw_call_with_returns() {
         }"#,
     );
 
-    vm.constructor("bar1", &[]);
+    vm.constructor(&[]);
 
-    let res = vm.function(
-        "test_bar",
-        &[BorshToken::Int {
-            width: 64,
-            value: BigInt::from(21u8),
-        }],
-    );
+    let res = vm
+        .function(
+            "test_bar",
+            &[BorshToken::Int {
+                width: 64,
+                value: BigInt::from(21u8),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         res,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(24u8),
-        }]
+        }
     );
 
     let bar1_account = vm.stack[0].data;
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor(&[]);
 
-    let res = vm.function("test_other", &[BorshToken::Address(bar1_account)]);
+    let res = vm
+        .function("test_other", &[BorshToken::Address(bar1_account)])
+        .unwrap();
 
     assert_eq!(
         res,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(15u8),
-        }]
+        }
     );
 }
 
@@ -187,9 +195,9 @@ fn call_external_func_type() {
     "#,
     );
 
-    vm.constructor("testing", &[]);
+    vm.constructor(&[]);
 
-    let res = vm.function("doTest", &[]);
+    let res = vm.function("doTest", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         res,
@@ -234,27 +242,31 @@ fn external_call_with_string_returns() {
         }"#,
     );
 
-    vm.constructor("bar1", &[]);
+    vm.constructor(&[]);
 
-    let res = vm.function(
-        "test_bar",
-        &[BorshToken::Int {
-            width: 64,
-            value: BigInt::from(22u8),
-        }],
-    );
+    let res = vm
+        .function(
+            "test_bar",
+            &[BorshToken::Int {
+                width: 64,
+                value: BigInt::from(22u8),
+            }],
+        )
+        .unwrap();
 
-    assert_eq!(res, vec![BorshToken::String(String::from("foo:22"))]);
+    assert_eq!(res, BorshToken::String(String::from("foo:22")));
 
     let bar1_account = vm.stack[0].data;
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor(&[]);
 
-    let res = vm.function("test_other", &[BorshToken::Address(bar1_account)]);
+    let res = vm
+        .function("test_other", &[BorshToken::Address(bar1_account)])
+        .unwrap();
 
-    assert_eq!(res, vec![BorshToken::String(String::from("foo:7"))]);
+    assert_eq!(res, BorshToken::String(String::from("foo:7")));
 
     vm.function("test_this", &[BorshToken::Address(bar1_account)]);
 }
@@ -283,38 +295,42 @@ fn encode_call() {
         }"#,
     );
 
-    vm.constructor("bar1", &[]);
+    vm.constructor(&[]);
 
-    let res = vm.function(
-        "test_bar",
-        &[BorshToken::Int {
-            width: 64,
-            value: BigInt::from(21u8),
-        }],
-    );
+    let res = vm
+        .function(
+            "test_bar",
+            &[BorshToken::Int {
+                width: 64,
+                value: BigInt::from(21u8),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         res,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(24u8)
-        }]
+        }
     );
 
     let bar1_account = vm.stack[0].data;
 
     vm.set_program(0);
 
-    vm.constructor("bar0", &[]);
+    vm.constructor(&[]);
 
-    let res = vm.function("test_other", &[BorshToken::Address(bar1_account)]);
+    let res = vm
+        .function("test_other", &[BorshToken::Address(bar1_account)])
+        .unwrap();
 
     assert_eq!(
         res,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(15u8)
-        }]
+        }
     );
 }
 
@@ -347,58 +363,62 @@ fn internal_function_storage() {
         }"#,
     );
 
-    vm.constructor("ft", &[]);
+    vm.constructor(&[]);
 
     let res = vm.function("set_op", &[BorshToken::Bool(true)]);
 
-    assert_eq!(res, vec![]);
+    assert!(res.is_none());
 
-    let res = vm.function(
-        "test",
-        &[
-            BorshToken::Int {
-                width: 32,
-                value: BigInt::from(3u8),
-            },
-            BorshToken::Int {
-                width: 32,
-                value: BigInt::from(5u8),
-            },
-        ],
-    );
+    let res = vm
+        .function(
+            "test",
+            &[
+                BorshToken::Int {
+                    width: 32,
+                    value: BigInt::from(3u8),
+                },
+                BorshToken::Int {
+                    width: 32,
+                    value: BigInt::from(5u8),
+                },
+            ],
+        )
+        .unwrap();
 
     assert_eq!(
         res,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 32,
             value: BigInt::from(15u8)
-        },]
+        }
     );
 
     let res = vm.function("set_op", &[BorshToken::Bool(false)]);
 
-    assert_eq!(res, vec![]);
+    assert!(res.is_none());
 
-    let res = vm.function(
-        "test",
-        &[
-            BorshToken::Int {
-                width: 32,
-                value: BigInt::from(3u8),
-            },
-            BorshToken::Int {
-                width: 32,
-                value: BigInt::from(5u8),
-            },
-        ],
-    );
+    let res = vm
+        .function(
+            "test",
+            &[
+                BorshToken::Int {
+                    width: 32,
+                    value: BigInt::from(3u8),
+                },
+                BorshToken::Int {
+                    width: 32,
+                    value: BigInt::from(5u8),
+                },
+            ],
+        )
+        .unwrap();
 
     assert_eq!(
         res,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 32,
             value: BigInt::from(8u8)
-        }]
+        }
     );
 }
 
@@ -439,7 +459,7 @@ fn raw_call_accounts() {
         }"#,
     );
 
-    vm.constructor("SplToken", &[]);
+    vm.constructor(&[]);
 
     let token = Pubkey(
         "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
@@ -520,7 +540,7 @@ fn pda() {
         }"#,
     );
 
-    vm.constructor("pda", &[]);
+    vm.constructor(&[]);
 
     let test_args = |vm: &VirtualMachine, _instr: &Instruction, signers: &[Pubkey]| {
         assert_eq!(

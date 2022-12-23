@@ -20,9 +20,9 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -45,7 +45,7 @@ fn fixed_array() {
                     value: BigInt::from(12313231u32),
                 },
             ]),
-            BorshToken::FixedBytes(vec!(0xfe))
+            BorshToken::uint8_fixed_array(vec!(0xfe))
         ]
     );
 
@@ -66,13 +66,13 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedArray(vec![
+        BorshToken::FixedArray(vec![
             BorshToken::Tuple(vec![
                 BorshToken::Uint {
                     width: 32,
@@ -101,7 +101,7 @@ fn fixed_array() {
                 },
                 BorshToken::Bool(false)
             ]),
-        ])]
+        ])
     );
 
     // Now let's try it the other way round; an struct with an array in it
@@ -135,13 +135,13 @@ fn fixed_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Tuple(vec![
+        BorshToken::Tuple(vec![
             BorshToken::Bool(true),
             BorshToken::FixedArray(vec![
                 BorshToken::Uint {
@@ -162,41 +162,43 @@ fn fixed_array() {
                 },
             ]),
             BorshToken::Bool(true)
-        ])],
+        ]),
     );
 
-    let returns = vm.function(
-        "set",
-        &[BorshToken::Tuple(vec![
-            BorshToken::Bool(true),
-            BorshToken::FixedArray(vec![
-                BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(3u8),
-                },
-                BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(5u8),
-                },
-                BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(7u8),
-                },
-                BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(11u8),
-                },
-            ]),
-            BorshToken::Bool(true),
-        ])],
-    );
+    let returns = vm
+        .function(
+            "set",
+            &[BorshToken::Tuple(vec![
+                BorshToken::Bool(true),
+                BorshToken::FixedArray(vec![
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(3u8),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(5u8),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(7u8),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(11u8),
+                    },
+                ]),
+                BorshToken::Bool(true),
+            ])],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 32,
             value: BigInt::from(26u8),
-        }]
+        }
     );
 }
 
@@ -228,50 +230,52 @@ fn dynamic_array_fixed_elements() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function(
-        "get",
-        &[
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from(12123123u32),
-            },
-            BorshToken::Array(vec![
+    let returns = vm
+        .function(
+            "get",
+            &[
                 BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(3u8),
+                    width: 256,
+                    value: BigInt::from(12123123u32),
                 },
+                BorshToken::Array(vec![
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(3u8),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(5u8),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(7u8),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(11u8),
+                    },
+                ]),
                 BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(5u8),
+                    width: 256,
+                    value: BigInt::from(102u8),
                 },
-                BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(7u8),
-                },
-                BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(11u8),
-                },
-            ]),
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from(102u8),
-            },
-        ],
-    );
+            ],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 32,
             value: BigInt::from(26u8),
-        }]
+        }
     );
 
     // test that the abi encoder can handle fixed arrays
-    let returns = vm.function("set", &[]);
+    let returns = vm.function("set", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -334,37 +338,39 @@ fn fixed_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function(
-        "get",
-        &[
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from(12123123u32),
-            },
-            BorshToken::FixedArray(vec![
-                BorshToken::Bytes(vec![3, 5, 7]),
-                BorshToken::Bytes(vec![11, 13, 17]),
-                BorshToken::Bytes(vec![19, 23]),
-                BorshToken::Bytes(vec![29]),
-            ]),
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from(102u8),
-            },
-        ],
-    );
+    let returns = vm
+        .function(
+            "get",
+            &[
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from(12123123u32),
+                },
+                BorshToken::FixedArray(vec![
+                    BorshToken::Bytes(vec![3, 5, 7]),
+                    BorshToken::Bytes(vec![11, 13, 17]),
+                    BorshToken::Bytes(vec![19, 23]),
+                    BorshToken::Bytes(vec![29]),
+                ]),
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from(102u8),
+                },
+            ],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 32,
             value: BigInt::from(127),
-        }]
+        }
     );
 
-    let returns = vm.function("set", &[]);
+    let returns = vm.function("set", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -419,37 +425,39 @@ fn dynamic_array_dynamic_elements() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function(
-        "get",
-        &[
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from(12123123u32),
-            },
-            BorshToken::Array(vec![
-                BorshToken::Bytes(vec![3, 5, 7]),
-                BorshToken::Bytes(vec![11, 13, 17]),
-                BorshToken::Bytes(vec![19, 23]),
-                BorshToken::Bytes(vec![29]),
-            ]),
-            BorshToken::Uint {
-                width: 256,
-                value: BigInt::from(102u8),
-            },
-        ],
-    );
+    let returns = vm
+        .function(
+            "get",
+            &[
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from(12123123u32),
+                },
+                BorshToken::Array(vec![
+                    BorshToken::Bytes(vec![3, 5, 7]),
+                    BorshToken::Bytes(vec![11, 13, 17]),
+                    BorshToken::Bytes(vec![19, 23]),
+                    BorshToken::Bytes(vec![29]),
+                ]),
+                BorshToken::Uint {
+                    width: 256,
+                    value: BigInt::from(102u8),
+                },
+            ],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 32,
             value: BigInt::from(127),
-        }]
+        }
     );
 
-    let returns = vm.function("set", &[]);
+    let returns = vm.function("set", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -498,7 +506,7 @@ fn fixed_array_fixed_elements_storage() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_elem",
@@ -528,27 +536,29 @@ fn fixed_array_fixed_elements_storage() {
         ],
     );
 
-    let returns = vm.function(
-        "get_elem",
-        &[BorshToken::Uint {
-            width: 256,
-            value: BigInt::from(2u8),
-        }],
-    );
+    let returns = vm
+        .function(
+            "get_elem",
+            &[BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(2u8),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(12123123u64)
-        },]
+        },
     );
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedArray(vec![
+        BorshToken::FixedArray(vec![
             BorshToken::Int {
                 width: 64,
                 value: BigInt::zero()
@@ -565,7 +575,7 @@ fn fixed_array_fixed_elements_storage() {
                 width: 64,
                 value: BigInt::from(123456789u32),
             },
-        ])],
+        ]),
     );
 
     vm.function(
@@ -590,11 +600,11 @@ fn fixed_array_fixed_elements_storage() {
         ])],
     );
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedArray(vec![
+        BorshToken::FixedArray(vec![
             BorshToken::Int {
                 width: 64,
                 value: BigInt::one(),
@@ -611,16 +621,16 @@ fn fixed_array_fixed_elements_storage() {
                 width: 64,
                 value: BigInt::from(4u8),
             },
-        ])],
+        ]),
     );
 
     vm.function("del", &[]);
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedArray(vec![
+        BorshToken::FixedArray(vec![
             BorshToken::Int {
                 width: 64,
                 value: BigInt::zero(),
@@ -637,7 +647,7 @@ fn fixed_array_fixed_elements_storage() {
                 width: 64,
                 value: BigInt::zero(),
             },
-        ])],
+        ]),
     );
 }
 
@@ -670,7 +680,7 @@ fn fixed_array_dynamic_elements_storage() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "set_elem",
@@ -696,28 +706,30 @@ fn fixed_array_dynamic_elements_storage() {
         ],
     );
 
-    let returns = vm.function(
-        "get_elem",
-        &[BorshToken::Uint {
-            width: 256,
-            value: BigInt::from(2u8),
-        }],
-    );
+    let returns = vm
+        .function(
+            "get_elem",
+            &[BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(2u8),
+            }],
+        )
+        .unwrap();
 
-    assert_eq!(returns, vec![BorshToken::String(String::from("abcd"))]);
+    assert_eq!(returns, BorshToken::String(String::from("abcd")));
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedArray(vec![
+        BorshToken::FixedArray(vec![
             BorshToken::String(String::from("")),
             BorshToken::String(String::from("")),
             BorshToken::String(String::from("abcd")),
             BorshToken::String(String::from(
                 "you can lead a horse to water but you can’t make him drink"
             )),
-        ])],
+        ]),
     );
 
     vm.function(
@@ -730,30 +742,30 @@ fn fixed_array_dynamic_elements_storage() {
         ])],
     );
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedArray(vec![
+        BorshToken::FixedArray(vec![
             BorshToken::String(String::from("a")),
             BorshToken::String(String::from("b")),
             BorshToken::String(String::from("c")),
             BorshToken::String(String::from("d")),
-        ])],
+        ]),
     );
 
     vm.function("del", &[]);
 
-    let returns = vm.function("get", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedArray(vec![
+        BorshToken::FixedArray(vec![
             BorshToken::String(String::from("")),
             BorshToken::String(String::from("")),
             BorshToken::String(String::from("")),
             BorshToken::String(String::from("")),
-        ])],
+        ]),
     );
 }
 
@@ -798,16 +810,16 @@ fn storage_simple_dynamic_array() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("len", &[]);
+    let returns = vm.function("len", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::zero(),
-        }]
+        }
     );
 
     vm.function(
@@ -828,59 +840,65 @@ fn storage_simple_dynamic_array() {
         }],
     );
 
-    let returns = vm.function(
-        "subscript",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::zero(),
-        }],
-    );
+    let returns = vm
+        .function(
+            "subscript",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::zero(),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(102u8),
-        }]
+        }
     );
 
-    let returns = vm.function(
-        "subscript",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::one(),
-        }],
-    );
+    let returns = vm
+        .function(
+            "subscript",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::one(),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::zero()
-        }]
+        }
     );
 
-    let returns = vm.function(
-        "subscript",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::from(2u8),
-        }],
-    );
+    let returns = vm
+        .function(
+            "subscript",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(2u8),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(12345678901u64),
-        },]
+        },
     );
 
-    let returns = vm.function("copy", &[]);
+    let returns = vm.function("copy", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Array(vec![
+        BorshToken::Array(vec![
             BorshToken::Int {
                 width: 64,
                 value: BigInt::from(102u8),
@@ -893,27 +911,27 @@ fn storage_simple_dynamic_array() {
                 width: 64,
                 value: BigInt::from(12345678901u64),
             },
-        ])],
+        ]),
     );
 
-    let returns = vm.function("pop", &[]);
+    let returns = vm.function("pop", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 64,
             value: BigInt::from(12345678901u64),
-        },]
+        },
     );
 
-    let returns = vm.function("len", &[]);
+    let returns = vm.function("len", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(2u8),
-        }]
+        }
     );
 
     vm.function(
@@ -950,11 +968,11 @@ fn storage_simple_dynamic_array() {
         ])],
     );
 
-    let returns = vm.function("copy", &[]);
+    let returns = vm.function("copy", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Array(vec![
+        BorshToken::Array(vec![
             BorshToken::Int {
                 width: 64,
                 value: BigInt::from(1u8)
@@ -983,19 +1001,19 @@ fn storage_simple_dynamic_array() {
                 width: 64,
                 value: BigInt::from(7u8)
             },
-        ])],
+        ]),
     );
 
     vm.function("rm", &[]);
 
-    let returns = vm.function("len", &[]);
+    let returns = vm.function("len", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::zero(),
-        }]
+        }
     );
 }
 
@@ -1013,7 +1031,7 @@ fn storage_pop_running_on_empty() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function("pop", &[]);
 }
@@ -1070,16 +1088,16 @@ fn storage_dynamic_array_of_structs() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("len", &[]);
+    let returns = vm.function("len", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::zero(),
-        }]
+        }
     );
 
     vm.function(
@@ -1106,68 +1124,74 @@ fn storage_dynamic_array_of_structs() {
         ])],
     );
 
-    let returns = vm.function(
-        "subscript",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::zero(),
-        }],
-    );
+    let returns = vm
+        .function(
+            "subscript",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::zero(),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Tuple(vec![
+        BorshToken::Tuple(vec![
             BorshToken::Uint {
                 width: 64,
                 value: BigInt::from(13819038012u64)
             },
             BorshToken::Bool(true),
-        ])]
+        ])
     );
 
-    let returns = vm.function(
-        "subscript",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::one(),
-        }],
-    );
+    let returns = vm
+        .function(
+            "subscript",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::one(),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Tuple(vec![
+        BorshToken::Tuple(vec![
             BorshToken::Uint {
                 width: 64,
                 value: BigInt::zero(),
             },
             BorshToken::Bool(false),
-        ])]
+        ])
     );
 
-    let returns = vm.function(
-        "subscript",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::from(2u8),
-        }],
-    );
+    let returns = vm
+        .function(
+            "subscript",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(2u8),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Tuple(vec![
+        BorshToken::Tuple(vec![
             BorshToken::Uint {
                 width: 64,
                 value: BigInt::from(12313123141123213u64),
             },
             BorshToken::Bool(true),
-        ]),]
+        ]),
     );
 
-    let returns = vm.function("copy", &[]);
+    let returns = vm.function("copy", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Array(vec![
+        BorshToken::Array(vec![
             BorshToken::Tuple(vec![
                 BorshToken::Uint {
                     width: 64,
@@ -1189,30 +1213,30 @@ fn storage_dynamic_array_of_structs() {
                 },
                 BorshToken::Bool(true),
             ]),
-        ])]
+        ])
     );
 
-    let returns = vm.function("pop", &[]);
+    let returns = vm.function("pop", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Tuple(vec![
+        BorshToken::Tuple(vec![
             BorshToken::Uint {
                 width: 64,
                 value: BigInt::from(12313123141123213u64),
             },
             BorshToken::Bool(true),
-        ])]
+        ])
     );
 
-    let returns = vm.function("len", &[]);
+    let returns = vm.function("len", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(2u8),
-        }]
+        }
     );
 
     vm.function(
@@ -1263,11 +1287,11 @@ fn storage_dynamic_array_of_structs() {
         ])],
     );
 
-    let returns = vm.function("copy", &[]);
+    let returns = vm.function("copy", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Array(vec![
+        BorshToken::Array(vec![
             BorshToken::Tuple(vec![
                 BorshToken::Uint {
                     width: 64,
@@ -1310,19 +1334,19 @@ fn storage_dynamic_array_of_structs() {
                 },
                 BorshToken::Bool(true)
             ]),
-        ]),]
+        ]),
     );
 
     vm.function("rm", &[]);
 
-    let returns = vm.function("len", &[]);
+    let returns = vm.function("len", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::zero(),
-        }]
+        }
     );
 }
 
@@ -1340,13 +1364,13 @@ fn array_literal() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("list", &[]);
+    let returns = vm.function("list", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedArray(vec![
+        BorshToken::FixedArray(vec![
             BorshToken::Int {
                 width: 64,
                 value: BigInt::one(),
@@ -1359,7 +1383,7 @@ fn array_literal() {
                 width: 64,
                 value: BigInt::from(3u8),
             },
-        ])]
+        ])
     );
 }
 
@@ -1416,7 +1440,7 @@ fn storage_pop_push() {
     }"#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
     vm.function("fn1", &[]);
     vm.function("fn2", &[]);
     vm.function("fn3", &[]);
@@ -1455,7 +1479,7 @@ fn initialization_with_literal() {
         "#,
     );
 
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let mut addr1: Vec<u8> = Vec::new();
     addr1.resize(32, 0);
@@ -1470,40 +1494,46 @@ fn initialization_with_literal() {
             BorshToken::FixedBytes(addr2[..].to_vec()),
         ],
     );
-    let returns = vm.function(
-        "getIdx",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::zero(),
-        }],
-    );
-    let returned_addr1 = returns[0].clone().into_fixed_bytes().unwrap();
+    let returns = vm
+        .function(
+            "getIdx",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::zero(),
+            }],
+        )
+        .unwrap();
+    let returned_addr1 = returns.into_fixed_bytes().unwrap();
     assert_eq!(addr1, returned_addr1);
 
-    let returns = vm.function(
-        "getIdx",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::one(),
-        }],
-    );
-    let returned_addr2 = returns[0].clone().into_fixed_bytes().unwrap();
+    let returns = vm
+        .function(
+            "getIdx",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::one(),
+            }],
+        )
+        .unwrap();
+    let returned_addr2 = returns.into_fixed_bytes().unwrap();
     assert_eq!(addr2, returned_addr2);
 
-    let returns = vm.function(
-        "getVec",
-        &[
-            BorshToken::Uint {
-                width: 32,
-                value: BigInt::from(563u16),
-            },
-            BorshToken::Uint {
-                width: 32,
-                value: BigInt::from(895u16),
-            },
-        ],
-    );
-    let array = returns[0].clone().into_array().unwrap();
+    let returns = vm
+        .function(
+            "getVec",
+            &[
+                BorshToken::Uint {
+                    width: 32,
+                    value: BigInt::from(563u16),
+                },
+                BorshToken::Uint {
+                    width: 32,
+                    value: BigInt::from(895u16),
+                },
+            ],
+        )
+        .unwrap();
+    let array = returns.into_array().unwrap();
     assert_eq!(
         array,
         vec![
@@ -1539,7 +1569,7 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1560,7 +1590,7 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1586,7 +1616,7 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1608,7 +1638,7 @@ fn dynamic_array_push() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     // push() returns a reference to the thing
@@ -1634,7 +1664,7 @@ fn dynamic_array_push() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }
 
@@ -1658,7 +1688,7 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1679,7 +1709,7 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1707,7 +1737,7 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1729,7 +1759,7 @@ fn dynamic_array_pop() {
         "#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }
 
@@ -1748,7 +1778,7 @@ fn dynamic_array_pop_empty_array() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }
 
@@ -1770,7 +1800,7 @@ fn dynamic_array_pop_bounds() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }
 
@@ -1810,7 +1840,7 @@ fn dynamic_array_push_pop_loop() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
@@ -1849,6 +1879,6 @@ fn dynamic_array_push_pop_loop() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 }

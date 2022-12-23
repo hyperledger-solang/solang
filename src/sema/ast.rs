@@ -866,16 +866,16 @@ impl Recurse for CallArgs {
     type ArgType = Expression;
     fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Expression, ctx: &mut T) -> bool) {
         if let Some(gas) = &self.gas {
-            f(gas, cx);
+            gas.recurse(cx, f);
         }
         if let Some(salt) = &self.salt {
-            f(salt, cx);
+            salt.recurse(cx, f);
         }
         if let Some(value) = &self.value {
-            f(value, cx);
+            value.recurse(cx, f);
         }
         if let Some(accounts) = &self.accounts {
-            f(accounts, cx);
+            accounts.recurse(cx, f);
         }
     }
 }
@@ -911,6 +911,7 @@ impl Recurse for Expression {
                 | Expression::ZeroExt { expr, .. }
                 | Expression::SignExt { expr, .. }
                 | Expression::Trunc { expr, .. }
+                | Expression::CheckingTrunc { expr, .. }
                 | Expression::Cast { expr, .. }
                 | Expression::BytesCast { expr, .. }
                 | Expression::PreIncrement(_, _, _, expr)

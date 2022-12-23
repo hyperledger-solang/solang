@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::borsh_encoding::{decode_output, encode_arguments, BorshToken};
+use crate::borsh_encoding::{decode_at_offset, encode_arguments, BorshToken};
 use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use ethabi::RawLog;
@@ -23,7 +23,8 @@ use solana_rbpf::{
 };
 use solang::compile;
 
-use solang::abi::anchor::discriminator;
+use anchor_syn::idl::Idl;
+use solang::abi::anchor::{discriminator, generate_anchor_idl};
 use solang::{file_resolver::FileResolver, Target};
 use std::{
     cell::{RefCell, RefMut},
@@ -75,7 +76,7 @@ struct VirtualMachine {
 #[derive(Clone)]
 struct Contract {
     program: Account,
-    abi: Option<ethabi::Contract>,
+    idl: Option<Idl>,
     data: Account,
 }
 
@@ -151,9 +152,7 @@ fn build_solidity_with_overflow_check(src: &str, math_overflow_flag: bool) -> Vi
         }
 
         let code = contract.code.get().unwrap();
-
-        let (abistr, _) = solang::abi::generate_abi(contract_no, &ns, code, false);
-        let abi = ethabi::Contract::load(abistr.as_bytes()).unwrap();
+        let idl = generate_anchor_idl(contract_no, &ns);
 
         let program = if let Some(program_id) = &contract.program_id {
             program_id.clone().try_into().unwrap()
@@ -183,7 +182,7 @@ fn build_solidity_with_overflow_check(src: &str, math_overflow_flag: bool) -> Vi
 
         programs.push(Contract {
             program,
-            abi: Some(abi),
+            idl: Some(idl),
             data,
         });
     }
@@ -1384,7 +1383,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
 
                         vm.programs.push(Contract {
                             program: create_account.program_id,
-                            abi: None,
+                            idl: None,
                             data: new_address,
                         });
                     }
@@ -1594,8 +1593,7 @@ impl VirtualMachine {
         res
     }
 
-    /// FIXME: remove name argument
-    fn constructor(&mut self, _name: &str, args: &[BorshToken]) {
+    fn constructor(&mut self, args: &[BorshToken]) {
         self.constructor_expected(0, args)
     }
 
@@ -1606,8 +1604,14 @@ impl VirtualMachine {
         println!("constructor for {}", hex::encode(program.data));
 
         let mut calldata = discriminator("global", "new");
-
-        if program.abi.as_ref().unwrap().constructor.is_some() {
+        if program
+            .idl
+            .as_ref()
+            .unwrap()
+            .instructions
+            .iter()
+            .any(|instr| instr.name == "new")
+        {
             let mut encoded_data = encode_arguments(args);
             calldata.append(&mut encoded_data);
         };
@@ -1623,7 +1627,7 @@ impl VirtualMachine {
         }
     }
 
-    fn function(&mut self, name: &str, args: &[BorshToken]) -> Vec<BorshToken> {
+    fn function(&mut self, name: &str, args: &[BorshToken]) -> Option<BorshToken> {
         let default_metas = self.default_metas();
 
         self.function_metas(&default_metas, name, args)
@@ -1634,14 +1638,27 @@ impl VirtualMachine {
         metas: &[AccountMeta],
         name: &str,
         args: &[BorshToken],
-    ) -> Vec<BorshToken> {
+    ) -> Option<BorshToken> {
         self.return_data = None;
-
         let program = &self.stack[0];
 
         println!("function {} for {}", name, hex::encode(program.data));
 
         let mut calldata = discriminator("global", name);
+
+        let instruction = if let Some(instr) = program
+            .idl
+            .as_ref()
+            .unwrap()
+            .instructions
+            .iter()
+            .find(|item| item.name == name)
+        {
+            instr.clone()
+        } else {
+            panic!("Function '{}' not found", name);
+        };
+
         let mut encoded_args = encode_arguments(args);
         calldata.append(&mut encoded_args);
 
@@ -1660,11 +1677,20 @@ impl VirtualMachine {
             &[]
         };
 
-        let func = &self.stack[0].abi.as_ref().unwrap().functions[name][0];
-        if func.outputs.is_empty() {
+        if let Some(ret) = &instruction.returns {
+            let mut offset: usize = 0;
+            let decoded = decode_at_offset(
+                return_data,
+                &mut offset,
+                ret,
+                &self.stack[0].idl.as_ref().unwrap().types,
+            );
+            assert_eq!(offset, return_data.len());
+            Some(decoded)
+        } else {
             assert_eq!(return_data.len(), 0);
+            None
         }
-        decode_output(&func.outputs, return_data)
     }
 
     fn function_must_fail(
@@ -1677,6 +1703,17 @@ impl VirtualMachine {
         println!("function for {}", hex::encode(program.data));
 
         let mut calldata = Vec::new();
+
+        if !self.stack[0]
+            .idl
+            .as_ref()
+            .unwrap()
+            .instructions
+            .iter()
+            .any(|item| item.name == name)
+        {
+            panic!("Function '{}' not found", name);
+        }
 
         let selector = discriminator("global", name);
         calldata.extend_from_slice(&selector);
@@ -1757,7 +1794,7 @@ impl VirtualMachine {
 
         self.programs.push(Contract {
             program: *program_id,
-            abi: None,
+            idl: None,
             data: *account,
         });
     }
