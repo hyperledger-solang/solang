@@ -20,16 +20,16 @@ fn storage_string_length() {
     }
     "#,
     );
-    vm.constructor("Testing", &[]);
+    vm.constructor(&[]);
 
     let _ = vm.function(
         "setString",
         &[BorshToken::String("coffee_tastes_good".to_string())],
     );
-    let returns = vm.function("getLength", &[]);
+    let returns = vm.function("getLength", &[]).unwrap();
 
     assert_eq!(
-        returns[0],
+        returns,
         BorshToken::Uint {
             width: 32,
             value: BigInt::from(18u8),
@@ -59,8 +59,8 @@ fn load_string_vector() {
       "#,
     );
 
-    vm.constructor("Testing", &[]);
-    let returns = vm.function("testLength", &[]);
+    vm.constructor(&[]);
+    let returns = vm.function("testLength", &[]).unwrap().unwrap_tuple();
     assert_eq!(
         returns[0],
         BorshToken::Uint {
@@ -83,30 +83,36 @@ fn load_string_vector() {
         }
     );
 
-    let returns = vm.function(
-        "getString",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::zero(),
-        }],
-    );
-    assert_eq!(returns[0], BorshToken::String("tea".to_string()));
+    let returns = vm
+        .function(
+            "getString",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::zero(),
+            }],
+        )
+        .unwrap();
+    assert_eq!(returns, BorshToken::String("tea".to_string()));
 
-    let returns = vm.function(
-        "getString",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::one(),
-        }],
-    );
-    assert_eq!(returns[0], BorshToken::String("coffe".to_string()));
+    let returns = vm
+        .function(
+            "getString",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::one(),
+            }],
+        )
+        .unwrap();
+    assert_eq!(returns, BorshToken::String("coffe".to_string()));
 
-    let returns = vm.function(
-        "getString",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::from(2u8),
-        }],
-    );
-    assert_eq!(returns[0], BorshToken::String("sixsix".to_string()));
+    let returns = vm
+        .function(
+            "getString",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(2u8),
+            }],
+        )
+        .unwrap();
+    assert_eq!(returns, BorshToken::String("sixsix".to_string()));
 }

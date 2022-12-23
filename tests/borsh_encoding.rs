@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use anchor_syn::idl::{IdlType, IdlTypeDefinition, IdlTypeDefinitionTy};
 use byte_slice_cast::AsByteSlice;
-use ethabi::{Param, ParamType};
 use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
 use std::cmp::Ordering;
@@ -54,8 +54,6 @@ impl BorshToken {
                 for item in data {
                     item.encode(buffer);
                 }
-                std::println!("len: {}", buffer.len());
-                std::println!("buffer: {:?}", buffer);
             }
             BorshToken::Array(arr) => {
                 let len = arr.len() as u32;
@@ -84,6 +82,20 @@ impl BorshToken {
     pub fn into_fixed_bytes(self) -> Option<Vec<u8>> {
         match self {
             BorshToken::FixedBytes(value) => Some(value),
+            BorshToken::FixedArray(vec) => {
+                let mut response: Vec<u8> = Vec::with_capacity(vec.len());
+                for elem in vec {
+                    match elem {
+                        BorshToken::Uint { width, value } => {
+                            assert_eq!(width, 8);
+                            response.push(value.to_u8().unwrap());
+                        }
+                        _ => unreachable!("Array cannot be converted to fixed bytes"),
+                    }
+                }
+                Some(response)
+            }
+            BorshToken::Address(value) => Some(value.to_vec()),
             _ => None,
         }
     }
@@ -101,6 +113,25 @@ impl BorshToken {
             BorshToken::Int { value, .. } => Some(value),
             _ => None,
         }
+    }
+
+    pub fn unwrap_tuple(self) -> Vec<BorshToken> {
+        match self {
+            BorshToken::Tuple(vec) => vec,
+            _ => panic!("This is not a tuple"),
+        }
+    }
+
+    pub fn uint8_fixed_array(vec: Vec<u8>) -> BorshToken {
+        let mut array: Vec<BorshToken> = Vec::with_capacity(vec.len());
+        for item in &vec {
+            array.push(BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(*item),
+            });
+        }
+
+        BorshToken::FixedArray(array)
     }
 }
 
@@ -199,18 +230,6 @@ fn encode_uint(width: u16, value: &BigInt, buffer: &mut Vec<u8>) {
     }
 }
 
-/// Decode the output buffer of a function given the description of its parameters
-pub fn decode_output(params: &[Param], data: &[u8]) -> Vec<BorshToken> {
-    let mut offset: usize = 0;
-    let mut decoded: Vec<BorshToken> = Vec::with_capacity(params.len());
-    for item in params {
-        let borsh_token = decode_at_offset(data, &mut offset, &item.kind);
-        decoded.push(borsh_token);
-    }
-
-    decoded
-}
-
 /// Encode the arguments of a function
 pub fn encode_arguments(args: &[BorshToken]) -> Vec<u8> {
     let mut encoded: Vec<u8> = Vec::new();
@@ -222,38 +241,56 @@ pub fn encode_arguments(args: &[BorshToken]) -> Vec<u8> {
 }
 
 /// Decode a parameter at a given offset
-fn decode_at_offset(data: &[u8], offset: &mut usize, ty: &ParamType) -> BorshToken {
+pub fn decode_at_offset(
+    data: &[u8],
+    offset: &mut usize,
+    ty: &IdlType,
+    custom_types: &[IdlTypeDefinition],
+) -> BorshToken {
     match ty {
-        ParamType::Address => {
+        IdlType::PublicKey => {
             let read = &data[*offset..(*offset + 32)];
             (*offset) += 32;
             BorshToken::Address(<[u8; 32]>::try_from(read).unwrap())
         }
-        ParamType::Uint(width) => {
-            let decoding_width = width.next_power_of_two() / 8;
+
+        IdlType::U8
+        | IdlType::U16
+        | IdlType::U32
+        | IdlType::U64
+        | IdlType::U128
+        | IdlType::U256 => {
+            let decoding_width = integer_byte_width(ty);
             let bigint =
                 BigInt::from_bytes_le(Sign::Plus, &data[*offset..(*offset + decoding_width)]);
             (*offset) += decoding_width;
             BorshToken::Uint {
-                width: *width as u16,
+                width: (decoding_width * 8) as u16,
                 value: bigint,
             }
         }
-        ParamType::Int(width) => {
-            let decoding_width = width.next_power_of_two() / 8;
+
+        IdlType::I8
+        | IdlType::I16
+        | IdlType::I32
+        | IdlType::I64
+        | IdlType::I128
+        | IdlType::I256 => {
+            let decoding_width = integer_byte_width(ty);
             let bigint = BigInt::from_signed_bytes_le(&data[*offset..(*offset + decoding_width)]);
             (*offset) += decoding_width;
             BorshToken::Int {
-                width: *width as u16,
+                width: (decoding_width * 8) as u16,
                 value: bigint,
             }
         }
-        ParamType::Bool => {
+
+        IdlType::Bool => {
             let val = data[*offset] == 1;
             (*offset) += 1;
             BorshToken::Bool(val)
         }
-        ParamType::String => {
+        IdlType::String => {
             let mut int_data: [u8; 4] = Default::default();
             int_data.copy_from_slice(&data[*offset..(*offset + 4)]);
             let len = u32::from_le_bytes(int_data) as usize;
@@ -262,37 +299,50 @@ fn decode_at_offset(data: &[u8], offset: &mut usize, ty: &ParamType) -> BorshTok
             (*offset) += len;
             BorshToken::String(read_string.to_string())
         }
-        ParamType::FixedBytes(len) => {
-            let read_data = &data[*offset..(*offset + len)];
-            (*offset) += len;
-            BorshToken::FixedBytes(read_data.to_vec())
-        }
-        ParamType::FixedArray(ty, len) => {
+        IdlType::Array(ty, len) => {
             let mut read_items: Vec<BorshToken> = Vec::with_capacity(*len);
             for _ in 0..*len {
-                read_items.push(decode_at_offset(data, offset, ty));
+                read_items.push(decode_at_offset(data, offset, ty, custom_types));
             }
             BorshToken::FixedArray(read_items)
         }
-        ParamType::Array(ty) => {
+        IdlType::Vec(ty) => {
             let mut int_data: [u8; 4] = Default::default();
             int_data.copy_from_slice(&data[*offset..(*offset + 4)]);
             let len = u32::from_le_bytes(int_data);
             (*offset) += 4;
             let mut read_items: Vec<BorshToken> = Vec::with_capacity(len as usize);
             for _ in 0..len {
-                read_items.push(decode_at_offset(data, offset, ty));
+                read_items.push(decode_at_offset(data, offset, ty, custom_types));
             }
             BorshToken::Array(read_items)
         }
-        ParamType::Tuple(items) => {
-            let mut read_items: Vec<BorshToken> = Vec::with_capacity(items.len());
-            for item in items {
-                read_items.push(decode_at_offset(data, offset, item));
+        IdlType::Defined(value) => {
+            let current_ty = custom_types
+                .iter()
+                .find(|item| &item.name == value)
+                .unwrap();
+
+            match &current_ty.ty {
+                IdlTypeDefinitionTy::Enum { .. } => {
+                    let value = data[*offset];
+                    (*offset) += 1;
+                    BorshToken::Uint {
+                        width: 8,
+                        value: BigInt::from(value),
+                    }
+                }
+                IdlTypeDefinitionTy::Struct { fields } => {
+                    let mut read_items: Vec<BorshToken> = Vec::with_capacity(fields.len());
+                    for item in fields {
+                        read_items.push(decode_at_offset(data, offset, &item.ty, custom_types));
+                    }
+
+                    BorshToken::Tuple(read_items)
+                }
             }
-            BorshToken::Tuple(read_items)
         }
-        ParamType::Bytes => {
+        IdlType::Bytes => {
             let mut int_data: [u8; 4] = Default::default();
             int_data.copy_from_slice(&data[*offset..(*offset + 4)]);
             let len = u32::from_le_bytes(int_data) as usize;
@@ -301,5 +351,21 @@ fn decode_at_offset(data: &[u8], offset: &mut usize, ty: &ParamType) -> BorshTok
             (*offset) += len;
             BorshToken::Bytes(read_data.to_vec())
         }
+
+        IdlType::Option(_) | IdlType::F32 | IdlType::F64 => {
+            unreachable!("Type not available in Solidity")
+        }
+    }
+}
+
+fn integer_byte_width(ty: &IdlType) -> usize {
+    match ty {
+        IdlType::U8 | IdlType::I8 => 1,
+        IdlType::U16 | IdlType::I16 => 2,
+        IdlType::U32 | IdlType::I32 => 4,
+        IdlType::U64 | IdlType::I64 => 8,
+        IdlType::U128 | IdlType::I128 => 16,
+        IdlType::U256 | IdlType::I256 => 32,
+        _ => unreachable!("Not an integer"),
     }
 }

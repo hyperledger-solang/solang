@@ -29,7 +29,7 @@ fn using_for_contracts() {
         }"#,
     );
 
-    runtime.constructor("C", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     assert_eq!(runtime.logs, "Hello");
@@ -72,7 +72,7 @@ fn using_for_contracts() {
         }"#,
     );
 
-    runtime.constructor("foo", &[]);
+    runtime.constructor(&[]);
     runtime.function("test", &[]);
 
     assert_eq!(runtime.logs, "X libX contractx:2");

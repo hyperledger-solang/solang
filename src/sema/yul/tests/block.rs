@@ -186,9 +186,6 @@ contract testTypes {
     "#;
 
     let ns = parse(file);
-    for item in ns.diagnostics.iter() {
-        std::println!("{}", item.message);
-    }
     assert!(ns.diagnostics.contains_message("unreachable yul statement"));
 
     let file = r#"
