@@ -5294,10 +5294,8 @@ fn array_subscript(
         ));
     }
 
-    if index_ty.is_contract_storage() {
-        // make sure we load the index value from storage
-        index = index.cast(&index.loc(), index_ty.deref_any(), true, ns, diagnostics)?;
-    }
+    // make sure we load the index value if needed
+    index = index.cast(&index.loc(), index_ty.deref_any(), true, ns, diagnostics)?;
 
     match array_ty.deref_any() {
         Type::Bytes(_) | Type::Array(..) | Type::DynamicBytes => {
