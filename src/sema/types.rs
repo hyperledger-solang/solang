@@ -1089,6 +1089,7 @@ impl Type {
                 Box::new(Type::Array(ty.clone(), dim[..dim.len() - 1].to_vec())),
             ),
             Type::Array(ty, dim) if dim.len() == 1 => Type::StorageRef(false, ty.clone()),
+            Type::Bytes(n) => Type::Bytes(*n),
             Type::StorageRef(_, ty) => ty.storage_array_elem(),
             _ => panic!("deref on non-array"),
         }
