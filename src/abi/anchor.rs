@@ -8,11 +8,13 @@ use anchor_syn::idl::{
     Idl, IdlAccount, IdlAccountItem, IdlEnumVariant, IdlEvent, IdlEventField, IdlField,
     IdlInstruction, IdlType, IdlTypeDefinition, IdlTypeDefinitionTy,
 };
+use base58::ToBase58;
 use num_traits::ToPrimitive;
 use semver::Version;
 use std::collections::{HashMap, HashSet};
 
 use convert_case::{Boundary, Case, Casing};
+use serde_json::json;
 use sha2::{Digest, Sha256};
 use solang_parser::pt::FunctionTy;
 
@@ -41,6 +43,11 @@ pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace) -> Idl {
 
     let events = idl_events(contract, &mut type_manager, ns);
 
+    let metadata = contract
+        .program_id
+        .as_ref()
+        .map(|id| json!({"address": id.to_base58()}));
+
     Idl {
         version: Version::parse(env!("CARGO_PKG_VERSION"))
             .unwrap()
@@ -54,7 +61,7 @@ pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace) -> Idl {
         types: type_manager.generate_custom_idl_types(),
         events,
         errors: None,
-        metadata: None,
+        metadata,
     }
 }
 

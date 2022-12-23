@@ -12,6 +12,7 @@ use anchor_syn::idl::{
     IdlTypeDefinition, IdlTypeDefinitionTy,
 };
 use semver::Version;
+use serde_json::json;
 use std::ffi::OsStr;
 
 fn generate_namespace(src: &'static str) -> Namespace {
@@ -1475,4 +1476,31 @@ contract C {
     assert_eq!(idl.types[1].name, "Foo");
     assert_eq!(idl.types[2].name, "D_Foo_2");
     assert_eq!(idl.types[3].name, "D_Foo_1");
+}
+
+#[test]
+fn program_id() {
+    let src = r#"
+    @program_id("Foo5mMfYo5RhRcWa4NZ2bwFn4Kdhe8rNK5jchxsKrivA")
+contract C {
+    struct D_Foo {
+        int64 f2;
+    }
+
+    struct D_Foo_1 {
+       int64 f3;
+    }
+
+    function f(D_Foo_1 k, D_Foo z) public pure returns (int64) { return z.f2 + k.f3; }
+}
+    "#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(0, &ns);
+
+    assert!(idl.metadata.is_some());
+    assert_eq!(
+        idl.metadata.unwrap(),
+        json!({"address": "Foo5mMfYo5RhRcWa4NZ2bwFn4Kdhe8rNK5jchxsKrivA"})
+    );
 }
