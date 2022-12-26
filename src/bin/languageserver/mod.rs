@@ -468,26 +468,23 @@ impl SolangServer {
                     val: typ.to_string(ns),
                 });
 
-                match typ {
-                    ast::Type::Enum(e) => {
-                        if let Some(idx) = idx.to_usize() {
-                            if let Some((_, val)) = &ns.enums[*e].values.get_index(idx) {
-                                definition_tbl.push(DefinitionEntry {
-                                    start: locs.start(),
-                                    stop: locs.end(),
-                                    val: **val,
-                                });
-                            }
+                if let ast::Type::Enum(e) = typ {
+                    if let Some(idx) = idx.to_usize() {
+                        if let Some((_, val)) = &ns.enums[*e].values.get_index(idx) {
+                            definition_tbl.push(DefinitionEntry {
+                                start: locs.start(),
+                                stop: locs.end(),
+                                val: **val,
+                            });
                         }
                     }
-                    _ => {}
                 }
             }
             ast::Expression::StructLiteral(locs, typ, expr) => {
                 for expp in expr {
                     SolangServer::construct_expr(expp, lookup_tbl, definition_tbl, symtab, ns);
                 }
-                let ty_decl_loc = SolangServer::type_declaration_loc(&typ, ns);
+                let ty_decl_loc = SolangServer::type_declaration_loc(typ, ns);
                 definition_tbl.push(DefinitionEntry {
                     start: locs.start(),
                     stop: locs.end(),
