@@ -2,9 +2,9 @@
 
 use anchor_syn::idl::{Idl, IdlInstruction, IdlType, IdlTypeDefinitionTy};
 use clap::ArgMatches;
-use convert_case::{Boundary, Case, Casing};
+use itertools::Itertools;
 use serde_json::Value as JsonValue;
-use sha2::{Digest, Sha256};
+use solang::abi::anchor::discriminator;
 use solang_parser::lexer::is_keyword;
 use std::{
     ffi::{OsStr, OsString},
@@ -281,9 +281,13 @@ fn instruction(
             .unwrap()
             .1;
 
+        // The anchor discriminator is what Solidity calls a selector
+        let selector = discriminator(if state { "state" } else { "global" }, &instr.name);
+
         write!(
             f,
-            "\tfunction {}(",
+            "\t@selector([{}])\n\tfunction {}(",
+            selector.iter().map(|v| format!("{:#04x}", v)).join(","),
             if instr.name == "new" {
                 "initialize"
             } else {
@@ -306,15 +310,7 @@ fn instruction(
             )?;
         }
 
-        // The anchor discriminator is what Solidity calls a selector
-        let selector = discriminator(if state { "state" } else { "global" }, &instr.name);
-
-        write!(
-            f,
-            ") selector=hex\"{}\" {}external",
-            hex::encode(selector),
-            if state { "" } else { "view " }
-        )?;
+        write!(f, ") {}external", if state { "" } else { "view " })?;
 
         if let Some(ty) = &instr.returns {
             writeln!(
@@ -349,21 +345,6 @@ fn docs(f: &mut File, indent: usize, docs: &Option<Vec<String>>) -> std::io::Res
     Ok(())
 }
 
-/// Generate discriminator based on the name of the function. This is the 8 byte
-/// value anchor uses to dispatch function calls on. This should match
-/// anchor's behaviour - we need to match the discriminator exactly
-fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-    // must match snake-case npm library, see
-    // https://github.com/coral-xyz/anchor/blob/master/ts/packages/anchor/src/coder/borsh/instruction.ts#L389
-    let normalized = name
-        .from_case(Case::Camel)
-        .without_boundaries(&[Boundary::LowerDigit])
-        .to_case(Case::Snake);
-    hasher.update(format!("{}:{}", namespace, normalized));
-    hasher.finalize()[..8].to_vec()
-}
-
 fn idltype_to_solidity(ty: &IdlType, ty_names: &[(String, String)]) -> Result<String, String> {
     match ty {
         IdlType::Bool => Ok("bool".to_string()),
@@ -377,6 +358,8 @@ fn idltype_to_solidity(ty: &IdlType, ty_names: &[(String, String)]) -> Result<St
         IdlType::I64 => Ok("int64".to_string()),
         IdlType::U128 => Ok("uint128".to_string()),
         IdlType::I128 => Ok("int128".to_string()),
+        IdlType::U256 => Ok("uint256".to_string()),
+        IdlType::I256 => Ok("int256".to_string()),
         IdlType::F32 => Err("f32".to_string()),
         IdlType::F64 => Err("f64".to_string()),
         IdlType::Bytes => Ok("bytes".to_string()),

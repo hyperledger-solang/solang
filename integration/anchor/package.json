@@ -7,7 +7,7 @@
     },
     "dependencies": {
         "@project-serum/anchor": "^0.25.0",
-        "@solana/solidity": "0.0.23",
+        "@solana/solidity": "0.0.25",
         "ts-node": "^10.9.1",
         "tsc-node": "^0.0.3"
     },

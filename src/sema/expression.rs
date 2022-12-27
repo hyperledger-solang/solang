@@ -24,7 +24,6 @@ use num_rational::BigRational;
 use num_traits::{FromPrimitive, Num, One, Pow, ToPrimitive, Zero};
 use solang_parser::pt::{self, CodeLocation, Loc};
 use std::{
-    cmp,
     cmp::Ordering,
     collections::{BTreeMap, HashMap},
     ops::{Mul, Shl, Sub},
@@ -103,7 +102,7 @@ impl RetrieveType for Expression {
                 list[0].ty()
             }
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
-            Expression::InterfaceId(..) => Type::Bytes(4),
+            Expression::InterfaceId(..) => Type::FunctionSelector,
             Expression::FormatString(..) => Type::String,
             // codegen Expressions
             Expression::InternalFunction { ty, .. } => ty.clone(),
@@ -515,6 +514,14 @@ impl Expression {
                     }),
                 }
             }
+            (Type::Bytes(n), Type::FunctionSelector) if *n == ns.target.selector_length() => {
+                Ok(Expression::Cast {
+                    loc: *loc,
+                    to: to.clone(),
+                    expr: Box::new(self.clone()),
+                })
+            }
+
             (Type::Bytes(1), Type::Uint(8)) | (Type::Uint(8), Type::Bytes(1)) => Ok(self.clone()),
             (Type::Uint(from_len), Type::Uint(to_len)) => match from_len.cmp(to_len) {
                 Ordering::Greater => {
@@ -1238,6 +1245,54 @@ impl Expression {
                     expr: Box::new(self.clone()),
                 })
             }
+            (Type::FunctionSelector, Type::Bytes(n)) => {
+                let selector_length = ns.target.selector_length();
+                if *n == selector_length {
+                    Ok(Expression::Cast {
+                        loc: *loc,
+                        to: to.clone(),
+                        expr: self.clone().into(),
+                    })
+                } else {
+                    if *n < selector_length {
+                        diagnostics.push(Diagnostic::warning(
+                            *loc,
+                            format!(
+                                "function selector should only be casted to bytes{} or larger",
+                                selector_length
+                            ),
+                        ));
+                    }
+                    self.cast_types(
+                        loc,
+                        &Type::Bytes(selector_length),
+                        to,
+                        implicit,
+                        ns,
+                        diagnostics,
+                    )
+                }
+            }
+            (Type::FunctionSelector, Type::Uint(n) | Type::Int(n)) => {
+                let selector_width = ns.target.selector_length() * 8;
+                if *n < selector_width as u16 {
+                    diagnostics.push(Diagnostic::warning(
+                        *loc,
+                        format!(
+                            "function selector needs an integer of at least {} bits to avoid being truncated",
+                            selector_width
+                        ),
+                    ));
+                }
+                self.cast_types(
+                    loc,
+                    &Type::Bytes(ns.target.selector_length()),
+                    to,
+                    implicit,
+                    ns,
+                    diagnostics,
+                )
+            }
             _ => {
                 diagnostics.push(Diagnostic::cast_error(
                     *loc,
@@ -1503,15 +1558,25 @@ pub fn coerce_number(
     let (right_len, right_signed) = get_int_length(r, r_loc, false, ns, diagnostics)?;
 
     Ok(match (left_signed, right_signed) {
-        (true, true) => Type::Int(cmp::max(left_len, right_len)),
-        (false, false) => Type::Uint(cmp::max(left_len, right_len)),
-        (true, false) => Type::Int(cmp::max(left_len, cmp::min(right_len + 8, 256))),
-        (false, true) => Type::Int(cmp::max(cmp::min(left_len + 8, 256), right_len)),
+        (true, true) => Type::Int(left_len.max(right_len)),
+        (false, false) => Type::Uint(left_len.max(right_len)),
+        (true, false) => {
+            // uint8 fits into int16
+            let len = left_len.max(right_len + 8);
+
+            Type::Int(len.min(256))
+        }
+        (false, true) => {
+            // uint8 fits into int16
+            let len = (left_len + 8).max(right_len);
+
+            Type::Int(len.min(256))
+        }
     })
 }
 
 /// Resolve the given number literal, multiplied by value of unit
-fn number_literal(
+pub(super) fn number_literal(
     loc: &pt::Loc,
     integer: &str,
     exp: &str,
@@ -2152,7 +2217,20 @@ pub fn expression(
 
                     res
                 }
-                _ => unreachable!(),
+                pt::Expression::Variable(id) => {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!("missing constructor arguments to {}", id.name),
+                    ));
+                    Err(())
+                }
+                expr => {
+                    diagnostics.push(Diagnostic::error(
+                        expr.loc(),
+                        "type with arguments expected".into(),
+                    ));
+                    Err(())
+                }
             }
         }
         pt::Expression::Delete(loc, _) => {
@@ -2446,7 +2524,7 @@ fn hex_literal(
     }
 }
 
-fn hex_number_literal(
+pub(super) fn hex_number_literal(
     loc: &pt::Loc,
     n: &str,
     ns: &mut Namespace,
@@ -3852,9 +3930,17 @@ pub fn new(
 
     let size_ty = size_expr.ty();
 
+    if !matches!(size_ty.deref_any(), Type::Uint(_)) {
+        diagnostics.push(Diagnostic::error(
+            size_expr.loc(),
+            "new dynamic array should have an unsigned length argument".to_string(),
+        ));
+        return Err(());
+    }
+
     let size = if size_ty.deref_any().bits(ns) > 32 {
         diagnostics.push(Diagnostic::warning(
-            *loc,
+            size_expr.loc(),
             format!(
                 "conversion truncates {} to {}, as memory size is type {} on target {}",
                 size_ty.deref_any().to_string(ns),
@@ -4182,11 +4268,13 @@ fn assign_single(
                 }
             }
 
+            let ty = ty.deref_any();
+
             Ok(Expression::Assign(
                 *loc,
                 ty.clone(),
                 Box::new(var.clone()),
-                Box::new(val.cast(&right.loc(), ty.deref_any(), true, ns, diagnostics)?),
+                Box::new(val.cast(&right.loc(), ty, true, ns, diagnostics)?),
             ))
         }
         Expression::Variable(_, var_ty, _) => Ok(Expression::Assign(
@@ -4198,7 +4286,7 @@ fn assign_single(
         _ => match &var_ty {
             Type::Ref(r_ty) => Ok(Expression::Assign(
                 *loc,
-                var_ty.clone(),
+                *r_ty.clone(),
                 Box::new(var),
                 Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
             )),
@@ -4217,7 +4305,7 @@ fn assign_single(
 
                 Ok(Expression::Assign(
                     *loc,
-                    var_ty.clone(),
+                    *r_ty.clone(),
                     Box::new(var),
                     Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
                 ))
@@ -4393,7 +4481,7 @@ fn assign_expr(
             };
             Ok(Expression::Assign(
                 *loc,
-                Type::Void,
+                var_ty.clone(),
                 Box::new(var.clone()),
                 Box::new(op(var, &var_ty, ns, diagnostics)?),
             ))
@@ -4402,7 +4490,7 @@ fn assign_expr(
             Type::Ref(r_ty) => match r_ty.as_ref() {
                 Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign(
                     *loc,
-                    Type::Void,
+                    *r_ty.clone(),
                     Box::new(var.clone()),
                     Box::new(op(
                         var.cast(loc, r_ty, true, ns, diagnostics)?,
@@ -4435,7 +4523,7 @@ fn assign_expr(
                 match r_ty.as_ref() {
                     Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign(
                         *loc,
-                        Type::Void,
+                        *r_ty.clone(),
                         Box::new(var.clone()),
                         Box::new(op(
                             var.cast(loc, r_ty, true, ns, diagnostics)?,
@@ -5046,7 +5134,7 @@ fn member_access(
                 used_variable(ns, &expr, symtable);
                 return Ok(Expression::Builtin(
                     e.loc(),
-                    vec![Type::Bytes(4)],
+                    vec![Type::FunctionSelector],
                     Builtin::FunctionSelector,
                     vec![expr],
                 ));
@@ -5058,7 +5146,7 @@ fn member_access(
                     used_variable(ns, &expr, symtable);
                     return Ok(Expression::Builtin(
                         e.loc(),
-                        vec![Type::Bytes(4)],
+                        vec![Type::FunctionSelector],
                         Builtin::FunctionSelector,
                         vec![expr],
                     ));
@@ -5513,7 +5601,9 @@ pub fn available_super_functions(name: &str, contract_no: usize, ns: &Namespace)
                 .all_functions
                 .keys()
                 .filter_map(|func_no| {
-                    if ns.functions[*func_no].name == name {
+                    let func = &ns.functions[*func_no];
+
+                    if func.name == name && func.has_body {
                         Some(*func_no)
                     } else {
                         None
@@ -7162,7 +7252,7 @@ fn array_literal(
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
-    let mut dims = Box::new(Vec::new());
+    let mut dims = Vec::new();
     let mut flattened = Vec::new();
 
     let resolve_to = match resolve_to {
@@ -7289,9 +7379,9 @@ fn array_literal(
     );
 
     if context.constant {
-        Ok(Expression::ConstArrayLiteral(*loc, aty, *dims, exprs))
+        Ok(Expression::ConstArrayLiteral(*loc, aty, dims, exprs))
     } else {
-        Ok(Expression::ArrayLiteral(*loc, aty, *dims, exprs))
+        Ok(Expression::ArrayLiteral(*loc, aty, dims, exprs))
     }
 }
 
@@ -7796,16 +7886,20 @@ pub fn call_expr(
         {
             new(loc, ty, args, context, ns, symtable, diagnostics)?
         }
-        _ => function_call_expr(
-            loc,
-            ty,
-            args,
-            context,
-            ns,
-            symtable,
-            diagnostics,
-            resolve_to,
-        )?,
+        _ => {
+            deprecated_constructor_arguments(ty, diagnostics)?;
+
+            function_call_expr(
+                loc,
+                ty,
+                args,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                resolve_to,
+            )?
+        }
     };
 
     check_function_call(ns, &expr, symtable);
@@ -7818,6 +7912,37 @@ pub fn call_expr(
     }
 
     Ok(expr)
+}
+
+/// Is it an (new C).value(1).gas(2)(1, 2, 3) style constructor (not supported)?
+fn deprecated_constructor_arguments(
+    expr: &pt::Expression,
+    diagnostics: &mut Diagnostics,
+) -> Result<(), ()> {
+    match expr.remove_parenthesis() {
+        pt::Expression::FunctionCall(func_loc, ty, _) => {
+            if let pt::Expression::MemberAccess(_, ty, call_arg) = ty.as_ref() {
+                if deprecated_constructor_arguments(ty, diagnostics).is_err() {
+                    // location should be the identifier and the arguments
+                    let mut loc = call_arg.loc;
+                    if let pt::Loc::File(_, _, end) = &mut loc {
+                        *end = func_loc.end();
+                    }
+                    diagnostics.push(Diagnostic::error(
+                        loc,
+                        format!("deprecated call argument syntax '.{}(...)' is not supported, use '{{{}: ...}}' instead", call_arg.name, call_arg.name)
+                    ));
+                    return Err(());
+                }
+            }
+        }
+        pt::Expression::New(..) => {
+            return Err(());
+        }
+        _ => (),
+    }
+
+    Ok(())
 }
 
 /// Resolve function call

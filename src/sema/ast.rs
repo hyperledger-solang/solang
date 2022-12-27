@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::symtable::Symtable;
+use crate::abi::anchor::discriminator;
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::diagnostics::Diagnostics;
 use crate::sema::yul::ast::{InlineAssembly, YulFunction};
@@ -9,9 +10,11 @@ use crate::{codegen, Target};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_rational::BigRational;
+use once_cell::unsync::OnceCell;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
-use solang_parser::pt::{CodeLocation, OptionalCodeLocation};
+use solang_parser::pt::{CodeLocation, FunctionTy, OptionalCodeLocation};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -66,6 +69,8 @@ pub enum Type {
     /// e.g. Type::Bytes is a pointer to struct.vector. When we advance it, it is a pointer
     /// to latter's data region.
     BufferPointer,
+    /// The function selector (or discriminator) type is 4 bytes on Substrate and 8 bytes on Solana
+    FunctionSelector,
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
@@ -262,7 +267,7 @@ pub struct Function {
     pub is_accessor: bool,
     pub is_override: Option<(pt::Loc, Vec<usize>)>,
     /// The selector (known as discriminator on Solana/Anchor)
-    pub selector: Option<Vec<u8>>,
+    pub selector: Option<(pt::Loc, Vec<u8>)>,
     /// Was the function declared with a body
     pub has_body: bool,
     /// The resolved body (if any)
@@ -274,6 +279,8 @@ pub struct Function {
     pub mangled_name: String,
     /// Solana constructors may have seeds specified using @seed tags
     pub annotations: Vec<ConstructorAnnotation>,
+    /// Which contracts should we use the mangled name in?
+    pub mangled_name_contracts: HashSet<usize>,
 }
 
 pub enum ConstructorAnnotation {
@@ -374,13 +381,26 @@ impl Function {
             emits_events: Vec::new(),
             mangled_name,
             annotations: Vec::new(),
+            mangled_name_contracts: HashSet::new(),
         }
     }
 
     /// Generate selector for this function
-    pub fn selector(&self) -> Vec<u8> {
-        if let Some(selector) = &self.selector {
+    pub fn selector(&self, ns: &Namespace, contract_no: &usize) -> Vec<u8> {
+        if let Some((_, selector)) = &self.selector {
             selector.clone()
+        } else if ns.target == Target::Solana {
+            match self.ty {
+                FunctionTy::Constructor => discriminator("global", "new"),
+                _ => {
+                    let discriminator_image = if self.mangled_name_contracts.contains(contract_no) {
+                        &self.mangled_name
+                    } else {
+                        &self.name
+                    };
+                    discriminator("global", discriminator_image.as_str())
+                }
+            }
         } else {
             let mut res = [0u8; 32];
 
@@ -630,13 +650,12 @@ pub struct Contract {
     pub initializer: Option<usize>,
     pub default_constructor: Option<(Function, usize)>,
     pub cfg: Vec<ControlFlowGraph>,
-    pub code: Vec<u8>,
+    /// Compiled program. Only available after emit.
+    pub code: OnceCell<Vec<u8>>,
     /// Can the contract be instantiated, i.e. not abstract, no errors, etc.
     pub instantiable: bool,
     /// CFG number of this contract's dispatch function
     pub dispatch_no: usize,
-    /// CFG number of this contract's constructor dispatch
-    pub constructor_dispatch: Option<usize>,
     /// Account of deployed program code on Solana
     pub program_id: Option<Vec<u8>>,
 }
@@ -847,16 +866,16 @@ impl Recurse for CallArgs {
     type ArgType = Expression;
     fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Expression, ctx: &mut T) -> bool) {
         if let Some(gas) = &self.gas {
-            f(gas, cx);
+            gas.recurse(cx, f);
         }
         if let Some(salt) = &self.salt {
-            f(salt, cx);
+            salt.recurse(cx, f);
         }
         if let Some(value) = &self.value {
-            f(value, cx);
+            value.recurse(cx, f);
         }
         if let Some(accounts) = &self.accounts {
-            f(accounts, cx);
+            accounts.recurse(cx, f);
         }
     }
 }
@@ -892,6 +911,7 @@ impl Recurse for Expression {
                 | Expression::ZeroExt { expr, .. }
                 | Expression::SignExt { expr, .. }
                 | Expression::Trunc { expr, .. }
+                | Expression::CheckingTrunc { expr, .. }
                 | Expression::Cast { expr, .. }
                 | Expression::BytesCast { expr, .. }
                 | Expression::PreIncrement(_, _, _, expr)

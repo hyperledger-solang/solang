@@ -1259,43 +1259,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         ns: &ast::Namespace,
     ) {
-        let address_length = binary
-            .context
-            .i32_type()
-            .const_int(ns.address_length as u64 * 2, false);
-
-        let malloc_length = binary.builder.build_int_add(
-            encoded_args_len.into_int_value(),
-            address_length,
-            "malloc_length",
-        );
-
-        // The format of the payload is:
-        // 32 bytes recv (will be filled in by create_contract C function)
-        // 32 bytes sender (will be filled in by create_contract C function)
-        // 4 bytes contract selector/magic
-        // remainder: abi encoded constructor arguments
-        let payload = binary
-            .builder
-            .build_call(
-                binary.module.get_function("__malloc").unwrap(),
-                &[malloc_length.into()],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_pointer_value();
-
-        let enc = unsafe { binary.builder.build_gep(payload, &[address_length], "enc") };
-
-        let buffer_bytes = binary.vector_bytes(encoded_args);
-        binary.builder.build_call(
-            binary.module.get_function("__memcpy").unwrap(),
-            &[enc.into(), buffer_bytes.into(), encoded_args_len.into()],
-            "",
-        );
-
         let const_program_id = binary.builder.build_pointer_cast(
             binary.emit_global_string(
                 "const_program_id",
@@ -1353,8 +1316,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_call(
                 create_contract,
                 &[
-                    payload.into(),
-                    malloc_length.into(),
+                    binary.vector_bytes(encoded_args).into(),
+                    encoded_args_len.into(),
                     address.into(),
                     const_program_id.into(),
                     signer_seeds.into(),
@@ -1521,7 +1484,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         _ty: ast::CallTy,
         _ns: &ast::Namespace,
     ) {
-        let ret = if let Some(address) = address {
+        let address = address.unwrap();
+
+        let ret = if let Some((accounts, accounts_len)) = accounts {
             // build instruction
             let instruction_ty: BasicTypeEnum = binary
                 .module
@@ -1546,8 +1511,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     "SolPubkey",
                 ),
             );
-
-            let (accounts, accounts_len) = accounts.unwrap();
 
             binary.builder.build_store(
                 binary
@@ -1679,17 +1642,27 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let external_call = binary.module.get_function("external_call").unwrap();
 
-            let arg2 = binary.builder.build_pointer_cast(
-                parameters,
-                external_call.get_type().get_param_types()[2].into_pointer_type(),
-                "",
+            // cast [u8; 32]* to SolPubkey*
+            let address = binary.builder.build_pointer_cast(
+                address,
+                binary
+                    .module
+                    .get_struct_type("struct.SolPubkey")
+                    .unwrap()
+                    .ptr_type(AddressSpace::Generic),
+                "address",
             );
 
             binary
                 .builder
                 .build_call(
                     external_call,
-                    &[payload.into(), payload_len.into(), arg2.into()],
+                    &[
+                        address.into(),
+                        payload.into(),
+                        payload_len.into(),
+                        parameters.into(),
+                    ],
                     "",
                 )
                 .try_as_basic_value()
@@ -2046,49 +2019,37 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 binary.builder.build_load(slot, "timestamp")
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Sender, _) => {
-                let parameters = self.sol_parameters(binary);
-
-                let sender = binary
-                    .builder
-                    .build_load(
-                        binary
-                            .builder
-                            .build_struct_gep(parameters, 10, "sender")
-                            .unwrap(),
-                        "sender",
-                    )
-                    .into_pointer_value();
-
-                let sender_address = binary.builder.build_pointer_cast(
-                    sender,
-                    binary.address_type(ns).ptr_type(AddressSpace::Generic),
-                    "",
-                );
-
-                binary.builder.build_load(sender_address, "sender_address")
-            }
             codegen::Expression::Builtin(_, _, codegen::Builtin::GetAddress, _) => {
                 let parameters = self.sol_parameters(binary);
 
-                let account_id = binary
-                    .builder
-                    .build_load(
-                        binary
-                            .builder
-                            .build_struct_gep(parameters, 4, "account_id")
-                            .unwrap(),
-                        "account_id",
+                let key = unsafe {
+                    binary.builder.build_gep(
+                        parameters,
+                        &[
+                            binary.context.i32_type().const_int(0, false), // first SolParameters
+                            binary.context.i32_type().const_int(0, false), // first field of SolParameters
+                            binary.context.i32_type().const_int(0, false), // first element of ka[]
+                            binary.context.i32_type().const_int(0, false), // first field of SolAccountInfo (key)
+                        ],
+                        "key",
                     )
-                    .into_pointer_value();
+                };
 
+                // SolPubkey** => [u8; 32]**
                 let value = binary.builder.build_pointer_cast(
-                    account_id,
-                    binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                    key,
+                    binary
+                        .address_type(ns)
+                        .ptr_type(AddressSpace::Generic)
+                        .ptr_type(AddressSpace::Generic),
                     "",
                 );
 
-                binary.builder.build_load(value, "self_address")
+                let key_pointer = binary.builder.build_load(value, "key_pointer");
+
+                binary
+                    .builder
+                    .build_load(key_pointer.into_pointer_value(), "key")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::ProgramId, _) => {
                 let parameters = self.sol_parameters(binary);
@@ -2098,7 +2059,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .build_load(
                         binary
                             .builder
-                            .build_struct_gep(parameters, 7, "program_id")
+                            .build_struct_gep(parameters, 4, "program_id")
                             .unwrap(),
                         "program_id",
                     )
@@ -2120,7 +2081,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .build_load(
                         binary
                             .builder
-                            .build_struct_gep(sol_params, 5, "input")
+                            .build_struct_gep(sol_params, 2, "input")
                             .unwrap(),
                         "data",
                     )
@@ -2131,7 +2092,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .build_load(
                         binary
                             .builder
-                            .build_struct_gep(sol_params, 6, "input_len")
+                            .build_struct_gep(sol_params, 3, "input_len")
                             .unwrap(),
                         "data_len",
                     )
@@ -2166,7 +2127,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .build_load(
                         binary
                             .builder
-                            .build_struct_gep(sol_params, 5, "input")
+                            .build_struct_gep(sol_params, 2, "input")
                             .unwrap(),
                         "data",
                     )
@@ -2175,13 +2136,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let selector = binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         input,
-                        binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i64_type().ptr_type(AddressSpace::Generic),
                         "selector",
                     ),
                     "selector",
                 );
 
-                let bswap = binary.llvm_bswap(32);
+                let bswap = binary.llvm_bswap(64);
 
                 binary
                     .builder

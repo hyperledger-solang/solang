@@ -102,6 +102,14 @@ impl Target {
             32
         }
     }
+
+    /// This function returns the byte length for a selector, given the target
+    pub fn selector_length(&self) -> u8 {
+        match self {
+            Target::Solana => 8,
+            _ => 4,
+        }
+    }
 }
 
 /// Compile a solidity file to list of wasm files and their ABIs. The filename is only used for error messages;
@@ -121,34 +129,38 @@ pub fn compile(
     log_api_return_codes: bool,
 ) -> (Vec<(Vec<u8>, String)>, sema::ast::Namespace) {
     let mut ns = parse_and_resolve(filename, resolver, target);
+    let opts = codegen::Options {
+        math_overflow_check,
+        log_api_return_codes,
+        opt_level: opt_level.into(),
+        ..Default::default()
+    };
 
     if ns.diagnostics.any_errors() {
         return (Vec::new(), ns);
     }
 
     // codegen all the contracts
-    codegen::codegen(
-        &mut ns,
-        &codegen::Options {
-            math_overflow_check,
-            log_api_return_codes,
-            opt_level: opt_level.into(),
-            ..Default::default()
-        },
-    );
+    codegen::codegen(&mut ns, &opts);
 
-    let results = (0..ns.contracts.len())
-        .filter(|c| ns.contracts[*c].instantiable)
-        .map(|c| {
-            // codegen has already happened
-            assert!(!ns.contracts[c].code.is_empty());
+    if ns.diagnostics.any_errors() {
+        return (Vec::new(), ns);
+    }
 
-            let code = &ns.contracts[c].code;
-            let (abistr, _) = abi::generate_abi(c, &ns, code, false);
+    // emit the contracts
+    let mut results = Vec::new();
 
-            (code.clone(), abistr)
-        })
-        .collect();
+    for contract_no in 0..ns.contracts.len() {
+        let contract = &ns.contracts[contract_no];
+
+        if contract.instantiable {
+            let code = contract.emit(&ns, &opts);
+
+            let (abistr, _) = abi::generate_abi(contract_no, &ns, &code, false);
+
+            results.push((code, abistr));
+        };
+    }
 
     (results, ns)
 }

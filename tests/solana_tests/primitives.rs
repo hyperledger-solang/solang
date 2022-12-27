@@ -28,9 +28,9 @@ fn assert_false() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    vm.function("assert_fails", &[], None);
+    vm.function("assert_fails", &[]);
 }
 
 #[test]
@@ -45,9 +45,9 @@ fn assert_true() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    vm.function("assert_fails", &[], None);
+    vm.function("assert_fails", &[]);
 }
 
 #[test]
@@ -77,18 +77,18 @@ fn boolean() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("return_true", &[], None);
+    let returns = vm.function("return_true", &[]).unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bool(true),]);
+    assert_eq!(returns, BorshToken::Bool(true));
 
-    let returns = vm.function("return_false", &[], None);
+    let returns = vm.function("return_false", &[]).unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bool(false),]);
+    assert_eq!(returns, BorshToken::Bool(false));
 
-    vm.function("true_arg", &[BorshToken::Bool(true)], None);
-    vm.function("false_arg", &[BorshToken::Bool(false)], None);
+    vm.function("true_arg", &[BorshToken::Bool(true)]);
+    vm.function("false_arg", &[BorshToken::Bool(false)]);
 }
 
 #[test]
@@ -111,25 +111,24 @@ fn address() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("return_address", &[], None);
+    let returns = vm.function("return_address", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::FixedBytes(vec![
+        BorshToken::Address([
             171, 59, 10, 127, 211, 122, 217, 123, 53, 213, 159, 40, 54, 36, 50, 52, 196, 144, 17,
             226, 97, 168, 69, 213, 79, 14, 6, 232, 165, 44, 58, 31
-        ]),]
+        ]),
     );
 
     vm.function(
         "address_arg",
-        &[BorshToken::FixedBytes(vec![
+        &[BorshToken::Address([
             75, 161, 209, 89, 47, 84, 50, 13, 23, 127, 94, 21, 50, 249, 250, 185, 117, 49, 186,
             134, 82, 130, 112, 97, 218, 24, 157, 198, 40, 105, 118, 27,
         ])],
-        None,
     );
 }
 
@@ -154,16 +153,16 @@ fn test_enum() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("return_enum", &[], None);
+    let returns = vm.function("return_enum", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 8,
             value: BigInt::from(9u8)
-        }]
+        }
     );
 
     vm.function(
@@ -172,7 +171,6 @@ fn test_enum() {
             width: 8,
             value: BigInt::from(6u8),
         }],
-        None,
     );
 }
 
@@ -215,24 +213,25 @@ fn bytes() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[]);
+        vm.constructor(&[]);
 
-        let returns = vm.function("return_literal", &[], None);
-
-        assert_eq!(
-            returns,
-            vec![BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7]),]
-        );
-
-        let returns = vm.function(
-            "return_arg",
-            &[BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
-            None,
-        );
+        let returns = vm.function("return_literal", &[]).unwrap();
 
         assert_eq!(
             returns,
-            vec![BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])]
+            BorshToken::uint8_fixed_array(vec![1, 2, 3, 4, 5, 6, 7])
+        );
+
+        let returns = vm
+            .function(
+                "return_arg",
+                &[BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
+            )
+            .unwrap();
+
+        assert_eq!(
+            returns,
+            BorshToken::uint8_fixed_array(vec![1, 2, 3, 4, 5, 6, 7])
         );
 
         for _ in 0..10 {
@@ -245,14 +244,15 @@ fn bytes() {
             rng.fill(&mut a[..]);
             rng.fill(&mut b[..]);
 
-            let or = vm.function(
-                "or",
-                &[
-                    BorshToken::FixedBytes(a.to_vec()),
-                    BorshToken::FixedBytes(b.to_vec()),
-                ],
-                None,
-            );
+            let or = vm
+                .function(
+                    "or",
+                    &[
+                        BorshToken::FixedBytes(a.to_vec()),
+                        BorshToken::FixedBytes(b.to_vec()),
+                    ],
+                )
+                .unwrap();
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a | b).collect();
 
@@ -263,49 +263,52 @@ fn bytes() {
                 hex::encode(&res)
             );
 
-            assert_eq!(or, vec![BorshToken::FixedBytes(res)]);
+            assert_eq!(or, BorshToken::uint8_fixed_array(res));
 
-            let and = vm.function(
-                "and",
-                &[
-                    BorshToken::FixedBytes(a.to_vec()),
-                    BorshToken::FixedBytes(b.to_vec()),
-                ],
-                None,
-            );
+            let and = vm
+                .function(
+                    "and",
+                    &[
+                        BorshToken::FixedBytes(a.to_vec()),
+                        BorshToken::FixedBytes(b.to_vec()),
+                    ],
+                )
+                .unwrap();
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a & b).collect();
 
-            assert_eq!(and, vec![BorshToken::FixedBytes(res)]);
+            assert_eq!(and, BorshToken::uint8_fixed_array(res));
 
-            let xor = vm.function(
-                "xor",
-                &[
-                    BorshToken::FixedBytes(a.to_vec()),
-                    BorshToken::FixedBytes(b.to_vec()),
-                ],
-                None,
-            );
+            let xor = vm
+                .function(
+                    "xor",
+                    &[
+                        BorshToken::FixedBytes(a.to_vec()),
+                        BorshToken::FixedBytes(b.to_vec()),
+                    ],
+                )
+                .unwrap();
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a ^ b).collect();
 
-            assert_eq!(xor, vec![BorshToken::FixedBytes(res)]);
+            assert_eq!(xor, BorshToken::uint8_fixed_array(res));
 
             let r = rng.gen::<u32>() % (width as u32 * 8);
 
             println!("w = {} r = {}", width, r);
 
-            let shl = vm.function(
-                "shift_left",
-                &[
-                    BorshToken::FixedBytes(a.to_vec()),
-                    BorshToken::Uint {
-                        width: 32,
-                        value: BigInt::from(r),
-                    },
-                ],
-                None,
-            );
+            let shl = vm
+                .function(
+                    "shift_left",
+                    &[
+                        BorshToken::FixedBytes(a.to_vec()),
+                        BorshToken::Uint {
+                            width: 32,
+                            value: BigInt::from(r),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = (BigUint::from_bytes_be(&a) << r).to_bytes_be();
 
@@ -317,19 +320,20 @@ fn bytes() {
                 res.insert(0, 0);
             }
 
-            assert_eq!(shl, vec![BorshToken::FixedBytes(res)]);
+            assert_eq!(shl, BorshToken::uint8_fixed_array(res));
 
-            let shr = vm.function(
-                "shift_right",
-                &[
-                    BorshToken::FixedBytes(a.to_vec()),
-                    BorshToken::Uint {
-                        width: 32,
-                        value: BigInt::from(r),
-                    },
-                ],
-                None,
-            );
+            let shr = vm
+                .function(
+                    "shift_right",
+                    &[
+                        BorshToken::FixedBytes(a.to_vec()),
+                        BorshToken::Uint {
+                            width: 32,
+                            value: BigInt::from(r),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = (BigUint::from_bytes_be(&a) >> r).to_bytes_be();
 
@@ -337,7 +341,7 @@ fn bytes() {
                 res.insert(0, 0);
             }
 
-            assert_eq!(shr, vec![BorshToken::FixedBytes(res)]);
+            assert_eq!(shr, BorshToken::uint8_fixed_array(res));
         }
     }
 }
@@ -346,7 +350,7 @@ fn bytes() {
 fn uint() {
     let mut rng = rand::thread_rng();
 
-    for width in (8..=256).step_by(8) {
+    for width in (8u16..=256).step_by(8) {
         let src = r#"
         contract test {
             function pass(uintN a) public returns (uintN) {
@@ -406,9 +410,10 @@ fn uint() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[]);
+        vm.constructor(&[]);
 
         println!("width:{}", width);
+        let returned_width = width.next_power_of_two();
 
         for _ in 0..10 {
             let mut a = rng.gen_biguint(width as u64);
@@ -420,28 +425,28 @@ fn uint() {
             let res = vm.function(
                 "pass",
                 &[BorshToken::Uint {
-                    width: width as u16,
+                    width,
                     value: a.to_bigint().unwrap(),
                 }],
-                None,
             );
 
             println!("{:x} = {:?} o", a, res);
 
-            let add = vm.function(
-                "add",
-                &[
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: a.to_bigint().unwrap(),
-                    },
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: b.to_bigint().unwrap(),
-                    },
-                ],
-                None,
-            );
+            let add = vm
+                .function(
+                    "add",
+                    &[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().add(&b);
             truncate_biguint(&mut res, width);
@@ -450,108 +455,112 @@ fn uint() {
 
             assert_eq!(
                 add,
-                vec![BorshToken::Uint {
-                    width: width as u16,
+                BorshToken::Uint {
+                    width: returned_width,
                     value: res.to_bigint().unwrap(),
-                }]
+                }
             );
 
-            let sub = vm.function(
-                "sub",
-                &[
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: a.to_bigint().unwrap(),
-                    },
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: b.to_bigint().unwrap(),
-                    },
-                ],
-                None,
-            );
+            let sub = vm
+                .function(
+                    "sub",
+                    &[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().sub(&b);
             truncate_biguint(&mut res, width);
 
             assert_eq!(
                 sub,
-                vec![BorshToken::Uint {
-                    width: width as u16,
+                BorshToken::Uint {
+                    width: returned_width,
                     value: res.to_bigint().unwrap(),
-                }]
+                }
             );
 
-            let mul = vm.function(
-                "mul",
-                &[
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: a.to_bigint().unwrap(),
-                    },
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: b.to_bigint().unwrap(),
-                    },
-                ],
-                None,
-            );
+            let mul = vm
+                .function(
+                    "mul",
+                    &[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().mul(&b);
             truncate_biguint(&mut res, width);
 
             assert_eq!(
                 mul,
-                vec![BorshToken::Uint {
-                    width: width as u16,
+                BorshToken::Uint {
+                    width: returned_width,
                     value: res.to_bigint().unwrap(),
-                }]
+                }
             );
 
             if let Some(mut n) = b.to_u32() {
                 n %= 65536;
-                let pow = vm.function(
-                    "pow",
-                    &[
-                        BorshToken::Uint {
-                            width: width as u16,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width: width as u16,
-                            value: BigInt::from(n),
-                        },
-                    ],
-                    None,
-                );
+                let pow = vm
+                    .function(
+                        "pow",
+                        &[
+                            BorshToken::Uint {
+                                width,
+                                value: a.to_bigint().unwrap(),
+                            },
+                            BorshToken::Uint {
+                                width,
+                                value: BigInt::from(n),
+                            },
+                        ],
+                    )
+                    .unwrap();
 
                 let mut res = a.clone().pow(n);
                 truncate_biguint(&mut res, width);
 
                 assert_eq!(
                     pow,
-                    vec![BorshToken::Uint {
-                        width: width as u16,
+                    BorshToken::Uint {
+                        width: returned_width,
                         value: res.to_bigint().unwrap(),
-                    }]
+                    }
                 );
             }
 
             if b != BigUint::zero() {
-                let div = vm.function(
-                    "div",
-                    &[
-                        BorshToken::Uint {
-                            width: width as u16,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width: width as u16,
-                            value: b.to_bigint().unwrap(),
-                        },
-                    ],
-                    None,
-                );
+                let div = vm
+                    .function(
+                        "div",
+                        &[
+                            BorshToken::Uint {
+                                width,
+                                value: a.to_bigint().unwrap(),
+                            },
+                            BorshToken::Uint {
+                                width,
+                                value: b.to_bigint().unwrap(),
+                            },
+                        ],
+                    )
+                    .unwrap();
 
                 let mut res = a.clone().div(&b);
 
@@ -559,26 +568,27 @@ fn uint() {
 
                 assert_eq!(
                     div,
-                    vec![BorshToken::Uint {
-                        width: width as u16,
+                    BorshToken::Uint {
+                        width: returned_width,
                         value: res.to_bigint().unwrap(),
-                    }]
+                    }
                 );
 
-                let add = vm.function(
-                    "mod",
-                    &[
-                        BorshToken::Uint {
-                            width: width as u16,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width: width as u16,
-                            value: b.to_bigint().unwrap(),
-                        },
-                    ],
-                    None,
-                );
+                let add = vm
+                    .function(
+                        "mod",
+                        &[
+                            BorshToken::Uint {
+                                width,
+                                value: a.to_bigint().unwrap(),
+                            },
+                            BorshToken::Uint {
+                                width,
+                                value: b.to_bigint().unwrap(),
+                            },
+                        ],
+                    )
+                    .unwrap();
 
                 let mut res = a.clone().rem(&b);
 
@@ -586,107 +596,111 @@ fn uint() {
 
                 assert_eq!(
                     add,
-                    vec![BorshToken::Uint {
-                        width: width as u16,
+                    BorshToken::Uint {
+                        width: returned_width,
                         value: res.to_bigint().unwrap(),
-                    }]
+                    }
                 );
             }
 
-            let or = vm.function(
-                "or",
-                &[
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: a.to_bigint().unwrap(),
-                    },
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: b.to_bigint().unwrap(),
-                    },
-                ],
-                None,
-            );
+            let or = vm
+                .function(
+                    "or",
+                    &[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().bitor(&b);
             truncate_biguint(&mut res, width);
 
             assert_eq!(
                 or,
-                vec![BorshToken::Uint {
-                    width: width as u16,
+                BorshToken::Uint {
+                    width: returned_width,
                     value: res.to_bigint().unwrap(),
-                }]
+                }
             );
 
-            let and = vm.function(
-                "and",
-                &[
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: a.to_bigint().unwrap(),
-                    },
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: b.to_bigint().unwrap(),
-                    },
-                ],
-                None,
-            );
+            let and = vm
+                .function(
+                    "and",
+                    &[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().bitand(&b);
             truncate_biguint(&mut res, width);
 
             assert_eq!(
                 and,
-                vec![BorshToken::Uint {
-                    width: width as u16,
+                BorshToken::Uint {
+                    width: returned_width,
                     value: res.to_bigint().unwrap(),
-                }]
+                }
             );
 
-            let xor = vm.function(
-                "xor",
-                &[
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: a.to_bigint().unwrap(),
-                    },
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: b.to_bigint().unwrap(),
-                    },
-                ],
-                None,
-            );
+            let xor = vm
+                .function(
+                    "xor",
+                    &[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().bitxor(&b);
             truncate_biguint(&mut res, width);
 
             assert_eq!(
                 xor,
-                vec![BorshToken::Uint {
-                    width: width as u16,
+                BorshToken::Uint {
+                    width: returned_width,
                     value: res.to_bigint().unwrap(),
-                }]
+                }
             );
 
             let r = rng.gen::<u32>() % (width as u32);
 
-            let shl = vm.function(
-                "shift_left",
-                &[
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: a.to_bigint().unwrap(),
-                    },
-                    BorshToken::Uint {
-                        width: 32,
-                        value: BigInt::from(r),
-                    },
-                ],
-                None,
-            );
+            let shl = vm
+                .function(
+                    "shift_left",
+                    &[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width: 32,
+                            value: BigInt::from(r),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone();
             res.shl_assign(r);
@@ -694,26 +708,27 @@ fn uint() {
 
             assert_eq!(
                 shl,
-                vec![BorshToken::Uint {
-                    width: width as u16,
+                BorshToken::Uint {
+                    width: returned_width,
                     value: res.to_bigint().unwrap(),
-                }]
+                }
             );
 
-            let shr = vm.function(
-                "shift_right",
-                &[
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: a.to_bigint().unwrap(),
-                    },
-                    BorshToken::Uint {
-                        width: 32,
-                        value: BigInt::from(r),
-                    },
-                ],
-                None,
-            );
+            let shr = vm
+                .function(
+                    "shift_right",
+                    &[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width: 32,
+                            value: BigInt::from(r),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone();
             res.shr_assign(&r);
@@ -721,18 +736,18 @@ fn uint() {
 
             assert_eq!(
                 shr,
-                vec![BorshToken::Uint {
-                    width: width as u16,
+                BorshToken::Uint {
+                    width: returned_width,
                     value: res.to_bigint().unwrap(),
-                }]
+                }
             );
         }
     }
 }
 
-fn truncate_biguint(n: &mut BigUint, width: usize) {
+fn truncate_biguint(n: &mut BigUint, width: u16) {
     let mut bytes = n.to_bytes_le();
-    let byte_width = width / 8;
+    let byte_width = (width / 8) as usize;
     if bytes.len() < byte_width {
         return;
     }
@@ -746,7 +761,7 @@ fn truncate_biguint(n: &mut BigUint, width: usize) {
 
 #[test]
 fn test_power_overflow_boundaries() {
-    for width in (8..=256).step_by(8) {
+    for width in (8u16..=256).step_by(8) {
         let src = r#"
         contract test {
             function pow(uintN a, uintN b) public returns (uintN) {
@@ -756,31 +771,32 @@ fn test_power_overflow_boundaries() {
         .replace("intN", &format!("int{}", width));
 
         let mut contract = build_solidity_with_overflow_check(&src, true);
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
 
-        let return_value = contract.function(
-            "pow",
-            &[
-                BorshToken::Uint {
-                    width,
-                    value: BigInt::from(2u8),
-                },
-                BorshToken::Uint {
-                    width,
-                    value: BigInt::from(width - 1),
-                },
-            ],
-            None,
-        );
+        let return_value = contract
+            .function(
+                "pow",
+                &[
+                    BorshToken::Uint {
+                        width,
+                        value: BigInt::from(2u8),
+                    },
+                    BorshToken::Uint {
+                        width,
+                        value: BigInt::from(width - 1),
+                    },
+                ],
+            )
+            .unwrap();
 
         let res = BigUint::from(2_u32).pow((width - 1) as u32);
 
         assert_eq!(
             return_value,
-            vec![BorshToken::Uint {
-                width,
+            BorshToken::Uint {
+                width: width.next_power_of_two(),
                 value: res.to_bigint().unwrap(),
-            }]
+            }
         );
 
         let sesa = contract.function_must_fail(
@@ -795,7 +811,6 @@ fn test_power_overflow_boundaries() {
                     value: BigInt::from(width + 1),
                 },
             ],
-            None,
         );
 
         assert_ne!(sesa, Ok(0));
@@ -821,50 +836,54 @@ fn test_overflow_boundaries() {
         lower_boundary.mul_assign(-1);
         let second_op = BigInt::from(1_u32);
 
+        let returned_width = (width as u16).next_power_of_two();
+
         // Multiply the boundaries by 1.
-        contract.constructor("test", &[]);
-        let return_value = contract.function(
-            "mul",
-            &[
-                BorshToken::Int {
-                    width: width as u16,
-                    value: upper_boundary.clone(),
-                },
-                BorshToken::Int {
-                    width: width as u16,
-                    value: second_op.clone(),
-                },
-            ],
-            None,
-        );
+        contract.constructor(&[]);
+        let return_value = contract
+            .function(
+                "mul",
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: upper_boundary.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: second_op.clone(),
+                    },
+                ],
+            )
+            .unwrap();
         assert_eq!(
             return_value,
-            vec![BorshToken::Int {
-                width: width as u16,
+            BorshToken::Int {
+                width: returned_width,
                 value: upper_boundary.clone(),
-            }]
+            }
         );
 
-        let return_value = contract.function(
-            "mul",
-            &[
-                BorshToken::Int {
-                    width: width as u16,
-                    value: lower_boundary.clone(),
-                },
-                BorshToken::Int {
-                    width: width as u16,
-                    value: second_op.clone(),
-                },
-            ],
-            None,
-        );
+        let return_value = contract
+            .function(
+                "mul",
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: lower_boundary.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: second_op.clone(),
+                    },
+                ],
+            )
+            .unwrap();
         assert_eq!(
             return_value,
-            vec![BorshToken::Int {
-                width: width as u16,
+            BorshToken::Int {
+                width: returned_width,
                 value: lower_boundary.clone(),
-            },]
+            },
         );
 
         let upper_boundary_plus_one: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -890,7 +909,6 @@ fn test_overflow_boundaries() {
                     value: BigInt::from(2u8),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -907,7 +925,6 @@ fn test_overflow_boundaries() {
                     value: BigInt::from(2),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -924,7 +941,6 @@ fn test_overflow_boundaries() {
                     value: upper_boundary.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -941,7 +957,6 @@ fn test_overflow_boundaries() {
                     value: lower_boundary.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -958,7 +973,6 @@ fn test_overflow_boundaries() {
                     value: lower_boundary.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -989,29 +1003,30 @@ fn test_mul_within_range_signed() {
         let second_op = BigInt::from(*side.choose(&mut rng).unwrap());
         println!("second op : {:?}", second_op);
 
-        contract.constructor("test", &[]);
-        let return_value = contract.function(
-            "mul",
-            &[
-                BorshToken::Int {
-                    width: width as u16,
-                    value: first_operand_rand.clone(),
-                },
-                BorshToken::Int {
-                    width: width as u16,
-                    value: second_op.clone(),
-                },
-            ],
-            None,
-        );
+        contract.constructor(&[]);
+        let return_value = contract
+            .function(
+                "mul",
+                &[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: first_operand_rand.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: second_op.clone(),
+                    },
+                ],
+            )
+            .unwrap();
 
         let res = first_operand_rand.mul(second_op);
         assert_eq!(
             return_value,
-            vec![BorshToken::Int {
-                width: width as u16,
+            BorshToken::Int {
+                width: width.next_power_of_two() as u16,
                 value: res,
-            }]
+            }
         );
     }
 }
@@ -1029,7 +1044,7 @@ fn test_mul_within_range() {
         .replace("intN", &format!("int{}", width));
 
         let mut contract = build_solidity_with_overflow_check(&src, true);
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
         for _ in 0..10 {
             // Max number to fit unsigned N bits is (2^N)-1
             let mut limit: BigUint = BigUint::from(2_u32).pow(width as u32);
@@ -1041,28 +1056,29 @@ fn test_mul_within_range() {
             // Calculate a number that when multiplied by first_operand_rand, the result will not overflow N bits (the result of this division will cast the float result to int result, therefore lowering it. The result of multiplication will never overflow).
             let second_operand_rand = limit.div(&first_operand_rand);
 
-            let return_value = contract.function(
-                "mul",
-                &[
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: first_operand_rand.to_bigint().unwrap(),
-                    },
-                    BorshToken::Uint {
-                        width: width as u16,
-                        value: second_operand_rand.to_bigint().unwrap(),
-                    },
-                ],
-                None,
-            );
+            let return_value = contract
+                .function(
+                    "mul",
+                    &[
+                        BorshToken::Uint {
+                            width: width as u16,
+                            value: first_operand_rand.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width: width as u16,
+                            value: second_operand_rand.to_bigint().unwrap(),
+                        },
+                    ],
+                )
+                .unwrap();
             let res = first_operand_rand * second_operand_rand;
 
             assert_eq!(
                 return_value,
-                vec![BorshToken::Uint {
-                    width: width as u16,
+                BorshToken::Uint {
+                    width: (width as u16).next_power_of_two(),
                     value: res.to_bigint().unwrap(),
-                }]
+                }
             );
         }
     }
@@ -1081,7 +1097,7 @@ fn test_overflow_detect_signed() {
         .replace("intN", &format!("int{}", width));
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
         let mut limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1106,7 +1122,6 @@ fn test_overflow_detect_signed() {
                     value: second_operand_rand.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -1132,7 +1147,6 @@ fn test_overflow_detect_signed() {
                     value: second_operand_rand.clone(),
                 },
             ],
-            None,
         );
 
         assert_ne!(res, Ok(0));
@@ -1152,7 +1166,7 @@ fn test_overflow_detect_unsigned() {
         .replace("intN", &format!("int{}", width));
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
-        contract.constructor("test", &[]);
+        contract.constructor(&[]);
 
         for _ in 0..10 {
             // N bits can hold the range [0, (2^N)-1]. Generate a value that overflows N bits
@@ -1178,7 +1192,6 @@ fn test_overflow_detect_unsigned() {
                         value: second_operand_rand.to_bigint().unwrap(),
                     },
                 ],
-                None,
             );
             assert_ne!(res, Ok(0));
         }
@@ -1238,119 +1251,154 @@ fn int() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor("test", &[]);
+        vm.constructor(&[]);
+
+        let returned_width = (width as u16).next_power_of_two();
 
         for _ in 0..10 {
             let a = rng.gen_bigint(width - 1);
             let b = rng.gen_bigint(width - 1);
 
-            let add = vm.function(
-                "add",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: a.clone(),
-                    },
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: b.clone(),
-                    },
-                ],
-                None,
-            );
+            let add = vm
+                .function(
+                    "add",
+                    &[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: b.clone(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().add(&b);
             truncate_bigint(&mut res, width as usize);
 
             assert_eq!(
                 add,
-                vec![BorshToken::Int {
-                    width: width as u16,
+                BorshToken::Int {
+                    width: returned_width,
                     value: res,
-                }]
+                }
             );
 
-            let sub = vm.function(
-                "sub",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: a.clone(),
-                    },
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: b.clone(),
-                    },
-                ],
-                None,
-            );
+            let sub = vm
+                .function(
+                    "sub",
+                    &[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: b.clone(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().sub(&b);
             truncate_bigint(&mut res, width as usize);
 
             assert_eq!(
                 sub,
-                vec![BorshToken::Int {
-                    width: width as u16,
+                BorshToken::Int {
+                    width: returned_width,
                     value: res,
-                }]
+                }
             );
 
-            let mul = vm.function(
-                "mul",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: a.clone(),
-                    },
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: b.clone(),
-                    },
-                ],
-                None,
-            );
+            let mul = vm
+                .function(
+                    "mul",
+                    &[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: b.clone(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().mul(&b);
             truncate_bigint(&mut res, width as usize);
 
             assert_eq!(
                 mul,
-                vec![BorshToken::Int {
-                    width: width as u16,
+                BorshToken::Int {
+                    width: returned_width,
                     value: res,
-                }]
+                }
             );
 
             if b != BigInt::zero() {
-                let div = vm.function(
-                    "div",
-                    &[
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: a.clone(),
-                        },
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: b.clone(),
-                        },
-                    ],
-                    None,
-                );
+                let div = vm
+                    .function(
+                        "div",
+                        &[
+                            BorshToken::Int {
+                                width: width as u16,
+                                value: a.clone(),
+                            },
+                            BorshToken::Int {
+                                width: width as u16,
+                                value: b.clone(),
+                            },
+                        ],
+                    )
+                    .unwrap();
 
                 let mut res = a.clone().div(&b);
                 truncate_bigint(&mut res, width as usize);
 
                 assert_eq!(
                     div,
-                    vec![BorshToken::Int {
-                        width: width as u16,
+                    BorshToken::Int {
+                        width: returned_width,
                         value: res,
-                    }]
+                    }
                 );
 
-                let add = vm.function(
-                    "mod",
+                let add = vm
+                    .function(
+                        "mod",
+                        &[
+                            BorshToken::Int {
+                                width: width as u16,
+                                value: a.clone(),
+                            },
+                            BorshToken::Int {
+                                width: width as u16,
+                                value: b.clone(),
+                            },
+                        ],
+                    )
+                    .unwrap();
+
+                let mut res = a.clone().rem(&b);
+                truncate_bigint(&mut res, width as usize);
+
+                assert_eq!(
+                    add,
+                    BorshToken::Int {
+                        width: returned_width,
+                        value: res,
+                    }
+                );
+            }
+
+            let or = vm
+                .function(
+                    "or",
                     &[
                         BorshToken::Int {
                             width: width as u16,
@@ -1361,115 +1409,91 @@ fn int() {
                             value: b.clone(),
                         },
                     ],
-                    None,
-                );
-
-                let mut res = a.clone().rem(&b);
-                truncate_bigint(&mut res, width as usize);
-
-                assert_eq!(
-                    add,
-                    vec![BorshToken::Int {
-                        width: width as u16,
-                        value: res,
-                    }]
-                );
-            }
-
-            let or = vm.function(
-                "or",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: a.clone(),
-                    },
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: b.clone(),
-                    },
-                ],
-                None,
-            );
+                )
+                .unwrap();
 
             let mut res = a.clone().bitor(&b);
             truncate_bigint(&mut res, width as usize);
 
             assert_eq!(
                 or,
-                vec![BorshToken::Int {
-                    width: width as u16,
+                BorshToken::Int {
+                    width: returned_width,
                     value: res,
-                }]
+                }
             );
 
-            let and = vm.function(
-                "and",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: a.clone(),
-                    },
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: b.clone(),
-                    },
-                ],
-                None,
-            );
+            let and = vm
+                .function(
+                    "and",
+                    &[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: b.clone(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().bitand(&b);
             truncate_bigint(&mut res, width as usize);
 
             assert_eq!(
                 and,
-                vec![BorshToken::Int {
-                    width: width as u16,
+                BorshToken::Int {
+                    width: returned_width,
                     value: res,
-                }]
+                }
             );
 
-            let xor = vm.function(
-                "xor",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: a.clone(),
-                    },
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: b.clone(),
-                    },
-                ],
-                None,
-            );
+            let xor = vm
+                .function(
+                    "xor",
+                    &[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: b.clone(),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().bitxor(&b);
             truncate_bigint(&mut res, width as usize);
 
             assert_eq!(
                 xor,
-                vec![BorshToken::Int {
-                    width: width as u16,
+                BorshToken::Int {
+                    width: returned_width,
                     value: res,
-                }]
+                }
             );
 
             let r = rng.gen::<u32>() % (width as u32);
 
-            let shl = vm.function(
-                "shift_left",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: a.clone(),
-                    },
-                    BorshToken::Uint {
-                        width: 32,
-                        value: BigInt::from(r),
-                    },
-                ],
-                None,
-            );
+            let shl = vm
+                .function(
+                    "shift_left",
+                    &[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Uint {
+                            width: 32,
+                            value: BigInt::from(r),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.clone().shl(r);
 
@@ -1477,35 +1501,36 @@ fn int() {
 
             assert_eq!(
                 shl,
-                vec![BorshToken::Int {
-                    width: width as u16,
+                BorshToken::Int {
+                    width: returned_width,
                     value: res,
-                }]
+                }
             );
 
-            let shr = vm.function(
-                "shift_right",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: a.clone(),
-                    },
-                    BorshToken::Uint {
-                        width: 32,
-                        value: BigInt::from(r),
-                    },
-                ],
-                None,
-            );
+            let shr = vm
+                .function(
+                    "shift_right",
+                    &[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Uint {
+                            width: 32,
+                            value: BigInt::from(r),
+                        },
+                    ],
+                )
+                .unwrap();
 
             let mut res = a.shr(r);
             truncate_bigint(&mut res, width as usize);
             assert_eq!(
                 shr,
-                vec![BorshToken::Int {
-                    width: width as u16,
+                BorshToken::Int {
+                    width: returned_width,
                     value: res,
-                }]
+                }
             );
         }
     }
@@ -1539,17 +1564,17 @@ fn bytes_cast() {
         "#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function(
-        "to_bytes",
-        &[BorshToken::FixedBytes(b"abcd".to_vec())],
-        None,
-    );
+    let returns = vm
+        .function("to_bytes", &[BorshToken::FixedBytes(b"abcd".to_vec())])
+        .unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bytes(b"abcd".to_vec())]);
+    assert_eq!(returns, BorshToken::Bytes(b"abcd".to_vec()));
 
-    let returns = vm.function("to_bytes5", &[BorshToken::Bytes(b"abcde".to_vec())], None);
+    let returns = vm
+        .function("to_bytes5", &[BorshToken::Bytes(b"abcde".to_vec())])
+        .unwrap();
 
-    assert_eq!(returns, vec![BorshToken::FixedBytes(b"abcde".to_vec())]);
+    assert_eq!(returns, BorshToken::uint8_fixed_array(b"abcde".to_vec()));
 }

@@ -20,13 +20,13 @@ fn simple() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     assert_eq!(vm.logs, "Hello from constructor");
 
     vm.logs.truncate(0);
 
-    vm.function("test", &[], None);
+    vm.function("test", &[]);
 
     assert_eq!(vm.logs, "Hello from function");
 }
@@ -44,7 +44,7 @@ fn format() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     assert_eq!(
         vm.logs,
@@ -69,7 +69,7 @@ fn parameters() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     vm.function(
         "test",
@@ -83,7 +83,6 @@ fn parameters() {
                 value: BigInt::from(10u8),
             },
         ],
-        None,
     );
 
     assert_eq!(vm.logs, "x is 10");
@@ -102,7 +101,6 @@ fn parameters() {
                 value: BigInt::from(102u8),
             },
         ],
-        None,
     );
 
     assert_eq!(vm.logs, "y is 102");
@@ -119,23 +117,24 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function(
-        "test",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::from(10u8),
-        }],
-        None,
-    );
+    let returns = vm
+        .function(
+            "test",
+            &[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(10u8),
+            }],
+        )
+        .unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 32,
             value: BigInt::from(100u8)
-        },]
+        }
     );
 
     let mut vm = build_solidity(
@@ -147,16 +146,18 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function(
-        "test",
-        &[BorshToken::Uint {
-            width: 64,
-            value: BigInt::from(982451653u64),
-        }],
-        None,
-    );
+    let returns = vm
+        .function(
+            "test",
+            &[BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(982451653u64),
+            }],
+        )
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -196,27 +197,27 @@ fn flipper() {
         }"#,
     );
 
-    vm.constructor("flipper", &[BorshToken::Bool(true)]);
+    vm.constructor(&[BorshToken::Bool(true)]);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000001").unwrap()
     );
 
-    let returns = vm.function("get", &[], None);
+    let returns = vm.function("get", &[]).unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bool(true)]);
+    assert_eq!(returns, BorshToken::Bool(true));
 
-    vm.function("flip", &[], None);
+    vm.function("flip", &[]);
 
     assert_eq!(
         vm.data()[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000000").unwrap()
     );
 
-    let returns = vm.function("get", &[], None);
+    let returns = vm.function("get", &[]).unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bool(false)]);
+    assert_eq!(returns, BorshToken::Bool(false));
 }
 
 #[test]
@@ -250,22 +251,19 @@ fn incrementer() {
         }"#,
     );
 
-    vm.constructor(
-        "incrementer",
-        &[BorshToken::Uint {
-            width: 32,
-            value: BigInt::from(5u8),
-        }],
-    );
+    vm.constructor(&[BorshToken::Uint {
+        width: 32,
+        value: BigInt::from(5u8),
+    }]);
 
-    let returns = vm.function("get", &[], None);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 32,
             value: BigInt::from(5u8),
-        }]
+        }
     );
 
     vm.function(
@@ -274,17 +272,16 @@ fn incrementer() {
             width: 32,
             value: BigInt::from(5u8),
         }],
-        None,
     );
 
-    let returns = vm.function("get", &[], None);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 32,
             value: BigInt::from(10u8),
-        }]
+        }
     );
 }
 
@@ -332,7 +329,7 @@ fn two_arrays() {
         }"#,
     );
 
-    vm.constructor("two_arrays", &[]);
+    vm.constructor(&[]);
 }
 
 #[test]
@@ -357,16 +354,16 @@ fn dead_storage_bug() {
         }"#,
     );
 
-    vm.constructor("deadstorage", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("v", &[], None);
+    let returns = vm.function("v", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(9991u16)
-        }]
+        }
     );
 }
 
@@ -416,50 +413,52 @@ contract test3 {
     );
 
     // call constructor
-    runtime.constructor("test3", &[]);
+    runtime.constructor(&[]);
 
     for i in 0..=50 {
         let res = ((50 - i) * 100 + 5) + i * 1000;
 
-        let returns = runtime.function(
-            "foo",
-            &[BorshToken::Uint {
-                width: 32,
-                value: BigInt::from(i),
-            }],
-            None,
-        );
+        let returns = runtime
+            .function(
+                "foo",
+                &[BorshToken::Uint {
+                    width: 32,
+                    value: BigInt::from(i),
+                }],
+            )
+            .unwrap();
 
         assert_eq!(
             returns,
-            vec![BorshToken::Uint {
+            BorshToken::Uint {
                 width: 32,
                 value: BigInt::from(res)
-            }]
+            }
         );
     }
 
     for i in 0..=50 {
         let res = (i + 1) * 10 + 1;
 
-        let returns = runtime.function(
-            "bar",
-            &[
-                BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(i),
-                },
-                BorshToken::Bool(true),
-            ],
-            None,
-        );
+        let returns = runtime
+            .function(
+                "bar",
+                &[
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(i),
+                    },
+                    BorshToken::Bool(true),
+                ],
+            )
+            .unwrap();
 
         assert_eq!(
             returns,
-            vec![BorshToken::Uint {
+            BorshToken::Uint {
                 width: 32,
                 value: BigInt::from(res)
-            }]
+            }
         );
     }
 
@@ -470,24 +469,25 @@ contract test3 {
             res *= 3;
         }
 
-        let returns = runtime.function(
-            "bar",
-            &[
-                BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(i),
-                },
-                BorshToken::Bool(false),
-            ],
-            None,
-        );
+        let returns = runtime
+            .function(
+                "bar",
+                &[
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(i),
+                    },
+                    BorshToken::Bool(false),
+                ],
+            )
+            .unwrap();
 
         assert_eq!(
             returns,
-            vec![BorshToken::Uint {
+            BorshToken::Uint {
                 width: 32,
                 value: BigInt::from(res)
-            }]
+            }
         );
     }
 
@@ -502,21 +502,22 @@ contract test3 {
             res += 1;
         }
 
-        let returns = runtime.function(
-            "baz",
-            &[BorshToken::Uint {
-                width: 32,
-                value: BigInt::from(i),
-            }],
-            None,
-        );
+        let returns = runtime
+            .function(
+                "baz",
+                &[BorshToken::Uint {
+                    width: 32,
+                    value: BigInt::from(i),
+                }],
+            )
+            .unwrap();
 
         assert_eq!(
             returns,
-            vec![BorshToken::Uint {
+            BorshToken::Uint {
                 width: 32,
                 value: BigInt::from(res)
-            }]
+            }
         );
     }
 }

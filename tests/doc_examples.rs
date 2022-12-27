@@ -31,7 +31,8 @@ fn file_resolver(target: Target) -> FileResolver {
                 r##"
                 anchor_anchor constant bobcat = anchor_anchor(address'z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq');
                 interface anchor_anchor {
-                    function pounce() selector=hex"afaf6d1f0d989bed" view external returns(int64);
+                    @selector([0xaf, 0xaf, 0x6d, 0x1f, 0x0d, 0x98, 0x9b, 0xed])
+                    function pounce() view external returns(int64);
                 }"##.into(),
             );
     }
@@ -99,6 +100,7 @@ fn substrate_general() {
 #[test]
 fn substrate_specific() {
     assert_compile("docs/examples/substrate/", Target::default_substrate());
+    assert_compile("examples/substrate/", Target::default_substrate());
 }
 
 #[test]

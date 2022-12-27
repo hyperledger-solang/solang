@@ -155,15 +155,17 @@ ____________________________
 
 When a function is called, the function selector and the arguments are serialized
 (also known as abi encoded) and passed to the program. The function selector is
-what the runtime program uses to determine what function was called. Usually the
+what the runtime program uses to determine what function was called. On Substrate, the
 function selector is generated using a deterministic hash value of the function
-name and the arguments types.
+name and the arguments types. On Solana, the selector is known as discriminator.
 
-The selector value can be overriden with the ``selector=hex"deadbea1"`` syntax,
-for example:
+The selector value can be overriden with the annotation
+``@selector([0xde, 0xad, 0xbe, 0xa1])``.
 
-.. include:: ../examples/function_selector_override.sol
+.. include:: ../examples/substrate/function_selector_override.sol
   :code: solidity
+
+The given example only works for Substrate, whose selectors are four bytes wide. On Solana, they are eight bytes wide.
 
 Only ``public`` and ``external`` functions have a selector, and can have their
 selector overriden. On Substrate, constructors have selectors too, so they
@@ -196,18 +198,20 @@ values. Here is an example of an overloaded function:
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
 
-.. note::
-  The substrate target runtime requires function names to be unique.
-  Overloaded function names will be mangled in the ABI.
-  The function name will be concatenated with all of its argument types, separated by underscores.
-  Struct types are represented by their field types (preceded with an extra underscore).
-  Enum types are represented as their underlying ``uint8`` type. Array types are recognizable by
-  having ``Array`` appended; Fixed size arrays will additionally have their length appended as well.
+Both Substrate and Solana runtime require unique function names, so
+overloaded function names will be mangled in the ABI or the IDL.
+The function name will be concatenated with all of its argument types, separated by underscores, using the
+following rules:
 
-  The following example illustrates some overloaded functions and their mangled name:
+- Struct types are represented by their field types (preceded by an extra underscore).
+- Enum types are represented as their underlying ``uint8`` type.
+- Array types are recognizable by having ``Array`` appended.
+- Fixed size arrays will additionally have their length appended as well.
 
-  .. include:: ../examples/substrate/function_name_mangling.sol
-    :code: solidity
+The following example illustrates some overloaded functions and their mangled name:
+
+.. include:: ../examples/function_name_mangling.sol
+  :code: solidity
 
 
 Function Modifiers
@@ -217,12 +221,18 @@ Function modifiers are used to check pre-conditions or post-conditions for a fun
 new modifier must be declared which looks much like a function, but uses the ``modifier``
 keyword rather than ``function``.
 
-.. include:: ../examples/function_modifier.sol
+.. include:: ../examples/substrate/function_modifier.sol
   :code: solidity
 
 The function `foo` can only be run by the owner of the contract, else the ``require()`` in its
 modifier will fail. The special symbol ``_;`` will be replaced by body of the function. In fact,
 if you specify ``_;`` twice, the function will execute twice, which might not be a good idea.
+
+On Solana, ``msg.sender`` does not exist, so the usual way to implement a similar test is using
+an `authority` accounts rather than an owner account.
+
+.. include:: ../examples/solana/use_authority.sol
+  :code: solidity
 
 A modifier cannot have visibility (e.g. ``public``) or mutability (e.g. ``view``) specified,
 since a modifier is never externally callable. Modifiers can only be used by attaching them
@@ -243,13 +253,13 @@ this example, the `only_owner` modifier is run first, and if that reaches ``_;``
 `check_price` is executed. The body of function `foo()` is only reached once `check_price()`
 reaches ``_;``.
 
-.. include:: ../examples/function_multiple_modifiers.sol
+.. include:: ../examples/substrate/function_multiple_modifiers.sol
   :code: solidity
 
 Modifiers can be inherited or declared ``virtual`` in a base contract and then overriden, exactly like
 functions can be.
 
-.. include:: ../examples/function_override_modifiers.sol
+.. include:: ../examples/substrate/function_override_modifiers.sol
   :code: solidity
 
 Calling an external function using ``call()``

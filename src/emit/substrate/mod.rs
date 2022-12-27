@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sema::ast;
+use crate::{codegen::Options, sema::ast};
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::BasicType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
-use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
 use solang_parser::pt;
 use std::collections::HashMap;
@@ -129,10 +128,7 @@ impl SubstrateTarget {
         contract: &'a ast::Contract,
         ns: &'a ast::Namespace,
         filename: &'a str,
-        opt: OptimizationLevel,
-        math_overflow_check: bool,
-        generate_debug_info: bool,
-        log_api_return_codes: bool,
+        opt: &'a Options,
     ) -> Binary<'a> {
         let mut binary = Binary::new(
             context,
@@ -140,11 +136,8 @@ impl SubstrateTarget {
             &contract.name,
             filename,
             opt,
-            math_overflow_check,
             std_lib,
             None,
-            generate_debug_info,
-            log_api_return_codes,
         );
 
         binary.set_early_value_aborts(contract, ns);
@@ -1425,6 +1418,16 @@ impl SubstrateTarget {
                     data,
                 );
             }
+            ast::Type::FunctionSelector => self.encode_ty(
+                binary,
+                ns,
+                load,
+                packed,
+                function,
+                &ast::Type::Bytes(4),
+                arg,
+                data,
+            ),
             _ => unreachable!(),
         };
     }
@@ -1452,6 +1455,10 @@ impl SubstrateTarget {
                 binary.context.i32_type().const_int(*n as u64 / 8, false)
             }
             ast::Type::Bytes(n) => binary.context.i32_type().const_int(*n as u64, false),
+            ast::Type::FunctionSelector => binary
+                .context
+                .i32_type()
+                .const_int(ns.target.selector_length() as u64, false),
             ast::Type::Address(_) | ast::Type::Contract(_) => binary
                 .context
                 .i32_type()
@@ -1856,7 +1863,7 @@ fn event_id<'b>(
 
 /// Print the return code of API calls to the debug buffer.
 fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: IntValue) {
-    if !binary.log_api_return_codes {
+    if !binary.options.log_api_return_codes {
         return;
     }
 

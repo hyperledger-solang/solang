@@ -4,7 +4,7 @@ strict digraph "tests/contract_testcases/substrate/functions/shadowing.sol" {
 	goodset [label="function goodset\ncontract: test\ntests/contract_testcases/substrate/functions/shadowing.sol:5:9-44\nsignature goodset(uint64)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint64 val"]
 	expr [label="expression\ntests/contract_testcases/substrate/functions/shadowing.sol:6:13-25"]
-	assign [label="assign\nuint64 storage\ntests/contract_testcases/substrate/functions/shadowing.sol:6:13-19"]
+	assign [label="assign\nuint64\ntests/contract_testcases/substrate/functions/shadowing.sol:6:13-19"]
 	storage_var [label="storage variable\ntest.result\nuint64 storage\ntests/contract_testcases/substrate/functions/shadowing.sol:6:13-19"]
 	variable [label="variable: val\nuint64\ntests/contract_testcases/substrate/functions/shadowing.sol:6:22-25"]
 	badset [label="function badset\ncontract: test\ntests/contract_testcases/substrate/functions/shadowing.sol:9:9-43\nsignature badset(uint64)\nvisibility public\nmutability nonpayable"]

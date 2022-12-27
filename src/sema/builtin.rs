@@ -227,7 +227,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 26]> = Lazy::new(|| {
             namespace: Some("abi"),
             method: None,
             name: "encodeWithSelector",
-            params: vec![Type::Bytes(4)],
+            params: vec![Type::FunctionSelector],
             ret: vec![],
             target: vec![],
             doc: "Abi encode given arguments with selector",
@@ -448,7 +448,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             method: None,
             name: "sig",
             params: vec![],
-            ret: vec![Type::Bytes(4)],
+            ret: vec![Type::FunctionSelector],
             target: vec![],
             doc: "Function selector for current call",
             constant: false,
@@ -854,6 +854,14 @@ pub fn builtin_var(
                     ),
                 ));
             }
+            if ns.target == Target::Solana && p.builtin == Builtin::Sender {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    String::from(
+                        "'msg.sender' is not available on Solana. See https://solang.readthedocs.io/en/latest/targets/solana.html#msg-sender-solana",
+                    ),
+                ));
+            }
             return Some((p.builtin, p.ret[0].clone()));
         }
     }
@@ -1156,12 +1164,21 @@ pub fn resolve_namespace_call(
 
                 resolved_args.insert(
                     0,
-                    selector.cast(&selector.loc(), &Type::Bytes(4), true, ns, diagnostics)?,
+                    selector.cast(
+                        &selector.loc(),
+                        &Type::FunctionSelector,
+                        true,
+                        ns,
+                        diagnostics,
+                    )?,
                 );
             } else {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    "function requires one 'bytes4' selector argument".to_string(),
+                    format!(
+                        "function requires one 'bytes{}' selector argument",
+                        ns.target.selector_length()
+                    ),
                 ));
 
                 return Err(());

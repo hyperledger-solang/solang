@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy, ReturnCode};
-use crate::codegen::Expression;
+use crate::codegen::{
+    cfg::{ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
+    Expression,
+};
 use crate::emit::binary::Binary;
 use crate::emit::cfg::{create_block, BasicBlock, Work};
 use crate::emit::expression::expression;
@@ -1139,6 +1141,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let is_bytes = if let Type::Bytes(n) = value.ty() {
                 n
+            } else if value.ty() == Type::FunctionSelector {
+                ns.target.selector_length()
             } else {
                 0
             };

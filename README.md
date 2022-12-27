@@ -138,24 +138,13 @@ up to date with the newest Solidity syntax and features.  In addition, we focus 
 and improve developer experience.
 Here is a brief description of what we envision for the next versions.
 
-### V0.2
-
-| Milestone                                  | Status      |
-|--------------------------------------------|-------------|
-| Solana SPL tokens compatibility            | Completed   |
-| Parse and resolve inline assembly          | Completed   |
-| Generate code for inline assembly          | Completed   |
-| Support latest Substrate production target | Completed   |
-| Improve parser resilience                  | Completed   |
-
-
 ### V0.3
 
 | Milestone                                  | Status      |
 |--------------------------------------------|-------------|
-| Call Solana's Rust contracts from Solidity | In progress |
-| Improvements in overflow checking          | In progress |
-| Support Solana's Program Derived Addresses | In Progress |
+| Call Solana's Rust contracts from Solidity | Completed   |
+| Improvements in overflow checking          | Completed   |
+| Support Solana's Program Derived Addresses | Completed   |
 | Call Solidity from Solana's Rust contracts | Not started |
 | Improve developer experience for Substrate | Not started |
 | Tooling for calls between ink! <> solidity | Not started |

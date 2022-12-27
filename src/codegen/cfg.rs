@@ -133,7 +133,7 @@ pub enum Instr {
         gas: Expression,
         callty: CallTy,
     },
-    /// Value transfer; either <address>.send() or <address>.transfer()
+    /// Value transfer; either address.send() or address.transfer()
     ValueTransfer {
         success: Option<usize>,
         address: Expression,
@@ -816,15 +816,6 @@ impl ControlFlowGraph {
             Expression::InternalFunctionCfg(cfg_no) => {
                 format!("function {}", contract.cfg[*cfg_no].name)
             }
-            Expression::CodeLiteral(_, contract_no, runtime) => format!(
-                "({} code contract {})",
-                if *runtime {
-                    "runtimeCode"
-                } else {
-                    "creationCode"
-                },
-                ns.contracts[*contract_no].name,
-            ),
             Expression::ReturnData(_) => "(external call return data)".to_string(),
             Expression::Cast(_, ty, e) => format!(
                 "{}({})",
@@ -1417,7 +1408,7 @@ pub fn generate_cfg(
 
             cfg.public = public;
             cfg.nonpayable = nonpayable;
-            cfg.selector = ns.functions[func_no].selector();
+            cfg.selector = ns.functions[func_no].selector(ns, &contract_no);
         }
     }
 
@@ -1535,7 +1526,7 @@ fn function_cfg(
             format!(
                 "{}::constructor::{}",
                 contract_name,
-                hex::encode(func.selector())
+                hex::encode(func.selector(ns, &contract_no))
             )
         }
         _ => format!("{}::{}", contract_name, func.ty),
@@ -1552,7 +1543,7 @@ fn function_cfg(
 
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();
-    cfg.selector = func.selector();
+    cfg.selector = func.selector(ns, &contract_no);
 
     // a function is public if is not a library and not a base constructor
     cfg.public = if let Some(base_contract_no) = func.contract_no {

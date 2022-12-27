@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/substrate/arrays/memory_dynamic_array_n
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_02.sol:2:9-8:10"]
 	test [label="function test\ncontract: foo\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_02.sol:3:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_02.sol:2:9-8:10"]
-	diagnostic_5 [label="implicit conversion to uint32 from bytes1 not allowed\nlevel Error\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_02.sol:4:48-55"]
+	diagnostic_5 [label="new dynamic array should have an unsigned length argument\nlevel Error\ntests/contract_testcases/substrate/arrays/memory_dynamic_array_new_02.sol:4:48-55"]
 	contracts -> contract
 	contract -> test [label="function"]
 	diagnostics -> diagnostic [label="Debug"]

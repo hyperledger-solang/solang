@@ -28,8 +28,6 @@ use self::{
     expression::expression,
     vartable::Vartable,
 };
-#[cfg(feature = "llvm")]
-use crate::emit::Generate;
 use crate::sema::ast::{
     FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
 };
@@ -37,14 +35,13 @@ use crate::{sema::ast, Target};
 use std::cmp::Ordering;
 
 use crate::codegen::cfg::ASTFunction;
-use crate::codegen::dispatch::{constructor_dispatch, function_dispatch};
+use crate::codegen::dispatch::function_dispatch;
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
-use solang_parser::pt;
-use solang_parser::pt::{CodeLocation, FunctionTy};
+use solang_parser::{pt, pt::CodeLocation};
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
@@ -148,34 +145,6 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
                 return;
             }
 
-            // EVM has no emitter implemented yet
-            if ns.target != Target::EVM {
-                #[cfg(not(feature = "llvm"))]
-                panic!("LLVM feature is not enabled");
-                #[cfg(feature = "llvm")]
-                {
-                    let context = inkwell::context::Context::create();
-
-                    let filename = ns.files[0].path.to_string_lossy();
-
-                    let binary = ns.contracts[contract_no].emit(
-                        ns,
-                        &context,
-                        &filename,
-                        opt.opt_level.into(),
-                        opt.math_overflow_check,
-                        opt.generate_debug_information,
-                        opt.log_api_return_codes,
-                    );
-
-                    let code = binary.code(Generate::Linked).expect("llvm build");
-
-                    drop(binary);
-
-                    ns.contracts[contract_no].code = code;
-                }
-            }
-
             contracts_done[contract_no] = true;
         }
     }
@@ -247,18 +216,9 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
         // TODO: This is a temporary solution. Once Substrate's dispatch moves to codegen,
         // we can remove this if-condition.
         if ns.target == Target::Solana {
-            let dispatch_cfg = function_dispatch(contract_no, &all_cfg, ns);
+            let dispatch_cfg = function_dispatch(contract_no, &all_cfg, ns, opt);
             ns.contracts[contract_no].dispatch_no = all_cfg.len();
             all_cfg.push(dispatch_cfg);
-
-            for cfg_no in 0..all_cfg.len() {
-                if all_cfg[cfg_no].ty == FunctionTy::Constructor && all_cfg[cfg_no].public {
-                    let dispatch_cfg = constructor_dispatch(contract_no, cfg_no, &all_cfg, ns, opt);
-                    ns.contracts[contract_no].constructor_dispatch = Some(all_cfg.len());
-                    all_cfg.push(dispatch_cfg);
-                    break;
-                }
-            }
         }
 
         ns.contracts[contract_no].cfg = all_cfg;
@@ -391,7 +351,6 @@ pub enum Expression {
     BytesCast(pt::Loc, Type, Type, Box<Expression>),
     BytesLiteral(pt::Loc, Type, Vec<u8>),
     Cast(pt::Loc, Type, Box<Expression>),
-    CodeLiteral(pt::Loc, usize, bool),
     Complement(pt::Loc, Type, Box<Expression>),
     ConstArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
     UnsignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
@@ -501,7 +460,6 @@ impl CodeLocation for Expression {
             | Expression::StringCompare(loc, ..)
             | Expression::StringConcat(loc, ..)
             | Expression::FunctionArg(loc, ..)
-            | Expression::CodeLiteral(loc, ..)
             | Expression::List(loc, ..)
             | Expression::ShiftRight(loc, ..)
             | Expression::ShiftLeft(loc, ..)
@@ -617,9 +575,7 @@ impl Recurse for Expression {
 impl RetrieveType for Expression {
     fn ty(&self) -> Type {
         match self {
-            Expression::AbiEncode { .. }
-            | Expression::CodeLiteral(..)
-            | Expression::ReturnData(_) => Type::DynamicBytes,
+            Expression::AbiEncode { .. } | Expression::ReturnData(_) => Type::DynamicBytes,
             Expression::Builtin(_, returns, ..) => {
                 assert_eq!(returns.len(), 1);
                 returns[0].clone()
@@ -940,6 +896,15 @@ impl Expression {
                 }
             }
 
+            (Type::FunctionSelector, _) => Expression::Cast(
+                self.loc(),
+                Type::Bytes(ns.target.selector_length()),
+                self.clone().into(),
+            )
+            .cast(to, ns),
+
+            (_, Type::FunctionSelector) => self.cast(&Type::Bytes(ns.target.selector_length()), ns),
+
             (Type::Uint(_), Type::Bytes(_))
             | (Type::Int(_), Type::Bytes(_))
             | (Type::Bytes(_), Type::Address(_))
@@ -1222,11 +1187,11 @@ impl Expression {
         let loc = self.loc();
         let struct_member = Expression::StructMember(
             loc,
-            Type::Ref(Box::new(Type::Bytes(4))),
+            Type::Ref(Box::new(Type::FunctionSelector)),
             Box::new(self.clone()),
             0,
         );
-        Expression::Load(loc, Type::Bytes(4), Box::new(struct_member))
+        Expression::Load(loc, Type::FunctionSelector, Box::new(struct_member))
     }
 
     fn external_function_address(&self) -> Expression {

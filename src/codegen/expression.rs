@@ -401,7 +401,7 @@ pub fn expression(
             match &func_expr[0] {
                 ast::Expression::ExternalFunction { function_no, .. }
                 | ast::Expression::InternalFunction { function_no, .. } => {
-                    let selector = ns.functions[*function_no].selector();
+                    let selector = ns.functions[*function_no].selector(ns, &contract_no);
                     Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector)
                 }
                 _ => {
@@ -430,7 +430,7 @@ pub fn expression(
             let selector = Expression::BytesLiteral(
                 *loc,
                 Type::Uint(32),
-                ns.functions[*function_no].selector(),
+                ns.functions[*function_no].selector(ns, &contract_no),
             );
             let struct_literal = Expression::StructLiteral(
                 *loc,
@@ -465,7 +465,7 @@ pub fn expression(
 
                 Expression::Add(
                     *loc,
-                    ty.clone(),
+                    ns.storage_type(),
                     true,
                     Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
                     Box::new(Expression::NumberLiteral(*loc, ns.storage_type(), offset)),
@@ -723,9 +723,7 @@ pub fn expression(
         ast::Expression::BytesLiteral(loc, ty, arr) => {
             Expression::BytesLiteral(*loc, ty.clone(), arr.clone())
         }
-        ast::Expression::CodeLiteral(loc, pos, boolean) => {
-            Expression::CodeLiteral(*loc, *pos, *boolean)
-        }
+        ast::Expression::CodeLiteral(loc, contract_no, _) => code(loc, *contract_no, ns, opt),
         ast::Expression::NumberLiteral(loc, ty, n) => {
             Expression::NumberLiteral(*loc, ty.clone(), n.clone())
         }
@@ -1355,14 +1353,20 @@ fn abi_encode_expression_with_signature(
     opt: &Options,
 ) -> Expression {
     let mut args_iter = args.iter();
+    let hash_algorithm = if ns.target == Target::Solana {
+        ast::Builtin::Sha256
+    } else {
+        ast::Builtin::Keccak256
+    };
+
     let hash = ast::Expression::Builtin(
         *loc,
         vec![Type::Bytes(32)],
-        ast::Builtin::Keccak256,
+        hash_algorithm,
         vec![args_iter.next().unwrap().clone()],
     );
     let hash = expression(&hash, cfg, contract_no, func, ns, vartab, opt);
-    let selector = hash.cast(&Type::Bytes(4), ns);
+    let selector = hash.cast(&Type::FunctionSelector, ns);
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
@@ -1383,7 +1387,7 @@ fn abi_encode_call(
     let selector = expression(
         &ast::Expression::Builtin(
             *loc,
-            vec![Type::Bytes(4)],
+            vec![Type::FunctionSelector],
             ast::Builtin::FunctionSelector,
             vec![args_iter.next().unwrap().clone()],
         ),
@@ -1904,12 +1908,13 @@ fn conditional_operator(
 }
 
 fn interfaceid(ns: &Namespace, contract_no: &usize, loc: &pt::Loc) -> Expression {
-    let mut id = vec![0u8; 4];
+    let selector_len = ns.target.selector_length();
+    let mut id = vec![0u8; selector_len as usize];
     for func_no in &ns.contracts[*contract_no].functions {
         let func = &ns.functions[*func_no];
 
         if func.ty == pt::FunctionTy::Function {
-            let selector = func.selector();
+            let selector = func.selector(ns, contract_no);
             debug_assert_eq!(id.len(), selector.len());
 
             for (i, e) in id.iter_mut().enumerate() {
@@ -1917,7 +1922,7 @@ fn interfaceid(ns: &Namespace, contract_no: &usize, loc: &pt::Loc) -> Expression
             }
         }
     }
-    Expression::BytesLiteral(*loc, Type::Bytes(4), id.to_vec())
+    Expression::BytesLiteral(*loc, Type::Bytes(selector_len), id.to_vec())
 }
 
 pub fn assign_single(
@@ -2021,7 +2026,7 @@ pub fn assign_single(
 /// Convert a function call expression to CFG in expression context
 pub fn emit_function_call(
     expr: &ast::Expression,
-    callee_contract_no: usize,
+    caller_contract_no: usize,
     cfg: &mut ControlFlowGraph,
     func: Option<&Function>,
     ns: &Namespace,
@@ -2038,11 +2043,11 @@ pub fn emit_function_call(
             {
                 let args = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
+                    .map(|a| expression(a, cfg, caller_contract_no, func, ns, vartab, opt))
                     .collect();
 
                 let function_no = if let Some(signature) = signature {
-                    ns.contracts[callee_contract_no].virtual_functions[signature]
+                    ns.contracts[caller_contract_no].virtual_functions[signature]
                 } else {
                     *function_no
                 };
@@ -2054,9 +2059,9 @@ pub fn emit_function_call(
                         ast_func_no: function_no,
                     }
                 } else {
-                    InternalCallTy::Static {
-                        cfg_no: ns.contracts[callee_contract_no].all_functions[&function_no],
-                    }
+                    let cfg_no = ns.contracts[caller_contract_no].all_functions[&function_no];
+
+                    InternalCallTy::Static { cfg_no }
                 };
 
                 if !ftype.returns.is_empty() {
@@ -2101,11 +2106,11 @@ pub fn emit_function_call(
                     vec![Expression::Poison]
                 }
             } else if let Type::InternalFunction { returns, .. } = function.ty().deref_any() {
-                let cfg_expr = expression(function, cfg, callee_contract_no, func, ns, vartab, opt);
+                let cfg_expr = expression(function, cfg, caller_contract_no, func, ns, vartab, opt);
 
                 let args = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
+                    .map(|a| expression(a, cfg, caller_contract_no, func, ns, vartab, opt))
                     .collect();
 
                 if !returns.is_empty() {
@@ -2160,57 +2165,35 @@ pub fn emit_function_call(
             call_args,
             ty,
         } => {
-            let args = expression(args, cfg, callee_contract_no, func, ns, vartab, opt);
-            let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
+            let args = expression(args, cfg, caller_contract_no, func, ns, vartab, opt);
+            let address = expression(address, cfg, caller_contract_no, func, ns, vartab, opt);
             let gas = if let Some(gas) = &call_args.gas {
-                expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+                expression(gas, cfg, caller_contract_no, func, ns, vartab, opt)
             } else {
                 default_gas(ns)
             };
             let value = if let Some(value) = &call_args.value {
-                expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
+                expression(value, cfg, caller_contract_no, func, ns, vartab, opt)
             } else {
                 Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
             };
             let accounts = call_args
                 .accounts
                 .as_ref()
-                .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+                .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
             let seeds = call_args
                 .seeds
                 .as_ref()
-                .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+                .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
             let success = vartab.temp_name("success", &Type::Bool);
-
-            let (payload, address) = if ns.target == Target::Solana && call_args.accounts.is_none()
-            {
-                let encoder_args = vec![
-                    address,
-                    Expression::Builtin(
-                        *loc,
-                        vec![Type::Address(false)],
-                        Builtin::GetAddress,
-                        vec![],
-                    ),
-                    value.clone(),
-                    Expression::NumberLiteral(*loc, Type::Bytes(4), BigInt::zero()),
-                    Expression::NumberLiteral(*loc, Type::Bytes(1), BigInt::zero()),
-                    args,
-                ];
-
-                let (encoded, _) = abi_encode(loc, encoder_args, ns, vartab, cfg, true);
-                (encoded, None)
-            } else {
-                (args, Some(address))
-            };
 
             cfg.add(
                 vartab,
                 Instr::ExternalCall {
                     success: Some(success),
-                    address,
-                    payload,
+                    address: Some(address),
+                    payload: args,
                     value,
                     accounts,
                     seeds,
@@ -2243,68 +2226,37 @@ pub fn emit_function_call(
                 let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
                 let mut args: Vec<Expression> = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
+                    .map(|a| expression(a, cfg, caller_contract_no, func, ns, vartab, opt))
                     .collect();
-                let address = expression(address, cfg, callee_contract_no, func, ns, vartab, opt);
+                let address = expression(address, cfg, caller_contract_no, func, ns, vartab, opt);
                 let gas = if let Some(gas) = &call_args.gas {
-                    expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+                    expression(gas, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
                     default_gas(ns)
                 };
                 let accounts = call_args
                     .accounts
                     .as_ref()
-                    .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+                    .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
                 let seeds = call_args
                     .seeds
                     .as_ref()
-                    .map(|expr| expression(expr, cfg, callee_contract_no, func, ns, vartab, opt));
+                    .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
                 let value = if let Some(value) = &call_args.value {
-                    expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
+                    expression(value, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
 
-                let selector = dest_func.selector();
+                let selector = dest_func.selector(ns, &caller_contract_no);
 
                 tys.insert(0, Type::Bytes(selector.len() as u8));
 
-                let address = if ns.target == Target::Solana && dest_func.selector.is_none() {
-                    let mut encoder_args: Vec<Expression> = Vec::with_capacity(6 + args.len());
-                    encoder_args.push(address);
-                    encoder_args.push(Expression::Builtin(
-                        *loc,
-                        vec![Type::Address(false)],
-                        Builtin::GetAddress,
-                        Vec::new(),
-                    ));
-                    encoder_args.push(value.clone());
-                    encoder_args.push(Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(4),
-                        BigInt::zero(),
-                    ));
-                    encoder_args.push(Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(1),
-                        BigInt::zero(),
-                    ));
-                    encoder_args.push(Expression::BytesLiteral(
-                        *loc,
-                        Type::Bytes(selector.len() as u8),
-                        selector,
-                    ));
-                    encoder_args.append(&mut args);
-                    args = encoder_args;
-                    None
-                } else {
-                    args.insert(
-                        0,
-                        Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector),
-                    );
-                    Some(address)
-                };
+                args.insert(
+                    0,
+                    Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector),
+                );
 
                 let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
@@ -2313,7 +2265,7 @@ pub fn emit_function_call(
                     Instr::ExternalCall {
                         success: None,
                         accounts,
-                        address,
+                        address: Some(address),
                         payload,
                         seeds,
                         value,
@@ -2350,16 +2302,16 @@ pub fn emit_function_call(
                 let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
                 let mut args = args
                     .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, func, ns, vartab, opt))
+                    .map(|a| expression(a, cfg, caller_contract_no, func, ns, vartab, opt))
                     .collect::<Vec<Expression>>();
-                let function = expression(function, cfg, callee_contract_no, func, ns, vartab, opt);
+                let function = expression(function, cfg, caller_contract_no, func, ns, vartab, opt);
                 let gas = if let Some(gas) = &call_args.gas {
-                    expression(gas, cfg, callee_contract_no, func, ns, vartab, opt)
+                    expression(gas, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
                     default_gas(ns)
                 };
                 let value = if let Some(value) = &call_args.value {
-                    expression(value, cfg, callee_contract_no, func, ns, vartab, opt)
+                    expression(value, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
                     Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
                 };
@@ -2367,35 +2319,8 @@ pub fn emit_function_call(
                 let selector = function.external_function_selector();
                 let address = function.external_function_address();
 
-                let address = if ns.target == Target::Solana {
-                    let mut encoder_args: Vec<Expression> = Vec::with_capacity(6 + args.len());
-                    encoder_args.push(address);
-                    encoder_args.push(Expression::Builtin(
-                        *loc,
-                        vec![Type::Address(false)],
-                        Builtin::GetAddress,
-                        Vec::new(),
-                    ));
-                    encoder_args.push(value.clone());
-                    encoder_args.push(Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(4),
-                        BigInt::zero(),
-                    ));
-                    encoder_args.push(Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(1),
-                        BigInt::zero(),
-                    ));
-                    encoder_args.push(selector);
-                    encoder_args.append(&mut args);
-                    args = encoder_args;
-                    None
-                } else {
-                    tys.insert(0, Type::Bytes(4));
-                    args.insert(0, selector);
-                    Some(address)
-                };
+                tys.insert(0, Type::Bytes(ns.target.selector_length()));
+                args.insert(0, selector);
 
                 let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
@@ -2405,7 +2330,7 @@ pub fn emit_function_call(
                         success: None,
                         accounts: None,
                         seeds: None,
-                        address,
+                        address: Some(address),
                         payload,
                         value,
                         gas,
@@ -2432,7 +2357,7 @@ pub fn emit_function_call(
             }
         }
         ast::Expression::Builtin(loc, tys, ast::Builtin::AbiDecode, args) => {
-            let data = expression(&args[0], cfg, callee_contract_no, func, ns, vartab, opt);
+            let data = expression(&args[0], cfg, caller_contract_no, func, ns, vartab, opt);
             let encoder = create_encoder(ns, false);
             encoder.abi_decode(loc, &data, tys, ns, vartab, cfg, None)
         }
@@ -2913,4 +2838,15 @@ pub(super) fn assert_failure(
             encoded_args: Some(encoded_buffer),
         },
     )
+}
+
+/// Generate the binary code for a contract
+fn code(loc: &Loc, contract_no: usize, ns: &Namespace, opt: &Options) -> Expression {
+    let contract = &ns.contracts[contract_no];
+
+    let code = contract.emit(ns, opt);
+
+    let size = Expression::NumberLiteral(*loc, Type::Uint(32), code.len().into());
+
+    Expression::AllocDynamicBytes(*loc, Type::DynamicBytes, size.into(), Some(code))
 }

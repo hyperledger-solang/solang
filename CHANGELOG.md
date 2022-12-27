@@ -2,13 +2,29 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## Unreleased
+
+### Changed
+- Overriding the function selector value is now done using the `@selector([1, 2, 3, 4])`
+  syntax, and the old syntax `selector=hex"12345678"` has been removed.
+- 'msg.sender' was not implemented correctly on Solana, and
+  [has now been removed](https://solang.readthedocs.io/en/latest/targets/solana.html#msg-sender-solana).
+  [seanyoung](https://github.com/seanyoung)
+
 ## v0.2.0.0 Berlin
-We are happy to release solang `v0.2.0` codenamed `Berlin` today. Aside from containing many small fixes and improvements, this release marks a milestone towards maturing our Substrate compilation target: any regressions building up since `ink!` v3.0 are fixed, most notably the metadata format (shoutout and many thanks to external contributor [extraymond](https://github.com/extraymond)) and event topics. Furthermore, we are leaving `ink!` version 3 behind us, in favor of introducing compatibility with the recent `ink!` 4 beta release and the latest pallet contract `v0.22.1`.
+We are happy to release solang `v0.2.0` codenamed `Berlin` today. Aside from
+containing many small fixes and improvements, this release marks a milestone
+towards maturing our Substrate compilation target: any regressions building up
+since `ink!` v3.0 are fixed, most notably the metadata format (shoutout and many
+thanks to external contributor [extraymond](https://github.com/extraymond)) and
+event topics. Furthermore, we are leaving `ink!` version 3 behind us, in favor
+of introducing compatibility with the recent `ink!` 4 beta release and the latest
+substrate contracts node `v0.22.1`.
 
 ### Added
 - **Solana / breaking:** The try-catch construct is no longer permitted on Solana, as it
-   never worked. Any CPI error will abort the transaction.
-   [seanyoung](https://github.com/seanyoung)
+  never worked. Any CPI error will abort the transaction.
+  [seanyoung](https://github.com/seanyoung)
 - **Solana:** Introduce new sub-command `solang idl` which can be used for generating
   a Solidity interface file from an Anchor IDL file. This can be used for calling
   Anchor Contracts on Solana. [seanyoung](https://github.com/seanyoung)
@@ -24,27 +40,27 @@ We are happy to release solang `v0.2.0` codenamed `Berlin` today. Aside from con
   [xermicus](https://github.com/xermicus)
 
 ### Changed
- - The Solana target now uses Borsh encoding rather than eth abi
-   encoding. This is aimed at making Solang contracts Anchor compatible.
-   [LucasSte](https://github.com/LucasSte)
+- The Solana target now uses Borsh encoding rather than eth abi
+  encoding. This is aimed at making Solang contracts Anchor compatible.
+  [LucasSte](https://github.com/LucasSte)
 - **Substrate / breaking:** Supported node version is now pallet contracts `v0.22.1`.
   [xermicus](https://github.com/xermicus)
 - **Substrate / breaking:** Remove the deprecated `random` builtin.
   [xermicus](https://github.com/xermicus)
 
 ### Fixed
- - Whenever possible, the parser does not give up after the first error.
-   [salaheldinsoliman](https://github.com/salaheldinsoliman)
- - Constant expressions are checked for overflow.
-   [salaheldinsoliman](https://github.com/salaheldinsoliman)
- - AddMod and MulMod were broken. This is now fixed.
-   [LucasSte](https://github.com/LucasSte)
+- Whenever possible, the parser does not give up after the first error.
+  [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- Constant expressions are checked for overflow.
+  [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- AddMod and MulMod were broken. This is now fixed.
+  [LucasSte](https://github.com/LucasSte)
 - **Substrate / breaking:** Solang is now compatible with `ink!` version 4 (beta).
   [xermicus](https://github.com/xermicus)
 - **Substrate:** Switched ABI generation to use official `ink!` crates, which fixes all
   remaining metadata regressions.
   [extraymond](https://github.com/extraymond) and [xermicus](https://github.com/xermicus)
-- **Substrate:** Allow constructors to have a name, so that multiple constructors are 
+- **Substrate:** Allow constructors to have a name, so that multiple constructors are
   supported, like in `ink!`.
   [xermicus](https://github.com/xermicus)
 - All provided examples as well as most of the Solidity code snippets in our

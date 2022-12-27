@@ -12,6 +12,7 @@ use crate::sema::yul::ast;
 use crate::sema::yul::ast::YulSuffix;
 use crate::{sema, Target};
 use num_bigint::{BigInt, Sign};
+use once_cell::unsync::OnceCell;
 use solang_parser::pt::{ContractTy, Loc, StorageLocation, Visibility};
 
 #[test]
@@ -134,10 +135,9 @@ fn contract_constant_variable() {
         initializer: None,
         default_constructor: None,
         cfg: vec![],
-        code: vec![],
+        code: OnceCell::new(),
         instantiable: true,
         dispatch_no: 0,
-        constructor_dispatch: None,
         program_id: None,
     };
     ns.contracts.push(contract);
@@ -256,10 +256,9 @@ fn slot_suffix() {
         initializer: None,
         default_constructor: None,
         cfg: vec![],
-        code: vec![],
+        code: OnceCell::new(),
         instantiable: true,
         dispatch_no: 0,
-        constructor_dispatch: None,
         program_id: None,
     };
     ns.contracts.push(contract);
@@ -554,10 +553,10 @@ fn selector_suffix() {
         res,
         Expression::Load(
             loc,
-            Type::Bytes(4),
+            Type::FunctionSelector,
             Box::new(Expression::StructMember(
                 loc,
-                Type::Ref(Box::new(Type::Bytes(4))),
+                Type::Ref(Box::new(Type::FunctionSelector)),
                 Box::new(Expression::Variable(
                     loc,
                     Type::ExternalFunction {

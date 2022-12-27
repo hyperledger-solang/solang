@@ -37,32 +37,32 @@ fn test_returns() {
     "#;
 
     let mut vm = build_solidity(file);
-    vm.constructor("c1", &[]);
-    let _ = vm.function("assign", &[], None);
-    let returns = vm.function("pb1", &[], None);
+    vm.constructor(&[]);
+    let _ = vm.function("assign", &[]);
+    let returns = vm.function("pb1", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 256,
             value: BigInt::from(5u8)
-        }]
+        }
     );
 
-    let returns = vm.function("test1", &[], None);
+    let returns = vm.function("test1", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 256,
             value: BigInt::from(52u8)
-        }]
+        }
     );
-    let returns = vm.function("test2", &[], None);
+    let returns = vm.function("test2", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Int {
+        BorshToken::Int {
             width: 256,
             value: BigInt::from(5u8)
-        }]
+        }
     );
 }

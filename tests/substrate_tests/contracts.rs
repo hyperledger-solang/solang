@@ -300,7 +300,7 @@ fn mangle_overloaded_function_names_in_abi() {
         .collect();
 
     assert!(messages_a.contains(&"foo".to_string()));
-    assert!(!messages_a.contains(&"foo_".to_string()));
+    assert!(!messages_a.contains(&"foo_bool".to_string()));
 
     let messages_b: Vec<String> = runtime
         .programs

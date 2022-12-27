@@ -31,51 +31,51 @@ fn return_single() {
             }
         }"#,
     );
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(2u8)
-        },]
+        },
     );
 
-    let returns = vm.function("g", &[], None);
+    let returns = vm.function("g", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(3u8)
-        },]
+        },
     );
 
-    let returns = vm.function("h", &[], None);
+    let returns = vm.function("h", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(2u8)
-        },]
+        },
     );
 
-    let returns = vm.function("i", &[], None);
+    let returns = vm.function("i", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(24u8)
-        },]
+        },
     );
 
-    let returns = vm.function("j", &[], None);
+    let returns = vm.function("j", &[]).unwrap();
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(5u8)
-        },]
+        },
     );
 }
 
@@ -90,8 +90,8 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
-    let returns = vm.function("f", &[], None);
+    vm.constructor(&[]);
+    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -116,8 +116,8 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
-    let returns = vm.function("f", &[], None);
+    vm.constructor(&[]);
+    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -156,17 +156,17 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
-    let _returns = vm.function("strange", &[], None);
-    let _returns = vm.function("inc", &[], None);
-    let returns = vm.function("get", &[], None);
+    vm.constructor(&[]);
+    let _returns = vm.function("strange", &[]);
+    let _returns = vm.function("inc", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(2u8)
-        },]
+        },
     );
 
     let mut vm = build_solidity(
@@ -192,16 +192,16 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
-    let _returns = vm.function("f", &[], None);
-    let returns = vm.function("get", &[], None);
+    vm.constructor(&[]);
+    let _returns = vm.function("f", &[]);
+    let returns = vm.function("get", &[]).unwrap();
 
     assert_eq!(
         returns,
-        vec![BorshToken::Uint {
+        BorshToken::Uint {
             width: 256,
             value: BigInt::from(5u8)
-        },]
+        },
     );
 }
 
@@ -220,8 +220,8 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
-    let returns = vm.function("f", &[], None);
+    vm.constructor(&[]);
+    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -250,8 +250,8 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
-    let returns = vm.function("f", &[], None);
+    vm.constructor(&[]);
+    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,

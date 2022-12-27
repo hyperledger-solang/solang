@@ -1064,6 +1064,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let created_contract = &ns.contracts[contract_no];
 
+        let code = created_contract.emit(ns, binary.options);
+
         let (scratch_buf, scratch_len) = scratch_buf!();
 
         // salt
@@ -1122,12 +1124,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
         }
 
-        assert!(!created_contract.code.is_empty());
-
         // code hash
         let codehash = binary.emit_global_string(
             &format!("binary_{}_codehash", created_contract.name),
-            blake2_rfc::blake2b::blake2b(32, &[], &created_contract.code).as_bytes(),
+            blake2_rfc::blake2b::blake2b(32, &[], &code).as_bytes(),
             true,
         );
 

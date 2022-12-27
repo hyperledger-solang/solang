@@ -6,7 +6,7 @@ strict digraph "tests/contract_testcases/substrate/value/this_address_03.sol" {
 	other [label="function other\ncontract: b\ntests/contract_testcases/substrate/value/this_address_03.sol:10:13-44\nsignature other(int32)\nvisibility private\nmutability nonpayable"]
 	parameters [label="parameters\nint32 n"]
 	expr [label="expression\ntests/contract_testcases/substrate/value/this_address_03.sol:11:17-22"]
-	assign [label="assign\nint32 storage\ntests/contract_testcases/substrate/value/this_address_03.sol:11:17-18"]
+	assign [label="assign\nint32\ntests/contract_testcases/substrate/value/this_address_03.sol:11:17-18"]
 	storage_var [label="storage variable\nb.s\nint32 storage\ntests/contract_testcases/substrate/value/this_address_03.sol:11:17-18"]
 	variable [label="variable: n\nint32\ntests/contract_testcases/substrate/value/this_address_03.sol:11:21-22"]
 	diagnostic [label="found contract 'b'\nlevel Debug\ntests/contract_testcases/substrate/value/this_address_03.sol:2:9-13:10"]

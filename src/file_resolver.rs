@@ -134,13 +134,12 @@ impl FileResolver {
         // first check maps
         let mut iter = path.iter();
         if let Some(first_part) = iter.next() {
-            let relpath: PathBuf = iter.collect();
+            let relpath: &PathBuf = &iter.collect();
 
             for (import_no, import) in self.import_paths.iter().enumerate() {
                 if let (Some(mapping), import_path) = import {
                     if first_part == mapping {
-                        // match!
-                        if let Ok(full_path) = import_path.join(&relpath).canonicalize() {
+                        if let Ok(full_path) = import_path.join(relpath).canonicalize() {
                             self.load_file(&full_path)?;
                             let base = full_path
                                 .parent()

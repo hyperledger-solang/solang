@@ -18,9 +18,12 @@ fn conditional_destructure() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("f", &[BorshToken::Bool(true), BorshToken::Bool(true)], None);
+    let returns = vm
+        .function("f", &[BorshToken::Bool(true), BorshToken::Bool(true)])
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -36,11 +39,10 @@ fn conditional_destructure() {
         ]
     );
 
-    let returns = vm.function(
-        "f",
-        &[BorshToken::Bool(true), BorshToken::Bool(false)],
-        None,
-    );
+    let returns = vm
+        .function("f", &[BorshToken::Bool(true), BorshToken::Bool(false)])
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -56,11 +58,10 @@ fn conditional_destructure() {
         ]
     );
 
-    let returns = vm.function(
-        "f",
-        &[BorshToken::Bool(false), BorshToken::Bool(false)],
-        None,
-    );
+    let returns = vm
+        .function("f", &[BorshToken::Bool(false), BorshToken::Bool(false)])
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -76,11 +77,10 @@ fn conditional_destructure() {
         ]
     );
 
-    let returns = vm.function(
-        "f",
-        &[BorshToken::Bool(false), BorshToken::Bool(true)],
-        None,
-    );
+    let returns = vm
+        .function("f", &[BorshToken::Bool(false), BorshToken::Bool(true)])
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -113,9 +113,9 @@ fn casting_destructure() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -141,9 +141,9 @@ fn casting_destructure() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
-    let returns = vm.function("f", &[], None);
+    let returns = vm.function("f", &[]).unwrap();
 
-    assert_eq!(returns, vec![BorshToken::String(String::from("Hello")),]);
+    assert_eq!(returns, BorshToken::String(String::from("Hello")));
 }

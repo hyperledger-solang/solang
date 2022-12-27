@@ -311,7 +311,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_store(r, bin.builder.build_int_z_extend(right, mul_ty, ""));
         }
 
-        if bin.math_overflow_check && !unchecked {
+        if bin.options.math_overflow_check && !unchecked {
             if signed {
                 return signed_ovf_detect(
                     target, bin, mul_ty, mul_bits, left, right, bits, function,
@@ -420,7 +420,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
         } else {
             return call_mul32_without_ovf(bin, l, r, o, mul_bits, left.get_type());
         }
-    } else if bin.math_overflow_check && !unchecked {
+    } else if bin.options.math_overflow_check && !unchecked {
         build_binary_op_with_overflow_check(
             target,
             bin,

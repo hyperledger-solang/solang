@@ -946,32 +946,37 @@ fn cast_and_try_load(
 ) -> Expression {
     let casted_expr = expr.cast(to_ty, ns);
 
-    if let Type::StorageRef(_, ty) = casted_expr.ty() {
-        if let Expression::Subscript(_, _, ty, ..) = &casted_expr {
-            if ty.is_storage_bytes() {
+    match casted_expr.ty() {
+        Type::StorageRef(_, ty) => {
+            if let Expression::Subscript(_, _, ty, ..) = &casted_expr {
+                if ty.is_storage_bytes() {
+                    return casted_expr;
+                }
+            }
+
+            if matches!(to_ty, Type::StorageRef(..)) {
+                // If we want a storage reference, there is no need to load from storage
                 return casted_expr;
             }
+
+            let anonymous_no = vartab.temp_anonymous(&ty);
+            cfg.add(
+                vartab,
+                Instr::LoadStorage {
+                    res: anonymous_no,
+                    ty: (*ty).clone(),
+                    storage: casted_expr,
+                },
+            );
+
+            Expression::Variable(*loc, (*ty).clone(), anonymous_no)
         }
-
-        if matches!(to_ty, Type::StorageRef(..)) {
-            // If we want a storage reference, there is no need to load from storage
-            return casted_expr;
-        }
-
-        let anonymous_no = vartab.temp_anonymous(&ty);
-        cfg.add(
-            vartab,
-            Instr::LoadStorage {
-                res: anonymous_no,
-                ty: (*ty).clone(),
-                storage: casted_expr,
-            },
-        );
-
-        return Expression::Variable(*loc, (*ty).clone(), anonymous_no);
+        Type::Ref(ty) => match *ty {
+            Type::Array(_, _) => casted_expr,
+            _ => Expression::Load(pt::Loc::Builtin, *ty, casted_expr.into()),
+        },
+        _ => casted_expr,
     }
-
-    casted_expr
 }
 
 /// Resolve try catch statement

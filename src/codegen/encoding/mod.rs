@@ -710,6 +710,12 @@ fn get_expr_size(
             Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(ns.value_length))
         }
 
+        Type::FunctionSelector => Expression::NumberLiteral(
+            Loc::Codegen,
+            Type::Uint(32),
+            BigInt::from(ns.target.selector_length()),
+        ),
+
         Type::Struct(struct_ty) => {
             calculate_struct_size(encoder, arg_no, expr, struct_ty, ns, vartab, cfg)
         }
@@ -730,11 +736,22 @@ fn get_expr_size(
         Type::ExternalFunction { .. } => {
             let addr = Expression::Undefined(Type::Address(false));
             let address_size = encoder.get_encoding_size(&addr, &Type::Address(false), ns);
+            let selector_len = ns.target.selector_length();
             if let Expression::NumberLiteral(_, _, mut number) = address_size {
-                number.add_assign(BigInt::from(4u8));
+                number.add_assign(BigInt::from(selector_len));
                 Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), number)
             } else {
-                increment_four(address_size)
+                Expression::Add(
+                    Loc::Codegen,
+                    Type::Uint(32),
+                    false,
+                    Box::new(Expression::NumberLiteral(
+                        Loc::Codegen,
+                        Type::Uint(32),
+                        BigInt::from(selector_len),
+                    )),
+                    address_size.into(),
+                )
             }
         }
 

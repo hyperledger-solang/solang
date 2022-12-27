@@ -8,11 +8,12 @@ use super::{
     symtable::Symtable,
     using, variables, ContractDefinition,
 };
-#[cfg(feature = "llvm")]
-use crate::emit;
-use crate::sema::unused_variable::emit_warning_local_variable;
+use crate::{sema::ast::Namespace, sema::unused_variable::emit_warning_local_variable};
 use num_bigint::BigInt;
 use num_traits::Zero;
+use once_cell::unsync::OnceCell;
+use solang_parser::diagnostics::Diagnostic;
+use solang_parser::pt::FunctionTy;
 use solang_parser::pt::{self, CodeLocation};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
@@ -42,36 +43,11 @@ impl ast::Contract {
             initializer: None,
             default_constructor: None,
             cfg: Vec::new(),
-            code: Vec::new(),
+            code: OnceCell::new(),
             instantiable,
             dispatch_no: 0,
-            constructor_dispatch: None,
             program_id: None,
         }
-    }
-
-    /// Generate contract code for this contract
-    #[cfg(feature = "llvm")]
-    pub fn emit<'a>(
-        &'a self,
-        ns: &'a ast::Namespace,
-        context: &'a inkwell::context::Context,
-        filename: &'a str,
-        opt: inkwell::OptimizationLevel,
-        math_overflow_check: bool,
-        generate_debug_info: bool,
-        log_api_return_codes: bool,
-    ) -> emit::binary::Binary {
-        emit::binary::Binary::build(
-            context,
-            self,
-            ns,
-            filename,
-            opt,
-            math_overflow_check,
-            generate_debug_info,
-            log_api_return_codes,
-        )
     }
 
     /// Selector for this contract. This is used by Solana contract bundle
@@ -105,8 +81,10 @@ pub fn resolve(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::N
         let contract_no = contract.contract_no;
 
         check_inheritance(contract_no, ns);
+        mangle_function_names(contract_no, ns);
+        verify_unique_selector(contract_no, ns);
         substrate_requires_public_functions(contract_no, ns);
-        substrate_unique_constructor_names(contract_no, ns);
+        unique_constructor_names(contract_no, ns);
         check_mangled_function_names(contract_no, ns);
     }
 
@@ -298,7 +276,6 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
     let mut variable_syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: BTreeMap<String, Vec<(usize, usize)>> = BTreeMap::new();
     let mut diagnostics = Diagnostics::default();
-    let mut selectors: HashMap<Vec<u8>, usize> = HashMap::new();
 
     for base_contract_no in ns.contract_bases(contract_no) {
         // find file number where contract is defined
@@ -626,40 +603,6 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     .insert(signature, function_no);
             }
 
-            let selector = cur.selector();
-
-            // On Solana, concrete contracts have selectors of 4 bytes
-            // TODO: this will change with the switch to borsh!
-            if ns.contracts[contract_no].is_concrete() && selector.len() != 4 {
-                diagnostics.push(ast::Diagnostic::error(
-                    cur.loc,
-                    format!(
-                        "function '{}' selector '{}' must be 4 bytes rather than {} bytes",
-                        cur.name,
-                        hex::encode(&selector),
-                        selector.len()
-                    ),
-                ));
-            }
-
-            if let Some(other_func_no) = selectors.get(&selector) {
-                let other = &ns.functions[*other_func_no];
-
-                if other.signature != cur.signature {
-                    diagnostics.push(ast::Diagnostic::error_with_note(
-                        cur.loc,
-                        format!(
-                            "{} '{}' selector is the same as {} '{}'",
-                            cur.ty, cur.name, other.ty, other.name
-                        ),
-                        other.loc,
-                        format!("definition of {} '{}'", other.ty, other.name),
-                    ));
-                }
-            } else {
-                selectors.insert(selector, function_no);
-            }
-
             ns.contracts[contract_no]
                 .all_functions
                 .insert(function_no, usize::MAX);
@@ -756,7 +699,7 @@ fn check_mangled_function_names(contract_no: usize, ns: &mut ast::Namespace) {
             let f = &ns.functions[*f];
             let message = format!(
                 "mangling the symbol of overloaded function '{}' with signature '{}' results in a new symbol '{}' but this symbol already exists",
-                &f.name, &f.signature, &f.mangled_name
+                &f.name, &f.signature, f.mangled_name
             );
             ns.diagnostics.push(ast::Diagnostic::error_with_note(
                 f.loc,
@@ -796,14 +739,18 @@ fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespa
 /// Constructors and functions are no different in Substrate.
 /// This function checks that all constructors and function names are unique.
 /// Overloading (mangled function or constructor names) is taken into account.
-fn substrate_unique_constructor_names(contract_no: usize, ns: &mut ast::Namespace) {
-    if !ns.target.is_substrate() || ns.diagnostics.any_errors() {
+fn unique_constructor_names(contract_no: usize, ns: &mut ast::Namespace) {
+    if ns.diagnostics.any_errors() {
         return;
     }
 
     let mut functions = HashMap::new();
     for f in &ns.contracts[contract_no].functions {
         let func = &ns.functions[*f];
+        if !func.is_public() {
+            continue;
+        }
+
         if let Some(offender) = functions.insert(&func.mangled_name, *f) {
             ns.diagnostics.push(ast::Diagnostic::error_with_note(
                 func.loc,
@@ -852,14 +799,12 @@ fn base_function_compatible(
         (cur, func) if cur == func => (),
         (Some(cur_selector), Some(func_selector)) => {
             diagnostics.push(ast::Diagnostic::error_with_note(
-                func.loc,
+                cur_selector.0,
                 format!(
-                    "selector '{}' of function '{}' different from base selector '{}'",
-                    hex::encode(cur_selector),
+                    "selector of function '{}' different from base selector",
                     func.name,
-                    hex::encode(func_selector)
                 ),
-                base.loc,
+                func_selector.0,
                 String::from("location of base function"),
             ));
         }
@@ -867,20 +812,18 @@ fn base_function_compatible(
             diagnostics.push(ast::Diagnostic::error_with_note(
                 func.loc,
                 format!(
-                    "selector of function '{}' must match base selector '{}'",
+                    "selector of function '{}' must match base selector",
                     func.name,
-                    hex::encode(func_selector)
                 ),
-                base.loc,
+                func_selector.0,
                 String::from("location of base function"),
             ));
         }
         (Some(cur_selector), None) => {
             diagnostics.push(ast::Diagnostic::error_with_note(
-                func.loc,
+                cur_selector.0,
                 format!(
-                    "base function needs same selector as selector '{}' of function '{}'",
-                    hex::encode(cur_selector),
+                    "base function needs same selector as selector of function '{}'",
                     func.name,
                 ),
                 base.loc,
@@ -934,9 +877,14 @@ fn resolve_declarations<'a>(
     // resolve function signatures
     for part in &def.parts {
         if let pt::ContractPart::FunctionDefinition(ref f) = &part.part {
-            if let Some(function_no) =
-                functions::contract_function(def, f, &part.doccomments, file_no, ns)
-            {
+            if let Some(function_no) = functions::contract_function(
+                def,
+                f,
+                &part.doccomments,
+                &part.annotations,
+                file_no,
+                ns,
+            ) {
                 if f.body.is_some() {
                     delayed.function_bodies.push(DelayedResolveFunction {
                         contract_no: def.contract_no,
@@ -945,8 +893,6 @@ fn resolve_declarations<'a>(
                         annotations: part.annotations.clone(),
                     });
                 } else {
-                    annotions_not_allowed(&part.annotations, &format!("{} with no body", f.ty), ns);
-
                     function_no_bodies.push(function_no);
                 }
             }
@@ -1207,4 +1153,83 @@ fn compatible_visibility(left: &pt::Visibility, right: &pt::Visibility) -> bool 
         ) | (pt::Visibility::Internal(_), pt::Visibility::Internal(_))
             | (pt::Visibility::Private(_), pt::Visibility::Private(_))
     )
+}
+
+/// This function checks which function names must be mangled given a contract.
+/// Mangling happens when there is more than one function with the same name in a give contract.
+fn mangle_function_names(contract_no: usize, ns: &mut Namespace) {
+    let mut repeated_names: HashMap<String, usize> = HashMap::new();
+
+    for func_no in ns.contracts[contract_no].all_functions.keys() {
+        if !ns.functions[*func_no].is_public()
+            && (ns.functions[*func_no].ty != pt::FunctionTy::Function
+                || ns.functions[*func_no].ty != pt::FunctionTy::Constructor)
+        {
+            continue;
+        }
+
+        if let Some(old_no) = repeated_names.insert(ns.functions[*func_no].name.clone(), *func_no) {
+            ns.functions[old_no]
+                .mangled_name_contracts
+                .insert(contract_no);
+            ns.functions[*func_no]
+                .mangled_name_contracts
+                .insert(contract_no);
+        }
+    }
+}
+
+/// This check guarantees that each public Solidity function has a unique selector.
+fn verify_unique_selector(contract_no: usize, ns: &mut Namespace) {
+    let mut selectors: HashMap<Vec<u8>, usize> = HashMap::new();
+    let mut diagnostics: Vec<Diagnostic> = Vec::new();
+    for func_no in ns.contracts[contract_no].all_functions.keys() {
+        let func = &ns.functions[*func_no];
+
+        let selector = func.selector(ns, &contract_no);
+        let selector_len = ns.target.selector_length();
+
+        // On Solana, concrete contracts have selectors of 8 bytes
+        if ns.contracts[contract_no].is_concrete() && selector.len() != selector_len as usize {
+            let loc = if let Some((loc, _)) = &func.selector {
+                loc
+            } else {
+                &func.loc
+            };
+
+            diagnostics.push(ast::Diagnostic::error(
+                *loc,
+                format!(
+                    "function '{}' selector must be {} bytes rather than {} bytes",
+                    func.name,
+                    selector_len,
+                    selector.len()
+                ),
+            ));
+        }
+
+        if let Some(other_func_no) = selectors.get(&selector) {
+            let other = &ns.functions[*other_func_no];
+
+            if other.signature != func.signature
+                && func.ty != FunctionTy::Constructor
+                && func.is_public()
+                && other.is_public()
+            {
+                diagnostics.push(ast::Diagnostic::error_with_note(
+                    func.loc,
+                    format!(
+                        "{} '{}' selector is the same as {} '{}'",
+                        func.ty, func.name, other.ty, other.name
+                    ),
+                    other.loc,
+                    format!("definition of {} '{}'", other.ty, other.name),
+                ));
+            }
+        } else {
+            selectors.insert(selector, *func_no);
+        }
+    }
+
+    ns.diagnostics.append(&mut diagnostics);
 }

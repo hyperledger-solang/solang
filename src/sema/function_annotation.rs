@@ -1,18 +1,147 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    ast::{ConstructorAnnotation, Diagnostic, Namespace, Type},
+    ast::{ConstructorAnnotation, Diagnostic, Expression, Function, Namespace, Type},
     diagnostics::Diagnostics,
-    expression::{expression, ExprContext, ResolveTo},
+    eval::overflow_check,
+    expression::{expression, hex_number_literal, number_literal, ExprContext, ResolveTo},
     unused_variable::used_variable,
     Symtable,
 };
 use crate::Target;
+use num_bigint::BigInt;
+use num_traits::{One, ToPrimitive};
 use solang_parser::pt::{self, CodeLocation};
+
+/// Resolve the prototype annotation for functions (just the selector). These
+/// annotations can be resolved for functions without a body. This means they
+/// do not need to access the symbol table, like `@seed(foo)` annotations do.
+pub fn function_prototype_annotations(
+    func: &mut Function,
+    annotations: &[&pt::Annotation],
+    ns: &mut Namespace,
+) {
+    let mut diagnostics = Diagnostics::default();
+
+    for annotation in annotations {
+        match annotation.id.name.as_str() {
+            "selector" => function_selector(func, annotation, &mut diagnostics, ns),
+            _ if !func.has_body => {
+                // function_body_annotations() is called iff there is a body
+                diagnostics.push(Diagnostic::error(
+                    annotation.loc,
+                    format!(
+                        "annotation '@{}' not allowed on {} with no body",
+                        annotation.id.name, func.ty
+                    ),
+                ));
+            }
+            _ => {
+                // handled in function_body_annotations()
+            }
+        }
+    }
+
+    ns.diagnostics.extend(diagnostics);
+}
+
+/// Parse the selector from an annotation and assign it to the function
+fn function_selector(
+    func: &mut Function,
+    annotation: &pt::Annotation,
+    diagnostics: &mut Diagnostics,
+    ns: &mut Namespace,
+) {
+    if func.ty != pt::FunctionTy::Function
+        && (!ns.target.is_substrate() || func.ty != pt::FunctionTy::Constructor)
+    {
+        diagnostics.push(Diagnostic::error(
+            annotation.loc,
+            format!("overriding selector not permitted on {}", func.ty),
+        ));
+        return;
+    }
+
+    if !func.is_public() {
+        diagnostics.push(Diagnostic::error(
+            annotation.loc,
+            format!(
+                "overriding selector only permitted on 'public' or 'external' function, not '{}'",
+                func.visibility
+            ),
+        ));
+        return;
+    }
+
+    if let Some((prev, _)) = &func.selector {
+        diagnostics.push(Diagnostic::error_with_note(
+            annotation.loc,
+            format!("duplicate @selector annotation for {}", func.ty),
+            *prev,
+            "previous @selector".into(),
+        ));
+        return;
+    }
+
+    match &annotation.value {
+        pt::Expression::ArrayLiteral(_, values) => {
+            let mut selector = Vec::new();
+
+            for expr in values {
+                let uint8 = Type::Uint(8);
+
+                let expr = match expr {
+                    pt::Expression::HexNumberLiteral(loc, n) => {
+                        hex_number_literal(loc, n, ns, diagnostics, ResolveTo::Type(&uint8))
+                    }
+                    pt::Expression::NumberLiteral(loc, base, exp) => number_literal(
+                        loc,
+                        base,
+                        exp,
+                        ns,
+                        &BigInt::one(),
+                        diagnostics,
+                        ResolveTo::Type(&uint8),
+                    ),
+                    _ => {
+                        diagnostics.push(Diagnostic::error(
+                            expr.loc(),
+                            "literal number expected".into(),
+                        ));
+                        continue;
+                    }
+                };
+
+                if let Ok(Expression::NumberLiteral(loc, _, v)) = &expr {
+                    if let Some(diagnostic) = overflow_check(v, &uint8, loc) {
+                        diagnostics.push(diagnostic);
+                    } else {
+                        selector.push(v.to_u8().unwrap());
+                    }
+                } else {
+                    // Diagnostic already generated
+                    assert!(expr.is_err());
+                }
+            }
+
+            if !diagnostics.any_errors() {
+                func.selector = Some((annotation.loc, selector));
+            }
+        }
+        _ => {
+            diagnostics.push(Diagnostic::error(
+                annotation.value.loc(),
+                "expression must be an array literal".into(),
+            ));
+        }
+    }
+}
 
 /// Collect the seeds, bump, payer, and space for constructors. This is a no-op on Substrate/EVM since
 /// there should be no seed or bump annotations permitted on other targets.
-pub fn function_annotations(
+///
+/// These annotations need a symbol table.
+pub fn function_body_annotations(
     function_no: usize,
     annotations: &[&pt::Annotation],
     symtable: &mut Symtable,
@@ -38,6 +167,10 @@ pub fn function_annotations(
 
     for note in annotations {
         match note.id.name.as_str() {
+            "selector" => {
+                // selectors already done in function_prototype_annotations
+                // without using a symbol table
+            }
             "seed" if is_solana_constructor => {
                 let ty = Type::Slice(Box::new(Type::Bytes(1)));
                 let loc = note.loc;

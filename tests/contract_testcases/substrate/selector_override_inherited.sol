@@ -1,9 +1,11 @@
 contract base {
-	function func() selector=hex"abcdef01" public virtual {}
+	@selector([0xab, 0xcd, 0xef, 0x01])
+	function func() public virtual {}
 }
 
 contract child is base {
-	function func() selector=hex"abcdef02" public override {}
+	@selector([0xab, 0xcd, 0xef, 0x02])
+	function func() public override {}
 }
 
 contract child2 is base {
@@ -15,7 +17,6 @@ contract base2 {
 }
 
 contract child3 is base2 {
-	function func() selector=hex"abcdef02" public override {}
+	@selector([0xab, 0xcd, 0xef, 0x02])
+	function func() public override {}
 }
-
-

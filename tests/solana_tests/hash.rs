@@ -15,8 +15,8 @@ fn constants_hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[]);
-    runtime.function("test", &[], None);
+    runtime.constructor(&[]);
+    runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
         r##"
@@ -29,8 +29,8 @@ fn constants_hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[]);
-    runtime.function("test", &[], None);
+    runtime.constructor(&[]);
+    runtime.function("test", &[]);
 
     let mut runtime = build_solidity(
         r##"
@@ -43,8 +43,8 @@ fn constants_hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[]);
-    runtime.function("test", &[], None);
+    runtime.constructor(&[]);
+    runtime.function("test", &[]);
 }
 
 #[test]
@@ -60,18 +60,16 @@ fn hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[]);
-    let hash = runtime.function(
-        "test",
-        &[BorshToken::Bytes(b"Hello, World!".to_vec())],
-        None,
-    );
+    runtime.constructor(&[]);
+    let hash = runtime
+        .function("test", &[BorshToken::Bytes(b"Hello, World!".to_vec())])
+        .unwrap();
 
     assert_eq!(
         hash,
-        vec![BorshToken::FixedBytes(
+        BorshToken::uint8_fixed_array(
             hex::decode("527a6a4b9a6da75607546842e0e00105350b1aaf").unwrap()
-        )]
+        )
     );
 
     let mut runtime = build_solidity(
@@ -85,19 +83,17 @@ fn hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[]);
-    let hash = runtime.function(
-        "test",
-        &[BorshToken::Bytes(b"Hello, World!".to_vec())],
-        None,
-    );
+    runtime.constructor(&[]);
+    let hash = runtime
+        .function("test", &[BorshToken::Bytes(b"Hello, World!".to_vec())])
+        .unwrap();
 
     assert_eq!(
         hash,
-        vec![BorshToken::FixedBytes(
+        BorshToken::uint8_fixed_array(
             hex::decode("dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f")
                 .unwrap()
-        )]
+        )
     );
 
     let mut runtime = build_solidity(
@@ -111,18 +107,16 @@ fn hash_tests() {
         }"##,
     );
 
-    runtime.constructor("tester", &[]);
-    let hash = runtime.function(
-        "test",
-        &[BorshToken::Bytes(b"Hello, World!".to_vec())],
-        None,
-    );
+    runtime.constructor(&[]);
+    let hash = runtime
+        .function("test", &[BorshToken::Bytes(b"Hello, World!".to_vec())])
+        .unwrap();
 
     assert_eq!(
         hash,
-        vec![BorshToken::FixedBytes(
+        BorshToken::uint8_fixed_array(
             hex::decode("acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f")
                 .unwrap()
-        )]
+        )
     );
 }

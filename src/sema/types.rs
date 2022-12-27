@@ -944,6 +944,7 @@ impl Type {
             Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
             Type::Unresolved => "unresolved".into(),
             Type::BufferPointer => "buffer_pointer".into(),
+            Type::FunctionSelector => "function_selector".into(),
         }
     }
 
@@ -1058,6 +1059,7 @@ impl Type {
             Type::ExternalFunction { .. } => false,
             Type::Slice(_) => false,
             Type::Unresolved => false,
+            Type::FunctionSelector => false,
             _ => unreachable!("{:?}", self),
         }
     }
@@ -1142,6 +1144,7 @@ impl Type {
             }
             Type::Unresolved | Type::Mapping(..) => BigInt::zero(),
             Type::UserType(no) => ns.user_types[*no].ty.memory_size_of(ns),
+            Type::FunctionSelector => BigInt::from(ns.target.selector_length()),
             _ => unimplemented!("sizeof on {:?}", self),
         }
     }
@@ -1249,6 +1252,23 @@ impl Type {
                 .unwrap(),
             Type::InternalFunction { .. } => ns.target.ptr_size().into(),
             _ => 1,
+        }
+    }
+
+    pub fn bytes(&self, ns: &Namespace) -> u8 {
+        match self {
+            Type::Contract(_) | Type::Address(_) => ns.address_length as u8,
+            Type::Bool => 1,
+            Type::Int(n) => *n as u8,
+            Type::Uint(n) => *n as u8,
+            Type::Rational => unreachable!(),
+            Type::Bytes(n) => *n,
+            Type::Enum(n) => ns.enums[*n].ty.bytes(ns),
+            Type::Value => ns.value_length as u8,
+            Type::StorageRef(..) => ns.storage_type().bytes(ns),
+            Type::Ref(ty) => ty.bytes(ns),
+            Type::FunctionSelector => ns.target.selector_length(),
+            _ => panic!("type not allowed"),
         }
     }
 

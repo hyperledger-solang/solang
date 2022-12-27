@@ -43,7 +43,7 @@ fn verify() {
         }"#,
     );
 
-    vm.constructor("foo", &[]);
+    vm.constructor(&[]);
 
     let mut csprng = rand_07::thread_rng();
     let keypair: Keypair = Keypair::generate(&mut csprng);
@@ -59,17 +59,18 @@ fn verify() {
     println!("T: SIG: {}", hex::encode(&signature_bs));
     println!("T: MES: {}", hex::encode(message));
 
-    let returns = vm.function(
-        "verify",
-        &[
-            BorshToken::Address(keypair.public.to_bytes()),
-            BorshToken::Bytes(message.to_vec()),
-            BorshToken::Bytes(signature_bs.clone()),
-        ],
-        None,
-    );
+    let returns = vm
+        .function(
+            "verify",
+            &[
+                BorshToken::Address(keypair.public.to_bytes()),
+                BorshToken::Bytes(message.to_vec()),
+                BorshToken::Bytes(signature_bs.clone()),
+            ],
+        )
+        .unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bool(false)]);
+    assert_eq!(returns, BorshToken::Bool(false));
 
     let instructions_account: Account = "Sysvar1nstructions1111111111111111111111111"
         .from_base58()
@@ -89,17 +90,18 @@ fn verify() {
 
     println!("Now try for real");
 
-    let returns = vm.function(
-        "verify",
-        &[
-            BorshToken::Address(keypair.public.to_bytes()),
-            BorshToken::Bytes(message.to_vec()),
-            BorshToken::Bytes(signature_bs.clone()),
-        ],
-        None,
-    );
+    let returns = vm
+        .function(
+            "verify",
+            &[
+                BorshToken::Address(keypair.public.to_bytes()),
+                BorshToken::Bytes(message.to_vec()),
+                BorshToken::Bytes(signature_bs.clone()),
+            ],
+        )
+        .unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bool(true)]);
+    assert_eq!(returns, BorshToken::Bool(true));
 
     println!("now try with bad signature");
 
@@ -118,17 +120,18 @@ fn verify() {
         },
     );
 
-    let returns = vm.function(
-        "verify",
-        &[
-            BorshToken::Address(keypair.public.to_bytes()),
-            BorshToken::Bytes(message.to_vec()),
-            BorshToken::Bytes(signature_bs),
-        ],
-        None,
-    );
+    let returns = vm
+        .function(
+            "verify",
+            &[
+                BorshToken::Address(keypair.public.to_bytes()),
+                BorshToken::Bytes(message.to_vec()),
+                BorshToken::Bytes(signature_bs),
+            ],
+        )
+        .unwrap();
 
-    assert_eq!(returns, vec![BorshToken::Bool(false)]);
+    assert_eq!(returns, BorshToken::Bool(false));
 }
 
 fn encode_instructions(public_key: &[u8], signature: &[u8], message: &[u8]) -> Vec<u8> {
