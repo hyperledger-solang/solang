@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::value::Value;
-use super::{bigint_to_bitarr, highest_set_bit, track, Variables};
+use super::{bigint_to_bitarr, highest_set_bit, track, Bits, Variables};
 use crate::codegen::Expression;
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{Namespace, Type};
@@ -67,7 +67,7 @@ pub(super) fn expression_values(
                 let bits = ty.bits(ns) as usize;
 
                 // set the bits from the value to unknown
-                known_bits[0..bits].set_all(false);
+                known_bits[0..bits].fill(false);
 
                 set.insert(Value {
                     known_bits,
@@ -123,7 +123,7 @@ fn zero_ext_values(
     vals.into_iter()
         .map(|mut v| {
             let bits_before = v.bits;
-            v.known_bits[bits_before..bits_after].set_all(true);
+            v.known_bits[bits_before..bits_after].fill(true);
             v.bits = bits_after;
             v
         })
@@ -144,11 +144,11 @@ fn sign_ext_values(
             let bits_before = v.bits;
             // copy the sign known bit over
             let sign_known = v.known_bits[bits_before - 1];
-            v.known_bits[bits_before..bits_after].set_all(sign_known);
+            v.known_bits[bits_before..bits_after].fill(sign_known);
 
             // copy the sign bit over
             let sign = v.value[bits_before - 1];
-            v.value[bits_before..bits_after].set_all(sign);
+            v.value[bits_before..bits_after].fill(sign);
 
             v.bits = bits_after;
             v
@@ -163,8 +163,8 @@ fn trunc_values(ty: &Type, expr: &Expression, vars: &Variables, ns: &Namespace) 
     vals.into_iter()
         .map(|mut v| {
             let bits_before = v.bits;
-            v.known_bits[bits_after..bits_before].set_all(true);
-            v.value[bits_after..bits_before].set_all(false);
+            v.known_bits[bits_after..bits_before].fill(true);
+            v.value[bits_after..bits_before].fill(false);
             v.bits = bits_after;
             v
         })
@@ -228,7 +228,7 @@ fn bitwise_xor_values(
         .cartesian_product(right.iter())
         .map(|(l, r)| {
             let mut value = l.value ^ r.value;
-            value[l.bits..].set_all(false);
+            value[l.bits..].fill(false);
             Value {
                 value,
                 known_bits: l.known_bits & r.known_bits,
@@ -252,8 +252,8 @@ fn add_values(
         .cartesian_product(right.iter())
         .map(|(l, r)| {
             let mut min_possible =
-                (BigInt::from_signed_bytes_le(l.get_unsigned_min_value().as_buffer())
-                    + BigInt::from_signed_bytes_le(r.get_unsigned_min_value().as_buffer()))
+                (BigInt::from_signed_bytes_le(&l.get_unsigned_min_value().into_inner())
+                    + BigInt::from_signed_bytes_le(&r.get_unsigned_min_value().into_inner()))
                 .to_signed_bytes_le();
             let sign = if (min_possible.last().unwrap() & 0x80) != 0 {
                 u8::MAX
@@ -262,13 +262,12 @@ fn add_values(
             };
             min_possible.resize(32, sign);
 
-            let mut min_possible: BitArray<Lsb0, [u8; 32]> =
-                BitArray::new(min_possible.try_into().unwrap());
-            min_possible[ty.bits(ns) as usize..].set_all(false);
+            let mut min_possible: Bits = BitArray::new(min_possible.try_into().unwrap());
+            min_possible[ty.bits(ns) as usize..].fill(false);
 
             let mut max_possible =
-                (BigInt::from_signed_bytes_le(l.get_unsigned_max_value().as_buffer())
-                    + BigInt::from_signed_bytes_le(r.get_unsigned_max_value().as_buffer()))
+                (BigInt::from_signed_bytes_le(&l.get_unsigned_max_value().into_inner())
+                    + BigInt::from_signed_bytes_le(&r.get_unsigned_max_value().into_inner()))
                 .to_signed_bytes_le();
             let sign = if (max_possible.last().unwrap() & 0x80) != 0 {
                 u8::MAX
@@ -277,9 +276,8 @@ fn add_values(
             };
             max_possible.resize(32, sign);
 
-            let mut max_possible: BitArray<Lsb0, [u8; 32]> =
-                BitArray::new(max_possible.try_into().unwrap());
-            max_possible[ty.bits(ns) as usize..].set_all(false);
+            let mut max_possible: Bits = BitArray::new(max_possible.try_into().unwrap());
+            max_possible[ty.bits(ns) as usize..].fill(false);
 
             let known_bits = !(min_possible ^ max_possible) & l.known_bits & r.known_bits;
 
@@ -310,8 +308,8 @@ fn subtract_values(
         .cartesian_product(right.iter())
         .map(|(l, r)| {
             let mut min_possible =
-                (BigInt::from_signed_bytes_le(l.get_unsigned_min_value().as_buffer())
-                    - BigInt::from_signed_bytes_le(r.get_unsigned_min_value().as_buffer()))
+                (BigInt::from_signed_bytes_le(&l.get_unsigned_min_value().into_inner())
+                    - BigInt::from_signed_bytes_le(&r.get_unsigned_min_value().into_inner()))
                 .to_signed_bytes_le();
             let sign = if (min_possible.last().unwrap() & 0x80) != 0 {
                 u8::MAX
@@ -320,13 +318,12 @@ fn subtract_values(
             };
             min_possible.resize(32, sign);
 
-            let mut min_possible: BitArray<Lsb0, [u8; 32]> =
-                BitArray::new(min_possible.try_into().unwrap());
-            min_possible[ty.bits(ns) as usize..].set_all(false);
+            let mut min_possible: Bits = BitArray::new(min_possible.try_into().unwrap());
+            min_possible[ty.bits(ns) as usize..].fill(false);
 
             let mut max_possible =
-                (BigInt::from_signed_bytes_le(l.get_unsigned_max_value().as_buffer())
-                    - BigInt::from_signed_bytes_le(r.get_unsigned_max_value().as_buffer()))
+                (BigInt::from_signed_bytes_le(&l.get_unsigned_max_value().into_inner())
+                    - BigInt::from_signed_bytes_le(&r.get_unsigned_max_value().into_inner()))
                 .to_signed_bytes_le();
             let sign = if (max_possible.last().unwrap() & 0x80) != 0 {
                 u8::MAX
@@ -335,9 +332,8 @@ fn subtract_values(
             };
             max_possible.resize(32, sign);
 
-            let mut max_possible: BitArray<Lsb0, [u8; 32]> =
-                BitArray::new(max_possible.try_into().unwrap());
-            max_possible[ty.bits(ns) as usize..].set_all(false);
+            let mut max_possible: Bits = BitArray::new(max_possible.try_into().unwrap());
+            max_possible[ty.bits(ns) as usize..].fill(false);
 
             let known_bits = !(min_possible ^ max_possible) & l.known_bits & r.known_bits;
 
@@ -380,8 +376,8 @@ fn multiply_values(
                             r.get_signed_max_value()
                         };
 
-                        let max_possible = BigInt::from_signed_bytes_le(left.as_buffer())
-                            * BigInt::from_signed_bytes_le(right.as_buffer());
+                        let max_possible = BigInt::from_signed_bytes_le(&left.into_inner())
+                            * BigInt::from_signed_bytes_le(&right.into_inner());
 
                         let (sign, bs) = max_possible.to_bytes_le();
                         let top_bit = highest_set_bit(&bs);
@@ -392,9 +388,9 @@ fn multiply_values(
 
                         if l.known_bits[0..l.bits].all() && r.known_bits[0..r.bits].all() {
                             // constants
-                            known_bits.set_all(true);
+                            known_bits.fill(true);
                         } else {
-                            known_bits[top_bit + 1..l.bits].set_all(true);
+                            known_bits[top_bit + 1..l.bits].fill(true);
                         }
 
                         Value {
@@ -414,8 +410,8 @@ fn multiply_values(
                 }
             } else {
                 let mut max_possible =
-                    (BigInt::from_signed_bytes_le(l.get_unsigned_max_value().as_buffer())
-                        * BigInt::from_signed_bytes_le(r.get_unsigned_max_value().as_buffer()))
+                    (BigInt::from_signed_bytes_le(&l.get_unsigned_max_value().into_inner())
+                        * BigInt::from_signed_bytes_le(&r.get_unsigned_max_value().into_inner()))
                     .to_signed_bytes_le();
                 let sign = if (max_possible.last().unwrap() & 0x80) != 0 {
                     u8::MAX
@@ -426,7 +422,7 @@ fn multiply_values(
 
                 if l.known_bits[0..l.bits].all() && r.known_bits[0..r.bits].all() {
                     // constants
-                    known_bits.set_all(true);
+                    known_bits.fill(true);
 
                     Value {
                         value: BitArray::new(max_possible.try_into().unwrap()),
@@ -437,7 +433,7 @@ fn multiply_values(
                     let top_bit = highest_set_bit(&max_possible);
 
                     if top_bit < l.bits {
-                        known_bits[top_bit + 1..l.bits].set_all(true);
+                        known_bits[top_bit + 1..l.bits].fill(true);
                     }
 
                     Value {
@@ -470,11 +466,11 @@ fn more_values(
             let mut value = BitArray::new([0u8; 32]);
 
             let is_true = if ty.is_signed_int() {
-                BigInt::from_signed_bytes_le(l.get_signed_max_value().as_buffer())
-                    > BigInt::from_signed_bytes_le(r.get_signed_min_value().as_buffer())
+                BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
+                    > BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
             } else {
-                BigInt::from_bytes_le(Sign::Plus, l.get_unsigned_max_value().as_buffer())
-                    > BigInt::from_bytes_le(Sign::Plus, r.get_unsigned_min_value().as_buffer())
+                BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_max_value().into_inner())
+                    > BigInt::from_bytes_le(Sign::Plus, &r.get_unsigned_min_value().into_inner())
             };
 
             if is_true {
@@ -484,11 +480,14 @@ fn more_values(
             } else {
                 // maybe the comparison is always false
                 let is_false = if ty.is_signed_int() {
-                    BigInt::from_signed_bytes_le(l.get_signed_min_value().as_buffer())
-                        <= BigInt::from_signed_bytes_le(r.get_signed_max_value().as_buffer())
+                    BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
+                        <= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                 } else {
-                    BigInt::from_bytes_le(Sign::Plus, l.get_unsigned_min_value().as_buffer())
-                        <= BigInt::from_bytes_le(Sign::Plus, r.get_unsigned_max_value().as_buffer())
+                    BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_min_value().into_inner())
+                        <= BigInt::from_bytes_le(
+                            Sign::Plus,
+                            &r.get_unsigned_max_value().into_inner(),
+                        )
                 };
 
                 if is_false {
@@ -525,11 +524,11 @@ fn more_equal_values(
             let mut value = BitArray::new([0u8; 32]);
 
             let is_true = if ty.is_signed_int() {
-                BigInt::from_signed_bytes_le(l.get_signed_max_value().as_buffer())
-                    >= BigInt::from_signed_bytes_le(r.get_signed_min_value().as_buffer())
+                BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
+                    >= BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
             } else {
-                BigInt::from_bytes_le(Sign::Plus, l.get_unsigned_max_value().as_buffer())
-                    >= BigInt::from_bytes_le(Sign::Plus, r.get_unsigned_min_value().as_buffer())
+                BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_max_value().into_inner())
+                    >= BigInt::from_bytes_le(Sign::Plus, &r.get_unsigned_min_value().into_inner())
             };
 
             if is_true {
@@ -539,11 +538,14 @@ fn more_equal_values(
             } else {
                 // maybe the comparison is always false
                 let is_false = if ty.is_signed_int() {
-                    BigInt::from_signed_bytes_le(l.get_signed_min_value().as_buffer())
-                        < BigInt::from_signed_bytes_le(r.get_signed_max_value().as_buffer())
+                    BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
+                        < BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                 } else {
-                    BigInt::from_bytes_le(Sign::Plus, l.get_unsigned_min_value().as_buffer())
-                        < BigInt::from_bytes_le(Sign::Plus, r.get_unsigned_max_value().as_buffer())
+                    BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_min_value().into_inner())
+                        < BigInt::from_bytes_le(
+                            Sign::Plus,
+                            &r.get_unsigned_max_value().into_inner(),
+                        )
                 };
 
                 if is_false {
@@ -580,11 +582,11 @@ fn less_values(
             let mut value = BitArray::new([0u8; 32]);
 
             let is_true = if ty.is_signed_int() {
-                BigInt::from_signed_bytes_le(l.get_signed_max_value().as_buffer())
-                    < BigInt::from_signed_bytes_le(r.get_signed_min_value().as_buffer())
+                BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
+                    < BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
             } else {
-                BigInt::from_bytes_le(Sign::Plus, l.get_unsigned_max_value().as_buffer())
-                    < BigInt::from_bytes_le(Sign::Plus, r.get_unsigned_min_value().as_buffer())
+                BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_max_value().into_inner())
+                    < BigInt::from_bytes_le(Sign::Plus, &r.get_unsigned_min_value().into_inner())
             };
 
             if is_true {
@@ -594,11 +596,14 @@ fn less_values(
             } else {
                 // maybe the comparison is always false
                 let is_false = if ty.is_signed_int() {
-                    BigInt::from_signed_bytes_le(l.get_signed_min_value().as_buffer())
-                        >= BigInt::from_signed_bytes_le(r.get_signed_max_value().as_buffer())
+                    BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
+                        >= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                 } else {
-                    BigInt::from_bytes_le(Sign::Plus, l.get_unsigned_min_value().as_buffer())
-                        >= BigInt::from_bytes_le(Sign::Plus, r.get_unsigned_max_value().as_buffer())
+                    BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_min_value().into_inner())
+                        >= BigInt::from_bytes_le(
+                            Sign::Plus,
+                            &r.get_unsigned_max_value().into_inner(),
+                        )
                 };
 
                 if is_false {
@@ -635,11 +640,11 @@ fn less_equal_values(
             let mut value = BitArray::new([0u8; 32]);
 
             let is_true = if ty.is_signed_int() {
-                BigInt::from_signed_bytes_le(l.get_signed_max_value().as_buffer())
-                    <= BigInt::from_signed_bytes_le(r.get_signed_min_value().as_buffer())
+                BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
+                    <= BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
             } else {
-                BigInt::from_bytes_le(Sign::Plus, l.get_unsigned_max_value().as_buffer())
-                    <= BigInt::from_bytes_le(Sign::Plus, r.get_unsigned_min_value().as_buffer())
+                BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_max_value().into_inner())
+                    <= BigInt::from_bytes_le(Sign::Plus, &r.get_unsigned_min_value().into_inner())
             };
 
             if is_true {
@@ -649,11 +654,14 @@ fn less_equal_values(
             } else {
                 // maybe the comparison is always false
                 let is_false = if ty.is_signed_int() {
-                    BigInt::from_signed_bytes_le(l.get_signed_min_value().as_buffer())
-                        > BigInt::from_signed_bytes_le(r.get_signed_max_value().as_buffer())
+                    BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
+                        > BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                 } else {
-                    BigInt::from_bytes_le(Sign::Plus, l.get_unsigned_min_value().as_buffer())
-                        > BigInt::from_bytes_le(Sign::Plus, r.get_unsigned_max_value().as_buffer())
+                    BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_min_value().into_inner())
+                        > BigInt::from_bytes_le(
+                            Sign::Plus,
+                            &r.get_unsigned_max_value().into_inner(),
+                        )
                 };
 
                 if is_false {
@@ -687,15 +695,15 @@ fn equal_values(
             let mut value = BitArray::new([0u8; 32]);
 
             let could_be_equal = if left_expr.ty().is_signed_int() {
-                BigInt::from_signed_bytes_le(l.get_signed_min_value().as_buffer())
-                    >= BigInt::from_signed_bytes_le(r.get_signed_max_value().as_buffer())
-                    && BigInt::from_signed_bytes_le(l.get_signed_min_value().as_buffer())
-                        <= BigInt::from_signed_bytes_le(r.get_signed_max_value().as_buffer())
+                BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
+                    >= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
+                    && BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
+                        <= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
             } else {
-                BigInt::from_signed_bytes_le(l.get_unsigned_min_value().as_buffer())
-                    >= BigInt::from_signed_bytes_le(r.get_unsigned_max_value().as_buffer())
-                    && BigInt::from_signed_bytes_le(l.get_unsigned_min_value().as_buffer())
-                        <= BigInt::from_signed_bytes_le(r.get_unsigned_max_value().as_buffer())
+                BigInt::from_signed_bytes_le(&l.get_unsigned_min_value().into_inner())
+                    >= BigInt::from_signed_bytes_le(&r.get_unsigned_max_value().into_inner())
+                    && BigInt::from_signed_bytes_le(&l.get_unsigned_min_value().into_inner())
+                        <= BigInt::from_signed_bytes_le(&r.get_unsigned_max_value().into_inner())
             };
 
             if !could_be_equal || l.all_known() && r.all_known() {
@@ -728,15 +736,15 @@ fn not_equal_values(
             let mut value = BitArray::new([0u8; 32]);
 
             let could_be_equal = if left_expr.ty().is_signed_int() {
-                BigInt::from_signed_bytes_le(l.get_signed_min_value().as_buffer())
-                    >= BigInt::from_signed_bytes_le(r.get_signed_max_value().as_buffer())
-                    && BigInt::from_signed_bytes_le(l.get_signed_min_value().as_buffer())
-                        <= BigInt::from_signed_bytes_le(r.get_signed_max_value().as_buffer())
+                BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
+                    >= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
+                    && BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
+                        <= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
             } else {
-                BigInt::from_signed_bytes_le(l.get_unsigned_min_value().as_buffer())
-                    >= BigInt::from_signed_bytes_le(r.get_unsigned_max_value().as_buffer())
-                    && BigInt::from_signed_bytes_le(l.get_unsigned_min_value().as_buffer())
-                        <= BigInt::from_signed_bytes_le(r.get_unsigned_max_value().as_buffer())
+                BigInt::from_signed_bytes_le(&l.get_unsigned_min_value().into_inner())
+                    >= BigInt::from_signed_bytes_le(&r.get_unsigned_max_value().into_inner())
+                    && BigInt::from_signed_bytes_le(&l.get_unsigned_min_value().into_inner())
+                        <= BigInt::from_signed_bytes_le(&r.get_unsigned_max_value().into_inner())
             };
 
             if !could_be_equal || l.all_known() && r.all_known() {
