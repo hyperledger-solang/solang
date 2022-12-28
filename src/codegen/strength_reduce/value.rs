@@ -34,7 +34,7 @@ impl fmt::Display for Value {
                 f,
                 "{} k:{}",
                 BigInt::from_signed_bytes_le(&self.value.into_inner()),
-                hex::encode(&self.value[0..self.bits].to_bitvec().as_raw_slice())
+                hex::encode(self.value[0..self.bits].to_bitvec().as_raw_slice())
             )
         }
     }
