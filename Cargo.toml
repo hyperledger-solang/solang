@@ -60,7 +60,7 @@ scale-info = "2.3"
 
 [dev-dependencies]
 num-derive = "0.3"
-ethabi = "17.0"
+ethabi = { version = "18", features = ["parity-codec"] }
 wasmi = "0.11"
 # rand version 0.7 is needed for ed25519_dalek::keypair::generate, used in solana_tests/signature_verify.rs
 rand_07 = { package = "rand", version = "0.7" }
