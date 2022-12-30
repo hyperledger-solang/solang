@@ -226,7 +226,7 @@ fn expresson_known_bits() {
     let mut bs = (123456u32 + 7899900u32).to_le_bytes().to_vec();
     bs.resize(32, 0);
 
-    assert_eq!(v.value.as_buffer().to_vec(), bs);
+    assert_eq!(v.value.into_inner(), &bs[..]);
 
     // add: unknown plus constant
     let expr = Expression::Add(
@@ -272,7 +272,7 @@ fn expresson_known_bits() {
 
     assert!(!v.known_bits[0..17].all());
     assert!(v.known_bits[17..32].all());
-    let mut value = BigInt::from_signed_bytes_le(v.value.as_buffer());
+    let mut value = BigInt::from_signed_bytes_le(&v.value.into_inner());
 
     // mask off the unknown bits and compare
     value &= BigInt::from(!0x1ffff);
@@ -307,7 +307,7 @@ fn expresson_known_bits() {
     let mut bs = (123456i32 - -7899900i32).to_le_bytes().to_vec();
     bs.resize(32, 0);
 
-    assert_eq!(v.value.as_buffer().to_vec(), bs);
+    assert_eq!(v.value.into_inner(), &bs[..]);
 
     // substract: unknown minus constant
     let expr = Expression::Subtract(
@@ -436,7 +436,7 @@ fn expresson_known_bits() {
     let mut bs = (123456i64 * -7899900i64).to_le_bytes().to_vec();
     bs.resize(32, 0xff);
 
-    assert_eq!(v.value.as_buffer().to_vec(), bs);
+    assert_eq!(v.value.into_inner().to_vec(), &bs[..]);
 
     // constants unsigned
     let expr = Expression::Multiply(
@@ -465,7 +465,7 @@ fn expresson_known_bits() {
     let mut bs = (123456i64 * 7899900i64).to_le_bytes().to_vec();
     bs.resize(32, 0);
 
-    assert_eq!(v.value.as_buffer().to_vec(), bs);
+    assert_eq!(v.value.into_inner(), &bs[..]);
 
     // multiply a bunch of numbers, known or not
     let mut vars = HashMap::new();
@@ -530,7 +530,7 @@ fn expresson_known_bits() {
 
     let mut known_bits = BitArray::new([0u8; 32]);
     // 0xffff * 3 = 0x2fffd =17 bits
-    known_bits[18..64].set_all(true);
+    known_bits[18..64].fill(true);
 
     cmp_set.insert(Value {
         known_bits,
@@ -540,7 +540,7 @@ fn expresson_known_bits() {
 
     let mut known_bits = BitArray::new([0u8; 32]);
     // 0xffff * 0x2000 = 0x1fffe00000 = 36 bits
-    known_bits[37..64].set_all(true);
+    known_bits[37..64].fill(true);
 
     cmp_set.insert(Value {
         known_bits,

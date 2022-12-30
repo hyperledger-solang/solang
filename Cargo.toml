@@ -40,7 +40,7 @@ tokio = { version = "1.16", features = ["rt", "io-std", "macros"] }
 base58 = "0.2.0"
 sha2 = "0.10"
 ripemd = "0.1"
-bitvec = "0.20"
+bitvec = "1"
 funty = "2.0"
 itertools = "0.10"
 num-rational = "0.4"
@@ -53,14 +53,14 @@ rust-lapper = "1.0"
 bitflags = "1.3"
 anchor-syn = { version = "0.26", features = ["idl"] }
 convert_case = "0.6"
-parse-display = "0.6.0"
+parse-display = "0.8.0"
 parity-scale-codec = "3.1"
 ink = "4.0.0-beta"
 scale-info = "2.3"
 
 [dev-dependencies]
 num-derive = "0.3"
-ethabi = "17.0"
+ethabi = { version = "18", features = ["parity-codec"] }
 wasmi = "0.11"
 # rand version 0.7 is needed for ed25519_dalek::keypair::generate, used in solana_tests/signature_verify.rs
 rand_07 = { package = "rand", version = "0.7" }
