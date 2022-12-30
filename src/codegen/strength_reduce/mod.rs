@@ -513,7 +513,7 @@ fn track(ty: &Type) -> bool {
 
 // A variable can
 type Variables = HashMap<usize, HashSet<Value>>;
-type Bits = BitArray<Lsb0, [u8; 32]>;
+type Bits = BitArray<[u8; 32], Lsb0>;
 
 fn highest_set_bit(bs: &[u8]) -> usize {
     for (i, b) in bs.iter().enumerate().rev() {
@@ -525,7 +525,7 @@ fn highest_set_bit(bs: &[u8]) -> usize {
     0
 }
 
-fn bigint_to_bitarr(v: &BigInt, bits: usize) -> BitArray<Lsb0, [u8; 32]> {
+fn bigint_to_bitarr(v: &BigInt, bits: usize) -> BitArray<[u8; 32], Lsb0> {
     let mut bs = v.to_signed_bytes_le();
 
     bs.resize(
@@ -540,7 +540,7 @@ fn bigint_to_bitarr(v: &BigInt, bits: usize) -> BitArray<Lsb0, [u8; 32]> {
     let mut ba = BitArray::new(bs.try_into().unwrap());
 
     if bits < 256 {
-        ba[bits..256].set_all(false);
+        ba[bits..256].fill(false);
     }
 
     ba
