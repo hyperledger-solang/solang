@@ -399,6 +399,11 @@ impl SolangServer {
                     stop: event_loc.end(),
                     val,
                 });
+                intelligence.definitions.push(DefinitionEntry {
+                    start: event_loc.start(),
+                    stop: event_loc.end(),
+                    val: event.loc,
+                });
 
                 for arg in args {
                     SolangServer::construct_expr(arg, intelligence, symtab, ns);
@@ -935,8 +940,8 @@ impl SolangServer {
                 }
             }
             ast::Expression::Constructor {
-                loc: _,
-                contract_no: _,
+                loc,
+                contract_no,
                 constructor_no: _,
                 args,
                 call_args,
@@ -959,6 +964,13 @@ impl SolangServer {
                 if let Some(seeds) = &call_args.seeds {
                     SolangServer::construct_expr(seeds, intelligence, symtab, ns);
                 }
+
+                let c = &ns.contracts[*contract_no];
+                intelligence.definitions.push(DefinitionEntry {
+                    start: loc.start(),
+                    stop: loc.end(),
+                    val: c.loc,
+                });
             }
             ast::Expression::Builtin(_locs, _typ, _builtin, expr) => {
                 let val = SolangServer::construct_builtins(_builtin, ns);
@@ -1203,6 +1215,7 @@ impl SolangServer {
             ast::Type::StorageRef(_, ty) => SolangServer::type_declaration_loc(ty, ns),
             ast::Type::Struct(struct_type) => struct_type.definition(ns).loc,
             ast::Type::Enum(n) => ns.enums[*n].loc,
+            ast::Type::Contract(n) => ns.contracts[*n].loc,
             _ => pt::Loc::Builtin,
         }
     }
