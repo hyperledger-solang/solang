@@ -6,11 +6,10 @@ contract b {
     mapping(string => user) users;
 
     function add(string name, address addr) public {
-        // assigning to a storage variable creates a reference
-        user storage s = users[name];
-
-        s.exists = true;
-        s.addr = addr;
+        // This construction is not recommended, because it requires two hash calculations.
+        // See the tip below.
+        users[name].exists = true;
+        users[name].addr = addr;
     }
 
     function get(string name) public view returns (bool, address) {
