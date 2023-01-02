@@ -853,7 +853,7 @@ impl SolangServer {
                     });
                     intelligence.definitions.push(DefinitionEntry {
                         start: loc.start(),
-                        stop: loc.start() + fnc.name.len(),
+                        stop: loc.end(),
                         val: fnc.loc,
                     });
                 }
@@ -908,7 +908,7 @@ impl SolangServer {
                     });
                     intelligence.definitions.push(DefinitionEntry {
                         start: loc.start(),
-                        stop: loc.start() + fnc.name.len(),
+                        stop: loc.end(),
                         val: fnc.loc,
                     });
 
