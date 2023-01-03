@@ -35,14 +35,12 @@ fn main() {
         let libdir = String::from_utf8(libdir.stdout).unwrap();
 
         println!("cargo:libdir={}", libdir);
-        for lib in &["lldELF", "lldDriver", "lldCore", "lldCommon", "lldWasm"] {
+        for lib in &["lldELF", "lldCommon", "lldWasm"] {
             println!("cargo:rustc-link-lib=static={}", lib);
         }
 
-        // And all the symbols were not using, needed by Windows and debug builds
-        for lib in &["lldReaderWriter", "lldMachO", "lldYAML"] {
-            println!("cargo:rustc-link-lib=static={}", lib);
-        }
+        // And all the symbols we're not using, needed by Windows and debug builds
+        println!("cargo:rustc-link-lib=static=lldMachO");
     }
 
     let output = Command::new("git")
