@@ -132,6 +132,10 @@ pub(super) trait AbiEncoding {
             Type::ExternalFunction { .. } => {
                 self.encode_external_function(expr, buffer, offset, ns, vartab, cfg)
             }
+            Type::FunctionSelector => {
+                let size = ns.target.selector_length().into();
+                self.encode_linear(expr, buffer, offset, vartab, cfg, size)
+            }
             Type::InternalFunction { .. }
             | Type::Void
             | Type::BufferPointer
@@ -618,15 +622,22 @@ pub(super) trait AbiEncoding {
                 value: expr.external_function_selector(),
             },
         );
+        let mut size = Type::FunctionSelector.memory_size_of(ns);
+        let offset = Expression::Add(
+            Loc::Codegen,
+            Type::Uint(32),
+            false,
+            offset.clone().into(),
+            Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), size.clone()).into(),
+        );
         cfg.add(
             vartab,
             Instr::WriteBuffer {
                 buf: buffer.clone(),
-                offset: increment_four(offset.clone()),
                 value: expr.external_function_address(),
+                offset,
             },
         );
-        let mut size = BigInt::from(4);
         size.add_assign(BigInt::from(ns.address_length));
         Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), size)
     }
