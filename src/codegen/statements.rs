@@ -764,7 +764,12 @@ fn returns(
     let uncast_values = match expr {
         // Explicitly recurse for conditinal operator expressions.
         // `return a ? b : c` is transformed into pseudo code `a ? return b : return c`
-        ast::Expression::ConditionalOperator(_, _, cond, left, right) => {
+        ast::Expression::ConditionalOperator {
+            cond,
+            true_option: left,
+            false_option: right,
+            ..
+        } => {
             let cond = expression(cond, cfg, contract_no, Some(func), ns, vartab, opt);
 
             let left_block = cfg.new_basic_block("left".to_string());
@@ -836,7 +841,13 @@ fn destructure(
     vartab: &mut Vartable,
     opt: &Options,
 ) {
-    if let ast::Expression::ConditionalOperator(_, _, cond, left, right) = expr {
+    if let ast::Expression::ConditionalOperator {
+        cond,
+        true_option: left,
+        false_option: right,
+        ..
+    } = expr
+    {
         let cond = expression(cond, cfg, contract_no, Some(func), ns, vartab, opt);
 
         let left_block = cfg.new_basic_block("left".to_string());

@@ -231,10 +231,10 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
 
 fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     match expr {
-        Expression::PreIncrement(_, _, _, expr)
-        | Expression::PreDecrement(_, _, _, expr)
-        | Expression::PostIncrement(_, _, _, expr)
-        | Expression::PostDecrement(_, _, _, expr) => {
+        Expression::PreIncrement { expr, .. }
+        | Expression::PreDecrement { expr, .. }
+        | Expression::PostIncrement { expr, .. }
+        | Expression::PostDecrement { expr, .. } => {
             expr.recurse(state, write_expression);
         }
         Expression::Assign(_, _, left, right) => {

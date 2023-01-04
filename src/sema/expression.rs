@@ -52,17 +52,17 @@ impl RetrieveType for Expression {
             | Expression::StructLiteral(_, ty, _)
             | Expression::ArrayLiteral(_, ty, ..)
             | Expression::ConstArrayLiteral(_, ty, ..)
-            | Expression::Add(_, ty, ..)
-            | Expression::Subtract(_, ty, ..)
-            | Expression::Multiply(_, ty, ..)
-            | Expression::Divide(_, ty, ..)
-            | Expression::Modulo(_, ty, ..)
-            | Expression::Power(_, ty, ..)
-            | Expression::BitwiseOr(_, ty, ..)
-            | Expression::BitwiseAnd(_, ty, ..)
-            | Expression::BitwiseXor(_, ty, ..)
-            | Expression::ShiftLeft(_, ty, ..)
-            | Expression::ShiftRight(_, ty, ..)
+            | Expression::Add { ty, .. }
+            | Expression::Subtract { ty, .. }
+            | Expression::Multiply { ty, .. }
+            | Expression::Divide { ty, .. }
+            | Expression::Modulo { ty, .. }
+            | Expression::Power { ty, .. }
+            | Expression::BitwiseOr { ty, .. }
+            | Expression::BitwiseAnd { ty, .. }
+            | Expression::BitwiseXor { ty, .. }
+            | Expression::ShiftLeft { ty, .. }
+            | Expression::ShiftRight { ty, .. }
             | Expression::Variable(_, ty, _)
             | Expression::ConstantVariable(_, ty, ..)
             | Expression::StorageVariable(_, ty, ..)
@@ -71,13 +71,13 @@ impl RetrieveType for Expression {
             | Expression::StorageLoad(_, ty, _)
             | Expression::Complement(_, ty, _)
             | Expression::UnaryMinus(_, ty, _)
-            | Expression::ConditionalOperator(_, ty, ..)
+            | Expression::ConditionalOperator { ty, .. }
             | Expression::StructMember(_, ty, ..)
             | Expression::AllocDynamicBytes(_, ty, ..)
-            | Expression::PreIncrement(_, ty, ..)
-            | Expression::PreDecrement(_, ty, ..)
-            | Expression::PostIncrement(_, ty, ..)
-            | Expression::PostDecrement(_, ty, ..)
+            | Expression::PreIncrement { ty, .. }
+            | Expression::PreDecrement { ty, .. }
+            | Expression::PostIncrement { ty, .. }
+            | Expression::PostDecrement { ty, .. }
             | Expression::Assign(_, ty, ..) => ty.clone(),
             Expression::Subscript(_, ty, ..) => ty.clone(),
             Expression::ZeroExt { to, .. }
@@ -880,37 +880,37 @@ impl Expression {
                 } else if to_len > from_len {
                     let shift = (to_len - from_len) * 8;
 
-                    Ok(Expression::ShiftLeft(
-                        *loc,
-                        to.clone(),
-                        Box::new(Expression::ZeroExt {
+                    Ok(Expression::ShiftLeft {
+                        loc: *loc,
+                        ty: to.clone(),
+                        left: Box::new(Expression::ZeroExt {
                             loc: self.loc(),
                             to: to.clone(),
                             expr: Box::new(self.clone()),
                         }),
-                        Box::new(Expression::NumberLiteral(
+                        right: Box::new(Expression::NumberLiteral(
                             *loc,
                             Type::Uint(*to_len as u16 * 8),
                             BigInt::from_u8(shift).unwrap(),
                         )),
-                    ))
+                    })
                 } else {
                     let shift = (from_len - to_len) * 8;
 
                     Ok(Expression::Trunc {
                         loc: *loc,
                         to: to.clone(),
-                        expr: Box::new(Expression::ShiftRight(
-                            self.loc(),
-                            from.clone(),
-                            Box::new(self.clone()),
-                            Box::new(Expression::NumberLiteral(
+                        expr: Box::new(Expression::ShiftRight {
+                            loc: self.loc(),
+                            ty: from.clone(),
+                            left: Box::new(self.clone()),
+                            right: Box::new(Expression::NumberLiteral(
                                 self.loc(),
                                 Type::Uint(*from_len as u16 * 8),
                                 BigInt::from_u8(shift).unwrap(),
                             )),
-                            false,
-                        )),
+                            sign: false,
+                        }),
                     })
                 }
             }
@@ -2117,13 +2117,13 @@ pub fn expression(
             let left = left.cast(&l.loc(), &ty, true, ns, diagnostics)?;
             let right = right.cast(&r.loc(), &ty, true, ns, diagnostics)?;
 
-            Ok(Expression::ConditionalOperator(
-                *loc,
+            Ok(Expression::ConditionalOperator {
+                loc: *loc,
                 ty,
-                Box::new(cond),
-                Box::new(left),
-                Box::new(right),
-            ))
+                cond: Box::new(cond),
+                true_option: Box::new(left),
+                false_option: Box::new(right),
+            })
         }
 
         // pre/post decrement/increment
@@ -2879,7 +2879,13 @@ fn subtract(
     )?;
 
     if ty.is_rational() {
-        let expr = Expression::Subtract(*loc, ty, false, Box::new(left), Box::new(right));
+        let expr = Expression::Subtract {
+            loc: *loc,
+            ty,
+            unchecked: false,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
 
         return match eval_const_rational(&expr, ns) {
             Ok(_) => Ok(expr),
@@ -2890,13 +2896,13 @@ fn subtract(
         };
     }
 
-    Ok(Expression::Subtract(
-        *loc,
-        ty.clone(),
-        context.unchecked,
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Subtract {
+        loc: *loc,
+        ty: ty.clone(),
+        unchecked: context.unchecked,
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn bitwise_or(
@@ -2925,12 +2931,12 @@ fn bitwise_or(
         diagnostics,
     )?;
 
-    Ok(Expression::BitwiseOr(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::BitwiseOr {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn bitwise_and(
@@ -2959,12 +2965,12 @@ fn bitwise_and(
         diagnostics,
     )?;
 
-    Ok(Expression::BitwiseAnd(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::BitwiseAnd {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn bitwise_xor(
@@ -2993,12 +2999,12 @@ fn bitwise_xor(
         diagnostics,
     )?;
 
-    Ok(Expression::BitwiseXor(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::BitwiseXor {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn shift_left(
@@ -3022,12 +3028,12 @@ fn shift_left(
 
     let left_type = left.ty();
 
-    Ok(Expression::ShiftLeft(
-        *loc,
-        left_type.clone(),
-        Box::new(left),
-        Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
-    ))
+    Ok(Expression::ShiftLeft {
+        loc: *loc,
+        ty: left_type.clone(),
+        left: Box::new(left),
+        right: Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
+    })
 }
 
 fn shift_right(
@@ -3051,13 +3057,13 @@ fn shift_right(
     let _ = get_int_length(&left_type, &l.loc(), true, ns, diagnostics)?;
     let (right_length, _) = get_int_length(&right.ty(), &r.loc(), false, ns, diagnostics)?;
 
-    Ok(Expression::ShiftRight(
-        *loc,
-        left_type.clone(),
-        Box::new(left),
-        Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
-        left_type.is_signed_int(),
-    ))
+    Ok(Expression::ShiftRight {
+        loc: *loc,
+        ty: left_type.clone(),
+        left: Box::new(left),
+        right: Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
+        sign: left_type.is_signed_int(),
+    })
 }
 
 fn multiply(
@@ -3087,7 +3093,13 @@ fn multiply(
     )?;
 
     if ty.is_rational() {
-        let expr = Expression::Multiply(*loc, ty, false, Box::new(left), Box::new(right));
+        let expr = Expression::Multiply {
+            loc: *loc,
+            ty,
+            unchecked: false,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
 
         return match eval_const_rational(&expr, ns) {
             Ok(_) => Ok(expr),
@@ -3126,13 +3138,13 @@ fn multiply(
             )
         }
     } else {
-        Ok(Expression::Multiply(
-            *loc,
-            ty.clone(),
-            context.unchecked,
-            Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-            Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-        ))
+        Ok(Expression::Multiply {
+            loc: *loc,
+            ty: ty.clone(),
+            unchecked: context.unchecked,
+            left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+            right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+        })
     }
 }
 
@@ -3162,12 +3174,12 @@ fn divide(
         diagnostics,
     )?;
 
-    Ok(Expression::Divide(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Divide {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn modulo(
@@ -3196,12 +3208,12 @@ fn modulo(
         diagnostics,
     )?;
 
-    Ok(Expression::Modulo(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Modulo {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn power(
@@ -3267,13 +3279,13 @@ fn power(
         diagnostics,
     )?;
 
-    Ok(Expression::Power(
-        *loc,
-        ty.clone(),
-        context.unchecked,
-        Box::new(base.cast(&b.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(exp.cast(&e.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Power {
+        loc: *loc,
+        ty: ty.clone(),
+        unchecked: context.unchecked,
+        left: Box::new(base.cast(&b.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(exp.cast(&e.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 /// Resolve an new contract expression with positional arguments
@@ -4149,7 +4161,13 @@ fn addition(
     )?;
 
     if ty.is_rational() {
-        let expr = Expression::Add(*loc, ty, false, Box::new(left), Box::new(right));
+        let expr = Expression::Add {
+            loc: *loc,
+            ty,
+            unchecked: false,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
 
         return match eval_const_rational(&expr, ns) {
             Ok(_) => Ok(expr),
@@ -4187,13 +4205,13 @@ fn addition(
         )?;
     }
 
-    Ok(Expression::Add(
-        *loc,
-        ty.clone(),
-        context.unchecked,
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Add {
+        loc: *loc,
+        ty: ty.clone(),
+        unchecked: context.unchecked,
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 /// Resolve an assignment
@@ -4396,52 +4414,70 @@ fn assign_expr(
         };
 
         Ok(match expr {
-            pt::Expression::AssignAdd(..) => Expression::Add(
-                *loc,
-                ty.clone(),
-                context.unchecked,
-                Box::new(assign),
-                Box::new(set),
-            ),
-            pt::Expression::AssignSubtract(..) => Expression::Subtract(
-                *loc,
-                ty.clone(),
-                context.unchecked,
-                Box::new(assign),
-                Box::new(set),
-            ),
-            pt::Expression::AssignMultiply(..) => Expression::Multiply(
-                *loc,
-                ty.clone(),
-                context.unchecked,
-                Box::new(assign),
-                Box::new(set),
-            ),
-            pt::Expression::AssignOr(..) => {
-                Expression::BitwiseOr(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignAnd(..) => {
-                Expression::BitwiseAnd(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignXor(..) => {
-                Expression::BitwiseXor(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignShiftLeft(..) => {
-                Expression::ShiftLeft(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignShiftRight(..) => Expression::ShiftRight(
-                *loc,
-                ty.clone(),
-                Box::new(assign),
-                Box::new(set),
-                ty.is_signed_int(),
-            ),
-            pt::Expression::AssignDivide(..) => {
-                Expression::Divide(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignModulo(..) => {
-                Expression::Modulo(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
+            pt::Expression::AssignAdd(..) => Expression::Add {
+                loc: *loc,
+                ty: ty.clone(),
+                unchecked: context.unchecked,
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignSubtract(..) => Expression::Subtract {
+                loc: *loc,
+                ty: ty.clone(),
+                unchecked: context.unchecked,
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignMultiply(..) => Expression::Multiply {
+                loc: *loc,
+                ty: ty.clone(),
+                unchecked: context.unchecked,
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignOr(..) => Expression::BitwiseOr {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignAnd(..) => Expression::BitwiseAnd {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignXor(..) => Expression::BitwiseXor {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignShiftLeft(..) => Expression::ShiftLeft {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignShiftRight(..) => Expression::ShiftRight {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+                sign: ty.is_signed_int(),
+            },
+            pt::Expression::AssignDivide(..) => Expression::Divide {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignModulo(..) => Expression::Modulo {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
             _ => unreachable!(),
         })
     };
@@ -4563,18 +4599,30 @@ fn incr_decr(
 ) -> Result<Expression, ()> {
     let op = |e: Expression, ty: Type| -> Expression {
         match expr {
-            pt::Expression::PreIncrement(loc, _) => {
-                Expression::PreIncrement(*loc, ty, context.unchecked, Box::new(e))
-            }
-            pt::Expression::PreDecrement(loc, _) => {
-                Expression::PreDecrement(*loc, ty, context.unchecked, Box::new(e))
-            }
-            pt::Expression::PostIncrement(loc, _) => {
-                Expression::PostIncrement(*loc, ty, context.unchecked, Box::new(e))
-            }
-            pt::Expression::PostDecrement(loc, _) => {
-                Expression::PostDecrement(*loc, ty, context.unchecked, Box::new(e))
-            }
+            pt::Expression::PreIncrement(loc, _) => Expression::PreIncrement {
+                loc: *loc,
+                ty,
+                unchecked: context.unchecked,
+                expr: Box::new(e),
+            },
+            pt::Expression::PreDecrement(loc, _) => Expression::PreDecrement {
+                loc: *loc,
+                ty,
+                unchecked: context.unchecked,
+                expr: Box::new(e),
+            },
+            pt::Expression::PostIncrement(loc, _) => Expression::PostIncrement {
+                loc: *loc,
+                ty,
+                unchecked: context.unchecked,
+                expr: Box::new(e),
+            },
+            pt::Expression::PostDecrement(loc, _) => Expression::PostDecrement {
+                loc: *loc,
+                ty,
+                unchecked: context.unchecked,
+                expr: Box::new(e),
+            },
             _ => unreachable!(),
         }
     };
