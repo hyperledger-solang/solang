@@ -17,19 +17,42 @@ pub fn eval_const_number(
     ns: &Namespace,
 ) -> Result<(pt::Loc, BigInt), Diagnostic> {
     match expr {
-        Expression::Add(loc, _, _, l, r) => Ok((
+        Expression::Add {
+            loc,
+            ty: _,
+            unchecked: _,
+            left: l,
+            right: r,
+        } => Ok((
             *loc,
             eval_const_number(l, ns)?.1 + eval_const_number(r, ns)?.1,
         )),
-        Expression::Subtract(loc, _, _, l, r) => Ok((
+        Expression::Subtract {
+            loc,
+            ty: _,
+            unchecked: _,
+            left: l,
+            right: r,
+        } => Ok((
             *loc,
             eval_const_number(l, ns)?.1 - eval_const_number(r, ns)?.1,
         )),
-        Expression::Multiply(loc, _, _, l, r) => Ok((
+        Expression::Multiply {
+            loc,
+            ty: _,
+            unchecked: _,
+            left: l,
+            right: r,
+        } => Ok((
             *loc,
             eval_const_number(l, ns)?.1 * eval_const_number(r, ns)?.1,
         )),
-        Expression::Divide(loc, _, l, r) => {
+        Expression::Divide {
+            loc,
+            ty: _,
+            left: l,
+            right: r,
+        } => {
             let divisor = eval_const_number(r, ns)?.1;
 
             if divisor.is_zero() {
@@ -38,7 +61,12 @@ pub fn eval_const_number(
                 Ok((*loc, eval_const_number(l, ns)?.1 / divisor))
             }
         }
-        Expression::Modulo(loc, _, l, r) => {
+        Expression::Modulo {
+            loc,
+            ty: _,
+            left: l,
+            right: r,
+        } => {
             let divisor = eval_const_number(r, ns)?.1;
 
             if divisor.is_zero() {
@@ -47,19 +75,40 @@ pub fn eval_const_number(
                 Ok((*loc, eval_const_number(l, ns)?.1 % divisor))
             }
         }
-        Expression::BitwiseAnd(loc, _, l, r) => Ok((
+        Expression::BitwiseAnd {
+            loc,
+            ty: _,
+            left: l,
+            right: r,
+        } => Ok((
             *loc,
             eval_const_number(l, ns)?.1 & eval_const_number(r, ns)?.1,
         )),
-        Expression::BitwiseOr(loc, _, l, r) => Ok((
+        Expression::BitwiseOr {
+            loc,
+            ty: _,
+            left: l,
+            right: r,
+        } => Ok((
             *loc,
             eval_const_number(l, ns)?.1 | eval_const_number(r, ns)?.1,
         )),
-        Expression::BitwiseXor(loc, _, l, r) => Ok((
+        Expression::BitwiseXor {
+            loc,
+            ty: _,
+            left: l,
+            right: r,
+        } => Ok((
             *loc,
             eval_const_number(l, ns)?.1 ^ eval_const_number(r, ns)?.1,
         )),
-        Expression::Power(loc, _, _, base, exp) => {
+        Expression::Power {
+            loc,
+            ty: _,
+            unchecked: _,
+            left: base,
+            right: exp,
+        } => {
             let b = eval_const_number(base, ns)?.1;
             let mut e = eval_const_number(exp, ns)?.1;
 
@@ -80,7 +129,12 @@ pub fn eval_const_number(
                 Ok((*loc, res))
             }
         }
-        Expression::ShiftLeft(loc, _, left, right) => {
+        Expression::ShiftLeft {
+            loc,
+            ty: _,
+            left,
+            right,
+        } => {
             let l = eval_const_number(left, ns)?.1;
             let r = eval_const_number(right, ns)?.1;
             let r = match r.to_usize() {
@@ -94,7 +148,13 @@ pub fn eval_const_number(
             };
             Ok((*loc, l << r))
         }
-        Expression::ShiftRight(loc, _, left, right, _) => {
+        Expression::ShiftRight {
+            loc,
+            ty: _,
+            left,
+            right,
+            sign: _,
+        } => {
             let l = eval_const_number(left, ns)?.1;
             let r = eval_const_number(right, ns)?.1;
             let r = match r.to_usize() {
@@ -142,19 +202,42 @@ pub fn eval_const_rational(
     ns: &Namespace,
 ) -> Result<(pt::Loc, BigRational), Diagnostic> {
     match expr {
-        Expression::Add(loc, _, _, l, r) => Ok((
+        Expression::Add {
+            loc,
+            ty: _,
+            unchecked: _,
+            left: l,
+            right: r,
+        } => Ok((
             *loc,
             eval_const_rational(l, ns)?.1 + eval_const_rational(r, ns)?.1,
         )),
-        Expression::Subtract(loc, _, _, l, r) => Ok((
+        Expression::Subtract {
+            loc,
+            ty: _,
+            unchecked: _,
+            left: l,
+            right: r,
+        } => Ok((
             *loc,
             eval_const_rational(l, ns)?.1 - eval_const_rational(r, ns)?.1,
         )),
-        Expression::Multiply(loc, _, _, l, r) => Ok((
+        Expression::Multiply {
+            loc,
+            ty: _,
+            unchecked: _,
+            left: l,
+            right: r,
+        } => Ok((
             *loc,
             eval_const_rational(l, ns)?.1 * eval_const_rational(r, ns)?.1,
         )),
-        Expression::Divide(loc, _, l, r) => {
+        Expression::Divide {
+            loc,
+            ty: _,
+            left: l,
+            right: r,
+        } => {
             let divisor = eval_const_rational(r, ns)?.1;
 
             if divisor.is_zero() {
@@ -163,7 +246,12 @@ pub fn eval_const_rational(
                 Ok((*loc, eval_const_rational(l, ns)?.1 / divisor))
             }
         }
-        Expression::Modulo(loc, _, l, r) => {
+        Expression::Modulo {
+            loc,
+            ty: _,
+            left: l,
+            right: r,
+        } => {
             let divisor = eval_const_rational(r, ns)?.1;
 
             if divisor.is_zero() {
@@ -201,17 +289,17 @@ pub fn eval_const_rational(
 /// If the expression is an arithmetic operation of two number literals, overflow_check() will be called on the result.
 pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Namespace) -> bool {
     match expr {
-        Expression::Add(..)
-        | Expression::Subtract(..)
-        | Expression::Multiply(..)
-        | Expression::Divide(..)
-        | Expression::Modulo(..)
-        | Expression::Power(..)
-        | Expression::ShiftLeft(..)
-        | Expression::ShiftRight(..)
-        | Expression::BitwiseAnd(..)
-        | Expression::BitwiseOr(..)
-        | Expression::BitwiseXor(..)
+        Expression::Add { .. }
+        | Expression::Subtract { .. }
+        | Expression::Multiply { .. }
+        | Expression::Divide { .. }
+        | Expression::Modulo { .. }
+        | Expression::Power { .. }
+        | Expression::ShiftLeft { .. }
+        | Expression::ShiftRight { .. }
+        | Expression::BitwiseAnd { .. }
+        | Expression::BitwiseOr { .. }
+        | Expression::BitwiseXor { .. }
         | Expression::NumberLiteral(..) => match eval_constants_in_expression(expr, ns) {
             (Some(Expression::NumberLiteral(loc, ty, result)), _) => {
                 if let Some(diagnostic) = overflow_check(&result, &ty, &loc) {
@@ -238,7 +326,13 @@ fn eval_constants_in_expression(
     ns: &mut Namespace,
 ) -> (Option<Expression>, bool) {
     match expr {
-        Expression::Add(loc, ty, _, left, right) => {
+        Expression::Add {
+            loc,
+            ty,
+            unchecked: _,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -255,7 +349,13 @@ fn eval_constants_in_expression(
                 (None, true)
             }
         }
-        Expression::Subtract(loc, ty, _, left, right) => {
+        Expression::Subtract {
+            loc,
+            ty,
+            unchecked: _,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -273,7 +373,13 @@ fn eval_constants_in_expression(
             }
         }
 
-        Expression::Multiply(loc, ty, _, left, right) => {
+        Expression::Multiply {
+            loc,
+            ty,
+            unchecked: _,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -290,7 +396,12 @@ fn eval_constants_in_expression(
                 (None, true)
             }
         }
-        Expression::Divide(loc, ty, left, right) => {
+        Expression::Divide {
+            loc,
+            ty,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -314,7 +425,12 @@ fn eval_constants_in_expression(
             }
         }
 
-        Expression::Modulo(loc, ty, left, right) => {
+        Expression::Modulo {
+            loc,
+            ty,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -337,7 +453,13 @@ fn eval_constants_in_expression(
                 (None, true)
             }
         }
-        Expression::Power(loc, ty, _, left, right) => {
+        Expression::Power {
+            loc,
+            ty,
+            unchecked: _,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -366,7 +488,12 @@ fn eval_constants_in_expression(
                 (None, true)
             }
         }
-        Expression::ShiftLeft(loc, ty, left, right) => {
+        Expression::ShiftLeft {
+            loc,
+            ty,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -403,7 +530,13 @@ fn eval_constants_in_expression(
             }
         }
 
-        Expression::ShiftRight(loc, ty, left, right, _) => {
+        Expression::ShiftRight {
+            loc,
+            ty,
+            left,
+            right,
+            sign: _,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -432,7 +565,12 @@ fn eval_constants_in_expression(
                 (None, true)
             }
         }
-        Expression::BitwiseAnd(loc, ty, left, right) => {
+        Expression::BitwiseAnd {
+            loc,
+            ty,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -453,7 +591,12 @@ fn eval_constants_in_expression(
                 (None, true)
             }
         }
-        Expression::BitwiseOr(loc, ty, left, right) => {
+        Expression::BitwiseOr {
+            loc,
+            ty,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 
@@ -474,7 +617,12 @@ fn eval_constants_in_expression(
                 (None, true)
             }
         }
-        Expression::BitwiseXor(loc, ty, left, right) => {
+        Expression::BitwiseXor {
+            loc,
+            ty,
+            left,
+            right,
+        } => {
             let left = eval_constants_in_expression(left, ns).0;
             let right = eval_constants_in_expression(right, ns).0;
 

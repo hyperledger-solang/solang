@@ -77,12 +77,7 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             assigned_variable(ns, &args[0], symtable);
             used_variable(ns, &args[0], symtable);
         }
-        Expression::StorageArrayLength {
-            loc: _,
-            ty: _,
-            array,
-            ..
-        } => {
+        Expression::StorageArrayLength { array, .. } => {
             //We should not eliminate an array from the code when 'length' is called
             //So the variable is also assigned
             assigned_variable(ns, array, symtable);
@@ -115,12 +110,7 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             used_variable(ns, exp, symtable);
         }
 
-        Expression::InternalFunctionCall {
-            loc: _,
-            returns: _,
-            function,
-            args,
-        } => {
+        Expression::InternalFunctionCall { function, args, .. } => {
             for arg in args {
                 used_variable(ns, arg, symtable);
             }
@@ -128,11 +118,10 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
         }
 
         Expression::ExternalFunctionCall {
-            loc: _,
-            returns: _,
             function,
             args,
             call_args,
+            ..
         } => {
             for arg in args {
                 used_variable(ns, arg, symtable);
@@ -142,11 +131,7 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
         }
 
         Expression::Constructor {
-            loc: _,
-            contract_no: _,
-            constructor_no: _,
-            args,
-            call_args,
+            args, call_args, ..
         } => {
             for arg in args {
                 used_variable(ns, arg, symtable);
@@ -155,11 +140,10 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
         }
 
         Expression::ExternalFunctionCallRaw {
-            loc: _,
-            ty: _,
             address,
             args,
             call_args,
+            ..
         } => {
             used_variable(ns, args, symtable);
             used_variable(ns, address, symtable);
