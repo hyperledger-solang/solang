@@ -107,7 +107,14 @@ impl AbiEncoding for BorshEncoding {
         self.storage_cache.remove(&arg_no)
     }
 
-    fn get_encoding_size(&self, expr: &Expression, ty: &Type, ns: &Namespace) -> Expression {
+    fn get_encoding_size(
+        &self,
+        expr: &Expression,
+        ty: &Type,
+        ns: &Namespace,
+        _vartab: &mut Vartable,
+        _cfg: &mut ControlFlowGraph,
+    ) -> Expression {
         match ty {
             Type::Uint(n) | Type::Int(n) => Expression::NumberLiteral(
                 Loc::Codegen,
@@ -146,7 +153,6 @@ impl AbiEncoding for BorshEncoding {
 }
 
 impl BorshEncoding {
-    
     pub fn new(packed: bool) -> BorshEncoding {
         BorshEncoding {
             storage_cache: HashMap::new(),

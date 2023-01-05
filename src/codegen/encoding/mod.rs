@@ -640,7 +640,14 @@ pub(super) trait AbiEncoding {
     fn storage_cache_remove(&mut self, arg_no: usize) -> Option<Expression>;
 
     /// Some types have sizes that are specific to each encoding scheme, so there is no way to generalize.
-    fn get_encoding_size(&self, expr: &Expression, ty: &Type, ns: &Namespace) -> Expression;
+    fn get_encoding_size(
+        &self,
+        expr: &Expression,
+        ty: &Type,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression;
 
     /// Returns if the we are packed encoding
     fn is_packed(&self) -> bool;
@@ -721,7 +728,8 @@ fn get_expr_size(
 
         Type::ExternalFunction { .. } => {
             let addr = Expression::Undefined(Type::Address(false));
-            let address_size = encoder.get_encoding_size(&addr, &Type::Address(false), ns);
+            let address_size =
+                encoder.get_encoding_size(&addr, &Type::Address(false), ns, vartab, cfg);
             let selector_len = ns.target.selector_length();
             if let Expression::NumberLiteral(_, _, mut number) = address_size {
                 number.add_assign(BigInt::from(selector_len));
@@ -762,7 +770,7 @@ fn get_expr_size(
             size
         }
 
-        _ => encoder.get_encoding_size(expr, &ty, ns),
+        _ => encoder.get_encoding_size(expr, &ty, ns, vartab, cfg),
     }
 }
 
