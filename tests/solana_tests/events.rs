@@ -27,12 +27,10 @@ fn simple_event() {
 
     vm.function("go", &[]);
 
-    let log = vm.events();
+    assert_eq!(vm.events.len(), 1);
+    assert_eq!(vm.events[0].len(), 1);
 
-    assert_eq!(log.len(), 1);
-    assert_eq!(log[0].topics.len(), 0);
-
-    let encoded = log[0].data.clone();
+    let encoded = &vm.events[0][0];
 
     let discriminator = calculate_discriminator("myevent");
 
@@ -83,11 +81,11 @@ fn less_simple_event() {
 
     vm.function("go", &[]);
 
-    let log = vm.events();
-    assert_eq!(log.len(), 1);
-    assert_eq!(log[0].topics.len(), 0);
+    assert_eq!(vm.events.len(), 1);
+    assert_eq!(vm.events[0].len(), 1);
 
-    let encoded = log[0].data.clone();
+    let encoded = &vm.events[0][0];
+
     let discriminator = calculate_discriminator("MyOtherEvent");
     assert_eq!(&encoded[..8], &discriminator[..]);
 
