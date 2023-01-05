@@ -2,16 +2,29 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
-## Unreleased
+## v0.2.1 Rio
+
+### Added
+- The Anchor IDL data structure is now generated for every Solana contract, although the actual IDL json file is not yet saved.
+[LucasSte](https://github.com/LucasSte)
 
 ### Changed
+- The Solana target now utilizes eight byte Anchor discriminators for function dispatch instead
+of the four byte Ethereum selectors. [LucasSte](https://github.com/LucasSte)
+- The deployment of contracts on Solana now follows the same scheme as Anchor. [seanyoung](https://github.com/seanyoung)
+- Compares between rational literals and integers are not allowed. [seanyoung](https://github.com/seanyoung)
 - Overriding the function selector value is now done using the `@selector([1, 2, 3, 4])`
   syntax, and the old syntax `selector=hex"12345678"` has been removed.
-- 'msg.sender' was not implemented correctly on Solana, and
+- `msg.sender` was not implemented correctly on Solana, and
   [has now been removed](https://solang.readthedocs.io/en/latest/targets/solana.html#msg-sender-solana).
   [seanyoung](https://github.com/seanyoung)
+- Solang now uses LLVM 14. [LucasSte](https://github.com/LucasSte)
 
-## v0.2.0.0 Berlin
+### Fixed
+- Many bugs have been fixed by [seanyoung](https://github.com/seanyoung), [LucasSte](https://github.com/LucasSte)
+  and [xermicus](https://github.com/xermicus)
+
+## v0.2.0 Berlin
 We are happy to release solang `v0.2.0` codenamed `Berlin` today. Aside from
 containing many small fixes and improvements, this release marks a milestone
 towards maturing our Substrate compilation target: any regressions building up

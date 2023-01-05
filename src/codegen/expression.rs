@@ -49,7 +49,13 @@ pub fn expression(
 
             load_storage(loc, ty, storage, cfg, vartab)
         }
-        ast::Expression::Add(loc, ty, unchecked, left, right) => add(
+        ast::Expression::Add {
+            loc,
+            ty,
+            unchecked,
+            left,
+            right,
+        } => add(
             loc,
             ty,
             unchecked,
@@ -62,7 +68,13 @@ pub fn expression(
             right,
             opt,
         ),
-        ast::Expression::Subtract(loc, ty, unchecked, left, right) => substract(
+        ast::Expression::Subtract {
+            loc,
+            ty,
+            unchecked,
+            left,
+            right,
+        } => substract(
             loc,
             ty,
             unchecked,
@@ -75,7 +87,13 @@ pub fn expression(
             right,
             opt,
         ),
-        ast::Expression::Multiply(loc, ty, unchecked, left, right) => {
+        ast::Expression::Multiply {
+            loc,
+            ty,
+            unchecked,
+            left,
+            right,
+        } => {
             if ty.is_rational() {
                 let (_, r) = eval_const_rational(expr, ns).unwrap();
 
@@ -90,7 +108,12 @@ pub fn expression(
                 )
             }
         }
-        ast::Expression::Divide(loc, ty, left, right) => {
+        ast::Expression::Divide {
+            loc,
+            ty,
+            left,
+            right,
+        } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
             if ty.is_signed_int() {
@@ -99,7 +122,12 @@ pub fn expression(
                 Expression::UnsignedDivide(*loc, ty.clone(), Box::new(l), Box::new(r))
             }
         }
-        ast::Expression::Modulo(loc, ty, left, right) => {
+        ast::Expression::Modulo {
+            loc,
+            ty,
+            left,
+            right,
+        } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
             if ty.is_signed_int() {
@@ -108,38 +136,70 @@ pub fn expression(
                 Expression::UnsignedModulo(*loc, ty.clone(), Box::new(l), Box::new(r))
             }
         }
-        ast::Expression::Power(loc, ty, unchecked, left, right) => Expression::Power(
+        ast::Expression::Power {
+            loc,
+            ty,
+            unchecked,
+            left,
+            right,
+        } => Expression::Power(
             *loc,
             ty.clone(),
             *unchecked,
             Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::BitwiseOr(loc, ty, left, right) => Expression::BitwiseOr(
+        ast::Expression::BitwiseOr {
+            loc,
+            ty,
+            left,
+            right,
+        } => Expression::BitwiseOr(
             *loc,
             ty.clone(),
             Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::BitwiseAnd(loc, ty, left, right) => Expression::BitwiseAnd(
+        ast::Expression::BitwiseAnd {
+            loc,
+            ty,
+            left,
+            right,
+        } => Expression::BitwiseAnd(
             *loc,
             ty.clone(),
             Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::BitwiseXor(loc, ty, left, right) => Expression::BitwiseXor(
+        ast::Expression::BitwiseXor {
+            loc,
+            ty,
+            left,
+            right,
+        } => Expression::BitwiseXor(
             *loc,
             ty.clone(),
             Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::ShiftLeft(loc, ty, left, right) => Expression::ShiftLeft(
+        ast::Expression::ShiftLeft {
+            loc,
+            ty,
+            left,
+            right,
+        } => Expression::ShiftLeft(
             *loc,
             ty.clone(),
             Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
             Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::ShiftRight(loc, ty, left, right, sign) => Expression::ShiftRight(
+        ast::Expression::ShiftRight {
+            loc,
+            ty,
+            left,
+            right,
+            sign,
+        } => Expression::ShiftRight(
             *loc,
             ty.clone(),
             Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
@@ -264,8 +324,18 @@ pub fn expression(
 
             assign_single(left, cfg_right, cfg, contract_no, func, ns, vartab, opt)
         }
-        ast::Expression::PreDecrement(loc, ty, unchecked, var)
-        | ast::Expression::PreIncrement(loc, ty, unchecked, var) => pre_incdec(
+        ast::Expression::PreDecrement {
+            loc,
+            ty,
+            unchecked,
+            expr: var,
+        }
+        | ast::Expression::PreIncrement {
+            loc,
+            ty,
+            unchecked,
+            expr: var,
+        } => pre_incdec(
             vartab,
             ty,
             var,
@@ -278,8 +348,18 @@ pub fn expression(
             unchecked,
             opt,
         ),
-        ast::Expression::PostDecrement(loc, ty, unchecked, var)
-        | ast::Expression::PostIncrement(loc, ty, unchecked, var) => post_incdec(
+        ast::Expression::PostDecrement {
+            loc,
+            ty,
+            unchecked,
+            expr: var,
+        }
+        | ast::Expression::PostIncrement {
+            loc,
+            ty,
+            unchecked,
+            expr: var,
+        } => post_incdec(
             vartab,
             ty,
             var,
@@ -704,7 +784,13 @@ pub fn expression(
         ast::Expression::AllocDynamicBytes(loc, ty, size, init) => {
             alloc_dynamic_array(size, cfg, contract_no, func, ns, vartab, loc, ty, init, opt)
         }
-        ast::Expression::ConditionalOperator(loc, ty, cond, left, right) => conditional_operator(
+        ast::Expression::ConditionalOperator {
+            loc,
+            ty,
+            cond,
+            true_option: left,
+            false_option: right,
+        } => conditional_operator(
             loc,
             ty,
             cond,
@@ -812,14 +898,14 @@ fn post_incdec(
     );
     let one = Box::new(Expression::NumberLiteral(*loc, ty.clone(), BigInt::one()));
     let expr = match expr {
-        ast::Expression::PostDecrement(..) => Expression::Subtract(
+        ast::Expression::PostDecrement { .. } => Expression::Subtract(
             *loc,
             ty.clone(),
             *unchecked,
             Box::new(Expression::Variable(*loc, ty.clone(), res)),
             one,
         ),
-        ast::Expression::PostIncrement(..) => Expression::Add(
+        ast::Expression::PostIncrement { .. } => Expression::Add(
             *loc,
             ty.clone(),
             *unchecked,
@@ -900,10 +986,10 @@ fn pre_incdec(
     };
     let one = Box::new(Expression::NumberLiteral(*loc, ty.clone(), BigInt::one()));
     let expr = match expr {
-        ast::Expression::PreDecrement(..) => {
+        ast::Expression::PreDecrement { .. } => {
             Expression::Subtract(*loc, ty.clone(), *unchecked, Box::new(v), one)
         }
-        ast::Expression::PreIncrement(..) => {
+        ast::Expression::PreIncrement { .. } => {
             Expression::Add(*loc, ty.clone(), *unchecked, Box::new(v), one)
         }
         _ => unreachable!(),

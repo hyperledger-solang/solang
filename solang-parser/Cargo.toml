@@ -1,7 +1,7 @@
 [package]
 name = "solang-parser"
-version = "0.2.0"
-authors = ["Sean Young <sean@mess.org>"]
+version = "0.2.1"
+authors = ["Sean Young <sean@mess.org>", "Lucas Steuernagel <lucas.tnagel@gmail.com>", "Cyrill Leutwiler <bigcyrill@hotmail.com>"]
 homepage = "https://github.com/hyperledger/solang"
 documentation = "https://solang.readthedocs.io/"
 license = "Apache-2.0"

@@ -1882,3 +1882,88 @@ fn dynamic_array_push_pop_loop() {
     runtime.constructor(&[]);
     runtime.function("test", &[]);
 }
+
+#[test]
+fn double_index() {
+    let src = r#"
+contract RH {
+
+  function calc(uint256[] memory separators, int256[] memory params) public pure returns (int256[4] memory) {
+    int256 stopLimit = params[separators[4]];
+    int256 contractedValueRatio = params[separators[6]];
+
+    return [stopLimit, contractedValueRatio, 3, 4];
+  }
+
+}
+    "#;
+
+    let mut vm = build_solidity(src);
+    vm.constructor(&[]);
+
+    let separators = BorshToken::Array(vec![
+        BorshToken::Int {
+            width: 256,
+            value: BigInt::from(25u8),
+        },
+        BorshToken::Int {
+            width: 256,
+            value: BigInt::from(25u8),
+        },
+        BorshToken::Int {
+            width: 256,
+            value: BigInt::from(25u8),
+        },
+        BorshToken::Int {
+            width: 256,
+            value: BigInt::from(25u8),
+        },
+        BorshToken::Int {
+            width: 256,
+            value: BigInt::from(1u8),
+        },
+        BorshToken::Int {
+            width: 256,
+            value: BigInt::from(25u8),
+        },
+        BorshToken::Int {
+            width: 256,
+            value: BigInt::from(0u8),
+        },
+    ]);
+
+    let params = BorshToken::Array(vec![
+        BorshToken::Int {
+            width: 256,
+            value: BigInt::from(80u8),
+        },
+        BorshToken::Int {
+            width: 256,
+            value: BigInt::from(98u8),
+        },
+    ]);
+
+    let returns = vm.function("calc", &[separators, params]).unwrap();
+
+    assert_eq!(
+        returns,
+        BorshToken::FixedArray(vec![
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(98u8),
+            },
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(80u8),
+            },
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(3u8),
+            },
+            BorshToken::Int {
+                width: 256,
+                value: BigInt::from(4u8),
+            },
+        ])
+    );
+}
