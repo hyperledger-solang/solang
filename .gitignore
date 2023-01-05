@@ -4,3 +4,5 @@ Cargo.lock
 **/*.rs.bk
 bundle.ll
 
+# Editors
+.vscode/
