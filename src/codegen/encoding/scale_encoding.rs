@@ -8,7 +8,7 @@ use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type};
 use num_bigint::BigInt;
 use solang_parser::pt::Loc;
 
-use super::increment_four;
+use super::{increment_by, increment_four};
 
 /// This struct implements the trait AbiEncoding for Parity's Scale encoding
 pub(super) struct ScaleEncoding {
@@ -25,6 +25,158 @@ impl ScaleEncoding {
 }
 
 impl AbiEncoding for ScaleEncoding {
+    /// SALE encoding uses "compact" integer for sizes.
+    fn encode_size(
+        &mut self,
+        expr: &Expression,
+        buffer: &Expression,
+        offset: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        let loc = Loc::Codegen;
+
+        let small = cfg.new_basic_block("small".into());
+        let medium = cfg.new_basic_block("medium".into());
+        let medium_or_big = cfg.new_basic_block("medium_or_big".into());
+        let big = cfg.new_basic_block("big".into());
+        let done = cfg.new_basic_block("done".into());
+        let fail = cfg.new_basic_block("fail".into());
+        let prepare = cfg.new_basic_block("prepare".into());
+
+        let compare = Expression::UnsignedMore(
+            loc,
+            expr.clone().into(),
+            Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0x40000000.into()).into(),
+        );
+
+        cfg.add(
+            vartab,
+            Instr::BranchCond {
+                cond: compare,
+                true_block: fail,
+                false_block: prepare,
+            },
+        );
+
+        cfg.set_basic_block(fail);
+        cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
+
+        cfg.set_basic_block(prepare);
+        let compare = Expression::UnsignedMore(
+            Loc::Codegen,
+            expr.clone().into(),
+            Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0x40.into()).into(),
+        );
+        cfg.add(
+            vartab,
+            Instr::BranchCond {
+                cond: compare,
+                true_block: medium_or_big,
+                false_block: small,
+            },
+        );
+
+        cfg.set_basic_block(medium_or_big);
+        let compare = Expression::UnsignedMore(
+            Loc::Codegen,
+            expr.clone().into(),
+            Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0x4000.into()).into(),
+        );
+        cfg.add(
+            vartab,
+            Instr::BranchCond {
+                cond: compare,
+                true_block: big,
+                false_block: medium,
+            },
+        );
+
+        vartab.new_dirty_tracker();
+        let size_variable = vartab.temp_anonymous(&Type::Uint(32));
+
+        let mul = Expression::Multiply(
+            Loc::Codegen,
+            Type::Uint(32),
+            false,
+            expr.clone().into(),
+            Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 4.into()).into(),
+        );
+
+        cfg.set_basic_block(small);
+        cfg.add(
+            vartab,
+            Instr::WriteBuffer {
+                buf: buffer.clone(),
+                offset: offset.clone(),
+                value: mul.clone(),
+            },
+        );
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc,
+                res: size_variable,
+                expr: Expression::NumberLiteral(loc, Type::Uint(32), 1.into()),
+            },
+        );
+        cfg.add(vartab, Instr::Branch { block: done });
+
+        cfg.set_basic_block(medium);
+        let mul2 = Expression::BitwiseOr(
+            loc,
+            Type::Uint(32),
+            mul.clone().into(),
+            Expression::NumberLiteral(loc, Type::Uint(32), 1.into()).into(),
+        );
+        cfg.add(
+            vartab,
+            Instr::WriteBuffer {
+                buf: buffer.clone(),
+                offset: offset.clone(),
+                value: mul2,
+            },
+        );
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc,
+                res: size_variable,
+                expr: Expression::NumberLiteral(loc, Type::Uint(32), 2.into()),
+            },
+        );
+        cfg.add(vartab, Instr::Branch { block: done });
+
+        cfg.set_basic_block(big);
+        let mul2 = Expression::BitwiseOr(
+            loc,
+            Type::Uint(32),
+            mul.clone().into(),
+            Expression::NumberLiteral(loc, Type::Uint(32), 2.into()).into(),
+        );
+        cfg.add(
+            vartab,
+            Instr::WriteBuffer {
+                buf: buffer.clone(),
+                offset: offset.clone(),
+                value: mul2,
+            },
+        );
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc,
+                res: size_variable,
+                expr: Expression::NumberLiteral(loc, Type::Uint(32), 4.into()),
+            },
+        );
+        cfg.add(vartab, Instr::Branch { block: done });
+
+        cfg.set_basic_block(done);
+        cfg.set_phis(done, vartab.pop_dirty_tracker());
+        Expression::Variable(loc, Type::Uint(32), size_variable)
+    }
+
     fn abi_decode(
         &self,
         loc: &Loc,
@@ -103,7 +255,10 @@ impl AbiEncoding for ScaleEncoding {
                 if self.is_packed() {
                     length
                 } else {
-                    increment_four(length)
+                    increment_by(
+                        length,
+                        Expression::NumberLiteral(Loc::Builtin, Type::Uint(32), 1.into()),
+                    )
                 }
             }
 

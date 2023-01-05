@@ -92,12 +92,12 @@ contract EncodingTest {
         
         // CHECK: ty:bytes %abi_encoded.temp.57 = (alloc bytes len (((builtin ArrayLength (%a)) + uint32 4) + ((builtin ArrayLength (%b)) + uint32 4)))
 	    // CHECK: ty:uint32 %temp.58 = (builtin ArrayLength (%a))
-	    // CHECK: memcpy src: %a, dest: (advance ptr: %abi_encoded.temp.57, by: uint32 4), bytes_len: %temp.58
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.57 offset:uint32 0 value:%temp.58
+	    // CHECK: memcpy src: %a, dest: (advance ptr: %abi_encoded.temp.57, by: uint32 4), bytes_len: %temp.58
 	    // CHECK: ty:uint32 %temp.59 = (builtin ArrayLength (%b))
 	    // CHECK: ty:uint32 %1.cse_temp = (uint32 0 + (%temp.58 + uint32 4))
-	    // CHECK: memcpy src: %b, dest: (advance ptr: %abi_encoded.temp.57, by: (%1.cse_temp + uint32 4)), bytes_len: %temp.59
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.57 offset:%1.cse_temp value:%temp.59
+	    // CHECK: memcpy src: %b, dest: (advance ptr: %abi_encoded.temp.57, by: (%1.cse_temp + uint32 4)), bytes_len: %temp.59
 	    // CHECK: ty:bytes %c = %abi_encoded.temp.57
 
         return c;

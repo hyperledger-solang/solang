@@ -14,7 +14,7 @@ use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
-use std::ops::{Add, AddAssign, MulAssign};
+use std::ops::{Add, MulAssign};
 
 /// This struct implements the trait AbiEncoding for Borsh encoding
 pub(super) struct BorshEncoding {
@@ -146,6 +146,7 @@ impl AbiEncoding for BorshEncoding {
 }
 
 impl BorshEncoding {
+    
     pub fn new(packed: bool) -> BorshEncoding {
         BorshEncoding {
             storage_cache: HashMap::new(),
