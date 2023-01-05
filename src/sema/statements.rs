@@ -1412,13 +1412,13 @@ fn destructure_values(
             )?;
             used_variable(ns, &right, symtable);
 
-            return Ok(Expression::ConditionalOperator(
-                *loc,
-                Type::Unreachable,
-                Box::new(cond),
-                Box::new(left),
-                Box::new(right),
-            ));
+            return Ok(Expression::ConditionalOperator {
+                loc: *loc,
+                ty: Type::Unreachable,
+                cond: Box::new(cond),
+                true_option: Box::new(left),
+                false_option: Box::new(right),
+            });
         }
         _ => {
             let mut list = Vec::new();
@@ -1618,13 +1618,13 @@ fn return_with_values(
                 return_with_values(right, &right.loc(), context, symtable, ns, diagnostics)?;
             used_variable(ns, &right, symtable);
 
-            return Ok(Expression::ConditionalOperator(
-                *loc,
-                Type::Unreachable,
-                Box::new(cond),
-                Box::new(left),
-                Box::new(right),
-            ));
+            return Ok(Expression::ConditionalOperator {
+                loc: *loc,
+                ty: Type::Unreachable,
+                cond: Box::new(cond),
+                true_option: Box::new(left),
+                false_option: Box::new(right),
+            });
         }
         _ => {
             let returns = parameter_list_to_expr_list(returns, diagnostics)?;

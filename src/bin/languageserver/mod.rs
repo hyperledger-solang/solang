@@ -273,12 +273,11 @@ impl SolangServer {
                 }
             }
             ast::Statement::For {
-                loc: _,
-                reachable: _,
                 init,
                 cond,
                 next,
                 body,
+                ..
             } => {
                 if let Some(exp) = cond {
                     SolangServer::construct_expr(exp, lookup_tbl, symtab, ns);
@@ -443,7 +442,13 @@ impl SolangServer {
             }
 
             // Arithmetic expression
-            ast::Expression::Add(locs, ty, unchecked, expr1, expr2) => {
+            ast::Expression::Add {
+                loc: locs,
+                ty,
+                unchecked,
+                left,
+                right,
+            } => {
                 lookup_tbl.push(HoverEntry {
                     start: locs.start(),
                     stop: locs.end(),
@@ -454,10 +459,16 @@ impl SolangServer {
                     ),
                 });
 
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(left, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(right, lookup_tbl, symtab, ns);
             }
-            ast::Expression::Subtract(locs, ty, unchecked, expr1, expr2) => {
+            ast::Expression::Subtract {
+                loc: locs,
+                ty,
+                unchecked,
+                left,
+                right,
+            } => {
                 lookup_tbl.push(HoverEntry {
                     start: locs.start(),
                     stop: locs.end(),
@@ -468,10 +479,16 @@ impl SolangServer {
                     ),
                 });
 
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(left, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(right, lookup_tbl, symtab, ns);
             }
-            ast::Expression::Multiply(locs, ty, unchecked, expr1, expr2) => {
+            ast::Expression::Multiply {
+                loc: locs,
+                ty,
+                unchecked,
+                left,
+                right,
+            } => {
                 lookup_tbl.push(HoverEntry {
                     start: locs.start(),
                     stop: locs.end(),
@@ -482,30 +499,46 @@ impl SolangServer {
                     ),
                 });
 
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(left, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(right, lookup_tbl, symtab, ns);
             }
-            ast::Expression::Divide(locs, ty, expr1, expr2) => {
+            ast::Expression::Divide {
+                loc: locs,
+                ty,
+                left,
+                right,
+            } => {
                 lookup_tbl.push(HoverEntry {
                     start: locs.start(),
                     stop: locs.end(),
                     val: format!("{} divide", ty.to_string(ns)),
                 });
 
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(left, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(right, lookup_tbl, symtab, ns);
             }
-            ast::Expression::Modulo(locs, ty, expr1, expr2) => {
+            ast::Expression::Modulo {
+                loc: locs,
+                ty,
+                left,
+                right,
+            } => {
                 lookup_tbl.push(HoverEntry {
                     start: locs.start(),
                     stop: locs.end(),
                     val: format!("{} modulo", ty.to_string(ns)),
                 });
 
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(left, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(right, lookup_tbl, symtab, ns);
             }
-            ast::Expression::Power(locs, ty, unchecked, expr1, expr2) => {
+            ast::Expression::Power {
+                loc: locs,
+                ty,
+                unchecked,
+                left,
+                right,
+            } => {
                 lookup_tbl.push(HoverEntry {
                     start: locs.start(),
                     stop: locs.end(),
@@ -516,30 +549,18 @@ impl SolangServer {
                     ),
                 });
 
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(left, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(right, lookup_tbl, symtab, ns);
             }
 
             // Bitwise expresion
-            ast::Expression::BitwiseOr(_locs, _typ, expr1, expr2) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
-            }
-            ast::Expression::BitwiseAnd(_locs, _typ, expr1, expr2) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
-            }
-            ast::Expression::BitwiseXor(_locs, _typ, expr1, expr2) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
-            }
-            ast::Expression::ShiftLeft(_locs, _typ, expr1, expr2) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
-            }
-            ast::Expression::ShiftRight(_locs, _typ, expr1, expr2, _bl) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
+            ast::Expression::BitwiseOr { left, right, .. }
+            | ast::Expression::BitwiseAnd { left, right, .. }
+            | ast::Expression::BitwiseXor { left, right, .. }
+            | ast::Expression::ShiftLeft { left, right, .. }
+            | ast::Expression::ShiftRight { left, right, .. } => {
+                SolangServer::construct_expr(left, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(right, lookup_tbl, symtab, ns);
             }
 
             // Variable expression
@@ -615,18 +636,12 @@ impl SolangServer {
                 SolangServer::construct_expr(expr, lookup_tbl, symtab, ns);
             }
 
-            //Increment-Decrement expression
-            ast::Expression::PreIncrement(_locs, _typ, _, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-            }
-            ast::Expression::PreDecrement(_locs, _typ, _, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-            }
-            ast::Expression::PostIncrement(_locs, _typ, _, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-            }
-            ast::Expression::PostDecrement(_locs, _typ, _, expr1) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
+            // Increment-Decrement expression
+            ast::Expression::PreIncrement { expr, .. }
+            | ast::Expression::PreDecrement { expr, .. }
+            | ast::Expression::PostIncrement { expr, .. }
+            | ast::Expression::PostDecrement { expr, .. } => {
+                SolangServer::construct_expr(expr, lookup_tbl, symtab, ns);
             }
             ast::Expression::Assign(_locs, _typ, expr1, expr2) => {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
@@ -669,10 +684,15 @@ impl SolangServer {
                 SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
             }
 
-            ast::Expression::ConditionalOperator(_locs, _typ, expr1, expr2, expr3) => {
-                SolangServer::construct_expr(expr1, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr2, lookup_tbl, symtab, ns);
-                SolangServer::construct_expr(expr3, lookup_tbl, symtab, ns);
+            ast::Expression::ConditionalOperator {
+                cond,
+                true_option: left,
+                false_option: right,
+                ..
+            } => {
+                SolangServer::construct_expr(cond, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(left, lookup_tbl, symtab, ns);
+                SolangServer::construct_expr(right, lookup_tbl, symtab, ns);
             }
 
             ast::Expression::Subscript(_locs, _, _, expr1, expr2) => {
@@ -837,11 +857,7 @@ impl SolangServer {
                 }
             }
             ast::Expression::Constructor {
-                loc: _,
-                contract_no: _,
-                constructor_no: _,
-                args,
-                call_args,
+                args, call_args, ..
             } => {
                 if let Some(gas) = &call_args.gas {
                     SolangServer::construct_expr(gas, lookup_tbl, symtab, ns);
