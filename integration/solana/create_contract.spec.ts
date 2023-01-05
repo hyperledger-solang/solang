@@ -2,56 +2,71 @@
 
 import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from '@solana/web3.js';
 import expect from 'expect';
-import { Contract } from '@solana/solidity';
+import { Program, Provider, BN } from '@project-serum/anchor';
 import { loadContract } from './setup';
 import fs from 'fs';
 
 describe('ChildContract', function () {
     this.timeout(150000);
 
-    let contract: Contract;
+    let program: Program;
+    let storage: Keypair
     let payer: Keypair;
-    let connection: Connection;
+    let provider: Provider;
 
     before(async function () {
-        ({ contract, payer, connection } = await loadContract('creator'));
+        ({ program, storage, payer, provider } = await loadContract('creator'));
     });
 
     it('Create Contract', async function () {
         let child_program = new PublicKey("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT");
         let child = Keypair.generate();
 
-        const { logs } = await contract.functions.create_child(child.publicKey.toBytes(), payer.publicKey.toBytes(), {
-            accounts: [child_program],
-            writableAccounts: [child.publicKey],
-            signers: [child, payer],
-        });
+        const signature = await program.methods.createChild(child.publicKey, payer.publicKey)
+            .accounts({ dataAccount: storage.publicKey })
+            .remainingAccounts([
+                { pubkey: child_program, isSigner: false, isWritable: false },
+                { pubkey: child.publicKey, isSigner: true, isWritable: true },
+                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+            ])
+            .signers([payer, child])
+            .rpc({ commitment: 'confirmed' });
 
-        expect(logs.toString()).toContain('In child constructor');
-        expect(logs.toString()).toContain('Hello there');
+        const tx = await provider.connection.getTransaction(signature, { commitment: 'confirmed' });
 
-        const info = await contract.connection.getAccountInfo(child.publicKey);
+        expect(tx?.meta?.logMessages!.toString()).toContain('In child constructor');
+        expect(tx?.meta?.logMessages!.toString()).toContain('Hello there');
+
+        const info = await provider.connection.getAccountInfo(child.publicKey);
 
         expect(info?.data.length).toEqual(518);
     });
 
     it('Creates Contract with seed1', async function () {
         let seed_program = new PublicKey("SeedHw4CsFsDEGu2AVwFM1toGXsbAJSKnb7kS8TrLxu");
-        let seed: Uint8Array = Buffer.from("chai");
+        let seed = Buffer.from("chai");
 
         let [address, bump] = await PublicKey.findProgramAddress([seed], seed_program);
 
-        const { logs } = await contract.functions.create_seed1(
-            address.toBytes(), payer.publicKey.toBytes(), seed, Buffer.from([bump]), 711, {
-            accounts: [seed_program],
-            writableAccounts: [address],
-            signers: [payer],
-        });
+        const signature = await program.methods.createSeed1(
+            address, payer.publicKey, seed, Buffer.from([bump]), new BN(711))
+            .accounts({ dataAccount: storage.publicKey })
+            .remainingAccounts([
+                { pubkey: seed_program, isSigner: false, isWritable: false },
+                { pubkey: address, isSigner: false, isWritable: true },
+                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+            ])
+            .signers([payer])
+            .rpc({ commitment: 'confirmed' });
+
+        const tx = await provider.connection.getTransaction(signature, { commitment: 'confirmed' });
+
+        const logs = tx?.meta?.logMessages!;
 
         expect(logs.toString()).toContain('In Seed1 constructor');
         expect(logs.toString()).toContain('Hello from Seed1');
 
-        const info = await contract.connection.getAccountInfo(address);
+        const info = await provider.connection.getAccountInfo(address);
 
         expect(info?.data.length).toEqual(711);
     });
@@ -64,25 +79,35 @@ describe('ChildContract', function () {
 
         let seed = Buffer.concat([bare_seed, Buffer.from([bump])]);
 
-        const { logs } = await contract.functions.create_seed2(
-            address.toBytes(), payer.publicKey.toBytes(), seed, 9889, {
-            accounts: [seed_program],
-            writableAccounts: [address],
-            signers: [payer],
-        });
+        const signature = await program.methods.createSeed2(
+            address, payer.publicKey, seed, new BN(9889))
+            .accounts({ dataAccount: storage.publicKey })
+            .remainingAccounts([
+                { pubkey: seed_program, isSigner: false, isWritable: false },
+                { pubkey: address, isSigner: false, isWritable: true },
+                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+            ])
+            .signers([payer])
+            .rpc({ commitment: 'confirmed' });
+
+        const tx = await provider.connection.getTransaction(signature, { commitment: 'confirmed' });
+
+        const logs = tx?.meta?.logMessages!;
 
         expect(logs.toString()).toContain('In Seed2 constructor');
 
-        const info = await contract.connection.getAccountInfo(address);
+        const info = await provider.connection.getAccountInfo(address);
 
         expect(info?.data.length).toEqual(9889 + 23);
 
-        const abi = JSON.parse(fs.readFileSync('Seed2.abi', 'utf8'));
+        const idl = JSON.parse(fs.readFileSync('Seed2.json', 'utf8'));
 
-        let seed2 = new Contract(connection, seed_program, address, abi, payer);
+        const seed2 = new Program(idl, seed_program, provider);
 
-        let res = await seed2.functions.check();
+        let res = await seed2.methods.check()
+            .accounts({ dataAccount: address })
+            .simulate();
 
-        expect(res.logs.toString()).toContain('I am PDA.');
+        expect(res.raw.toString()).toContain('I am PDA.');
     });
 });

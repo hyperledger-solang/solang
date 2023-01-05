@@ -37,7 +37,7 @@ contract SimpleCollectible {
         SplToken.MintAccountData mint_data = SplToken.get_mint_account_data(token_data.mintAccount);
         // Ensure the supply is zero. Otherwise, this is not an NFT.
         assert(mint_data.supply == 0);
-        
+
         // An NFT on Solana is a SPL-Token with only one minted token.
         // The token account saves the owner of the tokens minted with the mint account, the respective mint account and the number
         // of tokens the owner account owns
@@ -78,7 +78,7 @@ contract SimpleCollectible {
     ///
     /// @param owner the account whose ownership we want to verify
     /// @param tokenAccount the owner's associated token account
-    function isOwner(address owner, address tokenAccount) public returns (bool) {
+    function isOwner(address owner, address tokenAccount) public view returns (bool) {
         SplToken.TokenAccountData data = SplToken.get_token_account_data(tokenAccount);
 
         return owner == data.owner && mintAccount == data.mintAccount && data.balance == 1;

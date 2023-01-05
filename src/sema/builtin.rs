@@ -1485,7 +1485,7 @@ impl Namespace {
             None,
             Vec::new(),
             pt::FunctionTy::Function,
-            None,
+            Some(pt::Mutability::Pure(pt::Loc::Builtin)),
             pt::Visibility::Public(None),
             vec![
                 Parameter {
@@ -1545,7 +1545,7 @@ impl Namespace {
             None,
             Vec::new(),
             pt::FunctionTy::Function,
-            None,
+            Some(pt::Mutability::Pure(pt::Loc::Builtin)),
             pt::Visibility::Public(None),
             vec![
                 Parameter {

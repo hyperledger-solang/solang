@@ -188,7 +188,7 @@ fn instructions_and_types() {
     assert_eq!(
         idl.instructions[0].accounts,
         vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
+            name: "dataAccount".to_string(),
             is_mut: true,
             is_signer: false,
             is_optional: Some(false),
@@ -205,15 +205,26 @@ fn instructions_and_types() {
     assert!(idl.instructions[1].docs.is_none());
     assert_eq!(
         idl.instructions[1].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
-            is_mut: false,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        })]
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
     );
     assert!(idl.instructions[1].args.is_empty());
     assert_eq!(idl.instructions[1].returns, Some(IdlType::U64));
@@ -223,20 +234,31 @@ fn instructions_and_types() {
     assert!(idl.instructions[2].docs.is_none());
     assert_eq!(
         idl.instructions[2].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
-            is_mut: false,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        })]
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
     );
     assert_eq!(
         idl.instructions[2].args,
         vec![IdlField {
-            name: "arg_0".to_string(),
+            name: "arg0".to_string(),
             docs: None,
             ty: IdlType::U256,
         }]
@@ -246,7 +268,18 @@ fn instructions_and_types() {
     // sum function
     assert_eq!(idl.instructions[3].name, "sum");
     assert!(idl.instructions[3].docs.is_none());
-    assert!(idl.instructions[3].accounts.is_empty());
+    assert_eq!(
+        idl.instructions[3].accounts,
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "systemProgram".into(),
+            is_mut: false,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![]
+        })]
+    );
     assert_eq!(
         idl.instructions[3].args,
         vec![
@@ -271,15 +304,26 @@ fn instructions_and_types() {
     );
     assert_eq!(
         idl.instructions[4].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
-            is_mut: true,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        })]
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
     );
     assert_eq!(
         idl.instructions[4].args,
@@ -298,15 +342,26 @@ fn instructions_and_types() {
     );
     assert_eq!(
         idl.instructions[5].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
-            is_mut: false,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        })]
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
     );
     assert!(idl.instructions[5].args.is_empty());
     assert_eq!(idl.instructions[5].returns, Some(IdlType::String));
@@ -315,15 +370,26 @@ fn instructions_and_types() {
     assert!(idl.instructions[6].docs.is_none());
     assert_eq!(
         idl.instructions[6].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
-            is_mut: true,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        })]
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
     );
     assert!(idl.instructions[6].args.is_empty());
     assert_eq!(
@@ -409,7 +475,7 @@ contract caller {
     assert_eq!(
         idl.instructions[0].accounts,
         vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
+            name: "dataAccount".to_string(),
             is_mut: true,
             is_signer: false,
             is_optional: Some(false),
@@ -425,15 +491,26 @@ contract caller {
     assert!(idl.instructions[1].docs.is_none());
     assert_eq!(
         idl.instructions[1].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
-            is_mut: true,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        })]
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
     );
     assert_eq!(
         idl.instructions[1].args,
@@ -564,7 +641,7 @@ fn types() {
     assert_eq!(
         idl.instructions[0].accounts,
         vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
+            name: "dataAccount".to_string(),
             is_mut: true,
             is_signer: false,
             is_optional: Some(false),
@@ -579,15 +656,26 @@ fn types() {
     assert_eq!(idl.instructions[1].name, "myFunc");
     assert_eq!(
         idl.instructions[1].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
-            is_mut: true,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        })]
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
     );
     assert_eq!(
         idl.instructions[1].args,
@@ -649,15 +737,26 @@ fn constructor() {
     assert!(idl.instructions[0].docs.is_none());
     assert_eq!(
         idl.instructions[0].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
-            is_mut: true,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        })]
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
     );
     assert_eq!(
         idl.instructions[0].args,
@@ -673,15 +772,26 @@ fn constructor() {
     assert!(idl.instructions[1].docs.is_none());
     assert_eq!(
         idl.instructions[1].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
-            is_mut: false,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        })]
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
     );
     assert!(idl.instructions[1].args.is_empty());
     assert_eq!(idl.instructions[1].returns, Some(IdlType::U64));
@@ -715,7 +825,7 @@ contract Testing {
     assert_eq!(
         idl.instructions[0].accounts,
         vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "data_account".to_string(),
+            name: "dataAccount".to_string(),
             is_mut: true,
             is_signer: false,
             is_optional: Some(false),
@@ -797,7 +907,18 @@ contract Testing {
 
     assert_eq!(idl.instructions[1].name, "getNum_uint64_uint64");
     assert!(idl.instructions[1].docs.is_none());
-    assert!(idl.instructions[1].accounts.is_empty());
+    assert_eq!(
+        idl.instructions[1].accounts,
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "systemProgram".into(),
+            is_mut: false,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![]
+        })]
+    );
     assert_eq!(idl.instructions[1].args.len(), 2);
     assert_eq!(
         idl.instructions[1].args[0],
@@ -822,7 +943,18 @@ contract Testing {
 
     assert_eq!(idl.instructions[2].name, "getNum_int32_int32");
     assert!(idl.instructions[2].docs.is_none());
-    assert!(idl.instructions[2].accounts.is_empty());
+    assert_eq!(
+        idl.instructions[1].accounts,
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "systemProgram".into(),
+            is_mut: false,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![]
+        })]
+    );
 
     assert_eq!(idl.instructions[2].args.len(), 2);
     assert_eq!(
@@ -1140,7 +1272,7 @@ fn deduplication() {
                 ty: IdlType::PublicKey,
             },
             IdlField {
-                name: "arg_0".to_string(),
+                name: "arg0".to_string(),
                 docs: None,
                 ty: IdlType::String,
             }

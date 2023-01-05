@@ -422,6 +422,18 @@ impl Function {
         matches!(self.mutability, Mutability::Payable(_))
     }
 
+    /// Does this function have an @payer annotation
+    pub fn has_payer_annotation(&self) -> bool {
+        self.annotations
+            .iter()
+            .any(|note| matches!(note, ConstructorAnnotation::Payer(..)))
+    }
+
+    /// Does this function have the pure state
+    pub fn is_pure(&self) -> bool {
+        matches!(self.mutability, Mutability::Pure(_))
+    }
+
     /// Is this function accessable externally
     pub fn is_public(&self) -> bool {
         matches!(

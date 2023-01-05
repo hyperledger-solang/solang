@@ -27,6 +27,18 @@ pub fn generate_abi(
 
             (serde_json::to_string_pretty(&abi).unwrap(), "contract")
         }
+        Target::Solana => {
+            if verbose {
+                eprintln!(
+                    "info: Generating Anchor metadata for contract {}",
+                    ns.contracts[contract_no].name
+                );
+            }
+
+            let idl = anchor::generate_anchor_idl(contract_no, ns);
+
+            (serde_json::to_string_pretty(&idl).unwrap(), "json")
+        }
         _ => {
             if verbose {
                 eprintln!(

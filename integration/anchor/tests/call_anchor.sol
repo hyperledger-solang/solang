@@ -2,13 +2,13 @@ import 'solana';
 import 'anchor.sol';
 
 contract call_anchor {
-    address data;
+    address public data;
 
     constructor(address a) {
         data = a;
     }
 
-    function test(address payer) public returns (uint64) {
+    function test(address payer) public {
         AccountMeta[3] am = [
             AccountMeta({pubkey: data, is_writable: true, is_signer: true}),
             AccountMeta({pubkey: payer, is_writable: true, is_signer: true}),
@@ -72,7 +72,5 @@ contract call_anchor {
         require(ret8[0][3] == 10000, "array 1");
         require(ret8[1][2] == 8000, "array 2");
         require(ret8[2][0] == 3000, "array 3");
-
-        return 11;
     }
 }
