@@ -237,39 +237,48 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::PostDecrement { expr, .. } => {
             expr.recurse(state, write_expression);
         }
-        Expression::Assign(_, _, left, right) => {
+        Expression::Assign { left, right, .. } => {
             right.recurse(state, read_expression);
             left.recurse(state, write_expression);
         }
-        Expression::StorageArrayLength { loc, .. } | Expression::StorageLoad(loc, _, _) => {
+        Expression::StorageArrayLength { loc, .. } | Expression::StorageLoad { loc, .. } => {
             state.read(loc)
         }
-        Expression::Subscript(loc, _, ty, ..) if ty.is_contract_storage() => state.read(loc),
-        Expression::Builtin(loc, _, Builtin::GetAddress, _)
-        | Expression::Builtin(loc, _, Builtin::BlockNumber, _)
-        | Expression::Builtin(loc, _, Builtin::Timestamp, _)
-        | Expression::Builtin(loc, _, Builtin::ProgramId, _)
-        | Expression::Builtin(loc, _, Builtin::BlockCoinbase, _)
-        | Expression::Builtin(loc, _, Builtin::BlockDifficulty, _)
-        | Expression::Builtin(loc, _, Builtin::BlockHash, _)
-        | Expression::Builtin(loc, _, Builtin::Sender, _)
-        | Expression::Builtin(loc, _, Builtin::Origin, _)
-        | Expression::Builtin(loc, _, Builtin::Gasleft, _)
-        | Expression::Builtin(loc, _, Builtin::Gasprice, _)
-        | Expression::Builtin(loc, _, Builtin::GasLimit, _)
-        | Expression::Builtin(loc, _, Builtin::MinimumBalance, _)
-        | Expression::Builtin(loc, _, Builtin::Balance, _)
-        | Expression::Builtin(loc, _, Builtin::Random, _)
-        | Expression::Builtin(loc, _, Builtin::Accounts, _) => state.read(loc),
-        Expression::Builtin(loc, _, Builtin::PayableSend, _)
-        | Expression::Builtin(loc, _, Builtin::PayableTransfer, _)
-        | Expression::Builtin(loc, _, Builtin::SelfDestruct, _) => state.write(loc),
-        Expression::Builtin(loc, _, Builtin::ArrayPush, args)
-        | Expression::Builtin(loc, _, Builtin::ArrayPop, args)
-            if args[0].ty().is_contract_storage() =>
-        {
-            state.write(loc)
+        Expression::Subscript { loc, array_ty, .. } if array_ty.is_contract_storage() => {
+            state.read(loc)
         }
+        Expression::Builtin {
+            loc,
+            kind:
+                Builtin::GetAddress
+                | Builtin::BlockNumber
+                | Builtin::Timestamp
+                | Builtin::ProgramId
+                | Builtin::BlockCoinbase
+                | Builtin::BlockDifficulty
+                | Builtin::BlockHash
+                | Builtin::Sender
+                | Builtin::Origin
+                | Builtin::Gasleft
+                | Builtin::Gasprice
+                | Builtin::GasLimit
+                | Builtin::MinimumBalance
+                | Builtin::Balance
+                | Builtin::Random
+                | Builtin::Accounts,
+            ..
+        } => state.read(loc),
+        Expression::Builtin {
+            loc,
+            kind: Builtin::PayableSend | Builtin::PayableTransfer | Builtin::SelfDestruct,
+            ..
+        } => state.write(loc),
+        Expression::Builtin {
+            loc,
+            kind: Builtin::ArrayPush | Builtin::ArrayPop,
+            args,
+            ..
+        } if args[0].ty().is_contract_storage() => state.write(loc),
 
         Expression::Constructor { loc, .. } => {
             state.write(loc);
@@ -302,19 +311,22 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
 
 fn write_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     match expr {
-        Expression::StructMember(loc, _, expr, _) | Expression::Subscript(loc, _, _, expr, _) => {
+        Expression::StructMember { loc, expr, .. }
+        | Expression::Subscript {
+            loc, array: expr, ..
+        } => {
             if expr.ty().is_contract_storage() {
                 state.write(loc);
                 return false;
             }
         }
-        Expression::Variable(loc, ty, _) => {
+        Expression::Variable { loc, ty, var_no: _ } => {
             if ty.is_contract_storage() && !expr.ty().is_contract_storage() {
                 state.write(loc);
                 return false;
             }
         }
-        Expression::StorageVariable(loc, _, _, _) => {
+        Expression::StorageVariable { loc, .. } => {
             state.write(loc);
             return false;
         }

@@ -29,19 +29,23 @@ pub fn should_remove_assignment(
     }
 
     match &exp {
-        Expression::StorageVariable(_, _, contract_no, offset) => {
+        Expression::StorageVariable {
+            contract_no,
+            var_no: offset,
+            ..
+        } => {
             let var = &ns.contracts[*contract_no].variables[*offset];
             !var.read
         }
 
-        Expression::Variable(_, _, offset) => should_remove_variable(offset, func, opt),
+        Expression::Variable { var_no: offset, .. } => should_remove_variable(offset, func, opt),
 
-        Expression::StructMember(_, _, str, _) => should_remove_assignment(ns, str, func, opt),
+        Expression::StructMember { expr: str, .. } => should_remove_assignment(ns, str, func, opt),
 
-        Expression::Subscript(_, _, _, array, _) => should_remove_assignment(ns, array, func, opt),
+        Expression::Subscript { array, .. } => should_remove_assignment(ns, array, func, opt),
 
-        Expression::StorageLoad(_, _, expr)
-        | Expression::Load(_, _, expr)
+        Expression::StorageLoad { expr, .. }
+        | Expression::Load { expr, .. }
         | Expression::Trunc { expr, .. }
         | Expression::Cast { expr, .. }
         | Expression::BytesCast { expr, .. } => should_remove_assignment(ns, expr, func, opt),

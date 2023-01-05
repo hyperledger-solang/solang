@@ -62,7 +62,11 @@ pub fn string_format(
                 if !string_literal.is_empty() {
                     format_args.push((
                         FormatArg::StringLiteral,
-                        Expression::BytesLiteral(loc, Type::String, string_literal.into_bytes()),
+                        Expression::BytesLiteral {
+                            loc,
+                            ty: Type::String,
+                            value: string_literal.into_bytes(),
+                        },
                     ));
                     string_literal = String::new();
                 }
@@ -128,11 +132,18 @@ pub fn string_format(
     if !string_literal.is_empty() {
         format_args.push((
             FormatArg::StringLiteral,
-            Expression::BytesLiteral(*loc, Type::String, string_literal.into_bytes()),
+            Expression::BytesLiteral {
+                loc: *loc,
+                ty: Type::String,
+                value: string_literal.into_bytes(),
+            },
         ));
     }
 
-    Ok(Expression::FormatString(*loc, format_args))
+    Ok(Expression::FormatString {
+        loc: *loc,
+        format: format_args,
+    })
 }
 
 fn parse_format_specifier(

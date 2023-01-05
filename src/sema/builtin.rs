@@ -991,12 +991,12 @@ pub(super) fn resolve_call(
                 }
             }
 
-            return Ok(Expression::Builtin(
-                *loc,
-                func.ret.to_vec(),
-                func.builtin,
-                cast_args,
-            ));
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: func.ret.to_vec(),
+                kind: func.builtin,
+                args: cast_args,
+            });
         }
     }
 
@@ -1142,7 +1142,12 @@ pub(super) fn resolve_namespace_call(
         return if broken {
             Err(())
         } else {
-            Ok(Expression::Builtin(*loc, tys, builtin, vec![data]))
+            Ok(Expression::Builtin {
+                loc: *loc,
+                tys,
+                kind: builtin,
+                args: vec![data],
+            })
         };
     }
 
@@ -1227,7 +1232,7 @@ pub(super) fn resolve_namespace_call(
                             expr = expr.cast(&arg.loc(), &params[arg_no], true, ns, diagnostics)?;
 
                             // A string or hex literal should be encoded as a string
-                            if let Expression::BytesLiteral(..) = &expr {
+                            if let Expression::BytesLiteral { .. } = &expr {
                                 expr =
                                     expr.cast(&arg.loc(), &Type::String, true, ns, diagnostics)?;
                             }
@@ -1235,12 +1240,12 @@ pub(super) fn resolve_namespace_call(
                             resolved_args.push(expr);
                         }
 
-                        return Ok(Expression::Builtin(
-                            *loc,
-                            vec![Type::DynamicBytes],
-                            builtin,
-                            resolved_args,
-                        ));
+                        return Ok(Expression::Builtin {
+                            loc: *loc,
+                            tys: vec![Type::DynamicBytes],
+                            kind: builtin,
+                            args: resolved_args,
+                        });
                     }
                     ty => {
                         diagnostics.push(Diagnostic::error(
@@ -1307,19 +1312,19 @@ pub(super) fn resolve_namespace_call(
         expr = expr.cast(&arg.loc(), ty.deref_any(), true, ns, diagnostics)?;
 
         // A string or hex literal should be encoded as a string
-        if let Expression::BytesLiteral(..) = &expr {
+        if let Expression::BytesLiteral { .. } = &expr {
             expr = expr.cast(&arg.loc(), &Type::String, true, ns, diagnostics)?;
         }
 
         resolved_args.push(expr);
     }
 
-    Ok(Expression::Builtin(
-        *loc,
-        vec![Type::DynamicBytes],
-        builtin,
-        resolved_args,
-    ))
+    Ok(Expression::Builtin {
+        loc: *loc,
+        tys: vec![Type::DynamicBytes],
+        kind: builtin,
+        args: resolved_args,
+    })
 }
 
 /// Resolve a builtin call
@@ -1412,12 +1417,12 @@ pub(super) fn resolve_method_call(
                 func.ret.to_vec()
             };
 
-            return Ok(Some(Expression::Builtin(
-                id.loc,
-                returns,
-                func.builtin,
-                cast_args,
-            )));
+            return Ok(Some(Expression::Builtin {
+                loc: id.loc,
+                tys: returns,
+                kind: func.builtin,
+                args: cast_args,
+            }));
         }
     }
 

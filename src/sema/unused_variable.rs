@@ -9,26 +9,30 @@ use solang_parser::pt::{ContractTy, Loc};
 /// Namespace (for storage variables)
 pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtable) {
     match &exp {
-        Expression::StorageVariable(_, _, contract_no, offset) => {
+        Expression::StorageVariable {
+            contract_no,
+            var_no: offset,
+            ..
+        } => {
             ns.contracts[*contract_no].variables[*offset].assigned = true;
         }
 
-        Expression::Variable(_, _, offset) => {
+        Expression::Variable { var_no: offset, .. } => {
             let var = symtable.vars.get_mut(offset).unwrap();
             var.assigned = true;
         }
 
-        Expression::StructMember(_, _, str, _) => {
+        Expression::StructMember { expr: str, .. } => {
             assigned_variable(ns, str, symtable);
         }
 
-        Expression::Subscript(_, _, _, array, index) => {
+        Expression::Subscript { array, index, .. } => {
             assigned_variable(ns, array, symtable);
             used_variable(ns, index, symtable);
         }
 
-        Expression::StorageLoad(_, _, expr)
-        | Expression::Load(_, _, expr)
+        Expression::StorageLoad { expr, .. }
+        | Expression::Load { expr, .. }
         | Expression::Trunc { expr, .. }
         | Expression::Cast { expr, .. }
         | Expression::BytesCast { expr, .. } => {
@@ -45,47 +49,63 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
 /// assign expressions and array subscripts.
 pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtable) {
     match &exp {
-        Expression::StorageVariable(_, _, contract_no, offset) => {
-            ns.contracts[*contract_no].variables[*offset].read = true;
+        Expression::StorageVariable {
+            contract_no,
+            var_no,
+            ..
+        } => {
+            ns.contracts[*contract_no].variables[*var_no].read = true;
         }
 
-        Expression::Variable(_, _, offset) => {
-            let var = symtable.vars.get_mut(offset).unwrap();
+        Expression::Variable { var_no, .. } => {
+            let var = symtable.vars.get_mut(var_no).unwrap();
             var.read = true;
         }
 
-        Expression::ConstantVariable(_, _, Some(contract_no), offset) => {
-            ns.contracts[*contract_no].variables[*offset].read = true;
+        Expression::ConstantVariable {
+            contract_no: Some(contract_no),
+            var_no,
+            ..
+        } => {
+            ns.contracts[*contract_no].variables[*var_no].read = true;
         }
 
-        Expression::ConstantVariable(_, _, None, offset) => {
-            ns.constants[*offset].read = true;
+        Expression::ConstantVariable {
+            contract_no: None,
+            var_no,
+            ..
+        } => {
+            ns.constants[*var_no].read = true;
         }
 
-        Expression::StructMember(_, _, str, _) => {
-            used_variable(ns, str, symtable);
+        Expression::StructMember { expr, .. } => {
+            used_variable(ns, expr, symtable);
         }
 
-        Expression::Subscript(_, _, _, array, index) => {
+        Expression::Subscript { array, index, .. } => {
             used_variable(ns, array, symtable);
             used_variable(ns, index, symtable);
         }
 
-        Expression::Builtin(_, _, Builtin::ArrayLength, args) => {
-            //We should not eliminate an array from the code when 'length' is called
-            //So the variable is also assigned
+        Expression::Builtin {
+            kind: Builtin::ArrayLength,
+            args,
+            ..
+        } => {
+            // We should not eliminate an array from the code when 'length' is called
+            // So the variable is also assigned
             assigned_variable(ns, &args[0], symtable);
             used_variable(ns, &args[0], symtable);
         }
         Expression::StorageArrayLength { array, .. } => {
-            //We should not eliminate an array from the code when 'length' is called
-            //So the variable is also assigned
+            // We should not eliminate an array from the code when 'length' is called
+            // So the variable is also assigned
             assigned_variable(ns, array, symtable);
             used_variable(ns, array, symtable);
         }
 
-        Expression::StorageLoad(_, _, expr)
-        | Expression::Load(_, _, expr)
+        Expression::StorageLoad { expr, .. }
+        | Expression::Load { expr, .. }
         | Expression::SignExt { expr, .. }
         | Expression::ZeroExt { expr, .. }
         | Expression::Trunc { expr, .. }
@@ -106,7 +126,7 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
 /// usage of the latter as well
 pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtable) {
     match &exp {
-        Expression::Load(..) | Expression::StorageLoad(..) | Expression::Variable(..) => {
+        Expression::Load { .. } | Expression::StorageLoad { .. } | Expression::Variable { .. } => {
             used_variable(ns, exp, symtable);
         }
 
@@ -154,7 +174,11 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             used_variable(ns, address, symtable);
         }
 
-        Expression::Builtin(_, _, expr_type, args) => match expr_type {
+        Expression::Builtin {
+            kind: expr_type,
+            args,
+            ..
+        } => match expr_type {
             Builtin::ArrayPush => {
                 assigned_variable(ns, &args[0], symtable);
                 if args.len() > 1 {
@@ -169,8 +193,8 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             }
         },
 
-        Expression::FormatString(_, args) => {
-            for (_, expr) in args {
+        Expression::FormatString { format, .. } => {
+            for (_, expr) in format {
                 used_variable(ns, expr, symtable);
             }
         }

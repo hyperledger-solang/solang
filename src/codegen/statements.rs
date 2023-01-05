@@ -161,7 +161,7 @@ pub(crate) fn statement(
             }
         }
         Statement::Expression(_, reachable, expr) => {
-            if let ast::Expression::Assign(_, _, left, right) = &expr {
+            if let ast::Expression::Assign { left, right, .. } = &expr {
                 if should_remove_assignment(ns, left, func, opt) {
                     let mut params = SideEffectsCheckParameters {
                         cfg,
@@ -795,14 +795,17 @@ fn returns(
             return;
         }
 
-        ast::Expression::Builtin(_, _, ast::Builtin::AbiDecode, _)
+        ast::Expression::Builtin {
+            kind: ast::Builtin::AbiDecode,
+            ..
+        }
         | ast::Expression::InternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCallRaw { .. } => {
             emit_function_call(expr, contract_no, cfg, Some(func), ns, vartab, opt)
         }
 
-        ast::Expression::List(_, exprs) => exprs
+        ast::Expression::List { list: exprs, .. } => exprs
             .iter()
             .map(|e| expression(e, cfg, contract_no, Some(func), ns, vartab, opt))
             .collect::<Vec<Expression>>(),
@@ -885,10 +888,10 @@ fn destructure(
     }
 
     let mut values = match expr {
-        ast::Expression::List(_, exprs) => {
+        ast::Expression::List { list, .. } => {
             let mut values = Vec::new();
 
-            for expr in exprs {
+            for expr in list {
                 let loc = expr.loc();
                 let expr = expression(expr, cfg, contract_no, Some(func), ns, vartab, opt);
                 let ty = expr.ty();
@@ -1455,7 +1458,7 @@ pub fn process_side_effects_expressions(
         | ast::Expression::ExternalFunctionCall { .. }
         | ast::Expression::ExternalFunctionCallRaw { .. }
         | ast::Expression::Constructor { .. }
-        | ast::Expression::Assign(..) => {
+        | ast::Expression::Assign { .. } => {
             let _ = expression(
                 exp,
                 ctx.cfg,
@@ -1468,7 +1471,9 @@ pub fn process_side_effects_expressions(
             false
         }
 
-        ast::Expression::Builtin(_, _, builtin_type, _) => match &builtin_type {
+        ast::Expression::Builtin {
+            kind: builtin_type, ..
+        } => match &builtin_type {
             ast::Builtin::PayableSend
             | ast::Builtin::ArrayPush
             | ast::Builtin::ArrayPop

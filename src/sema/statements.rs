@@ -1238,7 +1238,11 @@ fn destructure(
                 let e = expression(ty, &lcontext, ns, symtable, diagnostics, ResolveTo::Unknown)?;
 
                 match &e {
-                    Expression::ConstantVariable(_, _, Some(contract_no), var_no) => {
+                    Expression::ConstantVariable {
+                        contract_no: Some(contract_no),
+                        var_no,
+                        ..
+                    } => {
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
@@ -1248,15 +1252,23 @@ fn destructure(
                         ));
                         return Err(());
                     }
-                    Expression::ConstantVariable(_, _, None, var_no) => {
+                    Expression::ConstantVariable {
+                        contract_no: None,
+                        var_no,
+                        ..
+                    } => {
                         diagnostics.push(Diagnostic::error(
                             *loc,
                             format!("cannot assign to constant '{}'", ns.constants[*var_no].name),
                         ));
                         return Err(());
                     }
-                    Expression::StorageVariable(_, _, var_contract_no, var_no) => {
-                        let store_var = &ns.contracts[*var_contract_no].variables[*var_no];
+                    Expression::StorageVariable {
+                        contract_no,
+                        var_no,
+                        ..
+                    } => {
+                        let store_var = &ns.contracts[*contract_no].variables[*var_no];
 
                         if store_var.immutable
                             && !ns.functions[context.function_no.unwrap()].is_constructor()
@@ -1271,7 +1283,7 @@ fn destructure(
                             return Err(());
                         }
                     }
-                    Expression::Variable(..) => (),
+                    Expression::Variable { .. } => (),
                     _ => match e.ty() {
                         Type::Ref(_) | Type::StorageRef(false, _) => (),
                         _ => {
@@ -1466,7 +1478,7 @@ fn destructure_values(
                 list.push(e);
             }
 
-            Expression::List(*loc, list)
+            Expression::List { loc: *loc, list }
         }
     };
 
@@ -1493,13 +1505,12 @@ fn destructure_values(
     for (i, field) in fields.iter().enumerate() {
         if let Some(left_ty) = &left_tys[i] {
             let loc = field.loc().unwrap();
-            let _ = Expression::Variable(loc, right_tys[i].clone(), i).cast(
-                &loc,
-                left_ty.deref_memory(),
-                true,
-                ns,
-                diagnostics,
-            )?;
+            let _ = Expression::Variable {
+                loc,
+                ty: right_tys[i].clone(),
+                var_no: i,
+            }
+            .cast(&loc, left_ty.deref_memory(), true, ns, diagnostics)?;
         }
     }
     Ok(expr)
@@ -1685,7 +1696,10 @@ fn return_with_values(
             return Ok(if exprs.len() == 1 {
                 exprs[0].clone()
             } else {
-                Expression::List(*loc, exprs)
+                Expression::List {
+                    loc: *loc,
+                    list: exprs,
+                }
             });
         }
     };
@@ -1741,13 +1755,12 @@ fn return_with_values(
         .zip(func_returns_tys)
         .enumerate()
         .map(|(i, (expr_return_ty, func_return_ty))| {
-            Expression::Variable(expr_returns.loc(), expr_return_ty, i).cast(
-                &expr_returns.loc(),
-                &func_return_ty,
-                true,
-                ns,
-                diagnostics,
-            )
+            Expression::Variable {
+                loc: expr_returns.loc(),
+                ty: expr_return_ty,
+                var_no: i,
+            }
+            .cast(&expr_returns.loc(), &func_return_ty, true, ns, diagnostics)
         })
         .collect::<Result<Vec<_>, _>>()?;
 

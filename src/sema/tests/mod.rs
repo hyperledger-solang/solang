@@ -36,7 +36,7 @@ fn test_statement_reachable() {
     let test_cases: Vec<(Statement, bool)> = vec![
         (Statement::Underscore(loc), true),
         (
-            Statement::Destructure(loc, vec![], Expression::BoolLiteral(loc, true)),
+            Statement::Destructure(loc, vec![], Expression::BoolLiteral { loc, value: true }),
             true,
         ),
         (
@@ -66,7 +66,11 @@ fn test_statement_reachable() {
             true,
         ),
         (
-            Statement::Delete(loc, Type::Bool, Expression::BoolLiteral(loc, true)),
+            Statement::Delete(
+                loc,
+                Type::Bool,
+                Expression::BoolLiteral { loc, value: true },
+            ),
             true,
         ),
         (Statement::Continue(loc), false),
@@ -76,22 +80,32 @@ fn test_statement_reachable() {
             Statement::If(
                 loc,
                 false,
-                Expression::BoolLiteral(loc, false),
+                Expression::BoolLiteral { loc, value: false },
                 vec![],
                 vec![],
             ),
             false,
         ),
         (
-            Statement::While(loc, true, Expression::BoolLiteral(loc, false), vec![]),
+            Statement::While(
+                loc,
+                true,
+                Expression::BoolLiteral { loc, value: false },
+                vec![],
+            ),
             true,
         ),
         (
-            Statement::DoWhile(loc, false, vec![], Expression::BoolLiteral(loc, true)),
+            Statement::DoWhile(
+                loc,
+                false,
+                vec![],
+                Expression::BoolLiteral { loc, value: true },
+            ),
             false,
         ),
         (
-            Statement::Expression(loc, true, Expression::BoolLiteral(loc, false)),
+            Statement::Expression(loc, true, Expression::BoolLiteral { loc, value: false }),
             true,
         ),
         (
@@ -110,7 +124,7 @@ fn test_statement_reachable() {
                 loc,
                 true,
                 TryCatch {
-                    expr: Expression::BoolLiteral(loc, false),
+                    expr: Expression::BoolLiteral { loc, value: false },
                     returns: vec![],
                     ok_stmt: vec![],
                     errors: vec![],
