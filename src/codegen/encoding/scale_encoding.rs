@@ -4,7 +4,7 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type};
+use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type, U32};
 use num_bigint::BigInt;
 use solang_parser::pt::Loc;
 
@@ -44,7 +44,7 @@ fn encode_compact(
     let compare = Expression::UnsignedMore(
         loc,
         expr.clone().into(),
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0x40000000.into()).into(),
+        Expression::NumberLiteral(Loc::Codegen, U32, 0x40000000.into()).into(),
     );
 
     cfg.add(
@@ -63,7 +63,7 @@ fn encode_compact(
     let compare = Expression::UnsignedMore(
         Loc::Codegen,
         expr.clone().into(),
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0x40.into()).into(),
+        Expression::NumberLiteral(Loc::Codegen, U32, 0x40.into()).into(),
     );
     cfg.add(
         vartab,
@@ -78,7 +78,7 @@ fn encode_compact(
     let compare = Expression::UnsignedMore(
         Loc::Codegen,
         expr.clone().into(),
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0x4000.into()).into(),
+        Expression::NumberLiteral(Loc::Codegen, U32, 0x4000.into()).into(),
     );
     cfg.add(
         vartab,
@@ -90,15 +90,10 @@ fn encode_compact(
     );
 
     vartab.new_dirty_tracker();
-    let size_variable = vartab.temp_anonymous(&Type::Uint(32));
+    let size_variable = vartab.temp_anonymous(&U32);
 
-    let mul = Expression::Multiply(
-        Loc::Codegen,
-        Type::Uint(32),
-        false,
-        expr.clone().into(),
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 4.into()).into(),
-    );
+    let four = Expression::NumberLiteral(Loc::Codegen, U32, 4.into()).into();
+    let mul = Expression::Multiply(loc, U32, false, expr.clone().into(), four);
 
     cfg.set_basic_block(small);
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
@@ -116,7 +111,7 @@ fn encode_compact(
         Instr::Set {
             loc,
             res: size_variable,
-            expr: Expression::NumberLiteral(loc, Type::Uint(32), 1.into()),
+            expr: Expression::NumberLiteral(loc, U32, 1.into()),
         },
     );
     cfg.add(vartab, Instr::Branch { block: done });
@@ -125,9 +120,9 @@ fn encode_compact(
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
         let mul2 = Expression::BitwiseOr(
             loc,
-            Type::Uint(32),
+            U32,
             mul.clone().into(),
-            Expression::NumberLiteral(loc, Type::Uint(32), 1.into()).into(),
+            Expression::NumberLiteral(loc, U32, 1.into()).into(),
         );
         cfg.add(
             vartab,
@@ -143,7 +138,7 @@ fn encode_compact(
         Instr::Set {
             loc,
             res: size_variable,
-            expr: Expression::NumberLiteral(loc, Type::Uint(32), 2.into()),
+            expr: Expression::NumberLiteral(loc, U32, 2.into()),
         },
     );
     cfg.add(vartab, Instr::Branch { block: done });
@@ -152,9 +147,9 @@ fn encode_compact(
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
         let mul2 = Expression::BitwiseOr(
             loc,
-            Type::Uint(32),
+            U32,
             mul.clone().into(),
-            Expression::NumberLiteral(loc, Type::Uint(32), 2.into()).into(),
+            Expression::NumberLiteral(loc, U32, 2.into()).into(),
         );
         cfg.add(
             vartab,
@@ -170,14 +165,14 @@ fn encode_compact(
         Instr::Set {
             loc,
             res: size_variable,
-            expr: Expression::NumberLiteral(loc, Type::Uint(32), 4.into()),
+            expr: Expression::NumberLiteral(loc, U32, 4.into()),
         },
     );
     cfg.add(vartab, Instr::Branch { block: done });
 
     cfg.set_basic_block(done);
     cfg.set_phis(done, vartab.pop_dirty_tracker());
-    Expression::Variable(loc, Type::Uint(32), size_variable)
+    Expression::Variable(loc, U32, size_variable)
 }
 
 impl AbiEncoding for ScaleEncoding {
@@ -250,27 +245,16 @@ impl AbiEncoding for ScaleEncoding {
         &self,
         expr: &Expression,
         ty: &Type,
-        ns: &Namespace,
+        _ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
         match ty {
-            Type::Uint(n) | Type::Int(n) => Expression::NumberLiteral(
-                Loc::Codegen,
-                Type::Uint(32),
-                BigInt::from(n.next_power_of_two() / 8),
-            ),
-
-            Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
-                let size = ty.memory_size_of(ns);
-                Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), size)
-            }
-
             Type::String | Type::DynamicBytes => {
                 // When encoding a variable length array, the total size is "compact encoded array length + N elements"
                 let length = Expression::Builtin(
                     Loc::Codegen,
-                    vec![Type::Uint(32)],
+                    vec![U32],
                     Builtin::ArrayLength,
                     vec![expr.clone()],
                 );
@@ -281,7 +265,6 @@ impl AbiEncoding for ScaleEncoding {
                     increment_by(encode_compact(&length, None, None, vartab, cfg), length)
                 }
             }
-
             _ => unreachable!("Type should have the same size for all encoding schemes"),
         }
     }
