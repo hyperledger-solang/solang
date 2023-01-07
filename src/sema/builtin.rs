@@ -898,7 +898,7 @@ pub fn is_reserved(fname: &str) -> bool {
 }
 
 /// Resolve a builtin call
-pub fn resolve_call(
+pub(super) fn resolve_call(
     loc: &pt::Loc,
     namespace: Option<&str>,
     id: &str,
@@ -1016,7 +1016,7 @@ pub fn resolve_call(
 /// to handle the special case "abi.decode(foo, (int32, bool, address))" where the
 /// second argument is a type list. The generic expression resolver cannot deal with
 /// this. It is only used in for this specific call.
-pub fn resolve_namespace_call(
+pub(super) fn resolve_namespace_call(
     loc: &pt::Loc,
     namespace: &str,
     name: &str,
@@ -1323,7 +1323,7 @@ pub fn resolve_namespace_call(
 }
 
 /// Resolve a builtin call
-pub fn resolve_method_call(
+pub(super) fn resolve_method_call(
     expr: &Expression,
     id: &pt::Identifier,
     args: &[pt::Expression],

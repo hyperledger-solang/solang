@@ -312,7 +312,7 @@ impl Namespace {
     }
 
     /// Resolve a contract name with namespace
-    pub fn resolve_contract_with_namespace(
+    pub(super) fn resolve_contract_with_namespace(
         &mut self,
         file_no: usize,
         name: &pt::IdentifierPath,
@@ -338,7 +338,7 @@ impl Namespace {
     }
 
     /// Resolve a free function name with namespace
-    pub fn resolve_free_function_with_namespace(
+    pub(super) fn resolve_free_function_with_namespace(
         &mut self,
         file_no: usize,
         name: &pt::IdentifierPath,
@@ -364,7 +364,7 @@ impl Namespace {
     }
 
     /// Resolve an event. We should only be resolving events for emit statements
-    pub fn resolve_event(
+    pub(super) fn resolve_event(
         &mut self,
         file_no: usize,
         contract_no: Option<usize>,
@@ -752,7 +752,7 @@ impl Namespace {
     /// Resolve the parsed data type. The type can be a primitive, enum and also an arrays.
     /// The type for address payable is "address payable" used as a type, and "payable" when
     /// casting. So, we need to know what we are resolving for.
-    pub fn resolve_type(
+    pub(super) fn resolve_type(
         &mut self,
         file_no: usize,
         contract_no: Option<usize>,
@@ -1233,7 +1233,7 @@ impl Namespace {
     // this as an expression, so we need to convert it to Type and check there are
     // no unexpected expressions types.
     #[allow(clippy::vec_init_then_push)]
-    pub fn expr_to_type<'a>(
+    pub(super) fn expr_to_type<'a>(
         &mut self,
         file_no: usize,
         contract_no: Option<usize>,
