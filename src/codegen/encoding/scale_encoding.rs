@@ -176,6 +176,15 @@ fn encode_compact(
 }
 
 impl AbiEncoding for ScaleEncoding {
+    fn size_width(
+        &self,
+        size: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        encode_compact(size, None, None, vartab, cfg)
+    }
+
     /// SALE encoding uses "compact" integer for sizes.
     fn encode_size(
         &mut self,

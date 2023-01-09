@@ -35,6 +35,26 @@ pub(super) struct BorshEncoding {
 }
 
 impl AbiEncoding for BorshEncoding {
+    fn size_width(
+        &self,
+        _size: &Expression,
+        _vartab: &mut Vartable,
+        _cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        Expression::NumberLiteral(Loc::Codegen, U32, 4.into())
+    }
+
+    fn encode_size(
+        &mut self,
+        expr: &Expression,
+        buffer: &Expression,
+        offset: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        self.encode_int(expr, buffer, offset, vartab, cfg, 32)
+    }
+
     fn abi_decode(
         &self,
         loc: &Loc,

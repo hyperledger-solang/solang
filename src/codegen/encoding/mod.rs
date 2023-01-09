@@ -68,9 +68,12 @@ pub(super) fn abi_encode(
 /// we have the same interface for creating encode and decode functions.
 pub(super) trait AbiEncoding {
     /// The width (in bits) used in size hints for dynamic size types.
-    fn size_width(&self) -> u16 {
-        32
-    }
+    fn size_width(
+        &self,
+        size: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression;
 
     /// Encode expression to buffer. Returns the size in bytes of the encoded item.
     fn encode(
@@ -230,9 +233,7 @@ pub(super) trait AbiEncoding {
         offset: &Expression,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
-    ) -> Expression {
-        self.encode_int(expr, buffer, offset, vartab, cfg, self.size_width())
-    }
+    ) -> Expression;
 
     fn encode_bytes_packed(
         &mut self,
@@ -784,8 +785,9 @@ fn calculate_array_size(
     };
 
     let size_var = if let Some(compile_type_size) = primitive_size {
+        let dimension = &dims.last().unwrap();
         // If the array saves primitive-type elements, its size is sizeof(type)*vec.length
-        let mut size = if let ArrayLength::Fixed(dim) = &dims.last().unwrap() {
+        let mut size = if let ArrayLength::Fixed(dim) = dimension {
             Expression::NumberLiteral(Loc::Codegen, U32, dim.clone())
         } else {
             Expression::Builtin(
@@ -799,7 +801,17 @@ fn calculate_array_size(
         for item in dims.iter().take(dims.len() - 1) {
             let local_size =
                 Expression::NumberLiteral(Loc::Codegen, U32, item.array_length().unwrap().clone());
-            size = Expression::Multiply(Loc::Codegen, U32, false, size.into(), local_size.into());
+            size = Expression::Multiply(
+                Loc::Codegen,
+                U32,
+                false,
+                size.into(),
+                local_size.clone().into(),
+            );
+            if !encoder.is_packed() && matches!(item, ArrayLength::Dynamic) {
+                let size_width = encoder.size_width(&local_size, vartab, cfg);
+                size = Expression::Add(Loc::Codegen, U32, false, size.into(), size_width.into())
+            }
         }
 
         let type_size = Expression::NumberLiteral(Loc::Codegen, U32, compile_type_size);
@@ -814,7 +826,7 @@ fn calculate_array_size(
             },
         );
 
-        size_var
+        Expression::Variable(Loc::Codegen, U32, size_var)
     } else {
         let size_var = vartab.temp_name(format!("array_bytes_size_{}", arg_no).as_str(), &U32);
         cfg.add(
@@ -838,34 +850,15 @@ fn calculate_array_size(
             vartab,
             cfg,
         );
-        size_var
+        Expression::Variable(Loc::Codegen, U32, size_var)
     };
 
-    // Each dynamic dimension size occupies 4 bytes in the buffer
-    let dyn_dims = dims.iter().filter(|d| **d == ArrayLength::Dynamic).count();
-
-    if dyn_dims > 0 && !encoder.is_packed() {
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: Loc::Codegen,
-                res: size_var,
-                expr: Expression::Add(
-                    Loc::Codegen,
-                    U32,
-                    false,
-                    Box::new(Expression::Variable(Loc::Codegen, U32, size_var)),
-                    Box::new(Expression::NumberLiteral(
-                        Loc::Codegen,
-                        U32,
-                        BigInt::from(4 * dyn_dims),
-                    )),
-                ),
-            },
-        );
+    if !encoder.is_packed() && matches!(&dims.last().unwrap(), ArrayLength::Dynamic) {
+        let size_width = encoder.size_width(&size_var, vartab, cfg);
+        Expression::Add(Loc::Codegen, U32, false, size_var.into(), size_width.into())
+    } else {
+        size_var
     }
-
-    Expression::Variable(Loc::Codegen, U32, size_var)
 }
 
 /// Calculate the size of a complex array.
