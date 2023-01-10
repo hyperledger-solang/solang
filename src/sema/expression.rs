@@ -408,7 +408,6 @@ impl Expression {
     ) -> Result<Expression, ()> {
         let address_bits = ns.address_length as u16 * 8;
 
-        #[allow(clippy::comparison_chain)]
         match (&from, &to) {
             // Solana builtin AccountMeta struct wants a pointer to an address for the pubkey field,
             // not an address. For this specific field we have a special Expression::GetRef() which
@@ -781,28 +780,23 @@ impl Expression {
                         Type::Uint(address_bits)
                     };
 
-                    let expr = if *from_len > address_bits {
-                        Expression::Trunc {
+                    let expr = match from_len.cmp(&address_bits) {
+                        Ordering::Greater => Expression::Trunc {
                             loc: *loc,
                             to: address_to_int,
                             expr: Box::new(self.clone()),
-                        }
-                    } else if *from_len < address_bits {
-                        if from.is_signed_int() {
-                            Expression::ZeroExt {
-                                loc: *loc,
-                                to: address_to_int,
-                                expr: Box::new(self.clone()),
-                            }
-                        } else {
-                            Expression::SignExt {
-                                loc: *loc,
-                                to: address_to_int,
-                                expr: Box::new(self.clone()),
-                            }
-                        }
-                    } else {
-                        self.clone()
+                        },
+                        Ordering::Less if from.is_signed_int() => Expression::ZeroExt {
+                            loc: *loc,
+                            to: address_to_int,
+                            expr: Box::new(self.clone()),
+                        },
+                        Ordering::Less => Expression::SignExt {
+                            loc: *loc,
+                            to: address_to_int,
+                            expr: Box::new(self.clone()),
+                        },
+                        Ordering::Equal => self.clone(),
                     };
 
                     // Now cast integer to address
@@ -840,28 +834,23 @@ impl Expression {
                         expr: Box::new(self.clone()),
                     };
                     // now resize int to request size with sign extension etc
-                    if *to_len < address_bits {
-                        Ok(Expression::Trunc {
+                    match to_len.cmp(&address_bits) {
+                        Ordering::Less => Ok(Expression::Trunc {
                             loc: *loc,
                             to: to.clone(),
                             expr: Box::new(expr),
-                        })
-                    } else if *to_len > address_bits {
-                        if to.is_signed_int() {
-                            Ok(Expression::ZeroExt {
-                                loc: *loc,
-                                to: to.clone(),
-                                expr: Box::new(expr),
-                            })
-                        } else {
-                            Ok(Expression::SignExt {
-                                loc: *loc,
-                                to: to.clone(),
-                                expr: Box::new(expr),
-                            })
-                        }
-                    } else {
-                        Ok(expr)
+                        }),
+                        Ordering::Greater if to.is_signed_int() => Ok(Expression::ZeroExt {
+                            loc: *loc,
+                            to: to.clone(),
+                            expr: Box::new(expr),
+                        }),
+                        Ordering::Greater => Ok(Expression::SignExt {
+                            loc: *loc,
+                            to: to.clone(),
+                            expr: Box::new(expr),
+                        }),
+                        Ordering::Equal => Ok(expr),
                     }
                 }
             }
@@ -5141,31 +5130,32 @@ fn member_access(
                 });
             }
 
-            #[allow(clippy::comparison_chain)]
-            return if name_matches == 0 {
-                diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    format!(
-                        "{} '{}' has no public function '{}'",
-                        ns.contracts[ref_contract_no].ty,
-                        ns.contracts[ref_contract_no].name,
-                        id.name
-                    ),
-                ));
-                Err(())
-            } else if name_matches == 1 {
-                ext_expr
-            } else {
-                diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    format!(
-                        "function '{}' of {} '{}' is overloaded",
-                        id.name,
-                        ns.contracts[ref_contract_no].ty,
-                        ns.contracts[ref_contract_no].name
-                    ),
-                ));
-                Err(())
+            return match name_matches {
+                0 => {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        format!(
+                            "{} '{}' has no public function '{}'",
+                            ns.contracts[ref_contract_no].ty,
+                            ns.contracts[ref_contract_no].name,
+                            id.name
+                        ),
+                    ));
+                    Err(())
+                }
+                1 => ext_expr,
+                _ => {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        format!(
+                            "function '{}' of {} '{}' is overloaded",
+                            id.name,
+                            ns.contracts[ref_contract_no].ty,
+                            ns.contracts[ref_contract_no].name
+                        ),
+                    ));
+                    Err(())
+                }
             };
         }
         Type::ExternalFunction { .. } => {
