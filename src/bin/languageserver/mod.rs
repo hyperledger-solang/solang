@@ -425,8 +425,8 @@ impl SolangServer {
             ast::Expression::StructLiteral { values, .. }
             | ast::Expression::ArrayLiteral { values, .. }
             | ast::Expression::ConstArrayLiteral { values, .. } => {
-                for expp in values {
-                    SolangServer::construct_expr(expp, lookup_tbl, symtab, ns);
+                for expr in values {
+                    SolangServer::construct_expr(expr, lookup_tbl, symtab, ns);
                 }
             }
 
@@ -772,8 +772,8 @@ impl SolangServer {
                     });
 
                     SolangServer::construct_expr(address, lookup_tbl, symtab, ns);
-                    for expp in args {
-                        SolangServer::construct_expr(expp, lookup_tbl, symtab, ns);
+                    for arg in args {
+                        SolangServer::construct_expr(arg, lookup_tbl, symtab, ns);
                     }
                     if let Some(value) = &call_args.value {
                         SolangServer::construct_expr(value, lookup_tbl, symtab, ns);
@@ -804,8 +804,8 @@ impl SolangServer {
                 if let Some(gas) = &call_args.gas {
                     SolangServer::construct_expr(gas, lookup_tbl, symtab, ns);
                 }
-                for expp in args {
-                    SolangServer::construct_expr(expp, lookup_tbl, symtab, ns);
+                for arg in args {
+                    SolangServer::construct_expr(arg, lookup_tbl, symtab, ns);
                 }
                 if let Some(optval) = &call_args.value {
                     SolangServer::construct_expr(optval, lookup_tbl, symtab, ns);
