@@ -703,14 +703,48 @@ impl Contract {
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Expression {
-    BoolLiteral(pt::Loc, bool),
-    BytesLiteral(pt::Loc, Type, Vec<u8>),
-    CodeLiteral(pt::Loc, usize, bool),
-    NumberLiteral(pt::Loc, Type, BigInt),
-    RationalNumberLiteral(pt::Loc, Type, BigRational),
-    StructLiteral(pt::Loc, Type, Vec<Expression>),
-    ArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
-    ConstArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
+    BoolLiteral {
+        loc: pt::Loc,
+        value: bool,
+    },
+    BytesLiteral {
+        loc: pt::Loc,
+        ty: Type,
+        value: Vec<u8>,
+    },
+    CodeLiteral {
+        loc: pt::Loc,
+        contract_no: usize,
+        // runtime code rather than deployer (evm only)
+        runtime: bool,
+    },
+    NumberLiteral {
+        loc: pt::Loc,
+        ty: Type,
+        value: BigInt,
+    },
+    RationalNumberLiteral {
+        loc: pt::Loc,
+        ty: Type,
+        value: BigRational,
+    },
+    StructLiteral {
+        loc: pt::Loc,
+        ty: Type,
+        values: Vec<Expression>,
+    },
+    ArrayLiteral {
+        loc: pt::Loc,
+        ty: Type,
+        dimensions: Vec<u32>,
+        values: Vec<Expression>,
+    },
+    ConstArrayLiteral {
+        loc: pt::Loc,
+        ty: Type,
+        dimensions: Vec<u32>,
+        values: Vec<Expression>,
+    },
     Add {
         loc: pt::Loc,
         ty: Type,
@@ -752,8 +786,8 @@ pub enum Expression {
         ty: Type,
         /// Do not check for overflow, i.e. in `unchecked {}` block
         unchecked: bool,
-        left: Box<Expression>,
-        right: Box<Expression>,
+        base: Box<Expression>,
+        exp: Box<Expression>,
     },
     BitwiseOr {
         loc: pt::Loc,
@@ -786,12 +820,38 @@ pub enum Expression {
         right: Box<Expression>,
         sign: bool,
     },
-    Variable(pt::Loc, Type, usize),
-    ConstantVariable(pt::Loc, Type, Option<usize>, usize),
-    StorageVariable(pt::Loc, Type, usize, usize),
-    Load(pt::Loc, Type, Box<Expression>),
-    GetRef(pt::Loc, Type, Box<Expression>),
-    StorageLoad(pt::Loc, Type, Box<Expression>),
+    Variable {
+        loc: pt::Loc,
+        ty: Type,
+        var_no: usize,
+    },
+    ConstantVariable {
+        loc: pt::Loc,
+        ty: Type,
+        contract_no: Option<usize>,
+        var_no: usize,
+    },
+    StorageVariable {
+        loc: pt::Loc,
+        ty: Type,
+        contract_no: usize,
+        var_no: usize,
+    },
+    Load {
+        loc: pt::Loc,
+        ty: Type,
+        expr: Box<Expression>,
+    },
+    GetRef {
+        loc: pt::Loc,
+        ty: Type,
+        expr: Box<Expression>,
+    },
+    StorageLoad {
+        loc: pt::Loc,
+        ty: Type,
+        expr: Box<Expression>,
+    },
     ZeroExt {
         loc: pt::Loc,
         to: Type,
@@ -851,18 +911,57 @@ pub enum Expression {
         unchecked: bool,
         expr: Box<Expression>,
     },
-    Assign(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    Assign {
+        loc: pt::Loc,
+        ty: Type,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    More {
+        loc: pt::Loc,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    Less {
+        loc: pt::Loc,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    MoreEqual {
+        loc: pt::Loc,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    LessEqual {
+        loc: pt::Loc,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    Equal {
+        loc: pt::Loc,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    NotEqual {
+        loc: pt::Loc,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
 
-    More(pt::Loc, Box<Expression>, Box<Expression>),
-    Less(pt::Loc, Box<Expression>, Box<Expression>),
-    MoreEqual(pt::Loc, Box<Expression>, Box<Expression>),
-    LessEqual(pt::Loc, Box<Expression>, Box<Expression>),
-    Equal(pt::Loc, Box<Expression>, Box<Expression>),
-    NotEqual(pt::Loc, Box<Expression>, Box<Expression>),
-
-    Not(pt::Loc, Box<Expression>),
-    Complement(pt::Loc, Type, Box<Expression>),
-    UnaryMinus(pt::Loc, Type, Box<Expression>),
+    Not {
+        loc: pt::Loc,
+        expr: Box<Expression>,
+    },
+    Complement {
+        loc: pt::Loc,
+        ty: Type,
+        expr: Box<Expression>,
+    },
+    UnaryMinus {
+        loc: pt::Loc,
+        ty: Type,
+        expr: Box<Expression>,
+    },
 
     ConditionalOperator {
         loc: pt::Loc,
@@ -871,30 +970,54 @@ pub enum Expression {
         true_option: Box<Expression>,
         false_option: Box<Expression>,
     },
-    Subscript(pt::Loc, Type, Type, Box<Expression>, Box<Expression>),
-    StructMember(pt::Loc, Type, Box<Expression>, usize),
+    Subscript {
+        loc: pt::Loc,
+        ty: Type,
+        array_ty: Type,
+        array: Box<Expression>,
+        index: Box<Expression>,
+    },
+    StructMember {
+        loc: pt::Loc,
+        ty: Type,
+        expr: Box<Expression>,
+        field: usize,
+    },
 
-    AllocDynamicBytes(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
+    AllocDynamicBytes {
+        loc: pt::Loc,
+        ty: Type,
+        length: Box<Expression>,
+        init: Option<Vec<u8>>,
+    },
     StorageArrayLength {
         loc: pt::Loc,
         ty: Type,
         array: Box<Expression>,
         elem_ty: Type,
     },
-    StringCompare(
-        pt::Loc,
-        StringLocation<Expression>,
-        StringLocation<Expression>,
-    ),
-    StringConcat(
-        pt::Loc,
-        Type,
-        StringLocation<Expression>,
-        StringLocation<Expression>,
-    ),
+    StringCompare {
+        loc: pt::Loc,
+        left: StringLocation<Expression>,
+        right: StringLocation<Expression>,
+    },
+    StringConcat {
+        loc: pt::Loc,
+        ty: Type,
+        left: StringLocation<Expression>,
+        right: StringLocation<Expression>,
+    },
 
-    Or(pt::Loc, Box<Expression>, Box<Expression>),
-    And(pt::Loc, Box<Expression>, Box<Expression>),
+    Or {
+        loc: pt::Loc,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    And {
+        loc: pt::Loc,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
     InternalFunction {
         loc: pt::Loc,
         ty: Type,
@@ -934,10 +1057,24 @@ pub enum Expression {
         args: Vec<Expression>,
         call_args: CallArgs,
     },
-    FormatString(pt::Loc, Vec<(FormatArg, Expression)>),
-    Builtin(pt::Loc, Vec<Type>, Builtin, Vec<Expression>),
-    InterfaceId(pt::Loc, usize),
-    List(pt::Loc, Vec<Expression>),
+    FormatString {
+        loc: pt::Loc,
+        format: Vec<(FormatArg, Expression)>,
+    },
+    Builtin {
+        loc: pt::Loc,
+        tys: Vec<Type>,
+        kind: Builtin,
+        args: Vec<Expression>,
+    },
+    InterfaceId {
+        loc: pt::Loc,
+        contract_no: usize,
+    },
+    List {
+        loc: pt::Loc,
+        list: Vec<Expression>,
+    },
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
@@ -973,29 +1110,16 @@ impl Recurse for Expression {
     fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Expression, ctx: &mut T) -> bool) {
         if f(self, cx) {
             match self {
-                Expression::StructLiteral(_, _, exprs)
-                | Expression::ArrayLiteral(_, _, _, exprs)
-                | Expression::ConstArrayLiteral(_, _, _, exprs) => {
-                    for e in exprs {
+                Expression::StructLiteral { values, .. }
+                | Expression::ArrayLiteral { values, .. }
+                | Expression::ConstArrayLiteral { values, .. } => {
+                    for e in values {
                         e.recurse(cx, f);
                     }
                 }
-                Expression::Add { left, right, .. }
-                | Expression::Subtract { left, right, .. }
-                | Expression::Multiply { left, right, .. }
-                | Expression::Divide { left, right, .. }
-                | Expression::Modulo { left, right, .. }
-                | Expression::Power { left, right, .. }
-                | Expression::BitwiseOr { left, right, .. }
-                | Expression::BitwiseAnd { left, right, .. }
-                | Expression::BitwiseXor { left, right, .. }
-                | Expression::ShiftLeft { left, right, .. }
-                | Expression::ShiftRight { left, right, .. } => {
-                    left.recurse(cx, f);
-                    right.recurse(cx, f);
-                }
-                Expression::Load(_, _, expr)
-                | Expression::StorageLoad(_, _, expr)
+
+                Expression::Load { expr, .. }
+                | Expression::StorageLoad { expr, .. }
                 | Expression::ZeroExt { expr, .. }
                 | Expression::SignExt { expr, .. }
                 | Expression::Trunc { expr, .. }
@@ -1005,21 +1129,39 @@ impl Recurse for Expression {
                 | Expression::PreIncrement { expr, .. }
                 | Expression::PreDecrement { expr, .. }
                 | Expression::PostIncrement { expr, .. }
-                | Expression::PostDecrement { expr, .. } => expr.recurse(cx, f),
+                | Expression::PostDecrement { expr, .. }
+                | Expression::Not { expr, .. }
+                | Expression::Complement { expr, .. }
+                | Expression::UnaryMinus { expr, .. }
+                | Expression::StructMember { expr, .. } => expr.recurse(cx, f),
 
-                Expression::Assign(_, _, left, right)
-                | Expression::More(_, left, right)
-                | Expression::Less(_, left, right)
-                | Expression::MoreEqual(_, left, right)
-                | Expression::LessEqual(_, left, right)
-                | Expression::Equal(_, left, right)
-                | Expression::NotEqual(_, left, right) => {
+                Expression::Add { left, right, .. }
+                | Expression::Subtract { left, right, .. }
+                | Expression::Multiply { left, right, .. }
+                | Expression::Divide { left, right, .. }
+                | Expression::Modulo { left, right, .. }
+                | Expression::Power {
+                    base: left,
+                    exp: right,
+                    ..
+                }
+                | Expression::BitwiseOr { left, right, .. }
+                | Expression::BitwiseAnd { left, right, .. }
+                | Expression::BitwiseXor { left, right, .. }
+                | Expression::ShiftLeft { left, right, .. }
+                | Expression::ShiftRight { left, right, .. }
+                | Expression::Assign { left, right, .. }
+                | Expression::More { left, right, .. }
+                | Expression::Less { left, right, .. }
+                | Expression::MoreEqual { left, right, .. }
+                | Expression::LessEqual { left, right, .. }
+                | Expression::Equal { left, right, .. }
+                | Expression::NotEqual { left, right, .. }
+                | Expression::Or { left, right, .. }
+                | Expression::And { left, right, .. } => {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::Not(_, expr)
-                | Expression::Complement(_, _, expr)
-                | Expression::UnaryMinus(_, _, expr) => expr.recurse(cx, f),
 
                 Expression::ConditionalOperator {
                     cond,
@@ -1031,26 +1173,25 @@ impl Recurse for Expression {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::Subscript(_, _, _, left, right) => {
+                Expression::Subscript {
+                    array: left,
+                    index: right,
+                    ..
+                } => {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::StructMember(_, _, expr, _) => expr.recurse(cx, f),
 
-                Expression::AllocDynamicBytes(_, _, expr, _) => expr.recurse(cx, f),
+                Expression::AllocDynamicBytes { length, .. } => length.recurse(cx, f),
                 Expression::StorageArrayLength { array, .. } => array.recurse(cx, f),
-                Expression::StringCompare(_, left, right)
-                | Expression::StringConcat(_, _, left, right) => {
+                Expression::StringCompare { left, right, .. }
+                | Expression::StringConcat { left, right, .. } => {
                     if let StringLocation::RunTime(expr) = left {
                         expr.recurse(cx, f);
                     }
                     if let StringLocation::RunTime(expr) = right {
                         expr.recurse(cx, f);
                     }
-                }
-                Expression::Or(_, left, right) | Expression::And(_, left, right) => {
-                    left.recurse(cx, f);
-                    right.recurse(cx, f);
                 }
                 Expression::InternalFunctionCall { function, args, .. } => {
                     function.recurse(cx, f);
@@ -1092,7 +1233,7 @@ impl Recurse for Expression {
                     }
                     call_args.recurse(cx, f);
                 }
-                Expression::Builtin(_, _, _, exprs) | Expression::List(_, exprs) => {
+                Expression::Builtin { args: exprs, .. } | Expression::List { list: exprs, .. } => {
                     for e in exprs {
                         e.recurse(cx, f);
                     }
@@ -1106,14 +1247,14 @@ impl Recurse for Expression {
 impl CodeLocation for Expression {
     fn loc(&self) -> pt::Loc {
         match self {
-            Expression::BoolLiteral(loc, _)
-            | Expression::BytesLiteral(loc, ..)
-            | Expression::CodeLiteral(loc, ..)
-            | Expression::NumberLiteral(loc, ..)
-            | Expression::RationalNumberLiteral(loc, ..)
-            | Expression::StructLiteral(loc, ..)
-            | Expression::ArrayLiteral(loc, ..)
-            | Expression::ConstArrayLiteral(loc, ..)
+            Expression::BoolLiteral { loc, .. }
+            | Expression::BytesLiteral { loc, .. }
+            | Expression::CodeLiteral { loc, .. }
+            | Expression::NumberLiteral { loc, .. }
+            | Expression::RationalNumberLiteral { loc, .. }
+            | Expression::StructLiteral { loc, .. }
+            | Expression::ArrayLiteral { loc, .. }
+            | Expression::ConstArrayLiteral { loc, .. }
             | Expression::Add { loc, .. }
             | Expression::Subtract { loc, .. }
             | Expression::Multiply { loc, .. }
@@ -1125,35 +1266,35 @@ impl CodeLocation for Expression {
             | Expression::BitwiseXor { loc, .. }
             | Expression::ShiftLeft { loc, .. }
             | Expression::ShiftRight { loc, .. }
-            | Expression::Variable(loc, ..)
-            | Expression::ConstantVariable(loc, ..)
-            | Expression::StorageVariable(loc, ..)
-            | Expression::Load(loc, ..)
-            | Expression::GetRef(loc, ..)
-            | Expression::StorageLoad(loc, ..)
+            | Expression::Variable { loc, .. }
+            | Expression::ConstantVariable { loc, .. }
+            | Expression::StorageVariable { loc, .. }
+            | Expression::Load { loc, .. }
+            | Expression::GetRef { loc, .. }
+            | Expression::StorageLoad { loc, .. }
             | Expression::ZeroExt { loc, .. }
             | Expression::SignExt { loc, .. }
             | Expression::Trunc { loc, .. }
             | Expression::CheckingTrunc { loc, .. }
             | Expression::Cast { loc, .. }
             | Expression::BytesCast { loc, .. }
-            | Expression::More(loc, ..)
-            | Expression::Less(loc, ..)
-            | Expression::MoreEqual(loc, ..)
-            | Expression::LessEqual(loc, ..)
-            | Expression::Equal(loc, ..)
-            | Expression::NotEqual(loc, ..)
-            | Expression::Not(loc, _)
-            | Expression::Complement(loc, ..)
-            | Expression::UnaryMinus(loc, ..)
+            | Expression::More { loc, .. }
+            | Expression::Less { loc, .. }
+            | Expression::MoreEqual { loc, .. }
+            | Expression::LessEqual { loc, .. }
+            | Expression::Equal { loc, .. }
+            | Expression::NotEqual { loc, .. }
+            | Expression::Not { loc, expr: _ }
+            | Expression::Complement { loc, .. }
+            | Expression::UnaryMinus { loc, .. }
             | Expression::ConditionalOperator { loc, .. }
-            | Expression::Subscript(loc, ..)
-            | Expression::StructMember(loc, ..)
-            | Expression::Or(loc, ..)
-            | Expression::AllocDynamicBytes(loc, ..)
+            | Expression::Subscript { loc, .. }
+            | Expression::StructMember { loc, .. }
+            | Expression::Or { loc, .. }
+            | Expression::AllocDynamicBytes { loc, .. }
             | Expression::StorageArrayLength { loc, .. }
-            | Expression::StringCompare(loc, ..)
-            | Expression::StringConcat(loc, ..)
+            | Expression::StringCompare { loc, .. }
+            | Expression::StringConcat { loc, .. }
             | Expression::InternalFunction { loc, .. }
             | Expression::ExternalFunction { loc, .. }
             | Expression::InternalFunctionCall { loc, .. }
@@ -1164,12 +1305,12 @@ impl CodeLocation for Expression {
             | Expression::PreDecrement { loc, .. }
             | Expression::PostIncrement { loc, .. }
             | Expression::PostDecrement { loc, .. }
-            | Expression::Builtin(loc, ..)
-            | Expression::Assign(loc, ..)
-            | Expression::List(loc, _)
-            | Expression::FormatString(loc, _)
-            | Expression::InterfaceId(loc, ..)
-            | Expression::And(loc, ..) => *loc,
+            | Expression::Builtin { loc, .. }
+            | Expression::Assign { loc, .. }
+            | Expression::List { loc, list: _ }
+            | Expression::FormatString { loc, format: _ }
+            | Expression::InterfaceId { loc, .. }
+            | Expression::And { loc, .. } => *loc,
         }
     }
 }

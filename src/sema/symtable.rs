@@ -51,10 +51,10 @@ impl Variable {
                 // the variable is not a reference to another.
                 return !matches!(
                     **expr,
-                    Expression::AllocDynamicBytes(..)
-                        | Expression::ArrayLiteral(..)
+                    Expression::AllocDynamicBytes { .. }
+                        | Expression::ArrayLiteral { .. }
                         | Expression::Constructor { .. }
-                        | Expression::StructLiteral(..)
+                        | Expression::StructLiteral { .. }
                 );
             }
         }
