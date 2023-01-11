@@ -996,7 +996,7 @@ impl Dot {
             }
             Expression::Subscript {
                 loc,
-                array_ty: ty,
+                array_ty,
                 array,
                 index,
                 ..
@@ -1005,7 +1005,7 @@ impl Dot {
                     Node::new(
                         "subscript",
                         vec![
-                            format!("subscript {}", ty.to_string(ns)),
+                            format!("subscript {}", array_ty.to_string(ns)),
                             ns.loc_to_string(loc),
                         ],
                     ),
@@ -1019,14 +1019,14 @@ impl Dot {
             Expression::StructMember {
                 loc,
                 ty,
-                expr: var,
-                field: member,
+                expr,
+                field,
             } => {
                 let node = self.add_node(
                     Node::new(
                         "structmember",
                         vec![
-                            format!("struct member #{} {}", member, ty.to_string(ns)),
+                            format!("struct member #{} {}", field, ty.to_string(ns)),
                             ns.loc_to_string(loc),
                         ],
                     ),
@@ -1034,21 +1034,21 @@ impl Dot {
                     Some(parent_rel),
                 );
 
-                self.add_expression(var, func, ns, node, String::from("var"));
+                self.add_expression(expr, func, ns, node, String::from("var"));
             }
 
             Expression::AllocDynamicBytes {
                 loc,
                 ty,
                 length,
-                init: initializer,
+                init,
             } => {
                 let mut labels = vec![
                     format!("alloc array {}", ty.to_string(ns)),
                     ns.loc_to_string(loc),
                 ];
 
-                if let Some(initializer) = initializer {
+                if let Some(initializer) = init {
                     labels.insert(1, format!("initializer: {}", hex::encode(initializer)));
                 }
 
@@ -1301,12 +1301,9 @@ impl Dot {
                 }
             }
             Expression::Builtin {
-                loc,
-                kind: builtin,
-                args,
-                ..
+                loc, kind, args, ..
             } => {
-                let labels = vec![format!("builtin {:?}", builtin), ns.loc_to_string(loc)];
+                let labels = vec![format!("builtin {:?}", kind), ns.loc_to_string(loc)];
 
                 let node = self.add_node(
                     Node::new("builtins", labels),

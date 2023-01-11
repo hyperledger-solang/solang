@@ -311,11 +311,11 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
 
 fn write_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     match expr {
-        Expression::StructMember { loc, expr, .. }
-        | Expression::Subscript {
-            loc, array: expr, ..
-        } => {
-            if expr.ty().is_contract_storage() {
+        Expression::StructMember {
+            loc, expr: array, ..
+        }
+        | Expression::Subscript { loc, array, .. } => {
+            if array.ty().is_contract_storage() {
                 state.write(loc);
                 return false;
             }

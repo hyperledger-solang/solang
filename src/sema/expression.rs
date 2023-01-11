@@ -204,10 +204,10 @@ impl Expression {
 
         // Special case: when converting literal sign can change if it fits
         match (self, &from, to) {
-            (&Expression::NumberLiteral { value: ref n, .. }, p, &Type::Uint(to_len))
+            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Uint(to_len))
                 if p.is_primitive() =>
             {
-                return if n.sign() == Sign::Minus {
+                return if value.sign() == Sign::Minus {
                     if implicit {
                         diagnostics.push(Diagnostic::cast_error(
                             *loc,
@@ -220,7 +220,7 @@ impl Expression {
                     } else {
                         // Convert to little endian so most significant bytes are at the end; that way
                         // we can simply resize the vector to the right size
-                        let mut bs = n.to_signed_bytes_le();
+                        let mut bs = value.to_signed_bytes_le();
 
                         bs.resize(to_len as usize / 8, 0xff);
                         Ok(Expression::NumberLiteral {
@@ -229,7 +229,7 @@ impl Expression {
                             value: BigInt::from_bytes_le(Sign::Plus, &bs),
                         })
                     }
-                } else if n.bits() >= to_len as u64 {
+                } else if value.bits() >= to_len as u64 {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -243,14 +243,14 @@ impl Expression {
                     Ok(Expression::NumberLiteral {
                         loc: *loc,
                         ty: Type::Uint(to_len),
-                        value: n.clone(),
+                        value: value.clone(),
                     })
                 };
             }
-            (&Expression::NumberLiteral { value: ref n, .. }, p, &Type::Int(to_len))
+            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Int(to_len))
                 if p.is_primitive() =>
             {
-                return if n.bits() >= to_len as u64 {
+                return if value.bits() >= to_len as u64 {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -264,16 +264,16 @@ impl Expression {
                     Ok(Expression::NumberLiteral {
                         loc: *loc,
                         ty: Type::Int(to_len),
-                        value: n.clone(),
+                        value: value.clone(),
                     })
                 };
             }
-            (&Expression::NumberLiteral { value: ref n, .. }, p, &Type::Bytes(to_len))
+            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Bytes(to_len))
                 if p.is_primitive() =>
             {
                 // round up the number of bits to bytes
-                let bytes = (n.bits() + 7) / 8;
-                return if n.sign() == Sign::Minus {
+                let bytes = (value.bits() + 7) / 8;
+                return if value.sign() == Sign::Minus {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -282,7 +282,7 @@ impl Expression {
                         ),
                     ));
                     Err(())
-                } else if n.sign() == Sign::Plus && bytes != to_len as u64 {
+                } else if value.sign() == Sign::Plus && bytes != to_len as u64 {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -296,11 +296,11 @@ impl Expression {
                     Ok(Expression::NumberLiteral {
                         loc: *loc,
                         ty: Type::Bytes(to_len),
-                        value: n.clone(),
+                        value: value.clone(),
                     })
                 };
             }
-            (&Expression::NumberLiteral { value: ref n, .. }, p, &Type::Address(payable))
+            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Address(payable))
                 if p.is_primitive() =>
             {
                 // note: negative values are allowed
@@ -310,7 +310,7 @@ impl Expression {
                         String::from("implicit conversion from int to address not allowed"),
                     ));
                     Err(())
-                } else if n.bits() > ns.address_length as u64 * 8 {
+                } else if value.bits() > ns.address_length as u64 * 8 {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -323,7 +323,7 @@ impl Expression {
                     Ok(Expression::NumberLiteral {
                         loc: *loc,
                         ty: Type::Address(payable),
-                        value: n.clone(),
+                        value: value.clone(),
                     })
                 };
             }
@@ -4069,8 +4069,8 @@ fn equal(
     }
 
     match (&right, &left_type.deref_any()) {
-        (Expression::BytesLiteral { value: literal, .. }, Type::String)
-        | (Expression::BytesLiteral { value: literal, .. }, Type::DynamicBytes) => {
+        (Expression::BytesLiteral { value, .. }, Type::String)
+        | (Expression::BytesLiteral { value, .. }, Type::DynamicBytes) => {
             return Ok(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(left.cast(
@@ -4080,7 +4080,7 @@ fn equal(
                     ns,
                     diagnostics,
                 )?)),
-                right: StringLocation::CompileTime(literal.clone()),
+                right: StringLocation::CompileTime(value.clone()),
             });
         }
         _ => {}

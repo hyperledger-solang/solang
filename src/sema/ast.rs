@@ -1132,7 +1132,8 @@ impl Recurse for Expression {
                 | Expression::PostDecrement { expr, .. }
                 | Expression::Not { expr, .. }
                 | Expression::Complement { expr, .. }
-                | Expression::UnaryMinus { expr, .. } => expr.recurse(cx, f),
+                | Expression::UnaryMinus { expr, .. }
+                | Expression::StructMember { expr, .. } => expr.recurse(cx, f),
 
                 Expression::Add { left, right, .. }
                 | Expression::Subtract { left, right, .. }
@@ -1180,9 +1181,8 @@ impl Recurse for Expression {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::StructMember { expr, .. } => expr.recurse(cx, f),
 
-                Expression::AllocDynamicBytes { length: expr, .. } => expr.recurse(cx, f),
+                Expression::AllocDynamicBytes { length, .. } => length.recurse(cx, f),
                 Expression::StorageArrayLength { array, .. } => array.recurse(cx, f),
                 Expression::StringCompare { left, right, .. }
                 | Expression::StringConcat { left, right, .. } => {

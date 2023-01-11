@@ -805,7 +805,7 @@ fn returns(
             emit_function_call(expr, contract_no, cfg, Some(func), ns, vartab, opt)
         }
 
-        ast::Expression::List { list: exprs, .. } => exprs
+        ast::Expression::List { list, .. } => list
             .iter()
             .map(|e| expression(e, cfg, contract_no, Some(func), ns, vartab, opt))
             .collect::<Vec<Expression>>(),
