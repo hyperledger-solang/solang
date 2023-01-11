@@ -28,7 +28,7 @@ use num_bigint::BigInt;
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, Loc};
-use std::ops::Mul;
+use std::{cmp::Ordering, ops::Mul};
 
 pub fn expression(
     expr: &ast::Expression,
@@ -2636,6 +2636,52 @@ fn array_subscript(
 
     cfg.set_basic_block(in_bounds);
 
+    if let Type::Bytes(array_length) = array_ty.deref_any() {
+        let res_ty = Type::Bytes(1);
+        let from_ty = Type::Bytes(*array_length);
+        let index_ty = Type::Uint(*array_length as u16 * 8);
+
+        let to_width = array_ty.bits(ns);
+        let shift_arg_raw = Expression::Variable(index_loc, coerced_ty.clone(), pos);
+
+        let shift_arg = match index_width.cmp(&to_width) {
+            Ordering::Equal => shift_arg_raw,
+            Ordering::Less => Expression::ZeroExt(*loc, index_ty.clone(), shift_arg_raw.into()),
+            Ordering::Greater => Expression::Trunc(*loc, index_ty.clone(), shift_arg_raw.into()),
+        };
+
+        return Expression::Trunc(
+            *loc,
+            res_ty,
+            Expression::ShiftRight(
+                *loc,
+                from_ty,
+                array.into(),
+                // shift by (array_length - 1 - index) * 8
+                Expression::ShiftLeft(
+                    *loc,
+                    index_ty.clone(),
+                    Box::new(Expression::Subtract(
+                        *loc,
+                        index_ty.clone(),
+                        true,
+                        Expression::NumberLiteral(
+                            *loc,
+                            index_ty.clone(),
+                            BigInt::from_u8(array_length - 1).unwrap(),
+                        )
+                        .into(),
+                        shift_arg.into(),
+                    )),
+                    Expression::NumberLiteral(*loc, index_ty, BigInt::from_u8(3).unwrap()).into(),
+                )
+                .into(),
+                false,
+            )
+            .into(),
+        );
+    }
+
     if let Type::StorageRef(_, ty) = &array_ty {
         let elem_ty = ty.storage_array_elem();
         let slot_ty = ns.storage_type();
@@ -2726,56 +2772,6 @@ fn array_subscript(
         }
     } else {
         match array_ty.deref_memory() {
-            Type::Bytes(array_length) => {
-                let res_ty = Type::Bytes(1);
-                let from_ty = Type::Bytes(*array_length);
-                let index_ty = Type::Uint(*array_length as u16 * 8);
-
-                let to_width = array_ty.bits(ns);
-                let shift_arg_raw = Expression::Variable(index_loc, coerced_ty.clone(), pos);
-
-                let shift_arg = if index_width == to_width {
-                    shift_arg_raw
-                } else if index_width < to_width && array_ty.is_signed_int() {
-                    Expression::SignExt(*loc, array_ty.clone(), Box::new(shift_arg_raw))
-                } else if index_width < to_width && !array_ty.is_signed_int() {
-                    Expression::ZeroExt(*loc, array_ty.clone(), Box::new(shift_arg_raw))
-                } else {
-                    Expression::Trunc(*loc, array_ty.clone(), Box::new(shift_arg_raw))
-                };
-
-                Expression::Trunc(
-                    *loc,
-                    res_ty,
-                    Box::new(Expression::ShiftRight(
-                        *loc,
-                        from_ty,
-                        Box::new(array),
-                        // shift by (array_length - 1 - index) * 8
-                        Box::new(Expression::ShiftLeft(
-                            *loc,
-                            index_ty.clone(),
-                            Box::new(Expression::Subtract(
-                                *loc,
-                                index_ty.clone(),
-                                true,
-                                Box::new(Expression::NumberLiteral(
-                                    *loc,
-                                    index_ty.clone(),
-                                    BigInt::from_u8(array_length - 1).unwrap(),
-                                )),
-                                Box::new(shift_arg),
-                            )),
-                            Box::new(Expression::NumberLiteral(
-                                *loc,
-                                index_ty,
-                                BigInt::from_u8(3).unwrap(),
-                            )),
-                        )),
-                        false,
-                    )),
-                )
-            }
             Type::DynamicBytes | Type::Array(..) => Expression::Subscript(
                 *loc,
                 elem_ty.clone(),
