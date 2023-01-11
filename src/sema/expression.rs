@@ -135,7 +135,7 @@ impl Expression {
 
     /// Cast from one type to another, which also automatically derefs any Type::Ref() type.
     /// if the cast is explicit (e.g. bytes32(bar) then implicit should be set to false.
-    pub fn cast(
+    pub(super) fn cast(
         &self,
         loc: &pt::Loc,
         to: &Type,
@@ -5275,7 +5275,7 @@ fn array_subscript(
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    let array = expression(
+    let mut array = expression(
         array,
         context,
         ns,
@@ -5335,10 +5335,17 @@ fn array_subscript(
     // make sure we load the index value if needed
     index = index.cast(&index.loc(), index_ty.deref_any(), true, ns, diagnostics)?;
 
-    match array_ty.deref_any() {
+    let deref_ty = array_ty.deref_any();
+    match deref_ty {
         Type::Bytes(_) | Type::Array(..) | Type::DynamicBytes => {
             if array_ty.is_contract_storage() {
                 let elem_ty = array_ty.storage_array_elem();
+
+                // When subscripting a bytes32 type array, we need to load it. It is not
+                // assignable and the value is calculated by shifting in codegen
+                if let Type::Bytes(_) = deref_ty {
+                    array = array.cast(&array.loc(), deref_ty, true, ns, diagnostics)?;
+                }
 
                 Ok(Expression::Subscript(
                     *loc,
@@ -5350,7 +5357,7 @@ fn array_subscript(
             } else {
                 let elem_ty = array_ty.array_deref();
 
-                let array = array.cast(
+                array = array.cast(
                     &array.loc(),
                     if array_ty.deref_memory().is_fixed_reference_type() {
                         &array_ty

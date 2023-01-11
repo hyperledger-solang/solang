@@ -280,14 +280,14 @@ impl Namespace {
     }
 }
 
+#[derive(Default)]
 pub struct RawBuffer {
     buf: Vec<u8>,
 }
 
 impl RawBuffer {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> RawBuffer {
-        RawBuffer { buf: Vec::new() }
+        RawBuffer::default()
     }
 
     pub fn into_string(self) -> String {

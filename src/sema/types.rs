@@ -1083,7 +1083,7 @@ impl Type {
     pub fn storage_array_elem(&self) -> Self {
         match self {
             Type::Mapping(_, v) => Type::StorageRef(false, v.clone()),
-            Type::DynamicBytes | Type::String => Type::Bytes(1),
+            Type::DynamicBytes | Type::String | Type::Bytes(_) => Type::Bytes(1),
             Type::Array(ty, dim) if dim.len() > 1 => Type::StorageRef(
                 false,
                 Box::new(Type::Array(ty.clone(), dim[..dim.len() - 1].to_vec())),
