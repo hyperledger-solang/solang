@@ -733,7 +733,6 @@ impl Expression {
             _ => from,
         };
 
-        #[allow(clippy::comparison_chain)]
         match (&from, to) {
             (Type::Uint(from_width), Type::Enum(enum_no))
             | (Type::Int(from_width), Type::Enum(enum_no)) => {
@@ -784,16 +783,17 @@ impl Expression {
                     Type::Uint(address_bits)
                 };
 
-                let expr = if *from_len > address_bits {
-                    Expression::Trunc(self.loc(), address_to_int, Box::new(self.clone()))
-                } else if *from_len < address_bits {
-                    if from.is_signed_int() {
+                let expr = match from_len.cmp(&address_bits) {
+                    Ordering::Greater => {
+                        Expression::Trunc(self.loc(), address_to_int, Box::new(self.clone()))
+                    }
+                    Ordering::Less if from.is_signed_int() => {
                         Expression::ZeroExt(self.loc(), to.clone(), Box::new(self.clone()))
-                    } else {
+                    }
+                    Ordering::Less => {
                         Expression::SignExt(self.loc(), to.clone(), Box::new(self.clone()))
                     }
-                } else {
-                    self.clone()
+                    Ordering::Equal => self.clone(),
                 };
 
                 Expression::Cast(self.loc(), to.clone(), Box::new(expr))
@@ -808,16 +808,15 @@ impl Expression {
                 let expr = Expression::Cast(self.loc(), address_to_int, Box::new(self.clone()));
 
                 // now resize int to request size with sign extension etc
-                if *to_len < address_bits {
-                    Expression::Trunc(self.loc(), to.clone(), Box::new(expr))
-                } else if *to_len > address_bits {
-                    if to.is_signed_int() {
+                match to_len.cmp(&address_bits) {
+                    Ordering::Less => Expression::Trunc(self.loc(), to.clone(), Box::new(expr)),
+                    Ordering::Greater if to.is_signed_int() => {
                         Expression::ZeroExt(self.loc(), to.clone(), Box::new(expr))
-                    } else {
+                    }
+                    Ordering::Greater => {
                         Expression::SignExt(self.loc(), to.clone(), Box::new(expr))
                     }
-                } else {
-                    expr
+                    Ordering::Equal => expr,
                 }
             }
             (Type::Bytes(from_len), Type::Bytes(to_len)) => {
