@@ -14,7 +14,7 @@ use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
-use std::ops::{Add, MulAssign};
+use std::ops::{Add, AddAssign, MulAssign};
 
 /// This struct implements the trait AbiEncoding for Borsh encoding
 pub(super) struct BorshEncoding {
@@ -53,6 +53,43 @@ impl AbiEncoding for BorshEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
         self.encode_int(expr, buffer, offset, vartab, cfg, 32)
+    }
+
+    fn encode_external_function(
+        &mut self,
+        expr: &Expression,
+        buffer: &Expression,
+        offset: &Expression,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        cfg.add(
+            vartab,
+            Instr::WriteBuffer {
+                buf: buffer.clone(),
+                offset: offset.clone(),
+                value: expr.external_function_selector(),
+            },
+        );
+        let mut size = Type::FunctionSelector.memory_size_of(ns);
+        let offset = Expression::Add(
+            Loc::Codegen,
+            U32,
+            false,
+            offset.clone().into(),
+            Expression::NumberLiteral(Loc::Codegen, U32, size.clone()).into(),
+        );
+        cfg.add(
+            vartab,
+            Instr::WriteBuffer {
+                buf: buffer.clone(),
+                value: expr.external_function_address(),
+                offset,
+            },
+        );
+        size.add_assign(BigInt::from(ns.address_length));
+        Expression::NumberLiteral(Loc::Codegen, U32, size)
     }
 
     fn abi_decode(

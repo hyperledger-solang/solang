@@ -28,7 +28,7 @@ pub(super) fn abi_encode(
 ) -> (Expression, Expression) {
     if ns.target.is_substrate() {
         // TODO refactor into codegen
-        return ScaleEncoding::new(packed).abi_encode(loc, args, ns, vartab, cfg);
+        //return ScaleEncoding::new(packed).abi_encode(loc, args, ns, vartab, cfg);
     }
     let mut encoder = create_encoder(ns, packed);
     let size = calculate_size_args(&mut encoder, &args, ns, vartab, cfg);
@@ -383,11 +383,7 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        if dims.is_empty() {
-            // Array has no dimension
-            let value = Expression::NumberLiteral(Loc::Codegen, U32, 0.into());
-            return self.encode_linear(&value, buffer, offset, vartab, cfg, 4.into());
-        }
+        assert!(!dims.is_empty());
 
         if allow_direct_copy(array_ty, elem_ty, dims, ns) {
             // Calculate number of elements
@@ -577,34 +573,7 @@ pub(super) trait AbiEncoding {
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
-    ) -> Expression {
-        cfg.add(
-            vartab,
-            Instr::WriteBuffer {
-                buf: buffer.clone(),
-                offset: offset.clone(),
-                value: expr.external_function_selector(),
-            },
-        );
-        let mut size = Type::FunctionSelector.memory_size_of(ns);
-        let offset = Expression::Add(
-            Loc::Codegen,
-            U32,
-            false,
-            offset.clone().into(),
-            Expression::NumberLiteral(Loc::Codegen, U32, size.clone()).into(),
-        );
-        cfg.add(
-            vartab,
-            Instr::WriteBuffer {
-                buf: buffer.clone(),
-                value: expr.external_function_address(),
-                offset,
-            },
-        );
-        size.add_assign(BigInt::from(ns.address_length));
-        Expression::NumberLiteral(Loc::Codegen, U32, size)
-    }
+    ) -> Expression;
 
     fn abi_decode(
         &self,

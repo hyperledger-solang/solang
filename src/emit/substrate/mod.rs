@@ -828,7 +828,7 @@ impl SubstrateTarget {
                 let address =
                     self.decode_ty(binary, function, &ast::Type::Address(false), data, end, ns);
                 let selector =
-                    self.decode_ty(binary, function, &ast::Type::Uint(32), data, end, ns);
+                    self.decode_ty(binary, function, &ast::Type::Bytes(4), data, end, ns);
 
                 let ty = binary.llvm_type(ty, ns);
 

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::ops::AddAssign;
+
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::vartable::Vartable;
@@ -183,6 +185,25 @@ impl AbiEncoding for ScaleEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
         encode_compact(size, None, None, vartab, cfg)
+    }
+
+    fn encode_external_function(
+        &mut self,
+        expr: &Expression,
+        buffer: &Expression,
+        offset: &Expression,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        let loc = Loc::Codegen;
+        let addr_len = ns.address_length.into();
+        let address = expr.external_function_address();
+        let size = self.encode_linear(&address, buffer, offset, vartab, cfg, addr_len);
+        let offset = Expression::Add(loc, U32, false, offset.clone().into(), size.clone().into());
+        let selector = expr.external_function_selector();
+        let selector_size = self.encode_linear(&selector, buffer, &offset, vartab, cfg, 4.into());
+        Expression::Add(loc, U32, false, size.into(), selector_size.into())
     }
 
     /// SALE encoding uses "compact" integer for sizes.
