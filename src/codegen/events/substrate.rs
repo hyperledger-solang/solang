@@ -48,7 +48,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         // For freestanding events the name of the emitting contract is used
         let contract_name = &self.ns.contracts[event.contract.unwrap_or(contract_no)].name;
         let hash_len = Box::new(Expression::NumberLiteral(loc, Type::Uint(32), 32.into()));
-        let id = *&self.ns.contracts[contract_no]
+        let id = self.ns.contracts[contract_no]
             .emits_events
             .iter()
             .position(|e| *e == self.event_no)
@@ -176,7 +176,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             topics.push(buffer);
         }
 
-        let (data, size) = abi_encode(&loc, data, self.ns, vartab, cfg, false).into();
+        let (data, size) = abi_encode(&loc, data, self.ns, vartab, cfg, false);
         cfg.add(
             vartab,
             Instr::EmitEvent {

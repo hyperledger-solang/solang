@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ops::AddAssign;
-
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type, U32};
-use num_bigint::BigInt;
+use crate::sema::ast::{Namespace, Parameter, Type, U32};
 use solang_parser::pt::Loc;
 
-use super::{increment_by, increment_four};
+use super::increment_by;
 
 /// This struct implements the trait AbiEncoding for Parity's Scale encoding
 pub(super) struct ScaleEncoding {
@@ -150,7 +147,7 @@ fn encode_compact(
         let mul2 = Expression::BitwiseOr(
             loc,
             U32,
-            mul.clone().into(),
+            mul.into(),
             Expression::NumberLiteral(loc, U32, 2.into()).into(),
         );
         cfg.add(
@@ -301,48 +298,5 @@ impl AbiEncoding for ScaleEncoding {
 
     fn is_packed(&self) -> bool {
         self.packed_encoder
-    }
-}
-
-impl ScaleEncoding {
-    pub fn abi_encode(
-        &mut self,
-        loc: &Loc,
-        mut args: Vec<Expression>,
-        _ns: &Namespace,
-        vartab: &mut Vartable,
-        cfg: &mut ControlFlowGraph,
-    ) -> (Expression, Expression) {
-        let tys = args.iter().map(|e| e.ty()).collect::<Vec<Type>>();
-
-        let encoded_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
-        let mut packed: Vec<Expression> = Vec::new();
-        if self.packed_encoder {
-            std::mem::swap(&mut packed, &mut args);
-        }
-
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: *loc,
-                res: encoded_buffer,
-                expr: Expression::AbiEncode {
-                    loc: *loc,
-                    packed,
-                    args,
-                    tys,
-                },
-            },
-        );
-
-        let encoded_expr = Expression::Variable(*loc, Type::DynamicBytes, encoded_buffer);
-        let buffer_len = Expression::Builtin(
-            *loc,
-            vec![Type::Uint(32)],
-            Builtin::ArrayLength,
-            vec![encoded_expr.clone()],
-        );
-
-        (encoded_expr, buffer_len)
     }
 }

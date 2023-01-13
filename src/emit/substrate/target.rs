@@ -4,7 +4,7 @@ use crate::codegen::cfg::{HashTy, ReturnCode};
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::storage::StorageSlot;
-use crate::emit::substrate::{event_id, log_return_code, SubstrateTarget, SCRATCH_SIZE};
+use crate::emit::substrate::{log_return_code, SubstrateTarget, SCRATCH_SIZE};
 use crate::emit::{TargetRuntime, Variable};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, Type};
@@ -1453,14 +1453,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn emit_event<'b>(
         &self,
         binary: &Binary<'b>,
-        contract: &ast::Contract,
-        function: FunctionValue<'b>,
-        event_no: usize,
+        _contract: &ast::Contract,
+        _function: FunctionValue<'b>,
+        _event_no: usize,
         data: &[BasicValueEnum<'b>],
-        data_tys: &[ast::Type],
+        _data_tys: &[ast::Type],
         topics: &[BasicValueEnum<'b>],
         _topic_tys: &[ast::Type],
-        ns: &ast::Namespace,
+        _ns: &ast::Namespace,
     ) {
         emit_context!(binary);
 

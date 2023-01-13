@@ -272,13 +272,13 @@ pub(super) trait AbiEncoding {
         let (data_offset, size) = if self.is_packed() {
             (offset.clone(), None)
         } else {
-            let size = self.encode_size(&len, buffer, &offset, vartab, cfg);
+            let size = self.encode_size(&len, buffer, offset, vartab, cfg);
             (increment_by(offset.clone(), size.clone()), Some(size))
         };
         // ptr + offset + size_of_integer
         let dest_address = Expression::AdvancePointer {
             pointer: Box::new(buffer.clone()),
-            bytes_offset: Box::new(data_offset.clone()),
+            bytes_offset: Box::new(data_offset),
         };
         cfg.add(
             vartab,
@@ -396,7 +396,7 @@ pub(super) trait AbiEncoding {
                         None,
                     )
                 } else {
-                    let value = array_length(&array, vartab, cfg);
+                    let value = array_length(array, vartab, cfg);
 
                     let (new_offset, size_length) = if self.is_packed() {
                         (offset.clone(), None)
