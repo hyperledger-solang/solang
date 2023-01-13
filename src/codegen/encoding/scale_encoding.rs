@@ -1,28 +1,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::encoding::AbiEncoding;
+use crate::codegen::encoding::{increment_by, AbiEncoding};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{Namespace, Parameter, Type, U32};
 use solang_parser::pt::Loc;
+use std::collections::HashMap;
 
-use super::increment_by;
-
-/// This struct implements the trait AbiEncoding for Parity's Scale encoding
 pub(super) struct ScaleEncoding {
-    /// Are we pakced encoding?
+    storage_cache: HashMap<usize, Expression>,
     packed_encoder: bool,
 }
 
 impl ScaleEncoding {
-    pub fn new(packed: bool) -> ScaleEncoding {
-        ScaleEncoding {
+    pub fn new(packed: bool) -> Self {
+        Self {
+            storage_cache: HashMap::new(),
             packed_encoder: packed,
         }
     }
 }
 
+/// Encode `expr` into `buffer` as a compact integer. More information can found in the
+/// [SCALE documentation](https://docs.substrate.io/reference/scale-codec/).
 fn encode_compact(
     expr: &Expression,
     buffer: Option<&Expression>,
@@ -31,7 +32,6 @@ fn encode_compact(
     cfg: &mut ControlFlowGraph,
 ) -> Expression {
     let loc = Loc::Codegen;
-
     let small = cfg.new_basic_block("small".into());
     let medium = cfg.new_basic_block("medium".into());
     let medium_or_big = cfg.new_basic_block("medium_or_big".into());
@@ -39,13 +39,11 @@ fn encode_compact(
     let done = cfg.new_basic_block("done".into());
     let fail = cfg.new_basic_block("fail".into());
     let prepare = cfg.new_basic_block("prepare".into());
-
     let compare = Expression::UnsignedMore(
         loc,
         expr.clone().into(),
         Expression::NumberLiteral(Loc::Codegen, U32, 0x40000000.into()).into(),
     );
-
     cfg.add(
         vartab,
         Instr::BranchCond {
@@ -87,10 +85,8 @@ fn encode_compact(
             false_block: medium,
         },
     );
-
     vartab.new_dirty_tracker();
     let size_variable = vartab.temp_anonymous(&U32);
-
     let four = Expression::NumberLiteral(Loc::Codegen, U32, 4.into()).into();
     let mul = Expression::Multiply(loc, U32, false, expr.clone().into(), four);
 
@@ -203,7 +199,6 @@ impl AbiEncoding for ScaleEncoding {
         Expression::Add(loc, U32, false, size.into(), selector_size.into())
     }
 
-    /// SALE encoding uses "compact" integer for sizes.
     fn encode_size(
         &mut self,
         expr: &Expression,
@@ -260,12 +255,12 @@ impl AbiEncoding for ScaleEncoding {
         returns
     }
 
-    fn storage_cache_insert(&mut self, _arg_no: usize, _expr: Expression) {
-        unreachable!("This function is not needed for Scale encoding");
+    fn storage_cache_insert(&mut self, arg_no: usize, expr: Expression) {
+        self.storage_cache.insert(arg_no, expr);
     }
 
-    fn storage_cache_remove(&mut self, _arg_no: usize) -> Option<Expression> {
-        todo!()
+    fn storage_cache_remove(&mut self, arg_no: usize) -> Option<Expression> {
+        self.storage_cache.remove(&arg_no)
     }
 
     fn get_encoding_size(

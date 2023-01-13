@@ -18,17 +18,6 @@ use std::ops::{Add, AddAssign, MulAssign};
 
 /// This struct implements the trait AbiEncoding for Borsh encoding
 pub(super) struct BorshEncoding {
-    /// The trait AbiEncoding has a 'cache_storage_loaded' function, which needs this HashMap to work.
-    /// Encoding happens in two steps. First, we look at each argument to calculate their size. If an
-    /// argument is a storage variable, we load it and save it to a local variable.
-    ///
-    /// During a second pass, we copy each argument to a buffer. To copy storage variables properly into
-    /// the buffer, we must load them from storage and save them in a local variable. As we have
-    /// already done this before, we can cache the Expression::Variable, containing the items we loaded before.
-    /// In addition, loading from storage can be an expensive operation if it done with large structs
-    /// or vectors. The has map contains (argument number, Expression::Variable)
-    ///
-    /// For more information, check the comment at function 'cache_storage_load' on encoding/mod.rs
     storage_cache: HashMap<usize, Expression>,
     /// Are we packed encoding?
     packed_encoder: bool,

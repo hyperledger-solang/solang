@@ -18,6 +18,8 @@ use num_traits::{One, Zero};
 use solang_parser::pt::Loc;
 use std::ops::{AddAssign, MulAssign, Sub};
 
+/// Insert encoding routines into the `cfg` for the `Expression`s in `args`.
+/// Returns a pointer to the encoded data and the size as an 32bit integer.
 pub(super) fn abi_encode(
     loc: &Loc,
     args: Vec<Expression>,
@@ -26,31 +28,21 @@ pub(super) fn abi_encode(
     cfg: &mut ControlFlowGraph,
     packed: bool,
 ) -> (Expression, Expression) {
-    if ns.target.is_substrate() {
-        // TODO refactor into codegen
-        //return ScaleEncoding::new(packed).abi_encode(loc, args, ns, vartab, cfg);
-    }
     let mut encoder = create_encoder(ns, packed);
     let size = calculate_size_args(&mut encoder, &args, ns, vartab, cfg);
-
     let encoded_bytes = vartab.temp_name("abi_encoded", &Type::DynamicBytes);
+    let expr = Expression::AllocDynamicBytes(*loc, Type::DynamicBytes, size.clone().into(), None);
     cfg.add(
         vartab,
         Instr::Set {
             loc: *loc,
             res: encoded_bytes,
-            expr: Expression::AllocDynamicBytes(
-                *loc,
-                Type::DynamicBytes,
-                Box::new(size.clone()),
-                None,
-            ),
+            expr,
         },
     );
 
     let mut offset = Expression::NumberLiteral(*loc, U32, BigInt::zero());
     let buffer = Expression::Variable(*loc, Type::DynamicBytes, encoded_bytes);
-
     for (arg_no, item) in args.iter().enumerate() {
         let advance = encoder.encode(item, &buffer, &offset, arg_no, ns, vartab, cfg);
         offset = Expression::Add(
@@ -66,6 +58,8 @@ pub(super) fn abi_encode(
 
 /// This trait should be implemented by all encoding methods (ethabi, Scale and Borsh), so that
 /// we have the same interface for creating encode and decode functions.
+///
+/// Methods encoding an individual expression should always return the encoded size.
 pub(super) trait AbiEncoding {
     /// The width (in bits) used in size hints for dynamic size types.
     fn size_width(
@@ -75,7 +69,7 @@ pub(super) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression;
 
-    /// Encode expression to buffer. Returns the size in bytes of the encoded item.
+    /// Encode any `expr`, regardless of its type, into `buffer`.
     fn encode(
         &mut self,
         expr: &Expression,
@@ -101,35 +95,24 @@ pub(super) trait AbiEncoding {
                 self.encode_linear(expr, buffer, offset, vartab, cfg, size)
             }
             Type::Bytes(length) => {
-                let size = (*length).into();
-                self.encode_linear(expr, buffer, offset, vartab, cfg, size)
+                self.encode_linear(expr, buffer, offset, vartab, cfg, (*length).into())
             }
             Type::String | Type::DynamicBytes => {
                 self.encode_bytes(expr, buffer, offset, vartab, cfg)
             }
             Type::Enum(_) => self.encode_linear(expr, buffer, offset, vartab, cfg, 1.into()),
-            Type::Struct(struct_ty) => self.encode_struct(
-                expr,
-                buffer,
-                offset.clone(),
-                struct_ty,
-                arg_no,
-                ns,
-                vartab,
-                cfg,
-            ),
+            Type::Struct(ty) => {
+                self.encode_struct(expr, buffer, offset.clone(), ty, arg_no, ns, vartab, cfg)
+            }
             Type::Slice(ty) => {
-                let dims = vec![ArrayLength::Dynamic];
+                let dims = &[ArrayLength::Dynamic];
                 self.encode_array(
-                    expr, &expr_ty, ty, &dims, arg_no, buffer, offset, ns, vartab, cfg,
+                    expr, &expr_ty, ty, dims, arg_no, buffer, offset, ns, vartab, cfg,
                 )
             }
             Type::Array(ty, dims) => self.encode_array(
                 expr, &expr_ty, ty, dims, arg_no, buffer, offset, ns, vartab, cfg,
             ),
-            Type::UserType(_) | Type::Unresolved | Type::Rational | Type::Unreachable => {
-                unreachable!("Type should not exist in codegen")
-            }
             Type::ExternalFunction { .. } => {
                 self.encode_external_function(expr, buffer, offset, ns, vartab, cfg)
             }
@@ -137,18 +120,14 @@ pub(super) trait AbiEncoding {
                 let size = ns.target.selector_length().into();
                 self.encode_linear(expr, buffer, offset, vartab, cfg, size)
             }
-            Type::InternalFunction { .. }
-            | Type::Void
-            | Type::BufferPointer
-            | Type::Mapping(..) => unreachable!("This type cannot be encoded"),
             Type::Ref(r) => {
-                if let Type::Struct(struct_ty) = &**r {
+                if let Type::Struct(ty) = &**r {
                     // Structs references should not be dereferenced
                     return self.encode_struct(
                         expr,
                         buffer,
                         offset.clone(),
-                        struct_ty,
+                        ty,
                         arg_no,
                         ns,
                         vartab,
@@ -162,10 +141,17 @@ pub(super) trait AbiEncoding {
                 let loaded = self.storage_cache_remove(arg_no).unwrap();
                 self.encode(&loaded, buffer, offset, arg_no, ns, vartab, cfg)
             }
+            Type::UserType(_) | Type::Unresolved | Type::Rational | Type::Unreachable => {
+                unreachable!("Type should not exist in codegen")
+            }
+            Type::InternalFunction { .. }
+            | Type::Void
+            | Type::BufferPointer
+            | Type::Mapping(..) => unreachable!("This type cannot be encoded"),
         }
     }
-    /// Receive the arguments and returns the variable containing a byte array and its size
 
+    /// Write whatever is inside the given `expr` into `buffer` without any modification.
     fn encode_linear(
         &mut self,
         expr: &Expression,
@@ -186,6 +172,7 @@ pub(super) trait AbiEncoding {
         Expression::NumberLiteral(Loc::Codegen, U32, size)
     }
 
+    /// Encode `expr` into `buffer` as an integer.
     fn encode_int(
         &mut self,
         expr: &Expression,
@@ -226,6 +213,7 @@ pub(super) trait AbiEncoding {
         Expression::NumberLiteral(Loc::Codegen, U32, (encoding_size / 8).into())
     }
 
+    /// Encode `expr` into `buffer` as size hint for dynamically sized datastructures.
     fn encode_size(
         &mut self,
         expr: &Expression,
@@ -235,6 +223,7 @@ pub(super) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression;
 
+    /// Encode `expr` into `buffer` as bytes, omitting the size.
     fn encode_bytes_packed(
         &mut self,
         expr: &Expression,
@@ -260,6 +249,7 @@ pub(super) trait AbiEncoding {
         len
     }
 
+    /// Encode `expr` into `buffer` as bytes.
     fn encode_bytes(
         &mut self,
         expr: &Expression,
@@ -295,7 +285,7 @@ pub(super) trait AbiEncoding {
         }
     }
 
-    /// Encode a struct and return its size in bytes
+    /// Encode `expr` into `buffer` as a struct type.
     fn encode_struct(
         &mut self,
         expr: &Expression,
@@ -369,13 +359,13 @@ pub(super) trait AbiEncoding {
         size.unwrap_or(runtime_size)
     }
 
-    /// Encode an array and return its size in bytes
+    /// Encode `expr` into `buffer` as an array.
     fn encode_array(
         &mut self,
         array: &Expression,
         array_ty: &Type,
         elem_ty: &Type,
-        dims: &Vec<ArrayLength>,
+        dims: &[ArrayLength],
         arg_no: usize,
         buffer: &Expression,
         offset: &Expression,
@@ -480,13 +470,15 @@ pub(super) trait AbiEncoding {
         Expression::Variable(Loc::Codegen, U32, offset_var)
     }
 
-    /// Encode a complex array.
-    /// This function indexes an array from its outer dimension to its inner one
+    /// Encode `expr` into `buffer` as a complex array.
+    /// This function indexes an array from its outer dimension to its inner one.
+    ///
+    /// Note: In the default implementation, `encode_array` decides when to use this method for you.
     fn encode_complex_array(
         &mut self,
         arr: &Expression,
         arg_no: usize,
-        dims: &Vec<ArrayLength>,
+        dims: &[ArrayLength],
         buffer: &Expression,
         offset_var: usize,
         dimension: usize,
@@ -565,6 +557,7 @@ pub(super) trait AbiEncoding {
         finish_array_loop(&for_loop, vartab, cfg);
     }
 
+    /// Encode `expr` into `buffer` as an external function pointer.
     fn encode_external_function(
         &mut self,
         expr: &Expression,
@@ -575,6 +568,8 @@ pub(super) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression;
 
+    /// Insert decoding routines into the `cfg` for the `Expression`s in `args`.
+    /// Returns a list containing the encoded data.
     fn abi_decode(
         &self,
         loc: &Loc,
@@ -586,13 +581,17 @@ pub(super) trait AbiEncoding {
         buffer_size: Option<Expression>,
     ) -> Vec<Expression>;
 
-    /// Cache items loaded from storage to reuse them later, so we avoid the expensive operation
-    /// of loading from storage twice. We need the data in two different passes: first to
-    /// calculate its size and then to copy it to the buffer.
+    /// Encoding happens in two steps. First, we look at each argument to calculate their size. If an
+    /// argument is a storage variable, we load it and save it to a local variable.
+    ///
+    /// During a second pass, we copy each argument to a buffer. To copy storage variables properly into
+    /// the buffer, we must load them from storage and save them in a local variable. As we have
+    /// already done this before, we can cache the Expression::Variable, containing the items we loaded before.
+    /// In addition, loading from storage can be an expensive operation if it's done with large structs
+    /// or vectors.
     ///
     /// This function serves only to cache Expression::Variable, containing items loaded from storage.
-    /// Nothing else should be stored here. For more information, check the comment at
-    /// 'struct BorshEncoding' on borsh_encoding.rs
+    /// Nothing else should be stored here.
     fn storage_cache_insert(&mut self, arg_no: usize, expr: Expression);
 
     fn storage_cache_remove(&mut self, arg_no: usize) -> Option<Expression>;
