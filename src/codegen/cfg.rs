@@ -157,9 +157,7 @@ pub enum Instr {
     EmitEvent {
         event_no: usize,
         data: Vec<Expression>,
-        data_tys: Vec<Type>,
         topics: Vec<Expression>,
-        topic_tys: Vec<Type>,
     },
     /// Write Buffer
     WriteBuffer {

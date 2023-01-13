@@ -290,9 +290,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 Instr::EmitEvent {
                     event_no,
                     data,
-                    data_tys,
                     topics,
-                    topic_tys,
                 } => {
                     let data = data
                         .iter()
@@ -307,9 +305,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     cfg.blocks[block_no].instr[instr_no].1 = Instr::EmitEvent {
                         event_no: *event_no,
                         data,
-                        data_tys: data_tys.clone(),
                         topics,
-                        topic_tys: topic_tys.clone(),
                     }
                 }
                 Instr::MemCopy {

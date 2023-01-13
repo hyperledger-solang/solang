@@ -420,21 +420,17 @@ impl AvailableExpressionSet {
             Instr::EmitEvent {
                 event_no,
                 data,
-                data_tys,
                 topics,
-                topic_tys,
             } => Instr::EmitEvent {
                 event_no: *event_no,
                 data: data
                     .iter()
                     .map(|v| self.regenerate_expression(v, ave, cst).1)
                     .collect::<Vec<Expression>>(),
-                data_tys: data_tys.clone(),
                 topics: topics
                     .iter()
                     .map(|v| self.regenerate_expression(v, ave, cst).1)
                     .collect::<Vec<Expression>>(),
-                topic_tys: topic_tys.clone(),
             },
 
             Instr::MemCopy {

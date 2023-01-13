@@ -54,9 +54,7 @@ impl EventEmitter for SolanaEventEmitter<'_> {
             Instr::EmitEvent {
                 event_no: self.event_no,
                 data: vec![abi_encoded, abi_encoded_size],
-                data_tys: vec![],
                 topics: vec![],
-                topic_tys: vec![],
             },
         );
     }

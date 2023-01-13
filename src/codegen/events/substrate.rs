@@ -54,7 +54,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             .position(|e| *e == self.event_no)
             .expect("contract emits this event");
         let mut data = vec![Expression::NumberLiteral(loc, Type::Uint(8), id.into())];
-        let (mut topics, mut topic_tys) = (vec![], vec![]);
+        let mut topics = vec![];
 
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
@@ -67,7 +67,6 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 hash_len.clone(),
                 Some(topic_hash(encoded.as_bytes())),
             ));
-            topic_tys.push(Type::DynamicBytes);
         };
 
         // Topic prefixes are static and can be calculated at compile time.
@@ -172,7 +171,6 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             cfg.set_basic_block(done_block);
             cfg.set_phis(done_block, vartab.pop_dirty_tracker());
 
-            topic_tys.push(Type::DynamicBytes);
             topics.push(buffer);
         }
 
@@ -182,9 +180,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             Instr::EmitEvent {
                 event_no: self.event_no,
                 data: vec![data, size],
-                data_tys: vec![],
                 topics,
-                topic_tys,
             },
         );
     }

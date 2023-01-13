@@ -1895,14 +1895,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn emit_event<'b>(
         &self,
         binary: &Binary<'b>,
-        _contract: &ast::Contract,
         function: FunctionValue<'b>,
-        _event_no: usize,
         data: &[BasicValueEnum<'b>],
-        _data_tys: &[ast::Type],
         _topics: &[BasicValueEnum<'b>],
-        _topic_tys: &[ast::Type],
-        _ns: &ast::Namespace,
     ) {
         let fields = binary.build_array_alloca(
             function,
