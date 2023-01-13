@@ -1520,23 +1520,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             byte_ptr!().const_null()
         };
 
-        let (data_ptr, data_len) = self.abi_encode(
-            binary,
-            event_id(binary, contract, event_no),
-            false,
-            function,
-            data,
-            data_tys,
-            ns,
-        );
-
         call!(
             "seal_deposit_event",
             &[
                 topic_buf.into(),
                 topic_size.into(),
-                data_ptr.into(),
-                data_len.into(),
+                binary.vector_bytes(data[0]).into(),
+                data[1].into_int_value().into(),
             ]
         );
     }
