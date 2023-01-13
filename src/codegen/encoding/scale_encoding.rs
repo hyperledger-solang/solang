@@ -8,6 +8,8 @@ use crate::sema::ast::{Namespace, Parameter, Type, U32};
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
 
+use super::LOC;
+
 pub(super) struct ScaleEncoding {
     storage_cache: HashMap<usize, Expression>,
     packed_encoder: bool,
@@ -31,7 +33,6 @@ fn encode_compact(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> Expression {
-    let loc = Loc::Codegen;
     let small = cfg.new_basic_block("small".into());
     let medium = cfg.new_basic_block("medium".into());
     let medium_or_big = cfg.new_basic_block("medium_or_big".into());
@@ -39,11 +40,8 @@ fn encode_compact(
     let done = cfg.new_basic_block("done".into());
     let fail = cfg.new_basic_block("fail".into());
     let prepare = cfg.new_basic_block("prepare".into());
-    let compare = Expression::UnsignedMore(
-        loc,
-        expr.clone().into(),
-        Expression::NumberLiteral(Loc::Codegen, U32, 0x40000000.into()).into(),
-    );
+    let cmp_val = Expression::NumberLiteral(LOC, U32, 0x40000000.into());
+    let compare = Expression::UnsignedMore(LOC, expr.clone().into(), cmp_val.into());
     cfg.add(
         vartab,
         Instr::BranchCond {
@@ -57,11 +55,8 @@ fn encode_compact(
     cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
 
     cfg.set_basic_block(prepare);
-    let compare = Expression::UnsignedMore(
-        Loc::Codegen,
-        expr.clone().into(),
-        Expression::NumberLiteral(Loc::Codegen, U32, 0x40.into()).into(),
-    );
+    let cmp_val = Expression::NumberLiteral(LOC, U32, 0x40.into());
+    let compare = Expression::UnsignedMore(LOC, expr.clone().into(), cmp_val.into());
     cfg.add(
         vartab,
         Instr::BranchCond {
@@ -72,11 +67,8 @@ fn encode_compact(
     );
 
     cfg.set_basic_block(medium_or_big);
-    let compare = Expression::UnsignedMore(
-        Loc::Codegen,
-        expr.clone().into(),
-        Expression::NumberLiteral(Loc::Codegen, U32, 0x4000.into()).into(),
-    );
+    let cmp_val = Expression::NumberLiteral(LOC, U32, 0x4000.into());
+    let compare = Expression::UnsignedMore(LOC, expr.clone().into(), cmp_val.into());
     cfg.add(
         vartab,
         Instr::BranchCond {
@@ -87,8 +79,8 @@ fn encode_compact(
     );
     vartab.new_dirty_tracker();
     let size_variable = vartab.temp_anonymous(&U32);
-    let four = Expression::NumberLiteral(Loc::Codegen, U32, 4.into()).into();
-    let mul = Expression::Multiply(loc, U32, false, expr.clone().into(), four);
+    let four = Expression::NumberLiteral(LOC, U32, 4.into()).into();
+    let mul = Expression::Multiply(LOC, U32, false, expr.clone().into(), four);
 
     cfg.set_basic_block(small);
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
@@ -101,24 +93,20 @@ fn encode_compact(
             },
         );
     }
+    let one = Expression::NumberLiteral(LOC, U32, 1.into());
     cfg.add(
         vartab,
         Instr::Set {
-            loc,
+            loc: LOC,
             res: size_variable,
-            expr: Expression::NumberLiteral(loc, U32, 1.into()),
+            expr: one.clone(),
         },
     );
     cfg.add(vartab, Instr::Branch { block: done });
 
     cfg.set_basic_block(medium);
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
-        let mul2 = Expression::BitwiseOr(
-            loc,
-            U32,
-            mul.clone().into(),
-            Expression::NumberLiteral(loc, U32, 1.into()).into(),
-        );
+        let mul2 = Expression::BitwiseOr(LOC, U32, mul.clone().into(), one.into());
         cfg.add(
             vartab,
             Instr::WriteBuffer {
@@ -128,24 +116,20 @@ fn encode_compact(
             },
         );
     }
+    let two = Expression::NumberLiteral(LOC, U32, 2.into());
     cfg.add(
         vartab,
         Instr::Set {
-            loc,
+            loc: LOC,
             res: size_variable,
-            expr: Expression::NumberLiteral(loc, U32, 2.into()),
+            expr: two.clone(),
         },
     );
     cfg.add(vartab, Instr::Branch { block: done });
 
     cfg.set_basic_block(big);
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
-        let mul2 = Expression::BitwiseOr(
-            loc,
-            U32,
-            mul.into(),
-            Expression::NumberLiteral(loc, U32, 2.into()).into(),
-        );
+        let mul2 = Expression::BitwiseOr(LOC, U32, mul.into(), two.into());
         cfg.add(
             vartab,
             Instr::WriteBuffer {
@@ -158,16 +142,16 @@ fn encode_compact(
     cfg.add(
         vartab,
         Instr::Set {
-            loc,
+            loc: LOC,
             res: size_variable,
-            expr: Expression::NumberLiteral(loc, U32, 4.into()),
+            expr: Expression::NumberLiteral(LOC, U32, 4.into()),
         },
     );
     cfg.add(vartab, Instr::Branch { block: done });
 
     cfg.set_basic_block(done);
     cfg.set_phis(done, vartab.pop_dirty_tracker());
-    Expression::Variable(loc, U32, size_variable)
+    Expression::Variable(LOC, U32, size_variable)
 }
 
 impl AbiEncoding for ScaleEncoding {
@@ -189,14 +173,13 @@ impl AbiEncoding for ScaleEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        let loc = Loc::Codegen;
         let addr_len = ns.address_length.into();
         let address = expr.external_function_address();
         let size = self.encode_linear(&address, buffer, offset, vartab, cfg, addr_len);
-        let offset = Expression::Add(loc, U32, false, offset.clone().into(), size.clone().into());
+        let offset = Expression::Add(LOC, U32, false, offset.clone().into(), size.clone().into());
         let selector = expr.external_function_selector();
         let selector_size = self.encode_linear(&selector, buffer, &offset, vartab, cfg, 4.into());
-        Expression::Add(loc, U32, false, size.into(), selector_size.into())
+        Expression::Add(LOC, U32, false, size.into(), selector_size.into())
     }
 
     fn encode_size(
@@ -274,13 +257,8 @@ impl AbiEncoding for ScaleEncoding {
         match ty {
             Type::String | Type::DynamicBytes => {
                 // When encoding a variable length array, the total size is "compact encoded array length + N elements"
-                let length = Expression::Builtin(
-                    Loc::Codegen,
-                    vec![U32],
-                    Builtin::ArrayLength,
-                    vec![expr.clone()],
-                );
-
+                let length =
+                    Expression::Builtin(LOC, vec![U32], Builtin::ArrayLength, vec![expr.clone()]);
                 if self.is_packed() {
                     length
                 } else {

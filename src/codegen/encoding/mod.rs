@@ -18,7 +18,9 @@ use num_traits::{One, Zero};
 use solang_parser::pt::Loc;
 use std::ops::{AddAssign, MulAssign, Sub};
 
-/// Insert encoding routines into the `cfg` for the `Expression`s in `args`.
+pub(super) const LOC: Loc = Loc::Codegen;
+
+/// Insert encoding routines into the `cfg` for any `Expression` in `args`.
 /// Returns a pointer to the encoded data and the size as an 32bit integer.
 pub(super) fn abi_encode(
     loc: &Loc,
@@ -45,21 +47,20 @@ pub(super) fn abi_encode(
     let buffer = Expression::Variable(*loc, Type::DynamicBytes, encoded_bytes);
     for (arg_no, item) in args.iter().enumerate() {
         let advance = encoder.encode(item, &buffer, &offset, arg_no, ns, vartab, cfg);
-        offset = Expression::Add(
-            Loc::Codegen,
-            U32,
-            false,
-            Box::new(offset),
-            Box::new(advance),
-        );
+        offset = Expression::Add(*loc, U32, false, offset.into(), advance.into());
     }
     (buffer, size)
 }
 
-/// This trait should be implemented by all encoding methods (ethabi, Scale and Borsh), so that
+/// This trait should be implemented by all encoding methods (ethabi, SCALE and Borsh), so that
 /// we have the same interface for creating encode and decode functions.
 ///
-/// Methods encoding an individual expression should always return the encoded size.
+/// Note: This trait mostly reflects the situation around SCALE and Borsh encoding schemas.
+/// Any provided default implementation works fine for both of them.
+///
+/// It might be less suitable for schemas vastly different than SCALE or Borsh.
+/// Worst case is that you need to provide your own implementation of `fn encode(..)`.
+/// Which effectively means implementing the encoding logic for any given sema `Type` on your own.
 pub(super) trait AbiEncoding {
     /// The width (in bits) used in size hints for dynamic size types.
     fn size_width(
@@ -69,7 +70,8 @@ pub(super) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression;
 
-    /// Encode any `expr`, regardless of its type, into `buffer`.
+    /// Provide generic encoding for any given `expr` into `buffer`, depending on its `Type`.
+    /// Relies on the methods encoding individual expressions (`encode_*`) returning the encoded size.
     fn encode(
         &mut self,
         expr: &Expression,
@@ -80,9 +82,8 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        let expr_ty = expr.ty().unwrap_user_type(ns);
-
-        match &expr_ty {
+        let expr_ty = &expr.ty().unwrap_user_type(ns);
+        match expr_ty {
             Type::Contract(_) | Type::Address(_) => {
                 self.encode_linear(expr, buffer, offset, vartab, cfg, ns.address_length.into())
             }
@@ -107,11 +108,11 @@ pub(super) trait AbiEncoding {
             Type::Slice(ty) => {
                 let dims = &[ArrayLength::Dynamic];
                 self.encode_array(
-                    expr, &expr_ty, ty, dims, arg_no, buffer, offset, ns, vartab, cfg,
+                    expr, expr_ty, ty, dims, arg_no, buffer, offset, ns, vartab, cfg,
                 )
             }
             Type::Array(ty, dims) => self.encode_array(
-                expr, &expr_ty, ty, dims, arg_no, buffer, offset, ns, vartab, cfg,
+                expr, expr_ty, ty, dims, arg_no, buffer, offset, ns, vartab, cfg,
             ),
             Type::ExternalFunction { .. } => {
                 self.encode_external_function(expr, buffer, offset, ns, vartab, cfg)
@@ -134,7 +135,7 @@ pub(super) trait AbiEncoding {
                         cfg,
                     );
                 }
-                let loaded = Expression::Load(Loc::Codegen, *r.clone(), Box::new(expr.clone()));
+                let loaded = Expression::Load(LOC, *r.clone(), expr.clone().into());
                 self.encode(&loaded, buffer, offset, arg_no, ns, vartab, cfg)
             }
             Type::StorageRef(..) => {
@@ -169,7 +170,7 @@ pub(super) trait AbiEncoding {
                 value: expr.clone(),
             },
         );
-        Expression::NumberLiteral(Loc::Codegen, U32, size)
+        Expression::NumberLiteral(LOC, U32, size)
     }
 
     /// Encode `expr` into `buffer` as an integer.
@@ -185,17 +186,9 @@ pub(super) trait AbiEncoding {
         let encoding_size = width.next_power_of_two();
         let expr = if encoding_size != width {
             if expr.ty().is_signed_int() {
-                Expression::SignExt(
-                    Loc::Codegen,
-                    Type::Int(encoding_size),
-                    Box::new(expr.clone()),
-                )
+                Expression::SignExt(LOC, Type::Int(encoding_size), expr.clone().into())
             } else {
-                Expression::ZeroExt(
-                    Loc::Codegen,
-                    Type::Uint(encoding_size),
-                    Box::new(expr.clone()),
-                )
+                Expression::ZeroExt(LOC, Type::Uint(encoding_size), expr.clone().into())
             }
         } else {
             expr.clone()
@@ -210,7 +203,7 @@ pub(super) trait AbiEncoding {
             },
         );
 
-        Expression::NumberLiteral(Loc::Codegen, U32, (encoding_size / 8).into())
+        Expression::NumberLiteral(LOC, U32, (encoding_size / 8).into())
     }
 
     /// Encode `expr` into `buffer` as size hint for dynamically sized datastructures.
@@ -235,8 +228,8 @@ pub(super) trait AbiEncoding {
     ) -> Expression {
         // ptr + offset + size_of_integer
         let dest_address = Expression::AdvancePointer {
-            pointer: Box::new(buffer.clone()),
-            bytes_offset: Box::new(offset.clone()),
+            pointer: buffer.clone().into(),
+            bytes_offset: offset.clone().into(),
         };
         cfg.add(
             vartab,
@@ -267,8 +260,8 @@ pub(super) trait AbiEncoding {
         };
         // ptr + offset + size_of_integer
         let dest_address = Expression::AdvancePointer {
-            pointer: Box::new(buffer.clone()),
-            bytes_offset: Box::new(data_offset),
+            pointer: buffer.clone().into(),
+            bytes_offset: data_offset.into(),
         };
         cfg.add(
             vartab,
@@ -299,13 +292,12 @@ pub(super) trait AbiEncoding {
     ) -> Expression {
         let size = if let Some(no_padding_size) = ns.calculate_struct_non_padded_size(struct_ty) {
             let padded_size = struct_ty.struct_padded_size(ns);
-            // If the size without padding equals the size with padding, we
-            // can memcpy this struct directly.
+            // If the size without padding equals the size with padding, memcpy this struct directly.
             if padded_size.eq(&no_padding_size) {
-                let size = Expression::NumberLiteral(Loc::Codegen, U32, no_padding_size);
+                let size = Expression::NumberLiteral(LOC, U32, no_padding_size);
                 let dest_address = Expression::AdvancePointer {
-                    pointer: Box::new(buffer.clone()),
-                    bytes_offset: Box::new(offset),
+                    pointer: buffer.clone().into(),
+                    bytes_offset: offset.into(),
                 };
                 cfg.add(
                     vartab,
@@ -317,13 +309,8 @@ pub(super) trait AbiEncoding {
                 );
                 return size;
             } else {
-                // This struct has a fixed size, but we cannot memcpy it due to
-                // its padding in memory
-                Some(Expression::NumberLiteral(
-                    Loc::Codegen,
-                    U32,
-                    no_padding_size,
-                ))
+                // This struct has a fixed size, but we can't memcpy it due to its padding in memory.
+                Some(Expression::NumberLiteral(LOC, U32, no_padding_size))
             }
         } else {
             None
@@ -337,23 +324,12 @@ pub(super) trait AbiEncoding {
         let mut runtime_size = advance.clone();
         for i in 1..qty {
             let ith_type = struct_ty.definition(ns).fields[i].ty.clone();
-            offset = Expression::Add(
-                Loc::Codegen,
-                U32,
-                false,
-                Box::new(offset.clone()),
-                Box::new(advance),
-            );
+            offset = Expression::Add(LOC, U32, false, offset.clone().into(), advance.into());
             let loaded = load_struct_member(ith_type.clone(), expr.clone(), i);
             // After fetching the struct member, we can encode it
             advance = self.encode(&loaded, buffer, &offset, arg_no, ns, vartab, cfg);
-            runtime_size = Expression::Add(
-                Loc::Codegen,
-                U32,
-                false,
-                Box::new(runtime_size),
-                Box::new(advance.clone()),
-            );
+            runtime_size =
+                Expression::Add(LOC, U32, false, runtime_size.into(), advance.clone().into());
         }
 
         size.unwrap_or(runtime_size)
@@ -381,7 +357,7 @@ pub(super) trait AbiEncoding {
                 if matches!(dims.last(), Some(&ArrayLength::Fixed(_))) {
                     let elem_no = calculate_direct_copy_bytes_size(dims, elem_ty, ns);
                     (
-                        Expression::NumberLiteral(Loc::Codegen, U32, elem_no),
+                        Expression::NumberLiteral(LOC, U32, elem_no),
                         offset.clone(),
                         None,
                     )
@@ -405,8 +381,8 @@ pub(super) trait AbiEncoding {
                 };
 
             let dest_address = Expression::AdvancePointer {
-                pointer: Box::new(buffer.clone()),
-                bytes_offset: Box::new(offset),
+                pointer: buffer.clone().into(),
+                bytes_offset: offset.into(),
             };
 
             cfg.add(
@@ -421,7 +397,7 @@ pub(super) trait AbiEncoding {
             // If the array is dynamic, we have written into the buffer its size and its elements
             return match (size_length, self.is_packed()) {
                 (Some(len), false) => {
-                    Expression::Add(Loc::Codegen, U32, false, bytes_size.into(), len.into())
+                    Expression::Add(LOC, U32, false, bytes_size.into(), len.into())
                 }
                 _ => bytes_size,
             };
@@ -429,12 +405,12 @@ pub(super) trait AbiEncoding {
 
         // In all other cases, we must loop through the array
         let mut indexes: Vec<usize> = Vec::new();
-        let offset_var = vartab.temp_anonymous(&U32);
+        let offset_var_no = vartab.temp_anonymous(&U32);
         cfg.add(
             vartab,
             Instr::Set {
-                loc: Loc::Codegen,
-                res: offset_var,
+                loc: LOC,
+                res: offset_var_no,
                 expr: offset.clone(),
             },
         );
@@ -443,7 +419,7 @@ pub(super) trait AbiEncoding {
             arg_no,
             dims,
             buffer,
-            offset_var,
+            offset_var_no,
             dims.len() - 1,
             ns,
             vartab,
@@ -451,23 +427,18 @@ pub(super) trait AbiEncoding {
             &mut indexes,
         );
 
-        // Subtract the original offset from
-        // the offset variable to obtain the vector size in bytes
+        // The offset variable minus the original offset obtains the vector size in bytes
+        let offset_var = Expression::Variable(LOC, U32, offset_var_no).into();
+        let sub = Expression::Subtract(LOC, U32, false, offset_var, offset.clone().into());
         cfg.add(
             vartab,
             Instr::Set {
-                loc: Loc::Codegen,
-                res: offset_var,
-                expr: Expression::Subtract(
-                    Loc::Codegen,
-                    U32,
-                    false,
-                    Box::new(Expression::Variable(Loc::Codegen, U32, offset_var)),
-                    Box::new(offset.clone()),
-                ),
+                loc: LOC,
+                res: offset_var_no,
+                expr: sub,
             },
         );
-        Expression::Variable(Loc::Codegen, U32, offset_var)
+        Expression::Variable(LOC, U32, offset_var_no)
     }
 
     /// Encode `expr` into `buffer` as a complex array.
@@ -500,19 +471,14 @@ pub(super) trait AbiEncoding {
                 true,
             );
 
-            let size = Expression::Builtin(
-                Loc::Codegen,
-                vec![U32],
-                Builtin::ArrayLength,
-                vec![sub_array],
-            );
+            let size = Expression::Builtin(LOC, vec![U32], Builtin::ArrayLength, vec![sub_array]);
 
-            let offset_expr = Expression::Variable(Loc::Codegen, U32, offset_var);
+            let offset_expr = Expression::Variable(LOC, U32, offset_var);
             let encoded_size = self.encode_size(&size, buffer, &offset_expr, vartab, cfg);
             cfg.add(
                 vartab,
                 Instr::Set {
-                    loc: Loc::Codegen,
+                    loc: LOC,
                     res: offset_var,
                     expr: increment_by(offset_expr, encoded_size),
                 },
@@ -523,20 +489,14 @@ pub(super) trait AbiEncoding {
         if 0 == dimension {
             // If we are indexing the last dimension, we have an element, so we can encode it.
             let deref = load_array_item(arr, dims, indexes);
-            let offset_expr = Expression::Variable(Loc::Codegen, U32, offset_var);
+            let offset_expr = Expression::Variable(LOC, U32, offset_var);
             let elem_size = self.encode(&deref, buffer, &offset_expr, arg_no, ns, vartab, cfg);
             cfg.add(
                 vartab,
                 Instr::Set {
-                    loc: Loc::Codegen,
+                    loc: LOC,
                     res: offset_var,
-                    expr: Expression::Add(
-                        Loc::Codegen,
-                        U32,
-                        false,
-                        Box::new(elem_size),
-                        Box::new(offset_expr),
-                    ),
+                    expr: Expression::Add(LOC, U32, false, elem_size.into(), offset_expr.into()),
                 },
             );
         } else {
@@ -614,8 +574,8 @@ pub(super) trait AbiEncoding {
 pub(super) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
     match &ns.target {
         Target::Solana => Box::new(BorshEncoding::new(packed)),
-        // Solana utilizes Borsh encoding and Substrate, Scale encoding.
-        // All other targets are using the Scale encoding, because we have tests for a
+        // Solana utilizes Borsh encoding and Substrate, SCALE encoding.
+        // All other targets are using the SCALE encoding, because we have tests for a
         // fake Ethereum target that checks the presence of Instr::AbiDecode and
         // Expression::AbiEncode.
         // If a new target is added, this piece of code needs to change.
@@ -633,15 +593,9 @@ fn calculate_size_args(
 ) -> Expression {
     let mut size = get_expr_size(encoder, 0, &args[0], ns, vartab, cfg);
     for (i, item) in args.iter().enumerate().skip(1) {
-        size = Expression::Add(
-            Loc::Codegen,
-            U32,
-            false,
-            Box::new(size),
-            Box::new(get_expr_size(encoder, i, item, ns, vartab, cfg)),
-        );
+        let additional = get_expr_size(encoder, i, item, ns, vartab, cfg);
+        size = Expression::Add(LOC, U32, false, size.into(), additional.into());
     }
-
     size
 }
 
@@ -656,18 +610,18 @@ fn get_expr_size(
 ) -> Expression {
     let ty = expr.ty().unwrap_user_type(ns);
     match &ty {
-        Type::Value => Expression::NumberLiteral(Loc::Codegen, U32, BigInt::from(ns.value_length)),
+        Type::Value => Expression::NumberLiteral(LOC, U32, BigInt::from(ns.value_length)),
 
         Type::Uint(n) | Type::Int(n) => {
-            Expression::NumberLiteral(Loc::Codegen, U32, BigInt::from(n.next_power_of_two() / 8))
+            Expression::NumberLiteral(LOC, U32, BigInt::from(n.next_power_of_two() / 8))
         }
 
         Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
-            Expression::NumberLiteral(Loc::Codegen, U32, ty.memory_size_of(ns))
+            Expression::NumberLiteral(LOC, U32, ty.memory_size_of(ns))
         }
 
         Type::FunctionSelector => {
-            Expression::NumberLiteral(Loc::Codegen, U32, BigInt::from(ns.target.selector_length()))
+            Expression::NumberLiteral(LOC, U32, BigInt::from(ns.target.selector_length()))
         }
 
         Type::Struct(struct_ty) => {
@@ -691,7 +645,7 @@ fn get_expr_size(
             let selector_len: BigInt = ns.target.selector_length().into();
             let mut address_size = Type::Address(false).memory_size_of(ns);
             address_size.add_assign(selector_len);
-            Expression::NumberLiteral(Loc::Codegen, U32, address_size)
+            Expression::NumberLiteral(LOC, U32, address_size)
         }
 
         Type::InternalFunction { .. }
@@ -704,12 +658,12 @@ fn get_expr_size(
             if let Type::Struct(struct_ty) = &**r {
                 return calculate_struct_size(encoder, arg_no, expr, struct_ty, ns, vartab, cfg);
             }
-            let loaded = Expression::Load(Loc::Codegen, *r.clone(), Box::new(expr.clone()));
+            let loaded = Expression::Load(LOC, *r.clone(), expr.clone().into());
             get_expr_size(encoder, arg_no, &loaded, ns, vartab, cfg)
         }
 
         Type::StorageRef(_, r) => {
-            let var = load_storage(&Loc::Codegen, r, expr.clone(), cfg, vartab);
+            let var = load_storage(&LOC, r, expr.clone(), cfg, vartab);
             let size = get_expr_size(encoder, arg_no, &var, ns, vartab, cfg);
             encoder.storage_cache_insert(arg_no, var.clone());
             size
@@ -756,53 +710,42 @@ fn calculate_array_size(
         let dimension = &dims.last().unwrap();
         // If the array saves primitive-type elements, its size is sizeof(type)*vec.length
         let mut size = if let ArrayLength::Fixed(dim) = dimension {
-            Expression::NumberLiteral(Loc::Codegen, U32, dim.clone())
+            Expression::NumberLiteral(LOC, U32, dim.clone())
         } else {
-            Expression::Builtin(
-                Loc::Codegen,
-                vec![U32],
-                Builtin::ArrayLength,
-                vec![array.clone()],
-            )
+            Expression::Builtin(LOC, vec![U32], Builtin::ArrayLength, vec![array.clone()])
         };
 
         for item in dims.iter().take(dims.len() - 1) {
             let local_size =
-                Expression::NumberLiteral(Loc::Codegen, U32, item.array_length().unwrap().clone());
-            size = Expression::Multiply(
-                Loc::Codegen,
-                U32,
-                false,
-                size.into(),
-                local_size.clone().into(),
-            );
+                Expression::NumberLiteral(LOC, U32, item.array_length().unwrap().clone());
+            size = Expression::Multiply(LOC, U32, false, size.into(), local_size.clone().into());
             if !encoder.is_packed() && matches!(item, ArrayLength::Dynamic) {
                 let size_width = encoder.size_width(&local_size, vartab, cfg);
-                size = Expression::Add(Loc::Codegen, U32, false, size.into(), size_width.into())
+                size = Expression::Add(LOC, U32, false, size.into(), size_width.into())
             }
         }
 
-        let type_size = Expression::NumberLiteral(Loc::Codegen, U32, compile_type_size);
-        let size = Expression::Multiply(Loc::Codegen, U32, false, size.into(), type_size.into());
+        let type_size = Expression::NumberLiteral(LOC, U32, compile_type_size);
+        let size = Expression::Multiply(LOC, U32, false, size.into(), type_size.into());
         let size_var = vartab.temp_anonymous(&U32);
         cfg.add(
             vartab,
             Instr::Set {
-                loc: Loc::Codegen,
+                loc: LOC,
                 res: size_var,
                 expr: size,
             },
         );
 
-        Expression::Variable(Loc::Codegen, U32, size_var)
+        Expression::Variable(LOC, U32, size_var)
     } else {
         let size_var = vartab.temp_name(format!("array_bytes_size_{}", arg_no).as_str(), &U32);
         cfg.add(
             vartab,
             Instr::Set {
-                loc: Loc::Codegen,
+                loc: LOC,
                 res: size_var,
-                expr: Expression::NumberLiteral(Loc::Codegen, U32, BigInt::from(0u8)),
+                expr: Expression::NumberLiteral(LOC, U32, BigInt::from(0u8)),
             },
         );
         let mut index_vec: Vec<usize> = Vec::new();
@@ -818,12 +761,12 @@ fn calculate_array_size(
             vartab,
             cfg,
         );
-        Expression::Variable(Loc::Codegen, U32, size_var)
+        Expression::Variable(LOC, U32, size_var)
     };
 
     if !encoder.is_packed() && matches!(&dims.last().unwrap(), ArrayLength::Dynamic) {
         let size_width = encoder.size_width(&size_var, vartab, cfg);
-        Expression::Add(Loc::Codegen, U32, false, size_var.into(), size_width.into())
+        Expression::Add(LOC, U32, false, size_var.into(), size_width.into())
     } else {
         size_var
     }
@@ -848,19 +791,13 @@ fn calculate_complex_array_size(
     if 0 == dimension {
         let deref = load_array_item(arr, dims, indexes);
         let elem_size = get_expr_size(encoder, arg_no, &deref, ns, vartab, cfg);
-
+        let size_var = Expression::Variable(LOC, U32, size_var_no);
         cfg.add(
             vartab,
             Instr::Set {
-                loc: Loc::Codegen,
+                loc: LOC,
                 res: size_var_no,
-                expr: Expression::Add(
-                    Loc::Codegen,
-                    U32,
-                    false,
-                    Box::new(Expression::Variable(Loc::Codegen, U32, size_var_no)),
-                    Box::new(elem_size),
-                ),
+                expr: Expression::Add(LOC, U32, false, size_var.into(), elem_size.into()),
             },
         );
     } else {
@@ -888,7 +825,7 @@ fn get_array_length(
     dimension: usize,
 ) -> Expression {
     if let ArrayLength::Fixed(dim) = &dims[dimension] {
-        return Expression::NumberLiteral(Loc::Codegen, U32, dim.clone());
+        return Expression::NumberLiteral(LOC, U32, dim.clone());
     }
     let (sub_array, _) = load_sub_array(
         arr.clone(),
@@ -896,12 +833,7 @@ fn get_array_length(
         indexes,
         true,
     );
-    Expression::Builtin(
-        Loc::Codegen,
-        vec![U32],
-        Builtin::ArrayLength,
-        vec![sub_array],
-    )
+    Expression::Builtin(LOC, vec![U32], Builtin::ArrayLength, vec![sub_array])
 }
 
 /// Retrieves the size of a struct
@@ -915,7 +847,7 @@ fn calculate_struct_size(
     cfg: &mut ControlFlowGraph,
 ) -> Expression {
     if let Some(struct_size) = ns.calculate_struct_non_padded_size(struct_ty) {
-        return Expression::NumberLiteral(Loc::Codegen, U32, struct_size);
+        return Expression::NumberLiteral(LOC, U32, struct_size);
     }
     let first_type = struct_ty.definition(ns).fields[0].ty.clone();
     let first_field = load_struct_member(first_type, expr.clone(), 0);
@@ -924,7 +856,7 @@ fn calculate_struct_size(
         let ty = struct_ty.definition(ns).fields[i].ty.clone();
         let field = load_struct_member(ty.clone(), expr.clone(), i);
         let expr_size = get_expr_size(encoder, arg_no, &field, ns, vartab, cfg).into();
-        size = Expression::Add(Loc::Codegen, U32, false, size.clone().into(), expr_size);
+        size = Expression::Add(LOC, U32, false, size.clone().into(), expr_size);
     }
     size
 }
@@ -933,8 +865,8 @@ fn calculate_struct_size(
 fn load_array_item(arr: &Expression, dims: &[ArrayLength], indexes: &[usize]) -> Expression {
     let elem_ty = Type::Ref(arr.ty().elem_ty().into());
     let (deref, ty) = load_sub_array(arr.clone(), dims, indexes, false);
-    let var = Expression::Variable(Loc::Codegen, U32, *indexes.last().unwrap()).into();
-    Expression::Subscript(Loc::Codegen, elem_ty, ty, deref.into(), var)
+    let var = Expression::Variable(LOC, U32, *indexes.last().unwrap()).into();
+    Expression::Subscript(LOC, elem_ty, ty, deref.into(), var)
 }
 
 /// Dereferences a subarray. If we have 'int[3][][4] vec' and we need 'int[3][]',
@@ -952,17 +884,14 @@ fn load_sub_array(
     let elem_ty = ty.elem_ty();
     let start = !index_first_dim as usize;
     for i in (start..dims.len()).rev() {
-        let local_ty = Type::Array(Box::new(elem_ty.clone()), dims[0..i].to_vec());
+        let local_ty = Type::Array(elem_ty.clone().into(), dims[0..i].to_vec());
+        let var = Expression::Variable(LOC, U32, indexes[indexes.len() - i - 1]);
         arr = Expression::Subscript(
-            Loc::Codegen,
-            Type::Ref(Box::new(local_ty.clone())),
+            LOC,
+            Type::Ref(local_ty.clone().into()),
             ty,
-            Box::new(arr),
-            Box::new(Expression::Variable(
-                Loc::Codegen,
-                U32,
-                indexes[indexes.len() - i - 1],
-            )),
+            arr.into(),
+            var.into(),
         );
         ty = local_ty;
     }
@@ -993,9 +922,9 @@ fn set_array_loop(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: Loc::Codegen,
+            loc: LOC,
             res: index_temp,
-            expr: Expression::NumberLiteral(Loc::Codegen, U32, BigInt::from(0u8)),
+            expr: Expression::NumberLiteral(LOC, U32, 0u8.into()),
         },
     );
 
@@ -1010,9 +939,9 @@ fn set_array_loop(
     cfg.set_basic_block(cond_block);
     let bound = get_array_length(arr, dims, indexes, dimension);
     let cond_expr = Expression::UnsignedLess(
-        Loc::Codegen,
-        Box::new(Expression::Variable(Loc::Codegen, U32, index_temp)),
-        Box::new(bound),
+        LOC,
+        Expression::Variable(LOC, U32, index_temp).into(),
+        bound.into(),
     );
     cfg.add(
         vartab,
@@ -1041,22 +970,14 @@ fn finish_array_loop(for_loop: &ForLoop, vartab: &mut Vartable, cfg: &mut Contro
         },
     );
     cfg.set_basic_block(for_loop.next_block);
+    let index_var = Expression::Variable(LOC, U32, for_loop.index);
+    let one = Expression::NumberLiteral(LOC, U32, 1u8.into());
     cfg.add(
         vartab,
         Instr::Set {
-            loc: Loc::Codegen,
+            loc: LOC,
             res: for_loop.index,
-            expr: Expression::Add(
-                Loc::Codegen,
-                U32,
-                false,
-                Box::new(Expression::Variable(Loc::Codegen, U32, for_loop.index)),
-                Box::new(Expression::NumberLiteral(
-                    Loc::Codegen,
-                    U32,
-                    BigInt::from(1u8),
-                )),
-            ),
+            expr: Expression::Add(LOC, U32, false, index_var.into(), one.into()),
         },
     );
     cfg.add(
@@ -1076,50 +997,36 @@ fn finish_array_loop(for_loop: &ForLoop, vartab: &mut Vartable, cfg: &mut Contro
 fn load_struct_member(ty: Type, expr: Expression, field: usize) -> Expression {
     if ty.is_fixed_reference_type() {
         // We should not dereference a struct or fixed array
-        return Expression::StructMember(Loc::Codegen, ty, Box::new(expr), field);
+        return Expression::StructMember(LOC, ty, expr.into(), field);
     }
-
-    Expression::Load(
-        Loc::Codegen,
-        ty.clone(),
-        Box::new(Expression::StructMember(
-            Loc::Codegen,
-            Type::Ref(Box::new(ty)),
-            Box::new(expr),
-            field,
-        )),
-    )
+    let s = Expression::StructMember(LOC, Type::Ref(ty.clone().into()), expr.into(), field);
+    Expression::Load(LOC, ty, s.into())
 }
 
 /// Get the array length inside a variable.
 fn array_length(arr: &Expression, vartab: &mut Vartable, cfg: &mut ControlFlowGraph) -> Expression {
-    let get_size = Expression::Builtin(
-        Loc::Codegen,
-        vec![U32],
-        Builtin::ArrayLength,
-        vec![arr.clone()],
-    );
+    let get_size = Expression::Builtin(LOC, vec![U32], Builtin::ArrayLength, vec![arr.clone()]);
     let array_length = vartab.temp_anonymous(&U32);
     cfg.add(
         vartab,
         Instr::Set {
-            loc: Loc::Codegen,
+            loc: LOC,
             res: array_length,
             expr: get_size,
         },
     );
-    Expression::Variable(Loc::Codegen, U32, array_length)
+    Expression::Variable(LOC, U32, array_length)
 }
 
 /// Increment an expression by some value.
 fn increment_by(expr: Expression, value: Expression) -> Expression {
-    Expression::Add(Loc::Codegen, U32, false, expr.into(), value.into())
+    Expression::Add(LOC, U32, false, expr.into(), value.into())
 }
 
 /// Increment an expression by four. This is useful because we save array sizes as uint32, so we
 /// need to increment the offset by four constantly.
 fn increment_four(expr: Expression) -> Expression {
-    let four = Expression::NumberLiteral(Loc::Codegen, U32, 4.into());
+    let four = Expression::NumberLiteral(LOC, U32, 4.into());
     increment_by(expr, four)
 }
 
@@ -1176,9 +1083,9 @@ fn calculate_direct_copy_bytes_size(
 /// Calculate the size in bytes of a dynamic array, whose dynamic dimension is the outer.
 /// It needs the variable saving the array's length.
 fn calculate_array_bytes_size(length_var: usize, elem_ty: &Type, ns: &Namespace) -> Expression {
-    let var = Expression::Variable(Loc::Codegen, U32, length_var);
-    let size = Expression::NumberLiteral(Loc::Codegen, U32, elem_ty.memory_size_of(ns));
-    Expression::Multiply(Loc::Codegen, U32, false, var.into(), size.into())
+    let var = Expression::Variable(LOC, U32, length_var);
+    let size = Expression::NumberLiteral(LOC, U32, elem_ty.memory_size_of(ns));
+    Expression::Multiply(LOC, U32, false, var.into(), size.into())
 }
 
 /// Retrieve a dynamic array length from the encoded buffer. It returns the variable number in which
@@ -1193,10 +1100,10 @@ fn retrieve_array_length(
     cfg.add(
         vartab,
         Instr::Set {
-            loc: Loc::Codegen,
+            loc: LOC,
             res: array_length,
             expr: Expression::Builtin(
-                Loc::Codegen,
+                LOC,
                 vec![U32],
                 Builtin::ReadFromBuffer,
                 vec![buffer.clone(), offset.clone()],
@@ -1214,17 +1121,13 @@ fn allocate_array(
     cfg: &mut ControlFlowGraph,
 ) -> usize {
     let array_var = vartab.temp_anonymous(ty);
+    let length_var = Expression::Variable(LOC, U32, length_variable);
     cfg.add(
         vartab,
         Instr::Set {
-            loc: Loc::Codegen,
+            loc: LOC,
             res: array_var,
-            expr: Expression::AllocDynamicBytes(
-                Loc::Codegen,
-                ty.clone(),
-                Box::new(Expression::Variable(Loc::Codegen, U32, length_variable)),
-                None,
-            ),
+            expr: Expression::AllocDynamicBytes(LOC, ty.clone(), length_var.into(), None),
         },
     );
     array_var
