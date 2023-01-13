@@ -382,9 +382,9 @@ ________
 Mappings are a dictionary type, or associative arrays. Mappings have a number of
 limitations:
 
-- it has to be in contract storage, not memory
-- they are not iterable
-- the key cannot be a ``struct``, array, or another mapping.
+- They only work as storage variables
+- They are not iterable
+- The key cannot be a ``struct``, array, or another mapping.
 
 Mappings are declared with ``mapping(keytype => valuetype)``, for example:
 
@@ -395,37 +395,43 @@ Mappings are declared with ``mapping(keytype => valuetype)``, for example:
 
   When assigning multiple members in a struct in a mapping, it is better to create
   a storage variable as a reference to the struct, and then assign to the reference.
-  The add() function above could have been written as:
+  The ``add()`` function above can be optimized like the following.
 
   .. code-block:: solidity
 
     function add(string name, address addr) public {
-        s[name].exists = true;
-        s[name].addr = addr;
+        // assigning to a storage variable creates a reference
+        user storage s = users[name];
+
+        s.exists = true;
+        s.addr = addr;
     }
 
-  Here the storage slot for struct is calculated twice, which includes an expensive
+  Here the storage slot for the struct is calculated only once, avoiding another expensive
   keccak256 calculation.
 
-If you access a non-existing field on a mapping, all the fields will read as zero. So, it
+If you access a non-existing field on a mapping, all the fields will read as zero. It
 is common practise to have a boolean field called ``exists``. Since mappings are not iterable,
 it is not possible to ``delete`` an entire mapping itself, but individual mapping entries can be deleted.
 
 .. note::
 
-  Solidity takes the keccak 256 hash of the key and the storage slot, and simply uses that
-  to find the entry. There are no hash collision chains. This scheme is simple and avoids
-  `"hash flooding" <https://www.securityweek.com/hash-table-collision-attacks-could-trigger-ddos-massive-scale>`_
-  attacks where the attacker chooses data which hashes to the same hash
-  collision chain, making the hash table very slow; it will behave like a linked list.
+  Solidity on Ethereum and on Substrate takes the keccak 256 hash of the key and the storage slot, and simply uses that
+  to find the entry. Its underlying hash table does not use separate chaining for collision resolution.
+  The scheme is simple and avoids `"hash flooding" <https://en.wikipedia.org/wiki/Collision_attack#Hash_flooding>`_
+  attacks that utilize hash collisions to exploit the worst-case time complexity for a separately chained
+  hash table. When too many collisions exist in a such a data structure,
+  it degenerates to a linked list, whose time complexity for searches is O(n).
 
-  In order to implement mappings in memory, a new scheme must be found which avoids this
-  attack. Usually this is done with `SipHash <https://en.wikipedia.org/wiki/SipHash>`_, but
-  this cannot be used in smart contracts since there is no place to store secrets. Collision
-  chains are needed since memory has a much smaller address space than the 256 bit storage
-  slots.
+  In order to implement mappings on Solana's storage, a new scheme must be found to prevent this
+  attack. `SipHash <https://en.wikipedia.org/wiki/SipHash>`_ is a hash algorithm that solves the problem,
+  but it cannot be used in smart contracts since there is no place to store secrets. Separate
+  chaining for collision handling is needed since Solana accounts have a much smaller address
+  space than the 256 bit storage slots. Any suggestions for solving this are very welcome!
 
-  Any suggestions for solving this are very welcome!
+  SipHash may serve as a way to implement mappings in memory, which would allow them to be local variables in
+  functions. Although the Substrate environment provides a function to generate random numbers to serve
+  as the hashes' secret, on Solana a safe alternative still needs to be found.
 
 Contract Types
 ______________

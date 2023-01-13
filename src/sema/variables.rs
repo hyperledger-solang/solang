@@ -439,19 +439,19 @@ pub fn variable_decl<'a>(
         if let Some(contract_no) = contract_no {
             // The accessor function returns the value of the storage variable, constant or not.
             let mut expr = if constant {
-                Expression::ConstantVariable(
-                    pt::Loc::Implicit,
-                    ty.clone(),
-                    Some(contract_no),
+                Expression::ConstantVariable {
+                    loc: pt::Loc::Implicit,
+                    ty: ty.clone(),
+                    contract_no: Some(contract_no),
                     var_no,
-                )
+                }
             } else {
-                Expression::StorageVariable(
-                    pt::Loc::Implicit,
-                    Type::StorageRef(false, Box::new(ty.clone())),
+                Expression::StorageVariable {
+                    loc: pt::Loc::Implicit,
+                    ty: Type::StorageRef(false, Box::new(ty.clone())),
                     contract_no,
                     var_no,
-                )
+                }
             };
 
             // If the variable is an array or mapping, the accessor function takes mapping keys
@@ -496,7 +496,11 @@ pub fn variable_decl<'a>(
                 Some(if constant {
                     expr
                 } else {
-                    Expression::StorageLoad(pt::Loc::Implicit, ty.clone(), Box::new(expr))
+                    Expression::StorageLoad {
+                        loc: pt::Loc::Implicit,
+                        ty: ty.clone(),
+                        expr: Box::new(expr),
+                    }
                 }),
             )];
             func.is_accessor = true;
@@ -559,13 +563,17 @@ fn collect_parameters<'a>(
 
             symtable.arguments.push(Some(arg_no));
 
-            *expr = Expression::Subscript(
-                pt::Loc::Implicit,
-                ty.storage_array_elem(),
-                Type::StorageRef(false, Box::new(ty.clone())),
-                Box::new(map),
-                Box::new(Expression::Variable(pt::Loc::Implicit, arg_ty, arg_no)),
-            );
+            *expr = Expression::Subscript {
+                loc: pt::Loc::Implicit,
+                ty: ty.storage_array_elem(),
+                array_ty: Type::StorageRef(false, Box::new(ty.clone())),
+                array: Box::new(map),
+                index: Box::new(Expression::Variable {
+                    loc: pt::Loc::Implicit,
+                    ty: arg_ty,
+                    var_no: arg_no,
+                }),
+            };
 
             params.push(Parameter {
                 id: Some(id),
@@ -603,17 +611,17 @@ fn collect_parameters<'a>(
 
                 symtable.arguments.push(Some(var_no));
 
-                *expr = Expression::Subscript(
-                    pt::Loc::Implicit,
-                    ty.storage_array_elem(),
-                    ty.clone(),
-                    Box::new(map),
-                    Box::new(Expression::Variable(
-                        pt::Loc::Implicit,
-                        Type::Uint(256),
+                *expr = Expression::Subscript {
+                    loc: pt::Loc::Implicit,
+                    ty: ty.storage_array_elem(),
+                    array_ty: ty.clone(),
+                    array: Box::new(map),
+                    index: Box::new(Expression::Variable {
+                        loc: pt::Loc::Implicit,
+                        ty: Type::Uint(256),
                         var_no,
-                    )),
-                );
+                    }),
+                };
 
                 ty = ty.storage_array_elem();
 

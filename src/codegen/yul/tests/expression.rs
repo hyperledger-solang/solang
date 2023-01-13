@@ -107,11 +107,11 @@ fn contract_constant_variable() {
         visibility: Visibility::Public(None),
         constant: false,
         immutable: false,
-        initializer: Some(sema::ast::Expression::NumberLiteral(
+        initializer: Some(sema::ast::Expression::NumberLiteral {
             loc,
-            Type::Uint(64),
-            BigInt::from(64),
-        )),
+            ty: Type::Uint(64),
+            value: BigInt::from(64),
+        }),
         assigned: false,
         read: false,
     };
@@ -166,11 +166,11 @@ fn global_constant_variable() {
         visibility: Visibility::Public(None),
         constant: false,
         immutable: false,
-        initializer: Some(sema::ast::Expression::NumberLiteral(
+        initializer: Some(sema::ast::Expression::NumberLiteral {
             loc,
-            Type::Uint(64),
-            BigInt::from(64),
-        )),
+            ty: Type::Uint(64),
+            value: BigInt::from(64),
+        }),
         assigned: false,
         read: false,
     };

@@ -33,53 +33,53 @@ use std::{
 impl RetrieveType for Expression {
     fn ty(&self) -> Type {
         match self {
-            Expression::BoolLiteral(..)
-            | Expression::More(..)
-            | Expression::Less(..)
-            | Expression::MoreEqual(..)
-            | Expression::LessEqual(..)
-            | Expression::Equal(..)
-            | Expression::Or(..)
-            | Expression::And(..)
-            | Expression::NotEqual(..)
-            | Expression::Not(..)
-            | Expression::StringCompare(..) => Type::Bool,
-            Expression::CodeLiteral(..) => Type::DynamicBytes,
-            Expression::StringConcat(_, ty, ..)
-            | Expression::BytesLiteral(_, ty, _)
-            | Expression::NumberLiteral(_, ty, _)
-            | Expression::RationalNumberLiteral(_, ty, _)
-            | Expression::StructLiteral(_, ty, _)
-            | Expression::ArrayLiteral(_, ty, ..)
-            | Expression::ConstArrayLiteral(_, ty, ..)
-            | Expression::Add(_, ty, ..)
-            | Expression::Subtract(_, ty, ..)
-            | Expression::Multiply(_, ty, ..)
-            | Expression::Divide(_, ty, ..)
-            | Expression::Modulo(_, ty, ..)
-            | Expression::Power(_, ty, ..)
-            | Expression::BitwiseOr(_, ty, ..)
-            | Expression::BitwiseAnd(_, ty, ..)
-            | Expression::BitwiseXor(_, ty, ..)
-            | Expression::ShiftLeft(_, ty, ..)
-            | Expression::ShiftRight(_, ty, ..)
-            | Expression::Variable(_, ty, _)
-            | Expression::ConstantVariable(_, ty, ..)
-            | Expression::StorageVariable(_, ty, ..)
-            | Expression::Load(_, ty, _)
-            | Expression::GetRef(_, ty, _)
-            | Expression::StorageLoad(_, ty, _)
-            | Expression::Complement(_, ty, _)
-            | Expression::UnaryMinus(_, ty, _)
-            | Expression::ConditionalOperator(_, ty, ..)
-            | Expression::StructMember(_, ty, ..)
-            | Expression::AllocDynamicBytes(_, ty, ..)
-            | Expression::PreIncrement(_, ty, ..)
-            | Expression::PreDecrement(_, ty, ..)
-            | Expression::PostIncrement(_, ty, ..)
-            | Expression::PostDecrement(_, ty, ..)
-            | Expression::Assign(_, ty, ..) => ty.clone(),
-            Expression::Subscript(_, ty, ..) => ty.clone(),
+            Expression::BoolLiteral { .. }
+            | Expression::More { .. }
+            | Expression::Less { .. }
+            | Expression::MoreEqual { .. }
+            | Expression::LessEqual { .. }
+            | Expression::Equal { .. }
+            | Expression::Or { .. }
+            | Expression::And { .. }
+            | Expression::NotEqual { .. }
+            | Expression::Not { .. }
+            | Expression::StringCompare { .. } => Type::Bool,
+            Expression::CodeLiteral { .. } => Type::DynamicBytes,
+            Expression::StringConcat { ty, .. }
+            | Expression::BytesLiteral { ty, .. }
+            | Expression::NumberLiteral { ty, .. }
+            | Expression::RationalNumberLiteral { ty, .. }
+            | Expression::StructLiteral { ty, .. }
+            | Expression::ArrayLiteral { ty, .. }
+            | Expression::ConstArrayLiteral { ty, .. }
+            | Expression::Add { ty, .. }
+            | Expression::Subtract { ty, .. }
+            | Expression::Multiply { ty, .. }
+            | Expression::Divide { ty, .. }
+            | Expression::Modulo { ty, .. }
+            | Expression::Power { ty, .. }
+            | Expression::BitwiseOr { ty, .. }
+            | Expression::BitwiseAnd { ty, .. }
+            | Expression::BitwiseXor { ty, .. }
+            | Expression::ShiftLeft { ty, .. }
+            | Expression::ShiftRight { ty, .. }
+            | Expression::Variable { ty, .. }
+            | Expression::ConstantVariable { ty, .. }
+            | Expression::StorageVariable { ty, .. }
+            | Expression::Load { ty, .. }
+            | Expression::GetRef { ty, .. }
+            | Expression::StorageLoad { ty, .. }
+            | Expression::Complement { ty, .. }
+            | Expression::UnaryMinus { ty, .. }
+            | Expression::ConditionalOperator { ty, .. }
+            | Expression::StructMember { ty, .. }
+            | Expression::AllocDynamicBytes { ty, .. }
+            | Expression::PreIncrement { ty, .. }
+            | Expression::PreDecrement { ty, .. }
+            | Expression::PostIncrement { ty, .. }
+            | Expression::PostDecrement { ty, .. }
+            | Expression::Assign { ty, .. } => ty.clone(),
+            Expression::Subscript { ty, .. } => ty.clone(),
             Expression::ZeroExt { to, .. }
             | Expression::SignExt { to, .. }
             | Expression::Trunc { to, .. }
@@ -90,20 +90,20 @@ impl RetrieveType for Expression {
             Expression::ExternalFunctionCallRaw { .. } => {
                 panic!("two return values");
             }
-            Expression::Builtin(_, returns, ..)
+            Expression::Builtin { tys: returns, .. }
             | Expression::InternalFunctionCall { returns, .. }
             | Expression::ExternalFunctionCall { returns, .. } => {
                 assert_eq!(returns.len(), 1);
                 returns[0].clone()
             }
-            Expression::List(_, list) => {
+            Expression::List { list, .. } => {
                 assert_eq!(list.len(), 1);
 
                 list[0].ty()
             }
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
-            Expression::InterfaceId(..) => Type::FunctionSelector,
-            Expression::FormatString(..) => Type::String,
+            Expression::InterfaceId { .. } => Type::FunctionSelector,
+            Expression::FormatString { .. } => Type::String,
             // codegen Expressions
             Expression::InternalFunction { ty, .. } => ty.clone(),
             Expression::ExternalFunction { ty, .. } => ty.clone(),
@@ -124,10 +124,10 @@ impl Expression {
     /// Return the type for this expression.
     pub fn tys(&self) -> Vec<Type> {
         match self {
-            Expression::Builtin(_, returns, ..)
+            Expression::Builtin { tys: returns, .. }
             | Expression::InternalFunctionCall { returns, .. }
             | Expression::ExternalFunctionCall { returns, .. } => returns.to_vec(),
-            Expression::List(_, list) => list.iter().map(|e| e.ty()).collect(),
+            Expression::List { list, .. } => list.iter().map(|e| e.ty()).collect(),
             Expression::ExternalFunctionCallRaw { .. } => vec![Type::Bool, Type::DynamicBytes],
             _ => vec![self.ty()],
         }
@@ -135,7 +135,7 @@ impl Expression {
 
     /// Cast from one type to another, which also automatically derefs any Type::Ref() type.
     /// if the cast is explicit (e.g. bytes32(bar) then implicit should be set to false.
-    pub fn cast(
+    pub(super) fn cast(
         &self,
         loc: &pt::Loc,
         to: &Type,
@@ -177,39 +177,37 @@ impl Expression {
                     Err(())
                 }
             } else {
-                Expression::Load(*loc, r.as_ref().clone(), Box::new(self.clone())).cast(
-                    loc,
-                    to,
-                    implicit,
-                    ns,
-                    diagnostics,
-                )
+                Expression::Load {
+                    loc: *loc,
+                    ty: r.as_ref().clone(),
+                    expr: Box::new(self.clone()),
+                }
+                .cast(loc, to, implicit, ns, diagnostics)
             };
         }
 
         // If it's a storage reference then load the value. The expr is the storage slot
         if let Type::StorageRef(_, r) = from {
-            if let Expression::Subscript(_, _, ty, ..) = self {
+            if let Expression::Subscript { array_ty: ty, .. } = self {
                 if ty.is_storage_bytes() {
                     return Ok(self.clone());
                 }
             }
 
-            return Expression::StorageLoad(*loc, *r, Box::new(self.clone())).cast(
-                loc,
-                to,
-                implicit,
-                ns,
-                diagnostics,
-            );
+            return Expression::StorageLoad {
+                loc: *loc,
+                ty: *r,
+                expr: Box::new(self.clone()),
+            }
+            .cast(loc, to, implicit, ns, diagnostics);
         }
 
         // Special case: when converting literal sign can change if it fits
         match (self, &from, to) {
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Uint(to_len))
+            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Uint(to_len))
                 if p.is_primitive() =>
             {
-                return if n.sign() == Sign::Minus {
+                return if value.sign() == Sign::Minus {
                     if implicit {
                         diagnostics.push(Diagnostic::cast_error(
                             *loc,
@@ -222,16 +220,16 @@ impl Expression {
                     } else {
                         // Convert to little endian so most significant bytes are at the end; that way
                         // we can simply resize the vector to the right size
-                        let mut bs = n.to_signed_bytes_le();
+                        let mut bs = value.to_signed_bytes_le();
 
                         bs.resize(to_len as usize / 8, 0xff);
-                        Ok(Expression::NumberLiteral(
-                            *loc,
-                            Type::Uint(to_len),
-                            BigInt::from_bytes_le(Sign::Plus, &bs),
-                        ))
+                        Ok(Expression::NumberLiteral {
+                            loc: *loc,
+                            ty: Type::Uint(to_len),
+                            value: BigInt::from_bytes_le(Sign::Plus, &bs),
+                        })
                     }
-                } else if n.bits() >= to_len as u64 {
+                } else if value.bits() >= to_len as u64 {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -242,17 +240,17 @@ impl Expression {
                     ));
                     Err(())
                 } else {
-                    Ok(Expression::NumberLiteral(
-                        *loc,
-                        Type::Uint(to_len),
-                        n.clone(),
-                    ))
+                    Ok(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(to_len),
+                        value: value.clone(),
+                    })
                 };
             }
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Int(to_len))
+            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Int(to_len))
                 if p.is_primitive() =>
             {
-                return if n.bits() >= to_len as u64 {
+                return if value.bits() >= to_len as u64 {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -263,19 +261,19 @@ impl Expression {
                     ));
                     Err(())
                 } else {
-                    Ok(Expression::NumberLiteral(
-                        *loc,
-                        Type::Int(to_len),
-                        n.clone(),
-                    ))
+                    Ok(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Int(to_len),
+                        value: value.clone(),
+                    })
                 };
             }
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Bytes(to_len))
+            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Bytes(to_len))
                 if p.is_primitive() =>
             {
                 // round up the number of bits to bytes
-                let bytes = (n.bits() + 7) / 8;
-                return if n.sign() == Sign::Minus {
+                let bytes = (value.bits() + 7) / 8;
+                return if value.sign() == Sign::Minus {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -284,7 +282,7 @@ impl Expression {
                         ),
                     ));
                     Err(())
-                } else if n.sign() == Sign::Plus && bytes != to_len as u64 {
+                } else if value.sign() == Sign::Plus && bytes != to_len as u64 {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -295,14 +293,14 @@ impl Expression {
                     ));
                     Err(())
                 } else {
-                    Ok(Expression::NumberLiteral(
-                        *loc,
-                        Type::Bytes(to_len),
-                        n.clone(),
-                    ))
+                    Ok(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Bytes(to_len),
+                        value: value.clone(),
+                    })
                 };
             }
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Address(payable))
+            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Address(payable))
                 if p.is_primitive() =>
             {
                 // note: negative values are allowed
@@ -312,7 +310,7 @@ impl Expression {
                         String::from("implicit conversion from int to address not allowed"),
                     ));
                     Err(())
-                } else if n.bits() > ns.address_length as u64 * 8 {
+                } else if value.bits() > ns.address_length as u64 * 8 {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -322,18 +320,18 @@ impl Expression {
                     ));
                     Err(())
                 } else {
-                    Ok(Expression::NumberLiteral(
-                        *loc,
-                        Type::Address(payable),
-                        n.clone(),
-                    ))
+                    Ok(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Address(payable),
+                        value: value.clone(),
+                    })
                 };
             }
             // Literal strings can be implicitly lengthened
-            (&Expression::BytesLiteral(_, _, ref bs), p, &Type::Bytes(to_len))
+            (&Expression::BytesLiteral { ref value, .. }, p, &Type::Bytes(to_len))
                 if p.is_primitive() =>
             {
-                return if bs.len() > to_len as usize && implicit {
+                return if value.len() > to_len as usize && implicit {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
@@ -344,37 +342,41 @@ impl Expression {
                     ));
                     Err(())
                 } else {
-                    let mut bs = bs.to_owned();
+                    let mut bs = value.to_owned();
 
                     // Add zero's at the end as needed
                     bs.resize(to_len as usize, 0);
 
-                    Ok(Expression::BytesLiteral(*loc, Type::Bytes(to_len), bs))
+                    Ok(Expression::BytesLiteral {
+                        loc: *loc,
+                        ty: Type::Bytes(to_len),
+                        value: bs,
+                    })
                 };
             }
-            (&Expression::BytesLiteral(loc, _, ref init), _, &Type::DynamicBytes)
-            | (&Expression::BytesLiteral(loc, _, ref init), _, &Type::String) => {
-                return Ok(Expression::AllocDynamicBytes(
+            (&Expression::BytesLiteral { loc, ref value, .. }, _, &Type::DynamicBytes)
+            | (&Expression::BytesLiteral { loc, ref value, .. }, _, &Type::String) => {
+                return Ok(Expression::AllocDynamicBytes {
                     loc,
-                    to.clone(),
-                    Box::new(Expression::NumberLiteral(
+                    ty: to.clone(),
+                    length: Box::new(Expression::NumberLiteral {
                         loc,
-                        Type::Uint(32),
-                        BigInt::from(init.len()),
-                    )),
-                    Some(init.clone()),
-                ));
+                        ty: Type::Uint(32),
+                        value: BigInt::from(value.len()),
+                    }),
+                    init: Some(value.clone()),
+                });
             }
-            (&Expression::NumberLiteral(_, _, ref n), _, &Type::Rational) => {
-                return Ok(Expression::RationalNumberLiteral(
-                    *loc,
-                    Type::Rational,
-                    BigRational::from(n.clone()),
-                ));
+            (&Expression::NumberLiteral { ref value, .. }, _, &Type::Rational) => {
+                return Ok(Expression::RationalNumberLiteral {
+                    loc: *loc,
+                    ty: Type::Rational,
+                    value: BigRational::from(value.clone()),
+                });
             }
 
             (
-                &Expression::ArrayLiteral(..),
+                &Expression::ArrayLiteral { .. },
                 Type::Array(from_ty, from_dims),
                 Type::Array(to_ty, to_dims),
             ) => {
@@ -408,17 +410,16 @@ impl Expression {
     ) -> Result<Expression, ()> {
         let address_bits = ns.address_length as u16 * 8;
 
-        #[allow(clippy::comparison_chain)]
         match (&from, &to) {
             // Solana builtin AccountMeta struct wants a pointer to an address for the pubkey field,
             // not an address. For this specific field we have a special Expression::GetRef() which
             // gets the pointer to an address
             (Type::Address(_), Type::Ref(to)) if matches!(to.as_ref(), Type::Address(..)) => {
-                Ok(Expression::GetRef(
-                    *loc,
-                    Type::Ref(Box::new(from.clone())),
-                    Box::new(self.clone()),
-                ))
+                Ok(Expression::GetRef {
+                    loc: *loc,
+                    ty: Type::Ref(Box::new(from.clone())),
+                    expr: Box::new(self.clone()),
+                })
             }
             (Type::Uint(from_width), Type::Enum(enum_no))
             | (Type::Int(from_width), Type::Enum(enum_no)) => {
@@ -440,11 +441,11 @@ impl Expression {
                 if let Ok((_, big_number)) = eval_const_number(self, ns) {
                     if let Some(number) = big_number.to_usize() {
                         if enum_ty.values.len() > number {
-                            return Ok(Expression::NumberLiteral(
-                                self.loc(),
-                                to.clone(),
-                                big_number,
-                            ));
+                            return Ok(Expression::NumberLiteral {
+                                loc: self.loc(),
+                                ty: to.clone(),
+                                value: big_number,
+                            });
                         }
                     }
 
@@ -781,28 +782,23 @@ impl Expression {
                         Type::Uint(address_bits)
                     };
 
-                    let expr = if *from_len > address_bits {
-                        Expression::Trunc {
+                    let expr = match from_len.cmp(&address_bits) {
+                        Ordering::Greater => Expression::Trunc {
                             loc: *loc,
                             to: address_to_int,
                             expr: Box::new(self.clone()),
-                        }
-                    } else if *from_len < address_bits {
-                        if from.is_signed_int() {
-                            Expression::ZeroExt {
-                                loc: *loc,
-                                to: address_to_int,
-                                expr: Box::new(self.clone()),
-                            }
-                        } else {
-                            Expression::SignExt {
-                                loc: *loc,
-                                to: address_to_int,
-                                expr: Box::new(self.clone()),
-                            }
-                        }
-                    } else {
-                        self.clone()
+                        },
+                        Ordering::Less if from.is_signed_int() => Expression::ZeroExt {
+                            loc: *loc,
+                            to: address_to_int,
+                            expr: Box::new(self.clone()),
+                        },
+                        Ordering::Less => Expression::SignExt {
+                            loc: *loc,
+                            to: address_to_int,
+                            expr: Box::new(self.clone()),
+                        },
+                        Ordering::Equal => self.clone(),
                     };
 
                     // Now cast integer to address
@@ -840,28 +836,23 @@ impl Expression {
                         expr: Box::new(self.clone()),
                     };
                     // now resize int to request size with sign extension etc
-                    if *to_len < address_bits {
-                        Ok(Expression::Trunc {
+                    match to_len.cmp(&address_bits) {
+                        Ordering::Less => Ok(Expression::Trunc {
                             loc: *loc,
                             to: to.clone(),
                             expr: Box::new(expr),
-                        })
-                    } else if *to_len > address_bits {
-                        if to.is_signed_int() {
-                            Ok(Expression::ZeroExt {
-                                loc: *loc,
-                                to: to.clone(),
-                                expr: Box::new(expr),
-                            })
-                        } else {
-                            Ok(Expression::SignExt {
-                                loc: *loc,
-                                to: to.clone(),
-                                expr: Box::new(expr),
-                            })
-                        }
-                    } else {
-                        Ok(expr)
+                        }),
+                        Ordering::Greater if to.is_signed_int() => Ok(Expression::ZeroExt {
+                            loc: *loc,
+                            to: to.clone(),
+                            expr: Box::new(expr),
+                        }),
+                        Ordering::Greater => Ok(Expression::SignExt {
+                            loc: *loc,
+                            to: to.clone(),
+                            expr: Box::new(expr),
+                        }),
+                        Ordering::Equal => Ok(expr),
                     }
                 }
             }
@@ -880,37 +871,37 @@ impl Expression {
                 } else if to_len > from_len {
                     let shift = (to_len - from_len) * 8;
 
-                    Ok(Expression::ShiftLeft(
-                        *loc,
-                        to.clone(),
-                        Box::new(Expression::ZeroExt {
+                    Ok(Expression::ShiftLeft {
+                        loc: *loc,
+                        ty: to.clone(),
+                        left: Box::new(Expression::ZeroExt {
                             loc: self.loc(),
                             to: to.clone(),
                             expr: Box::new(self.clone()),
                         }),
-                        Box::new(Expression::NumberLiteral(
-                            *loc,
-                            Type::Uint(*to_len as u16 * 8),
-                            BigInt::from_u8(shift).unwrap(),
-                        )),
-                    ))
+                        right: Box::new(Expression::NumberLiteral {
+                            loc: *loc,
+                            ty: Type::Uint(*to_len as u16 * 8),
+                            value: BigInt::from_u8(shift).unwrap(),
+                        }),
+                    })
                 } else {
                     let shift = (from_len - to_len) * 8;
 
                     Ok(Expression::Trunc {
                         loc: *loc,
                         to: to.clone(),
-                        expr: Box::new(Expression::ShiftRight(
-                            self.loc(),
-                            from.clone(),
-                            Box::new(self.clone()),
-                            Box::new(Expression::NumberLiteral(
-                                self.loc(),
-                                Type::Uint(*from_len as u16 * 8),
-                                BigInt::from_u8(shift).unwrap(),
-                            )),
-                            false,
-                        )),
+                        expr: Box::new(Expression::ShiftRight {
+                            loc: self.loc(),
+                            ty: from.clone(),
+                            left: Box::new(self.clone()),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc: self.loc(),
+                                ty: Type::Uint(*from_len as u16 * 8),
+                                value: BigInt::from_u8(shift).unwrap(),
+                            }),
+                            sign: false,
+                        }),
                     })
                 }
             }
@@ -1599,7 +1590,11 @@ pub(super) fn number_literal(
                 if res.is_integer() {
                     res.to_integer()
                 } else {
-                    return Ok(Expression::RationalNumberLiteral(*loc, Type::Rational, res));
+                    return Ok(Expression::RationalNumberLiteral {
+                        loc: *loc,
+                        ty: Type::Rational,
+                        value: res,
+                    });
                 }
             } else {
                 diagnostics.push(Diagnostic::error(
@@ -1707,7 +1702,11 @@ fn rational_number_literal(
     if res.is_integer() {
         bigint_to_expression(loc, &res.to_integer(), ns, diagnostics, resolve_to)
     } else {
-        Ok(Expression::RationalNumberLiteral(*loc, Type::Rational, res))
+        Ok(Expression::RationalNumberLiteral {
+            loc: *loc,
+            ty: Type::Rational,
+            value: res,
+        })
     }
 }
 
@@ -1730,11 +1729,11 @@ pub fn bigint_to_expression(
                 ));
                 return Err(());
             } else {
-                return Ok(Expression::NumberLiteral(
-                    *loc,
-                    resolve_to.clone(),
-                    n.clone(),
-                ));
+                return Ok(Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: resolve_to.clone(),
+                    value: n.clone(),
+                });
             }
         }
     }
@@ -1748,21 +1747,21 @@ pub fn bigint_to_expression(
             diagnostics.push(Diagnostic::error(*loc, format!("{} is too large", n)));
             Err(())
         } else {
-            Ok(Expression::NumberLiteral(
-                *loc,
-                Type::Int(int_size),
-                n.clone(),
-            ))
+            Ok(Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Int(int_size),
+                value: n.clone(),
+            })
         }
     } else if bits > 256 {
         diagnostics.push(Diagnostic::error(*loc, format!("{} is too large", n)));
         Err(())
     } else {
-        Ok(Expression::NumberLiteral(
-            *loc,
-            Type::Uint(int_size),
-            n.clone(),
-        ))
+        Ok(Expression::NumberLiteral {
+            loc: *loc,
+            ty: Type::Uint(int_size),
+            value: n.clone(),
+        })
     }
 }
 
@@ -1831,7 +1830,10 @@ pub fn expression(
 
             res
         }
-        pt::Expression::BoolLiteral(loc, v) => Ok(Expression::BoolLiteral(*loc, *v)),
+        pt::Expression::BoolLiteral(loc, v) => Ok(Expression::BoolLiteral {
+            loc: *loc,
+            value: *v,
+        }),
         pt::Expression::StringLiteral(v) => {
             Ok(string_literal(v, context.file_no, diagnostics, resolve_to))
         }
@@ -1916,11 +1918,11 @@ pub fn expression(
                 diagnostics,
             )?;
 
-            let expr = Expression::More(
-                *loc,
-                Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-                Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            );
+            let expr = Expression::More {
+                loc: *loc,
+                left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+                right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+            };
 
             if ty.is_rational() {
                 if let Err(diag) = eval_const_rational(&expr, ns) {
@@ -1947,11 +1949,11 @@ pub fn expression(
                 diagnostics,
             )?;
 
-            let expr = Expression::Less(
-                *loc,
-                Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-                Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            );
+            let expr = Expression::Less {
+                loc: *loc,
+                left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+                right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+            };
 
             if ty.is_rational() {
                 if let Err(diag) = eval_const_rational(&expr, ns) {
@@ -1977,11 +1979,11 @@ pub fn expression(
                 diagnostics,
             )?;
 
-            let expr = Expression::MoreEqual(
-                *loc,
-                Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-                Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            );
+            let expr = Expression::MoreEqual {
+                loc: *loc,
+                left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+                right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+            };
 
             if ty.is_rational() {
                 if let Err(diag) = eval_const_rational(&expr, ns) {
@@ -2007,11 +2009,11 @@ pub fn expression(
                 diagnostics,
             )?;
 
-            let expr = Expression::LessEqual(
-                *loc,
-                Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-                Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            );
+            let expr = Expression::LessEqual {
+                loc: *loc,
+                left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+                right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+            };
 
             if ty.is_rational() {
                 if let Err(diag) = eval_const_rational(&expr, ns) {
@@ -2023,19 +2025,19 @@ pub fn expression(
         }
         pt::Expression::Equal(loc, l, r) => equal(loc, l, r, context, ns, symtable, diagnostics),
 
-        pt::Expression::NotEqual(loc, l, r) => Ok(Expression::Not(
-            *loc,
-            Box::new(equal(loc, l, r, context, ns, symtable, diagnostics)?),
-        )),
+        pt::Expression::NotEqual(loc, l, r) => Ok(Expression::Not {
+            loc: *loc,
+            expr: Box::new(equal(loc, l, r, context, ns, symtable, diagnostics)?),
+        }),
         // unary expressions
         pt::Expression::Not(loc, e) => {
             let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
 
             used_variable(ns, &expr, symtable);
-            Ok(Expression::Not(
-                *loc,
-                Box::new(expr.cast(loc, &Type::Bool, true, ns, diagnostics)?),
-            ))
+            Ok(Expression::Not {
+                loc: *loc,
+                expr: Box::new(expr.cast(loc, &Type::Bool, true, ns, diagnostics)?),
+            })
         }
         pt::Expression::Complement(loc, e) => {
             let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
@@ -2045,7 +2047,11 @@ pub fn expression(
 
             get_int_length(&expr_ty, loc, true, ns, diagnostics)?;
 
-            Ok(Expression::Complement(*loc, expr_ty, Box::new(expr)))
+            Ok(Expression::Complement {
+                loc: *loc,
+                ty: expr_ty,
+                expr: Box::new(expr),
+            })
         }
         pt::Expression::UnaryMinus(loc, e) => match e.as_ref() {
             pt::Expression::NumberLiteral(_, integer, exp) => number_literal(
@@ -2083,14 +2089,22 @@ pub fn expression(
                 used_variable(ns, &expr, symtable);
                 let expr_type = expr.ty();
 
-                if let Expression::NumberLiteral(_, _, n) = expr {
-                    bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to)
-                } else if let Expression::RationalNumberLiteral(_, ty, r) = expr {
-                    Ok(Expression::RationalNumberLiteral(*loc, ty, -r))
+                if let Expression::NumberLiteral { value, .. } = expr {
+                    bigint_to_expression(loc, &-value, ns, diagnostics, resolve_to)
+                } else if let Expression::RationalNumberLiteral { ty, value: r, .. } = expr {
+                    Ok(Expression::RationalNumberLiteral {
+                        loc: *loc,
+                        ty,
+                        value: -r,
+                    })
                 } else {
                     get_int_length(&expr_type, loc, false, ns, diagnostics)?;
 
-                    Ok(Expression::UnaryMinus(*loc, expr_type, Box::new(expr)))
+                    Ok(Expression::UnaryMinus {
+                        loc: *loc,
+                        ty: expr_type,
+                        expr: Box::new(expr),
+                    })
                 }
             }
         },
@@ -2117,13 +2131,13 @@ pub fn expression(
             let left = left.cast(&l.loc(), &ty, true, ns, diagnostics)?;
             let right = right.cast(&r.loc(), &ty, true, ns, diagnostics)?;
 
-            Ok(Expression::ConditionalOperator(
-                *loc,
+            Ok(Expression::ConditionalOperator {
+                loc: *loc,
                 ty,
-                Box::new(cond),
-                Box::new(left),
-                Box::new(right),
-            ))
+                cond: Box::new(cond),
+                true_option: Box::new(left),
+                false_option: Box::new(right),
+            })
         }
 
         // pre/post decrement/increment
@@ -2303,7 +2317,11 @@ pub fn expression(
 
             check_var_usage_expression(ns, &l, &r, symtable);
 
-            Ok(Expression::Or(*loc, Box::new(l), Box::new(r)))
+            Ok(Expression::Or {
+                loc: *loc,
+                left: Box::new(l),
+                right: Box::new(r),
+            })
         }
         pt::Expression::And(loc, left, right) => {
             let boolty = Type::Bool;
@@ -2327,7 +2345,11 @@ pub fn expression(
             .cast(loc, &boolty, true, ns, diagnostics)?;
             check_var_usage_expression(ns, &l, &r, symtable);
 
-            Ok(Expression::And(*loc, Box::new(l), Box::new(r)))
+            Ok(Expression::And {
+                loc: *loc,
+                left: Box::new(l),
+                right: Box::new(r),
+            })
         }
         pt::Expression::Type(loc, _) => {
             diagnostics.push(Diagnostic::error(*loc, "type not expected".to_owned()));
@@ -2404,12 +2426,12 @@ pub fn expression(
             }
         }
         pt::Expression::This(loc) => match context.contract_no {
-            Some(contract_no) => Ok(Expression::Builtin(
-                *loc,
-                vec![Type::Contract(contract_no)],
-                Builtin::GetAddress,
-                Vec::new(),
-            )),
+            Some(contract_no) => Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![Type::Contract(contract_no)],
+                kind: Builtin::GetAddress,
+                args: Vec::new(),
+            }),
             None => {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -2444,29 +2466,33 @@ fn string_literal(
     let length = result.len();
 
     match resolve_to {
-        ResolveTo::Type(Type::String) => Expression::AllocDynamicBytes(
+        ResolveTo::Type(Type::String) => Expression::AllocDynamicBytes {
             loc,
-            Type::String,
-            Box::new(Expression::NumberLiteral(
+            ty: Type::String,
+            length: Box::new(Expression::NumberLiteral {
                 loc,
-                Type::Uint(32),
-                BigInt::from(length),
-            )),
-            Some(result),
-        ),
+                ty: Type::Uint(32),
+                value: BigInt::from(length),
+            }),
+            init: Some(result),
+        },
         ResolveTo::Type(Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
-            Expression::AllocDynamicBytes(
+            Expression::AllocDynamicBytes {
                 loc,
-                Type::Slice(ty.clone()),
-                Box::new(Expression::NumberLiteral(
+                ty: Type::Slice(ty.clone()),
+                length: Box::new(Expression::NumberLiteral {
                     loc,
-                    Type::Uint(32),
-                    BigInt::from(length),
-                )),
-                Some(result),
-            )
+                    ty: Type::Uint(32),
+                    value: BigInt::from(length),
+                }),
+                init: Some(result),
+            }
         }
-        _ => Expression::BytesLiteral(loc, Type::Bytes(length as u8), result),
+        _ => Expression::BytesLiteral {
+            loc,
+            ty: Type::Bytes(length as u8),
+            value: result,
+        },
     }
 }
 
@@ -2495,32 +2521,32 @@ fn hex_literal(
 
     match resolve_to {
         ResolveTo::Type(Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
-            Ok(Expression::AllocDynamicBytes(
+            Ok(Expression::AllocDynamicBytes {
                 loc,
-                Type::Slice(ty.clone()),
-                Box::new(Expression::NumberLiteral(
+                ty: Type::Slice(ty.clone()),
+                length: Box::new(Expression::NumberLiteral {
                     loc,
-                    Type::Uint(32),
-                    BigInt::from(length),
-                )),
-                Some(result),
-            ))
+                    ty: Type::Uint(32),
+                    value: BigInt::from(length),
+                }),
+                init: Some(result),
+            })
         }
-        ResolveTo::Type(Type::DynamicBytes) => Ok(Expression::AllocDynamicBytes(
+        ResolveTo::Type(Type::DynamicBytes) => Ok(Expression::AllocDynamicBytes {
             loc,
-            Type::DynamicBytes,
-            Box::new(Expression::NumberLiteral(
+            ty: Type::DynamicBytes,
+            length: Box::new(Expression::NumberLiteral {
                 loc,
-                Type::Uint(32),
-                BigInt::from(length),
-            )),
-            Some(result),
-        )),
-        _ => Ok(Expression::BytesLiteral(
+                ty: Type::Uint(32),
+                value: BigInt::from(length),
+            }),
+            init: Some(result),
+        }),
+        _ => Ok(Expression::BytesLiteral {
             loc,
-            Type::Bytes(length as u8),
-            result,
-        )),
+            ty: Type::Bytes(length as u8),
+            value: result,
+        }),
     }
 }
 
@@ -2539,11 +2565,11 @@ pub(super) fn hex_number_literal(
             return if address == *n {
                 let s: String = address.chars().skip(2).collect();
 
-                Ok(Expression::NumberLiteral(
-                    *loc,
-                    Type::Address(false),
-                    BigInt::from_str_radix(&s, 16).unwrap(),
-                ))
+                Ok(Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Address(false),
+                    value: BigInt::from_str_radix(&s, 16).unwrap(),
+                })
             } else {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -2585,7 +2611,11 @@ pub(super) fn hex_number_literal(
             ));
             Err(())
         } else {
-            Ok(Expression::NumberLiteral(*loc, Type::Bytes(*length), val))
+            Ok(Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Bytes(*length),
+                value: val,
+            })
         };
     }
 
@@ -2636,11 +2666,11 @@ fn address_literal(
                     return Err(());
                 }
 
-                Ok(Expression::NumberLiteral(
-                    *loc,
-                    Type::Address(false),
-                    BigInt::from_bytes_be(Sign::Plus, &v[1..ns.address_length + 1]),
-                ))
+                Ok(Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Address(false),
+                    value: BigInt::from_bytes_be(Sign::Plus, &v[1..ns.address_length + 1]),
+                })
             }
             Err(FromBase58Error::InvalidBase58Length) => {
                 diagnostics.push(Diagnostic::error(
@@ -2676,11 +2706,11 @@ fn address_literal(
                     ));
                     Err(())
                 } else {
-                    Ok(Expression::NumberLiteral(
-                        *loc,
-                        Type::Address(false),
-                        BigInt::from_bytes_be(Sign::Plus, &v),
-                    ))
+                    Ok(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Address(false),
+                        value: BigInt::from_bytes_be(Sign::Plus, &v),
+                    })
                 }
             }
             Err(FromBase58Error::InvalidBase58Length) => {
@@ -2728,12 +2758,21 @@ fn variable(
             ));
             Err(())
         } else {
-            Ok(Expression::Variable(id.loc, v.ty.clone(), v.pos))
+            Ok(Expression::Variable {
+                loc: id.loc,
+                ty: v.ty.clone(),
+                var_no: v.pos,
+            })
         };
     }
 
     if let Some((builtin, ty)) = builtin::builtin_var(&id.loc, None, &id.name, ns, diagnostics) {
-        return Ok(Expression::Builtin(id.loc, vec![ty], builtin, vec![]));
+        return Ok(Expression::Builtin {
+            loc: id.loc,
+            tys: vec![ty],
+            kind: builtin,
+            args: vec![],
+        });
     }
 
     // are we trying to resolve a function type?
@@ -2754,12 +2793,12 @@ fn variable(
             let var = &ns.contracts[var_contract_no].variables[var_no];
 
             if var.constant {
-                Ok(Expression::ConstantVariable(
-                    id.loc,
-                    var.ty.clone(),
-                    Some(var_contract_no),
+                Ok(Expression::ConstantVariable {
+                    loc: id.loc,
+                    ty: var.ty.clone(),
+                    contract_no: Some(var_contract_no),
                     var_no,
-                ))
+                })
             } else if context.constant {
                 diagnostics.push(Diagnostic::error(
                     id.loc,
@@ -2770,12 +2809,12 @@ fn variable(
                 ));
                 Err(())
             } else {
-                Ok(Expression::StorageVariable(
-                    id.loc,
-                    Type::StorageRef(var.immutable, Box::new(var.ty.clone())),
-                    var_contract_no,
+                Ok(Expression::StorageVariable {
+                    loc: id.loc,
+                    ty: Type::StorageRef(var.immutable, Box::new(var.ty.clone())),
+                    contract_no: var_contract_no,
                     var_no,
-                ))
+                })
             }
         }
         Some(Symbol::Variable(_, None, var_no)) => {
@@ -2783,12 +2822,12 @@ fn variable(
 
             let var = &ns.constants[var_no];
 
-            Ok(Expression::ConstantVariable(
-                id.loc,
-                var.ty.clone(),
-                None,
+            Ok(Expression::ConstantVariable {
+                loc: id.loc,
+                ty: var.ty.clone(),
+                contract_no: None,
                 var_no,
-            ))
+            })
         }
         Some(Symbol::Function(_)) => {
             let mut name_matches = 0;
@@ -2879,7 +2918,13 @@ fn subtract(
     )?;
 
     if ty.is_rational() {
-        let expr = Expression::Subtract(*loc, ty, false, Box::new(left), Box::new(right));
+        let expr = Expression::Subtract {
+            loc: *loc,
+            ty,
+            unchecked: false,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
 
         return match eval_const_rational(&expr, ns) {
             Ok(_) => Ok(expr),
@@ -2890,13 +2935,13 @@ fn subtract(
         };
     }
 
-    Ok(Expression::Subtract(
-        *loc,
-        ty.clone(),
-        context.unchecked,
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Subtract {
+        loc: *loc,
+        ty: ty.clone(),
+        unchecked: context.unchecked,
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn bitwise_or(
@@ -2925,12 +2970,12 @@ fn bitwise_or(
         diagnostics,
     )?;
 
-    Ok(Expression::BitwiseOr(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::BitwiseOr {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn bitwise_and(
@@ -2959,12 +3004,12 @@ fn bitwise_and(
         diagnostics,
     )?;
 
-    Ok(Expression::BitwiseAnd(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::BitwiseAnd {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn bitwise_xor(
@@ -2993,12 +3038,12 @@ fn bitwise_xor(
         diagnostics,
     )?;
 
-    Ok(Expression::BitwiseXor(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::BitwiseXor {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn shift_left(
@@ -3022,12 +3067,12 @@ fn shift_left(
 
     let left_type = left.ty();
 
-    Ok(Expression::ShiftLeft(
-        *loc,
-        left_type.clone(),
-        Box::new(left),
-        Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
-    ))
+    Ok(Expression::ShiftLeft {
+        loc: *loc,
+        ty: left_type.clone(),
+        left: Box::new(left),
+        right: Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
+    })
 }
 
 fn shift_right(
@@ -3051,13 +3096,13 @@ fn shift_right(
     let _ = get_int_length(&left_type, &l.loc(), true, ns, diagnostics)?;
     let (right_length, _) = get_int_length(&right.ty(), &r.loc(), false, ns, diagnostics)?;
 
-    Ok(Expression::ShiftRight(
-        *loc,
-        left_type.clone(),
-        Box::new(left),
-        Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
-        left_type.is_signed_int(),
-    ))
+    Ok(Expression::ShiftRight {
+        loc: *loc,
+        ty: left_type.clone(),
+        left: Box::new(left),
+        right: Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
+        sign: left_type.is_signed_int(),
+    })
 }
 
 fn multiply(
@@ -3087,7 +3132,13 @@ fn multiply(
     )?;
 
     if ty.is_rational() {
-        let expr = Expression::Multiply(*loc, ty, false, Box::new(left), Box::new(right));
+        let expr = Expression::Multiply {
+            loc: *loc,
+            ty,
+            unchecked: false,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
 
         return match eval_const_rational(&expr, ns) {
             Ok(_) => Ok(expr),
@@ -3126,13 +3177,13 @@ fn multiply(
             )
         }
     } else {
-        Ok(Expression::Multiply(
-            *loc,
-            ty.clone(),
-            context.unchecked,
-            Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-            Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-        ))
+        Ok(Expression::Multiply {
+            loc: *loc,
+            ty: ty.clone(),
+            unchecked: context.unchecked,
+            left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+            right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+        })
     }
 }
 
@@ -3162,12 +3213,12 @@ fn divide(
         diagnostics,
     )?;
 
-    Ok(Expression::Divide(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Divide {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn modulo(
@@ -3196,12 +3247,12 @@ fn modulo(
         diagnostics,
     )?;
 
-    Ok(Expression::Modulo(
-        *loc,
-        ty.clone(),
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Modulo {
+        loc: *loc,
+        ty: ty.clone(),
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 fn power(
@@ -3267,13 +3318,13 @@ fn power(
         diagnostics,
     )?;
 
-    Ok(Expression::Power(
-        *loc,
-        ty.clone(),
-        context.unchecked,
-        Box::new(base.cast(&b.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(exp.cast(&e.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Power {
+        loc: *loc,
+        ty: ty.clone(),
+        unchecked: context.unchecked,
+        base: Box::new(base.cast(&b.loc(), &ty, true, ns, diagnostics)?),
+        exp: Box::new(exp.cast(&e.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 /// Resolve an new contract expression with positional arguments
@@ -3738,11 +3789,11 @@ pub fn type_name_expr(
             let max = BigInt::one().shl(*bits as usize - 1).sub(1);
             bigint_to_expression(loc, &max, ns, diagnostics, resolve_to)
         }
-        (Type::Contract(n), "name") => Ok(Expression::BytesLiteral(
-            *loc,
-            Type::String,
-            ns.contracts[*n].name.as_bytes().to_vec(),
-        )),
+        (Type::Contract(n), "name") => Ok(Expression::BytesLiteral {
+            loc: *loc,
+            ty: Type::String,
+            value: ns.contracts[*n].name.as_bytes().to_vec(),
+        }),
         (Type::Contract(n), "interfaceId") => {
             let contract = &ns.contracts[*n];
 
@@ -3756,18 +3807,21 @@ pub fn type_name_expr(
                 ));
                 Err(())
             } else {
-                Ok(Expression::InterfaceId(*loc, *n))
+                Ok(Expression::InterfaceId {
+                    loc: *loc,
+                    contract_no: *n,
+                })
             }
         }
         (Type::Contract(no), "program_id") => {
             let contract = &ns.contracts[*no];
 
             if let Some(v) = &contract.program_id {
-                Ok(Expression::NumberLiteral(
-                    *loc,
-                    Type::Address(false),
-                    BigInt::from_bytes_be(Sign::Plus, v),
-                ))
+                Ok(Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Address(false),
+                    value: BigInt::from_bytes_be(Sign::Plus, v),
+                })
             } else {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -3821,11 +3875,11 @@ pub fn type_name_expr(
                 ns.contracts[contract_no].creates.push(*no);
             }
 
-            Ok(Expression::CodeLiteral(
-                *loc,
-                *no,
-                field.name == "runtimeCode",
-            ))
+            Ok(Expression::CodeLiteral {
+                loc: *loc,
+                contract_no: *no,
+                runtime: field.name == "runtimeCode",
+            })
         }
         _ => {
             diagnostics.push(Diagnostic::error(
@@ -3959,12 +4013,12 @@ pub fn new(
         size_expr.cast(&size_loc, &expected_ty, true, ns, diagnostics)?
     };
 
-    Ok(Expression::AllocDynamicBytes(
-        *loc,
+    Ok(Expression::AllocDynamicBytes {
+        loc: *loc,
         ty,
-        Box::new(size),
-        None,
-    ))
+        length: Box::new(size),
+        init: None,
+    })
 }
 
 /// Test for equality; first check string equality, then integer equality
@@ -3983,9 +4037,13 @@ fn equal(
     check_var_usage_expression(ns, &left, &right, symtable);
 
     // Comparing stringliteral against stringliteral
-    if let (Expression::BytesLiteral(_, _, l), Expression::BytesLiteral(_, _, r)) = (&left, &right)
+    if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
+        (&left, &right)
     {
-        return Ok(Expression::BoolLiteral(*loc, l == r));
+        return Ok(Expression::BoolLiteral {
+            loc: *loc,
+            value: l == r,
+        });
     }
 
     let left_type = left.ty();
@@ -3993,37 +4051,37 @@ fn equal(
 
     // compare string against literal
     match (&left, &right_type.deref_any()) {
-        (Expression::BytesLiteral(_, _, l), Type::String)
-        | (Expression::BytesLiteral(_, _, l), Type::DynamicBytes) => {
-            return Ok(Expression::StringCompare(
-                *loc,
-                StringLocation::RunTime(Box::new(right.cast(
+        (Expression::BytesLiteral { value: l, .. }, Type::String)
+        | (Expression::BytesLiteral { value: l, .. }, Type::DynamicBytes) => {
+            return Ok(Expression::StringCompare {
+                loc: *loc,
+                left: StringLocation::RunTime(Box::new(right.cast(
                     &r.loc(),
                     right_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
                 )?)),
-                StringLocation::CompileTime(l.clone()),
-            ));
+                right: StringLocation::CompileTime(l.clone()),
+            });
         }
         _ => {}
     }
 
     match (&right, &left_type.deref_any()) {
-        (Expression::BytesLiteral(_, _, literal), Type::String)
-        | (Expression::BytesLiteral(_, _, literal), Type::DynamicBytes) => {
-            return Ok(Expression::StringCompare(
-                *loc,
-                StringLocation::RunTime(Box::new(left.cast(
+        (Expression::BytesLiteral { value, .. }, Type::String)
+        | (Expression::BytesLiteral { value, .. }, Type::DynamicBytes) => {
+            return Ok(Expression::StringCompare {
+                loc: *loc,
+                left: StringLocation::RunTime(Box::new(left.cast(
                     &l.loc(),
                     left_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
                 )?)),
-                StringLocation::CompileTime(literal.clone()),
-            ));
+                right: StringLocation::CompileTime(value.clone()),
+            });
         }
         _ => {}
     }
@@ -4031,34 +4089,34 @@ fn equal(
     // compare string
     match (&left_type.deref_any(), &right_type.deref_any()) {
         (Type::String, Type::String) | (Type::DynamicBytes, Type::DynamicBytes) => {
-            return Ok(Expression::StringCompare(
-                *loc,
-                StringLocation::RunTime(Box::new(left.cast(
+            return Ok(Expression::StringCompare {
+                loc: *loc,
+                left: StringLocation::RunTime(Box::new(left.cast(
                     &l.loc(),
                     left_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
                 )?)),
-                StringLocation::RunTime(Box::new(right.cast(
+                right: StringLocation::RunTime(Box::new(right.cast(
                     &r.loc(),
                     right_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
                 )?)),
-            ));
+            });
         }
         _ => {}
     }
 
     let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, diagnostics)?;
 
-    let expr = Expression::Equal(
-        *loc,
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    );
+    let expr = Expression::Equal {
+        loc: *loc,
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    };
 
     if ty.is_rational() {
         if let Err(diag) = eval_const_rational(&expr, ns) {
@@ -4085,13 +4143,18 @@ fn addition(
     check_var_usage_expression(ns, &left, &right, symtable);
 
     // Concatenate stringliteral with stringliteral
-    if let (Expression::BytesLiteral(_, _, l), Expression::BytesLiteral(_, _, r)) = (&left, &right)
+    if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
+        (&left, &right)
     {
         let mut c = Vec::with_capacity(l.len() + r.len());
         c.extend_from_slice(l);
         c.extend_from_slice(r);
         let length = c.len();
-        return Ok(Expression::BytesLiteral(*loc, Type::Bytes(length as u8), c));
+        return Ok(Expression::BytesLiteral {
+            loc: *loc,
+            ty: Type::Bytes(length as u8),
+            value: c,
+        });
     }
 
     let left_type = left.ty();
@@ -4099,27 +4162,27 @@ fn addition(
 
     // compare string against literal
     match (&left, &right_type) {
-        (Expression::BytesLiteral(_, _, l), Type::String)
-        | (Expression::BytesLiteral(_, _, l), Type::DynamicBytes) => {
-            return Ok(Expression::StringConcat(
-                *loc,
-                right_type,
-                StringLocation::CompileTime(l.clone()),
-                StringLocation::RunTime(Box::new(right)),
-            ));
+        (Expression::BytesLiteral { value, .. }, Type::String)
+        | (Expression::BytesLiteral { value, .. }, Type::DynamicBytes) => {
+            return Ok(Expression::StringConcat {
+                loc: *loc,
+                ty: right_type,
+                left: StringLocation::CompileTime(value.clone()),
+                right: StringLocation::RunTime(Box::new(right)),
+            });
         }
         _ => {}
     }
 
     match (&right, &left_type) {
-        (Expression::BytesLiteral(_, _, l), Type::String)
-        | (Expression::BytesLiteral(_, _, l), Type::DynamicBytes) => {
-            return Ok(Expression::StringConcat(
-                *loc,
-                left_type,
-                StringLocation::RunTime(Box::new(left)),
-                StringLocation::CompileTime(l.clone()),
-            ));
+        (Expression::BytesLiteral { value, .. }, Type::String)
+        | (Expression::BytesLiteral { value, .. }, Type::DynamicBytes) => {
+            return Ok(Expression::StringConcat {
+                loc: *loc,
+                ty: left_type,
+                left: StringLocation::RunTime(Box::new(left)),
+                right: StringLocation::CompileTime(value.clone()),
+            });
         }
         _ => {}
     }
@@ -4127,12 +4190,12 @@ fn addition(
     // compare string
     match (&left_type, &right_type) {
         (Type::String, Type::String) | (Type::DynamicBytes, Type::DynamicBytes) => {
-            return Ok(Expression::StringConcat(
-                *loc,
-                right_type,
-                StringLocation::RunTime(Box::new(left)),
-                StringLocation::RunTime(Box::new(right)),
-            ));
+            return Ok(Expression::StringConcat {
+                loc: *loc,
+                ty: right_type,
+                left: StringLocation::RunTime(Box::new(left)),
+                right: StringLocation::RunTime(Box::new(right)),
+            });
         }
         _ => {}
     }
@@ -4149,7 +4212,13 @@ fn addition(
     )?;
 
     if ty.is_rational() {
-        let expr = Expression::Add(*loc, ty, false, Box::new(left), Box::new(right));
+        let expr = Expression::Add {
+            loc: *loc,
+            ty,
+            unchecked: false,
+            left: Box::new(left),
+            right: Box::new(right),
+        };
 
         return match eval_const_rational(&expr, ns) {
             Ok(_) => Ok(expr),
@@ -4187,13 +4256,13 @@ fn addition(
         )?;
     }
 
-    Ok(Expression::Add(
-        *loc,
-        ty.clone(),
-        context.unchecked,
-        Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-    ))
+    Ok(Expression::Add {
+        loc: *loc,
+        ty: ty.clone(),
+        unchecked: context.unchecked,
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    })
 }
 
 /// Resolve an assignment
@@ -4233,7 +4302,12 @@ fn assign_single(
 
     used_variable(ns, &val, symtable);
     match &var {
-        Expression::ConstantVariable(loc, _, Some(contract_no), var_no) => {
+        Expression::ConstantVariable {
+            loc,
+            contract_no: Some(contract_no),
+            var_no,
+            ..
+        } => {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
@@ -4243,14 +4317,24 @@ fn assign_single(
             ));
             Err(())
         }
-        Expression::ConstantVariable(loc, _, None, var_no) => {
+        Expression::ConstantVariable {
+            loc,
+            contract_no: None,
+            var_no,
+            ..
+        } => {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("cannot assign to constant '{}'", ns.constants[*var_no].name),
             ));
             Err(())
         }
-        Expression::StorageVariable(loc, ty, var_contract_no, var_no) => {
+        Expression::StorageVariable {
+            loc,
+            ty,
+            contract_no: var_contract_no,
+            var_no,
+        } => {
             let store_var = &ns.contracts[*var_contract_no].variables[*var_no];
 
             if store_var.immutable {
@@ -4270,26 +4354,26 @@ fn assign_single(
 
             let ty = ty.deref_any();
 
-            Ok(Expression::Assign(
-                *loc,
-                ty.clone(),
-                Box::new(var.clone()),
-                Box::new(val.cast(&right.loc(), ty, true, ns, diagnostics)?),
-            ))
+            Ok(Expression::Assign {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(var.clone()),
+                right: Box::new(val.cast(&right.loc(), ty, true, ns, diagnostics)?),
+            })
         }
-        Expression::Variable(_, var_ty, _) => Ok(Expression::Assign(
-            *loc,
-            var_ty.clone(),
-            Box::new(var.clone()),
-            Box::new(val.cast(&right.loc(), var_ty, true, ns, diagnostics)?),
-        )),
+        Expression::Variable { ty: var_ty, .. } => Ok(Expression::Assign {
+            loc: *loc,
+            ty: var_ty.clone(),
+            left: Box::new(var.clone()),
+            right: Box::new(val.cast(&right.loc(), var_ty, true, ns, diagnostics)?),
+        }),
         _ => match &var_ty {
-            Type::Ref(r_ty) => Ok(Expression::Assign(
-                *loc,
-                *r_ty.clone(),
-                Box::new(var),
-                Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
-            )),
+            Type::Ref(r_ty) => Ok(Expression::Assign {
+                loc: *loc,
+                ty: *r_ty.clone(),
+                left: Box::new(var),
+                right: Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
+            }),
             Type::StorageRef(immutable, r_ty) => {
                 if *immutable {
                     if let Some(function_no) = context.function_no {
@@ -4303,12 +4387,12 @@ fn assign_single(
                     }
                 }
 
-                Ok(Expression::Assign(
-                    *loc,
-                    *r_ty.clone(),
-                    Box::new(var),
-                    Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
-                ))
+                Ok(Expression::Assign {
+                    loc: *loc,
+                    ty: *r_ty.clone(),
+                    left: Box::new(var),
+                    right: Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
+                })
             }
             _ => {
                 diagnostics.push(Diagnostic::error(
@@ -4359,10 +4443,10 @@ fn assign_expr(
     used_variable(ns, &set, symtable);
     let set_type = set.ty();
 
-    let op = |assign: Expression,
-              ty: &Type,
-              ns: &Namespace,
-              diagnostics: &mut Diagnostics|
+    let assign_operation = |assign: Expression,
+                            ty: &Type,
+                            ns: &Namespace,
+                            diagnostics: &mut Diagnostics|
      -> Result<Expression, ()> {
         let set = match expr {
             pt::Expression::AssignShiftLeft(..) | pt::Expression::AssignShiftRight(..) => {
@@ -4396,58 +4480,81 @@ fn assign_expr(
         };
 
         Ok(match expr {
-            pt::Expression::AssignAdd(..) => Expression::Add(
-                *loc,
-                ty.clone(),
-                context.unchecked,
-                Box::new(assign),
-                Box::new(set),
-            ),
-            pt::Expression::AssignSubtract(..) => Expression::Subtract(
-                *loc,
-                ty.clone(),
-                context.unchecked,
-                Box::new(assign),
-                Box::new(set),
-            ),
-            pt::Expression::AssignMultiply(..) => Expression::Multiply(
-                *loc,
-                ty.clone(),
-                context.unchecked,
-                Box::new(assign),
-                Box::new(set),
-            ),
-            pt::Expression::AssignOr(..) => {
-                Expression::BitwiseOr(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignAnd(..) => {
-                Expression::BitwiseAnd(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignXor(..) => {
-                Expression::BitwiseXor(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignShiftLeft(..) => {
-                Expression::ShiftLeft(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignShiftRight(..) => Expression::ShiftRight(
-                *loc,
-                ty.clone(),
-                Box::new(assign),
-                Box::new(set),
-                ty.is_signed_int(),
-            ),
-            pt::Expression::AssignDivide(..) => {
-                Expression::Divide(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
-            pt::Expression::AssignModulo(..) => {
-                Expression::Modulo(*loc, ty.clone(), Box::new(assign), Box::new(set))
-            }
+            pt::Expression::AssignAdd(..) => Expression::Add {
+                loc: *loc,
+                ty: ty.clone(),
+                unchecked: context.unchecked,
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignSubtract(..) => Expression::Subtract {
+                loc: *loc,
+                ty: ty.clone(),
+                unchecked: context.unchecked,
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignMultiply(..) => Expression::Multiply {
+                loc: *loc,
+                ty: ty.clone(),
+                unchecked: context.unchecked,
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignOr(..) => Expression::BitwiseOr {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignAnd(..) => Expression::BitwiseAnd {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignXor(..) => Expression::BitwiseXor {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignShiftLeft(..) => Expression::ShiftLeft {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignShiftRight(..) => Expression::ShiftRight {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+                sign: ty.is_signed_int(),
+            },
+            pt::Expression::AssignDivide(..) => Expression::Divide {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
+            pt::Expression::AssignModulo(..) => Expression::Modulo {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(assign),
+                right: Box::new(set),
+            },
             _ => unreachable!(),
         })
     };
 
     match &var {
-        Expression::ConstantVariable(loc, _, Some(contract_no), var_no) => {
+        Expression::ConstantVariable {
+            loc,
+            contract_no: Some(contract_no),
+            var_no,
+            ..
+        } => {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
@@ -4457,14 +4564,19 @@ fn assign_expr(
             ));
             Err(())
         }
-        Expression::ConstantVariable(loc, _, None, var_no) => {
+        Expression::ConstantVariable {
+            loc,
+            contract_no: None,
+            var_no,
+            ..
+        } => {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("cannot assign to constant '{}'", ns.constants[*var_no].name),
             ));
             Err(())
         }
-        Expression::Variable(_, _, n) => {
+        Expression::Variable { var_no, .. } => {
             match var_ty {
                 Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => (),
                 _ => {
@@ -4472,33 +4584,33 @@ fn assign_expr(
                         var.loc(),
                         format!(
                             "variable '{}' of incorrect type {}",
-                            symtable.get_name(*n),
+                            symtable.get_name(*var_no),
                             var_ty.to_string(ns)
                         ),
                     ));
                     return Err(());
                 }
             };
-            Ok(Expression::Assign(
-                *loc,
-                var_ty.clone(),
-                Box::new(var.clone()),
-                Box::new(op(var, &var_ty, ns, diagnostics)?),
-            ))
+            Ok(Expression::Assign {
+                loc: *loc,
+                ty: var_ty.clone(),
+                left: Box::new(var.clone()),
+                right: Box::new(assign_operation(var, &var_ty, ns, diagnostics)?),
+            })
         }
         _ => match &var_ty {
             Type::Ref(r_ty) => match r_ty.as_ref() {
-                Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign(
-                    *loc,
-                    *r_ty.clone(),
-                    Box::new(var.clone()),
-                    Box::new(op(
+                Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign {
+                    loc: *loc,
+                    ty: *r_ty.clone(),
+                    left: Box::new(var.clone()),
+                    right: Box::new(assign_operation(
                         var.cast(loc, r_ty, true, ns, diagnostics)?,
                         r_ty,
                         ns,
                         diagnostics,
                     )?),
-                )),
+                }),
                 _ => {
                     diagnostics.push(Diagnostic::error(
                         var.loc(),
@@ -4521,17 +4633,17 @@ fn assign_expr(
                 }
 
                 match r_ty.as_ref() {
-                    Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign(
-                        *loc,
-                        *r_ty.clone(),
-                        Box::new(var.clone()),
-                        Box::new(op(
+                    Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign {
+                        loc: *loc,
+                        ty: *r_ty.clone(),
+                        left: Box::new(var.clone()),
+                        right: Box::new(assign_operation(
                             var.cast(loc, r_ty, true, ns, diagnostics)?,
                             r_ty,
                             ns,
                             diagnostics,
                         )?),
-                    )),
+                    }),
                     _ => {
                         diagnostics.push(Diagnostic::error(
                             var.loc(),
@@ -4563,18 +4675,30 @@ fn incr_decr(
 ) -> Result<Expression, ()> {
     let op = |e: Expression, ty: Type| -> Expression {
         match expr {
-            pt::Expression::PreIncrement(loc, _) => {
-                Expression::PreIncrement(*loc, ty, context.unchecked, Box::new(e))
-            }
-            pt::Expression::PreDecrement(loc, _) => {
-                Expression::PreDecrement(*loc, ty, context.unchecked, Box::new(e))
-            }
-            pt::Expression::PostIncrement(loc, _) => {
-                Expression::PostIncrement(*loc, ty, context.unchecked, Box::new(e))
-            }
-            pt::Expression::PostDecrement(loc, _) => {
-                Expression::PostDecrement(*loc, ty, context.unchecked, Box::new(e))
-            }
+            pt::Expression::PreIncrement(loc, _) => Expression::PreIncrement {
+                loc: *loc,
+                ty,
+                unchecked: context.unchecked,
+                expr: Box::new(e),
+            },
+            pt::Expression::PreDecrement(loc, _) => Expression::PreDecrement {
+                loc: *loc,
+                ty,
+                unchecked: context.unchecked,
+                expr: Box::new(e),
+            },
+            pt::Expression::PostIncrement(loc, _) => Expression::PostIncrement {
+                loc: *loc,
+                ty,
+                unchecked: context.unchecked,
+                expr: Box::new(e),
+            },
+            pt::Expression::PostDecrement(loc, _) => Expression::PostDecrement {
+                loc: *loc,
+                ty,
+                unchecked: context.unchecked,
+                expr: Box::new(e),
+            },
             _ => unreachable!(),
         }
     };
@@ -4588,7 +4712,12 @@ fn incr_decr(
     let var_ty = var.ty();
 
     match &var {
-        Expression::ConstantVariable(loc, _, Some(contract_no), var_no) => {
+        Expression::ConstantVariable {
+            loc,
+            contract_no: Some(contract_no),
+            var_no,
+            ..
+        } => {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
@@ -4598,14 +4727,19 @@ fn incr_decr(
             ));
             Err(())
         }
-        Expression::ConstantVariable(loc, _, None, var_no) => {
+        Expression::ConstantVariable {
+            loc,
+            contract_no: None,
+            var_no,
+            ..
+        } => {
             diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("cannot assign to constant '{}'", ns.constants[*var_no].name),
             ));
             Err(())
         }
-        Expression::Variable(_, ty, n) => {
+        Expression::Variable { ty, var_no, .. } => {
             match ty {
                 Type::Int(_) | Type::Uint(_) => (),
                 _ => {
@@ -4613,7 +4747,7 @@ fn incr_decr(
                         var.loc(),
                         format!(
                             "variable '{}' of incorrect type {}",
-                            symtable.get_name(*n),
+                            symtable.get_name(*var_no),
                             var_ty.to_string(ns)
                         ),
                     ));
@@ -4728,11 +4862,11 @@ fn enum_value(
 
     if let Some(e) = ns.resolve_enum(file_no, contract_no, namespace[0]) {
         match ns.enums[e].values.get_full(&id.name) {
-            Some((val, _, _)) => Ok(Some(Expression::NumberLiteral(
-                *loc,
-                Type::Enum(e),
-                BigInt::from_usize(val).unwrap(),
-            ))),
+            Some((val, _, _)) => Ok(Some(Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Enum(e),
+                value: BigInt::from_usize(val).unwrap(),
+            })),
             None => {
                 diagnostics.push(Diagnostic::error(
                     id.loc,
@@ -4762,7 +4896,12 @@ fn member_access(
         if let Some((builtin, ty)) =
             builtin::builtin_var(loc, Some(&namespace.name), &id.name, ns, diagnostics)
         {
-            return Ok(Expression::Builtin(*loc, vec![ty], builtin, vec![]));
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![ty],
+                kind: builtin,
+                args: vec![],
+            });
         }
 
         if builtin::builtin_namespace(&namespace.name) {
@@ -4886,19 +5025,19 @@ fn member_access(
                 Err(())
             } else if f.readonly {
                 // readonly fields return the value, not a reference
-                Ok(Expression::StructMember(
-                    id.loc,
-                    f.ty.clone(),
-                    Box::new(expr),
-                    i,
-                ))
+                Ok(Expression::StructMember {
+                    loc: id.loc,
+                    ty: f.ty.clone(),
+                    expr: Box::new(expr),
+                    field: i,
+                })
             } else {
-                Ok(Expression::StructMember(
-                    id.loc,
-                    Type::Ref(Box::new(f.ty.clone())),
-                    Box::new(expr),
-                    i,
-                ))
+                Ok(Expression::StructMember {
+                    loc: id.loc,
+                    ty: Type::Ref(Box::new(f.ty.clone())),
+                    expr: Box::new(expr),
+                    field: i,
+                })
             };
         } else {
             diagnostics.push(Diagnostic::error(
@@ -4916,7 +5055,11 @@ fn member_access(
     // Dereference if need to
     let (expr, expr_ty) = if let Type::Ref(ty) = &expr_ty {
         (
-            Expression::Load(*loc, expr_ty.clone(), Box::new(expr)),
+            Expression::Load {
+                loc: *loc,
+                ty: expr_ty.clone(),
+                expr: Box::new(expr),
+            },
             ty.as_ref().clone(),
         )
     } else {
@@ -4930,22 +5073,22 @@ fn member_access(
                 //So the variable is also assigned a value to be read from 'length'
                 assigned_variable(ns, &expr, symtable);
                 used_variable(ns, &expr, symtable);
-                return Ok(Expression::NumberLiteral(
-                    *loc,
-                    Type::Uint(8),
-                    BigInt::from_u8(n).unwrap(),
-                ));
+                return Ok(Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Uint(8),
+                    value: BigInt::from_u8(n).unwrap(),
+                });
             }
         }
         Type::Array(_, dim) => {
             if id.name == "length" {
                 return match dim.last().unwrap() {
-                    ArrayLength::Dynamic => Ok(Expression::Builtin(
-                        *loc,
-                        vec![Type::Uint(32)],
-                        Builtin::ArrayLength,
-                        vec![expr],
-                    )),
+                    ArrayLength::Dynamic => Ok(Expression::Builtin {
+                        loc: *loc,
+                        tys: vec![Type::Uint(32)],
+                        kind: Builtin::ArrayLength,
+                        args: vec![expr],
+                    }),
                     ArrayLength::Fixed(d) => {
                         //We should not eliminate an array from the code when 'length' is called
                         //So the variable is also assigned a value to be read from 'length'
@@ -4965,12 +5108,12 @@ fn member_access(
         }
         Type::String | Type::DynamicBytes => {
             if id.name == "length" {
-                return Ok(Expression::Builtin(
-                    *loc,
-                    vec![Type::Uint(32)],
-                    Builtin::ArrayLength,
-                    vec![expr],
-                ));
+                return Ok(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![Type::Uint(32)],
+                    kind: Builtin::ArrayLength,
+                    args: vec![expr],
+                });
             }
         }
         Type::StorageRef(immutable, r) => match *r {
@@ -4982,12 +5125,12 @@ fn member_access(
                     .enumerate()
                     .find(|(_, field)| id.name == field.name_as_str())
                 {
-                    Ok(Expression::StructMember(
-                        id.loc,
-                        Type::StorageRef(immutable, Box::new(field.ty.clone())),
-                        Box::new(expr),
-                        field_no,
-                    ))
+                    Ok(Expression::StructMember {
+                        loc: id.loc,
+                        ty: Type::StorageRef(immutable, Box::new(field.ty.clone())),
+                        expr: Box::new(expr),
+                        field: field_no,
+                    })
                 } else {
                     diagnostics.push(Diagnostic::error(
                         id.loc,
@@ -5044,7 +5187,11 @@ fn member_access(
                     let mut is_this = false;
 
                     if let Expression::Cast { expr: this, .. } = &expr {
-                        if let Expression::Builtin(_, _, Builtin::GetAddress, _) = this.as_ref() {
+                        if let Expression::Builtin {
+                            kind: Builtin::GetAddress,
+                            ..
+                        } = this.as_ref()
+                        {
                             is_this = true;
                         }
                     }
@@ -5058,12 +5205,12 @@ fn member_access(
                     }
                 }
                 used_variable(ns, &expr, symtable);
-                return Ok(Expression::Builtin(
-                    *loc,
-                    vec![Type::Value],
-                    Builtin::Balance,
-                    vec![expr],
-                ));
+                return Ok(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![Type::Value],
+                    kind: Builtin::Balance,
+                    args: vec![expr],
+                });
             }
         }
         Type::Contract(ref_contract_no) => {
@@ -5093,63 +5240,64 @@ fn member_access(
                 });
             }
 
-            #[allow(clippy::comparison_chain)]
-            return if name_matches == 0 {
-                diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    format!(
-                        "{} '{}' has no public function '{}'",
-                        ns.contracts[ref_contract_no].ty,
-                        ns.contracts[ref_contract_no].name,
-                        id.name
-                    ),
-                ));
-                Err(())
-            } else if name_matches == 1 {
-                ext_expr
-            } else {
-                diagnostics.push(Diagnostic::error(
-                    id.loc,
-                    format!(
-                        "function '{}' of {} '{}' is overloaded",
-                        id.name,
-                        ns.contracts[ref_contract_no].ty,
-                        ns.contracts[ref_contract_no].name
-                    ),
-                ));
-                Err(())
+            return match name_matches {
+                0 => {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        format!(
+                            "{} '{}' has no public function '{}'",
+                            ns.contracts[ref_contract_no].ty,
+                            ns.contracts[ref_contract_no].name,
+                            id.name
+                        ),
+                    ));
+                    Err(())
+                }
+                1 => ext_expr,
+                _ => {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        format!(
+                            "function '{}' of {} '{}' is overloaded",
+                            id.name,
+                            ns.contracts[ref_contract_no].ty,
+                            ns.contracts[ref_contract_no].name
+                        ),
+                    ));
+                    Err(())
+                }
             };
         }
         Type::ExternalFunction { .. } => {
             if id.name == "address" {
                 used_variable(ns, &expr, symtable);
-                return Ok(Expression::Builtin(
-                    e.loc(),
-                    vec![Type::Address(false)],
-                    Builtin::ExternalFunctionAddress,
-                    vec![expr],
-                ));
+                return Ok(Expression::Builtin {
+                    loc: e.loc(),
+                    tys: vec![Type::Address(false)],
+                    kind: Builtin::ExternalFunctionAddress,
+                    args: vec![expr],
+                });
             }
             if id.name == "selector" {
                 used_variable(ns, &expr, symtable);
-                return Ok(Expression::Builtin(
-                    e.loc(),
-                    vec![Type::FunctionSelector],
-                    Builtin::FunctionSelector,
-                    vec![expr],
-                ));
+                return Ok(Expression::Builtin {
+                    loc: e.loc(),
+                    tys: vec![Type::FunctionSelector],
+                    kind: Builtin::FunctionSelector,
+                    args: vec![expr],
+                });
             }
         }
         Type::InternalFunction { .. } => {
             if let Expression::InternalFunction { .. } = expr {
                 if id.name == "selector" {
                     used_variable(ns, &expr, symtable);
-                    return Ok(Expression::Builtin(
-                        e.loc(),
-                        vec![Type::FunctionSelector],
-                        Builtin::FunctionSelector,
-                        vec![expr],
-                    ));
+                    return Ok(Expression::Builtin {
+                        loc: e.loc(),
+                        tys: vec![Type::FunctionSelector],
+                        kind: Builtin::FunctionSelector,
+                        args: vec![expr],
+                    });
                 }
             }
         }
@@ -5215,12 +5363,12 @@ fn contract_constant(
 
             var.read = true;
 
-            return Ok(Some(Expression::ConstantVariable(
-                *loc,
-                var.ty.clone(),
-                Some(contract_no),
+            return Ok(Some(Expression::ConstantVariable {
+                loc: *loc,
+                ty: var.ty.clone(),
+                contract_no: Some(contract_no),
                 var_no,
-            )));
+            }));
         }
     }
 
@@ -5237,7 +5385,7 @@ fn array_subscript(
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    let array = expression(
+    let mut array = expression(
         array,
         context,
         ns,
@@ -5285,36 +5433,41 @@ fn array_subscript(
     };
 
     if array_ty.is_storage_bytes() {
-        return Ok(Expression::Subscript(
-            *loc,
-            Type::StorageRef(false, Box::new(Type::Bytes(1))),
+        return Ok(Expression::Subscript {
+            loc: *loc,
+            ty: Type::StorageRef(false, Box::new(Type::Bytes(1))),
             array_ty,
-            Box::new(array),
-            Box::new(index.cast(&index.loc(), &Type::Uint(32), false, ns, diagnostics)?),
-        ));
+            array: Box::new(array),
+            index: Box::new(index.cast(&index.loc(), &Type::Uint(32), false, ns, diagnostics)?),
+        });
     }
 
-    if index_ty.is_contract_storage() {
-        // make sure we load the index value from storage
-        index = index.cast(&index.loc(), index_ty.deref_any(), true, ns, diagnostics)?;
-    }
+    // make sure we load the index value if needed
+    index = index.cast(&index.loc(), index_ty.deref_any(), true, ns, diagnostics)?;
 
-    match array_ty.deref_any() {
+    let deref_ty = array_ty.deref_any();
+    match deref_ty {
         Type::Bytes(_) | Type::Array(..) | Type::DynamicBytes => {
             if array_ty.is_contract_storage() {
                 let elem_ty = array_ty.storage_array_elem();
 
-                Ok(Expression::Subscript(
-                    *loc,
-                    elem_ty,
+                // When subscripting a bytes32 type array, we need to load it. It is not
+                // assignable and the value is calculated by shifting in codegen
+                if let Type::Bytes(_) = deref_ty {
+                    array = array.cast(&array.loc(), deref_ty, true, ns, diagnostics)?;
+                }
+
+                Ok(Expression::Subscript {
+                    loc: *loc,
+                    ty: elem_ty,
                     array_ty,
-                    Box::new(array),
-                    Box::new(index),
-                ))
+                    array: Box::new(array),
+                    index: Box::new(index),
+                })
             } else {
                 let elem_ty = array_ty.array_deref();
 
-                let array = array.cast(
+                array = array.cast(
                     &array.loc(),
                     if array_ty.deref_memory().is_fixed_reference_type() {
                         &array_ty
@@ -5326,13 +5479,13 @@ fn array_subscript(
                     diagnostics,
                 )?;
 
-                Ok(Expression::Subscript(
-                    *loc,
-                    elem_ty,
+                Ok(Expression::Subscript {
+                    loc: *loc,
+                    ty: elem_ty,
                     array_ty,
-                    Box::new(array),
-                    Box::new(index),
-                ))
+                    array: Box::new(array),
+                    index: Box::new(index),
+                })
             }
         }
         Type::String => {
@@ -5402,7 +5555,11 @@ fn struct_literal(
             fields.push(expr.cast(loc, &struct_def.fields[i].ty, true, ns, diagnostics)?);
         }
 
-        Ok(Expression::StructLiteral(*loc, ty, fields))
+        Ok(Expression::StructLiteral {
+            loc: *loc,
+            ty,
+            values: fields,
+        })
     }
 }
 
@@ -5969,7 +6126,13 @@ fn named_struct_literal(
         Err(())
     } else {
         let mut fields = Vec::new();
-        fields.resize(args.len(), Expression::BoolLiteral(Loc::Implicit, false));
+        fields.resize(
+            args.len(),
+            Expression::BoolLiteral {
+                loc: Loc::Implicit,
+                value: false,
+            },
+        );
         for a in args {
             match struct_def.fields.iter().enumerate().find(|(_, f)| {
                 f.id.as_ref().map(|id| id.name.as_str()) == Some(a.name.name.as_str())
@@ -5998,7 +6161,11 @@ fn named_struct_literal(
                 }
             }
         }
-        Ok(Expression::StructLiteral(*loc, ty, fields))
+        Ok(Expression::StructLiteral {
+            loc: *loc,
+            ty,
+            values: fields,
+        })
     }
 }
 
@@ -6178,12 +6345,12 @@ fn method_call_pos_args(
                     ResolveTo::Type(&user_ty),
                 )?;
 
-                Ok(Expression::Builtin(
-                    *loc,
-                    vec![elem_ty],
-                    Builtin::UserTypeUnwrap,
-                    vec![expr.cast(&expr.loc(), &user_ty, true, ns, diagnostics)?],
-                ))
+                Ok(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![elem_ty],
+                    kind: Builtin::UserTypeUnwrap,
+                    args: vec![expr.cast(&expr.loc(), &user_ty, true, ns, diagnostics)?],
+                })
             };
         } else if func.name == "wrap" {
             return if args.len() != 1 {
@@ -6202,12 +6369,12 @@ fn method_call_pos_args(
                     ResolveTo::Type(&elem_ty),
                 )?;
 
-                Ok(Expression::Builtin(
-                    *loc,
-                    vec![user_ty],
-                    Builtin::UserTypeWrap,
-                    vec![expr.cast(&expr.loc(), &elem_ty, true, ns, diagnostics)?],
-                ))
+                Ok(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![user_ty],
+                    kind: Builtin::UserTypeWrap,
+                    args: vec![expr.cast(&expr.loc(), &elem_ty, true, ns, diagnostics)?],
+                })
             };
         }
     }
@@ -6346,12 +6513,12 @@ fn method_call_pos_args(
                         }
                     };
 
-                    return Ok(Expression::Builtin(
-                        func.loc,
-                        vec![ret_ty],
-                        Builtin::ArrayPush,
-                        builtin_args,
-                    ));
+                    return Ok(Expression::Builtin {
+                        loc: func.loc,
+                        tys: vec![ret_ty],
+                        kind: Builtin::ArrayPush,
+                        args: builtin_args,
+                    });
                 }
                 if func.name == "pop" {
                     if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
@@ -6380,12 +6547,12 @@ fn method_call_pos_args(
                         elem_ty.clone()
                     };
 
-                    return Ok(Expression::Builtin(
-                        func.loc,
-                        vec![return_ty],
-                        Builtin::ArrayPop,
-                        vec![var_expr],
-                    ));
+                    return Ok(Expression::Builtin {
+                        loc: func.loc,
+                        tys: vec![return_ty],
+                        kind: Builtin::ArrayPop,
+                        args: vec![var_expr],
+                    });
                 }
             }
             Type::DynamicBytes => {
@@ -6445,12 +6612,12 @@ fn method_call_pos_args(
                             return Err(());
                         }
                     };
-                    return Ok(Expression::Builtin(
-                        func.loc,
-                        vec![ret_ty],
-                        Builtin::ArrayPush,
-                        builtin_args,
-                    ));
+                    return Ok(Expression::Builtin {
+                        loc: func.loc,
+                        tys: vec![ret_ty],
+                        kind: Builtin::ArrayPush,
+                        args: builtin_args,
+                    });
                 }
 
                 if func.name == "pop" {
@@ -6462,12 +6629,12 @@ fn method_call_pos_args(
                         return Err(());
                     }
 
-                    return Ok(Expression::Builtin(
-                        func.loc,
-                        vec![Type::Bytes(1)],
-                        Builtin::ArrayPop,
-                        vec![var_expr],
-                    ));
+                    return Ok(Expression::Builtin {
+                        loc: func.loc,
+                        tys: vec![Type::Bytes(1)],
+                        kind: Builtin::ArrayPop,
+                        args: vec![var_expr],
+                    });
                 }
             }
             _ => {}
@@ -6480,12 +6647,12 @@ fn method_call_pos_args(
 
             let val = match args.len() {
                 0 => {
-                    return Ok(Expression::Builtin(
-                        *loc,
-                        vec![elem_ty.clone()],
-                        Builtin::ArrayPush,
-                        vec![var_expr],
-                    ));
+                    return Ok(Expression::Builtin {
+                        loc: *loc,
+                        tys: vec![elem_ty.clone()],
+                        kind: Builtin::ArrayPush,
+                        args: vec![var_expr],
+                    });
                 }
                 1 => {
                     let val_expr = expression(
@@ -6508,12 +6675,12 @@ fn method_call_pos_args(
                 }
             };
 
-            return Ok(Expression::Builtin(
-                *loc,
-                vec![elem_ty.clone()],
-                Builtin::ArrayPush,
-                vec![var_expr, val],
-            ));
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![elem_ty.clone()],
+                kind: Builtin::ArrayPush,
+                args: vec![var_expr, val],
+            });
         }
         if func.name == "pop" {
             if !args.is_empty() {
@@ -6530,12 +6697,12 @@ fn method_call_pos_args(
                 _ => unreachable!(),
             };
 
-            return Ok(Expression::Builtin(
-                *loc,
-                vec![elem_ty.clone()],
-                Builtin::ArrayPop,
-                vec![var_expr],
-            ));
+            return Ok(Expression::Builtin {
+                loc: *loc,
+                tys: vec![elem_ty.clone()],
+                kind: Builtin::ArrayPop,
+                args: vec![var_expr],
+            });
         }
     }
 
@@ -6733,19 +6900,19 @@ fn method_call_pos_args(
             let value = expr.cast(&args[0].loc(), &Type::Value, true, ns, diagnostics)?;
 
             return if func.name == "transfer" {
-                Ok(Expression::Builtin(
-                    *loc,
-                    vec![Type::Void],
-                    Builtin::PayableTransfer,
-                    vec![address, value],
-                ))
+                Ok(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![Type::Void],
+                    kind: Builtin::PayableTransfer,
+                    args: vec![address, value],
+                })
             } else {
-                Ok(Expression::Builtin(
-                    *loc,
-                    vec![Type::Bool],
-                    Builtin::PayableSend,
-                    vec![address, value],
-                ))
+                Ok(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![Type::Bool],
+                    kind: Builtin::PayableSend,
+                    args: vec![address, value],
+                })
             };
         }
     }
@@ -7252,7 +7419,7 @@ fn array_literal(
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
 ) -> Result<Expression, ()> {
-    let mut dims = Vec::new();
+    let mut dimensions = Vec::new();
     let mut flattened = Vec::new();
 
     let resolve_to = match resolve_to {
@@ -7315,18 +7482,23 @@ fn array_literal(
                     vec![ArrayLength::Fixed(BigInt::from(exprs.len()))],
                 );
 
-                Ok(Expression::ArrayLiteral(
-                    *loc,
-                    aty,
-                    vec![exprs.len() as u32],
-                    res,
-                ))
+                Ok(Expression::ArrayLiteral {
+                    loc: *loc,
+                    ty: aty,
+                    dimensions: vec![exprs.len() as u32],
+                    values: res,
+                })
             };
         }
         _ => resolve_to,
     };
 
-    check_subarrays(exprs, &mut Some(&mut dims), &mut flattened, diagnostics)?;
+    check_subarrays(
+        exprs,
+        &mut Some(&mut dimensions),
+        &mut flattened,
+        diagnostics,
+    )?;
 
     if flattened.is_empty() {
         diagnostics.push(Diagnostic::error(
@@ -7373,15 +7545,26 @@ fn array_literal(
 
     let aty = Type::Array(
         Box::new(ty),
-        dims.iter()
+        dimensions
+            .iter()
             .map(|n| ArrayLength::Fixed(BigInt::from_u32(*n).unwrap()))
             .collect::<Vec<ArrayLength>>(),
     );
 
     if context.constant {
-        Ok(Expression::ConstArrayLiteral(*loc, aty, dims, exprs))
+        Ok(Expression::ConstArrayLiteral {
+            loc: *loc,
+            ty: aty,
+            dimensions,
+            values: exprs,
+        })
     } else {
-        Ok(Expression::ArrayLiteral(*loc, aty, dims, exprs))
+        Ok(Expression::ArrayLiteral {
+            loc: *loc,
+            ty: aty,
+            dimensions,
+            values: exprs,
+        })
     }
 }
 
@@ -8195,13 +8378,13 @@ fn mapping_subscript(
         )?
         .cast(&index.loc(), key_ty, true, ns, diagnostics)?;
 
-        Ok(Expression::Subscript(
-            *loc,
-            elem_ty,
-            ty,
-            Box::new(mapping),
-            Box::new(index_expr),
-        ))
+        Ok(Expression::Subscript {
+            loc: *loc,
+            ty: elem_ty,
+            array_ty: ty,
+            array: Box::new(mapping),
+            index: Box::new(index_expr),
+        })
     } else {
         unreachable!()
     }
