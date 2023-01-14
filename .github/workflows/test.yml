@@ -66,7 +66,7 @@ jobs:
       with:
         submodules: recursive
     - name: Rust stable
-      run: rustup default 1.63.0
+      run: rustup default 1.64.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -87,7 +87,7 @@ jobs:
       with:
         submodules: recursive
     - name: Rust stable
-      run: rustup default 1.63.0
+      run: rustup default 1.64.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -111,7 +111,7 @@ jobs:
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
       run: echo "c:\llvm14.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
-    - uses: dtolnay/rust-toolchain@1.63.0
+    - uses: dtolnay/rust-toolchain@1.64.0
       with:
         components: clippy
     # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
@@ -135,7 +135,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         submodules: recursive
-    - uses: dtolnay/rust-toolchain@1.63.0
+    - uses: dtolnay/rust-toolchain@1.64.0
     - name: Get LLVM
       run: curl -L --output llvm14.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-mac-arm.tar.xz
     - name: Extract LLVM
@@ -159,7 +159,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         submodules: recursive
-    - uses: dtolnay/rust-toolchain@1.63.0
+    - uses: dtolnay/rust-toolchain@1.64.0
     - name: Get LLVM
       run: wget -q -O llvm14.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-mac-intel.tar.xz
     - name: Extract LLVM
