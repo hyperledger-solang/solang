@@ -87,7 +87,7 @@ Then you can build the image using:
 Option 5: Build Solang from source
 ----------------------------------
 
-In order to build Solang from source, you will need rust 1.63.0 or higher,
+In order to build Solang from source, you will need rust 1.64.0 or higher,
 and a build of LLVM based on the Solana LLVM tree. There are a few LLVM patches required that are not upstream yet.
 First, follow the steps below for installing LLVM and then proceed from there.
 
