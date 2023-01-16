@@ -73,8 +73,6 @@ pub enum Type {
     FunctionSelector,
 }
 
-pub const U32: Type = Type::Uint(32);
-
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub enum ArrayLength {
     Fixed(BigInt),
