@@ -216,32 +216,6 @@ pub(super) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression;
 
-    /// Encode `expr` into `buffer` as bytes, omitting the size.
-    fn encode_bytes_packed(
-        &mut self,
-        expr: &Expression,
-        len: Expression,
-        buffer: &Expression,
-        offset: &Expression,
-        vartab: &mut Vartable,
-        cfg: &mut ControlFlowGraph,
-    ) -> Expression {
-        // ptr + offset + size_of_integer
-        let dest_address = Expression::AdvancePointer {
-            pointer: buffer.clone().into(),
-            bytes_offset: offset.clone().into(),
-        };
-        cfg.add(
-            vartab,
-            Instr::MemCopy {
-                source: expr.clone(),
-                destination: dest_address,
-                bytes: len.clone(),
-            },
-        );
-        len
-    }
-
     /// Encode `expr` into `buffer` as bytes.
     fn encode_bytes(
         &mut self,
