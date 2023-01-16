@@ -71,7 +71,7 @@ pub(super) trait AbiEncoding {
     ) -> Expression;
 
     /// Provide generic encoding for any given `expr` into `buffer`, depending on its `Type`.
-    /// Relies on the methods encoding individual expressions (`encode_*`) returning the encoded size.
+    /// Relies on the methods encoding individual expressions (`encode_*`) to return the encoded size.
     fn encode(
         &mut self,
         expr: &Expression,
