@@ -692,10 +692,6 @@ fn calculate_array_size(
             let local_size =
                 Expression::NumberLiteral(LOC, U32, item.array_length().unwrap().clone());
             size = Expression::Multiply(LOC, U32, false, size.into(), local_size.clone().into());
-            if !encoder.is_packed() && matches!(item, ArrayLength::Dynamic) {
-                let size_width = encoder.size_width(&local_size, vartab, cfg);
-                size = Expression::Add(LOC, U32, false, size.into(), size_width.into())
-            }
         }
 
         let type_size = Expression::NumberLiteral(LOC, U32, compile_type_size);
@@ -788,25 +784,6 @@ fn calculate_complex_array_size(
         );
     }
     finish_array_loop(&for_loop, vartab, cfg);
-}
-
-/// Get the array length at dimension 'index'
-fn get_array_length(
-    arr: &Expression,
-    dims: &[ArrayLength],
-    indexes: &[usize],
-    dimension: usize,
-) -> Expression {
-    if let ArrayLength::Fixed(dim) = &dims[dimension] {
-        return Expression::NumberLiteral(LOC, U32, dim.clone());
-    }
-    let (sub_array, _) = load_sub_array(
-        arr.clone(),
-        &dims[(dimension + 1)..dims.len()],
-        indexes,
-        true,
-    );
-    Expression::Builtin(LOC, vec![U32], Builtin::ArrayLength, vec![sub_array])
 }
 
 /// Retrieves the size of a struct
@@ -910,7 +887,13 @@ fn set_array_loop(
     vartab.new_dirty_tracker();
     cfg.add(vartab, Instr::Branch { block: cond_block });
     cfg.set_basic_block(cond_block);
-    let bound = get_array_length(arr, dims, indexes, dimension);
+    // Get the array length at dimension 'index'
+    let bound = if let ArrayLength::Fixed(dim) = &dims[dimension] {
+        Expression::NumberLiteral(LOC, U32, dim.clone())
+    } else {
+        let sub_array = load_sub_array(arr.clone(), &dims[(dimension + 1)..], indexes, true).0;
+        Expression::Builtin(LOC, vec![U32], Builtin::ArrayLength, vec![sub_array])
+    };
     let cond_expr = Expression::UnsignedLess(
         LOC,
         Expression::Variable(LOC, U32, index_temp).into(),
