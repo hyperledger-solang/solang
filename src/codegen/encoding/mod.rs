@@ -681,9 +681,8 @@ fn calculate_array_size(
     };
 
     let size_var = if let Some(compile_type_size) = primitive_size {
-        let dimension = &dims.last().unwrap();
         // If the array saves primitive-type elements, its size is sizeof(type)*vec.length
-        let mut size = if let ArrayLength::Fixed(dim) = dimension {
+        let mut size = if let ArrayLength::Fixed(dim) = &dims.last().unwrap() {
             Expression::NumberLiteral(LOC, U32, dim.clone())
         } else {
             Expression::Builtin(LOC, vec![U32], Builtin::ArrayLength, vec![array.clone()])
