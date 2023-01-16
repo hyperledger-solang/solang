@@ -541,7 +541,7 @@ pub(super) trait AbiEncoding {
         buffer_size: Option<Expression>,
     ) -> Vec<Expression>;
 
-    /// Encoding happens in two steps. First, we look at each argument to calculate their size. If an
+    /// Encoding happens in two steps. First, we look at each argument to calculate its size. If an
     /// argument is a storage variable, we load it and save it to a local variable.
     ///
     /// During a second pass, we copy each argument to a buffer. To copy storage variables properly into
