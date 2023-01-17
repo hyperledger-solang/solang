@@ -717,6 +717,7 @@ fn target_arg(matches: &ArgMatches) -> Target {
             value_length: *value_length as usize,
         },
         "evm" => solang::Target::EVM,
+        "soroban" => solang::Target::Soroban,
         _ => unreachable!(),
     };
 
