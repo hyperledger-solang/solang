@@ -66,7 +66,9 @@ fn main() {
                     )
                     .arg(
                         Arg::new("TARGET")
-                            .help("Target to build for [possible values: solana, substrate, soroban]")
+                            .help(
+                                "Target to build for [possible values: solana, substrate, soroban]",
+                            )
                             .long("target")
                             .num_args(1)
                             .value_parser(["solana", "substrate", "soroban", "evm"])
