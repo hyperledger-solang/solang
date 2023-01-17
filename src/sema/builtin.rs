@@ -1640,4 +1640,6 @@ impl Namespace {
         let symbol = Symbol::UserType(pt::Loc::Builtin, type_no);
         assert!(self.add_symbol(file_no, None, &id, symbol));
     }
+
+    pub fn add_soroban_builtins(&mut self) {}
 }

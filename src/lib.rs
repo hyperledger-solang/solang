@@ -31,6 +31,8 @@ pub enum Target {
     },
     /// Ethereum EVM, see <https://ethereum.org/en/developers/docs/evm/>
     EVM,
+    /// Soroban, see <https://soroban.stellar.org/docs>
+    Soroban,
 }
 
 impl fmt::Display for Target {
@@ -39,6 +41,7 @@ impl fmt::Display for Target {
             Target::Solana => write!(f, "solana"),
             Target::Substrate { .. } => write!(f, "substrate"),
             Target::EVM => write!(f, "evm"),
+            Target::Soroban => write!(f, "soroban"),
         }
     }
 }
@@ -51,6 +54,7 @@ impl PartialEq for Target {
             Target::Solana => matches!(other, Target::Solana),
             Target::Substrate { .. } => matches!(other, Target::Substrate { .. }),
             Target::EVM => matches!(other, Target::EVM),
+            Target::Soroban => matches!(other, Target::Soroban),
         }
     }
 }
@@ -75,6 +79,7 @@ impl Target {
             "solana" => Some(Target::Solana),
             "substrate" => Some(Target::default_substrate()),
             "evm" => Some(Target::EVM),
+            "soroban" => Some(Target::Soroban),
             _ => None,
         }
     }

@@ -32,6 +32,7 @@ impl Namespace {
                 value_length,
             } => (address_length, value_length),
             Target::Solana => (32, 8),
+            Target::Soroban => (32, 8),
         };
 
         let mut ns = Namespace {
@@ -59,6 +60,7 @@ impl Namespace {
         match target {
             Target::Solana => ns.add_solana_builtins(),
             Target::Substrate { .. } => ns.add_substrate_builtins(),
+            Target::Soroban => ns.add_soroban_builtins(),
             _ => {}
         }
 
