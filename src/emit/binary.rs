@@ -11,6 +11,7 @@ use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
 use crate::codegen::{cfg::ReturnCode, Options};
+use crate::emit::soroban;
 use crate::emit::substrate;
 use crate::emit::{solana, BinaryOp, Generate};
 use crate::linker::link;
@@ -72,6 +73,9 @@ impl<'a> Binary<'a> {
             }
             Target::Solana => {
                 solana::SolanaTarget::build(context, &std_lib, contract, ns, filename, opt)
+            }
+            Target::Soroban => {
+                soroban::SorobanTarget::build(context, &std_lib, contract, ns, filename, opt)
             }
             Target::EVM => unimplemented!(),
         }

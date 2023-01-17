@@ -21,6 +21,7 @@ mod instructions;
 mod loop_builder;
 mod math;
 pub mod solana;
+pub mod soroban;
 mod storage;
 mod strings;
 pub mod substrate;

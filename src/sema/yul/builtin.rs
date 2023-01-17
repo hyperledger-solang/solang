@@ -20,6 +20,7 @@ impl YulBuiltinPrototype {
             Target::EVM => self.availability[0],
             Target::Substrate { .. } => self.availability[1],
             Target::Solana => self.availability[2],
+            Target::Soroban => todo!(),
         }
     }
 }

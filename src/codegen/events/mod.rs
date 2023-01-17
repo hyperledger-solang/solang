@@ -47,5 +47,7 @@ pub(super) fn new_event_emitter<'a>(
             ns,
             event_no,
         }),
+
+        Target::Soroban => todo!(),
     }
 }
