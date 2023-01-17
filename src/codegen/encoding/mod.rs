@@ -54,9 +54,10 @@ pub(super) fn abi_encode(
 /// we have the same interface for creating encode and decode functions.
 ///
 /// Note: This trait mostly reflects the situation around SCALE and Borsh encoding schemas.
-/// Any provided default implementation works fine for both of them.
+/// These two encoding schemes share only minor differences. We provide default implementations
+/// for many methods, which all work fine for SCALE and Borsh encoding.
 ///
-/// It might be less suitable for schemas vastly different than SCALE or Borsh.
+/// However, this might be less suitable for schemas vastly different than SCALE or Borsh.
 /// Worst case is that you need to provide your own implementation of `fn encode(..)`.
 /// Which effectively means implementing the encoding logic for any given sema `Type` on your own.
 pub(super) trait AbiEncoding {
@@ -83,23 +84,23 @@ pub(super) trait AbiEncoding {
         let expr_ty = &expr.ty().unwrap_user_type(ns);
         match expr_ty {
             Type::Contract(_) | Type::Address(_) => {
-                self.encode_linear(expr, buffer, offset, vartab, cfg, ns.address_length.into())
+                self.encode_direct(expr, buffer, offset, vartab, cfg, ns.address_length.into())
             }
-            Type::Bool => self.encode_linear(expr, buffer, offset, vartab, cfg, 1.into()),
+            Type::Bool => self.encode_direct(expr, buffer, offset, vartab, cfg, 1.into()),
             Type::Uint(width) | Type::Int(width) => {
                 self.encode_int(expr, buffer, offset, vartab, cfg, *width)
             }
             Type::Value => {
                 let size = ns.value_length.into();
-                self.encode_linear(expr, buffer, offset, vartab, cfg, size)
+                self.encode_direct(expr, buffer, offset, vartab, cfg, size)
             }
             Type::Bytes(length) => {
-                self.encode_linear(expr, buffer, offset, vartab, cfg, (*length).into())
+                self.encode_direct(expr, buffer, offset, vartab, cfg, (*length).into())
             }
             Type::String | Type::DynamicBytes => {
                 self.encode_bytes(expr, buffer, offset, vartab, cfg)
             }
-            Type::Enum(_) => self.encode_linear(expr, buffer, offset, vartab, cfg, 1.into()),
+            Type::Enum(_) => self.encode_direct(expr, buffer, offset, vartab, cfg, 1.into()),
             Type::Struct(ty) => {
                 self.encode_struct(expr, buffer, offset.clone(), ty, arg_no, ns, vartab, cfg)
             }
@@ -117,7 +118,7 @@ pub(super) trait AbiEncoding {
             }
             Type::FunctionSelector => {
                 let size = ns.target.selector_length().into();
-                self.encode_linear(expr, buffer, offset, vartab, cfg, size)
+                self.encode_direct(expr, buffer, offset, vartab, cfg, size)
             }
             Type::Ref(r) => {
                 if let Type::Struct(ty) = &**r {
@@ -151,7 +152,7 @@ pub(super) trait AbiEncoding {
     }
 
     /// Write whatever is inside the given `expr` into `buffer` without any modification.
-    fn encode_linear(
+    fn encode_direct(
         &mut self,
         expr: &Expression,
         buffer: &Expression,

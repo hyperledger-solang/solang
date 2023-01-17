@@ -849,23 +849,19 @@ pub fn expression(
             kind: ast::Builtin::AbiEncodePacked,
             args,
             ..
-        } => abi_encode_packed_expression(args, cfg, contract_no, func, ns, vartab, loc, opt),
+        } => abi_encode_packed(args, cfg, contract_no, func, ns, vartab, loc, opt),
         ast::Expression::Builtin {
             loc,
             kind: ast::Builtin::AbiEncodeWithSelector,
             args,
             ..
-        } => {
-            abi_encode_expression_with_selector(args, cfg, contract_no, func, ns, vartab, loc, opt)
-        }
+        } => abi_encode_with_selector(args, cfg, contract_no, func, ns, vartab, loc, opt),
         ast::Expression::Builtin {
             loc,
             kind: ast::Builtin::AbiEncodeWithSignature,
             args,
             ..
-        } => {
-            abi_encode_expression_with_signature(args, loc, cfg, contract_no, func, ns, vartab, opt)
-        }
+        } => abi_encode_with_signature(args, loc, cfg, contract_no, func, ns, vartab, opt),
         ast::Expression::Builtin {
             loc,
             kind: ast::Builtin::AbiEncodeCall,
@@ -1496,7 +1492,7 @@ fn abi_encode_many(
     abi_encode(loc, args, ns, vartab, cfg, false).0
 }
 
-fn abi_encode_packed_expression(
+fn abi_encode_packed(
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -1529,7 +1525,7 @@ fn encode_many_with_selector(
     abi_encode(loc, encoder_args, ns, vartab, cfg, false).0
 }
 
-fn abi_encode_expression_with_selector(
+fn abi_encode_with_selector(
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -1555,7 +1551,7 @@ fn abi_encode_expression_with_selector(
     encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
-fn abi_encode_expression_with_signature(
+fn abi_encode_with_signature(
     args: &[ast::Expression],
     loc: &pt::Loc,
     cfg: &mut ControlFlowGraph,
