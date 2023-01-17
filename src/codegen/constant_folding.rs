@@ -290,13 +290,9 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 Instr::EmitEvent {
                     event_no,
                     data,
+                    size: data_len,
                     topics,
                 } => {
-                    let data = data
-                        .iter()
-                        .map(|e| expression(e, Some(&vars), cfg, ns).0)
-                        .collect();
-
                     let topics = topics
                         .iter()
                         .map(|e| expression(e, Some(&vars), cfg, ns).0)
@@ -304,7 +300,8 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
 
                     cfg.blocks[block_no].instr[instr_no].1 = Instr::EmitEvent {
                         event_no: *event_no,
-                        data,
+                        data: expression(data, Some(&vars), cfg, ns).0,
+                        size: expression(data_len, Some(&vars), cfg, ns).0,
                         topics,
                     }
                 }

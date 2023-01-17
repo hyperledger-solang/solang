@@ -1896,7 +1896,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         &self,
         binary: &Binary<'b>,
         function: FunctionValue<'b>,
-        data: &[BasicValueEnum<'b>],
+        data: BasicValueEnum<'b>,
+        size: BasicValueEnum<'b>,
         _topics: &[BasicValueEnum<'b>],
     ) {
         let fields = binary.build_array_alloca(
@@ -1917,7 +1918,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             )
         };
 
-        let bytes_pointer = binary.vector_bytes(data[0]);
+        let bytes_pointer = binary.vector_bytes(data);
         binary.builder.build_store(field_data, bytes_pointer);
 
         let field_len = unsafe {
@@ -1934,7 +1935,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary.builder.build_store(
             field_len,
             binary.builder.build_int_z_extend(
-                data[1].into_int_value(),
+                size.into_int_value(),
                 binary.context.i64_type(),
                 "data_len64",
             ),

@@ -53,7 +53,8 @@ impl EventEmitter for SolanaEventEmitter<'_> {
             vartab,
             Instr::EmitEvent {
                 event_no: self.event_no,
-                data: vec![abi_encoded, abi_encoded_size],
+                data: abi_encoded,
+                size: abi_encoded_size,
                 topics: vec![],
             },
         );

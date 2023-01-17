@@ -332,7 +332,8 @@ pub trait TargetRuntime<'a> {
         &self,
         bin: &Binary<'b>,
         function: FunctionValue<'b>,
-        data: &[BasicValueEnum<'b>],
+        data: BasicValueEnum<'b>,
+        size: BasicValueEnum<'b>,
         topics: &[BasicValueEnum<'b>],
     );
 

@@ -198,16 +198,18 @@ fn block_reduce(
             Instr::AbiDecode { data, .. } => {
                 *data = expression_reduce(data, &vars, ns);
             }
-            Instr::EmitEvent { topics, data, .. } => {
+            Instr::EmitEvent {
+                topics,
+                data,
+                size: data_len,
+                ..
+            } => {
                 *topics = topics
                     .iter()
                     .map(|e| expression_reduce(e, &vars, ns))
                     .collect();
-
-                *data = data
-                    .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
-                    .collect();
+                *data = expression_reduce(data, &vars, ns);
+                *data_len = expression_reduce(data_len, &vars, ns);
             }
             Instr::WriteBuffer { offset, .. } => {
                 *offset = expression_reduce(offset, &vars, ns);

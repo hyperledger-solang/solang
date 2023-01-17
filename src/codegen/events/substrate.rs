@@ -179,7 +179,8 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             vartab,
             Instr::EmitEvent {
                 event_no: self.event_no,
-                data: vec![data, size],
+                data,
+                size,
                 topics,
             },
         );
