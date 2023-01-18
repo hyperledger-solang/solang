@@ -203,27 +203,44 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
     let mut types_seen: HashSet<usize> = HashSet::new();
 
     for (field_no, field) in def.fields.iter().enumerate() {
-        if let Type::Struct(StructType::UserDefined(field_struct_no)) = field.ty {
-            if types_seen.contains(&field_struct_no) {
-                continue;
+        let field_struct_no = match &field.ty {
+            Type::Struct(StructType::UserDefined(n)) => *n,
+            Type::Mapping(_, v) => {
+                if let Type::Struct(StructType::UserDefined(n)) = **v {
+                    n
+                } else {
+                    continue;
+                }
             }
-
-            types_seen.insert(field_struct_no);
-
-            if structs_visited.contains(&field_struct_no) {
-                ns.diagnostics.push(Diagnostic::error_with_note(
-                    def.loc,
-                    format!("struct '{}' has infinite size", def.name),
-                    field.loc,
-                    format!("recursive field '{}'", field.name_as_str()),
-                ));
-
-                ns.structs[struct_no].fields[field_no].recursive = true;
-            } else {
-                structs_visited.push(field_struct_no);
-                find_struct_recursion(field_struct_no, structs_visited, ns);
-                structs_visited.pop();
+            Type::Array(v, _) => {
+                if let Type::Struct(StructType::UserDefined(n)) = **v {
+                    n
+                } else {
+                    continue;
+                }
             }
+            _ => continue,
+        };
+
+        if types_seen.contains(&field_struct_no) {
+            continue;
+        }
+
+        types_seen.insert(field_struct_no);
+
+        if structs_visited.contains(&field_struct_no) {
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                def.loc,
+                format!("struct '{}' has infinite size", def.name),
+                field.loc,
+                format!("recursive field '{}'", field.name_as_str()),
+            ));
+
+            ns.structs[struct_no].fields[field_no].recursive = true;
+        } else {
+            structs_visited.push(field_struct_no);
+            find_struct_recursion(field_struct_no, structs_visited, ns);
+            structs_visited.pop();
         }
     }
 }
