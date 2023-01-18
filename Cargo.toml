@@ -57,6 +57,7 @@ parse-display = "0.8.0"
 parity-scale-codec = "3.1"
 ink = "4.0.0-beta"
 scale-info = "2.3"
+stellar-xdr = { version = "0.0.12", default-features = false, features = ["std", "next", "base64"] }
 
 [dev-dependencies]
 num-derive = "0.3"
