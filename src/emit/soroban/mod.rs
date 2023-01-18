@@ -49,26 +49,7 @@ impl SorobanTarget {
         ScEnvMetaEntry::ScEnvMetaKindInterfaceVersion(SOROBAN_ENV_INTERFACE_VERSION)
             .write_xdr(&mut meta)
             .expect("writing env meta interface version to xdr");
-        let meta = unsafe {
-            // TODO: Figure out the right way to generate the LLVM metadata for
-            // a slice of bytes. As far as I can tell the inkwell interface only
-            // provides a way to provide it as a &str, although internally it
-            // immediately converts it to a CStr, and LLVM allows non-unicode
-            // characters. We're currently misusing String's unchecked
-            // conversion function to intentionally get a String that holds
-            // non-utf8 data.
-            String::from_utf8_unchecked(meta)
-        };
-        binary
-            .module
-            .add_global_metadata(
-                "wasm.custom_sections",
-                &context.metadata_node(&[
-                    context.metadata_string("contractenvmetav0").into(),
-                    context.metadata_string(meta.as_str()).into(),
-                ]),
-            )
-            .expect("adding env meta as metadata");
+        add_custom_section(context, &binary.module, "contractenvmetav0", meta);
     }
 
     fn emit_spec_entries<'a>(
@@ -117,20 +98,7 @@ impl SorobanTarget {
             .write_xdr(&mut spec)
             .expect(format!("writing spec to xdr for function {}", cfg.name).as_str());
         }
-        let spec = unsafe {
-            // TODO: See comment in emit_env_meta_entries.
-            String::from_utf8_unchecked(spec)
-        };
-        binary
-            .module
-            .add_global_metadata(
-                "wasm.custom_sections",
-                &context.metadata_node(&[
-                    context.metadata_string("contractspecv0").into(),
-                    context.metadata_string(spec.as_str()).into(),
-                ]),
-            )
-            .expect("adding spec as metadata");
+        add_custom_section(context, &binary.module, "contractspecv0", spec);
     }
 }
 
@@ -162,4 +130,26 @@ fn function_name<'a>(s: &'a str) -> &'a str {
         }
         _ => panic!("unsupported function kind {:?}", s),
     }
+}
+
+fn add_custom_section<'a>(context: &'a Context, module: &Module<'a>, name: &'a str, value: Vec<u8>) {
+    let value_str = unsafe {
+        // TODO: Figure out the right way to generate the LLVM metadata for
+        // a slice of bytes. As far as I can tell the inkwell interface only
+        // provides a way to provide it as a &str, although internally it
+        // immediately converts it to a CStr, and LLVM allows non-unicode
+        // characters. We're currently misusing String's unchecked
+        // conversion function to intentionally get a String that holds
+        // non-utf8 data.
+        String::from_utf8_unchecked(value)
+    };
+    module
+        .add_global_metadata(
+            "wasm.custom_sections",
+            &context.metadata_node(&[
+                context.metadata_string(name).into(),
+                context.metadata_string(&value_str).into(),
+            ]),
+        )
+        .expect("adding spec as metadata");
 }
