@@ -36,7 +36,7 @@ impl SorobanTarget {
             None,
         );
 
-        // TODO: emit_functions(&mut SorobanTarget, &mut binary, contract, ns);
+        emit_functions(&mut SorobanTarget, &mut binary, contract, ns);
 
         Self::emit_env_meta_entries(context, &mut binary);
         Self::emit_spec_entries(context, contract, &mut binary);
