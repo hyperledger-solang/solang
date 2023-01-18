@@ -54,7 +54,9 @@ impl SorobanTarget {
             // a slice of bytes. As far as I can tell the inkwell interface only
             // provides a way to provide it as a &str, although internally it
             // immediately converts it to a CStr, and LLVM allows non-unicode
-            // characters.
+            // characters. We're currently misusing String's unchecked
+            // conversion function to intentionally get a String that holds
+            // non-utf8 data.
             String::from_utf8_unchecked(meta)
         };
         binary
