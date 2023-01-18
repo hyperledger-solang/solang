@@ -13,6 +13,7 @@ use stellar_xdr::{
 // how to return errors from build.
 
 const SOROBAN_ENV_INTERFACE_VERSION: u64 = 27;
+const SOROBAN_SYMBOL_MAX_LENGTH: usize = 10;
 
 pub struct SorobanTarget;
 
@@ -151,10 +152,10 @@ fn function_name<'a>(s: &'a str) -> &'a str {
         "constructor" => "init",
         _ => {
             let name = name.splitn(2, "__").next().unwrap();
-            if name.len() <= 10 {
+            if name.len() <= SOROBAN_SYMBOL_MAX_LENGTH {
                 name
             } else {
-                &name[..10]
+                &name[..SOROBAN_SYMBOL_MAX_LENGTH]
             }
         }
     }
