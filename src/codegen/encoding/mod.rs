@@ -705,7 +705,7 @@ fn calculate_array_size(
         None
     };
 
-    let size_var = if let Some(compile_type_size) = primitive_size {
+    if let Some(compile_type_size) = primitive_size {
         // If the array saves primitive-type elements, its size is sizeof(type)*vec.length
         let mut size = if let ArrayLength::Fixed(dim) = &dims.last().unwrap() {
             Expression::NumberLiteral(Codegen, Uint(32), dim.clone())
@@ -741,8 +741,12 @@ fn calculate_array_size(
                 expr: size,
             },
         );
-
-        Expression::Variable(Codegen, Uint(32), size_var)
+        let size_var = Expression::Variable(Codegen, Uint(32), size_var);
+        if encoder.is_packed() || !matches!(&dims.last().unwrap(), ArrayLength::Dynamic) {
+            return size_var;
+        }
+        let size_width = encoder.size_width(&size_var, vartab, cfg);
+        Expression::Add(Codegen, Uint(32), false, size_var.into(), size_width.into())
     } else {
         let size_var = vartab.temp_name(format!("array_bytes_size_{}", arg_no).as_str(), &Uint(32));
         cfg.add(
@@ -767,18 +771,12 @@ fn calculate_array_size(
             cfg,
         );
         Expression::Variable(Codegen, Uint(32), size_var)
-    };
-
-    if !encoder.is_packed() && matches!(&dims.last().unwrap(), ArrayLength::Dynamic) {
-        let size_width = encoder.size_width(&size_var, vartab, cfg);
-        Expression::Add(Codegen, Uint(32), false, size_var.into(), size_width.into())
-    } else {
-        size_var
     }
 }
 
 /// Calculate the size of a complex array.
-/// This function indexes an array from its outer dimension to its inner one
+/// This function indexes an array from its outer dimension to its inner one and
+/// accounts for the encoded length size for dynamic dimensions.
 fn calculate_complex_array_size(
     encoder: &mut Box<dyn AbiEncoding>,
     arg_no: usize,
@@ -791,6 +789,22 @@ fn calculate_complex_array_size(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) {
+    // If this dimension is dynamic, account for the encoded vector length variable.
+    if !encoder.is_packed() && dims[dimension] == ArrayLength::Dynamic {
+        let arr = load_sub_array(arr.clone(), &dims[(dimension + 1)..], indexes, true).0;
+        let size = Expression::Builtin(Codegen, vec![Uint(32)], Builtin::ArrayLength, vec![arr]);
+        let size_width = encoder.size_width(&size, vartab, cfg);
+        let size_var = Expression::Variable(Codegen, Uint(32), size_var_no);
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc: Codegen,
+                res: size_var_no,
+                expr: Expression::Add(Codegen, Uint(32), false, size_var.into(), size_width.into()),
+            },
+        );
+    }
+
     let for_loop = set_array_loop(arr, dims, dimension, indexes, vartab, cfg);
     cfg.set_basic_block(for_loop.body_block);
     if 0 == dimension {
