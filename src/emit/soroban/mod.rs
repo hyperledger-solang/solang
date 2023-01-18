@@ -150,7 +150,7 @@ fn function_name<'a>(s: &'a str) -> &'a str {
     let name = iter.next().unwrap();
     match kind {
         "constructor" => "init",
-        _ => {
+        "function" => {
             let name = name.splitn(2, "__").next().unwrap();
             if name.len() <= SOROBAN_SYMBOL_MAX_LENGTH {
                 name
@@ -158,5 +158,6 @@ fn function_name<'a>(s: &'a str) -> &'a str {
                 &name[..SOROBAN_SYMBOL_MAX_LENGTH]
             }
         }
+        _ => panic!("unsupported function kind {:?}", s),
     }
 }
