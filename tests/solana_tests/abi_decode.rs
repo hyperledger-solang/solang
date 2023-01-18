@@ -1215,3 +1215,38 @@ fn string_fixed_array() {
     let encoded = input.try_to_vec().unwrap();
     let _ = vm.function("testing", &[BorshToken::Bytes(encoded)]);
 }
+
+#[test]
+fn double_dynamic_array() {
+    let mut vm = build_solidity(
+        r#"
+    contract Testing {
+        function testThis(bytes memory bb) public pure {
+            (uint32 a, uint16[][] memory vec, int64 b) = abi.decode(bb, (uint32, uint16[][], int64));
+            assert(a == 99);
+            assert(vec[0][0] == 99);
+            assert(vec[0][1] == 20);
+            assert(vec[1][0] == 15);
+            assert(vec[1][1] == 88);
+            assert(b == -755);
+        }
+    }
+        "#,
+    );
+    vm.constructor(&[]);
+
+    #[derive(Debug, BorshSerialize)]
+    struct Input {
+        item_1: u32,
+        item_2: Vec<Vec<u16>>,
+        item_3: i64,
+    }
+
+    let input = Input {
+        item_1: 99,
+        item_2: vec![vec![99, 20], vec![15, 88]],
+        item_3: -755,
+    };
+    let encoded = input.try_to_vec().unwrap();
+    let _ = vm.function("testThis", &[BorshToken::Bytes(encoded)]);
+}
