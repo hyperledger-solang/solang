@@ -132,7 +132,12 @@ fn function_name<'a>(s: &'a str) -> &'a str {
     }
 }
 
-fn add_custom_section<'a>(context: &'a Context, module: &Module<'a>, name: &'a str, value: Vec<u8>) {
+fn add_custom_section<'a>(
+    context: &'a Context,
+    module: &Module<'a>,
+    name: &'a str,
+    value: Vec<u8>,
+) {
     let value_str = unsafe {
         // TODO: Figure out the right way to generate the LLVM metadata for
         // a slice of bytes. As far as I can tell the inkwell interface only
