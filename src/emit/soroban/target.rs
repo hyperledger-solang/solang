@@ -1,16 +1,17 @@
-use crate::codegen::cfg::{HashTy, ReturnCode};
+use crate::codegen::cfg::HashTy;
 use crate::codegen::Expression;
 use crate::emit::binary::Binary;
 use crate::emit::soroban::SorobanTarget;
 use crate::emit::{TargetRuntime, Variable};
 use crate::sema::ast;
 use crate::sema::ast::{Contract, Function, Namespace, Type};
-use inkwell::types::{BasicType, IntType};
+use inkwell::types::IntType;
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
 use std::collections::HashMap;
 
+#[allow(unused_variables)] // TODO: Remove when implementing TargetRuntime.
 impl<'a> TargetRuntime<'a> for SorobanTarget {
     fn abi_decode<'b>(
         &self,
