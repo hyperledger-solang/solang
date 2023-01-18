@@ -25,7 +25,7 @@ impl SorobanTarget {
             std_lib,
             None,
         );
-        emit_functions(&mut SorobanTarget, &mut binary, contract, ns);
+        // TODO: emit_functions(&mut SorobanTarget, &mut binary, contract, ns);
         binary
     }
 }
