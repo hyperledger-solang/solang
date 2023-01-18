@@ -29,10 +29,7 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
         CString::new("--global-base=0").unwrap(),
     ];
 
-    command_line.push(CString::new("--export").unwrap());
-    command_line.push(CString::new("deploy").unwrap());
-    command_line.push(CString::new("--export").unwrap());
-    command_line.push(CString::new("call").unwrap());
+    command_line.push(CString::new("--export-dynamic").unwrap());
 
     command_line.push(CString::new("--import-memory").unwrap());
     command_line.push(CString::new("--initial-memory=1048576").unwrap());
