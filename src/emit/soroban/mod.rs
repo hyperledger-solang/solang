@@ -82,7 +82,6 @@ impl SorobanTarget {
             if !cfg.public {
                 continue;
             }
-            cfg.params.iter().count();
             ScSpecEntry::FunctionV0(ScSpecFunctionV0 {
                 name: function_name(&cfg.name)
                     .try_into()
