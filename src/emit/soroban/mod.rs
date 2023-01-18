@@ -1,3 +1,6 @@
+pub(super) mod target;
+
+use crate::emit::functions::emit_functions;
 use crate::{codegen::Options, emit::Binary, sema::ast};
 use inkwell::context::Context;
 use inkwell::module::Module;
@@ -13,7 +16,7 @@ impl SorobanTarget {
         filename: &'a str,
         opt: &'a Options,
     ) -> Binary<'a> {
-        Binary::new(
+        let mut binary = Binary::new(
             context,
             ns.target,
             &contract.name,
@@ -21,6 +24,8 @@ impl SorobanTarget {
             opt,
             std_lib,
             None,
-        )
+        );
+        emit_functions(&mut SorobanTarget, &mut binary, contract, ns);
+        binary
     }
 }
