@@ -410,6 +410,7 @@ impl BasicBlock {
 #[derive(Clone)]
 pub struct ControlFlowGraph {
     pub name: String,
+    pub original_name: String,
     pub function_no: ASTFunction,
     pub params: Arc<Vec<Parameter>>,
     pub returns: Arc<Vec<Parameter>>,
@@ -432,9 +433,10 @@ pub enum ASTFunction {
 }
 
 impl ControlFlowGraph {
-    pub fn new(name: String, function_no: ASTFunction) -> Self {
+    pub fn new(name: String, function_name: String, function_no: ASTFunction) -> Self {
         let mut cfg = ControlFlowGraph {
             name,
+            original_name: function_name,
             function_no,
             params: Arc::new(Vec::new()),
             returns: Arc::new(Vec::new()),
@@ -457,6 +459,7 @@ impl ControlFlowGraph {
     pub fn placeholder() -> Self {
         ControlFlowGraph {
             name: String::new(),
+            original_name: String::new(),
             function_no: ASTFunction::None,
             params: Arc::new(Vec::new()),
             returns: Arc::new(Vec::new()),
@@ -1534,6 +1537,7 @@ fn function_cfg(
 
     let mut cfg = ControlFlowGraph::new(
         name,
+        func.name.clone(),
         if let Some(num) = function_no {
             ASTFunction::SolidityFunction(num)
         } else {
@@ -1805,7 +1809,7 @@ fn generate_modifier_dispatch(
         chain_no,
         modifier.llvm_symbol(ns)
     );
-    let mut cfg = ControlFlowGraph::new(name, ASTFunction::None);
+    let mut cfg = ControlFlowGraph::new(name.clone(), name, ASTFunction::None);
 
     cfg.params = func.params.clone();
     cfg.returns = func.returns.clone();

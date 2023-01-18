@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    codegen::cfg::ControlFlowGraph,
     emit::{binary::Binary, cfg::emit_cfg, TargetRuntime},
     sema::ast::{Contract, Namespace, Type},
 };
@@ -14,8 +15,9 @@ use inkwell::{
 pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(
     target: &mut T,
     bin: &mut Binary<'a>,
-    contract: &Contract,
+    contract: &'a Contract,
     ns: &Namespace,
+    fn_name_map: impl Fn(&'a ControlFlowGraph) -> &'a str,
 ) {
     let mut defines = Vec::new();
 
@@ -33,13 +35,15 @@ pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(
                 ns,
             );
 
-            let func_decl = if let Some(func) = bin.module.get_function(&cfg.name) {
+            let name = fn_name_map(&cfg);
+
+            let func_decl = if let Some(func) = bin.module.get_function(&name) {
                 // must not have a body yet
                 assert_eq!(func.get_first_basic_block(), None);
 
                 func
             } else {
-                bin.module.add_function(&cfg.name, ftype, None)
+                bin.module.add_function(&name, ftype, None)
             };
 
             bin.functions.insert(cfg_no, func_decl);

@@ -36,12 +36,27 @@ impl SorobanTarget {
             None,
         );
 
-        emit_functions(&mut SorobanTarget, &mut binary, contract, ns);
+        emit_functions(&mut SorobanTarget, &mut binary, contract, ns, |cfg| {
+            &cfg.original_name
+        });
 
         Self::emit_env_meta_entries(context, &mut binary);
         Self::emit_spec_entries(context, contract, &mut binary);
+        Self::internalize(contract, &mut binary);
 
         binary
+    }
+
+    fn internalize<'a>(contract: &ast::Contract, binary: &mut Binary<'a>) {
+        let exports = contract
+            .cfg
+            .iter()
+            .filter(|cfg| !cfg.is_placeholder())
+            .filter(|cfg| cfg.public)
+            .filter(|cfg| cfg.original_name.len() > 0)
+            .map(|cfg| cfg.name.as_str())
+            .collect::<Vec<_>>();
+        binary.internalize(&exports);
     }
 
     fn emit_env_meta_entries<'a>(context: &'a Context, binary: &mut Binary<'a>) {

@@ -167,7 +167,7 @@ impl SubstrateTarget {
 
         target.declare_externals(&binary);
 
-        emit_functions(&mut target, &mut binary, contract, ns);
+        emit_functions(&mut target, &mut binary, contract, ns, |cfg| &cfg.name);
 
         target.emit_deploy(&mut binary, contract, ns);
         target.emit_call(&binary, contract, ns);

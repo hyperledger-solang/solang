@@ -23,7 +23,11 @@ pub(super) fn function_dispatch(
     opt: &Options,
 ) -> ControlFlowGraph {
     let mut vartab = Vartable::new(ns.next_id);
-    let mut cfg = ControlFlowGraph::new("solang_dispatch".into(), ASTFunction::None);
+    let mut cfg = ControlFlowGraph::new(
+        "solang_dispatch".into(),
+        "solang_dispatch".into(),
+        ASTFunction::None,
+    );
 
     let switch_block = cfg.new_basic_block("switch".to_string());
     let no_function_matched = cfg.new_basic_block("no_function_matched".to_string());

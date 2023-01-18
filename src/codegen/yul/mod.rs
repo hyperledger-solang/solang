@@ -64,7 +64,11 @@ fn yul_function_cfg(
         "{}::yul_function_{}::{}",
         ns.contracts[contract_no].name, function_no, yul_func.name
     );
-    let mut cfg = ControlFlowGraph::new(func_name, ASTFunction::YulFunction(function_no));
+    let mut cfg = ControlFlowGraph::new(
+        func_name.clone(),
+        func_name,
+        ASTFunction::YulFunction(function_no),
+    );
 
     cfg.params = yul_func.params.clone();
     cfg.returns = yul_func.returns.clone();

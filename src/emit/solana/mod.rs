@@ -69,7 +69,7 @@ impl SolanaTarget {
         // externals
         target.declare_externals(&mut binary, ns);
 
-        emit_functions(&mut target, &mut binary, contract, ns);
+        emit_functions(&mut target, &mut binary, contract, ns, |cfg| &cfg.name);
 
         binary.internalize(&[
             "entrypoint",
