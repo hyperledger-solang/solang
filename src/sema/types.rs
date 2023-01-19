@@ -197,7 +197,7 @@ fn type_decl(
     });
 }
 
-/// check if a struct contains itself. This function calls itself recursively
+/// Check if a struct contains itself. This function calls itself recursively.
 fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns: &mut Namespace) {
     let def = ns.structs[struct_no].clone();
     let mut types_seen: HashSet<usize> = HashSet::new();
@@ -205,28 +205,16 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
     for (field_no, field) in def.fields.iter().enumerate() {
         let field_struct_no = match &field.ty {
             Type::Struct(StructType::UserDefined(n)) => *n,
-            Type::Mapping(_, v) => {
-                if let Type::Struct(StructType::UserDefined(n)) = **v {
-                    n
-                } else {
-                    continue;
-                }
-            }
-            Type::Array(v, _) => {
-                if let Type::Struct(StructType::UserDefined(n)) = **v {
-                    n
-                } else {
-                    continue;
-                }
-            }
+            Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
+                (Type::Struct(StructType::UserDefined(n)), Some(ArrayLength::Fixed(_))) => *n,
+                _ => continue,
+            },
             _ => continue,
         };
 
-        if types_seen.contains(&field_struct_no) {
+        if !types_seen.insert(field_struct_no) {
             continue;
         }
-
-        types_seen.insert(field_struct_no);
 
         if structs_visited.contains(&field_struct_no) {
             ns.diagnostics.push(Diagnostic::error_with_note(

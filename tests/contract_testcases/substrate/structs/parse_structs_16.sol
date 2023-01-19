@@ -1,8 +1,11 @@
 contract AddressTree {
-    struct Tree {
-        mapping(uint256 => Wrapped) Items;
+    struct MapTree {
+        mapping(uint256 => MapTree) Items; // OK
     }
-	struct Wrapped {
-		Tree[] Arr;
-	}
+    struct ArrayTreeDynamic {
+        ArrayTreeDynamic[] Arr; // OK
+    }
+    struct ArrayTreeFixed {
+        ArrayTreeFixed[2] Arr; // Recursive struct definision
+    }
 }
