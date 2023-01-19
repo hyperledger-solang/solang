@@ -31,9 +31,9 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
 
     command_line.push(CString::new("--export-dynamic").unwrap());
 
-    command_line.push(CString::new("--import-memory").unwrap());
-    command_line.push(CString::new("--initial-memory=1048576").unwrap());
-    command_line.push(CString::new("--max-memory=1048576").unwrap());
+    // command_line.push(CString::new("--import-memory").unwrap());
+    // command_line.push(CString::new("--initial-memory=1048576").unwrap());
+    // command_line.push(CString::new("--max-memory=1048576").unwrap());
 
     command_line.push(
         CString::new(
@@ -61,27 +61,27 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
         parity_wasm::deserialize_buffer(&output).expect("cannot deserialize llvm wasm");
 
     {
-        let imports = module.import_section_mut().unwrap().entries_mut();
-        let mut ind = 0;
+        // let imports = module.import_section_mut().unwrap().entries_mut();
+        // let mut ind = 0;
 
-        while ind < imports.len() {
-            if imports[ind].field().starts_with("seal") {
-                let module_name = match imports[ind].field() {
-                    "seal_set_storage" => "seal2",
-                    "seal_clear_storage"
-                    | "seal_contains_storage"
-                    | "seal_get_storage"
-                    | "seal_instantiate"
-                    | "seal_terminate"
-                    | "seal_random"
-                    | "seal_call" => "seal1",
-                    _ => "seal0",
-                };
-                *imports[ind].module_mut() = module_name.to_owned();
-            }
+        // while ind < imports.len() {
+        //     if imports[ind].field().starts_with("seal") {
+        //         let module_name = match imports[ind].field() {
+        //             "seal_set_storage" => "seal2",
+        //             "seal_clear_storage"
+        //             | "seal_contains_storage"
+        //             | "seal_get_storage"
+        //             | "seal_instantiate"
+        //             | "seal_terminate"
+        //             | "seal_random"
+        //             | "seal_call" => "seal1",
+        //             _ => "seal0",
+        //         };
+        //         *imports[ind].module_mut() = module_name.to_owned();
+        //     }
 
-            ind += 1;
-        }
+        //     ind += 1;
+        // }
     }
 
     // remove empty initializers
