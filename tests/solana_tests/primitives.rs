@@ -3,7 +3,7 @@
 use crate::build_solidity_with_overflow_check;
 use crate::{build_solidity, BorshToken};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt};
-use num_traits::{ToPrimitive, Zero};
+use num_traits::{One, ToPrimitive, Zero};
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::ops::BitAnd;
@@ -1577,4 +1577,48 @@ fn bytes_cast() {
         .unwrap();
 
     assert_eq!(returns, BorshToken::uint8_fixed_array(b"abcde".to_vec()));
+}
+
+#[test]
+fn shift_after_load() {
+    let mut vm = build_solidity(
+        r#"
+    contract OneSwapToken {
+        function testIt(uint256[] calldata mixedAddrVal) public pure returns (uint256, uint256) {
+            uint256 a = mixedAddrVal[0]<<2;
+            uint256 b = mixedAddrVal[1]>>2;
+            return (a, b);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor(&[]);
+    let args = BorshToken::Array(vec![
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::one(),
+        },
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(4u8),
+        },
+    ]);
+    let returns = vm.function("testIt", &[args]).unwrap().unwrap_tuple();
+
+    assert_eq!(returns.len(), 2);
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(4u8)
+        }
+    );
+    assert_eq!(
+        returns[1],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::one(),
+        }
+    );
 }
