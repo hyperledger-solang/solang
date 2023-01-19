@@ -32,22 +32,15 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 ) {
     match ins {
         Instr::Nop => (),
-        Instr::Return { value } if value.is_empty() => {
-            bin.builder
-                .build_return(Some(&bin.return_values[&ReturnCode::Success]));
-        }
-        Instr::Return { value } => {
-            let returns_offset = cfg.params.len();
-            for (i, val) in value.iter().enumerate() {
-                let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
+        Instr::Return { value } => match value.iter().next() {
+            Some(val) => {
                 let retval = expression(target, bin, val, &w.vars, function, ns);
-
-                bin.builder.build_store(arg.into_pointer_value(), retval);
+                bin.builder.build_return(Some(&retval));
             }
-
-            bin.builder
-                .build_return(Some(&bin.return_values[&ReturnCode::Success]));
-        }
+            None => {
+                bin.builder.build_return(None);
+            }
+        },
         Instr::Set { res, expr, .. } => {
             if let Expression::Undefined(expr_type) = expr {
                 // If the variable has been declared as undefined, but we can

@@ -607,40 +607,15 @@ impl<'a> Binary<'a> {
         ns: &Namespace,
     ) -> FunctionType<'a> {
         // function parameters
-        let mut args = params
+        let args = params
             .iter()
             .map(|ty| self.llvm_var_ty(ty, ns).into())
             .collect::<Vec<BasicMetadataTypeEnum>>();
 
-        // add return values
-        for ty in returns {
-            args.push(if ty.is_reference_type(ns) && !ty.is_contract_storage() {
-                self.llvm_type(ty, ns)
-                    .ptr_type(AddressSpace::Generic)
-                    .ptr_type(AddressSpace::Generic)
-                    .into()
-            } else {
-                self.llvm_type(ty, ns)
-                    .ptr_type(AddressSpace::Generic)
-                    .into()
-            });
+        match returns.iter().next() {
+            Some(ret) => self.llvm_type(ret, ns).fn_type(&args, false),
+            None => self.context.void_type().fn_type(&args, false),
         }
-
-        // On Solana, we need to pass around the accounts
-        if ns.target == Target::Solana {
-            args.push(
-                self.module
-                    .get_struct_type("struct.SolParameters")
-                    .unwrap()
-                    .ptr_type(AddressSpace::Generic)
-                    .into(),
-            );
-        }
-
-        // Solana return type should be 64 bit, 32 bit on wasm
-        self.return_values[&ReturnCode::Success]
-            .get_type()
-            .fn_type(&args, false)
     }
 
     // Create the llvm intrinsic for counting leading zeros
