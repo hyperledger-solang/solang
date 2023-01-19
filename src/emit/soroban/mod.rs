@@ -54,7 +54,7 @@ impl SorobanTarget {
             .filter(|cfg| !cfg.is_placeholder())
             .filter(|cfg| cfg.public)
             .filter(|cfg| cfg.original_name.len() > 0)
-            .map(|cfg| cfg.name.as_str())
+            .map(|cfg| cfg.original_name.as_str())
             .collect::<Vec<_>>();
         binary.internalize(&exports);
     }
