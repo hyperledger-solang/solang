@@ -5,8 +5,7 @@ use crate::codegen::encoding::buffer_validator::BufferValidator;
 use crate::codegen::encoding::{
     allocate_array, allow_direct_copy, calculate_array_bytes_size,
     calculate_direct_copy_bytes_size, calculate_size_args, finish_array_loop, increment_four,
-    load_array_item, load_struct_member, load_sub_array, retrieve_array_length, set_array_loop,
-    AbiEncoding,
+    index_array, load_struct_member, retrieve_array_length, set_array_loop, AbiEncoding,
 };
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
@@ -658,12 +657,8 @@ impl BorshEncoding {
             // TODO: 'int[3][][4] vec', but it needs testing, as soon as Solang works with them.
             // TODO: A discussion about this is under way here: https://github.com/hyperledger/solang/issues/932
             // We only support dynamic arrays whose non-constant length is the outer one.
-            let (sub_array, _) = load_sub_array(
-                arr.clone(),
-                &dims[(dimension + 1)..dims.len()],
-                indexes,
-                true,
-            );
+
+            let sub_array = index_array(arr.clone(), dims, indexes, false);
 
             let size = Expression::Builtin(
                 Loc::Codegen,
@@ -694,7 +689,7 @@ impl BorshEncoding {
         cfg.set_basic_block(for_loop.body_block);
         if 0 == dimension {
             // If we are indexing the last dimension, we have an element, so we can encode it.
-            let deref = load_array_item(arr, dims, indexes);
+            let deref = index_array(arr.clone(), dims, indexes, false);
             let offset_expr = Expression::Variable(Loc::Codegen, Type::Uint(32), offset_var);
             let elem_size = self.encode(&deref, buffer, &offset_expr, arg_no, ns, vartab, cfg);
             cfg.add(
@@ -1231,12 +1226,7 @@ impl BorshEncoding {
             } else {
                 // TODO: This is wired up for multidimensional dynamic arrays, but they do no work yet
                 // Check https://github.com/hyperledger/solang/issues/932 for more information
-                let (sub_arr, _) = load_sub_array(
-                    array_var.clone(),
-                    &dims[(dimension + 1)..dims.len()],
-                    indexes,
-                    true,
-                );
+                let sub_arr = index_array(array_var.clone(), dims, indexes, true);
                 cfg.add(
                     vartab,
                     Instr::Store {
@@ -1252,7 +1242,7 @@ impl BorshEncoding {
         if 0 == dimension {
             let (read_expr, advance) =
                 self.read_from_buffer(buffer, offset_expr, elem_ty, validator, ns, vartab, cfg);
-            let ptr = load_array_item(array_var, dims, indexes);
+            let ptr = index_array(array_var.clone(), dims, indexes, true);
 
             cfg.add(
                 vartab,
