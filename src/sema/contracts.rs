@@ -3,11 +3,12 @@
 use super::{
     annotions_not_allowed, ast,
     diagnostics::Diagnostics,
-    expression::{compatible_mutability, match_constructor_to_args, ExprContext},
+    expression::{compatible_mutability, ExprContext},
     functions, statements,
     symtable::Symtable,
     using, variables, ContractDefinition,
 };
+use crate::sema::expression::constructor::match_constructor_to_args;
 use crate::{sema::ast::Namespace, sema::unused_variable::emit_warning_local_variable};
 use num_bigint::BigInt;
 use num_traits::Zero;

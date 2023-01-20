@@ -5,12 +5,14 @@ use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
 use super::eval::check_term_for_constant_overflow;
 use super::expression::{
-    available_functions, call_expr, constructor_named_args, expression, function_call_expr,
-    function_call_pos_args, match_constructor_to_args, named_call_expr, named_function_call_expr,
-    new, ExprContext, ResolveTo,
+    available_functions, call_expr, expression, function_call_expr, function_call_pos_args,
+    named_call_expr, named_function_call_expr, ExprContext, ResolveTo,
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::sema::builtin;
+use crate::sema::expression::constructor::{
+    constructor_named_args, match_constructor_to_args, new,
+};
 use crate::sema::function_annotation::function_body_annotations;
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
