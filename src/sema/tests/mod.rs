@@ -2,8 +2,6 @@
 
 #![cfg(test)]
 use crate::sema::ast::{Expression, Parameter, Statement, TryCatch, Type};
-use crate::sema::diagnostics::Diagnostics;
-use crate::sema::expression::unescape;
 use crate::sema::yul::ast::InlineAssembly;
 use crate::{parse_and_resolve, sema::ast, FileResolver, Target};
 use solang_parser::pt::Loc;
@@ -15,19 +13,6 @@ pub(crate) fn parse(src: &'static str) -> ast::Namespace {
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::EVM);
     ns
-}
-
-#[test]
-fn test_unescape() {
-    let s = r#"\u00f3"#;
-    let mut vec = Diagnostics::default();
-    let res = unescape(s, 0, 0, &mut vec);
-    assert!(vec.is_empty());
-    assert_eq!(res, vec![0xc3, 0xb3]);
-    let s = r#"\xff"#;
-    let res = unescape(s, 0, 0, &mut vec);
-    assert!(vec.is_empty());
-    assert_eq!(res, vec![255]);
 }
 
 #[test]

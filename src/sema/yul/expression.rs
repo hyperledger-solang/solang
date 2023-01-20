@@ -2,7 +2,7 @@
 
 use crate::sema::ast::{ArrayLength, Namespace, Parameter, Symbol, Type};
 use crate::sema::diagnostics::Diagnostics;
-use crate::sema::expression::{unescape, ExprContext};
+use crate::sema::expression::{strings::unescape, ExprContext};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::yul::ast::{YulExpression, YulSuffix};
 use crate::sema::yul::builtin::{parse_builtin_keyword, yul_unsupported_builtin};
