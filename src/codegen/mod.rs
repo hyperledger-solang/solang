@@ -912,6 +912,28 @@ impl Expression {
                 Expression::Cast(self.loc(), to.clone(), Box::new(self.clone()))
             }
 
+            _ if from.is_reference_type(ns) && !to.is_reference_type(ns) => {
+                let expr = Expression::Cast(
+                    self.loc(),
+                    Type::Uint(ns.target.ptr_size()),
+                    self.clone().into(),
+                );
+
+                expr.cast(&to, ns)
+            }
+
+            _ if !from.is_reference_type(ns) && to.is_reference_type(ns) => {
+                // cast non-pointer to pointer
+                let ptr_ty = Type::Uint(ns.target.ptr_size());
+
+                Expression::Cast(self.loc(), to.clone(), self.cast(&ptr_ty, ns).into())
+            }
+
+            _ if !from.is_reference_type(ns) && !to.is_reference_type(ns) => {
+                // cast pointer to different pointer
+                Expression::Cast(self.loc(), to.clone(), self.clone().into())
+            }
+
             _ => self.clone(),
         }
     }

@@ -221,6 +221,10 @@ fn process_arithmetic(
 ) -> Expression {
     let left = expression(&args[0], contract_no, ns, vartab, cfg, opt);
     let right = expression(&args[1], contract_no, ns, vartab, cfg, opt);
+
+    let left = cast_to_number(left, ns);
+    let right = cast_to_number(right, ns);
+
     let (left, right) = equalize_types(left, right, ns);
 
     match builtin_ty {
@@ -307,6 +311,28 @@ fn process_arithmetic(
         }
 
         _ => panic!("This is not a binary arithmetic operation!"),
+    }
+}
+
+/// Arithmetic operations work on numbers, so addresses and pointers need to be
+/// converted to integers
+fn cast_to_number(expr: Expression, ns: &Namespace) -> Expression {
+    let ty = expr.ty();
+
+    if ty.is_reference_type(ns) {
+        Expression::Cast(
+            pt::Loc::Codegen,
+            Type::Uint(ns.target.ptr_size()),
+            expr.into(),
+        )
+    } else if ty.is_address() {
+        Expression::Cast(
+            pt::Loc::Codegen,
+            Type::Uint((ns.address_length * 8) as u16),
+            expr.into(),
+        )
+    } else {
+        expr
     }
 }
 

@@ -1897,6 +1897,14 @@ fn runtime_cast<'a>(
                 "ptr_to_int",
             )
             .into()
+    } else if to.is_reference_type(ns) && matches!(from, Type::Uint(_)) {
+        bin.builder
+            .build_int_to_ptr(
+                val.into_int_value(),
+                bin.llvm_type(to, ns).ptr_type(AddressSpace::Generic),
+                "int_to_ptr",
+            )
+            .into()
     } else if matches!((from, to), (Type::DynamicBytes, Type::Slice(_))) {
         let slice = bin.build_alloca(function, bin.llvm_type(to, ns), "slice");
 
