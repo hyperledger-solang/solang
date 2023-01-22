@@ -110,7 +110,7 @@ pub(super) fn abort_if_value_transfer<'a, T: TargetRuntime<'a> + ?Sized>(
         binary
             .context
             .i8_type()
-            .ptr_type(AddressSpace::Generic)
+            .ptr_type(AddressSpace::default())
             .const_null(),
         binary.context.i32_type().const_zero(),
     );

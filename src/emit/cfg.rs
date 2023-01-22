@@ -122,7 +122,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
                 // a null pointer means an empty, zero'ed thing, be it string, struct or array
                 let value = bin
                     .llvm_type(&v.ty, ns)
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .const_null()
                     .into();
 
@@ -192,8 +192,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
                         di_func_scope.unwrap().as_debug_info_scope(),
                         None,
                     );
-                    bin.builder
-                        .set_current_debug_location(bin.context, debug_loc);
+                    bin.builder.set_current_debug_location(debug_loc);
                 }
             }
 
