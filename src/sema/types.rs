@@ -450,7 +450,7 @@ fn contract_annotations(
                     Err(FromBase58Error::InvalidBase58Length) => {
                         ns.diagnostics.push(Diagnostic::error(
                             loc,
-                            format!("address literal {} invalid base58 length", string),
+                            format!("address literal {string} invalid base58 length"),
                         ));
                     }
                     Err(FromBase58Error::InvalidBase58Character(ch, pos)) => {
@@ -460,7 +460,7 @@ fn contract_annotations(
                         }
                         ns.diagnostics.push(Diagnostic::error(
                             loc,
-                            format!("address literal {} invalid character '{}'", string, ch),
+                            format!("address literal {string} invalid character '{ch}'"),
                         ));
                     }
                 }
@@ -527,10 +527,7 @@ pub fn struct_decl(
         if let Some(storage) = &field.storage {
             ns.diagnostics.push(Diagnostic::error(
                 storage.loc(),
-                format!(
-                    "storage location '{}' not allowed for struct field",
-                    storage
-                ),
+                format!("storage location '{storage}' not allowed for struct field"),
             ));
         }
 
@@ -870,11 +867,11 @@ impl Type {
             Type::Bool => "bool".to_string(),
             Type::Address(false) => "address".to_string(),
             Type::Address(true) => "address payable".to_string(),
-            Type::Int(n) => format!("int{}", n),
-            Type::Uint(n) => format!("uint{}", n),
+            Type::Int(n) => format!("int{n}"),
+            Type::Uint(n) => format!("uint{n}"),
             Type::Rational => "rational".to_string(),
             Type::Value => format!("uint{}", ns.value_length * 8),
-            Type::Bytes(n) => format!("bytes{}", n),
+            Type::Bytes(n) => format!("bytes{n}"),
             Type::String => "string".to_string(),
             Type::DynamicBytes => "bytes".to_string(),
             Type::Enum(n) => format!("enum {}", ns.enums[*n]),
@@ -884,7 +881,7 @@ impl Type {
                 ty.to_string(ns),
                 len.iter()
                     .map(|len| match len {
-                        ArrayLength::Fixed(len) => format!("[{}]", len),
+                        ArrayLength::Fixed(len) => format!("[{len}]"),
                         _ => "[]".to_string(),
                     })
                     .collect::<String>()
@@ -915,7 +912,7 @@ impl Type {
                 );
 
                 if !mutability.is_default() {
-                    write!(s, " {}", mutability).unwrap();
+                    write!(s, " {mutability}").unwrap();
                 }
 
                 if !returns.is_empty() {
@@ -972,10 +969,10 @@ impl Type {
                 format!("bytes{}", ns.address_length)
             }
             Type::Contract(_) | Type::Address(_) => "address".to_string(),
-            Type::Int(n) => format!("int{}", n),
-            Type::Uint(n) => format!("uint{}", n),
+            Type::Int(n) => format!("int{n}"),
+            Type::Uint(n) => format!("uint{n}"),
             Type::Rational => "rational".to_string(),
-            Type::Bytes(n) => format!("bytes{}", n),
+            Type::Bytes(n) => format!("bytes{n}"),
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
             Type::Enum(n) => ns.enums[*n].ty.to_signature_string(say_tuple, ns),
@@ -984,7 +981,7 @@ impl Type {
                 ty.to_signature_string(say_tuple, ns),
                 len.iter()
                     .map(|len| match len {
-                        ArrayLength::Fixed(len) => format!("[{}]", len),
+                        ArrayLength::Fixed(len) => format!("[{len}]"),
                         _ => "[]".to_string(),
                     })
                     .collect::<String>()
@@ -1662,9 +1659,9 @@ impl Type {
         match self {
             Type::Bool => "bool".to_string(),
             Type::Address(_) => "address".to_string(),
-            Type::Int(n) => format!("int{}", n),
-            Type::Uint(n) => format!("uint{}", n),
-            Type::Bytes(n) => format!("bytes{}", n),
+            Type::Int(n) => format!("int{n}"),
+            Type::Uint(n) => format!("uint{n}"),
+            Type::Bytes(n) => format!("bytes{n}"),
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
             Type::Enum(i) => format!("{}", ns.enums[*i]),
@@ -1675,7 +1672,7 @@ impl Type {
                 len.iter()
                     .map(|r| match r {
                         ArrayLength::Dynamic | ArrayLength::AnyFixed => ":".to_string(),
-                        ArrayLength::Fixed(r) => format!(":{}", r),
+                        ArrayLength::Fixed(r) => format!(":{r}"),
                     })
                     .collect::<String>()
             ),

@@ -185,23 +185,23 @@ pub enum Token<'input> {
 impl<'input> fmt::Display for Token<'input> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Token::Identifier(id) => write!(f, "{}", id),
-            Token::StringLiteral(false, s) => write!(f, "\"{}\"", s),
-            Token::StringLiteral(true, s) => write!(f, "unicode\"{}\"", s),
-            Token::HexLiteral(hex) => write!(f, "{}", hex),
-            Token::AddressLiteral(address) => write!(f, "{}", address),
-            Token::Number(integer, exp) if exp.is_empty() => write!(f, "{}", integer),
-            Token::Number(integer, exp) => write!(f, "{}e{}", integer, exp),
+            Token::Identifier(id) => write!(f, "{id}"),
+            Token::StringLiteral(false, s) => write!(f, "\"{s}\""),
+            Token::StringLiteral(true, s) => write!(f, "unicode\"{s}\""),
+            Token::HexLiteral(hex) => write!(f, "{hex}"),
+            Token::AddressLiteral(address) => write!(f, "{address}"),
+            Token::Number(integer, exp) if exp.is_empty() => write!(f, "{integer}"),
+            Token::Number(integer, exp) => write!(f, "{integer}e{exp}"),
             Token::RationalNumber(integer, fraction, exp) if exp.is_empty() => {
-                write!(f, "{}.{}", integer, fraction)
+                write!(f, "{integer}.{fraction}")
             }
             Token::RationalNumber(integer, fraction, exp) => {
-                write!(f, "{}.{}e{}", integer, fraction, exp)
+                write!(f, "{integer}.{fraction}e{exp}")
             }
-            Token::HexNumber(n) => write!(f, "{}", n),
-            Token::Uint(w) => write!(f, "uint{}", w),
-            Token::Int(w) => write!(f, "int{}", w),
-            Token::Bytes(w) => write!(f, "bytes{}", w),
+            Token::HexNumber(n) => write!(f, "{n}"),
+            Token::Uint(w) => write!(f, "uint{w}"),
+            Token::Int(w) => write!(f, "int{w}"),
+            Token::Bytes(w) => write!(f, "bytes{w}"),
             Token::Byte => write!(f, "byte"),
             Token::DynamicBytes => write!(f, "bytes"),
             Token::Semicolon => write!(f, ";"),
@@ -363,10 +363,10 @@ impl fmt::Display for LexicalError {
             }
             LexicalError::MissingNumber(..) => write!(f, "missing number"),
             LexicalError::InvalidCharacterInHexLiteral(_, ch) => {
-                write!(f, "invalid character '{}' in hex literal string", ch)
+                write!(f, "invalid character '{ch}' in hex literal string")
             }
-            LexicalError::UnrecognisedToken(_, t) => write!(f, "unrecognised token '{}'", t),
-            LexicalError::ExpectedFrom(_, t) => write!(f, "'{}' found where 'from' expected", t),
+            LexicalError::UnrecognisedToken(_, t) => write!(f, "unrecognised token '{t}'"),
+            LexicalError::ExpectedFrom(_, t) => write!(f, "'{t}' found where 'from' expected"),
             LexicalError::MissingExponent(..) => write!(f, "missing number"),
         }
     }

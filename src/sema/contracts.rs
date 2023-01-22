@@ -127,7 +127,7 @@ pub fn resolve_base_contracts(
                 if no == contract.contract_no {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         name.loc,
-                        format!("contract '{}' cannot have itself as a base contract", name),
+                        format!("contract '{name}' cannot have itself as a base contract"),
                     ));
                 } else if ns.contracts[contract.contract_no]
                     .bases
@@ -310,9 +310,9 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     {
                         diagnostics.push(ast::Diagnostic::error_with_note(
                             sym.loc(),
-                            format!("already defined '{}'", name),
+                            format!("already defined '{name}'"),
                             prev.loc(),
-                            format!("previous definition of '{}'", name),
+                            format!("previous definition of '{name}'"),
                         ));
                     }
                 }

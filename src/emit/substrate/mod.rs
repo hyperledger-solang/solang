@@ -511,7 +511,7 @@ impl SubstrateTarget {
                 );
 
                 (
-                    binary.builder.build_load(buf, &format!("bytes{}", len)),
+                    binary.builder.build_load(buf, &format!("bytes{len}")),
                     *len as u64,
                 )
             }
@@ -985,7 +985,7 @@ impl SubstrateTarget {
                 } else {
                     let temp = binary
                         .builder
-                        .build_alloca(arg.into_int_value().get_type(), &format!("bytes{}", n));
+                        .build_alloca(arg.into_int_value().get_type(), &format!("bytes{n}"));
 
                     binary.builder.build_store(temp, arg.into_int_value());
 
@@ -1832,10 +1832,10 @@ impl SubstrateTarget {
 
         let binary_name = &ns.contracts[binary_no].name;
 
-        let unique = format!("{}-{}", binary_name, counter);
+        let unique = format!("{binary_name}-{counter}");
 
         let salt = binary.emit_global_string(
-            &format!("salt_{}_{}", binary_name, counter),
+            &format!("salt_{binary_name}_{counter}"),
             blake2_rfc::blake2b::blake2b(32, &[], unique.as_bytes()).as_bytes(),
             true,
         );
@@ -1847,14 +1847,14 @@ impl SubstrateTarget {
 }
 
 /// Print the return code of API calls to the debug buffer.
-fn log_return_code<'b>(binary: &Binary<'b>, api: &'static str, code: IntValue) {
+fn log_return_code(binary: &Binary, api: &'static str, code: IntValue) {
     if !binary.options.log_api_return_codes {
         return;
     }
 
     emit_context!(binary);
 
-    let fmt = format!("{}=", api);
+    let fmt = format!("{api}=");
     let msg = fmt.as_bytes();
     let length = i32_const!(msg.len() as u64 + 16);
     let out_buf =

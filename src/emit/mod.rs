@@ -241,7 +241,7 @@ pub trait TargetRuntime<'a> {
     fn return_abi<'b>(&self, bin: &'b Binary, data: PointerValue<'b>, length: IntValue);
 
     /// Return failure without any result
-    fn assert_failure<'b>(&self, bin: &'b Binary, data: PointerValue, length: IntValue);
+    fn assert_failure(&self, bin: &Binary, data: PointerValue, length: IntValue);
 
     fn builtin_function(
         &self,

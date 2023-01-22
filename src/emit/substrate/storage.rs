@@ -93,7 +93,7 @@ impl StorageSlot for SubstrateTarget {
             .into_array_value()
     }
 
-    fn storage_delete_single_slot<'a>(&self, binary: &Binary<'a>, slot: PointerValue) {
+    fn storage_delete_single_slot(&self, binary: &Binary, slot: PointerValue) {
         emit_context!(binary);
 
         let ret = call!(

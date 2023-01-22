@@ -455,7 +455,7 @@ fn output_file(matches: &ArgMatches, stem: &str, ext: &str) -> PathBuf {
             .get_one::<OsString>("OUTPUT")
             .unwrap_or(&OsString::from(".")),
     )
-    .join(format!("{}.{}", stem, ext))
+    .join(format!("{stem}.{ext}"))
 }
 
 fn process_file(
@@ -634,7 +634,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
             let obj = match binary.code(Generate::Object) {
                 Ok(o) => o,
                 Err(s) => {
-                    println!("error: {}", s);
+                    println!("error: {s}");
                     exit(1);
                 }
             };
@@ -657,7 +657,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
             let obj = match binary.code(Generate::Assembly) {
                 Ok(o) => o,
                 Err(s) => {
-                    println!("error: {}", s);
+                    println!("error: {s}");
                     exit(1);
                 }
             };
@@ -721,20 +721,14 @@ fn target_arg(matches: &ArgMatches) -> Target {
     if !target.is_substrate()
         && matches.value_source("ADDRESS_LENGTH") == Some(ValueSource::CommandLine)
     {
-        eprintln!(
-            "error: address length cannot be modified for target '{}'",
-            target
-        );
+        eprintln!("error: address length cannot be modified for target '{target}'");
         exit(1);
     }
 
     if !target.is_substrate()
         && matches.value_source("VALUE_LENGTH") == Some(ValueSource::CommandLine)
     {
-        eprintln!(
-            "error: value length cannot be modified for target '{}'",
-            target
-        );
+        eprintln!("error: value length cannot be modified for target '{target}'");
         exit(1);
     }
 
@@ -751,7 +745,7 @@ fn imports_arg(matches: &ArgMatches) -> FileResolver {
     }
 
     if let Err(e) = resolver.add_import_path(&PathBuf::from(".")) {
-        eprintln!("error: cannot add current directory to import path: {}", e);
+        eprintln!("error: cannot add current directory to import path: {e}");
         exit(1);
     }
 

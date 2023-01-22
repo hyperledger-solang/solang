@@ -322,8 +322,7 @@ pub fn constructor_named_args(
             errors.push(Diagnostic::cast_error_with_note(
                 *loc,
                 format!(
-                    "constructor cannot be called with named arguments as {} of its parameters do not have names",
-                    unnamed_params,
+                    "constructor cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
                 ),
                 func.loc,
                 format!("definition of {}", func.ty),

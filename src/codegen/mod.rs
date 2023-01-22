@@ -656,9 +656,7 @@ impl Expression {
 
         // When converting from literals, there is not need to trunc or extend.
         match (self, &from, to) {
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Uint(to_len))
-                if p.is_primitive() =>
-            {
+            (Expression::NumberLiteral(_, _, n), p, &Type::Uint(to_len)) if p.is_primitive() => {
                 return if n.sign() == Sign::Minus {
                     let mut bs = n.to_signed_bytes_le();
                     bs.resize(to_len as usize / 8, 0xff);
@@ -671,43 +669,37 @@ impl Expression {
                     Expression::NumberLiteral(self.loc(), Type::Uint(to_len), n.clone())
                 }
             }
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Int(to_len))
-                if p.is_primitive() =>
-            {
+            (Expression::NumberLiteral(_, _, n), p, &Type::Int(to_len)) if p.is_primitive() => {
                 return Expression::NumberLiteral(self.loc(), Type::Int(to_len), n.clone());
             }
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Bytes(to_len))
-                if p.is_primitive() =>
-            {
+            (Expression::NumberLiteral(_, _, n), p, &Type::Bytes(to_len)) if p.is_primitive() => {
                 return Expression::NumberLiteral(self.loc(), Type::Bytes(to_len), n.clone());
             }
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Address(payable))
+            (Expression::NumberLiteral(_, _, n), p, &Type::Address(payable))
                 if p.is_primitive() =>
             {
                 return Expression::NumberLiteral(self.loc(), Type::Address(payable), n.clone());
             }
 
-            (&Expression::BytesLiteral(_, _, ref bs), p, &Type::Bytes(to_len))
-                if p.is_primitive() =>
-            {
+            (Expression::BytesLiteral(_, _, bs), p, &Type::Bytes(to_len)) if p.is_primitive() => {
                 let mut bs = bs.to_owned();
                 bs.resize(to_len as usize, 0);
                 return Expression::BytesLiteral(self.loc(), Type::Bytes(to_len), bs);
             }
-            (&Expression::BytesLiteral(loc, _, ref init), _, &Type::DynamicBytes)
-            | (&Expression::BytesLiteral(loc, _, ref init), _, &Type::String) => {
+            (Expression::BytesLiteral(loc, _, init), _, &Type::DynamicBytes)
+            | (Expression::BytesLiteral(loc, _, init), _, &Type::String) => {
                 return Expression::AllocDynamicBytes(
-                    loc,
+                    *loc,
                     to.clone(),
                     Box::new(Expression::NumberLiteral(
-                        loc,
+                        *loc,
                         Type::Uint(32),
                         BigInt::from(init.len()),
                     )),
                     Some(init.clone()),
                 );
             }
-            (&Expression::NumberLiteral(_, _, ref n), _, &Type::Rational) => {
+            (Expression::NumberLiteral(_, _, n), _, &Type::Rational) => {
                 return Expression::RationalNumberLiteral(
                     self.loc(),
                     Type::Rational,

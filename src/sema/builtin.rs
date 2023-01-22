@@ -1090,7 +1090,7 @@ pub(super) fn resolve_namespace_call(
                         if let Some(storage) = &param.storage {
                             diagnostics.push(Diagnostic::error(
                                 storage.loc(),
-                                format!("storage modifier '{}' not allowed", storage),
+                                format!("storage modifier '{storage}' not allowed"),
                             ));
                             broken = true;
                         }

@@ -360,7 +360,7 @@ pub fn function_call_pos_args(
         _ => {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("cannot find overloaded {} which matches signature", func_ty),
+                format!("cannot find overloaded {func_ty} which matches signature"),
             ));
         }
     }
@@ -421,8 +421,7 @@ pub(super) fn function_call_named_args(
             errors.push(Diagnostic::cast_error_with_note(
                 *loc,
                 format!(
-                    "function cannot be called with named arguments as {} of its parameters do not have names",
-                    unnamed_params,
+                    "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
                 ),
                 func.loc,
                 format!("definition of {}", func.name),
@@ -1607,8 +1606,7 @@ pub(super) fn method_call_named_args(
                 errors.push(Diagnostic::cast_error_with_note(
                     *loc,
                     format!(
-                        "function cannot be called with named arguments as {} of its parameters do not have names",
-                        unnamed_params,
+                        "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
                     ),
                     func.loc,
                     format!("definition of {}", func.name),

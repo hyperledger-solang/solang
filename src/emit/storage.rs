@@ -16,7 +16,7 @@ pub(super) trait StorageSlot {
     ) -> ArrayValue<'a>;
 
     /// Clear a particlar storage slot (slot-based storage chains should implement)
-    fn storage_delete_single_slot<'a>(&self, binary: &Binary<'a>, slot: PointerValue);
+    fn storage_delete_single_slot(&self, binary: &Binary, slot: PointerValue);
 
     /// Recursively load a type from storage for slot based storage
     fn storage_load_slot<'a>(

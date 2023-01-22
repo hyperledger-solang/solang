@@ -11,19 +11,19 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
     match &exp {
         Expression::StorageVariable {
             contract_no,
-            var_no: offset,
+            var_no,
             ..
         } => {
-            ns.contracts[*contract_no].variables[*offset].assigned = true;
+            ns.contracts[*contract_no].variables[*var_no].assigned = true;
         }
 
-        Expression::Variable { var_no: offset, .. } => {
-            let var = symtable.vars.get_mut(offset).unwrap();
+        Expression::Variable { var_no, .. } => {
+            let var = symtable.vars.get_mut(var_no).unwrap();
             var.assigned = true;
         }
 
-        Expression::StructMember { expr: str, .. } => {
-            assigned_variable(ns, str, symtable);
+        Expression::StructMember { expr, .. } => {
+            assigned_variable(ns, expr, symtable);
         }
 
         Expression::Subscript { array, index, .. } => {

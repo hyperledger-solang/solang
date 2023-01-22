@@ -43,7 +43,6 @@ fn file_resolver(target: Target) -> FileResolver {
 fn get_source_files(dir: &str) -> Vec<String> {
     read_dir(dir)
         .unwrap()
-        .into_iter()
         .filter_map(|entry| {
             let e = entry.unwrap();
             if let (true, Some(ext)) = (e.path().is_file(), e.path().extension()) {
@@ -86,7 +85,7 @@ fn assert_compile(dir: &str, target: Target) {
     let errors = get_source_files(dir)
         .par_iter()
         .filter_map(|path| try_compile(path, target).err().map(|msg| (path, msg)))
-        .map(|(path, msg)| println!("{} failed: {:#?}", path, msg))
+        .map(|(path, msg)| println!("{path} failed: {msg:#?}"))
         .count();
     assert_eq!(0, errors);
 }

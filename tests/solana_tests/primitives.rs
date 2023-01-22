@@ -209,7 +209,7 @@ fn bytes() {
                 return a >> r;
             }
         }"#
-        .replace("bytesN", &format!("bytes{}", width));
+        .replace("bytesN", &format!("bytes{width}"));
 
         let mut vm = build_solidity(&src);
 
@@ -295,7 +295,7 @@ fn bytes() {
 
             let r = rng.gen::<u32>() % (width as u32 * 8);
 
-            println!("w = {} r = {}", width, r);
+            println!("w = {width} r = {r}");
 
             let shl = vm
                 .function(
@@ -406,13 +406,13 @@ fn uint() {
                 return a >> r;
             }
         }"#
-        .replace("uintN", &format!("uint{}", width));
+        .replace("uintN", &format!("uint{width}"));
 
         let mut vm = build_solidity(&src);
 
         vm.constructor(&[]);
 
-        println!("width:{}", width);
+        println!("width:{width}");
         let returned_width = width.next_power_of_two();
 
         for _ in 0..10 {
@@ -430,7 +430,7 @@ fn uint() {
                 }],
             );
 
-            println!("{:x} = {:?} o", a, res);
+            println!("{a:x} = {res:?} o");
 
             let add = vm
                 .function(
@@ -451,7 +451,7 @@ fn uint() {
             let mut res = a.clone().add(&b);
             truncate_biguint(&mut res, width);
 
-            println!("{:x} + {:x} = {:?} or {:x}", a, b, add, res);
+            println!("{a:x} + {b:x} = {add:?} or {res:x}");
 
             assert_eq!(
                 add,
@@ -768,7 +768,7 @@ fn test_power_overflow_boundaries() {
                 return a ** b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
         let mut contract = build_solidity_with_overflow_check(&src, true);
         contract.constructor(&[]);
@@ -826,7 +826,7 @@ fn test_overflow_boundaries() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
@@ -990,18 +990,18 @@ fn test_mul_within_range_signed() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
         let mut contract = build_solidity(&src);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. Here we generate a random number within this range and multiply it by -1, 1 or 0.
         let first_operand_rand = rng.gen_bigint(width - 1).sub(1_u32);
-        println!("First op : {:?}", first_operand_rand);
+        println!("First op : {first_operand_rand:?}");
 
         let side = vec![-1, 0, 1];
         // -1, 1 or 0
         let second_op = BigInt::from(*side.choose(&mut rng).unwrap());
-        println!("second op : {:?}", second_op);
+        println!("second op : {second_op:?}");
 
         contract.constructor(&[]);
         let return_value = contract
@@ -1041,7 +1041,7 @@ fn test_mul_within_range() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
         let mut contract = build_solidity_with_overflow_check(&src, true);
         contract.constructor(&[]);
@@ -1094,7 +1094,7 @@ fn test_overflow_detect_signed() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
         contract.constructor(&[]);
@@ -1163,7 +1163,7 @@ fn test_overflow_detect_unsigned() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
         let mut contract = build_solidity_with_overflow_check(&src, true);
 
         contract.constructor(&[]);
@@ -1247,7 +1247,7 @@ fn int() {
                 return a >> r;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
         let mut vm = build_solidity(&src);
 

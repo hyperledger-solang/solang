@@ -702,10 +702,7 @@ fn statement(
             if symtable.returns.len() != no_returns {
                 ns.diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!(
-                        "missing return value, {} return values expected",
-                        no_returns
-                    ),
+                    format!("missing return value, {no_returns} return values expected"),
                 ));
                 return Err(());
             }
@@ -884,7 +881,7 @@ fn statement(
             if let Some(error) = error {
                 ns.diagnostics.push(Diagnostic::error(
                     error.loc,
-                    format!("revert with custom error '{}' not supported yet", error),
+                    format!("revert with custom error '{error}' not supported yet"),
                 ));
                 return Err(());
             }
@@ -1094,8 +1091,7 @@ fn emit_event(
                     temp_diagnostics.push(Diagnostic::cast_error_with_note(
                         *loc,
                         format!(
-                            "event cannot be emmited with named fields as {} of its fields do not have names",
-                            unnamed_fields,
+                            "event cannot be emmited with named fields as {unnamed_fields} of its fields do not have names"
                         ),
                         event.loc,
                         format!("definition of {}", event.name),
@@ -1235,7 +1231,7 @@ fn destructure(
                 if let Some(storage) = storage {
                     diagnostics.push(Diagnostic::error(
                         storage.loc(),
-                        format!("storage modifier '{}' not permitted on assignment", storage),
+                        format!("storage modifier '{storage}' not permitted on assignment"),
                     ));
                     return Err(());
                 }
@@ -1538,10 +1534,7 @@ fn resolve_var_decl_ty(
         if !var_ty.can_have_data_location() {
             diagnostics.push(Diagnostic::error(
                 storage.loc(),
-                format!(
-                    "data location '{}' only allowed for array, struct or mapping type",
-                    storage
-                ),
+                format!("data location '{storage}' only allowed for array, struct or mapping type"),
             ));
             return Err(());
         }
@@ -1649,10 +1642,7 @@ fn return_with_values(
             if no_returns > 0 && returns.is_empty() {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!(
-                        "missing return value, {} return values expected",
-                        no_returns
-                    ),
+                    format!("missing return value, {no_returns} return values expected"),
                 ));
                 return Err(());
             }
@@ -1721,10 +1711,7 @@ fn return_with_values(
     if no_returns > 0 && expr_return_tys.is_empty() {
         diagnostics.push(Diagnostic::error(
             *loc,
-            format!(
-                "missing return value, {} return values expected",
-                no_returns
-            ),
+            format!("missing return value, {no_returns} return values expected"),
         ));
         return Err(());
     }
@@ -2139,7 +2126,7 @@ fn try_catch(
                 if name.is_empty() {
                     "duplicate catch clause".to_string()
                 } else {
-                    format!("duplicate '{}' catch clause", name)
+                    format!("duplicate '{name}' catch clause")
                 },
             ));
             return Err(());

@@ -72,7 +72,7 @@ pub(crate) fn unescape(
             Some((i, ch)) => {
                 diagnostics.push(Diagnostic::error(
                     pt::Loc::File(file_no, start + i, start + i + ch.len_utf8()),
-                    format!("unknown escape character '{}'", ch),
+                    format!("unknown escape character '{ch}'"),
                 ));
             }
             None => unreachable!(),

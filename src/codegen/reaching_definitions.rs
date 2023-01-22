@@ -25,16 +25,16 @@ impl fmt::Display for Transfer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Transfer::Gen { def, var_no } => {
-                write!(f, "Gen %{} = ({}, {})", var_no, def.block_no, def.instr_no)
+                write!(f, "Gen %{var_no} = ({}, {})", def.block_no, def.instr_no)
             }
             Transfer::Mod { var_no } => {
-                write!(f, "Mod %{}", var_no)
+                write!(f, "Mod %{var_no}")
             }
             Transfer::Copy { var_no, src } => {
-                write!(f, "Copy %{} from %{}", var_no, src)
+                write!(f, "Copy %{var_no} from %{src}")
             }
             Transfer::Kill { var_no } => {
-                write!(f, "Kill %{}", var_no)
+                write!(f, "Kill %{var_no}")
             }
         }
     }

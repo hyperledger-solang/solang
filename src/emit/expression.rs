@@ -184,7 +184,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             if bits > 64 {
                 let div_bits = if bits <= 128 { 128 } else { 256 };
 
-                let name = format!("udivmod{}", div_bits);
+                let name = format!("udivmod{div_bits}");
 
                 let f = bin
                     .module
@@ -278,7 +278,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             if bits > 64 {
                 let div_bits = if bits <= 128 { 128 } else { 256 };
 
-                let name = format!("sdivmod{}", div_bits);
+                let name = format!("sdivmod{div_bits}");
 
                 let f = bin
                     .module
@@ -420,7 +420,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             if bits > 64 {
                 let div_bits = if bits <= 128 { 128 } else { 256 };
 
-                let name = format!("udivmod{}", div_bits);
+                let name = format!("udivmod{div_bits}");
 
                 let f = bin
                     .module
@@ -511,7 +511,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             if bits > 64 {
                 let div_bits = if bits <= 128 { 128 } else { 256 };
 
-                let name = format!("sdivmod{}", div_bits);
+                let name = format!("sdivmod{div_bits}");
 
                 let f = bin
                     .module
@@ -1231,8 +1231,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     e /= *d;
                 }
 
-                let elemptr =
-                    unsafe { bin.builder.build_gep(array, &ind, &format!("elemptr{}", i)) };
+                let elemptr = unsafe { bin.builder.build_gep(array, &ind, &format!("elemptr{i}")) };
 
                 let elem = expression(target, bin, expr, vartab, function, ns);
 
@@ -1328,7 +1327,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     ],
                     "",
                 );
-                bin.builder.build_load(store, &format!("bytes{}", n))
+                bin.builder.build_load(store, &format!("bytes{n}"))
             } else {
                 let start = bin.builder.build_pointer_cast(
                     start,

@@ -506,7 +506,7 @@ fn switch(
     for (item_no, item) in cases.iter().enumerate() {
         let case_cond =
             expression(&item.condition, contract_no, ns, vartab, cfg, opt).cast(&cond.ty(), ns);
-        let case_block = cfg.new_basic_block(format!("case_{}", item_no));
+        let case_block = cfg.new_basic_block(format!("case_{item_no}"));
         cfg.set_basic_block(case_block);
         for stmt in &item.block.body {
             statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);

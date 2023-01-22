@@ -415,10 +415,7 @@ impl<'a> SyscallContext<'a> {
             let allocated: u64 = read_u64(current_elem + 24);
 
             if VERBOSE {
-                println!(
-                    "next:{:08x} prev:{:08x} length:{} allocated:{}",
-                    next, prev, length, allocated
-                );
+                println!("next:{next:08x} prev:{prev:08x} length:{length} allocated:{allocated}");
             }
 
             let start = (current_elem + 8 * 4 - HEAP_START) as usize;
@@ -446,7 +443,7 @@ impl<'a> SyscallContext<'a> {
                             break;
                         }
                         let b = buf[offset + i];
-                        write!(hex, " {:02x}", b).unwrap();
+                        write!(hex, " {b:02x}").unwrap();
                         if b.is_ascii() && !b.is_ascii_control() {
                             write!(chars, "  {}", b as char).unwrap();
                         } else {
@@ -454,7 +451,7 @@ impl<'a> SyscallContext<'a> {
                         }
                     }
                     if VERBOSE {
-                        println!("{}\n{}", hex, chars);
+                        println!("{hex}\n{chars}");
                     }
                 }
             }
@@ -536,7 +533,7 @@ impl<'a> SyscallObject<UserError> for SolLog<'a> {
                 len as usize,
             ))
             .unwrap();
-            println!("log: {}", message);
+            println!("log: {message}");
             if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
                 vm.logs.push_str(message);
             }
@@ -573,7 +570,7 @@ impl<'a> SyscallObject<UserError> for SolLogPubKey<'a> {
             result
         );
         let message = account[0].to_base58();
-        println!("log pubkey: {}", message);
+        println!("log pubkey: {message}");
         if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
             vm.logs.push_str(&message);
         }
@@ -602,12 +599,9 @@ impl<'a> SyscallObject<UserError> for SolLogU64<'a> {
         _memory_mapping: &mut MemoryMapping,
         result: &mut Result<u64, EbpfError<UserError>>,
     ) {
-        let message = format!(
-            "{:#x}, {:#x}, {:#x}, {:#x}, {:#x}",
-            arg1, arg2, arg3, arg4, arg5
-        );
+        let message = format!("{arg1:#x}, {arg2:#x}, {arg3:#x}, {arg4:#x}, {arg5:#x}");
 
-        println!("log64: {}", message);
+        println!("log64: {message}");
 
         self.context.heap_verify();
 
@@ -869,7 +863,7 @@ impl<'a> SyscallObject<UserError> for SyscallSetReturnData<'a> {
     ) {
         self.context.heap_verify();
 
-        assert!(len <= 1024, "sol_set_return_data: length is {}", len);
+        assert!(len <= 1024, "sol_set_return_data: length is {len}");
 
         let buf = question_mark!(translate_slice::<u8>(memory_mapping, addr, len), result);
 
@@ -1419,7 +1413,7 @@ impl<'a> SyscallObject<UserError> for SyscallInvokeSignedC<'a> {
                             }
                         }
                     }
-                    instruction => panic!("instruction {} not supported", instruction),
+                    instruction => panic!("instruction {instruction} not supported"),
                 }
             } else {
                 let data_id: Account = instruction.accounts[0].pubkey.0;
@@ -1619,7 +1613,7 @@ impl VirtualMachine {
 
         let res = self.execute(&default_metas, &calldata);
 
-        println!("res:{:?}", res);
+        println!("res:{res:?}");
         assert_eq!(res, Ok(expected));
         if let Some((_, return_data)) = &self.return_data {
             assert_eq!(return_data.len(), 0);
@@ -1655,7 +1649,7 @@ impl VirtualMachine {
         {
             instr.clone()
         } else {
-            panic!("Function '{}' not found", name);
+            panic!("Function '{name}' not found");
         };
 
         let mut encoded_args = encode_arguments(args);
@@ -1666,8 +1660,8 @@ impl VirtualMachine {
         let res = self.execute(metas, &calldata);
         match res {
             Ok(0) => (),
-            Ok(error_code) => panic!("unexpected return {:#x}", error_code),
-            Err(e) => panic!("error: {:?}", e),
+            Ok(error_code) => panic!("unexpected return {error_code:#x}"),
+            Err(e) => panic!("error: {e:?}"),
         };
 
         let return_data = if let Some((_, return_data)) = &self.return_data {
@@ -1711,7 +1705,7 @@ impl VirtualMachine {
             .iter()
             .any(|item| item.name == name)
         {
-            panic!("Function '{}' not found", name);
+            panic!("Function '{name}' not found");
         }
 
         let selector = discriminator("global", name);

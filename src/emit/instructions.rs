@@ -1138,7 +1138,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 let value_ptr = bin.build_alloca(
                     function,
                     emit_value.into_int_value().get_type(),
-                    &format!("bytes{}", is_bytes),
+                    &format!("bytes{is_bytes}"),
                 );
                 bin.builder
                     .build_store(value_ptr, emit_value.into_int_value());

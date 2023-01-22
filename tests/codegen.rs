@@ -131,12 +131,12 @@ fn testcase(path: PathBuf) {
     }
 
     if current_check < checks.len() {
-        println!("{}", stderr);
-        println!("OUTPUT: \n===8<===8<===\n{}===8<===8<===\n", stdout);
+        println!("{stderr}");
+        println!("OUTPUT: \n===8<===8<===\n{stdout}===8<===8<===\n");
 
         panic!("NOT FOUND CHECK: {:?}", checks[current_check]);
     } else if current_fail < fails.len() {
-        println!("STDERR: \n===8<===8<===\n{}===8<===8<===\n", stderr);
+        println!("STDERR: \n===8<===8<===\n{stderr}===8<===8<===\n");
 
         panic!("NOT FOUND FAIL: {:?}", fails[current_check]);
     }

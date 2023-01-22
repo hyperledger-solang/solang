@@ -508,7 +508,7 @@ fn expression(
                 if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("left shift by {} is not possible", right),
+                        format!("left shift by {right} is not possible"),
                     ));
                 } else {
                     let right: u64 = right.to_u64().unwrap();
@@ -531,7 +531,7 @@ fn expression(
                 if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("right shift by {} is not possible", right),
+                        format!("right shift by {right} is not possible"),
                     ));
                 } else {
                     let right: u64 = right.to_u64().unwrap();
@@ -561,7 +561,7 @@ fn expression(
                 if right.sign() == Sign::Minus || right >= &BigInt::from(u32::MAX) {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("power {} not possible", right),
+                        format!("power {right} not possible"),
                     ));
                 } else {
                     let right: u32 = right.to_u32().unwrap();
@@ -1165,7 +1165,7 @@ fn expression(
         | Expression::GetRef(..)
         | Expression::InternalFunctionCfg(_) => (expr.clone(), false),
         // nothing else is permitted in cfg
-        _ => panic!("expr should not be in cfg: {:?}", expr),
+        _ => panic!("expr should not be in cfg: {expr:?}"),
     }
 }
 

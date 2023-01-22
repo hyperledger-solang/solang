@@ -569,7 +569,7 @@ impl ControlFlowGraph {
 
     pub fn expr_to_string(&self, contract: &Contract, ns: &Namespace, expr: &Expression) -> String {
         match expr {
-            Expression::FunctionArg(_, _, pos) => format!("(arg #{})", pos),
+            Expression::FunctionArg(_, _, pos) => format!("(arg #{pos})"),
             Expression::BoolLiteral(_, false) => "false".to_string(),
             Expression::BoolLiteral(_, true) => "true".to_string(),
             Expression::BytesLiteral(_, Type::String, s) => {
@@ -594,7 +594,7 @@ impl ControlFlowGraph {
             ),
             Expression::ConstArrayLiteral(_, _, dims, exprs) => format!(
                 "constant {} [ {} ]",
-                dims.iter().map(|d| format!("[{}]", d)).collect::<String>(),
+                dims.iter().map(|d| format!("[{d}]")).collect::<String>(),
                 exprs
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
@@ -603,7 +603,7 @@ impl ControlFlowGraph {
             ),
             Expression::ArrayLiteral(_, _, dims, exprs) => format!(
                 "{} [ {} ]",
-                dims.iter().map(|d| format!("[{}]", d)).collect::<String>(),
+                dims.iter().map(|d| format!("[{d}]")).collect::<String>(),
                 exprs
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
@@ -679,7 +679,7 @@ impl ControlFlowGraph {
                 if let Some(var) = self.vars.get(res) {
                     format!("%{}", var.id.name)
                 } else {
-                    panic!("error: non-existing variable {} in CFG", res);
+                    panic!("error: non-existing variable {res} in CFG");
                 }
             }
             Expression::Load(_, _, expr) => {
@@ -864,7 +864,7 @@ impl ControlFlowGraph {
             Expression::GetRef(_, _, expr) => {
                 format!("(deref {}", self.expr_to_string(contract, ns, expr))
             }
-            _ => panic!("{:?}", expr),
+            _ => panic!("{expr:?}"),
         }
     }
 
@@ -899,7 +899,7 @@ impl ControlFlowGraph {
                 self.vars[res].id.name,
                 self.expr_to_string(contract, ns, expr)
             ),
-            Instr::Branch { block } => format!("branch block{}", block),
+            Instr::Branch { block } => format!("branch block{block}"),
             Instr::BranchCond {
                 cond,
                 true_block,
@@ -1122,11 +1122,11 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, data),
                     selector
                         .iter()
-                        .map(|s| format!("selector:0x{:08x} ", s))
+                        .map(|s| format!("selector:0x{s:08x} "))
                         .collect::<String>(),
                     exception
                         .iter()
-                        .map(|block| format!("exception: block{} ", block))
+                        .map(|block| format!("exception: block{block} "))
                         .collect::<String>(),
                     tys.iter()
                         .map(|ty| ty.ty.to_string(ns))
@@ -1245,7 +1245,7 @@ impl ControlFlowGraph {
                         .as_str(),
                     );
                 }
-                description.push_str(format!("\n\t\tdefault: goto block #{}", default).as_str());
+                description.push_str(format!("\n\t\tdefault: goto block #{default}").as_str());
                 description
             }
 
@@ -1258,7 +1258,7 @@ impl ControlFlowGraph {
             }
 
             Instr::ReturnCode { code } => {
-                format!("return code: {}", code)
+                format!("return code: {code}")
             }
         }
     }

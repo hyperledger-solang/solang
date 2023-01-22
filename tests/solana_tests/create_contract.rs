@@ -132,7 +132,7 @@ fn simple_create_contract() {
 
     vm.logs.truncate(0);
 
-    println!("next test, {:?}", bar1);
+    println!("next test, {bar1:?}");
 
     vm.function(
         "call_bar1_at_address",

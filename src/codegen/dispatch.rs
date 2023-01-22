@@ -264,7 +264,7 @@ fn add_function_dispatch_case(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> usize {
-    let entry = cfg.new_basic_block(format!("function_cfg_{}", cfg_no));
+    let entry = cfg.new_basic_block(format!("function_cfg_{cfg_no}"));
     cfg.set_basic_block(entry);
 
     // check for magic in data account, to see if data account is initialized
@@ -385,7 +385,7 @@ fn add_constructor_dispatch_case(
     cfg: &mut ControlFlowGraph,
     opt: &Options,
 ) -> usize {
-    let entry = cfg.new_basic_block(format!("constructor_cfg_{}", cfg_no));
+    let entry = cfg.new_basic_block(format!("constructor_cfg_{cfg_no}"));
     cfg.set_basic_block(entry);
 
     let mut returns: Vec<Expression> = Vec::new();

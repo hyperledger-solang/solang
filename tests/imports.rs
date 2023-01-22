@@ -22,7 +22,7 @@ fn import_map_dup() {
     let output = dup.get_output();
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    println!("stderr: {}", stderr);
+    println!("stderr: {stderr}");
 
     assert_eq!(
         stderr,
@@ -48,7 +48,7 @@ fn import_map_badpath() {
     let output = badpath.get_output();
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    println!("stderr: {}", stderr);
+    println!("stderr: {stderr}");
 
     assert!(stderr.contains("error: import path '/does/not/exist': "));
 }
@@ -81,7 +81,7 @@ fn import_map() {
     let output = badpath.get_output();
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    println!("stderr: {}", stderr);
+    println!("stderr: {stderr}");
 
     assert!(stderr.contains("file not found 'foo/bar.sol'"));
 }
@@ -114,7 +114,7 @@ fn import() {
     let output = badpath.get_output();
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    println!("stderr: {}", stderr);
+    println!("stderr: {stderr}");
 
     assert!(stderr.contains("file not found 'bar.sol'"));
 }
