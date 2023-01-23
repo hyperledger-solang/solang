@@ -219,7 +219,7 @@ impl SubstrateTarget {
                 } else {
                     bin.build_alloca(
                         function,
-                        bin.llvm_type(&v.ty, ns).ptr_type(AddressSpace::Generic),
+                        bin.llvm_type(&v.ty, ns).ptr_type(AddressSpace::default()),
                         v.name_as_str(),
                     )
                     .into()
