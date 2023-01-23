@@ -4,8 +4,8 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::buffer_validator::BufferValidator;
 use crate::codegen::encoding::{
     allocate_array, allow_direct_copy, calculate_array_bytes_size,
-    calculate_direct_copy_bytes_size, finish_array_loop, increment_four, load_array_item,
-    load_sub_array, retrieve_array_length, set_array_loop, AbiEncoding,
+    calculate_direct_copy_bytes_size, finish_array_loop, increment_four, retrieve_array_length,
+    set_array_loop, AbiEncoding,
 };
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
@@ -15,6 +15,8 @@ use num_traits::{One, Zero};
 use solang_parser::pt::{Loc, Loc::Codegen};
 use std::collections::HashMap;
 use std::ops::{Add, AddAssign, MulAssign};
+
+use super::index_array;
 
 /// This struct implements the trait AbiEncoding for Borsh encoding
 pub(super) struct BorshEncoding {

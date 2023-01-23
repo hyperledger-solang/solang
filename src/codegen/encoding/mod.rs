@@ -452,12 +452,7 @@ pub(super) trait AbiEncoding {
             // TODO: 'int[3][][4] vec', but it needs testing, as soon as Solang works with them.
             // TODO: A discussion about this is under way here: https://github.com/hyperledger/solang/issues/932
             // We only support dynamic arrays whose non-constant length is the outer one.
-            let (sub_array, _) = load_sub_array(
-                arr.clone(),
-                &dims[(dimension + 1)..dims.len()],
-                indexes,
-                true,
-            );
+            let sub_array = index_array(arr.clone(), dims, indexes, false);
 
             let size = Expression::Builtin(
                 Codegen,
@@ -481,7 +476,7 @@ pub(super) trait AbiEncoding {
         cfg.set_basic_block(for_loop.body_block);
         if 0 == dimension {
             // If we are indexing the last dimension, we have an element, so we can encode it.
-            let deref = load_array_item(arr, dims, indexes);
+            let deref = index_array(arr.clone(), dims, indexes, false);
             let offset_expr = Expression::Variable(Codegen, Uint(32), offset_var);
             let elem_size = self.encode(&deref, buffer, &offset_expr, arg_no, ns, vartab, cfg);
             cfg.add(
@@ -791,7 +786,7 @@ fn calculate_complex_array_size(
 ) {
     // If this dimension is dynamic, account for the encoded vector length variable.
     if !encoder.is_packed() && dims[dimension] == ArrayLength::Dynamic {
-        let arr = load_sub_array(arr.clone(), &dims[(dimension + 1)..], indexes, true).0;
+        let arr = index_array(arr.clone(), dims, indexes, false);
         let size = Expression::Builtin(Codegen, vec![Uint(32)], Builtin::ArrayLength, vec![arr]);
         let size_width = encoder.size_width(&size, vartab, cfg);
         let size_var = Expression::Variable(Codegen, Uint(32), size_var_no);
@@ -834,27 +829,6 @@ fn calculate_complex_array_size(
         );
     }
     finish_array_loop(&for_loop, vartab, cfg);
-}
-
-/// Get the array length at dimension 'index'
-fn get_array_length(
-    arr: &Expression,
-    dims: &[ArrayLength],
-    indexes: &[usize],
-    dimension: usize,
-) -> Expression {
-    if let ArrayLength::Fixed(dim) = &dims[dimension] {
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), dim.clone())
-    } else {
-        let sub_array = index_array(arr.clone(), dims, &indexes[..indexes.len() - 1], false);
-
-        Expression::Builtin(
-            Loc::Codegen,
-            vec![Type::Uint(32)],
-            Builtin::ArrayLength,
-            vec![sub_array],
-        )
-    }
 }
 
 /// Retrieves the size of a struct
@@ -1006,7 +980,7 @@ fn set_array_loop(
     let bound = if let ArrayLength::Fixed(dim) = &dims[dimension] {
         Expression::NumberLiteral(Codegen, Uint(32), dim.clone())
     } else {
-        let sub_array = load_sub_array(arr.clone(), &dims[(dimension + 1)..], indexes, true).0;
+        let sub_array = index_array(arr.clone(), dims, &indexes[..indexes.len() - 1], false);
         Expression::Builtin(
             Codegen,
             vec![Uint(32)],
