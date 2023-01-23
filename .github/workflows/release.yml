@@ -67,8 +67,7 @@ jobs:
       working-directory: ./llvm-project/
     - run: cmake --build . --target install
       working-directory: ./llvm-project/
-      # compression takes a long time on linux-arm64, use multithreaded compression
-    - run: tar cf ./llvm14.0-linux-arm64.tar.xz -I 'xz -T 0' ./llvm14.0/
+    - run: tar Jcf ./llvm14.0-linux-arm64.tar.xz ./llvm14.0/
     - name: Upload llvm
       uses: svenstaro/upload-release-action@v2
       with:
