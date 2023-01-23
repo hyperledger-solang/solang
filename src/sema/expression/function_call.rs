@@ -6,11 +6,9 @@ use crate::sema::ast::{
 };
 use crate::sema::contracts::is_base;
 use crate::sema::diagnostics::Diagnostics;
-use crate::sema::expression::constructor::new;
+use crate::sema::expression::constructor::{deprecated_constructor_arguments, new};
 use crate::sema::expression::literals::{named_struct_literal, struct_literal};
-use crate::sema::expression::{
-    deprecated_constructor_arguments, expression, ExprContext, ResolveTo,
-};
+use crate::sema::expression::{expression, ExprContext, ResolveTo};
 use crate::sema::format::string_format;
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::check_function_call;
