@@ -194,7 +194,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.builder
                             .build_pointer_cast(
                                 arr.into_pointer_value(),
-                                bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                bin.context.i8_type().ptr_type(AddressSpace::default()),
                                 "a",
                             )
                             .into(),
@@ -208,7 +208,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into_pointer_value();
             let dest = bin.builder.build_pointer_cast(
                 new,
-                llvm_ty.ptr_type(AddressSpace::Generic),
+                llvm_ty.ptr_type(AddressSpace::default()),
                 "dest",
             );
             w.vars.get_mut(array).unwrap().value = dest.into();
@@ -228,7 +228,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let value = expression(target, bin, value, &w.vars, function, ns);
             let elem_ptr = bin.builder.build_pointer_cast(
                 slot_ptr,
-                llvm_elem_ty.ptr_type(AddressSpace::Generic),
+                llvm_elem_ty.ptr_type(AddressSpace::default()),
                 "element pointer",
             );
             let value = if elem_ty.is_fixed_reference_type() {
@@ -253,7 +253,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             };
             let len_field = bin.builder.build_pointer_cast(
                 len_ptr,
-                bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                bin.context.i32_type().ptr_type(AddressSpace::default()),
                 "len field",
             );
             bin.builder.build_store(len_field, new_len);
@@ -270,7 +270,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             };
             let size_field = bin.builder.build_pointer_cast(
                 size_ptr,
-                bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                bin.context.i32_type().ptr_type(AddressSpace::default()),
                 "size field",
             );
             bin.builder.build_store(size_field, new_len);
@@ -306,7 +306,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin,
                 bin.context
                     .i8_type()
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .const_null(),
                 bin.context.i32_type().const_zero(),
             );
@@ -349,7 +349,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             };
             let slot_ptr = bin.builder.build_pointer_cast(
                 slot_ptr,
-                llvm_elem_ty.ptr_type(AddressSpace::Generic),
+                llvm_elem_ty.ptr_type(AddressSpace::default()),
                 "slot_ptr",
             );
             if elem_ty.is_fixed_reference_type() {
@@ -362,7 +362,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             // Reallocate and reassign the array pointer
             let a = bin.builder.build_pointer_cast(
                 a,
-                bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                bin.context.i8_type().ptr_type(AddressSpace::default()),
                 "a",
             );
 
@@ -386,7 +386,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into_pointer_value();
             let dest = bin.builder.build_pointer_cast(
                 new,
-                llvm_ty.ptr_type(AddressSpace::Generic),
+                llvm_ty.ptr_type(AddressSpace::default()),
                 "dest",
             );
             w.vars.get_mut(array).unwrap().value = dest.into();
@@ -404,7 +404,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             };
             let len_field = bin.builder.build_pointer_cast(
                 len_ptr,
-                bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                bin.context.i32_type().ptr_type(AddressSpace::default()),
                 "len field",
             );
             bin.builder.build_store(len_field, new_len);
@@ -421,7 +421,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             };
             let size_field = bin.builder.build_pointer_cast(
                 size_ptr,
-                bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                bin.context.i32_type().ptr_type(AddressSpace::default()),
                 "size field",
             );
             bin.builder.build_store(size_field, new_len);
@@ -431,7 +431,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin,
                 bin.context
                     .i8_type()
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .const_null(),
                 bin.context.i32_type().const_zero(),
             );
@@ -776,7 +776,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 *contract_no,
                 bin.builder.build_pointer_cast(
                     address_stack,
-                    bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                    bin.context.i8_type().ptr_type(AddressSpace::default()),
                     "address",
                 ),
                 encoded_args,
@@ -820,7 +820,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.build_store(
                     bin.builder.build_pointer_cast(
                         addr,
-                        address.get_type().ptr_type(AddressSpace::Generic),
+                        address.get_type().ptr_type(AddressSpace::default()),
                         "address",
                     ),
                     address,
@@ -965,7 +965,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.build_store(
                 bin.builder.build_pointer_cast(
                     addr,
-                    address.get_type().ptr_type(AddressSpace::Generic),
+                    address.get_type().ptr_type(AddressSpace::default()),
                     "address",
                 ),
                 address,
@@ -981,7 +981,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 success,
                 bin.builder.build_pointer_cast(
                     addr,
-                    bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                    bin.context.i8_type().ptr_type(AddressSpace::default()),
                     "address",
                 ),
                 value,
@@ -1046,7 +1046,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     .build_load(
                         bin.builder.build_pointer_cast(
                             data,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i32_type().ptr_type(AddressSpace::default()),
                             "selector",
                         ),
                         "selector",
@@ -1083,7 +1083,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.builder.build_gep(
                         bin.builder.build_pointer_cast(
                             data,
-                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i8_type().ptr_type(AddressSpace::default()),
                             "data",
                         ),
                         &[bin.context.i32_type().const_int(4, false)],
@@ -1154,14 +1154,14 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.builder
                             .build_pointer_cast(
                                 value_ptr,
-                                bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                bin.context.i8_type().ptr_type(AddressSpace::default()),
                                 "store",
                             )
                             .into(),
                         bin.builder
                             .build_pointer_cast(
                                 start,
-                                bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                bin.context.i8_type().ptr_type(AddressSpace::default()),
                                 "dest",
                             )
                             .into(),
@@ -1175,7 +1175,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             } else {
                 let start = bin.builder.build_pointer_cast(
                     start,
-                    emit_value.get_type().ptr_type(AddressSpace::Generic),
+                    emit_value.get_type().ptr_type(AddressSpace::default()),
                     "start",
                 );
 
@@ -1200,7 +1200,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             };
 
             let size = expression(target, bin, bytes, &w.vars, function, ns);
-            let arg_type = bin.context.i8_type().ptr_type(AddressSpace::Generic);
+            let arg_type = bin.context.i8_type().ptr_type(AddressSpace::default());
 
             let src = if src.get_type() == arg_type {
                 src

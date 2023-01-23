@@ -199,7 +199,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let dest = binary.builder.build_pointer_cast(
             binary.scratch.unwrap().as_pointer_value(),
-            ty.ptr_type(AddressSpace::Generic),
+            ty.ptr_type(AddressSpace::default()),
             "scratch_ty_buf",
         );
 
@@ -251,7 +251,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .module
             .get_struct_type("struct.vector")
             .unwrap()
-            .ptr_type(AddressSpace::Generic);
+            .ptr_type(AddressSpace::default());
 
         let entry = binary.builder.get_insert_block().unwrap();
 
@@ -291,7 +291,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .module
                     .get_struct_type("struct.vector")
                     .unwrap()
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .const_null(),
                 entry,
             ),
@@ -788,7 +788,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ) {
         let mut argsdata = binary.builder.build_pointer_cast(
             data,
-            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+            binary.context.i8_type().ptr_type(AddressSpace::default()),
             "",
         );
 
@@ -865,7 +865,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .module
                 .get_struct_type("struct.vector")
                 .unwrap()
-                .ptr_type(AddressSpace::Generic),
+                .ptr_type(AddressSpace::default()),
             "string",
         );
 
@@ -985,7 +985,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             binary.builder.build_store(
                 binary.builder.build_pointer_cast(
                     data,
-                    selector.get_type().ptr_type(AddressSpace::Generic),
+                    selector.get_type().ptr_type(AddressSpace::default()),
                     "",
                 ),
                 selector,
@@ -1084,7 +1084,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     salt_buf,
                     binary
                         .llvm_type(&salt_ty, ns)
-                        .ptr_type(AddressSpace::Generic),
+                        .ptr_type(AddressSpace::default()),
                     "salt",
                 ),
                 salt,
@@ -1558,7 +1558,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         binary
                             .context
                             .custom_width_int_type($width)
-                            .ptr_type(AddressSpace::Generic),
+                            .ptr_type(AddressSpace::default()),
                         "",
                     ),
                     $name,
@@ -1672,7 +1672,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         binary
                             .context
                             .custom_width_int_type(ns.value_length as u32 * 8)
-                            .ptr_type(AddressSpace::Generic),
+                            .ptr_type(AddressSpace::default()),
                         "",
                     ),
                     "price",
@@ -1694,7 +1694,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         scratch_buf,
-                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        binary.address_type(ns).ptr_type(AddressSpace::default()),
                         "",
                     ),
                     "caller",
@@ -1747,7 +1747,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         binary
                             .context
                             .custom_width_int_type(256)
-                            .ptr_type(AddressSpace::Generic),
+                            .ptr_type(AddressSpace::default()),
                         "",
                     ),
                     "hash",
@@ -1769,7 +1769,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         scratch_buf,
-                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        binary.address_type(ns).ptr_type(AddressSpace::default()),
                         "",
                     ),
                     "self_address",
@@ -1791,7 +1791,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         scratch_buf,
-                        binary.value_type(ns).ptr_type(AddressSpace::Generic),
+                        binary.value_type(ns).ptr_type(AddressSpace::default()),
                         "",
                     ),
                     "balance",

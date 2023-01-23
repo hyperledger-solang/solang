@@ -183,7 +183,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let s = bin.builder.build_pointer_cast(
                         buf,
-                        bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                        bin.context.i8_type().ptr_type(AddressSpace::default()),
                         "address_bytes",
                     );
 
@@ -206,7 +206,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let s = bin.builder.build_pointer_cast(
                         buf,
-                        bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                        bin.context.i8_type().ptr_type(AddressSpace::default()),
                         "bytes",
                     );
 
@@ -321,7 +321,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                         let s = bin.builder.build_pointer_cast(
                             buf,
-                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i8_type().ptr_type(AddressSpace::default()),
                             "uint",
                         );
 
@@ -472,7 +472,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                         let s = bin.builder.build_pointer_cast(
                             buf,
-                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i8_type().ptr_type(AddressSpace::default()),
                             "int",
                         );
 

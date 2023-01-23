@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use ethabi::ethereum_types::U256;
 use parity_scale_codec::{Decode, Encode};
+use primitive_types::U256;
 
 #[derive(Debug, Encode, Decode)]
 struct Val256(U256);

@@ -74,21 +74,21 @@ fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
             bin.builder
                 .build_pointer_cast(
                     l,
-                    bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                    bin.context.i32_type().ptr_type(AddressSpace::default()),
                     "left",
                 )
                 .into(),
             bin.builder
                 .build_pointer_cast(
                     r,
-                    bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                    bin.context.i32_type().ptr_type(AddressSpace::default()),
                     "right",
                 )
                 .into(),
             bin.builder
                 .build_pointer_cast(
                     o,
-                    bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                    bin.context.i32_type().ptr_type(AddressSpace::default()),
                     "output",
                 )
                 .into(),
@@ -198,7 +198,7 @@ fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
         bin,
         bin.context
             .i8_type()
-            .ptr_type(AddressSpace::Generic)
+            .ptr_type(AddressSpace::default())
             .const_null(),
         bin.context.i32_type().const_zero(),
     );
@@ -224,21 +224,21 @@ fn call_mul32_without_ovf<'a>(
             bin.builder
                 .build_pointer_cast(
                     l,
-                    bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                    bin.context.i32_type().ptr_type(AddressSpace::default()),
                     "left",
                 )
                 .into(),
             bin.builder
                 .build_pointer_cast(
                     r,
-                    bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                    bin.context.i32_type().ptr_type(AddressSpace::default()),
                     "right",
                 )
                 .into(),
             bin.builder
                 .build_pointer_cast(
                     o,
-                    bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                    bin.context.i32_type().ptr_type(AddressSpace::default()),
                     "output",
                 )
                 .into(),
@@ -329,21 +329,21 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.builder
                         .build_pointer_cast(
                             l,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i32_type().ptr_type(AddressSpace::default()),
                             "left",
                         )
                         .into(),
                     bin.builder
                         .build_pointer_cast(
                             r,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i32_type().ptr_type(AddressSpace::default()),
                             "right",
                         )
                         .into(),
                     bin.builder
                         .build_pointer_cast(
                             o,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i32_type().ptr_type(AddressSpace::default()),
                             "output",
                         )
                         .into(),
@@ -408,7 +408,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin,
                 bin.context
                     .i8_type()
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .const_null(),
                 bin.context.i32_type().const_zero(),
             );
@@ -626,7 +626,7 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
         bin,
         bin.context
             .i8_type()
-            .ptr_type(AddressSpace::Generic)
+            .ptr_type(AddressSpace::default())
             .const_null(),
         bin.context.i32_type().const_zero(),
     );

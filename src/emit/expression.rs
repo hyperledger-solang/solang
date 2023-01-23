@@ -81,7 +81,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let s = bin.builder.build_pointer_cast(
                 s,
-                struct_ty.ptr_type(AddressSpace::Generic),
+                struct_ty.ptr_type(AddressSpace::default()),
                 "struct_literal",
             );
 
@@ -246,7 +246,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin,
                     bin.context
                         .i8_type()
-                        .ptr_type(AddressSpace::Generic)
+                        .ptr_type(AddressSpace::default())
                         .const_null(),
                     bin.context.i32_type().const_zero(),
                 );
@@ -340,7 +340,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin,
                     bin.context
                         .i8_type()
-                        .ptr_type(AddressSpace::Generic)
+                        .ptr_type(AddressSpace::default())
                         .const_null(),
                     bin.context.i32_type().const_zero(),
                 );
@@ -482,7 +482,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin,
                     bin.context
                         .i8_type()
-                        .ptr_type(AddressSpace::Generic)
+                        .ptr_type(AddressSpace::default())
                         .const_null(),
                     bin.context.i32_type().const_zero(),
                 );
@@ -573,7 +573,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin,
                     bin.context
                         .i8_type()
-                        .ptr_type(AddressSpace::Generic)
+                        .ptr_type(AddressSpace::default())
                         .const_null(),
                     bin.context.i32_type().const_zero(),
                 );
@@ -677,7 +677,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin,
                     bin.context
                         .i8_type()
-                        .ptr_type(AddressSpace::Generic)
+                        .ptr_type(AddressSpace::default())
                         .const_null(),
                     bin.context.i32_type().const_zero(),
                 );
@@ -875,7 +875,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let new_struct = bin.builder.build_pointer_cast(
                     new_struct,
-                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    llvm_ty.ptr_type(AddressSpace::default()),
                     &format!("new_{}", ty.to_string(ns)),
                 );
 
@@ -887,7 +887,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 // insert phi node
                 let combined_struct_ptr = bin.builder.build_phi(
-                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    llvm_ty.ptr_type(AddressSpace::default()),
                     &format!("ptr_{}", ty.to_string(ns)),
                 );
 
@@ -947,12 +947,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.build_store(bytes_ptr, e);
             let bytes_ptr = bin.builder.build_pointer_cast(
                 bytes_ptr,
-                bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                bin.context.i8_type().ptr_type(AddressSpace::default()),
                 "bytes_ptr",
             );
             let init = bin.builder.build_pointer_cast(
                 bin.build_alloca(function, e.get_type(), "init"),
-                bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                bin.context.i8_type().ptr_type(AddressSpace::default()),
                 "init",
             );
             bin.builder.build_call(
@@ -993,7 +993,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin,
                 bin.context
                     .i8_type()
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .const_null(),
                 bin.context.i32_type().const_zero(),
             );
@@ -1012,7 +1012,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.builder
                         .build_pointer_cast(
                             le_bytes_ptr,
-                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i8_type().ptr_type(AddressSpace::default()),
                             "le_bytes_ptr",
                         )
                         .into(),
@@ -1185,9 +1185,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             // We actually end up with an array with a single entry
 
             // now we've created the type, and the const array. Put it into a global
-            let gv = bin
-                .module
-                .add_global(ty, Some(AddressSpace::Generic), "const_array_literal");
+            let gv =
+                bin.module
+                    .add_global(ty, Some(AddressSpace::default()), "const_array_literal");
 
             gv.set_linkage(Linkage::Internal);
 
@@ -1216,7 +1216,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             let array = bin.builder.build_pointer_cast(
                 p.into_pointer_value(),
-                ty.ptr_type(AddressSpace::Generic),
+                ty.ptr_type(AddressSpace::default()),
                 "array_literal",
             );
 
@@ -1313,14 +1313,14 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.builder
                             .build_pointer_cast(
                                 start,
-                                bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                bin.context.i8_type().ptr_type(AddressSpace::default()),
                                 "",
                             )
                             .into(),
                         bin.builder
                             .build_pointer_cast(
                                 store,
-                                bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                bin.context.i8_type().ptr_type(AddressSpace::default()),
                                 "",
                             )
                             .into(),
@@ -1333,7 +1333,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let start = bin.builder.build_pointer_cast(
                     start,
                     bin.llvm_type(&returns[0], ns)
-                        .ptr_type(AddressSpace::Generic),
+                        .ptr_type(AddressSpace::default()),
                     "start",
                 );
 
@@ -1386,7 +1386,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                                 bin.builder
                                     .build_pointer_cast(
                                         data,
-                                        bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                        bin.context.i8_type().ptr_type(AddressSpace::default()),
                                         "data",
                                     )
                                     .into(),
@@ -1398,7 +1398,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     _ => {
                         let elem = bin.builder.build_pointer_cast(
                             elem,
-                            v.get_type().ptr_type(AddressSpace::Generic),
+                            v.get_type().ptr_type(AddressSpace::default()),
                             "",
                         );
 
@@ -1479,14 +1479,14 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.builder
                         .build_pointer_cast(
                             bin.selector.as_pointer_value(),
-                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i8_type().ptr_type(AddressSpace::default()),
                             "",
                         )
                         .into(),
                     bin.builder
                         .build_pointer_cast(
                             selector,
-                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i8_type().ptr_type(AddressSpace::default()),
                             "",
                         )
                         .into(),
@@ -1591,21 +1591,21 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.builder
                         .build_pointer_cast(
                             x_m,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i32_type().ptr_type(AddressSpace::default()),
                             "left",
                         )
                         .into(),
                     bin.builder
                         .build_pointer_cast(
                             y_m,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i32_type().ptr_type(AddressSpace::default()),
                             "right",
                         )
                         .into(),
                     bin.builder
                         .build_pointer_cast(
                             x_times_y_m,
-                            bin.context.i32_type().ptr_type(AddressSpace::Generic),
+                            bin.context.i32_type().ptr_type(AddressSpace::default()),
                             "output",
                         )
                         .into(),
@@ -1765,7 +1765,7 @@ pub(super) fn compare_address<'a, T: TargetRuntime<'a> + ?Sized>(
                     .builder
                     .build_pointer_cast(
                         left,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::default()),
                         "left",
                     )
                     .into(),
@@ -1773,7 +1773,7 @@ pub(super) fn compare_address<'a, T: TargetRuntime<'a> + ?Sized>(
                     .builder
                     .build_pointer_cast(
                         right,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::default()),
                         "right",
                     )
                     .into(),
@@ -1828,14 +1828,14 @@ fn runtime_cast<'a>(
                 bin.builder
                     .build_pointer_cast(
                         src,
-                        bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                        bin.context.i8_type().ptr_type(AddressSpace::default()),
                         "address_ptr",
                     )
                     .into(),
                 bin.builder
                     .build_pointer_cast(
                         dest,
-                        bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                        bin.context.i8_type().ptr_type(AddressSpace::default()),
                         "dest_ptr",
                     )
                     .into(),
@@ -1865,14 +1865,14 @@ fn runtime_cast<'a>(
                 bin.builder
                     .build_pointer_cast(
                         src,
-                        bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                        bin.context.i8_type().ptr_type(AddressSpace::default()),
                         "address_ptr",
                     )
                     .into(),
                 bin.builder
                     .build_pointer_cast(
                         dest,
-                        bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                        bin.context.i8_type().ptr_type(AddressSpace::default()),
                         "dest_ptr",
                     )
                     .into(),

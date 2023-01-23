@@ -81,7 +81,7 @@ impl StorageSlot for SubstrateTarget {
                     .build_load(
                         binary.builder.build_pointer_cast(
                             scratch_buf,
-                            binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                            binary.address_type(ns).ptr_type(AddressSpace::default()),
                             "address_ptr",
                         ),
                         "address",
@@ -140,7 +140,7 @@ impl StorageSlot for SubstrateTarget {
 
                     let dest = bin.builder.build_pointer_cast(
                         new,
-                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        llvm_ty.ptr_type(AddressSpace::default()),
                         "dest",
                     );
 
@@ -189,7 +189,7 @@ impl StorageSlot for SubstrateTarget {
                     );
                     let init = bin.builder.build_int_to_ptr(
                         bin.context.i32_type().const_all_ones(),
-                        bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                        bin.context.i8_type().ptr_type(AddressSpace::default()),
                         "invalid",
                     );
 
@@ -257,7 +257,7 @@ impl StorageSlot for SubstrateTarget {
 
                 let dest = bin.builder.build_pointer_cast(
                     new,
-                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    llvm_ty.ptr_type(AddressSpace::default()),
                     "dest",
                 );
 
@@ -489,7 +489,7 @@ impl StorageSlot for SubstrateTarget {
 
                             let mut elem = bin.builder.build_pointer_cast(
                                 data,
-                                llvm_elem_ty.ptr_type(AddressSpace::Generic),
+                                llvm_elem_ty.ptr_type(AddressSpace::default()),
                                 "entry",
                             );
 

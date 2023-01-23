@@ -27,7 +27,7 @@ macro_rules! emit_context {
         #[allow(unused_macros)]
         macro_rules! byte_ptr {
             () => {
-                $binary.context.i8_type().ptr_type(AddressSpace::Generic)
+                $binary.context.i8_type().ptr_type(AddressSpace::default())
             };
         }
 
@@ -107,7 +107,7 @@ macro_rules! emit_context {
                 (
                     $binary.builder.build_pointer_cast(
                         $binary.scratch.unwrap().as_pointer_value(),
-                        $binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        $binary.context.i8_type().ptr_type(AddressSpace::default()),
                         "scratch_buf",
                     ),
                     $binary.scratch_len.unwrap().as_pointer_value(),
@@ -144,7 +144,7 @@ impl SubstrateTarget {
 
         let scratch_len = binary.module.add_global(
             context.i32_type(),
-            Some(AddressSpace::Generic),
+            Some(AddressSpace::default()),
             "scratch_len",
         );
         scratch_len.set_linkage(Linkage::Internal);
@@ -154,7 +154,7 @@ impl SubstrateTarget {
 
         let scratch = binary.module.add_global(
             context.i8_type().array_type(SCRATCH_SIZE),
-            Some(AddressSpace::Generic),
+            Some(AddressSpace::default()),
             "scratch",
         );
         scratch.set_linkage(Linkage::Internal);
@@ -229,7 +229,7 @@ impl SubstrateTarget {
 
         let scratch_buf = binary.builder.build_pointer_cast(
             binary.scratch.unwrap().as_pointer_value(),
-            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+            binary.context.i8_type().ptr_type(AddressSpace::default()),
             "scratch_buf",
         );
         let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
@@ -251,7 +251,7 @@ impl SubstrateTarget {
 
         let args = binary.builder.build_pointer_cast(
             scratch_buf,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::default()),
             "",
         );
         let args_length = binary.builder.build_load(scratch_len, "input_len");
@@ -267,9 +267,9 @@ impl SubstrateTarget {
 
     fn declare_externals(&self, binary: &Binary) {
         let ctx = binary.context;
-        let u8_ptr = ctx.i8_type().ptr_type(AddressSpace::Generic).into();
+        let u8_ptr = ctx.i8_type().ptr_type(AddressSpace::default()).into();
         let u32_val = ctx.i32_type().into();
-        let u32_ptr = ctx.i32_type().ptr_type(AddressSpace::Generic).into();
+        let u32_ptr = ctx.i32_type().ptr_type(AddressSpace::default()).into();
         let u64_val = ctx.i64_type().into();
 
         macro_rules! external {
@@ -395,7 +395,7 @@ impl SubstrateTarget {
             binary
                 .context
                 .i8_type()
-                .ptr_type(AddressSpace::Generic)
+                .ptr_type(AddressSpace::default())
                 .const_null(),
             binary.context.i32_type().const_zero(),
         );
@@ -454,7 +454,7 @@ impl SubstrateTarget {
                 let val = binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         src,
-                        int_type.ptr_type(AddressSpace::Generic),
+                        int_type.ptr_type(AddressSpace::default()),
                         "",
                     ),
                     "",
@@ -473,7 +473,7 @@ impl SubstrateTarget {
                 let val = binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         src,
-                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        binary.address_type(ns).ptr_type(AddressSpace::default()),
                         "",
                     ),
                     "",
@@ -497,7 +497,7 @@ impl SubstrateTarget {
                             .builder
                             .build_pointer_cast(
                                 buf,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::default()),
                                 "",
                             )
                             .into(),
@@ -557,7 +557,7 @@ impl SubstrateTarget {
             binary
                 .context
                 .i8_type()
-                .ptr_type(AddressSpace::Generic)
+                .ptr_type(AddressSpace::default())
                 .const_null(),
             binary.context.i32_type().const_zero(),
         );
@@ -622,7 +622,7 @@ impl SubstrateTarget {
 
                 let dest = binary.builder.build_pointer_cast(
                     new,
-                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    llvm_ty.ptr_type(AddressSpace::default()),
                     "dest",
                 );
 
@@ -678,7 +678,7 @@ impl SubstrateTarget {
 
                     let dest = binary.builder.build_pointer_cast(
                         new,
-                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        llvm_ty.ptr_type(AddressSpace::default()),
                         "dest",
                     );
 
@@ -740,7 +740,7 @@ impl SubstrateTarget {
 
                     let init = binary.builder.build_int_to_ptr(
                         binary.context.i32_type().const_all_ones(),
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::default()),
                         "invalid",
                     );
 
@@ -778,7 +778,7 @@ impl SubstrateTarget {
 
                             let elem = binary.builder.build_pointer_cast(
                                 element_start,
-                                elem_ty.ptr_type(AddressSpace::Generic),
+                                elem_ty.ptr_type(AddressSpace::default()),
                                 "entry",
                             );
 
@@ -800,7 +800,7 @@ impl SubstrateTarget {
             }
             ast::Type::String | ast::Type::DynamicBytes => {
                 let from = binary.builder.build_alloca(
-                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    binary.context.i8_type().ptr_type(AddressSpace::default()),
                     "from",
                 );
 
@@ -953,7 +953,7 @@ impl SubstrateTarget {
                 binary.builder.build_store(
                     binary.builder.build_pointer_cast(
                         dest,
-                        arg.get_type().ptr_type(AddressSpace::Generic),
+                        arg.get_type().ptr_type(AddressSpace::default()),
                         "",
                     ),
                     arg,
@@ -971,7 +971,7 @@ impl SubstrateTarget {
                 binary.builder.build_store(
                     binary.builder.build_pointer_cast(
                         dest,
-                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        binary.address_type(ns).ptr_type(AddressSpace::default()),
                         "",
                     ),
                     arg.into_array_value(),
@@ -1000,7 +1000,7 @@ impl SubstrateTarget {
                             .builder
                             .build_pointer_cast(
                                 val,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::default()),
                                 "",
                             )
                             .into(),
@@ -1161,7 +1161,7 @@ impl SubstrateTarget {
                 binary.builder.position_at_end(done_array);
 
                 let either_data = binary.builder.build_phi(
-                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    binary.context.i8_type().ptr_type(AddressSpace::default()),
                     "either_data",
                 );
 
@@ -1296,7 +1296,7 @@ impl SubstrateTarget {
                 binary.builder.position_at_end(done_struct);
 
                 let either_data = binary.builder.build_phi(
-                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    binary.context.i8_type().ptr_type(AddressSpace::default()),
                     "either_data",
                 );
 
@@ -1351,7 +1351,7 @@ impl SubstrateTarget {
                                 .builder
                                 .build_pointer_cast(
                                     string_data,
-                                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    binary.context.i8_type().ptr_type(AddressSpace::default()),
                                     "",
                                 )
                                 .into(),

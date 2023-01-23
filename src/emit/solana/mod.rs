@@ -91,10 +91,10 @@ impl SolanaTarget {
 
     fn declare_externals(&self, binary: &mut Binary, ns: &ast::Namespace) {
         let void_ty = binary.context.void_type();
-        let u8_ptr = binary.context.i8_type().ptr_type(AddressSpace::Generic);
+        let u8_ptr = binary.context.i8_type().ptr_type(AddressSpace::default());
         let u64_ty = binary.context.i64_type();
         let u32_ty = binary.context.i32_type();
-        let address = binary.address_type(ns).ptr_type(AddressSpace::Generic);
+        let address = binary.address_type(ns).ptr_type(AddressSpace::default());
         let seeds = binary.llvm_type(
             &Type::Ref(Box::new(Type::Slice(Box::new(Type::Bytes(1))))),
             ns,
@@ -103,7 +103,7 @@ impl SolanaTarget {
         let sol_bytes = binary
             .context
             .struct_type(&[u8_ptr.into(), u64_ty.into()], false)
-            .ptr_type(AddressSpace::Generic);
+            .ptr_type(AddressSpace::default());
 
         let function = binary.module.add_function(
             "sol_log_",
@@ -175,7 +175,10 @@ impl SolanaTarget {
         let function = binary.module.add_function(
             "sol_log_data",
             void_ty.fn_type(
-                &[fields.ptr_type(AddressSpace::Generic).into(), u64_ty.into()],
+                &[
+                    fields.ptr_type(AddressSpace::default()).into(),
+                    u64_ty.into(),
+                ],
                 false,
             ),
             None,
@@ -237,7 +240,7 @@ impl SolanaTarget {
                 .module
                 .get_struct_type("struct.SolAccountInfo")
                 .unwrap()
-                .ptr_type(AddressSpace::Generic),
+                .ptr_type(AddressSpace::default()),
             "account_info",
         )
     }
@@ -259,7 +262,7 @@ impl SolanaTarget {
                 .module
                 .get_struct_type("struct.SolParameters")
                 .unwrap()
-                .ptr_type(AddressSpace::Generic),
+                .ptr_type(AddressSpace::default()),
             "parameters",
         )
     }
@@ -310,7 +313,7 @@ impl SolanaTarget {
         if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
             let offset_ptr = binary.builder.build_pointer_cast(
                 member,
-                binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                binary.context.i32_type().ptr_type(AddressSpace::default()),
                 "offset_ptr",
             );
 
@@ -335,7 +338,7 @@ impl SolanaTarget {
 
             let offset_ptr = binary.builder.build_pointer_cast(
                 member,
-                binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                binary.context.i32_type().ptr_type(AddressSpace::default()),
                 "offset_ptr",
             );
 
@@ -431,7 +434,7 @@ impl SolanaTarget {
             binary.builder.build_store(
                 binary
                     .builder
-                    .build_pointer_cast(member, ty.ptr_type(AddressSpace::Generic), ""),
+                    .build_pointer_cast(member, ty.ptr_type(AddressSpace::default()), ""),
                 ty.into_array_type().const_zero(),
             );
         } else {
@@ -440,7 +443,7 @@ impl SolanaTarget {
             binary.builder.build_store(
                 binary
                     .builder
-                    .build_pointer_cast(member, ty.ptr_type(AddressSpace::Generic), ""),
+                    .build_pointer_cast(member, ty.ptr_type(AddressSpace::default()), ""),
                 ty.into_int_type().const_zero(),
             );
         }
@@ -521,7 +524,7 @@ impl SolanaTarget {
         let entry_ty = self.sparse_entry(binary, key_ty, value_ty, ns);
         let value_offset = unsafe {
             entry_ty
-                .ptr_type(AddressSpace::Generic)
+                .ptr_type(AddressSpace::default())
                 .const_null()
                 .const_gep(&[
                     binary.context.i32_type().const_zero(),
@@ -535,7 +538,7 @@ impl SolanaTarget {
         let member = unsafe { binary.builder.build_gep(data, &[offset], "data") };
         let offset_ptr = binary.builder.build_pointer_cast(
             member,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::default()),
             "offset_ptr",
         );
 
@@ -565,7 +568,7 @@ impl SolanaTarget {
                         .builder
                         .build_pointer_cast(
                             address,
-                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i8_type().ptr_type(AddressSpace::default()),
                             "address_ptr",
                         )
                         .into()],
@@ -613,7 +616,7 @@ impl SolanaTarget {
 
         // we are walking the bucket list via the offset ptr
         let offset_ptr_phi = binary.builder.build_phi(
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::default()),
             "offset_ptr",
         );
 
@@ -645,7 +648,7 @@ impl SolanaTarget {
         let member = unsafe { binary.builder.build_gep(data, &[offset], "data") };
         let entry_ptr = binary.builder.build_pointer_cast(
             member,
-            entry_ty.ptr_type(AddressSpace::Generic),
+            entry_ty.ptr_type(AddressSpace::default()),
             "offset_ptr",
         );
 
@@ -707,7 +710,7 @@ impl SolanaTarget {
                             .builder
                             .build_pointer_cast(
                                 address,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::default()),
                                 "address_ptr",
                             )
                             .into(),
@@ -715,7 +718,7 @@ impl SolanaTarget {
                             .builder
                             .build_pointer_cast(
                                 ptr,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i8_type().ptr_type(AddressSpace::default()),
                                 "offset_ptr",
                             )
                             .into(),
@@ -846,7 +849,7 @@ impl SolanaTarget {
 
         let entry_ptr = binary.builder.build_pointer_cast(
             member,
-            entry_ty.ptr_type(AddressSpace::Generic),
+            entry_ty.ptr_type(AddressSpace::default()),
             "offset_ptr",
         );
 
@@ -1032,7 +1035,7 @@ impl SolanaTarget {
                 binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         key,
-                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        binary.address_type(ns).ptr_type(AddressSpace::default()),
                         "address",
                     ),
                     "key",
@@ -1101,7 +1104,7 @@ impl SolanaTarget {
                 binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         owner,
-                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        binary.address_type(ns).ptr_type(AddressSpace::default()),
                         "address",
                     ),
                     "owner",

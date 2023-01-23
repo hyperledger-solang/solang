@@ -84,7 +84,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member = unsafe { binary.builder.build_gep(data, &[slot], "data") };
         let offset_ptr = binary.builder.build_pointer_cast(
             member,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::default()),
             "offset_ptr",
         );
 
@@ -125,7 +125,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             binary
                 .context
                 .i8_type()
-                .ptr_type(AddressSpace::Generic)
+                .ptr_type(AddressSpace::default())
                 .const_null(),
             binary.context.i32_type().const_zero(),
         );
@@ -152,7 +152,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member = unsafe { binary.builder.build_gep(data, &[slot], "data") };
         let offset_ptr = binary.builder.build_pointer_cast(
             member,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::default()),
             "offset_ptr",
         );
 
@@ -192,7 +192,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             binary
                 .context
                 .i8_type()
-                .ptr_type(AddressSpace::Generic)
+                .ptr_type(AddressSpace::default())
                 .const_null(),
             binary.context.i32_type().const_zero(),
         );
@@ -244,7 +244,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             let member = unsafe { binary.builder.build_gep(data, &[slot], "data") };
             let offset_ptr = binary.builder.build_pointer_cast(
                 member,
-                binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                binary.context.i32_type().ptr_type(AddressSpace::default()),
                 "offset_ptr",
             );
 
@@ -285,7 +285,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member = unsafe { binary.builder.build_gep(data, &[slot], "data") };
         let offset_ptr = binary.builder.build_pointer_cast(
             member,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::default()),
             "offset_ptr",
         );
 
@@ -391,7 +391,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let member = unsafe { binary.builder.build_gep(data, &[slot], "data") };
         let offset_ptr = binary.builder.build_pointer_cast(
             member,
-            binary.context.i32_type().ptr_type(AddressSpace::Generic),
+            binary.context.i32_type().ptr_type(AddressSpace::default()),
             "offset_ptr",
         );
 
@@ -433,7 +433,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             binary
                 .context
                 .i8_type()
-                .ptr_type(AddressSpace::Generic)
+                .ptr_type(AddressSpace::default())
                 .const_null(),
             binary.context.i32_type().const_zero(),
         );
@@ -493,7 +493,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_load(
                 binary.builder.build_pointer_cast(
                     member,
-                    binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                    binary.context.i32_type().ptr_type(AddressSpace::default()),
                     "",
                 ),
                 "offset",
@@ -555,7 +555,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .build_load(
                         binary.builder.build_pointer_cast(
                             member,
-                            binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                            binary.context.i32_type().ptr_type(AddressSpace::default()),
                             "",
                         ),
                         "offset",
@@ -615,7 +615,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 let dest = binary.builder.build_pointer_cast(
                     new,
-                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    llvm_ty.ptr_type(AddressSpace::default()),
                     "dest",
                 );
 
@@ -683,7 +683,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                     dest = binary.builder.build_pointer_cast(
                         new,
-                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        llvm_ty.ptr_type(AddressSpace::default()),
                         "dest",
                     );
                     length = binary.context.i32_type().const_int(
@@ -709,7 +709,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         .build_load(
                             binary.builder.build_pointer_cast(
                                 member,
-                                binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                                binary.context.i32_type().ptr_type(AddressSpace::default()),
                                 "",
                             ),
                             "offset",
@@ -769,7 +769,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             _ => binary.builder.build_load(
                 binary.builder.build_pointer_cast(
                     member,
-                    binary.llvm_type(ty, ns).ptr_type(AddressSpace::Generic),
+                    binary.llvm_type(ty, ns).ptr_type(AddressSpace::default()),
                     "",
                 ),
                 "",
@@ -796,7 +796,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         if *ty == ast::Type::String || *ty == ast::Type::DynamicBytes {
             let offset_ptr = binary.builder.build_pointer_cast(
                 member,
-                binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                binary.context.i32_type().ptr_type(AddressSpace::default()),
                 "offset_ptr",
             );
 
@@ -962,7 +962,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let offset_ptr = binary.builder.build_pointer_cast(
                 member,
-                binary.context.i32_type().ptr_type(AddressSpace::Generic),
+                binary.context.i32_type().ptr_type(AddressSpace::default()),
                 "offset_ptr",
             );
 
@@ -1125,7 +1125,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             binary.builder.build_store(
                 binary.builder.build_pointer_cast(
                     member,
-                    val.get_type().ptr_type(AddressSpace::Generic),
+                    val.get_type().ptr_type(AddressSpace::default()),
                     "",
                 ),
                 val,
@@ -1269,7 +1269,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .module
                 .get_struct_type("struct.SolPubkey")
                 .unwrap()
-                .ptr_type(AddressSpace::Generic),
+                .ptr_type(AddressSpace::default()),
             "const_program_id",
         );
 
@@ -1283,7 +1283,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .module
                 .get_struct_type("struct.SolPubkey")
                 .unwrap()
-                .ptr_type(AddressSpace::Generic),
+                .ptr_type(AddressSpace::default()),
             "address",
         );
 
@@ -1507,7 +1507,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         .module
                         .get_struct_type("struct.SolPubkey")
                         .unwrap()
-                        .ptr_type(AddressSpace::Generic),
+                        .ptr_type(AddressSpace::default()),
                     "SolPubkey",
                 ),
             );
@@ -1523,7 +1523,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         .module
                         .get_struct_type("struct.SolAccountMeta")
                         .unwrap()
-                        .ptr_type(AddressSpace::Generic),
+                        .ptr_type(AddressSpace::default()),
                     "SolAccountMeta",
                 ),
             );
@@ -1547,7 +1547,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .unwrap(),
                 binary.builder.build_pointer_cast(
                     payload,
-                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    binary.context.i8_type().ptr_type(AddressSpace::default()),
                     "data",
                 ),
             );
@@ -1575,7 +1575,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .module
                     .get_struct_type("struct.SolAccountInfo")
                     .unwrap()
-                    .ptr_type(AddressSpace::Generic),
+                    .ptr_type(AddressSpace::default()),
                 "SolAccountInfo",
             );
 
@@ -1649,7 +1649,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .module
                     .get_struct_type("struct.SolPubkey")
                     .unwrap()
-                    .ptr_type(AddressSpace::Generic),
+                    .ptr_type(AddressSpace::default()),
                 "address",
             );
 
@@ -1698,7 +1698,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 binary
                     .context
                     .i8_type()
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .const_null(),
                 binary.context.i32_type().const_zero(),
             );
@@ -1716,7 +1716,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let null_u8_ptr = binary
             .context
             .i8_type()
-            .ptr_type(AddressSpace::Generic)
+            .ptr_type(AddressSpace::default())
             .const_zero();
 
         let length_as_64 = binary
@@ -1770,7 +1770,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .module
                 .get_struct_type("struct.vector")
                 .unwrap()
-                .ptr_type(AddressSpace::Generic),
+                .ptr_type(AddressSpace::default()),
             "string",
         );
 
@@ -1825,7 +1825,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_pointer_cast(
                         data,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::default()),
                         "",
                     )
                     .into(),
@@ -1834,7 +1834,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_pointer_cast(
                         program_id,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::default()),
                         "",
                     )
                     .into(),
@@ -2036,8 +2036,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     key,
                     binary
                         .address_type(ns)
-                        .ptr_type(AddressSpace::Generic)
-                        .ptr_type(AddressSpace::Generic),
+                        .ptr_type(AddressSpace::default())
+                        .ptr_type(AddressSpace::default()),
                     "",
                 );
 
@@ -2063,7 +2063,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 let value = binary.builder.build_pointer_cast(
                     account_id,
-                    binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                    binary.address_type(ns).ptr_type(AddressSpace::default()),
                     "",
                 );
 
@@ -2132,7 +2132,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 let selector = binary.builder.build_load(
                     binary.builder.build_pointer_cast(
                         input,
-                        binary.context.i64_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i64_type().ptr_type(AddressSpace::default()),
                         "selector",
                     ),
                     "selector",
@@ -2183,7 +2183,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                                 .builder
                                 .build_pointer_cast(
                                     address,
-                                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    binary.context.i8_type().ptr_type(AddressSpace::default()),
                                     "",
                                 )
                                 .into(),
@@ -2372,7 +2372,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_pointer_cast(
                         temp,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        binary.context.i8_type().ptr_type(AddressSpace::default()),
                         "",
                     )
                     .into(),

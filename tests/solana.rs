@@ -3,7 +3,6 @@
 use crate::borsh_encoding::{decode_at_offset, encode_arguments, BorshToken};
 use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use ethabi::RawLog;
 use libc::c_char;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -1868,18 +1867,5 @@ impl VirtualMachine {
         } else {
             0
         }
-    }
-
-    pub fn events(&self) -> Vec<RawLog> {
-        self.events
-            .iter()
-            .map(|fields| {
-                assert_eq!(fields.len(), 1);
-                RawLog {
-                    topics: vec![],
-                    data: fields[0].clone(),
-                }
-            })
-            .collect()
     }
 }
