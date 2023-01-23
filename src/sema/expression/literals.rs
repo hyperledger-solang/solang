@@ -5,7 +5,7 @@ use crate::sema::ast::{ArrayLength, Expression, Namespace, RetrieveType, StructT
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::integers::bigint_to_expression;
 use crate::sema::expression::strings::unescape;
-use crate::sema::expression::{check_subarrays, expression, ExprContext, ResolveTo};
+use crate::sema::expression::{expression, ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::used_variable;
 use crate::Target;
@@ -757,4 +757,59 @@ pub(super) fn array_literal(
             values: exprs,
         })
     }
+}
+
+/// Traverse the literal looking for sub arrays. Ensure that all the sub
+/// arrays are the same length, and returned a flattened array of elements
+fn check_subarrays<'a>(
+    exprs: &'a [pt::Expression],
+    dims: &mut Option<&mut Vec<u32>>,
+    flatten: &mut Vec<&'a pt::Expression>,
+    diagnostics: &mut Diagnostics,
+) -> Result<(), ()> {
+    if let Some(pt::Expression::ArrayLiteral(_, first)) = exprs.get(0) {
+        // ensure all elements are array literals of the same length
+        check_subarrays(first, dims, flatten, diagnostics)?;
+
+        for (i, e) in exprs.iter().enumerate().skip(1) {
+            if let pt::Expression::ArrayLiteral(_, other) = e {
+                if other.len() != first.len() {
+                    diagnostics.push(Diagnostic::error(
+                        e.loc(),
+                        format!(
+                            "array elements should be identical, sub array {} has {} elements rather than {}", i + 1, other.len(), first.len()
+                        ),
+                    ));
+                    return Err(());
+                }
+                check_subarrays(other, &mut None, flatten, diagnostics)?;
+            } else {
+                diagnostics.push(Diagnostic::error(
+                    e.loc(),
+                    format!("array element {} should also be an array", i + 1),
+                ));
+                return Err(());
+            }
+        }
+    } else {
+        for (i, e) in exprs.iter().enumerate().skip(1) {
+            if let pt::Expression::ArrayLiteral(loc, _) = e {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "array elements should be of the type, element {} is unexpected array",
+                        i + 1
+                    ),
+                ));
+                return Err(());
+            }
+        }
+        flatten.extend(exprs);
+    }
+
+    if let Some(dims) = dims.as_deref_mut() {
+        dims.push(exprs.len() as u32);
+    }
+
+    Ok(())
 }
