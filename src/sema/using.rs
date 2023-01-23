@@ -3,9 +3,10 @@
 use super::{
     ast::{Diagnostic, Expression, Namespace, Note, Type, Using, UsingList},
     diagnostics::Diagnostics,
-    expression::{expression, function_returns, function_type, ExprContext, ResolveTo},
+    expression::{expression, ExprContext, ResolveTo},
     symtable::Symtable,
 };
+use crate::sema::expression::function_call::{function_returns, function_type};
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 use std::collections::HashSet;
