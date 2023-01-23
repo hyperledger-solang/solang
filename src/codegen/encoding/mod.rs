@@ -808,7 +808,7 @@ fn calculate_complex_array_size(
     let for_loop = set_array_loop(arr, dims, dimension, indexes, vartab, cfg);
     cfg.set_basic_block(for_loop.body_block);
     if 0 == dimension {
-        let deref = load_array_item(arr, dims, indexes);
+        let deref = index_array(arr.clone(), dims, indexes, false);
         let elem_size = get_expr_size(encoder, arg_no, &deref, ns, vartab, cfg);
         let size_var = Expression::Variable(Codegen, Uint(32), size_var_no);
         cfg.add(
@@ -836,6 +836,27 @@ fn calculate_complex_array_size(
     finish_array_loop(&for_loop, vartab, cfg);
 }
 
+/// Get the array length at dimension 'index'
+fn get_array_length(
+    arr: &Expression,
+    dims: &[ArrayLength],
+    indexes: &[usize],
+    dimension: usize,
+) -> Expression {
+    if let ArrayLength::Fixed(dim) = &dims[dimension] {
+        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), dim.clone())
+    } else {
+        let sub_array = index_array(arr.clone(), dims, &indexes[..indexes.len() - 1], false);
+
+        Expression::Builtin(
+            Loc::Codegen,
+            vec![Type::Uint(32)],
+            Builtin::ArrayLength,
+            vec![sub_array],
+        )
+    }
+}
+
 /// Retrieves the size of a struct
 fn calculate_struct_size(
     encoder: &mut Box<dyn AbiEncoding>,
@@ -861,42 +882,86 @@ fn calculate_struct_size(
     size
 }
 
-/// Loads an item from an array
-fn load_array_item(arr: &Expression, dims: &[ArrayLength], indexes: &[usize]) -> Expression {
-    let elem_ty = Type::Ref(arr.ty().elem_ty().into());
-    let (deref, ty) = load_sub_array(arr.clone(), dims, indexes, false);
-    let var = Expression::Variable(Codegen, Uint(32), *indexes.last().unwrap()).into();
-    Expression::Subscript(Codegen, elem_ty, ty, deref.into(), var)
-}
-
-/// Dereferences a subarray. If we have 'int[3][][4] vec' and we need 'int[3][]',
-/// this function returns so.
-/// 'dims' should contain only the dimensions we want to index
-/// 'index' is the list of indexes to use
-/// 'index_first_dim' chooses whether to index the first dimension in dims
-fn load_sub_array(
+/// Indexes an array. If we have 'int[3][][4] vec' and we need 'int[3][]',
+/// 'int[3]' or 'int' (the array element) this function returns so.
+///
+/// * `arr` - The expression that represents the array
+/// * `dims` - is the vector containing the array's dimensions
+/// * `index` - is the list of indexes to use for each dimension
+/// * `coerce_pointer_return` - forces the return of a pointer in this function.
+///
+/// When applying Expression::Subscript to a fixed-sized array, like 'int[3][4] vec', we
+/// have a pointer to a 'int[3]'. If we would like to index it again, there is no need to load,
+/// because a pointer to 'int[3]' is what the LLVM GEP instruction requires.
+///
+/// The underlying representation of a dynamic array is a C struct called 'struct vector'. In this
+/// sense, a vector like 'uint16[][] vec is a 'struct vector', whose buffer elements are all pointers to
+/// other 'struct vector's. When we index the first dimension of 'vec', we have a pointer to a pointer
+/// to a 'struct vector', which is not compatible with LLVM GEP instruction for further indexing.
+/// Therefore, we need an Expression::Load to obtain a pointer to 'struct vector' to be able to index
+/// it again.
+///
+/// Even though all the types this function returns are pointers in the LLVM IR representation,
+/// the argument `coerce_pointer_return` must be true when we are dealing with dynamic arrays that are
+/// going to be the destination address of a store instruction.
+///
+/// In a case like this,
+///
+/// uint16[][] vec;
+/// uint16[] vec1;
+/// vec[0] = vec1;
+///
+/// 'vec[0]' must be a pointer to a pointer to a 'struct vector' so that the LLVM Store instruction
+/// can be executed properly, as the value we are trying to store there is a pointer to a 'struct vector'.
+/// In this case, we must coerce the return of a pointer. Everywhere else, the load is necessary.
+///
+/// `coerce_pointer_return` has not effect for fixed sized arrays.
+fn index_array(
     mut arr: Expression,
     dims: &[ArrayLength],
     indexes: &[usize],
-    index_first_dim: bool,
-) -> (Expression, Type) {
+    coerce_pointer_return: bool,
+) -> Expression {
     let mut ty = arr.ty();
     let elem_ty = ty.elem_ty();
-    let start = !index_first_dim as usize;
-    for i in (start..dims.len()).rev() {
-        let local_ty = Type::Array(elem_ty.clone().into(), dims[0..i].to_vec());
-        let var = Expression::Variable(Codegen, Uint(32), indexes[indexes.len() - i - 1]);
+    let begin = dims.len() - indexes.len();
+
+    for i in (begin..dims.len()).rev() {
+        // If we are indexing the last dimension, the type should be that of the array element.
+        let local_ty = if i == 0 {
+            elem_ty.clone()
+        } else {
+            Type::Array(Box::new(elem_ty.clone()), dims[0..i].to_vec())
+        };
         arr = Expression::Subscript(
             Codegen,
             Type::Ref(local_ty.clone().into()),
             ty,
-            arr.into(),
-            var.into(),
+            Box::new(arr),
+            Box::new(Expression::Variable(
+                Loc::Codegen,
+                Type::Uint(32),
+                indexes[dims.len() - i - 1],
+            )),
         );
+
+        // We should only load if the dimension is dynamic.
+        if i > 0 && dims[i - 1] == ArrayLength::Dynamic {
+            arr = Expression::Load(Loc::Codegen, local_ty.clone(), arr.into());
+        }
+
         ty = local_ty;
     }
 
-    (arr, ty)
+    if coerce_pointer_return && !matches!(arr.ty(), Type::Ref(_)) {
+        if let Expression::Load(_, _, expr) = arr {
+            return *expr;
+        } else {
+            unreachable!("Expression should be a load");
+        }
+    }
+
+    arr
 }
 
 /// This struct manages for-loops created when iterating over arrays

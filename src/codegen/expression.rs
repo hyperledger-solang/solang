@@ -403,17 +403,17 @@ pub fn expression(
         ),
         ast::Expression::Constructor {
             loc,
-            contract_no,
+            contract_no: constructor_contract,
             constructor_no,
             args,
             call_args,
         } => {
-            let address_res = vartab.temp_anonymous(&Type::Contract(*contract_no));
+            let address_res = vartab.temp_anonymous(&Type::Contract(*constructor_contract));
 
             call_constructor(
                 loc,
+                constructor_contract,
                 contract_no,
-                *contract_no,
                 constructor_no,
                 args,
                 call_args,
@@ -425,7 +425,7 @@ pub fn expression(
                 cfg,
                 opt,
             );
-            Expression::Variable(*loc, Type::Contract(*contract_no), address_res)
+            Expression::Variable(*loc, Type::Contract(*constructor_contract), address_res)
         }
         ast::Expression::InternalFunction {
             function_no,

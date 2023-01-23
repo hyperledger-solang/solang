@@ -596,12 +596,7 @@ impl BorshEncoding {
             } else {
                 // TODO: This is wired up for multidimensional dynamic arrays, but they do no work yet
                 // Check https://github.com/hyperledger/solang/issues/932 for more information
-                let (sub_arr, _) = load_sub_array(
-                    array_var.clone(),
-                    &dims[(dimension + 1)..dims.len()],
-                    indexes,
-                    true,
-                );
+                let sub_arr = index_array(array_var.clone(), dims, indexes, true);
                 cfg.add(
                     vartab,
                     Instr::Store {
@@ -617,7 +612,7 @@ impl BorshEncoding {
         if 0 == dimension {
             let (read_expr, advance) =
                 self.read_from_buffer(buffer, offset_expr, elem_ty, validator, ns, vartab, cfg);
-            let ptr = load_array_item(array_var, dims, indexes);
+            let ptr = index_array(array_var.clone(), dims, indexes, true);
 
             cfg.add(
                 vartab,
