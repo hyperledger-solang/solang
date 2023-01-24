@@ -224,7 +224,7 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        let len = array_length(expr, vartab, cfg);
+        let len = array_outer_length(expr, vartab, cfg);
         let (data_offset, size) = if self.is_packed() {
             (offset.clone(), None)
         } else {
@@ -350,7 +350,7 @@ pub(super) trait AbiEncoding {
                         None,
                     )
                 } else {
-                    let value = array_length(array, vartab, cfg);
+                    let value = array_outer_length(array, vartab, cfg);
 
                     let (new_offset, size_length) = if self.is_packed() {
                         (offset.clone(), None)
@@ -1053,8 +1053,12 @@ fn load_struct_member(ty: Type, expr: Expression, field: usize) -> Expression {
     Expression::Load(Codegen, ty, s.into())
 }
 
-/// Get the array length inside a variable.
-fn array_length(arr: &Expression, vartab: &mut Vartable, cfg: &mut ControlFlowGraph) -> Expression {
+/// Get the outer array length inside a variable (cannot be used for any dimension).
+fn array_outer_length(
+    arr: &Expression,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+) -> Expression {
     let get_size = Expression::Builtin(
         Codegen,
         vec![Uint(32)],
