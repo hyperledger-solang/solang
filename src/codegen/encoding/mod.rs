@@ -18,7 +18,7 @@ use num_traits::{One, Zero};
 use solang_parser::pt::{Loc, Loc::Codegen};
 use std::ops::{AddAssign, MulAssign, Sub};
 
-/// Insert encoding routines into the `cfg` for any `Expression` in `args`.
+/// Insert encoding instructions into the `cfg` for any `Expression` in `args`.
 /// Returns a pointer to the encoded data and the size as an 32bit integer.
 pub(super) fn abi_encode(
     loc: &Loc,
