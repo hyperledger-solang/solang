@@ -1897,7 +1897,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary: &Binary<'b>,
         function: FunctionValue<'b>,
         data: BasicValueEnum<'b>,
-        size: BasicValueEnum<'b>,
         _topics: &[BasicValueEnum<'b>],
     ) {
         let fields = binary.build_array_alloca(
@@ -1935,7 +1934,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary.builder.build_store(
             field_len,
             binary.builder.build_int_z_extend(
-                size.into_int_value(),
+                binary.vector_len(data),
                 binary.context.i64_type(),
                 "data_len64",
             ),

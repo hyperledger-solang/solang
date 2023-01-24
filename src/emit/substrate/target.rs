@@ -1455,7 +1455,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         binary: &Binary<'b>,
         _function: FunctionValue<'b>,
         data: BasicValueEnum<'b>,
-        size: BasicValueEnum<'b>,
         topics: &[BasicValueEnum<'b>],
     ) {
         emit_context!(binary);
@@ -1522,7 +1521,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 topic_buf.into(),
                 topic_size.into(),
                 binary.vector_bytes(data).into(),
-                size.into_int_value().into(),
+                binary.vector_len(data).into(),
             ]
         );
     }

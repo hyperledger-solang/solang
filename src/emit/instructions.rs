@@ -1109,19 +1109,13 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             target.selfdestruct(bin, recipient, ns);
         }
-        Instr::EmitEvent {
-            data,
-            size: data_len,
-            topics,
-            ..
-        } => {
+        Instr::EmitEvent { data, topics, .. } => {
             let data = expression(target, bin, data, &w.vars, function, ns);
-            let data_len = expression(target, bin, data_len, &w.vars, function, ns);
             let topics = topics
                 .iter()
                 .map(|a| expression(target, bin, a, &w.vars, function, ns))
                 .collect::<Vec<BasicValueEnum>>();
-            target.emit_event(bin, function, data, data_len, &topics);
+            target.emit_event(bin, function, data, &topics);
         }
         Instr::WriteBuffer { buf, offset, value } => {
             let v = expression(target, bin, buf, &w.vars, function, ns);
