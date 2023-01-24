@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod arithmetics;
-mod arrays;
 mod assign;
 pub(crate) mod constructor;
 pub mod expression_impl;
@@ -11,6 +10,7 @@ pub(crate) mod literals;
 mod member_access;
 pub mod retrieve_type;
 pub(crate) mod strings;
+mod subscript;
 mod tests;
 mod variable;
 
@@ -23,7 +23,6 @@ use crate::sema::expression::arithmetics::{
     addition, bitwise_and, bitwise_or, bitwise_xor, divide, equal, incr_decr, modulo, multiply,
     power, shift_left, shift_right, subtract,
 };
-use crate::sema::expression::arrays::array_subscript;
 use crate::sema::expression::assign::{assign_expr, assign_single};
 use crate::sema::expression::constructor::{constructor_named_args, new};
 use crate::sema::expression::function_call::{call_expr, named_call_expr};
@@ -35,6 +34,7 @@ use crate::sema::expression::literals::{
     rational_number_literal, string_literal,
 };
 use crate::sema::expression::member_access::member_access;
+use crate::sema::expression::subscript::array_subscript;
 use crate::sema::expression::variable::variable;
 use crate::sema::unused_variable::{
     check_function_call, check_var_usage_expression, used_variable,
