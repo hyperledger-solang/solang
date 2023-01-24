@@ -174,16 +174,10 @@ impl AbiEncoding for ScaleEncoding {
         let addr_len = ns.address_length.into();
         let address = expr.external_function_address();
         let size = self.encode_direct(&address, buffer, offset, vartab, cfg, addr_len);
-        let offset = Expression::Add(
-            Codegen,
-            Uint(32),
-            false,
-            offset.clone().into(),
-            size.clone().into(),
-        );
+        let offset = Expression::Add(Codegen, Uint(32), false, offset.clone().into(), size.into());
         let selector = expr.external_function_selector();
-        let selector_size = self.encode_direct(&selector, buffer, &offset, vartab, cfg, 4.into());
-        Expression::Add(Codegen, Uint(32), false, size.into(), selector_size.into())
+        self.encode_direct(&selector, buffer, &offset, vartab, cfg, 4.into());
+        Expression::NumberLiteral(Codegen, Uint(32), (ns.address_length + 4).into())
     }
 
     fn encode_size(
