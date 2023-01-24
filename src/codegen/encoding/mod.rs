@@ -84,23 +84,23 @@ pub(super) trait AbiEncoding {
         let expr_ty = &expr.ty().unwrap_user_type(ns);
         match expr_ty {
             Type::Contract(_) | Type::Address(_) => {
-                self.encode_direct(expr, buffer, offset, vartab, cfg, ns.address_length.into())
+                self.encode_directly(expr, buffer, offset, vartab, cfg, ns.address_length.into())
             }
-            Type::Bool => self.encode_direct(expr, buffer, offset, vartab, cfg, 1.into()),
+            Type::Bool => self.encode_directly(expr, buffer, offset, vartab, cfg, 1.into()),
             Type::Uint(width) | Type::Int(width) => {
                 self.encode_int(expr, buffer, offset, vartab, cfg, *width)
             }
             Type::Value => {
                 let size = ns.value_length.into();
-                self.encode_direct(expr, buffer, offset, vartab, cfg, size)
+                self.encode_directly(expr, buffer, offset, vartab, cfg, size)
             }
             Type::Bytes(length) => {
-                self.encode_direct(expr, buffer, offset, vartab, cfg, (*length).into())
+                self.encode_directly(expr, buffer, offset, vartab, cfg, (*length).into())
             }
             Type::String | Type::DynamicBytes => {
                 self.encode_bytes(expr, buffer, offset, vartab, cfg)
             }
-            Type::Enum(_) => self.encode_direct(expr, buffer, offset, vartab, cfg, 1.into()),
+            Type::Enum(_) => self.encode_directly(expr, buffer, offset, vartab, cfg, 1.into()),
             Type::Struct(ty) => {
                 self.encode_struct(expr, buffer, offset.clone(), ty, arg_no, ns, vartab, cfg)
             }
@@ -118,7 +118,7 @@ pub(super) trait AbiEncoding {
             }
             Type::FunctionSelector => {
                 let size = ns.target.selector_length().into();
-                self.encode_direct(expr, buffer, offset, vartab, cfg, size)
+                self.encode_directly(expr, buffer, offset, vartab, cfg, size)
             }
             Type::Ref(r) => {
                 if let Type::Struct(ty) = &**r {
@@ -152,7 +152,7 @@ pub(super) trait AbiEncoding {
     }
 
     /// Write whatever is inside the given `expr` into `buffer` without any modification.
-    fn encode_direct(
+    fn encode_directly(
         &mut self,
         expr: &Expression,
         buffer: &Expression,
