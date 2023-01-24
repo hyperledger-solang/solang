@@ -55,7 +55,7 @@ pub(super) fn abi_encode(
 ///
 /// Note: This trait mostly reflects the situation around SCALE and Borsh encoding schemes.
 /// These two encoding schemes share only minor differences. We provide default implementations
-/// for many methods, which all work fine for SCALE and Borsh encoding.
+/// for many methods, which properly work for SCALE and Borsh encoding.
 ///
 /// However, this might be less suitable for schemas vastly different than SCALE or Borsh.
 /// Worst case is that you need to provide your own implementation of `fn encode(..)`.
