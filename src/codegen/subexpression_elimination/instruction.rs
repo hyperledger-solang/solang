@@ -141,14 +141,8 @@ impl AvailableExpressionSet {
                 let _ = self.gen_expression(value, ave, cst);
             }
 
-            Instr::EmitEvent {
-                data,
-                size: data_len,
-                topics,
-                ..
-            } => {
+            Instr::EmitEvent { data, topics, .. } => {
                 let _ = self.gen_expression(data, ave, cst);
-                let _ = self.gen_expression(data_len, ave, cst);
                 for expr in topics {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
@@ -423,12 +417,10 @@ impl AvailableExpressionSet {
             Instr::EmitEvent {
                 event_no,
                 data,
-                size: data_len,
                 topics,
             } => Instr::EmitEvent {
                 event_no: *event_no,
                 data: self.regenerate_expression(data, ave, cst).1,
-                size: self.regenerate_expression(data_len, ave, cst).1,
                 topics: topics
                     .iter()
                     .map(|v| self.regenerate_expression(v, ave, cst).1)

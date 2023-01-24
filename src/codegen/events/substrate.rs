@@ -174,13 +174,12 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             topics.push(buffer);
         }
 
-        let (data, size) = abi_encode(&loc, data, self.ns, vartab, cfg, false);
+        let data = abi_encode(&loc, data, self.ns, vartab, cfg, false).0;
         cfg.add(
             vartab,
             Instr::EmitEvent {
                 event_no: self.event_no,
                 data,
-                size,
                 topics,
             },
         );

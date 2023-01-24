@@ -45,16 +45,13 @@ impl EventEmitter for SolanaEventEmitter<'_> {
 
         let mut to_be_encoded: Vec<Expression> = vec![discriminator];
         to_be_encoded.append(&mut codegen_args);
-
-        let (abi_encoded, abi_encoded_size) =
-            abi_encode(&self.loc, to_be_encoded, self.ns, vartab, cfg, false);
+        let data = abi_encode(&self.loc, to_be_encoded, self.ns, vartab, cfg, false).0;
 
         cfg.add(
             vartab,
             Instr::EmitEvent {
                 event_no: self.event_no,
-                data: abi_encoded,
-                size: abi_encoded_size,
+                data,
                 topics: vec![],
             },
         );
