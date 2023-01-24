@@ -53,7 +53,7 @@ pub(super) fn abi_encode(
 /// This trait should be implemented by all encoding methods (ethabi, SCALE and Borsh), so that
 /// we have the same interface for creating encode and decode functions.
 ///
-/// Note: This trait mostly reflects the situation around SCALE and Borsh encoding schemas.
+/// Note: This trait mostly reflects the situation around SCALE and Borsh encoding schemes.
 /// These two encoding schemes share only minor differences. We provide default implementations
 /// for many methods, which all work fine for SCALE and Borsh encoding.
 ///
