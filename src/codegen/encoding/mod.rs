@@ -58,7 +58,7 @@ pub(super) fn abi_encode(
 /// for many methods, which properly work for SCALE and Borsh encoding.
 ///
 /// However, this might be less suitable for schemas vastly different than SCALE or Borsh.
-/// In the worst case scenario, you need to provide your own implementation of `fn encode(..)`.
+/// In the worst case scenario, you need to provide your own implementation of `fn encode(..)`,
 /// which effectively means implementing the encoding logic for any given sema `Type` on your own.
 pub(super) trait AbiEncoding {
     /// The width (in bits) used in size hints for dynamic size types.
