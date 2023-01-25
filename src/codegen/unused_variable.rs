@@ -31,16 +31,16 @@ pub fn should_remove_assignment(
     match &exp {
         Expression::StorageVariable {
             contract_no,
-            var_no: offset,
+            var_no,
             ..
         } => {
-            let var = &ns.contracts[*contract_no].variables[*offset];
+            let var = &ns.contracts[*contract_no].variables[*var_no];
             !var.read
         }
 
-        Expression::Variable { var_no: offset, .. } => should_remove_variable(offset, func, opt),
+        Expression::Variable { var_no, .. } => should_remove_variable(var_no, func, opt),
 
-        Expression::StructMember { expr: str, .. } => should_remove_assignment(ns, str, func, opt),
+        Expression::StructMember { expr, .. } => should_remove_assignment(ns, expr, func, opt),
 
         Expression::Subscript { array, .. } => should_remove_assignment(ns, array, func, opt),
 

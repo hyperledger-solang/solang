@@ -148,7 +148,7 @@ fn resolve_number_literal(
             } else {
                 ns.diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!("exponent '{}' too large", exp),
+                    format!("exponent '{exp}' too large"),
                 ));
                 return Err(());
             }
@@ -157,7 +157,7 @@ fn resolve_number_literal(
         } else {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("exponent '{}' too large", exp),
+                format!("exponent '{exp}' too large"),
             ));
             return Err(());
         }
@@ -200,8 +200,7 @@ fn resolve_number_literal(
             ty: ErrorType::TypeError,
             loc: *loc,
             message: format!(
-                "the provided literal requires {} bits, but the type only supports {}",
-                bits_needed, type_size
+                "the provided literal requires {bits_needed} bits, but the type only supports {type_size}"
             ),
             notes: vec![],
         });
@@ -503,7 +502,7 @@ fn check_function_argument(
         if n1 < n2 {
             ns.diagnostics.push(Diagnostic::warning(
                 argument.loc(),
-                format!("{} bit type may not fit into {} bit type", n2, n1),
+                format!("{n2} bit type may not fit into {n1} bit type"),
             ));
         }
     } else if matches!(parameter.ty, Type::Uint(_)) && matches!(arg_type, Type::Int(_)) {
@@ -517,10 +516,7 @@ fn check_function_argument(
         if n1 == n2 {
             ns.diagnostics.push(Diagnostic::warning(
                 argument.loc(),
-                format!(
-                    "{} bit unsigned integer may not fit into {} bit signed integer",
-                    n1, n2
-                ),
+                format!("{n1} bit unsigned integer may not fit into {n2} bit signed integer"),
             ));
         }
     }

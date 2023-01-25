@@ -754,7 +754,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_return(Some(&binary.return_values[&ReturnCode::Success]));
     }
 
-    fn assert_failure<'b>(&self, binary: &'b Binary, _data: PointerValue, _length: IntValue) {
+    fn assert_failure(&self, binary: &Binary, _data: PointerValue, _length: IntValue) {
         // insert "unreachable" instruction; not that build_unreachable() tells the compiler
         // that this code path is not reachable and may be discarded.
         let asm_fn = binary.context.void_type().fn_type(&[], false);

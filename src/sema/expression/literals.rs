@@ -150,10 +150,7 @@ pub(crate) fn hex_number_literal(
             } else {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!(
-                        "address literal has incorrect checksum, expected '{}'",
-                        address
-                    ),
+                    format!("address literal has incorrect checksum, expected '{address}'"),
                 ));
                 Err(())
             };
@@ -182,8 +179,7 @@ pub(crate) fn hex_number_literal(
             diagnostics.push(Diagnostic::cast_error(
                 *loc,
                 format!(
-                    "hex literal {} must be {} digits for type 'bytes{}'",
-                    n, expected_length, length,
+                    "hex literal {n} must be {expected_length} digits for type 'bytes{length}'"
                 ),
             ));
             Err(())
@@ -238,7 +234,7 @@ pub(super) fn address_literal(
                 if v[ns.address_length + 1] != hash[0] || v[ns.address_length + 2] != hash[1] {
                     diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("address literal {} hash incorrect checksum", address,),
+                        format!("address literal {address} hash incorrect checksum"),
                     ));
                     return Err(());
                 }
@@ -252,7 +248,7 @@ pub(super) fn address_literal(
             Err(FromBase58Error::InvalidBase58Length) => {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!("address literal {} invalid base58 length", address),
+                    format!("address literal {address} invalid base58 length"),
                 ));
                 Err(())
             }
@@ -264,7 +260,7 @@ pub(super) fn address_literal(
                 }
                 diagnostics.push(Diagnostic::error(
                     loc,
-                    format!("address literal {} invalid character '{}'", address, ch),
+                    format!("address literal {address} invalid character '{ch}'"),
                 ));
                 Err(())
             }
@@ -293,7 +289,7 @@ pub(super) fn address_literal(
             Err(FromBase58Error::InvalidBase58Length) => {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!("address literal {} invalid base58 length", address),
+                    format!("address literal {address} invalid base58 length"),
                 ));
                 Err(())
             }
@@ -305,7 +301,7 @@ pub(super) fn address_literal(
                 }
                 diagnostics.push(Diagnostic::error(
                     loc,
-                    format!("address literal {} invalid character '{}'", address, ch),
+                    format!("address literal {address} invalid character '{ch}'"),
                 ));
                 Err(())
             }
@@ -352,7 +348,7 @@ pub(crate) fn number_literal(
             } else {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!("exponent '{}' too large", exp),
+                    format!("exponent '{exp}' too large"),
                 ));
                 return Err(());
             }
@@ -361,7 +357,7 @@ pub(crate) fn number_literal(
         } else {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("exponent '{}' too large", exp),
+                format!("exponent '{exp}' too large"),
             ));
             return Err(());
         }
@@ -410,7 +406,7 @@ pub(super) fn rational_number_literal(
         } else {
             diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("exponent '{}' too large", exp),
+                format!("exponent '{exp}' too large"),
             ));
             return Err(());
         };

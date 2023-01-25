@@ -126,9 +126,9 @@ pub fn contract_function(
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         m.loc(),
-                        format!("function redeclared '{}'", m),
+                        format!("function redeclared '{m}'"),
                         e.loc(),
-                        format!("location of previous declaration of '{}'", e),
+                        format!("location of previous declaration of '{e}'"),
                     ));
                     success = false;
                     continue;
@@ -149,9 +149,9 @@ pub fn contract_function(
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         v.loc().unwrap(),
-                        format!("function redeclared '{}'", v),
+                        format!("function redeclared '{v}'"),
                         e.loc().unwrap(),
-                        format!("location of previous declaration of '{}'", e),
+                        format!("location of previous declaration of '{e}'"),
                     ));
                     success = false;
                     continue;
@@ -195,7 +195,7 @@ pub fn contract_function(
                         if list.contains(&no) {
                             diagnostics.push(Diagnostic::error(
                                 name.loc,
-                                format!("function duplicate override '{}'", name),
+                                format!("function duplicate override '{name}'"),
                             ));
                         } else if !is_base(no, contract_no, ns) {
                             diagnostics.push(Diagnostic::error(
@@ -238,14 +238,14 @@ pub fn contract_function(
             if func.ty == pt::FunctionTy::Modifier {
                 ns.diagnostics.push(Diagnostic::error(
                     v.loc().unwrap(),
-                    format!("'{}': modifiers can not have visibility", v),
+                    format!("'{v}': modifiers can not have visibility"),
                 ));
 
                 pt::Visibility::Internal(v.loc())
             } else if func.ty == pt::FunctionTy::Constructor {
                 ns.diagnostics.push(Diagnostic::warning(
                     v.loc().unwrap(),
-                    format!("'{}': visibility for constructors is ignored", v),
+                    format!("'{v}': visibility for constructors is ignored"),
                 ));
 
                 pt::Visibility::Public(v.loc())
@@ -674,9 +674,9 @@ pub fn function(
                 if let Some(e) = &mutability {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         m.loc(),
-                        format!("function redeclared '{}'", m),
+                        format!("function redeclared '{m}'"),
                         e.loc(),
-                        format!("location of previous declaration of '{}'", e),
+                        format!("location of previous declaration of '{e}'"),
                     ));
                     success = false;
                     continue;
@@ -696,10 +696,7 @@ pub fn function(
             pt::FunctionAttribute::Visibility(v) => {
                 ns.diagnostics.push(Diagnostic::error(
                     v.loc().unwrap(),
-                    format!(
-                        "'{}': only functions in contracts can have a visibility specifier",
-                        v
-                    ),
+                    format!("'{v}': only functions in contracts can have a visibility specifier"),
                 ));
                 success = false;
             }
@@ -871,8 +868,8 @@ pub fn resolve_params(
                     if let Some(storage) = &p.storage {
                         diagnostics.push(Diagnostic::error(
                             storage.loc(),
-                                format!("data location '{}' can only be specified for array, struct or mapping",
-                                storage)
+                                format!("data location '{storage}' can only be specified for array, struct or mapping"
+                                )
                             ));
                         success = false;
                     }
@@ -977,8 +974,8 @@ pub fn resolve_returns(
                     if let Some(storage) = &r.storage {
                         diagnostics.push(Diagnostic::error(
                             storage.loc(),
-                                format!("data location '{}' can only be specified for array, struct or mapping",
-                                storage)
+                                format!("data location '{storage}' can only be specified for array, struct or mapping"
+                                )
                             ));
                         success = false;
                     }

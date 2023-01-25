@@ -1230,7 +1230,7 @@ fn test_libsolidity() {
                 crate::parse(&source_part, 0)
             }) {
                 Ok(result) => result,
-                Err(err) => return Some(format!("{:?}: \n\t{}", path, err)),
+                Err(err) => return Some(format!("{path:?}: \n\t{err}")),
             };
 
             if let (Err(err), false) = (

@@ -695,7 +695,7 @@ pub(super) trait AbiEncoding {
             Expression::Add(Codegen, Uint(32), false, size_var.into(), size_width.into())
         } else {
             let size_var =
-                vartab.temp_name(format!("array_bytes_size_{}", arg_no).as_str(), &Uint(32));
+                vartab.temp_name(format!("array_bytes_size_{arg_no}").as_str(), &Uint(32));
             cfg.add(
                 vartab,
                 Instr::Set {
@@ -985,7 +985,7 @@ fn set_array_loop(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> ForLoop {
-    let index_temp = vartab.temp_name(format!("for_i_{}", dimension).as_str(), &Uint(32));
+    let index_temp = vartab.temp_name(format!("for_i_{dimension}").as_str(), &Uint(32));
 
     cfg.add(
         vartab,

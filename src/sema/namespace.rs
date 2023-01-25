@@ -783,8 +783,7 @@ impl Namespace {
                         return Err(());
                     } else if is_substrate && n > &u32::MAX.into() {
                         let msg = format!(
-                            "array dimension of {} exceeds the maximum of 4294967295 on Substrate",
-                            n
+                            "array dimension of {n} exceeds the maximum of 4294967295 on Substrate"
                         );
                         diagnostics.push(Diagnostic::decl_error(*loc, msg));
                         return Err(());
@@ -850,11 +849,10 @@ impl Namespace {
                                 if let Some(e) = &mutability {
                                     diagnostics.push(Diagnostic::error_with_note(
                                         m.loc(),
-                                        format!("function type mutability redeclared '{}'", m),
+                                        format!("function type mutability redeclared '{m}'"),
                                         e.loc(),
                                         format!(
-                                            "location of previous mutability declaration of '{}'",
-                                            e
+                                            "location of previous mutability declaration of '{e}'"
                                         ),
                                     ));
                                     success = false;
@@ -881,7 +879,7 @@ impl Namespace {
                             pt::FunctionAttribute::Visibility(v) => {
                                 diagnostics.push(Diagnostic::error(
                                     v.loc().unwrap(),
-                                    format!("function type cannot have visibility '{}'", v),
+                                    format!("function type cannot have visibility '{v}'"),
                                 ));
                                 success = false;
                             }
@@ -901,7 +899,7 @@ impl Namespace {
                         Some(v) => {
                             diagnostics.push(Diagnostic::error(
                                 v.loc().unwrap(),
-                                format!("function type cannot have visibility attribute '{}'", v),
+                                format!("function type cannot have visibility attribute '{v}'"),
                             ));
                             success = false;
                             false
@@ -945,14 +943,14 @@ impl Namespace {
                             pt::FunctionAttribute::Mutability(m) => {
                                 diagnostics.push(Diagnostic::error(
                                     m.loc(),
-                                    format!("mutability '{}' cannot be declared after returns", m),
+                                    format!("mutability '{m}' cannot be declared after returns"),
                                 ));
                                 success = false;
                             }
                             pt::FunctionAttribute::Visibility(v) => {
                                 diagnostics.push(Diagnostic::error(
                                     v.loc().unwrap(),
-                                    format!("function type cannot have visibility '{}'", v),
+                                    format!("function type cannot have visibility '{v}'"),
                                 ));
                                 success = false;
                             }

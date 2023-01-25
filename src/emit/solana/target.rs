@@ -1171,7 +1171,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_return(Some(&binary.context.i64_type().const_int(0, false)));
     }
 
-    fn assert_failure<'b>(&self, binary: &'b Binary, data: PointerValue, length: IntValue) {
+    fn assert_failure(&self, binary: &Binary, data: PointerValue, length: IntValue) {
         // the reason code should be null (and already printed)
         binary.builder.build_call(
             binary.module.get_function("sol_set_return_data").unwrap(),

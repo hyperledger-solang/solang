@@ -26,7 +26,7 @@ pub(crate) fn using_decl(
             Ok(Type::Contract(contract_no)) if ns.contracts[contract_no].is_library() => {
                 ns.diagnostics.push(Diagnostic::error(
                     expr.loc(),
-                    format!("using for library '{}' type not permitted", expr),
+                    format!("using for library '{expr}' type not permitted"),
                 ));
                 return Err(());
             }
@@ -84,13 +84,13 @@ pub(crate) fn using_decl(
                             .iter()
                             .map(|(loc, _)| Note {
                                 loc: *loc,
-                                message: format!("definition of '{}'", function_name),
+                                message: format!("definition of '{function_name}'"),
                             })
                             .collect();
 
                         diagnostics.push(Diagnostic::error_with_notes(
                             function_name.loc,
-                            format!("'{}' is an overloaded function", function_name),
+                            format!("'{function_name}' is an overloaded function"),
                             notes,
                         ));
                         continue;
@@ -104,11 +104,11 @@ pub(crate) fn using_decl(
                         diagnostics.push(Diagnostic::error_with_note(
                             function_name.loc,
                             format!(
-                                "'{}' has no arguments, at least one argument required",
-                                function_name
+                                "'{function_name}' has no arguments, at least one argument required"
+
                             ),
                             loc,
-                            format!("definition of '{}'", function_name),
+                            format!("definition of '{function_name}'"),
                         ));
                         continue;
                     }
@@ -119,7 +119,7 @@ pub(crate) fn using_decl(
                                 function_name.loc,
                                 format!("function cannot be used since first argument is '{}' rather than the required '{}'", func.params[0].ty.to_string(ns), ty.to_string(ns)),
                                 loc,
-                                format!("definition of '{}'", function_name),
+                                format!("definition of '{function_name}'"),
                             ));
                             continue;
                         }

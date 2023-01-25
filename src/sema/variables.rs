@@ -175,7 +175,7 @@ pub fn variable_decl<'a>(
                             if list.contains(&no) {
                                 diagnostics.push(Diagnostic::error(
                                     name.loc,
-                                    format!("duplicate override '{}'", name),
+                                    format!("duplicate override '{name}'"),
                                 ));
                             } else if !is_base(no, contract_no, ns) {
                                 diagnostics.push(Diagnostic::error(
@@ -204,7 +204,7 @@ pub fn variable_decl<'a>(
             pt::VariableAttribute::Visibility(v) if contract_no.is_none() => {
                 ns.diagnostics.push(Diagnostic::error(
                     v.loc().unwrap(),
-                    format!("'{}': global variable cannot have visibility specifier", v),
+                    format!("'{v}': global variable cannot have visibility specifier"),
                 ));
                 return None;
             }
@@ -219,9 +219,9 @@ pub fn variable_decl<'a>(
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
                         v.loc().unwrap(),
-                        format!("variable visibility redeclared '{}'", v),
+                        format!("variable visibility redeclared '{v}'"),
                         e.loc().unwrap(),
-                        format!("location of previous declaration of '{}'", e),
+                        format!("location of previous declaration of '{e}'"),
                     ));
                     return None;
                 }
@@ -299,10 +299,7 @@ pub fn variable_decl<'a>(
     {
         ns.diagnostics.push(Diagnostic::error(
             def.ty.loc(),
-            format!(
-                "variable of type internal function cannot be '{}'",
-                visibility
-            ),
+            format!("variable of type internal function cannot be '{visibility}'"),
         ));
         return None;
     } else if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountInfo) {

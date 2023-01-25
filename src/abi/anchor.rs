@@ -29,7 +29,7 @@ pub fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
         .from_case(Case::Camel)
         .without_boundaries(&[Boundary::LowerDigit])
         .to_case(Case::Snake);
-    hasher.update(format!("{}:{}", namespace, normalized));
+    hasher.update(format!("{namespace}:{normalized}"));
     hasher.finalize()[..8].to_vec()
 }
 
@@ -246,7 +246,7 @@ impl TypeManager<'_> {
             });
         }
 
-        let name = format!("{}_returns", effective_name);
+        let name = format!("{effective_name}_returns");
         self.returns_structs.push(IdlTypeDefinition {
             name: name.clone(),
             docs: Some(vec![format!(
@@ -274,7 +274,7 @@ impl TypeManager<'_> {
             || other_contract.as_ref().unwrap() == &self.namespace.contracts[self.contract_no].name
         {
             let new_name = if let Some(this_name) = contract {
-                format!("{}_{}", this_name, type_name)
+                format!("{this_name}_{type_name}")
             } else {
                 type_name.clone()
             };
@@ -283,9 +283,9 @@ impl TypeManager<'_> {
             // If the type we are adding now belongs to the current contract, we change the name
             // of a previously added IDL type
             let new_other_name = if let Some(other_name) = &other_contract {
-                format!("{}_{}", other_name, real_name)
+                format!("{other_name}_{real_name}")
             } else {
-                format!("_{}", real_name)
+                format!("_{real_name}")
             };
             let unique_name = self.unique_string(new_other_name);
             self.types[idx].name = unique_name.clone();
@@ -454,7 +454,7 @@ impl TypeManager<'_> {
         let mut unique_name = name.clone();
         while self.added_names.contains_key(&unique_name) {
             num += 1;
-            unique_name = format!("{}_{}", name, num);
+            unique_name = format!("{name}_{num}");
         }
 
         unique_name
@@ -514,7 +514,7 @@ impl Deduplicate {
         let prefix = candidate.clone();
         while self.existing_names.contains(candidate) {
             counter += 1;
-            *candidate = format!("{}_{}", prefix, counter);
+            *candidate = format!("{prefix}_{counter}");
         }
         self.existing_names.insert(candidate.clone());
     }

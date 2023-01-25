@@ -98,7 +98,7 @@ fn less_simple_event() {
 }
 
 fn calculate_discriminator(event_name: &str) -> Vec<u8> {
-    let image = format!("event:{}", event_name);
+    let image = format!("event:{event_name}");
     let mut hasher = Sha256::new();
     hasher.update(image.as_bytes());
     let finalized = hasher.finalize();

@@ -644,7 +644,7 @@ impl<'a> Binary<'a> {
 
     // Create the llvm intrinsic for counting leading zeros
     pub fn llvm_ctlz(&self, bit: u32) -> FunctionValue<'a> {
-        let name = format!("llvm.ctlz.i{}", bit);
+        let name = format!("llvm.ctlz.i{bit}");
         let ty = self.context.custom_width_int_type(bit);
 
         if let Some(f) = self.module.get_function(&name) {
@@ -660,7 +660,7 @@ impl<'a> Binary<'a> {
 
     // Create the llvm intrinsic for bswap
     pub fn llvm_bswap(&self, bit: u32) -> FunctionValue<'a> {
-        let name = format!("llvm.bswap.i{}", bit);
+        let name = format!("llvm.bswap.i{bit}");
         let ty = self.context.custom_width_int_type(bit);
 
         if let Some(f) = self.module.get_function(&name) {

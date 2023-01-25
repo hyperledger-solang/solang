@@ -106,7 +106,7 @@ pub fn eval_const_number(
                 None => {
                     return Err(Diagnostic::error(
                         expr.loc(),
-                        format!("cannot left shift by {}", r),
+                        format!("cannot left shift by {r}"),
                     ));
                 }
             };
@@ -122,7 +122,7 @@ pub fn eval_const_number(
                 None => {
                     return Err(Diagnostic::error(
                         expr.loc(),
-                        format!("cannot right shift by {}", r),
+                        format!("cannot right shift by {r}"),
                     ));
                 }
             };
@@ -450,11 +450,11 @@ fn eval_constants_in_expression(
             loc,
             ty,
             unchecked: _,
-            base: left,
-            exp: right,
+            base,
+            exp,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let base = eval_constants_in_expression(base, ns).0;
+            let exp = eval_constants_in_expression(exp, ns).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -463,12 +463,12 @@ fn eval_constants_in_expression(
                     value: right,
                     ..
                 }),
-            ) = (&left, &right)
+            ) = (&base, &exp)
             {
                 if overflow_check(right, &Type::Uint(16), right_loc).is_some() {
                     ns.diagnostics.push(Diagnostic::error(
                         *right_loc,
-                        format!("power by {} is not possible", right),
+                        format!("power by {right} is not possible"),
                     ));
                     (None, false)
                 } else {
@@ -506,14 +506,14 @@ fn eval_constants_in_expression(
                 if overflow_check(right, &Type::Uint(64), right_loc).is_some() {
                     ns.diagnostics.push(Diagnostic::error(
                         *right_loc,
-                        format!("left shift by {} is not possible", right),
+                        format!("left shift by {right} is not possible"),
                     ));
                     (None, false)
                 } else {
                     if right >= &BigInt::from(left.bits()) {
                         ns.diagnostics.push(Diagnostic::warning(
                             *right_loc,
-                            format!("left shift by {} may overflow the final result", right),
+                            format!("left shift by {right} may overflow the final result"),
                         ));
                     }
 
@@ -553,7 +553,7 @@ fn eval_constants_in_expression(
                 if overflow_check(right, &Type::Uint(64), right_loc).is_some() {
                     ns.diagnostics.push(Diagnostic::error(
                         *right_loc,
-                        format!("right shift by {} is not possible", right),
+                        format!("right shift by {right} is not possible"),
                     ));
                     (None, false)
                 } else {

@@ -205,7 +205,7 @@ pub fn bigint_to_expression(
 
     if n.sign() == Sign::Minus {
         if bits > 255 {
-            diagnostics.push(Diagnostic::error(*loc, format!("{} is too large", n)));
+            diagnostics.push(Diagnostic::error(*loc, format!("{n} is too large")));
             Err(())
         } else {
             Ok(Expression::NumberLiteral {
@@ -215,7 +215,7 @@ pub fn bigint_to_expression(
             })
         }
     } else if bits > 256 {
-        diagnostics.push(Diagnostic::error(*loc, format!("{} is too large", n)));
+        diagnostics.push(Diagnostic::error(*loc, format!("{n} is too large")));
         Err(())
     } else {
         Ok(Expression::NumberLiteral {

@@ -272,7 +272,7 @@ impl Namespace {
         for (file_no, file) in self.files.iter().enumerate() {
             if file.cache_no.is_some() {
                 let (contents, _) = cache.get_file_contents_and_number(&file.path);
-                file_id.insert(file_no, files.add(format!("{}", file), contents.to_owned()));
+                file_id.insert(file_no, files.add(format!("{file}"), contents.to_owned()));
             }
         }
 

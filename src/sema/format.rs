@@ -174,7 +174,7 @@ fn parse_format_specifier(
                 Some((loc, ch)) => {
                     diagnostics.push(Diagnostic::error(
                         loc,
-                        format!("unexpected format char '{}'", ch),
+                        format!("unexpected format char '{ch}'"),
                     ));
                     return Err(());
                 }
@@ -192,7 +192,7 @@ fn parse_format_specifier(
                 Some((loc, ch)) => {
                     diagnostics.push(Diagnostic::error(
                         loc,
-                        format!("unexpected format char '{:}', expected closing '}}'", ch),
+                        format!("unexpected format char '{ch}', expected closing '}}'"),
                     ));
                     Err(())
                 }
@@ -208,7 +208,7 @@ fn parse_format_specifier(
         Some((loc, ch)) => {
             diagnostics.push(Diagnostic::error(
                 loc,
-                format!("unexpected format char '{}'", ch),
+                format!("unexpected format char '{ch}'"),
             ));
             Err(())
         }

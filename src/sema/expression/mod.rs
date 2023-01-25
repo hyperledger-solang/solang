@@ -160,7 +160,7 @@ impl Expression {
 
         // Special case: when converting literal sign can change if it fits
         match (self, &from, to) {
-            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Uint(to_len))
+            (Expression::NumberLiteral { value, .. }, p, &Type::Uint(to_len))
                 if p.is_primitive() =>
             {
                 return if value.sign() == Sign::Minus {
@@ -203,7 +203,7 @@ impl Expression {
                     })
                 };
             }
-            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Int(to_len))
+            (Expression::NumberLiteral { value, .. }, p, &Type::Int(to_len))
                 if p.is_primitive() =>
             {
                 return if value.bits() >= to_len as u64 {
@@ -224,7 +224,7 @@ impl Expression {
                     })
                 };
             }
-            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Bytes(to_len))
+            (Expression::NumberLiteral { value, .. }, p, &Type::Bytes(to_len))
                 if p.is_primitive() =>
             {
                 // round up the number of bits to bytes
@@ -256,7 +256,7 @@ impl Expression {
                     })
                 };
             }
-            (&Expression::NumberLiteral { ref value, .. }, p, &Type::Address(payable))
+            (Expression::NumberLiteral { value, .. }, p, &Type::Address(payable))
                 if p.is_primitive() =>
             {
                 // note: negative values are allowed
@@ -284,7 +284,7 @@ impl Expression {
                 };
             }
             // Literal strings can be implicitly lengthened
-            (&Expression::BytesLiteral { ref value, .. }, p, &Type::Bytes(to_len))
+            (Expression::BytesLiteral { value, .. }, p, &Type::Bytes(to_len))
                 if p.is_primitive() =>
             {
                 return if value.len() > to_len as usize && implicit {
@@ -310,20 +310,20 @@ impl Expression {
                     })
                 };
             }
-            (&Expression::BytesLiteral { loc, ref value, .. }, _, &Type::DynamicBytes)
-            | (&Expression::BytesLiteral { loc, ref value, .. }, _, &Type::String) => {
+            (Expression::BytesLiteral { loc, value, .. }, _, &Type::DynamicBytes)
+            | (Expression::BytesLiteral { loc, value, .. }, _, &Type::String) => {
                 return Ok(Expression::AllocDynamicBytes {
-                    loc,
+                    loc: *loc,
                     ty: to.clone(),
                     length: Box::new(Expression::NumberLiteral {
-                        loc,
+                        loc: *loc,
                         ty: Type::Uint(32),
                         value: BigInt::from(value.len()),
                     }),
                     init: Some(value.clone()),
                 });
             }
-            (&Expression::NumberLiteral { ref value, .. }, _, &Type::Rational) => {
+            (Expression::NumberLiteral { value, .. }, _, &Type::Rational) => {
                 return Ok(Expression::RationalNumberLiteral {
                     loc: *loc,
                     ty: Type::Rational,
@@ -332,7 +332,7 @@ impl Expression {
             }
 
             (
-                &Expression::ArrayLiteral { .. },
+                Expression::ArrayLiteral { .. },
                 Type::Array(from_ty, from_dims),
                 Type::Array(to_ty, to_dims),
             ) => {
@@ -1205,8 +1205,7 @@ impl Expression {
                         diagnostics.push(Diagnostic::warning(
                             *loc,
                             format!(
-                                "function selector should only be casted to bytes{} or larger",
-                                selector_length
+                                "function selector should only be casted to bytes{selector_length} or larger"
                             ),
                         ));
                     }
@@ -1226,8 +1225,7 @@ impl Expression {
                     diagnostics.push(Diagnostic::warning(
                         *loc,
                         format!(
-                            "function selector needs an integer of at least {} bits to avoid being truncated",
-                            selector_width
+                            "function selector needs an integer of at least {selector_width} bits to avoid being truncated"
                         ),
                     ));
                 }

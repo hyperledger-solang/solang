@@ -282,7 +282,7 @@ fn string_abi_decode() {
 
     assert_eq!(
         runtime.vm.output,
-        Val(format!(" {} ", moby_dick_first_para)).encode()
+        Val(format!(" {moby_dick_first_para} ")).encode()
     );
 
     let mut rng = rand::thread_rng();

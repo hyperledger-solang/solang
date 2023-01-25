@@ -52,7 +52,7 @@ pub fn resolve_tags(
                     if res.iter().any(|e| e.tag == "param" && e.no == no) {
                         ns.diagnostics.push(Diagnostic::error(
                             tag_loc,
-                            format!("duplicate tag '@param' for '{}'", name),
+                            format!("duplicate tag '@param' for '{name}'"),
                         ));
                     } else {
                         res.push(Tag {
@@ -65,7 +65,7 @@ pub fn resolve_tags(
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
                         value_loc,
-                        format!("tag '@param' no field '{}'", name),
+                        format!("tag '@param' no field '{name}'"),
                     ));
                 }
             }
@@ -110,7 +110,7 @@ pub fn resolve_tags(
                         if res.iter().any(|e| e.tag == "return" && e.no == no) {
                             ns.diagnostics.push(Diagnostic::error(
                                 tag_loc,
-                                format!("duplicate tag '@return' for '{}'", name),
+                                format!("duplicate tag '@return' for '{name}'"),
                             ));
                         } else {
                             res.push(Tag {
