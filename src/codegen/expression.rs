@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::encoding::abi_encode;
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
 };
@@ -842,7 +843,7 @@ pub fn expression(
             kind: ast::Builtin::AbiEncode,
             args,
             ..
-        } => abi_encode(args, cfg, contract_no, func, ns, vartab, loc, opt),
+        } => abi_encode_many(args, cfg, contract_no, func, ns, vartab, loc, opt),
         ast::Expression::Builtin {
             loc,
             kind: ast::Builtin::AbiEncodePacked,
@@ -1473,7 +1474,7 @@ fn payable_transfer(
     Expression::Poison
 }
 
-fn abi_encode(
+fn abi_encode_many(
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -1488,8 +1489,7 @@ fn abi_encode(
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
 
-    let mut encoder = create_encoder(ns, false);
-    encoder.abi_encode(loc, args, ns, vartab, cfg).0
+    abi_encode(loc, args, ns, vartab, cfg, false).0
 }
 
 fn abi_encode_packed(
@@ -1507,12 +1507,11 @@ fn abi_encode_packed(
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
 
-    let mut encoder = create_encoder(ns, true);
-    let (encoded, _) = encoder.abi_encode(loc, packed, ns, vartab, cfg);
+    let (encoded, _) = abi_encode(loc, packed, ns, vartab, cfg, true);
     encoded
 }
 
-fn encode_with_selector(
+fn encode_many_with_selector(
     loc: &pt::Loc,
     selector: Expression,
     mut args: Vec<Expression>,
@@ -1523,8 +1522,7 @@ fn encode_with_selector(
     let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
     encoder_args.push(selector);
     encoder_args.append(&mut args);
-    let mut encoder = create_encoder(ns, false);
-    encoder.abi_encode(loc, encoder_args, ns, vartab, cfg).0
+    abi_encode(loc, encoder_args, ns, vartab, cfg, false).0
 }
 
 fn abi_encode_with_selector(
@@ -1550,7 +1548,7 @@ fn abi_encode_with_selector(
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-    encode_with_selector(loc, selector, args, ns, vartab, cfg)
+    encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
 fn abi_encode_with_signature(
@@ -1581,7 +1579,7 @@ fn abi_encode_with_signature(
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-    encode_with_selector(loc, selector, args, ns, vartab, cfg)
+    encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
 fn abi_encode_call(
@@ -1612,7 +1610,7 @@ fn abi_encode_call(
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-    encode_with_selector(loc, selector, args, ns, vartab, cfg)
+    encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
 fn builtin_evm_gasprice(
@@ -2468,8 +2466,7 @@ pub fn emit_function_call(
                     Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector),
                 );
 
-                let mut encoder = create_encoder(ns, false);
-                let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
+                let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
                 cfg.add(
                     vartab,
@@ -2533,8 +2530,7 @@ pub fn emit_function_call(
                 tys.insert(0, Type::Bytes(ns.target.selector_length()));
                 args.insert(0, selector);
 
-                let mut encoder = create_encoder(ns, false);
-                let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
+                let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
                 cfg.add(
                     vartab,
@@ -3043,8 +3039,7 @@ pub(super) fn assert_failure(
     let selector = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(selector));
     let args = vec![selector, arg.unwrap()];
 
-    let mut encoder = create_encoder(ns, false);
-    let (encoded_buffer, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
+    let (encoded_buffer, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
     cfg.add(
         vartab,

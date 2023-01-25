@@ -1895,14 +1895,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn emit_event<'b>(
         &self,
         binary: &Binary<'b>,
-        _contract: &ast::Contract,
         function: FunctionValue<'b>,
-        _event_no: usize,
-        data: &[BasicValueEnum<'b>],
-        _data_tys: &[ast::Type],
+        data: BasicValueEnum<'b>,
         _topics: &[BasicValueEnum<'b>],
-        _topic_tys: &[ast::Type],
-        _ns: &ast::Namespace,
     ) {
         let fields = binary.build_array_alloca(
             function,
@@ -1922,7 +1917,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             )
         };
 
-        let bytes_pointer = binary.vector_bytes(data[0]);
+        let bytes_pointer = binary.vector_bytes(data);
         binary.builder.build_store(field_data, bytes_pointer);
 
         let field_len = unsafe {
@@ -1939,7 +1934,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary.builder.build_store(
             field_len,
             binary.builder.build_int_z_extend(
-                data[1].into_int_value(),
+                binary.vector_len(data),
                 binary.context.i64_type(),
                 "data_len64",
             ),

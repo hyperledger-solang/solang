@@ -155,10 +155,10 @@ contract EncodingTest {
         noPadStruct[2] memory str_vec = [noPadStruct(1,2), noPadStruct(3, 4)];
         bytes memory b1 = abi.encode(test_vec_1, mem_vec, str_vec);
         // CHECK: %temp.66 = load storage slot(uint32 16) ty:struct EncodingTest.noPadStruct[]
-	    // CHECK: ty:uint32 %temp.67 = (((builtin ArrayLength (%temp.66)) * uint32 8) + uint32 4)
+	    // CHECK: ty:uint32 %temp.67 = ((builtin ArrayLength (%temp.66)) * uint32 8)
 	    // CHECK: ty:uint32 %temp.68 = uint32 16
 	    // CHECK: ty:uint32 %temp.69 = uint32 16
-	    // CHECK: ty:bytes %abi_encoded.temp.70 = (alloc bytes len ((%temp.67 + uint32 16) + uint32 16))
+	    // CHECK: ty:bytes %abi_encoded.temp.70 = (alloc bytes len (((%temp.67 + uint32 4) + uint32 16) + uint32 16))
 	    // CHECK: ty:uint32 %temp.71 = (builtin ArrayLength (%temp.66))
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.70 offset:uint32 0 value:%temp.71
 	    // CHECK: memcpy src: %temp.66, dest: (advance ptr: %abi_encoded.temp.70, by: uint32 4), bytes_len: (%temp.71 * uint32 8)

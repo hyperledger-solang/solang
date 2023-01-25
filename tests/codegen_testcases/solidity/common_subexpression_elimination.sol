@@ -315,13 +315,13 @@ contract c1 {
             emit testEvent(a + get(a/(2*b) -p, b), p, ast+bst);
         }
 
-        // CHECK: branchcond %2.cse_temp, block7, block8
+        // CHECK: branchcond %2.cse_temp, block21, block22
         if (ast == bst) {
             ast = ast + "b";
         }
         // CHECK: call c1::c1::function::get__int256_int256 (%1.cse_temp - %p), (arg #1)
 
-        // CHECK: branchcond (strcmp (%ast) (%bst)), block10, block11
+        // CHECK: branchcond (strcmp (%ast) (%bst)), block24, block25
         while (ast == bst) {
             ast = ast + "a";
         }

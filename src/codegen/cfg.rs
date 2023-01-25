@@ -156,10 +156,8 @@ pub enum Instr {
     /// Emit event
     EmitEvent {
         event_no: usize,
-        data: Vec<Expression>,
-        data_tys: Vec<Type>,
+        data: Expression,
         topics: Vec<Expression>,
-        topic_tys: Vec<Type>,
     },
     /// Write Buffer
     WriteBuffer {
@@ -312,10 +310,7 @@ impl Instr {
             }
 
             Instr::EmitEvent { data, topics, .. } => {
-                for expr in data {
-                    expr.recurse(cx, f);
-                }
-
+                data.recurse(cx, f);
                 for expr in topics {
                     expr.recurse(cx, f);
                 }
@@ -1211,17 +1206,14 @@ impl ControlFlowGraph {
                 event_no,
                 ..
             } => format!(
-                "emit event {} topics {} data {}",
+                "emit event {} topics {} data {} ",
                 ns.events[*event_no].symbol_name(ns),
                 topics
                     .iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
                     .collect::<Vec<String>>()
                     .join(", "),
-                data.iter()
-                    .map(|expr| self.expr_to_string(contract, ns, expr))
-                    .collect::<Vec<String>>()
-                    .join(", ")
+                self.expr_to_string(contract, ns, data)
             ),
             Instr::Nop => String::from("nop"),
             Instr::MemCopy {

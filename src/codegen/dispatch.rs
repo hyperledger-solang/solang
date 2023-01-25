@@ -15,6 +15,8 @@ use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
 use solang_parser::{pt, pt::Loc};
 
+use super::encoding::abi_encode;
+
 /// Create the dispatch for the Solana target
 pub(super) fn function_dispatch(
     contract_no: usize,
@@ -305,7 +307,7 @@ fn add_function_dispatch_case(
         .iter()
         .map(|e| e.ty.clone())
         .collect::<Vec<Type>>();
-    let mut encoder = create_encoder(ns, false);
+    let encoder = create_encoder(ns, false);
     let decoded = encoder.abi_decode(
         &Loc::Codegen,
         argsdata,
@@ -337,7 +339,7 @@ fn add_function_dispatch_case(
     );
 
     if !func_cfg.returns.is_empty() {
-        let (data, data_len) = encoder.abi_encode(&Loc::Codegen, returns_expr, ns, vartab, cfg);
+        let (data, data_len) = abi_encode(&Loc::Codegen, returns_expr, ns, vartab, cfg, false);
         let zext_len = Expression::ZeroExt(Loc::Codegen, Type::Uint(64), Box::new(data_len));
         cfg.add(
             vartab,

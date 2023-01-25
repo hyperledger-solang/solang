@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::encoding::create_encoder;
 use crate::codegen::expression::{default_gas, expression};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Expression, Options};
@@ -10,6 +9,8 @@ use crate::sema::{
     ast::{CallArgs, Function, Namespace, Type},
 };
 use solang_parser::pt::Loc;
+
+use super::encoding::abi_encode;
 
 /// This function encodes the constructor arguments and place an instruction in the CFG to
 /// call the constructor of a contract.
@@ -75,8 +76,7 @@ pub(super) fn call_constructor(
 
     args.append(&mut constructor_args);
 
-    let mut encoder = create_encoder(ns, false);
-    let (encoded_args, encoded_args_len) = encoder.abi_encode(loc, args, ns, vartab, cfg);
+    let (encoded_args, encoded_args_len) = abi_encode(loc, args, ns, vartab, cfg, false);
 
     cfg.add(
         vartab,
