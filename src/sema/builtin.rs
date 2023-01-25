@@ -6,9 +6,10 @@ use super::ast::{
 };
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
-use super::expression::{expression, ExprContext, ResolveTo};
+use super::expression::{ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::sema::ast::{RetrieveType, Tag, UserTypeDecl};
+use crate::sema::expression::resolve_expression::expression;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;

@@ -4,10 +4,13 @@ use super::{
     ast::{ConstructorAnnotation, Diagnostic, Expression, Function, Namespace, Type},
     diagnostics::Diagnostics,
     eval::overflow_check,
-    expression::{expression, hex_number_literal, number_literal, ExprContext, ResolveTo},
+    expression::literals::hex_number_literal,
+    expression::{ExprContext, ResolveTo},
     unused_variable::used_variable,
     Symtable,
 };
+use crate::sema::expression::literals::number_literal;
+use crate::sema::expression::resolve_expression::expression;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};

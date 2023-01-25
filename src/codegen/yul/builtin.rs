@@ -10,7 +10,7 @@ use crate::codegen::{
 use crate::sema::ast::{Namespace, RetrieveType, Type};
 use crate::sema::{
     diagnostics::Diagnostics,
-    expression::coerce_number,
+    expression::integers::coerce_number,
     yul::{ast, builtin::YulBuiltInFunction},
 };
 use num_bigint::BigInt;

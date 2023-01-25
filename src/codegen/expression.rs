@@ -22,7 +22,8 @@ use crate::sema::{
     },
     diagnostics::Diagnostics,
     eval::{eval_const_number, eval_const_rational},
-    expression::{bigint_to_expression, ResolveTo},
+    expression::integers::bigint_to_expression,
+    expression::ResolveTo,
 };
 use crate::Target;
 use num_bigint::BigInt;
