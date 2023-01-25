@@ -8,13 +8,14 @@ use super::{
     },
     contracts::is_base,
     diagnostics::Diagnostics,
-    expression::{expression, ExprContext, ResolveTo},
+    expression::{ExprContext, ResolveTo},
     symtable::Symtable,
     symtable::{VariableInitializer, VariableUsage},
     tags::resolve_tags,
     ContractDefinition,
 };
 use crate::sema::eval::check_term_for_constant_overflow;
+use crate::sema::expression::resolve_expression::expression;
 use crate::sema::Recurse;
 use solang_parser::{
     doccomment::DocComment,

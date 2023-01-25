@@ -3,7 +3,8 @@
 use crate::sema::ast::{Expression, Namespace, RetrieveType, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::eval::check_term_for_constant_overflow;
-use crate::sema::expression::{expression, ExprContext, ResolveTo};
+use crate::sema::expression::resolve_expression::expression;
+use crate::sema::expression::{ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
 use crate::sema::Recurse;
 use solang_parser::diagnostics::Diagnostic;

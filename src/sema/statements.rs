@@ -5,7 +5,6 @@ use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
 use super::eval::check_term_for_constant_overflow;
 use super::expression::{
-    expression,
     function_call::{available_functions, call_expr, named_call_expr},
     ExprContext, ResolveTo,
 };
@@ -17,6 +16,7 @@ use crate::sema::expression::constructor::{
 use crate::sema::expression::function_call::{
     function_call_expr, function_call_pos_args, named_function_call_expr,
 };
+use crate::sema::expression::resolve_expression::expression;
 use crate::sema::function_annotation::function_body_annotations;
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};

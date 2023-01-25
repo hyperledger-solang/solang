@@ -4,7 +4,8 @@ use crate::sema::ast::{Expression, Namespace, RetrieveType, StringLocation, Type
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::eval::eval_const_rational;
 use crate::sema::expression::integers::{coerce, coerce_number, get_int_length};
-use crate::sema::expression::{expression, ExprContext, ResolveTo};
+use crate::sema::expression::resolve_expression::expression;
+use crate::sema::expression::{ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::{check_var_usage_expression, used_variable};
 use solang_parser::diagnostics::Diagnostic;

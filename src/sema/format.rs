@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::ast::{Diagnostic, Expression, FormatArg, Namespace, RetrieveType, Type};
-use super::expression::{expression, ExprContext, ResolveTo};
+use super::expression::{ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::sema::diagnostics::Diagnostics;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 
+use crate::sema::expression::resolve_expression::expression;
 use std::iter::Peekable;
 use std::slice::Iter;
 use std::str::CharIndices;

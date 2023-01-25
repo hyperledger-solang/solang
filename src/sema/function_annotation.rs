@@ -5,11 +5,12 @@ use super::{
     diagnostics::Diagnostics,
     eval::overflow_check,
     expression::literals::hex_number_literal,
-    expression::{expression, ExprContext, ResolveTo},
+    expression::{ExprContext, ResolveTo},
     unused_variable::used_variable,
     Symtable,
 };
 use crate::sema::expression::literals::number_literal;
+use crate::sema::expression::resolve_expression::expression;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};

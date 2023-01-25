@@ -3,7 +3,8 @@
 use crate::sema::ast::{ArrayLength, CallArgs, Expression, Namespace, RetrieveType, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::function_call::{collect_call_args, parse_call_args};
-use crate::sema::expression::{expression, ExprContext, ResolveTo};
+use crate::sema::expression::resolve_expression::expression;
+use crate::sema::expression::{ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::used_variable;
 use crate::Target;

@@ -7,11 +7,12 @@ use super::{
     builtin,
     diagnostics::Diagnostics,
     eval::eval_const_number,
-    expression::{expression, ExprContext, ResolveTo},
+    expression::{ExprContext, ResolveTo},
     resolve_params, resolve_returns,
     symtable::Symtable,
     ArrayDimension,
 };
+use crate::sema::expression::resolve_expression::expression;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::Signed;
