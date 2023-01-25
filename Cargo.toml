@@ -55,8 +55,7 @@ anchor-syn = { version = "0.26", features = ["idl"] }
 convert_case = "0.6"
 parse-display = "0.8.0"
 parity-scale-codec = "3.1"
-# ink = "4.0.0-beta"
-ink = { git = "https://github.com/paritytech/ink.git", ref = "178a52f7fefd57470d5f526d0f8a6f21a82cbe83" }
+ink = "4.0.0-beta.1"
 scale-info = "2.3"
 
 [dev-dependencies]
