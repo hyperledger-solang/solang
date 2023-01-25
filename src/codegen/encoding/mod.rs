@@ -540,7 +540,7 @@ pub(super) trait AbiEncoding {
     ///
     /// During a second pass, we copy each argument to a buffer. To copy storage variables properly into
     /// the buffer, we must load them from storage and save them in a local variable. As we have
-    /// already done this before, we can cache the Expression::Variable, containing the items we loaded before.
+    /// already done this, we can cache the Expression::Variable, containing the items we loaded before.
     /// In addition, loading from storage can be an expensive operation if it's done with large structs
     /// or vectors.
     ///
