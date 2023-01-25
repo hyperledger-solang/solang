@@ -149,35 +149,6 @@ impl AbiEncoding for BorshEncoding {
         self.storage_cache.remove(&arg_no)
     }
 
-    fn get_encoding_size(
-        &self,
-        expr: &Expression,
-        ty: &Type,
-        _ns: &Namespace,
-        _vartab: &mut Vartable,
-        _cfg: &mut ControlFlowGraph,
-    ) -> Expression {
-        match ty {
-            Type::String | Type::DynamicBytes => {
-                // When encoding a variable length array, the total size is "length (u32)" + elements
-                let length = Expression::Builtin(
-                    Codegen,
-                    vec![Uint(32)],
-                    Builtin::ArrayLength,
-                    vec![expr.clone()],
-                );
-
-                if self.is_packed() {
-                    length
-                } else {
-                    increment_four(length)
-                }
-            }
-
-            _ => unreachable!("Type should have the same size for all encoding schemes"),
-        }
-    }
-
     fn is_packed(&self) -> bool {
         self.packed_encoder
     }

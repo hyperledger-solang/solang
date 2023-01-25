@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
+/// Any supported encoding scheme should be implemented here.
+/// The module is organized as follows:
+///
+/// - `fn abi_encode()` and `fn abi_decode()` are entry point for whereever there is
+/// something to be encoded or decoded.
+/// - The `AbiEncoding` defines the encoding and decoding API and must be implemented by all schemes.
+/// - There are some helper functions to work with more complex types.
+///   Any such helper function should work fine regardless of the encoding scheme being used.
 mod borsh_encoding;
 mod buffer_validator;
 mod scale_encoding;
@@ -48,6 +56,22 @@ pub(super) fn abi_encode(
         offset = Expression::Add(*loc, Uint(32), false, offset.into(), advance.into());
     }
     (buffer, size)
+}
+
+/// Calculate the size of a set of arguments to encoding functions
+fn calculate_size_args(
+    encoder: &mut Box<dyn AbiEncoding>,
+    args: &[Expression],
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+) -> Expression {
+    let mut size = encoder.get_expr_size(0, &args[0], ns, vartab, cfg);
+    for (i, item) in args.iter().enumerate().skip(1) {
+        let additional = encoder.get_expr_size(i, item, ns, vartab, cfg);
+        size = Expression::Add(Codegen, Uint(32), false, size.into(), additional.into());
+    }
+    size
 }
 
 /// This trait should be implemented by all encoding methods (ethabi, SCALE and Borsh), so that
@@ -522,6 +546,300 @@ pub(super) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression;
 
+    /// Calculate the size of a single codegen::Expression
+    fn get_expr_size(
+        &mut self,
+        arg_no: usize,
+        expr: &Expression,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        let ty = expr.ty().unwrap_user_type(ns);
+        match &ty {
+            Type::Value => {
+                Expression::NumberLiteral(Codegen, Uint(32), BigInt::from(ns.value_length))
+            }
+            Type::Uint(n) | Type::Int(n) => Expression::NumberLiteral(
+                Codegen,
+                Uint(32),
+                BigInt::from(n.next_power_of_two() / 8),
+            ),
+            Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
+                Expression::NumberLiteral(Codegen, Uint(32), ty.memory_size_of(ns))
+            }
+            Type::FunctionSelector => Expression::NumberLiteral(
+                Codegen,
+                Uint(32),
+                BigInt::from(ns.target.selector_length()),
+            ),
+            Type::Struct(struct_ty) => {
+                self.calculate_struct_size(arg_no, expr, struct_ty, ns, vartab, cfg)
+            }
+            Type::Slice(ty) => {
+                let dims = vec![ArrayLength::Dynamic];
+                self.calculate_array_size(expr, ty, &dims, arg_no, ns, vartab, cfg)
+            }
+            Type::Array(ty, dims) => {
+                self.calculate_array_size(expr, ty, dims, arg_no, ns, vartab, cfg)
+            }
+            Type::ExternalFunction { .. } => {
+                let selector_len: BigInt = ns.target.selector_length().into();
+                let mut address_size = Type::Address(false).memory_size_of(ns);
+                address_size.add_assign(selector_len);
+                Expression::NumberLiteral(Codegen, Uint(32), address_size)
+            }
+            Type::Ref(r) => {
+                if let Type::Struct(struct_ty) = &**r {
+                    return self.calculate_struct_size(arg_no, expr, struct_ty, ns, vartab, cfg);
+                }
+                let loaded = Expression::Load(Codegen, *r.clone(), expr.clone().into());
+                self.get_expr_size(arg_no, &loaded, ns, vartab, cfg)
+            }
+            Type::StorageRef(_, r) => {
+                let var = load_storage(&Codegen, r, expr.clone(), cfg, vartab);
+                let size = self.get_expr_size(arg_no, &var, ns, vartab, cfg);
+                self.storage_cache_insert(arg_no, var.clone());
+                size
+            }
+            Type::String | Type::DynamicBytes => self.calculate_string_size(expr, vartab, cfg),
+            Type::InternalFunction { .. }
+            | Type::Void
+            | Type::Unreachable
+            | Type::BufferPointer
+            | Type::Mapping(..) => unreachable!("This type cannot be encoded"),
+            Type::UserType(_) | Type::Unresolved | Type::Rational => {
+                unreachable!("Type should not exist in codegen")
+            }
+        }
+    }
+
+    /// Calculate the size of an array
+    fn calculate_array_size(
+        &mut self,
+        array: &Expression,
+        elem_ty: &Type,
+        dims: &Vec<ArrayLength>,
+        arg_no: usize,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        let dyn_dims = dims.iter().filter(|d| **d == ArrayLength::Dynamic).count();
+
+        // If the array does not have variable length elements,
+        // we can calculate its size using a simple multiplication (direct_assessment)
+        // i.e. 'uint8[3][] vec' has size vec.length*2*size_of(uint8)
+        // In cases like 'uint [3][][2] v' this is not possible, as v[0] and v[1] have different sizes
+        let direct_assessment =
+            dyn_dims == 0 || (dyn_dims == 1 && dims.last() == Some(&ArrayLength::Dynamic));
+
+        // Check if the array contains only fixed sized elements
+        let primitive_size = if elem_ty.is_primitive() && direct_assessment {
+            Some(elem_ty.memory_size_of(ns))
+        } else if let Type::Struct(struct_ty) = elem_ty {
+            if direct_assessment {
+                ns.calculate_struct_non_padded_size(struct_ty)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(compile_type_size) = primitive_size {
+            // If the array saves primitive-type elements, its size is sizeof(type)*vec.length
+            let mut size = if let ArrayLength::Fixed(dim) = &dims.last().unwrap() {
+                Expression::NumberLiteral(Codegen, Uint(32), dim.clone())
+            } else {
+                Expression::Builtin(
+                    Codegen,
+                    vec![Uint(32)],
+                    Builtin::ArrayLength,
+                    vec![array.clone()],
+                )
+            };
+
+            for item in dims.iter().take(dims.len() - 1) {
+                let local_size = Expression::NumberLiteral(
+                    Codegen,
+                    Uint(32),
+                    item.array_length().unwrap().clone(),
+                );
+                size = Expression::Multiply(
+                    Codegen,
+                    Uint(32),
+                    false,
+                    size.into(),
+                    local_size.clone().into(),
+                );
+            }
+
+            let type_size = Expression::NumberLiteral(Codegen, Uint(32), compile_type_size);
+            let size =
+                Expression::Multiply(Codegen, Uint(32), false, size.into(), type_size.into());
+            let size_var = vartab.temp_anonymous(&Uint(32));
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Codegen,
+                    res: size_var,
+                    expr: size,
+                },
+            );
+            let size_var = Expression::Variable(Codegen, Uint(32), size_var);
+            if self.is_packed() || !matches!(&dims.last().unwrap(), ArrayLength::Dynamic) {
+                return size_var;
+            }
+            let size_width = self.size_width(&size_var, vartab, cfg);
+            Expression::Add(Codegen, Uint(32), false, size_var.into(), size_width.into())
+        } else {
+            let size_var =
+                vartab.temp_name(format!("array_bytes_size_{}", arg_no).as_str(), &Uint(32));
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Codegen,
+                    res: size_var,
+                    expr: Expression::NumberLiteral(Codegen, Uint(32), BigInt::from(0u8)),
+                },
+            );
+            let mut index_vec: Vec<usize> = Vec::new();
+            self.calculate_complex_array_size(
+                arg_no,
+                array,
+                dims,
+                dims.len() - 1,
+                size_var,
+                ns,
+                &mut index_vec,
+                vartab,
+                cfg,
+            );
+            Expression::Variable(Codegen, Uint(32), size_var)
+        }
+    }
+
+    /// Calculate the size of a complex array.
+    /// This function indexes an array from its outer dimension to its inner one and
+    /// accounts for the encoded length size for dynamic dimensions.
+    fn calculate_complex_array_size(
+        &mut self,
+        arg_no: usize,
+        arr: &Expression,
+        dims: &Vec<ArrayLength>,
+        dimension: usize,
+        size_var_no: usize,
+        ns: &Namespace,
+        indexes: &mut Vec<usize>,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) {
+        // If this dimension is dynamic, account for the encoded vector length variable.
+        if !self.is_packed() && dims[dimension] == ArrayLength::Dynamic {
+            let arr = index_array(arr.clone(), dims, indexes, false);
+            let size =
+                Expression::Builtin(Codegen, vec![Uint(32)], Builtin::ArrayLength, vec![arr]);
+            let size_width = self.size_width(&size, vartab, cfg);
+            let size_var = Expression::Variable(Codegen, Uint(32), size_var_no);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Codegen,
+                    res: size_var_no,
+                    expr: Expression::Add(
+                        Codegen,
+                        Uint(32),
+                        false,
+                        size_var.into(),
+                        size_width.into(),
+                    ),
+                },
+            );
+        }
+
+        let for_loop = set_array_loop(arr, dims, dimension, indexes, vartab, cfg);
+        cfg.set_basic_block(for_loop.body_block);
+        if 0 == dimension {
+            let deref = index_array(arr.clone(), dims, indexes, false);
+            let elem_size = self.get_expr_size(arg_no, &deref, ns, vartab, cfg);
+            let size_var = Expression::Variable(Codegen, Uint(32), size_var_no);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Codegen,
+                    res: size_var_no,
+                    expr: Expression::Add(
+                        Codegen,
+                        Uint(32),
+                        false,
+                        size_var.into(),
+                        elem_size.into(),
+                    ),
+                },
+            );
+        } else {
+            self.calculate_complex_array_size(
+                arg_no,
+                arr,
+                dims,
+                dimension - 1,
+                size_var_no,
+                ns,
+                indexes,
+                vartab,
+                cfg,
+            );
+        }
+        finish_array_loop(&for_loop, vartab, cfg);
+    }
+
+    /// Retrieves the size of a struct
+    fn calculate_struct_size(
+        &mut self,
+        arg_no: usize,
+        expr: &Expression,
+        struct_ty: &StructType,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        if let Some(struct_size) = ns.calculate_struct_non_padded_size(struct_ty) {
+            return Expression::NumberLiteral(Codegen, Uint(32), struct_size);
+        }
+        let first_type = struct_ty.definition(ns).fields[0].ty.clone();
+        let first_field = load_struct_member(first_type, expr.clone(), 0);
+        let mut size = self.get_expr_size(arg_no, &first_field, ns, vartab, cfg);
+        for i in 1..struct_ty.definition(ns).fields.len() {
+            let ty = struct_ty.definition(ns).fields[i].ty.clone();
+            let field = load_struct_member(ty.clone(), expr.clone(), i);
+            let expr_size = self.get_expr_size(arg_no, &field, ns, vartab, cfg).into();
+            size = Expression::Add(Codegen, Uint(32), false, size.clone().into(), expr_size);
+        }
+        size
+    }
+
+    fn calculate_string_size(
+        &self,
+        expr: &Expression,
+        _vartab: &mut Vartable,
+        _cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        // When encoding a variable length array, the total size is "length (u32)" + elements
+        let length = Expression::Builtin(
+            Codegen,
+            vec![Uint(32)],
+            Builtin::ArrayLength,
+            vec![expr.clone()],
+        );
+
+        if self.is_packed() {
+            length
+        } else {
+            increment_four(length)
+        }
+    }
+
     /// Insert decoding routines into the `cfg` for the `Expression`s in `args`.
     /// Returns a list containing the encoded data.
     fn abi_decode(
@@ -550,16 +868,6 @@ pub(super) trait AbiEncoding {
 
     fn storage_cache_remove(&mut self, arg_no: usize) -> Option<Expression>;
 
-    /// Some types have sizes that are specific to each encoding scheme, so there is no way to generalize.
-    fn get_encoding_size(
-        &self,
-        expr: &Expression,
-        ty: &Type,
-        ns: &Namespace,
-        vartab: &mut Vartable,
-        cfg: &mut ControlFlowGraph,
-    ) -> Expression;
-
     /// Returns if the we are packed encoding
     fn is_packed(&self) -> bool;
 }
@@ -575,285 +883,6 @@ pub(super) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncodin
         // If a new target is added, this piece of code needs to change.
         _ => Box::new(ScaleEncoding::new(packed)),
     }
-}
-
-/// Calculate the size of a set of arguments to encoding functions
-fn calculate_size_args(
-    encoder: &mut Box<dyn AbiEncoding>,
-    args: &[Expression],
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-) -> Expression {
-    let mut size = get_expr_size(encoder, 0, &args[0], ns, vartab, cfg);
-    for (i, item) in args.iter().enumerate().skip(1) {
-        let additional = get_expr_size(encoder, i, item, ns, vartab, cfg);
-        size = Expression::Add(Codegen, Uint(32), false, size.into(), additional.into());
-    }
-    size
-}
-
-/// Calculate the size of a single codegen::Expression
-fn get_expr_size(
-    encoder: &mut Box<dyn AbiEncoding>,
-    arg_no: usize,
-    expr: &Expression,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-) -> Expression {
-    let ty = expr.ty().unwrap_user_type(ns);
-    match &ty {
-        Type::Value => Expression::NumberLiteral(Codegen, Uint(32), BigInt::from(ns.value_length)),
-
-        Type::Uint(n) | Type::Int(n) => {
-            Expression::NumberLiteral(Codegen, Uint(32), BigInt::from(n.next_power_of_two() / 8))
-        }
-
-        Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
-            Expression::NumberLiteral(Codegen, Uint(32), ty.memory_size_of(ns))
-        }
-
-        Type::FunctionSelector => {
-            Expression::NumberLiteral(Codegen, Uint(32), BigInt::from(ns.target.selector_length()))
-        }
-
-        Type::Struct(struct_ty) => {
-            calculate_struct_size(encoder, arg_no, expr, struct_ty, ns, vartab, cfg)
-        }
-
-        Type::Slice(ty) => {
-            let dims = vec![ArrayLength::Dynamic];
-            calculate_array_size(encoder, expr, ty, &dims, arg_no, ns, vartab, cfg)
-        }
-
-        Type::Array(ty, dims) => {
-            calculate_array_size(encoder, expr, ty, dims, arg_no, ns, vartab, cfg)
-        }
-
-        Type::UserType(_) | Type::Unresolved | Type::Rational => {
-            unreachable!("Type should not exist in codegen")
-        }
-
-        Type::ExternalFunction { .. } => {
-            let selector_len: BigInt = ns.target.selector_length().into();
-            let mut address_size = Type::Address(false).memory_size_of(ns);
-            address_size.add_assign(selector_len);
-            Expression::NumberLiteral(Codegen, Uint(32), address_size)
-        }
-
-        Type::InternalFunction { .. }
-        | Type::Void
-        | Type::Unreachable
-        | Type::BufferPointer
-        | Type::Mapping(..) => unreachable!("This type cannot be encoded"),
-
-        Type::Ref(r) => {
-            if let Type::Struct(struct_ty) = &**r {
-                return calculate_struct_size(encoder, arg_no, expr, struct_ty, ns, vartab, cfg);
-            }
-            let loaded = Expression::Load(Codegen, *r.clone(), expr.clone().into());
-            get_expr_size(encoder, arg_no, &loaded, ns, vartab, cfg)
-        }
-
-        Type::StorageRef(_, r) => {
-            let var = load_storage(&Codegen, r, expr.clone(), cfg, vartab);
-            let size = get_expr_size(encoder, arg_no, &var, ns, vartab, cfg);
-            encoder.storage_cache_insert(arg_no, var.clone());
-            size
-        }
-
-        _ => encoder.get_encoding_size(expr, &ty, ns, vartab, cfg),
-    }
-}
-
-/// Calculate the size of an array
-fn calculate_array_size(
-    encoder: &mut Box<dyn AbiEncoding>,
-    array: &Expression,
-    elem_ty: &Type,
-    dims: &Vec<ArrayLength>,
-    arg_no: usize,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-) -> Expression {
-    let dyn_dims = dims.iter().filter(|d| **d == ArrayLength::Dynamic).count();
-
-    // If the array does not have variable length elements,
-    // we can calculate its size using a simple multiplication (direct_assessment)
-    // i.e. 'uint8[3][] vec' has size vec.length*2*size_of(uint8)
-    // In cases like 'uint [3][][2] v' this is not possible, as v[0] and v[1] have different sizes
-    let direct_assessment =
-        dyn_dims == 0 || (dyn_dims == 1 && dims.last() == Some(&ArrayLength::Dynamic));
-
-    // Check if the array contains only fixed sized elements
-    let primitive_size = if elem_ty.is_primitive() && direct_assessment {
-        Some(elem_ty.memory_size_of(ns))
-    } else if let Type::Struct(struct_ty) = elem_ty {
-        if direct_assessment {
-            ns.calculate_struct_non_padded_size(struct_ty)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    if let Some(compile_type_size) = primitive_size {
-        // If the array saves primitive-type elements, its size is sizeof(type)*vec.length
-        let mut size = if let ArrayLength::Fixed(dim) = &dims.last().unwrap() {
-            Expression::NumberLiteral(Codegen, Uint(32), dim.clone())
-        } else {
-            Expression::Builtin(
-                Codegen,
-                vec![Uint(32)],
-                Builtin::ArrayLength,
-                vec![array.clone()],
-            )
-        };
-
-        for item in dims.iter().take(dims.len() - 1) {
-            let local_size =
-                Expression::NumberLiteral(Codegen, Uint(32), item.array_length().unwrap().clone());
-            size = Expression::Multiply(
-                Codegen,
-                Uint(32),
-                false,
-                size.into(),
-                local_size.clone().into(),
-            );
-        }
-
-        let type_size = Expression::NumberLiteral(Codegen, Uint(32), compile_type_size);
-        let size = Expression::Multiply(Codegen, Uint(32), false, size.into(), type_size.into());
-        let size_var = vartab.temp_anonymous(&Uint(32));
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: Codegen,
-                res: size_var,
-                expr: size,
-            },
-        );
-        let size_var = Expression::Variable(Codegen, Uint(32), size_var);
-        if encoder.is_packed() || !matches!(&dims.last().unwrap(), ArrayLength::Dynamic) {
-            return size_var;
-        }
-        let size_width = encoder.size_width(&size_var, vartab, cfg);
-        Expression::Add(Codegen, Uint(32), false, size_var.into(), size_width.into())
-    } else {
-        let size_var = vartab.temp_name(format!("array_bytes_size_{}", arg_no).as_str(), &Uint(32));
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: Codegen,
-                res: size_var,
-                expr: Expression::NumberLiteral(Codegen, Uint(32), BigInt::from(0u8)),
-            },
-        );
-        let mut index_vec: Vec<usize> = Vec::new();
-        calculate_complex_array_size(
-            encoder,
-            arg_no,
-            array,
-            dims,
-            dims.len() - 1,
-            size_var,
-            ns,
-            &mut index_vec,
-            vartab,
-            cfg,
-        );
-        Expression::Variable(Codegen, Uint(32), size_var)
-    }
-}
-
-/// Calculate the size of a complex array.
-/// This function indexes an array from its outer dimension to its inner one and
-/// accounts for the encoded length size for dynamic dimensions.
-fn calculate_complex_array_size(
-    encoder: &mut Box<dyn AbiEncoding>,
-    arg_no: usize,
-    arr: &Expression,
-    dims: &Vec<ArrayLength>,
-    dimension: usize,
-    size_var_no: usize,
-    ns: &Namespace,
-    indexes: &mut Vec<usize>,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-) {
-    // If this dimension is dynamic, account for the encoded vector length variable.
-    if !encoder.is_packed() && dims[dimension] == ArrayLength::Dynamic {
-        let arr = index_array(arr.clone(), dims, indexes, false);
-        let size = Expression::Builtin(Codegen, vec![Uint(32)], Builtin::ArrayLength, vec![arr]);
-        let size_width = encoder.size_width(&size, vartab, cfg);
-        let size_var = Expression::Variable(Codegen, Uint(32), size_var_no);
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: Codegen,
-                res: size_var_no,
-                expr: Expression::Add(Codegen, Uint(32), false, size_var.into(), size_width.into()),
-            },
-        );
-    }
-
-    let for_loop = set_array_loop(arr, dims, dimension, indexes, vartab, cfg);
-    cfg.set_basic_block(for_loop.body_block);
-    if 0 == dimension {
-        let deref = index_array(arr.clone(), dims, indexes, false);
-        let elem_size = get_expr_size(encoder, arg_no, &deref, ns, vartab, cfg);
-        let size_var = Expression::Variable(Codegen, Uint(32), size_var_no);
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: Codegen,
-                res: size_var_no,
-                expr: Expression::Add(Codegen, Uint(32), false, size_var.into(), elem_size.into()),
-            },
-        );
-    } else {
-        calculate_complex_array_size(
-            encoder,
-            arg_no,
-            arr,
-            dims,
-            dimension - 1,
-            size_var_no,
-            ns,
-            indexes,
-            vartab,
-            cfg,
-        );
-    }
-    finish_array_loop(&for_loop, vartab, cfg);
-}
-
-/// Retrieves the size of a struct
-fn calculate_struct_size(
-    encoder: &mut Box<dyn AbiEncoding>,
-    arg_no: usize,
-    expr: &Expression,
-    struct_ty: &StructType,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-) -> Expression {
-    if let Some(struct_size) = ns.calculate_struct_non_padded_size(struct_ty) {
-        return Expression::NumberLiteral(Codegen, Uint(32), struct_size);
-    }
-    let first_type = struct_ty.definition(ns).fields[0].ty.clone();
-    let first_field = load_struct_member(first_type, expr.clone(), 0);
-    let mut size = get_expr_size(encoder, arg_no, &first_field, ns, vartab, cfg);
-    for i in 1..struct_ty.definition(ns).fields.len() {
-        let ty = struct_ty.definition(ns).fields[i].ty.clone();
-        let field = load_struct_member(ty.clone(), expr.clone(), i);
-        let expr_size = get_expr_size(encoder, arg_no, &field, ns, vartab, cfg).into();
-        size = Expression::Add(Codegen, Uint(32), false, size.clone().into(), expr_size);
-    }
-    size
 }
 
 /// Indexes an array. If we have 'int[3][][4] vec' and we need 'int[3][]',
