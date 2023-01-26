@@ -246,7 +246,7 @@ fn missing_contract() {
     let missing = account_new();
 
     let res = vm.function_must_fail("test_other", &[BorshToken::Address(missing)]);
-    assert_eq!(res, Ok(64424509440));
+    assert_eq!(res.unwrap(), 64424509440);
 }
 
 #[test]

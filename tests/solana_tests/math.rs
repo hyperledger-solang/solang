@@ -127,7 +127,7 @@ fn safe_math() {
         ],
     );
 
-    assert_ne!(res, Ok(0));
+    assert_ne!(res.unwrap(), 0);
 
     let res = vm.function_must_fail(
         "add_test",
@@ -143,7 +143,7 @@ fn safe_math() {
         ],
     );
 
-    assert_ne!(res, Ok(0));
+    assert_ne!(res.unwrap(), 0);
 
     let res = vm.function_must_fail(
         "sub_test",
@@ -159,5 +159,5 @@ fn safe_math() {
         ],
     );
 
-    assert_ne!(res, Ok(0));
+    assert_ne!(res.unwrap(), 0);
 }
