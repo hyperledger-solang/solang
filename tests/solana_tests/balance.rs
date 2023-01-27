@@ -379,7 +379,7 @@ fn value_overflows() {
             },
         ],
     );
-    assert_eq!(res.ok(), Some(4294967296));
+    assert_eq!(res.unwrap(), 4294967296);
 
     let res = vm.function_must_fail(
         "send",
@@ -391,7 +391,8 @@ fn value_overflows() {
             },
         ],
     );
-    assert_eq!(res.ok(), Some(4294967296));
+
+    assert_eq!(res.unwrap(), 4294967296);
 
     let returns = vm
         .function(
