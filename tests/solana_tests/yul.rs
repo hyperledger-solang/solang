@@ -502,7 +502,12 @@ contract testing  {
     runtime.constructor(&[]);
     let returns = runtime.function("test_address", &[]).unwrap();
     let addr = returns.into_bigint().unwrap();
-    let b_vec = addr.to_bytes_be().1;
+    let mut b_vec = addr.to_bytes_be().1;
+    // test_address() returns address as uint256. If the highest bits are 0, then addr.to_bytes_be().1
+    // may not return 32 bytes.
+    while b_vec.len() < 32 {
+        b_vec.insert(0, 0);
+    }
     assert_eq!(&b_vec, runtime.stack[0].data.as_ref());
 
     runtime

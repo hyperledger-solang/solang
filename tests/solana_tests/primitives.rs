@@ -813,7 +813,7 @@ fn test_power_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(sesa, Ok(0));
+        assert_ne!(sesa.unwrap(), 0);
     }
 }
 
@@ -911,7 +911,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         let res = contract.function_must_fail(
             "mul",
@@ -927,7 +927,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         let res = contract.function_must_fail(
             "mul",
@@ -943,7 +943,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         let res = contract.function_must_fail(
             "mul",
@@ -959,7 +959,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         let res = contract.function_must_fail(
             "mul",
@@ -975,7 +975,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
     }
 }
 
@@ -1124,7 +1124,7 @@ fn test_overflow_detect_signed() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
         let mut lower_limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1149,7 +1149,7 @@ fn test_overflow_detect_signed() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
     }
 }
 
@@ -1193,7 +1193,7 @@ fn test_overflow_detect_unsigned() {
                     },
                 ],
             );
-            assert_ne!(res, Ok(0));
+            assert_ne!(res.unwrap(), 0);
         }
     }
 }
