@@ -1709,49 +1709,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     ns.value_length as u32 * 8
                 )
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Random, args) => {
-                let subject =
-                    expression(self, binary, &args[0], vartab, function, ns).into_pointer_value();
-
-                let subject_data = unsafe {
-                    binary
-                        .builder
-                        .build_gep(subject, &[i32_zero!(), i32_const!(2)], "subject_data")
-                };
-
-                let subject_len = unsafe {
-                    binary
-                        .builder
-                        .build_gep(subject, &[i32_zero!(), i32_zero!()], "subject_len")
-                };
-
-                let (scratch_buf, scratch_len) = scratch_buf!();
-
-                binary.builder.build_store(scratch_len, i32_const!(36));
-
-                call!(
-                    "seal_random",
-                    &[
-                        cast_byte_ptr!(subject_data, "subject_data").into(),
-                        binary.builder.build_load(subject_len, "subject_len").into(),
-                        scratch_buf.into(),
-                        scratch_len.into()
-                    ],
-                    "random"
-                );
-
-                binary.builder.build_load(
-                    binary.builder.build_pointer_cast(
-                        scratch_buf,
-                        binary
-                            .context
-                            .custom_width_int_type(256)
-                            .ptr_type(AddressSpace::default()),
-                        "",
-                    ),
-                    "hash",
-                )
-            }
             codegen::Expression::Builtin(_, _, codegen::Builtin::GetAddress, _) => {
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
