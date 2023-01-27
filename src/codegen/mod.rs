@@ -1223,7 +1223,6 @@ pub enum Builtin {
     MulMod,
     Keccak256,
     Origin,
-    Random,
     ReadFromBuffer,
     Ripemd160,
     Sender,
@@ -1271,7 +1270,6 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::MulMod => Builtin::MulMod,
             ast::Builtin::Keccak256 => Builtin::Keccak256,
             ast::Builtin::Origin => Builtin::Origin,
-            ast::Builtin::Random => Builtin::Random,
             ast::Builtin::ReadAddress
             | ast::Builtin::ReadInt8
             | ast::Builtin::ReadInt16LE

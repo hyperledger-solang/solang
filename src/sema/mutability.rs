@@ -264,7 +264,6 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
                 | Builtin::GasLimit
                 | Builtin::MinimumBalance
                 | Builtin::Balance
-                | Builtin::Random
                 | Builtin::Accounts,
             ..
         } => state.read(loc),

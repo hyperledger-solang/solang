@@ -1444,7 +1444,6 @@ pub enum Builtin {
     Gasprice,
     Origin,
     BlockHash,
-    Random,
     MinimumBalance,
     AbiDecode,
     AbiEncode,
