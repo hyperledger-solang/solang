@@ -836,9 +836,7 @@ impl SubstrateTarget {
                     .builder
                     .build_call(
                         binary.module.get_function("__malloc").unwrap(),
-                        &[ty.into_pointer_type()
-                            .get_element_type()
-                            .size_of()
+                        &[ty.size_of()
                             .unwrap()
                             .const_cast(binary.context.i32_type(), false)
                             .into()],
@@ -849,10 +847,11 @@ impl SubstrateTarget {
                     .unwrap()
                     .into_pointer_value();
 
-                let ef =
-                    binary
-                        .builder
-                        .build_pointer_cast(ef, ty.into_pointer_type(), "function_type");
+                let ef = binary.builder.build_pointer_cast(
+                    ef,
+                    ty.ptr_type(AddressSpace::default()),
+                    "function_type",
+                );
 
                 let address_member = unsafe {
                     binary.builder.build_gep(

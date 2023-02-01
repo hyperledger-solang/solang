@@ -62,8 +62,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         let len = ty
-            .into_pointer_type()
-            .get_element_type()
             .size_of()
             .unwrap()
             .const_cast(binary.context.i32_type(), false);
@@ -97,7 +95,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_pointer_cast(ef, ty.into_pointer_type(), "function_type")
+            .build_pointer_cast(ef, ty.ptr_type(AddressSpace::default()), "function_type")
     }
 
     fn set_storage_string(
