@@ -699,7 +699,11 @@ impl<'a> Binary<'a> {
     pub(crate) fn llvm_var_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty, ns);
         match ty.deref_memory() {
-            Type::Struct(_) | Type::Array(..) | Type::DynamicBytes | Type::String => llvm_ty
+            Type::Struct(_)
+            | Type::Array(..)
+            | Type::DynamicBytes
+            | Type::String
+            | Type::ExternalFunction { .. } => llvm_ty
                 .ptr_type(AddressSpace::default())
                 .as_basic_type_enum(),
             _ => llvm_ty,
@@ -825,11 +829,9 @@ impl<'a> Binary<'a> {
                     let address = self.llvm_type(&Type::Address(false), ns);
                     let selector = self.llvm_type(&Type::FunctionSelector, ns);
 
-                    BasicTypeEnum::PointerType(
-                        self.context
-                            .struct_type(&[selector, address], false)
-                            .ptr_type(AddressSpace::default()),
-                    )
+                    self.context
+                        .struct_type(&[selector, address], false)
+                        .as_basic_type_enum()
                 }
                 Type::Slice(ty) => BasicTypeEnum::StructType(
                     self.context.struct_type(
