@@ -6,8 +6,7 @@
         "build": "solang compile tests/*.sol --target solana -v -o tests/"
     },
     "dependencies": {
-        "@project-serum/anchor": "^0.25.0",
-        "@solana/solidity": "0.0.25",
+        "@project-serum/anchor": "^0.26.0",
         "ts-node": "^10.9.1",
         "tsc-node": "^0.0.3"
     },

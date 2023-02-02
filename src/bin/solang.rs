@@ -577,7 +577,7 @@ fn process_file(
 
             if verbose {
                 eprintln!(
-                    "info: Saving ABI {} for contract {}",
+                    "info: Saving metadata {} for contract {}",
                     abi_filename.display(),
                     binary.name
                 );

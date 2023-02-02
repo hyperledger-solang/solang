@@ -18,7 +18,7 @@ fn create_output_dir() {
     .assert()
     .success();
 
-    File::open("tests/create_me/flipper.abi").expect("should exist");
+    File::open("tests/create_me/flipper.json").expect("should exist");
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
 

@@ -267,38 +267,46 @@ fn add_function_dispatch_case(
     let entry = cfg.new_basic_block(format!("function_cfg_{cfg_no}"));
     cfg.set_basic_block(entry);
 
-    // check for magic in data account, to see if data account is initialized
-    let magic_ok = cfg.new_basic_block("magic_ok".into());
-    let magic_bad = cfg.new_basic_block("magic_bad".into());
+    let needs_account = if let ASTFunction::SolidityFunction(func_no) = func_cfg.function_no {
+        !ns.functions[func_no].is_pure()
+    } else {
+        true
+    };
 
-    cfg.add(
-        vartab,
-        Instr::BranchCond {
-            cond: Expression::Equal(
-                Loc::Codegen,
-                Expression::Variable(Loc::Codegen, Type::Uint(32), magic).into(),
-                Expression::NumberLiteral(
+    if needs_account {
+        // check for magic in data account, to see if data account is initialized
+        let magic_ok = cfg.new_basic_block("magic_ok".into());
+        let magic_bad = cfg.new_basic_block("magic_bad".into());
+
+        cfg.add(
+            vartab,
+            Instr::BranchCond {
+                cond: Expression::Equal(
                     Loc::Codegen,
-                    Type::Uint(32),
-                    ns.contracts[contract_no].selector().into(),
-                )
-                .into(),
-            ),
-            true_block: magic_ok,
-            false_block: magic_bad,
-        },
-    );
+                    Expression::Variable(Loc::Codegen, Type::Uint(32), magic).into(),
+                    Expression::NumberLiteral(
+                        Loc::Codegen,
+                        Type::Uint(32),
+                        ns.contracts[contract_no].selector().into(),
+                    )
+                    .into(),
+                ),
+                true_block: magic_ok,
+                false_block: magic_bad,
+            },
+        );
 
-    cfg.set_basic_block(magic_bad);
+        cfg.set_basic_block(magic_bad);
 
-    cfg.add(
-        vartab,
-        Instr::ReturnCode {
-            code: ReturnCode::InvalidDataError,
-        },
-    );
+        cfg.add(
+            vartab,
+            Instr::ReturnCode {
+                code: ReturnCode::InvalidDataError,
+            },
+        );
 
-    cfg.set_basic_block(magic_ok);
+        cfg.set_basic_block(magic_ok);
+    }
 
     let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(argslen));
 

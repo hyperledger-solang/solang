@@ -112,7 +112,7 @@ fn idl_instructions(
             name: "new".to_string(),
             docs: None,
             accounts: vec![IdlAccountItem::IdlAccount(IdlAccount {
-                name: "data_account".to_string(),
+                name: "dataAccount".to_string(),
                 is_mut: true,
                 is_signer: false,
                 is_optional: Some(false),
@@ -138,13 +138,13 @@ fn idl_instructions(
         let func = &ns.functions[*func_no];
         let tags = idl_docs(&func.tags);
 
-        let accounts = match &func.mutability {
+        let mut accounts = match &func.mutability {
             Mutability::Pure(_) => {
                 vec![]
             }
             Mutability::View(_) => {
                 vec![IdlAccountItem::IdlAccount(IdlAccount {
-                    name: "data_account".to_string(),
+                    name: "dataAccount".to_string(),
                     is_mut: false,
                     is_signer: false,
                     is_optional: Some(false),
@@ -155,9 +155,9 @@ fn idl_instructions(
             }
             _ => {
                 vec![IdlAccountItem::IdlAccount(IdlAccount {
-                    name: "data_account".to_string(),
+                    name: "dataAccount".to_string(),
                     is_mut: true,
-                    is_signer: false,
+                    is_signer: func.has_payer_annotation(),
                     is_optional: Some(false),
                     docs: None,
                     pda: None,
@@ -170,21 +170,47 @@ fn idl_instructions(
         let mut dedup = Deduplicate::new("arg".to_owned());
         for item in &*func.params {
             let name = dedup.unique_name(item);
+            let normalized = name
+                .from_case(Case::Snake)
+                .without_boundaries(&[Boundary::LowerDigit])
+                .to_case(Case::Camel);
 
             args.push(IdlField {
-                name,
+                name: normalized,
                 docs: None,
                 ty: type_manager.convert(&item.ty),
             });
         }
 
         let name = if func.is_constructor() {
+            if func.has_payer_annotation() {
+                accounts.push(IdlAccountItem::IdlAccount(IdlAccount {
+                    name: "wallet".to_string(),
+                    is_mut: false,
+                    is_signer: true,
+                    is_optional: Some(false),
+                    docs: None,
+                    pda: None,
+                    relations: vec![],
+                }));
+            }
+
             "new".to_string()
         } else if func.mangled_name_contracts.contains(&contract_no) {
             func.mangled_name.clone()
         } else {
             func.name.clone()
         };
+
+        accounts.push(IdlAccountItem::IdlAccount(IdlAccount {
+            name: "systemProgram".to_string(),
+            is_mut: false,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }));
 
         let returns = if func.returns.is_empty() {
             None
