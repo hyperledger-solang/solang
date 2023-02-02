@@ -29,7 +29,8 @@ and a binary file.
 
 Each program will need to be deployed to a program_id. Usually, the program_id is a well-known account which is specified
 in the Solidity source code using the `@program_id("F1ipperKF9EfD821ZbbYjS319LXYiBmjhzkkf5a26rC")` annotation on the contract.
-The private key for the account to is needed to deploy.
+The private key for the account to is needed to deploy. You can generate your own private key using the command line tool
+``solana-keygen``.
 
 .. code-block:: bash
 
