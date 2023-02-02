@@ -34,17 +34,17 @@ describe('Deploy builtins2 contract and test', () => {
 
         let { output: gas_left } = await query(conn, alice, contract, "burnGas", [0], undefined, convertWeight(gasLimit).v2Weight);
         let gas = BigInt(gas_left!.toString());
-        expect(gasLimit.toJSON().refTime).toBeGreaterThan(gas);
-        let previous_diff = BigInt(gasLimit.toJSON().refTime) - gas;
+        expect(gasLimit.refTime.toBigInt()).toBeGreaterThan(gas);
+        let previous_diff = gasLimit.refTime.toBigInt() - gas;
 
         // Gas metering is based on execution time:
         // Expect each call to burn between 10000..1000000 more gas than the previous iteration.
         for (let i = 1; i < 100; i++) {
             let { output: gas_left } = await query(conn, alice, contract, "burnGas", [i], undefined, convertWeight(gasLimit).v2Weight);
             let gas = BigInt(gas_left!.toString());
-            expect(gasLimit.toJSON().refTime).toBeGreaterThan(gas);
+            expect(gasLimit.refTime.toBigInt()).toBeGreaterThan(gas);
 
-            let diff = BigInt(gasLimit.toJSON().refTime) - gas;
+            let diff = gasLimit.refTime.toBigInt() - gas;
             expect(diff).toBeGreaterThan(previous_diff);
             expect(diff - previous_diff).toBeLessThan(1e6);
             expect(diff - previous_diff).toBeGreaterThan(1e4);
