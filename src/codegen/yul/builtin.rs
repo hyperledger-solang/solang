@@ -319,7 +319,7 @@ fn process_arithmetic(
 fn cast_to_number(expr: Expression, ns: &Namespace) -> Expression {
     let ty = expr.ty();
 
-    if ty.is_reference_type(ns) {
+    if !ty.is_contract_storage() && ty.is_reference_type(ns) {
         Expression::Cast(
             pt::Loc::Codegen,
             Type::Uint(ns.target.ptr_size()),
