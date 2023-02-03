@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::encoding::abi_encode;
+use super::encoding::{abi_decode, abi_encode};
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
 };
@@ -11,7 +11,6 @@ use super::{
 };
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
-use crate::codegen::encoding::create_encoder;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::{
@@ -2485,13 +2484,12 @@ pub fn emit_function_call(
 
                 // If the first element of returns is Void, we can discard the returns
                 if !dest_func.returns.is_empty() && returns[0] != Type::Void {
-                    let encoder = create_encoder(ns, false);
                     let tys = dest_func
                         .returns
                         .iter()
                         .map(|e| e.ty.clone())
                         .collect::<Vec<Type>>();
-                    encoder.abi_decode(
+                    abi_decode(
                         loc,
                         &Expression::ReturnData(*loc),
                         &tys,
@@ -2548,8 +2546,7 @@ pub fn emit_function_call(
                 );
 
                 if !func_returns.is_empty() && returns[0] != Type::Void {
-                    let encoder = create_encoder(ns, false);
-                    encoder.abi_decode(
+                    abi_decode(
                         loc,
                         &Expression::ReturnData(*loc),
                         returns,
@@ -2572,8 +2569,7 @@ pub fn emit_function_call(
             args,
         } => {
             let data = expression(&args[0], cfg, caller_contract_no, func, ns, vartab, opt);
-            let encoder = create_encoder(ns, false);
-            encoder.abi_decode(loc, &data, tys, ns, vartab, cfg, None)
+            abi_decode(loc, &data, tys, ns, vartab, cfg, None)
         }
         _ => unreachable!(),
     }

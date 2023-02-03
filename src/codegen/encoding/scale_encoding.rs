@@ -199,51 +199,6 @@ impl AbiEncoding for ScaleEncoding {
         encode_compact(expr, Some(buffer), Some(offset), vartab, cfg)
     }
 
-    fn abi_decode(
-        &self,
-        loc: &Loc,
-        buffer: &Expression,
-        types: &[Type],
-        _ns: &Namespace,
-        vartab: &mut Vartable,
-        cfg: &mut ControlFlowGraph,
-        buffer_size: Option<Expression>,
-    ) -> Vec<Expression> {
-        assert!(!self.packed_encoder);
-        let mut returns: Vec<Expression> = Vec::with_capacity(types.len());
-        let mut var_nos: Vec<usize> = Vec::with_capacity(types.len());
-        let mut decode_params: Vec<Parameter> = Vec::with_capacity(types.len());
-
-        for item in types {
-            let var_no = vartab.temp_anonymous(item);
-            var_nos.push(var_no);
-            returns.push(Expression::Variable(*loc, item.clone(), var_no));
-            decode_params.push(Parameter {
-                loc: Loc::Codegen,
-                id: None,
-                ty: item.clone(),
-                ty_loc: None,
-                indexed: false,
-                readonly: false,
-                recursive: false,
-            });
-        }
-
-        cfg.add(
-            vartab,
-            Instr::AbiDecode {
-                res: var_nos,
-                selector: None,
-                exception_block: None,
-                tys: decode_params,
-                data: buffer.clone(),
-                data_len: buffer_size,
-            },
-        );
-
-        returns
-    }
-
     fn storage_cache_insert(&mut self, arg_no: usize, expr: Expression) {
         self.storage_cache.insert(arg_no, expr);
     }
@@ -275,4 +230,47 @@ impl AbiEncoding for ScaleEncoding {
     fn is_packed(&self) -> bool {
         self.packed_encoder
     }
+}
+
+pub fn abi_decode(
+    loc: &Loc,
+    buffer: &Expression,
+    types: &[Type],
+    _ns: &Namespace,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+    buffer_size: Option<Expression>,
+) -> Vec<Expression> {
+    let mut returns: Vec<Expression> = Vec::with_capacity(types.len());
+    let mut var_nos: Vec<usize> = Vec::with_capacity(types.len());
+    let mut decode_params: Vec<Parameter> = Vec::with_capacity(types.len());
+
+    for item in types {
+        let var_no = vartab.temp_anonymous(item);
+        var_nos.push(var_no);
+        returns.push(Expression::Variable(*loc, item.clone(), var_no));
+        decode_params.push(Parameter {
+            loc: Loc::Codegen,
+            id: None,
+            ty: item.clone(),
+            ty_loc: None,
+            indexed: false,
+            readonly: false,
+            recursive: false,
+        });
+    }
+
+    cfg.add(
+        vartab,
+        Instr::AbiDecode {
+            res: var_nos,
+            selector: None,
+            exception_block: None,
+            tys: decode_params,
+            data: buffer.clone(),
+            data_len: buffer_size,
+        },
+    );
+
+    returns
 }

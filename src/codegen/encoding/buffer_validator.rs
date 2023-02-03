@@ -13,7 +13,7 @@ use std::ops::AddAssign;
 /// When we are decoding serialized data from a bytes array, we must constantly verify if
 /// we are not reading past its ending. This struct helps us decrease the number of checks we do,
 /// by merging checks when we can determine the size of what to read beforehand.
-pub(super) struct BufferValidator<'a> {
+pub struct BufferValidator<'a> {
     /// Saves the codegen::Expression that contains the buffer length.
     buffer_length: Expression,
     /// The types we are supposed to decode
