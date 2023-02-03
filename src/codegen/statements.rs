@@ -828,7 +828,7 @@ fn returns(
         .returns
         .iter()
         .zip(uncast_values.into_iter())
-        .map(|(left, right)| cast_and_try_load(&right.loc(), &right, &left.ty, ns, cfg, vartab))
+        .map(|(left, right)| try_load_and_cast(&right.loc(), &right, &left.ty, ns, cfg, vartab))
         .collect();
 
     cfg.add(vartab, Instr::Return { value: cast_values });
@@ -919,7 +919,7 @@ fn destructure(
                 // nothing to do
             }
             DestructureField::VariableDecl(res, param) => {
-                let expr = cast_and_try_load(&param.loc, &right, &param.ty, ns, cfg, vartab);
+                let expr = try_load_and_cast(&param.loc, &right, &param.ty, ns, cfg, vartab);
 
                 if should_remove_variable(res, func, opt) {
                     continue;
@@ -935,7 +935,7 @@ fn destructure(
                 );
             }
             DestructureField::Expression(left) => {
-                let expr = cast_and_try_load(&left.loc(), &right, &left.ty(), ns, cfg, vartab);
+                let expr = try_load_and_cast(&left.loc(), &right, &left.ty(), ns, cfg, vartab);
 
                 if should_remove_assignment(ns, left, func, opt) {
                     continue;
@@ -950,7 +950,7 @@ fn destructure(
 /// During a destructure statement, sema only checks if the cast is possible. During codegen, we
 /// perform the real cast and add an instruction to the CFG to load a value from the storage if want it.
 /// The existing codegen cast function does not manage the CFG, so the loads must be done here.
-fn cast_and_try_load(
+fn try_load_and_cast(
     loc: &pt::Loc,
     expr: &Expression,
     to_ty: &Type,
@@ -958,19 +958,17 @@ fn cast_and_try_load(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) -> Expression {
-    let casted_expr = expr.cast(to_ty, ns);
-
-    match casted_expr.ty() {
+    match expr.ty() {
         Type::StorageRef(_, ty) => {
-            if let Expression::Subscript(_, _, ty, ..) = &casted_expr {
+            if let Expression::Subscript(_, _, ty, ..) = &expr {
                 if ty.is_storage_bytes() {
-                    return casted_expr;
+                    return expr.cast(to_ty, ns);
                 }
             }
 
             if matches!(to_ty, Type::StorageRef(..)) {
                 // If we want a storage reference, there is no need to load from storage
-                return casted_expr;
+                return expr.cast(to_ty, ns);
             }
 
             let anonymous_no = vartab.temp_anonymous(&ty);
@@ -979,17 +977,17 @@ fn cast_and_try_load(
                 Instr::LoadStorage {
                     res: anonymous_no,
                     ty: (*ty).clone(),
-                    storage: casted_expr,
+                    storage: expr.cast(to_ty, ns),
                 },
             );
 
             Expression::Variable(*loc, (*ty).clone(), anonymous_no)
         }
         Type::Ref(ty) => match *ty {
-            Type::Array(_, _) => casted_expr,
-            _ => Expression::Load(pt::Loc::Builtin, *ty, casted_expr.into()),
+            Type::Array(_, _) => expr.cast(to_ty, ns),
+            _ => Expression::Load(pt::Loc::Builtin, *ty, expr.clone().into()).cast(to_ty, ns),
         },
-        _ => casted_expr,
+        _ => expr.cast(to_ty, ns),
     }
 }
 

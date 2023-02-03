@@ -913,6 +913,7 @@ impl Expression {
             }
 
             _ if !from.is_contract_storage()
+                && !to.is_contract_storage()
                 && from.is_reference_type(ns)
                 && !to.is_reference_type(ns) =>
             {
@@ -926,6 +927,7 @@ impl Expression {
             }
 
             _ if !from.is_contract_storage()
+                && !to.is_contract_storage()
                 && !from.is_reference_type(ns)
                 && to.is_reference_type(ns) =>
             {
@@ -936,6 +938,7 @@ impl Expression {
             }
 
             _ if !from.is_contract_storage()
+                && !to.is_contract_storage()
                 && !from.is_reference_type(ns)
                 && !to.is_reference_type(ns) =>
             {
