@@ -117,7 +117,7 @@ async function setup() {
 
             console.log(`Loading ${name} at ${program.publicKey}...`);
             const program_so = fs.readFileSync(file);
-            for (; ;) {
+            for (let retries = 5; retries > 0; retries -= 1) {
                 try {
                     await BpfLoader.load(connection, payer, program, program_so, BPF_LOADER_PROGRAM_ID);
                     break;
