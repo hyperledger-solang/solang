@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, BpfLoader, Transaction, SystemProgram, BPF_LOADER_PROGRAM_ID } from '@solana/web3.js';
+import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, BpfLoader, Transaction, SystemProgram, BPF_LOADER_PROGRAM_ID, TransactionExpiredBlockheightExceededError } from '@solana/web3.js';
 import { AnchorProvider, Program } from '@project-serum/anchor';
 import fs from 'fs';
 
@@ -96,7 +96,7 @@ async function setup() {
         fs.writeFileSync(file_name, JSON.stringify(Array.from(key.secretKey)));
     };
 
-    const connection = newConnection();
+    let connection = newConnection();
     const payer = await newAccountWithLamports(connection);
 
     write_key('payer.key', payer);
@@ -117,12 +117,29 @@ async function setup() {
 
             console.log(`Loading ${name} at ${program.publicKey}...`);
             const program_so = fs.readFileSync(file);
-            await BpfLoader.load(connection, payer, program, program_so, BPF_LOADER_PROGRAM_ID);
+            for (let retries = 5; retries > 0; retries -= 1) {
+                try {
+                    await BpfLoader.load(connection, payer, program, program_so, BPF_LOADER_PROGRAM_ID);
+                    break;
+                } catch (e) {
+                    if (e instanceof TransactionExpiredBlockheightExceededError) {
+                        console.log(e);
+                        console.log('retrying...');
+                        connection = newConnection();
+                    } else {
+                        throw e;
+                    }
+                }
+            }
             console.log(`Done loading ${name} ...`);
 
             write_key(`${name}.key`, program);
         }
     }
+
+    // If there was a TransactionExpiredBlockheightExceededError exception, then
+    // setup.ts does not exit. I have no idea why
+    process.exit();
 }
 
 function newConnection(): Connection {
