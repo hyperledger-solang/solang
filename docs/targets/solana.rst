@@ -191,10 +191,10 @@ or a hex string with the format ``hex"4142"``, or a constructor argument of type
 
 .. _value_transfer:
 
-Transfering native value with a function call
+Transferring native value with a function call
 _____________________________________________
 
-The Solidity langauge on Ethereum allows value transfers with an external call
+The Solidity language on Ethereum allows value transfers with an external call
 or constructor, using the ``auction.bid{value: 501}()`` syntax.
 Solana Cross Program Invocation (CPI) does not support this. This means that:
 
@@ -214,7 +214,7 @@ ________________
 
 In Solidity the ``receive()`` function, when defined, is called whenever the native
 balance for an account gets credited, for example through a contract calling
-``account.transfer(value);``. On Solana, there is no method that implement
+``account.transfer(value);``. On Solana, there is no method that implements
 this. The balance of an account can be credited without any code being executed.
 
 ``receive()`` functions are not permitted on the Solana target.
@@ -322,7 +322,7 @@ Builtin create_program_address
 
 This function returns the program derived address for a program address and
 the provided seeds. See the Solana documentation on
-`program derived adddresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
+`program derived addresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
 
 .. include:: ../examples/solana/builtin_create_program_address.sol
   :code: solidity
@@ -332,7 +332,7 @@ Builtin try_find_program_address
 
 This function returns the program derived address for a program address and
 the provided seeds, along with a seed bump. See the Solana documentation on
-`program derived adddresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
+`program derived addresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
 
 .. include:: ../examples/solana/builtin_try_find_program_address.sol
   :code: solidity
@@ -364,7 +364,7 @@ There is an example in our integration tests of how this should be used. See
 System Instructions
 +++++++++++++++++++
 
-Solana's system instructions enables developers to interact with Solana's System Program. There are functions to
+Solana's system instructions enable developers to interact with Solana's System Program. There are functions to
 create new accounts, allocate account data, assign accounts to owning programs, transfer lamports from System Program
 owned accounts and pay transaction fees. More information about the functions offered can be found both on
 `Solana documentation <https://docs.rs/solana-program/1.11.10/solana_program/system_instruction/enum.SystemInstruction.html>`_
