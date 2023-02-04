@@ -192,7 +192,7 @@ or a hex string with the format ``hex"4142"``, or a constructor argument of type
 .. _value_transfer:
 
 Transferring native value with a function call
-_____________________________________________
+______________________________________________
 
 The Solidity language on Ethereum allows value transfers with an external call
 or constructor, using the ``auction.bid{value: 501}()`` syntax.
