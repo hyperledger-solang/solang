@@ -9,10 +9,9 @@ use crate::emit::{TargetRuntime, Variable};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, Type};
 use crate::{codegen, emit_context};
-use inkwell::types::{BasicType, IntType};
+use inkwell::types::{BasicType, BasicTypeEnum, IntType};
 use inkwell::values::{
-    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, CallableValue, FunctionValue, IntValue,
-    PointerValue,
+    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
 use inkwell::{AddressSpace, IntPredicate};
 use solang_parser::pt;
@@ -25,6 +24,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _function: FunctionValue,
         slot: PointerValue,
         dest: PointerValue,
+        dest_ty: BasicTypeEnum,
     ) {
         emit_context!(binary);
 
@@ -32,8 +32,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             cast_byte_ptr!(slot).into(),
             i32_const!(32).into(),
             cast_byte_ptr!(dest).into(),
-            dest.get_type()
-                .get_element_type()
+            dest_ty
                 .size_of()
                 .unwrap()
                 .const_cast(binary.context.i32_type(), false)
@@ -61,19 +60,27 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             ns,
         );
 
-        let len = ty
-            .size_of()
-            .unwrap()
-            .const_cast(binary.context.i32_type(), false);
+        // This is the size of the external function struct
+        let len = ns.address_length + 4;
 
-        let ef = call!("__malloc", &[len.into()])
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_pointer_value();
+        let ef = call!(
+            "__malloc",
+            &[binary
+                .context
+                .i32_type()
+                .const_int(len as u64, false)
+                .into()]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_pointer_value();
 
         let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
-        binary.builder.build_store(scratch_len, len);
+        binary.builder.build_store(
+            scratch_len,
+            binary.context.i64_type().const_int(len as u64, false),
+        );
 
         let ret = call!(
             "seal_get_storage",
@@ -201,7 +208,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "scratch_ty_buf",
         );
 
-        let loaded_int = binary.builder.build_load(dest, "int");
+        let loaded_int = binary.builder.build_load(ty, dest, "int");
 
         binary.builder.build_unconditional_branch(done_storage);
 
@@ -265,7 +272,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.position_at_end(retrieve_block);
 
-        let length = binary.builder.build_load(scratch_len, "string_len");
+        let length =
+            binary
+                .builder
+                .build_load(binary.context.i32_type(), scratch_len, "string_len");
 
         let loaded_string = call!(
             "vector_new",
@@ -337,7 +347,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_select(
                 exists,
-                binary.builder.build_load(scratch_len, "string_len"),
+                binary
+                    .builder
+                    .build_load(binary.context.i32_type(), scratch_len, "string_len"),
                 i32_zero!().into(),
                 "string_length",
             )
@@ -363,13 +375,17 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let offset = unsafe {
             binary.builder.build_gep(
+                binary.context.i8_type().array_type(SCRATCH_SIZE),
                 binary.scratch.unwrap().as_pointer_value(),
                 &[i32_zero!(), index],
                 "data_offset",
             )
         };
 
-        binary.builder.build_load(offset, "value").into_int_value()
+        binary
+            .builder
+            .build_load(binary.context.i8_type(), offset, "value")
+            .into_int_value()
     }
 
     fn set_storage_bytes_subscript(
@@ -411,7 +427,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_select(
                 exists,
-                binary.builder.build_load(scratch_len, "string_len"),
+                binary
+                    .builder
+                    .build_load(binary.context.i32_type(), scratch_len, "string_len"),
                 i32_zero!().into(),
                 "string_length",
             )
@@ -437,6 +455,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let offset = unsafe {
             binary.builder.build_gep(
+                binary.context.i8_type().array_type(SCRATCH_SIZE),
                 binary.scratch.unwrap().as_pointer_value(),
                 &[i32_zero!(), index],
                 "data_offset",
@@ -501,7 +520,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_select(
                 exists,
-                binary.builder.build_load(scratch_len, "string_len"),
+                binary
+                    .builder
+                    .build_load(binary.context.i32_type(), scratch_len, "string_len"),
                 i32_zero!().into(),
                 "string_length",
             )
@@ -510,6 +531,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // set the result
         let offset = unsafe {
             binary.builder.build_gep(
+                binary.context.i8_type().array_type(SCRATCH_SIZE),
                 binary.scratch.unwrap().as_pointer_value(),
                 &[i32_zero!(), length],
                 "data_offset",
@@ -540,10 +562,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         &self,
         binary: &Binary<'a>,
         function: FunctionValue<'a>,
-        _ty: &ast::Type,
+        ty: &ast::Type,
         slot: IntValue<'a>,
         load: bool,
-        _ns: &ast::Namespace,
+        ns: &ast::Namespace,
     ) -> Option<BasicValueEnum<'a>> {
         emit_context!(binary);
 
@@ -576,7 +598,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_select(
                 exists,
-                binary.builder.build_load(scratch_len, "string_len"),
+                binary
+                    .builder
+                    .build_load(binary.context.i32_type(), scratch_len, "string_len"),
                 i32_zero!().into(),
                 "string_length",
             )
@@ -610,13 +634,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let val = if load {
             let offset = unsafe {
                 binary.builder.build_gep(
+                    binary.context.i8_type().array_type(SCRATCH_SIZE),
                     binary.scratch.unwrap().as_pointer_value(),
                     &[i32_zero!(), new_length],
                     "data_offset",
                 )
             };
 
-            Some(binary.builder.build_load(offset, "popped_value"))
+            Some(
+                binary
+                    .builder
+                    .build_load(binary.llvm_type(ty, ns), offset, "popped_value"),
+            )
         } else {
             None
         };
@@ -673,7 +702,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .builder
             .build_select(
                 exists,
-                binary.builder.build_load(scratch_len, "string_len"),
+                binary
+                    .builder
+                    .build_load(binary.context.i32_type(), scratch_len, "string_len"),
                 i32_zero!().into(),
                 "string_length",
             )
@@ -767,9 +798,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             false,
         );
 
-        let callable = CallableValue::try_from(asm).unwrap();
-
-        binary.builder.build_call(callable, &[], "unreachable");
+        binary
+            .builder
+            .build_indirect_call(asm_fn, asm, &[], "unreachable");
 
         binary.builder.build_unreachable();
     }
@@ -790,7 +821,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "",
         );
 
-        let argsend = unsafe { binary.builder.build_gep(argsdata, &[datalength], "argsend") };
+        let argsend = unsafe {
+            binary
+                .builder
+                .build_gep(binary.context.i8_type(), argsdata, &[datalength], "argsend")
+        };
 
         for param in spec {
             args.push(self.decode_ty(binary, function, &param.ty, &mut argsdata, argsend, ns));
@@ -870,26 +905,35 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // if it's packed, we have the correct length already
         if args.is_empty() {
             let data_len = unsafe {
-                binary
-                    .builder
-                    .build_gep(v, &[i32_zero!(), i32_zero!()], "data_len")
+                binary.builder.build_gep(
+                    binary.module.get_struct_type("struct.vector").unwrap(),
+                    v,
+                    &[i32_zero!(), i32_zero!()],
+                    "data_len",
+                )
             };
 
             binary.builder.build_store(data_len, length);
         }
 
         let data_size = unsafe {
-            binary
-                .builder
-                .build_gep(v, &[i32_zero!(), i32_const!(1)], "data_size")
+            binary.builder.build_gep(
+                binary.module.get_struct_type("struct.vector").unwrap(),
+                v,
+                &[i32_zero!(), i32_const!(1)],
+                "data_size",
+            )
         };
 
         binary.builder.build_store(data_size, length);
 
         let data = unsafe {
-            binary
-                .builder
-                .build_gep(v, &[i32_zero!(), i32_const!(2)], "data")
+            binary.builder.build_gep(
+                binary.module.get_struct_type("struct.vector").unwrap(),
+                v,
+                &[i32_zero!(), i32_const!(2)],
+                "data",
+            )
         };
 
         // now encode each of the arguments
@@ -923,9 +967,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
 
             let data_len = unsafe {
-                binary
-                    .builder
-                    .build_gep(v, &[i32_zero!(), i32_zero!()], "data_len")
+                binary.builder.build_gep(
+                    binary.module.get_struct_type("struct.vector").unwrap(),
+                    v,
+                    &[i32_zero!(), i32_zero!()],
+                    "data_len",
+                )
             };
 
             binary.builder.build_store(data_len, length);
@@ -991,6 +1038,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             argsdata = unsafe {
                 binary.builder.build_gep(
+                    binary.context.i8_type(),
                     data,
                     &[selector
                         .get_type()
@@ -1188,7 +1236,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 scratch_buf,
                 binary
                     .builder
-                    .build_load(scratch_len, "string_len")
+                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
                     .into_int_value(),
             );
 
@@ -1271,7 +1319,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 scratch_buf,
                 binary
                     .builder
-                    .build_load(scratch_len, "string_len")
+                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
                     .into_int_value(),
             );
 
@@ -1344,7 +1392,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
-        let length = binary.builder.build_load(scratch_len, "string_len");
+        let length =
+            binary
+                .builder
+                .build_load(binary.context.i32_type(), scratch_len, "string_len");
 
         call!(
             "vector_new",
@@ -1378,7 +1429,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary
             .builder
-            .build_load(value, "value_transferred")
+            .build_load(binary.value_type(ns), value, "value_transferred")
             .into_int_value()
     }
 
@@ -1444,7 +1495,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             ]
         );
 
-        binary.builder.build_load(temp, "hash").into_int_value()
+        binary
+            .builder
+            .build_load(
+                binary.llvm_type(&ast::Type::Bytes(hashlen as u8), ns),
+                temp,
+                "hash",
+            )
+            .into_int_value()
     }
 
     /// Emit event
@@ -1482,9 +1540,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
 
             let mut dest = unsafe {
-                binary
-                    .builder
-                    .build_gep(topic_buf, &[i32_const!(1)], "dest")
+                binary.builder.build_gep(
+                    binary.context.i8_type(),
+                    topic_buf,
+                    &[i32_const!(1)],
+                    "dest",
+                )
             };
 
             call!(
@@ -1505,7 +1566,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     ]
                 );
 
-                dest = unsafe { binary.builder.build_gep(dest, &[i32_const!(32)], "dest") };
+                dest = unsafe {
+                    binary.builder.build_gep(
+                        binary.context.i8_type(),
+                        dest,
+                        &[i32_const!(32)],
+                        "dest",
+                    )
+                };
             }
 
             topic_buf
@@ -1550,6 +1618,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 call!($func, &[scratch_buf.into(), scratch_len.into()], $name);
 
                 binary.builder.build_load(
+                    binary.context.custom_width_int_type($width),
                     binary.builder.build_pointer_cast(
                         scratch_buf,
                         binary
@@ -1571,7 +1640,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     &[
                         binary
                             .builder
-                            .build_load(binary.calldata_len.as_pointer_value(), "calldata_len")
+                            .build_load(
+                                binary.context.i32_type(),
+                                binary.calldata_len.as_pointer_value(),
+                                "calldata_len"
+                            )
                             .into(),
                         i32_const!(1).into(),
                         binary
@@ -1590,6 +1663,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 let data = unsafe {
                     binary.builder.build_gep(
+                        binary.context.get_struct_type("struct.vector").unwrap(),
                         v.into_pointer_value(),
                         &[i32_zero!(), i32_const!(2)],
                         "",
@@ -1664,6 +1738,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 );
 
                 binary.builder.build_load(
+                    binary
+                        .context
+                        .custom_width_int_type(ns.value_length as u32 * 8),
                     binary.builder.build_pointer_cast(
                         scratch_buf,
                         binary
@@ -1689,6 +1766,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 );
 
                 binary.builder.build_load(
+                    binary.address_type(ns),
                     binary.builder.build_pointer_cast(
                         scratch_buf,
                         binary.address_type(ns).ptr_type(AddressSpace::default()),
@@ -1721,6 +1799,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 );
 
                 binary.builder.build_load(
+                    binary.address_type(ns),
                     binary.builder.build_pointer_cast(
                         scratch_buf,
                         binary.address_type(ns).ptr_type(AddressSpace::default()),
@@ -1743,6 +1822,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 );
 
                 binary.builder.build_load(
+                    binary.value_type(ns),
                     binary.builder.build_pointer_cast(
                         scratch_buf,
                         binary.value_type(ns).ptr_type(AddressSpace::default()),
@@ -1804,6 +1884,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _function: FunctionValue<'a>,
         _builtin_func: &Function,
         _args: &[BasicMetadataValueEnum<'a>],
+        _first_arg_type: BasicTypeEnum,
         _ns: &Namespace,
     ) -> BasicValueEnum<'a> {
         unimplemented!()

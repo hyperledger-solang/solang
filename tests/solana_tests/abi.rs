@@ -38,9 +38,13 @@ fn packed() {
 
             function test4() public {
                 uint8[] vec = new uint8[](2);
+                print("after allocation");
                 vec[0] = 0xca;
+                print("after first store");
                 vec[1] = 0xfe;
+                print("after second store");
                 assert(abi.encodePacked(vec) == hex"cafe");
+                print("after encode");
             }
         }"#,
     );

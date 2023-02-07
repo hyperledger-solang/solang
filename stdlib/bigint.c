@@ -430,7 +430,7 @@ int sdivmod128(__uint128_t *pdividend, __uint128_t *pdivisor, __uint128_t *remai
     return 0;
 }
 
-typedef unsigned _ExtInt(256) uint256_t;
+typedef unsigned _BitInt(256) uint256_t;
 uint256_t const uint256_0 = (uint256_t)0;
 uint256_t const uint256_1 = (uint256_t)1;
 
@@ -544,7 +544,7 @@ int sdivmod256(uint256_t *pdividend, uint256_t *pdivisor, uint256_t *remainder, 
     return 0;
 }
 
-typedef unsigned _ExtInt(512) uint512_t;
+typedef unsigned _BitInt(512) uint512_t;
 uint512_t const uint512_0 = (uint512_t)0;
 uint512_t const uint512_1 = (uint512_t)1;
 

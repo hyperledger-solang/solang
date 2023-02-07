@@ -8,7 +8,7 @@ use std::str;
 
 use crate::Target;
 use inkwell::targets::TargetTriple;
-use inkwell::types::IntType;
+use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
@@ -152,6 +152,7 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue,
         slot: PointerValue,
         dest: PointerValue,
+        dest_ty: BasicTypeEnum,
     );
 
     fn get_storage_extfunc(
@@ -249,6 +250,7 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
+        first_arg_type: BasicTypeEnum,
         ns: &Namespace,
     ) -> BasicValueEnum<'a>;
 

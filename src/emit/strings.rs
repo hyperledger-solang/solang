@@ -110,7 +110,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     "",
                 );
 
-                output = unsafe { bin.builder.build_gep(output, &[len], "") };
+                output = unsafe {
+                    bin.builder
+                        .build_gep(bin.context.i8_type(), output, &[len], "")
+                };
             }
         } else {
             let val = evaluated_arg[i]
@@ -142,7 +145,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         "",
                     );
 
-                    output = unsafe { bin.builder.build_gep(output, &[len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[len], "")
+                    };
                 }
                 Type::String => {
                     let s = bin.vector_bytes(val);
@@ -154,7 +160,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         "",
                     );
 
-                    output = unsafe { bin.builder.build_gep(output, &[len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[len], "")
+                    };
                 }
                 Type::DynamicBytes => {
                     let s = bin.vector_bytes(val);
@@ -168,7 +177,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let hex_len = bin.builder.build_int_add(len, len, "hex_len");
 
-                    output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[hex_len], "")
+                    };
                 }
                 Type::Address(_) | Type::Contract(_) => {
                     // for Solana/Substrate, we should encode in base58
@@ -195,7 +207,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let hex_len = bin.builder.build_int_add(len, len, "hex_len");
 
-                    output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[hex_len], "")
+                    };
                 }
                 Type::Bytes(size) => {
                     let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "bytesN");
@@ -218,7 +233,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let hex_len = bin.builder.build_int_add(len, len, "hex_len");
 
-                    output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[hex_len], "")
+                    };
                 }
                 Type::Enum(_) => {
                     let val = bin.builder.build_int_z_extend(
@@ -371,7 +389,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let minus_len = bin.context.i32_type().const_int(1, false);
 
-                    let neg_data = unsafe { bin.builder.build_gep(output, &[minus_len], "") };
+                    let neg_data = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[minus_len], "")
+                    };
                     let neg_val = bin.builder.build_int_neg(val, "negative_int");
 
                     bin.builder.build_unconditional_branch(positive);
@@ -515,6 +536,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
     let data_len = unsafe {
         bin.builder.build_gep(
+            bin.module.get_struct_type("struct.vector").unwrap(),
             vector,
             &[
                 bin.context.i32_type().const_zero(),

@@ -28,7 +28,7 @@ tiny-keccak = { version = "2.0", features = ["keccak"] }
 serde_json = "1.0"
 serde = "1.0"
 serde_derive = { version = "1.0" }
-inkwell = { version = "0.1.0", features = ["target-webassembly", "target-bpf", "no-libffi-linking", "llvm14-0"], optional = true }
+inkwell = { version = "0.1.0", features = ["target-webassembly", "target-bpf", "no-libffi-linking", "llvm15-0"], optional = true }
 blake2-rfc = "0.2.18"
 handlebars = "4.3"
 contract-metadata = "1.5.1"
