@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/yul/unreachable_after_asm.sol" {
 	contract [label="contract testTypes\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:1:1-14:2"]
-	var [label="variable b\nvisibility internal\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:2:5-14"]
+	var [label="variable b\nvisibility internal\nuint256\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:2:5-14"]
 	testAsm [label="function testAsm\ncontract: testTypes\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:3:5-51\nsignature testAsm(uint128[])\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint128[] vl"]
 	diagnostic [label="found contract 'testTypes'\nlevel Debug\ntests/contract_testcases/substrate/yul/unreachable_after_asm.sol:1:1-14:2"]

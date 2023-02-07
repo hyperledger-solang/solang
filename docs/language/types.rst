@@ -391,6 +391,11 @@ Mappings are declared with ``mapping(keytype => valuetype)``, for example:
 .. include:: ../examples/mapping_type.sol
   :code: solidity
 
+Mappings may have a name for the key or the value, for example:
+``mapping(address owner => uint64 balance)``. The names are used in the metadata of
+the contract. If the mapping is public, then the accessor function will have
+named arguments and returns.
+
 .. tip::
 
   When assigning multiple members in a struct in a mapping, it is better to create

@@ -2,7 +2,8 @@
 
 use super::{
     ast::{
-        ArrayLength, Diagnostic, Mutability, Namespace, Note, Parameter, RetrieveType, Symbol, Type,
+        ArrayLength, Diagnostic, Mapping, Mutability, Namespace, Note, Parameter, RetrieveType,
+        Symbol, Type,
     },
     builtin,
     diagnostics::Diagnostics,
@@ -804,33 +805,46 @@ impl Namespace {
             assert!(namespace.is_empty());
 
             let ty = match ty {
-                pt::Type::Mapping(_, k, v) => {
-                    let key = self.resolve_type(file_no, contract_no, false, k, diagnostics)?;
-                    let value = self.resolve_type(file_no, contract_no, false, v, diagnostics)?;
+                pt::Type::Mapping {
+                    key,
+                    key_name,
+                    value,
+                    value_name,
+                    ..
+                } => {
+                    let key_ty =
+                        self.resolve_type(file_no, contract_no, false, key, diagnostics)?;
+                    let value_ty =
+                        self.resolve_type(file_no, contract_no, false, value, diagnostics)?;
 
-                    match key {
+                    match key_ty {
                         Type::Mapping(..) => {
                             diagnostics.push(Diagnostic::decl_error(
-                                k.loc(),
+                                key.loc(),
                                 "key of mapping cannot be another mapping type".to_string(),
                             ));
                             return Err(());
                         }
                         Type::Struct(_) => {
                             diagnostics.push(Diagnostic::decl_error(
-                                k.loc(),
+                                key.loc(),
                                 "key of mapping cannot be struct type".to_string(),
                             ));
                             return Err(());
                         }
                         Type::Array(..) => {
                             diagnostics.push(Diagnostic::decl_error(
-                                k.loc(),
+                                key.loc(),
                                 "key of mapping cannot be array type".to_string(),
                             ));
                             return Err(());
                         }
-                        _ => Type::Mapping(Box::new(key), Box::new(value)),
+                        _ => Type::Mapping(Mapping {
+                            key: Box::new(key_ty),
+                            key_name: key_name.clone(),
+                            value: Box::new(value_ty),
+                            value_name: value_name.clone(),
+                        }),
                     }
                 }
                 pt::Type::Function {

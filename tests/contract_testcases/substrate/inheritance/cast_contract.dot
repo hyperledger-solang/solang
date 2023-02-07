@@ -7,7 +7,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/cast_contract.sol
 	parameters_6 [label="parameters\nint32 a\nint32 b"]
 	returns_7 [label="returns\nint32 "]
 	contract_8 [label="contract ferqu\ntests/contract_testcases/substrate/inheritance/cast_contract.sol:7:9-21:10"]
-	var [label="variable op\nvisibility internal\ntests/contract_testcases/substrate/inheritance/cast_contract.sol:8:13-24"]
+	var [label="variable op\nvisibility internal\ncontract operator\ntests/contract_testcases/substrate/inheritance/cast_contract.sol:8:13-24"]
 	new [label="constructor new\ncontract: ferqu\ntests/contract_testcases/substrate/inheritance/cast_contract.sol:10:13-39\nsignature new(bool)\nvisibility public\nmutability nonpayable"]
 	parameters_11 [label="parameters\nbool do_adds"]
 	if [label="if\ntests/contract_testcases/substrate/inheritance/cast_contract.sol:11:17-15:18"]

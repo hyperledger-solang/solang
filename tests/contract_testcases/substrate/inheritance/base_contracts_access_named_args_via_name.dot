@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol" {
 	contract [label="contract Base\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:1:1-7:2"]
-	var [label="variable something\nvisibility private\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:2:5-30"]
+	var [label="variable something\nvisibility private\nuint256\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:2:5-30"]
 	set [label="function set\ncontract: Base\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:4:5-42\nsignature set(uint256)\nvisibility public\nmutability pure"]
 	parameters [label="parameters\nuint256 val"]
 	expr [label="expression\ntests/contract_testcases/substrate/inheritance/base_contracts_access_named_args_via_name.sol:5:9-24"]

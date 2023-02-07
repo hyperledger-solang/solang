@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sema::ast::{Expression, Namespace, RetrieveType, Type};
+use crate::sema::ast::{Expression, Mapping, Namespace, RetrieveType, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::eval::check_term_for_constant_overflow;
 use crate::sema::expression::resolve_expression::expression;
@@ -154,16 +154,16 @@ fn mapping_subscript(
     let ty = mapping.ty();
     let elem_ty = ty.storage_array_elem();
 
-    if let Type::Mapping(key_ty, _) = ty.deref_any() {
+    if let Type::Mapping(Mapping { key, .. }) = ty.deref_any() {
         let index_expr = expression(
             index,
             context,
             ns,
             symtable,
             diagnostics,
-            ResolveTo::Type(key_ty),
+            ResolveTo::Type(key),
         )?
-        .cast(&index.loc(), key_ty, true, ns, diagnostics)?;
+        .cast(&index.loc(), key, true, ns, diagnostics)?;
 
         Ok(Expression::Subscript {
             loc: *loc,

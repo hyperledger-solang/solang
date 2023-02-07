@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/variables/override_attribute_01.sol" {
 	contract [label="contract x\ntests/contract_testcases/substrate/variables/override_attribute_01.sol:1:1-3:10"]
-	var [label="variable y\nvisibility internal\ntests/contract_testcases/substrate/variables/override_attribute_01.sol:2:13-40"]
+	var [label="variable y\nvisibility internal\nint256\ntests/contract_testcases/substrate/variables/override_attribute_01.sol:2:13-40"]
 	number_literal [label="int256 literal: 1\ntests/contract_testcases/substrate/variables/override_attribute_01.sol:2:39-40"]
 	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/variables/override_attribute_01.sol:1:1-3:10"]
 	diagnostic_6 [label="only public variable can be declared 'override'\nlevel Error\ntests/contract_testcases/substrate/variables/override_attribute_01.sol:2:17-25"]

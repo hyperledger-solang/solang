@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/arrays/storage_delete.sol" {
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/storage_delete.sol:2:9-8:10"]
-	var [label="variable bar\nvisibility internal\ntests/contract_testcases/substrate/arrays/storage_delete.sol:3:13-24"]
+	var [label="variable bar\nvisibility internal\nint32[]\ntests/contract_testcases/substrate/arrays/storage_delete.sol:3:13-24"]
 	test [label="function test\ncontract: foo\ntests/contract_testcases/substrate/arrays/storage_delete.sol:5:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/storage_delete.sol:2:9-8:10"]
 	diagnostic_6 [label="argument to 'delete' should be storage reference\nlevel Error\ntests/contract_testcases/substrate/arrays/storage_delete.sol:6:17-27"]

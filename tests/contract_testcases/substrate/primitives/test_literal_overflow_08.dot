@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:1:1-3:10"]
-	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:2:13-46"]
+	var [label="variable foo\nvisibility internal\nint64\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:2:13-46"]
 	number_literal [label="int64 literal: 18446744073709551616\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:2:25-46"]
 	diagnostic [label="found abstract contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:1:1-3:10"]
 	diagnostic_6 [label="value 18446744073709551616 does not fit into type int64.\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_08.sol:2:25-46"]

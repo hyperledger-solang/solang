@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/tags/variables_01.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/tags/variables_01.sol:2:9-7:10"]
 	base [label="base b\ntests/contract_testcases/substrate/tags/variables_01.sol:2:32-33"]
-	var [label="variable y\nvisibility internal\ntests/contract_testcases/substrate/tags/variables_01.sol:6:13-18"]
+	var [label="variable y\nvisibility internal\nint256\ntests/contract_testcases/substrate/tags/variables_01.sol:6:13-18"]
 	tags [label="notice: so here we are\ntitle: i figured it out\ninheritdoc: b"]
 	contract_5 [label="contract b\ntests/contract_testcases/substrate/tags/variables_01.sol:9:9-31"]
 	diagnostic [label="found abstract contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/tags/variables_01.sol:2:9-7:10"]

@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/solana/multidimensional_array.sol" {
 	contract [label="contract Testing\ntests/contract_testcases/solana/multidimensional_array.sol:1:1-8:2"]
-	var [label="variable stor_arr\nvisibility internal\ntests/contract_testcases/solana/multidimensional_array.sol:3:5-28"]
+	var [label="variable stor_arr\nvisibility internal\nuint16[2][4][]\ntests/contract_testcases/solana/multidimensional_array.sol:3:5-28"]
 	getThis [label="function getThis\ncontract: Testing\ntests/contract_testcases/solana/multidimensional_array.sol:4:5-52\nsignature getThis()\nvisibility public\nmutability view"]
 	returns [label="returns\nuint16 "]
 	var_decl [label="variable decl uint16[2][4][] arr2\ntests/contract_testcases/solana/multidimensional_array.sol:5:9-46"]

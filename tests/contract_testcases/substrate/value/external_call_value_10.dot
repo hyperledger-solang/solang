@@ -3,7 +3,7 @@ strict digraph "tests/contract_testcases/substrate/value/external_call_value_10.
 	test [label="function test\ncontract: a\ntests/contract_testcases/substrate/value/external_call_value_10.sol:3:13-42\nsignature test(int32)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nint32 l"]
 	contract_4 [label="contract b\ntests/contract_testcases/substrate/value/external_call_value_10.sol:7:9-14:10"]
-	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/value/external_call_value_10.sol:8:13-18"]
+	var [label="variable x\nvisibility internal\nint256\ntests/contract_testcases/substrate/value/external_call_value_10.sol:8:13-18"]
 	test_6 [label="function test\ncontract: b\ntests/contract_testcases/substrate/value/external_call_value_10.sol:10:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
 	var_decl [label="variable decl contract a f\ntests/contract_testcases/substrate/value/external_call_value_10.sol:11:17-30"]
 	constructor [label="constructor contract a\ntests/contract_testcases/substrate/value/external_call_value_10.sol:11:23-30"]

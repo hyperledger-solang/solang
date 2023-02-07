@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/evm/public_mapping.sol" {
 	A [label="name:A\ncontract: foo\ntests/contract_testcases/evm/public_mapping.sol:2:12-13\nfield name:a ty:mapping(uint64 => uint64)"]
 	contract [label="contract foo\ntests/contract_testcases/evm/public_mapping.sol:1:1-7:2"]
-	var [label="variable map\nvisibility public\ntests/contract_testcases/evm/public_mapping.sol:6:5-19"]
+	var [label="variable map\nvisibility public\nstruct foo.A[]\ntests/contract_testcases/evm/public_mapping.sol:6:5-19"]
 	map [label="function map\ncontract: foo\ntests/contract_testcases/evm/public_mapping.sol:6:16-19\nsignature map(uint256)\nvisibility public\nmutability view"]
 	parameters [label="parameters\nuint256 "]
 	returns [label="returns\nstruct foo.A "]

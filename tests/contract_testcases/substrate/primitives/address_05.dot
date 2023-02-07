@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/primitives/address_05.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/primitives/address_05.sol:1:1-3:10"]
-	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/address_05.sol:2:13-84"]
+	var [label="variable foo\nvisibility internal\naddress\ntests/contract_testcases/substrate/primitives/address_05.sol:2:13-84"]
 	number_literal [label="address literal: 82381599652983064627748031644048006099156261489258002493031233701766405061660\ntests/contract_testcases/substrate/primitives/address_05.sol:2:27-84"]
 	diagnostic [label="found abstract contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/primitives/address_05.sol:1:1-3:10"]
 	diagnostic_6 [label="storage variable 'foo' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/primitives/address_05.sol:2:13-84"]

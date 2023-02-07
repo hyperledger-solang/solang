@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/solana/returns/return_err_03.sol" {
 	contract [label="contract foo\ntests/contract_testcases/solana/returns/return_err_03.sol:2:9-11:10"]
-	var [label="variable val\nvisibility private\ntests/contract_testcases/solana/returns/return_err_03.sol:3:13-33"]
+	var [label="variable val\nvisibility private\nuint256\ntests/contract_testcases/solana/returns/return_err_03.sol:3:13-33"]
 	number_literal [label="uint256 literal: 0\ntests/contract_testcases/solana/returns/return_err_03.sol:3:32-33"]
 	f [label="function f\ncontract: foo\ntests/contract_testcases/solana/returns/return_err_03.sol:4:13-59\nsignature f()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nuint256 \nuint256 \nuint256 "]

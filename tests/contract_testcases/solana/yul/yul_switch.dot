@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/solana/yul/yul_switch.sol" {
 	contract [label="contract testTypes\ntests/contract_testcases/solana/yul/yul_switch.sol:1:1-18:2"]
-	var [label="variable b\nvisibility internal\ntests/contract_testcases/solana/yul/yul_switch.sol:2:5-14"]
+	var [label="variable b\nvisibility internal\nuint256\ntests/contract_testcases/solana/yul/yul_switch.sol:2:5-14"]
 	testAsm [label="function testAsm\ncontract: testTypes\ntests/contract_testcases/solana/yul/yul_switch.sol:3:5-74\nsignature testAsm(uint128[])\nvisibility public\nmutability pure"]
 	parameters [label="parameters\nuint128[] vl"]
 	returns [label="returns\nuint256 "]

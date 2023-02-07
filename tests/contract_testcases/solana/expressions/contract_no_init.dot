@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/solana/expressions/contract_no_init.sol" {
 	contract [label="contract other\ntests/contract_testcases/solana/expressions/contract_no_init.sol:2:9-4:10"]
-	var [label="variable a\nvisibility public\ntests/contract_testcases/solana/expressions/contract_no_init.sol:3:13-25"]
+	var [label="variable a\nvisibility public\nint256\ntests/contract_testcases/solana/expressions/contract_no_init.sol:3:13-25"]
 	a [label="function a\ncontract: other\ntests/contract_testcases/solana/expressions/contract_no_init.sol:3:24-25\nsignature a()\nvisibility public\nmutability view"]
-	returns [label="returns\nint256 "]
+	returns [label="returns\nint256 a"]
 	return [label="return\nimplicit"]
 	storage_load [label="storage load int256\nimplicit"]
 	storage_var [label="storage variable\nother.a\nint256 storage\nimplicit"]

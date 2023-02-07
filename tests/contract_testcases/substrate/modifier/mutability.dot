@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/modifier/mutability.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/modifier/mutability.sol:2:9-7:10"]
-	var [label="variable var\nvisibility internal\ntests/contract_testcases/substrate/modifier/mutability.sol:3:13-23"]
+	var [label="variable var\nvisibility internal\nuint64\ntests/contract_testcases/substrate/modifier/mutability.sol:3:13-23"]
 	foo [label="modifier foo\ncontract: c\ntests/contract_testcases/substrate/modifier/mutability.sol:4:13-36\nmutability nonpayable"]
 	parameters [label="parameters\nuint64 x"]
 	underscore [label="undersore\ntests/contract_testcases/substrate/modifier/mutability.sol:4:38-39"]

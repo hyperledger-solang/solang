@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/substrate/variables/override_attribute_05.sol" {
 	contract [label="contract x\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:1:1-3:10"]
 	base [label="base y\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:1:15-16"]
-	var [label="variable foo\nvisibility public\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:2:13-36"]
+	var [label="variable foo\nvisibility public\nint256\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:2:13-36"]
 	foo [label="function foo\ncontract: x\ntests/contract_testcases/substrate/variables/override_attribute_05.sol:2:33-36\nsignature foo()\nvisibility public\nmutability view\noverride"]
-	returns [label="returns\nint256 "]
+	returns [label="returns\nint256 foo"]
 	return [label="return\nimplicit"]
 	storage_load [label="storage load int256\nimplicit"]
 	storage_var [label="storage variable\nx.foo\nint256 storage\nimplicit"]
