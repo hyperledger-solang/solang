@@ -263,6 +263,16 @@ fn string_abi_decode() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct ValB(Vec<u8>);
 
+    let mut runtime = build_solidity(
+        r##"contract foo {
+            function test() public {
+                string dec = abi.decode(hex"0c414141", (string));
+                assert(dec == "AAA");
+            }
+        }"##,
+    );
+    runtime.function("test", vec![]);
+
     // we should try lengths: 0 to 63, 64 to 0x800
     let mut runtime = build_solidity(
         r##"
