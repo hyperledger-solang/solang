@@ -57,6 +57,13 @@ fn main() {
                             ]),
                     )
                     .arg(
+                        Arg::new("CONTRACT")
+                            .help("Contract names to compile (defaults to all)")
+                            .value_delimiter(',')
+                            .action(ArgAction::Append)
+                            .long("contract"),
+                    )
+                    .arg(
                         Arg::new("OPT")
                             .help("Set llvm optimizer level")
                             .short('O')
@@ -423,10 +430,36 @@ fn compile(matches: &ArgMatches) {
 
     let mut errors = false;
 
+    // build a map of requested contract names, and a flag specifying whether it was found or not
+    let mut contract_names: HashMap<&str, bool> = HashMap::new();
+
+    if let Some(values) = matches.get_many::<String>("CONTRACT") {
+        for v in values {
+            contract_names.insert(v.as_str(), false);
+        }
+    }
+
     for filename in matches.get_many::<OsString>("INPUT").unwrap() {
-        match process_file(filename, &mut resolver, target, matches, &mut json, &opt) {
+        match process_file(
+            filename,
+            &mut resolver,
+            target,
+            matches,
+            &mut json,
+            &mut contract_names,
+            &opt,
+        ) {
             Ok(ns) => namespaces.push(ns),
             Err(_) => {
+                errors = true;
+            }
+        }
+    }
+
+    if !contract_names.is_empty() {
+        for (name, found) in contract_names {
+            if !found {
+                eprintln!("error: contact {name} not found");
                 errors = true;
             }
         }
@@ -443,7 +476,6 @@ fn compile(matches: &ArgMatches) {
             println!("{}", serde_json::to_string(&json).unwrap());
             exit(0);
         } else {
-            eprintln!("error: not all contracts are valid");
             exit(1);
         }
     }
@@ -479,6 +511,7 @@ fn process_file(
     target: solang::Target,
     matches: &ArgMatches,
     json: &mut JsonResult,
+    contract_names: &mut HashMap<&str, bool>,
     opt: &Options,
 ) -> Result<Namespace, ()> {
     let verbose = *matches.get_one("VERBOSE").unwrap();
@@ -530,6 +563,17 @@ fn process_file(
 
         if !resolved_contract.instantiable {
             continue;
+        }
+
+        if !contract_names.is_empty() {
+            if let Some(contract) = contract_names.get_mut(resolved_contract.name.as_str()) {
+                *contract = true;
+            } else if verbose {
+                eprintln!(
+                    "debug: contract {} ignored as not listed with --contract",
+                    resolved_contract.name
+                );
+            }
         }
 
         if let Some("cfg") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {

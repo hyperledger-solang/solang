@@ -32,6 +32,8 @@ fn create_output_dir() {
         "examples/flipper.sol",
         "--target",
         "solana",
+        "--contract",
+        "flipper",
         "--output",
         "tests/create_me",
         "--output-meta",
@@ -60,4 +62,23 @@ fn create_output_dir() {
     ])
     .assert()
     .failure();
+
+    let mut cmd = Command::cargo_bin("solang").unwrap();
+
+    cmd.args([
+        "compile",
+        "examples/flipper.sol",
+        "--target",
+        "solana",
+        "--contract",
+        "flapper,flipper", // not flipper
+        "--output",
+        "tests/create_me",
+    ])
+    .assert()
+    .failure();
+
+    remove_file("tests/create_me/flipper.json").unwrap();
+    remove_file("tests/create_me/flipper.so").unwrap();
+    remove_dir("tests/create_me").unwrap();
 }
