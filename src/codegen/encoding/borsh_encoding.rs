@@ -3,7 +3,7 @@
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::vartable::Vartable;
-use crate::codegen::Expression;
+use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{Namespace, Type, Type::Uint};
 use num_bigint::BigInt;
 use solang_parser::pt::Loc::Codegen;
@@ -73,6 +73,33 @@ impl AbiEncoding for BorshEncoding {
         );
         size.add_assign(BigInt::from(ns.address_length));
         Expression::NumberLiteral(Codegen, Uint(32), size)
+    }
+
+    fn retrieve_array_length(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (usize, Expression) {
+        let array_length = vartab.temp_anonymous(&Uint(32));
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc: Codegen,
+                res: array_length,
+                expr: Expression::Builtin(
+                    Codegen,
+                    vec![Uint(32)],
+                    Builtin::ReadFromBuffer,
+                    vec![buffer.clone(), offset.clone()],
+                ),
+            },
+        );
+        (
+            array_length,
+            Expression::NumberLiteral(Codegen, Uint(32), 4.into()),
+        )
     }
 
     fn storage_cache_insert(&mut self, arg_no: usize, expr: Expression) {

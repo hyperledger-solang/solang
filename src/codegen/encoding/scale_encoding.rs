@@ -23,18 +23,16 @@ impl ScaleEncoding {
 }
 
 /// Decoding the compact integer at current `offset` inside `buffer`.
-/// Returns the decoded integer (32bit) and the width in bytes of the encoded version.
+/// Returns the variable number of the decoded integer (32bit) and the width in bytes of the encoded version.
 /// More information can found in the /// [SCALE documentation](https://docs.substrate.io/reference/scale-codec/).
 fn decode_compact(
     buffer: &Expression,
     offset: &Expression,
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
-) -> (Expression, Expression) {
-    let two = Expression::NumberLiteral(Codegen, Uint(32), 2.into());
-    let three = Expression::NumberLiteral(Codegen, Uint(32), 3.into());
-
+) -> (usize, Expression) {
     vartab.new_dirty_tracker();
+    let decoded_var = vartab.temp_anonymous(&Uint(32));
     let size_width_var = vartab.temp_anonymous(&Uint(32));
     let read_byte = Expression::Builtin(
         Codegen,
@@ -47,19 +45,21 @@ fn decode_compact(
         Instr::Set {
             loc: Codegen,
             res: size_width_var,
-            expr: read_byte,
+            expr: Expression::ZeroExt(Codegen, Uint(32), read_byte.into()),
         },
     );
     let size_width = Expression::Variable(Codegen, Uint(32), size_width_var);
+    let two = Expression::NumberLiteral(Codegen, Uint(32), 2.into());
+    let three = Expression::NumberLiteral(Codegen, Uint(32), 3.into());
     let cond = Expression::BitwiseAnd(Codegen, Uint(32), size_width.clone().into(), three.into());
     let cases = &[
         (
             Expression::NumberLiteral(Codegen, Uint(32), 0.into()),
-            cfg.new_basic_block("case_zero".into()),
+            cfg.new_basic_block("case_0".into()),
         ),
         (
             Expression::NumberLiteral(Codegen, Uint(32), 1.into()),
-            cfg.new_basic_block("case_one".into()),
+            cfg.new_basic_block("case_1".into()),
         ),
         (
             Expression::NumberLiteral(Codegen, Uint(32), 2.into()),
@@ -75,18 +75,8 @@ fn decode_compact(
             default,
         },
     );
-    let done = cfg.new_basic_block("done".into());
-    let decoded_var = vartab.temp_anonymous(&Uint(32));
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Codegen,
-            res: decoded_var,
-            expr: Expression::NumberLiteral(Codegen, Uint(32), 0.into()),
-        },
-    );
-    let decoded = Expression::Variable(Codegen, Uint(32), decoded_var);
 
+    let done = cfg.new_basic_block("done".into());
     // sizes of 2**30 (1GB) or larger are not allowed
     cfg.set_basic_block(default);
     cfg.add(vartab, Instr::Unreachable);
@@ -95,8 +85,8 @@ fn decode_compact(
     let expr = Expression::ShiftRight(
         Codegen,
         Uint(32),
+        size_width.clone().into(),
         two.clone().into(),
-        Expression::ZeroExt(Codegen, Uint(32), size_width.clone().into()).into(),
         false,
     );
     cfg.add(
@@ -104,7 +94,7 @@ fn decode_compact(
         Instr::Set {
             loc: Codegen,
             res: decoded_var,
-            expr: expr,
+            expr,
         },
     );
     cfg.add(
@@ -115,7 +105,7 @@ fn decode_compact(
             expr: Expression::NumberLiteral(Codegen, Uint(32), 1.into()),
         },
     );
-    cfg.set_basic_block(done);
+    cfg.add(vartab, Instr::Branch { block: done });
 
     cfg.set_basic_block(cases[1].1);
     let read_byte = Expression::Builtin(
@@ -127,8 +117,8 @@ fn decode_compact(
     let expr = Expression::ShiftRight(
         Codegen,
         Uint(32),
-        two.clone().into(),
         Expression::ZeroExt(Codegen, Uint(32), read_byte.into()).into(),
+        two.clone().into(),
         false,
     );
     cfg.add(
@@ -147,7 +137,7 @@ fn decode_compact(
             expr: two.clone(),
         },
     );
-    cfg.set_basic_block(done);
+    cfg.add(vartab, Instr::Branch { block: done });
 
     cfg.set_basic_block(cases[2].1);
     let read_byte = Expression::Builtin(
@@ -159,8 +149,8 @@ fn decode_compact(
     let expr = Expression::ShiftRight(
         Codegen,
         Uint(32),
-        two.clone().into(),
         read_byte.into(),
+        two.clone().into(),
         false,
     );
     cfg.add(
@@ -176,22 +166,18 @@ fn decode_compact(
         Instr::Set {
             loc: Codegen,
             res: size_width_var,
-            expr: two,
-        },
-    );
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Codegen,
-            res: size_width_var,
             expr: Expression::NumberLiteral(Codegen, Uint(32), 4.into()),
         },
     );
-    cfg.set_basic_block(done);
+    cfg.add(vartab, Instr::Branch { block: done });
 
+    vartab.set_dirty(decoded_var);
+    vartab.set_dirty(size_width_var);
+
+    cfg.set_basic_block(done);
     cfg.set_phis(done, vartab.pop_dirty_tracker());
 
-    (size_width, decoded)
+    (decoded_var, size_width)
 }
 
 /// Encode `expr` into `buffer` as a compact integer. More information can found in the
@@ -369,6 +355,34 @@ impl AbiEncoding for ScaleEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
         encode_compact(expr, Some(buffer), Some(offset), vartab, cfg)
+    }
+
+    fn retrieve_array_length(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (usize, Expression) {
+        decode_compact(buffer, offset, vartab, cfg)
+        //let array_length = vartab.temp_anonymous(&Uint(32));
+        //cfg.add(
+        //    vartab,
+        //    Instr::Set {
+        //        loc: Codegen,
+        //        res: array_length,
+        //        expr: Expression::Builtin(
+        //            Codegen,
+        //            vec![Uint(32)],
+        //            Builtin::ReadFromBuffer,
+        //            vec![buffer.clone(), offset.clone()],
+        //        ),
+        //    },
+        //);
+        //(
+        //    array_length,
+        //    Expression::NumberLiteral(Codegen, Uint(32), 4.into()),
+        //)
     }
 
     fn storage_cache_insert(&mut self, arg_no: usize, expr: Expression) {

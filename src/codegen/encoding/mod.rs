@@ -691,9 +691,10 @@ pub(super) trait AbiEncoding {
                 // String and Dynamic bytes are encoded as size (uint32) + elements
                 validator.validate_offset(increment_four(offset.clone()), ns, vartab, cfg);
 
-                let array_length = retrieve_array_length(buffer, offset, vartab, cfg);
+                let (array_length, size) = self.retrieve_array_length(buffer, offset, vartab, cfg);
+                let size =
+                    increment_by(Expression::Variable(Codegen, Uint(32), array_length), size);
 
-                let size = increment_four(Expression::Variable(Codegen, Uint(32), array_length));
                 let offset_to_validate = Expression::Add(
                     Codegen,
                     Uint(32),
@@ -811,6 +812,16 @@ pub(super) trait AbiEncoding {
         }
     }
 
+    /// Retrieve a dynamic array length from the encoded buffer. It returns the variable number in which
+    /// the length has been stored and the size width of the vector length.
+    fn retrieve_array_length(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (usize, Expression);
+
     /// Given the buffer and the offers, decode an array.
     /// The function returns an expression containing the array and the number of bytes read.
     fn decode_array(
@@ -852,8 +863,10 @@ pub(super) trait AbiEncoding {
                         allocated_vector,
                     )
                 } else {
+                    // TODO need to figure out (SCALE can read 1 to 4 bytes here)
                     validator.validate_offset(increment_four(offset.clone()), ns, vartab, cfg);
-                    let array_length = retrieve_array_length(buffer, offset, vartab, cfg);
+                    let (array_length, size) =
+                        self.retrieve_array_length(buffer, offset, vartab, cfg);
 
                     let allocated_array = allocate_array(array_ty, array_length, vartab, cfg);
 
@@ -989,13 +1002,13 @@ pub(super) trait AbiEncoding {
         if dims[dimension] == ArrayLength::Dynamic {
             let offset_to_validate = increment_four(offset_expr.clone());
             validator.validate_offset(offset_to_validate, ns, vartab, cfg);
-            let array_length = retrieve_array_length(buffer, offset_expr, vartab, cfg);
+            let (array_length, size) = self.retrieve_array_length(buffer, offset_expr, vartab, cfg);
             cfg.add(
                 vartab,
                 Instr::Set {
                     loc: Codegen,
                     res: offset_var,
-                    expr: increment_four(offset_expr.clone()),
+                    expr: increment_by(offset_expr.clone(), size),
                 },
             );
             let new_ty = Type::Array(Box::new(elem_ty.clone()), dims[0..(dimension + 1)].to_vec());
@@ -1826,31 +1839,6 @@ fn calculate_array_bytes_size(length_var: usize, elem_ty: &Type, ns: &Namespace)
     let var = Expression::Variable(Codegen, Uint(32), length_var);
     let size = Expression::NumberLiteral(Codegen, Uint(32), elem_ty.memory_size_of(ns));
     Expression::Multiply(Codegen, Uint(32), false, var.into(), size.into())
-}
-
-/// Retrieve a dynamic array length from the encoded buffer. It returns the variable number in which
-/// the length has been stored
-fn retrieve_array_length(
-    buffer: &Expression,
-    offset: &Expression,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-) -> usize {
-    let array_length = vartab.temp_anonymous(&Uint(32));
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Codegen,
-            res: array_length,
-            expr: Expression::Builtin(
-                Codegen,
-                vec![Uint(32)],
-                Builtin::ReadFromBuffer,
-                vec![buffer.clone(), offset.clone()],
-            ),
-        },
-    );
-    array_length
 }
 
 /// Allocate an array in memory and return its variable number.
