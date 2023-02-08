@@ -112,6 +112,13 @@ fn main() {
                             .value_parser(ValueParser::os_string()),
                     )
                     .arg(
+                        Arg::new("OUTPUTMETA")
+                            .help("output directory for metadata")
+                            .long("output-meta")
+                            .num_args(1)
+                            .value_parser(ValueParser::os_string()),
+                    )
+                    .arg(
                         Arg::new("IMPORTPATH")
                             .help("Directory to search for solidity files")
                             .short('I')
@@ -455,13 +462,15 @@ fn shell_complete(mut app: Command, matches: &ArgMatches) {
     }
 }
 
-fn output_file(matches: &ArgMatches, stem: &str, ext: &str) -> PathBuf {
-    Path::new(
+fn output_file(matches: &ArgMatches, stem: &str, ext: &str, meta: bool) -> PathBuf {
+    let dir = if meta {
         matches
-            .get_one::<OsString>("OUTPUT")
-            .unwrap_or(&OsString::from(".")),
-    )
-    .join(format!("{stem}.{ext}"))
+            .get_one::<OsString>("OUTPUTMETA")
+            .or_else(|| matches.get_one::<OsString>("OUTPUT"))
+    } else {
+        matches.get_one::<OsString>("OUTPUT")
+    };
+    Path::new(dir.unwrap_or(&OsString::from("."))).join(format!("{stem}.{ext}"))
 }
 
 fn process_file(
@@ -493,7 +502,7 @@ fn process_file(
     if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         let filepath = PathBuf::from(filename);
         let stem = filepath.file_stem().unwrap().to_string_lossy();
-        let dot_filename = output_file(matches, &stem, "dot");
+        let dot_filename = output_file(matches, &stem, "dot", false);
 
         if verbose {
             eprintln!("info: Saving graphviz dot {}", dot_filename.display());
@@ -565,7 +574,7 @@ fn process_file(
                 },
             );
         } else {
-            let bin_filename = output_file(matches, &binary.name, target.file_extension());
+            let bin_filename = output_file(matches, &binary.name, target.file_extension(), false);
 
             if verbose {
                 eprintln!(
@@ -579,19 +588,19 @@ fn process_file(
 
             file.write_all(&code).unwrap();
 
-            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
-            let abi_filename = output_file(matches, &binary.name, abi_ext);
+            let (metadata, meta_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
+            let meta_filename = output_file(matches, &binary.name, meta_ext, true);
 
             if verbose {
                 eprintln!(
                     "info: Saving metadata {} for contract {}",
-                    abi_filename.display(),
+                    meta_filename.display(),
                     binary.name
                 );
             }
 
-            let mut file = create_file(&abi_filename);
-            file.write_all(abi_bytes.as_bytes()).unwrap();
+            let mut file = create_file(&meta_filename);
+            file.write_all(metadata.as_bytes()).unwrap();
         }
     }
 
@@ -606,7 +615,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
 
     match matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         Some("llvm-ir") => {
-            let llvm_filename = output_file(matches, &binary.name, "ll");
+            let llvm_filename = output_file(matches, &binary.name, "ll", false);
 
             if verbose {
                 eprintln!(
@@ -622,7 +631,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
         }
 
         Some("llvm-bc") => {
-            let bc_filename = output_file(matches, &binary.name, "bc");
+            let bc_filename = output_file(matches, &binary.name, "bc", false);
 
             if verbose {
                 eprintln!(
@@ -646,7 +655,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
                 }
             };
 
-            let obj_filename = output_file(matches, &binary.name, "o");
+            let obj_filename = output_file(matches, &binary.name, "o", false);
 
             if verbose {
                 eprintln!(
@@ -669,7 +678,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
                 }
             };
 
-            let obj_filename = output_file(matches, &binary.name, "asm");
+            let obj_filename = output_file(matches, &binary.name, "asm", false);
 
             if verbose {
                 eprintln!(
