@@ -393,7 +393,7 @@ Mappings are declared with ``mapping(keytype => valuetype)``, for example:
 
 Mappings may have a name for the key or the value, for example:
 ``mapping(address owner => uint64 balance)``. The names are used in the metadata of
-the contract. If the mapping is public, then the accessor function will have
+the contract. If the mapping is public, the accessor function will have
 named arguments and returns.
 
 .. tip::
