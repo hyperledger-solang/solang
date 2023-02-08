@@ -1942,7 +1942,13 @@ impl Contract {
                     "# params: {}",
                     cfg.params
                         .iter()
-                        .map(|p| p.ty.to_string(ns))
+                        .map(|p| {
+                            if p.id.is_some() {
+                                format!("{} {}", p.ty.to_string(ns), p.name_as_str())
+                            } else {
+                                p.ty.to_string(ns)
+                            }
+                        })
                         .collect::<Vec<String>>()
                         .join(",")
                 )
@@ -1953,7 +1959,13 @@ impl Contract {
                     "# returns: {}",
                     cfg.returns
                         .iter()
-                        .map(|p| p.ty.to_string(ns))
+                        .map(|p| {
+                            if p.id.is_some() {
+                                format!("{} {}", p.ty.to_string(ns), p.name_as_str())
+                            } else {
+                                p.ty.to_string(ns)
+                            }
+                        })
                         .collect::<Vec<String>>()
                         .join(",")
                 )

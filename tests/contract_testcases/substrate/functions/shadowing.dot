@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/functions/shadowing.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/functions/shadowing.sol:2:5-16:6"]
-	var [label="variable result\nvisibility internal\ntests/contract_testcases/substrate/functions/shadowing.sol:3:9-22"]
+	var [label="variable result\nvisibility internal\nuint64\ntests/contract_testcases/substrate/functions/shadowing.sol:3:9-22"]
 	goodset [label="function goodset\ncontract: test\ntests/contract_testcases/substrate/functions/shadowing.sol:5:9-44\nsignature goodset(uint64)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint64 val"]
 	expr [label="expression\ntests/contract_testcases/substrate/functions/shadowing.sol:6:13-25"]

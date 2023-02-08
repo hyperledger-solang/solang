@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/arrays/fixed_bytes_subscript_not_assign.sol" {
 	contract [label="contract fixed_bytes_subscript_not_assign\ntests/contract_testcases/substrate/arrays/fixed_bytes_subscript_not_assign.sol:1:1-9:2"]
-	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/arrays/fixed_bytes_subscript_not_assign.sol:2:5-14"]
+	var [label="variable x\nvisibility internal\nbytes32\ntests/contract_testcases/substrate/arrays/fixed_bytes_subscript_not_assign.sol:2:5-14"]
 	storage_test [label="function storage_test\ncontract: fixed_bytes_subscript_not_assign\ntests/contract_testcases/substrate/arrays/fixed_bytes_subscript_not_assign.sol:3:5-35\nsignature storage_test()\nvisibility public\nmutability nonpayable"]
 	memory_test [label="function memory_test\ncontract: fixed_bytes_subscript_not_assign\ntests/contract_testcases/substrate/arrays/fixed_bytes_subscript_not_assign.sol:6:5-43\nsignature memory_test(bytes32)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nbytes32 y"]

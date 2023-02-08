@@ -85,8 +85,13 @@ NoFunctionType: Type = {
     Bytes => Type::Bytes(<>),
     // prior to 0.8.0 `byte` used to be an alias for `bytes1`
     "byte" => Type::Bytes(1),
-    <l:@L> "mapping" "(" <k:AnyType> "=>" <v:AnyType> ")" <r:@R> => {
-        Type::Mapping(Loc::File(file_no, l, r), Box::new(k), Box::new(v))
+    <l:@L> "mapping" "(" <k:AnyType> <key_name:SolIdentifier?> "=>" <v:AnyType> <value_name:SolIdentifier?> ")" <r:@R> => {
+        Type::Mapping {
+            loc: Loc::File(file_no, l, r),
+            key: Box::new(k),
+            key_name,
+            value: Box::new(v),
+            value_name }
     },
 }
 

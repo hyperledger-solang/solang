@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/expressions/bad_new_args.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/expressions/bad_new_args.sol:1:1-14:2"]
-	var [label="variable state\nvisibility internal\ntests/contract_testcases/substrate/expressions/bad_new_args.sol:2:2-14"]
+	var [label="variable state\nvisibility internal\nuint32\ntests/contract_testcases/substrate/expressions/bad_new_args.sol:2:2-14"]
 	f [label="function f\ncontract: c\ntests/contract_testcases/substrate/expressions/bad_new_args.sol:4:2-33\nsignature f(uint32)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nuint32 count"]
 	var_decl [label="variable decl uint256[] array\ntests/contract_testcases/substrate/expressions/bad_new_args.sol:5:3-48"]

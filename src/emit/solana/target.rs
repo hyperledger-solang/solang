@@ -217,7 +217,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     ) -> IntValue<'a> {
         let account = self.contract_storage_account(binary);
 
-        if let ast::Type::Mapping(key, value) = ty.deref_any() {
+        if let ast::Type::Mapping(ast::Mapping { key, value, .. }) = ty.deref_any() {
             self.sparse_lookup(binary, function, key, value, slot, index, ns)
         } else if ty.is_sparse_solana(ns) {
             // sparse array

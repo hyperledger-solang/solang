@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/value/this_address_04.sol" {
 	contract [label="contract b\ntests/contract_testcases/substrate/value/this_address_04.sol:2:9-13:10"]
-	var [label="variable s\nvisibility internal\ntests/contract_testcases/substrate/value/this_address_04.sol:3:13-20"]
+	var [label="variable s\nvisibility internal\nint32\ntests/contract_testcases/substrate/value/this_address_04.sol:3:13-20"]
 	step1 [label="function step1\ncontract: b\ntests/contract_testcases/substrate/value/this_address_04.sol:5:13-52\nsignature step1()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nint32 "]
 	expr [label="expression\ntests/contract_testcases/substrate/value/this_address_04.sol:6:17-37"]

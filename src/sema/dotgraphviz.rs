@@ -2391,6 +2391,7 @@ impl Namespace {
                 let mut labels = vec![
                     format!("variable {}", var.name),
                     format!("visibility {}", var.visibility),
+                    var.ty.to_string(self),
                     self.loc_to_string(&var.loc),
                 ];
 

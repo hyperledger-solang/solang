@@ -1,8 +1,8 @@
 strict digraph "tests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:1:1-4:10"]
-	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:2:13-25"]
+	var [label="variable x\nvisibility internal\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:2:13-25"]
 	number_literal [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:2:22-25"]
-	var_4 [label="variable y\nvisibility internal\nconstant\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:3:13-36"]
+	var_4 [label="variable y\nvisibility internal\nconstant\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:3:13-36"]
 	diagnostic [label="found abstract contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:1:1-4:10"]
 	diagnostic_7 [label="cannot read contract variable 'x' in constant expression\nlevel Error\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors.sol:3:31-32"]
 	contracts -> contract

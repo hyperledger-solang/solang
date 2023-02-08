@@ -3,8 +3,8 @@
 use super::{
     annotions_not_allowed,
     ast::{
-        Diagnostic, Expression, Function, Namespace, Parameter, Statement, StructType, Symbol,
-        Type, Variable,
+        Diagnostic, Expression, Function, Mapping, Namespace, Parameter, Statement, StructType,
+        Symbol, Type, Variable,
     },
     contracts::is_base,
     diagnostics::Diagnostics,
@@ -456,7 +456,9 @@ pub fn variable_decl<'a>(
             // or array indices as arguments, and returns the dereferenced value
             let mut symtable = Symtable::new();
             let mut params = Vec::new();
-            let ty = collect_parameters(&ty, &mut symtable, &mut params, &mut expr, ns);
+            let param =
+                collect_parameters(&ty, &def.name, &mut symtable, &mut params, &mut expr, ns);
+            let ty = param.ty.clone();
 
             if ty.contains_mapping(ns) {
                 // we can't return a mapping
@@ -476,15 +478,7 @@ pub fn variable_decl<'a>(
                 Some(pt::Mutability::View(def.name.as_ref().unwrap().loc)),
                 visibility,
                 params,
-                vec![Parameter {
-                    id: None,
-                    loc: def.name.as_ref().unwrap().loc,
-                    ty: ty.clone(),
-                    ty_loc: Some(def.ty.loc()),
-                    indexed: false,
-                    readonly: false,
-                    recursive: false,
-                }],
+                vec![param],
                 ns,
             );
 
@@ -496,7 +490,7 @@ pub fn variable_decl<'a>(
                 } else {
                     Expression::StorageLoad {
                         loc: pt::Loc::Implicit,
-                        ty: ty.clone(),
+                        ty,
                         expr: Box::new(expr),
                     }
                 }),
@@ -531,20 +525,30 @@ pub fn variable_decl<'a>(
 }
 
 /// For accessor functions, create the parameter list and the return expression
-fn collect_parameters<'a>(
-    ty: &'a Type,
+fn collect_parameters(
+    ty: &Type,
+    name: &Option<pt::Identifier>,
     symtable: &mut Symtable,
     params: &mut Vec<Parameter>,
     expr: &mut Expression,
     ns: &mut Namespace,
-) -> &'a Type {
+) -> Parameter {
     match ty {
-        Type::Mapping(key, value) => {
+        Type::Mapping(Mapping {
+            key,
+            key_name,
+            value,
+            value_name,
+        }) => {
             let map = (*expr).clone();
 
-            let id = pt::Identifier {
-                loc: pt::Loc::Implicit,
-                name: "".to_owned(),
+            let id = if let Some(name) = &key_name {
+                name.clone()
+            } else {
+                pt::Identifier {
+                    loc: pt::Loc::Implicit,
+                    name: String::new(),
+                }
             };
             let arg_ty = key.as_ref().clone();
 
@@ -574,7 +578,7 @@ fn collect_parameters<'a>(
             };
 
             params.push(Parameter {
-                id: Some(id),
+                id: key_name.clone(),
                 loc: pt::Loc::Implicit,
                 ty: key.as_ref().clone(),
                 ty_loc: None,
@@ -583,7 +587,7 @@ fn collect_parameters<'a>(
                 recursive: false,
             });
 
-            collect_parameters(value, symtable, params, expr, ns)
+            collect_parameters(value, value_name, symtable, params, expr, ns)
         }
         Type::Array(elem_ty, dims) => {
             let mut ty = Type::StorageRef(false, Box::new(ty.clone()));
@@ -634,9 +638,21 @@ fn collect_parameters<'a>(
                 });
             }
 
-            collect_parameters(elem_ty, symtable, params, expr, ns)
+            collect_parameters(elem_ty, &None, symtable, params, expr, ns)
         }
-        _ => ty,
+        _ => Parameter {
+            id: name.clone(),
+            loc: if let Some(name) = name {
+                name.loc
+            } else {
+                pt::Loc::Implicit
+            },
+            ty: ty.clone(),
+            ty_loc: None,
+            indexed: false,
+            readonly: false,
+            recursive: false,
+        },
     }
 }
 

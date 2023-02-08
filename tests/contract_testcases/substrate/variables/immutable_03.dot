@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/variables/immutable_03.sol" {
 	contract [label="contract x\ntests/contract_testcases/substrate/variables/immutable_03.sol:1:1-7:10"]
-	var [label="variable y\nvisibility public\nimmutable\ntests/contract_testcases/substrate/variables/immutable_03.sol:2:13-37"]
+	var [label="variable y\nvisibility public\nimmutable\nint256[]\ntests/contract_testcases/substrate/variables/immutable_03.sol:2:13-37"]
 	y [label="function y\ncontract: x\ntests/contract_testcases/substrate/variables/immutable_03.sol:2:36-37\nsignature y(uint256)\nvisibility public\nmutability view"]
 	parameters [label="parameters\nuint256 "]
 	returns [label="returns\nint256 "]

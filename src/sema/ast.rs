@@ -14,12 +14,12 @@ use once_cell::unsync::OnceCell;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, FunctionTy, OptionalCodeLocation};
-use std::collections::HashSet;
-use std::sync::Arc;
 use std::{
+    collections::HashSet,
     collections::{BTreeMap, HashMap},
-    fmt,
+    fmt, hash,
     path::PathBuf,
+    sync::Arc,
 };
 use tiny_keccak::{Hasher, Keccak};
 
@@ -38,7 +38,7 @@ pub enum Type {
     Enum(usize),
     /// The usize is an index into contracts in the namespace
     Struct(StructType),
-    Mapping(Box<Type>, Box<Type>),
+    Mapping(Mapping),
     /// The usize is an index into contracts in the namespace
     Contract(usize),
     Ref(Box<Type>),
@@ -71,6 +71,28 @@ pub enum Type {
     BufferPointer,
     /// The function selector (or discriminator) type is 4 bytes on Substrate and 8 bytes on Solana
     FunctionSelector,
+}
+
+#[derive(Eq, Clone, Debug)]
+pub struct Mapping {
+    pub key: Box<Type>,
+    pub key_name: Option<pt::Identifier>,
+    pub value: Box<Type>,
+    pub value_name: Option<pt::Identifier>,
+}
+
+// Ensure the key_name and value_name is not used for comparison or hashing
+impl PartialEq for Mapping {
+    fn eq(&self, other: &Mapping) -> bool {
+        self.key == other.key && self.value == other.value
+    }
+}
+
+impl hash::Hash for Mapping {
+    fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
+        self.key.hash(hasher);
+        self.value.hash(hasher);
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
@@ -474,8 +496,7 @@ impl From<&pt::Type> for Type {
             pt::Type::Rational => Type::Rational,
             pt::Type::DynamicBytes => Type::DynamicBytes,
             // needs special casing
-            pt::Type::Function { .. } => unimplemented!(),
-            pt::Type::Mapping(..) => unimplemented!(),
+            pt::Type::Function { .. } | pt::Type::Mapping { .. } => unimplemented!(),
         }
     }
 }
