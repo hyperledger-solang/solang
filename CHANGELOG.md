@@ -2,6 +2,25 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## v0.2.2 (unreleased)
+
+### Added
+- Solidity mappings can now have named key and named value types. [seanyoung](https://github.com/seanyoung)
+
+### Changed
+- Solang now uses LLVM 15. [LucasSte](https://github.com/LucasSte)
+- The Substrate Scale encoding now happens during the compiler's code generation phase, instead of during the code 
+emission phase. [xermicus](https://github.com/xermicus)
+- Solidity on Solana now required the Anchor framework for the client code, and the `@solana/solidity.js`
+  Typescript library is no longer compatible with Solidity.
+
+### Fixed
+- Many bugs have been fixed by [seanyoung](https://github.com/seanyoung), [LucasSte](https://github.com/LucasSte)
+  and [xermicus](https://github.com/xermicus)
+- Typos throughout the code have been fixed. [omahs](https://github.com/omahs)
+
+
+
 ## v0.2.1 Rio
 
 ### Added

@@ -121,8 +121,8 @@ Linux
 ~~~~~
 
 A pre-built version of LLVM, specifically configured for Solang, is available at
-`<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm15.0-linux-x86-64.tar.xz>`_ for x86 processors
-and at `<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm15.0-linux-arm64.tar.xz>`_ for ARM.
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-linux-x86-64.tar.xz>`_ for x86 processors
+and at `<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-linux-arm64.tar.xz>`_ for ARM.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
@@ -134,7 +134,7 @@ Windows
 ~~~~~~~
 
 A pre-built version of LLVM, specifically configured for Solang, is available at
-`<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm15.0-win.zip>`_.
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-win.zip>`_.
 
 After unzipping the file, add the bin directory to your path.
 
@@ -146,8 +146,8 @@ Mac
 ~~~
 
 A pre-built version of LLVM for intel macs, is available at
-`<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm15.0-mac-intel.tar.xz>`_ and for arm macs there is
-`<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm15.0-mac-arm.tar.xz>`_. After downloading,
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-mac-intel.tar.xz>`_ and for arm macs there is
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-mac-arm.tar.xz>`_. After downloading,
 untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash

@@ -1050,7 +1050,7 @@ impl Type {
     }
 
     /// Is this a reference type of fixed size
-    pub fn is_fixed_reference_type(&self) -> bool {
+    pub fn is_fixed_reference_type(&self, ns: &Namespace) -> bool {
         match self {
             Type::Bool => false,
             Type::Address(_) => false,
@@ -1068,7 +1068,9 @@ impl Type {
             Type::Ref(_) => false,
             Type::StorageRef(..) => false,
             Type::InternalFunction { .. } => false,
-            Type::ExternalFunction { .. } => true,
+            // On EVM, an external function is saved on an 256-bit register, so it is not
+            // a reference type.
+            Type::ExternalFunction { .. } => ns.target != Target::EVM,
             Type::Slice(_) => false,
             Type::Unresolved => false,
             Type::FunctionSelector => false,
@@ -1490,7 +1492,9 @@ impl Type {
             Type::Ref(r) => r.is_reference_type(ns),
             Type::StorageRef(_, r) => r.is_reference_type(ns),
             Type::InternalFunction { .. } => false,
-            Type::ExternalFunction { .. } => true,
+            // On EVM, an external function is saved on an 256-bit register, so it is not
+            // a reference type.
+            Type::ExternalFunction { .. } => ns.target != Target::EVM,
             Type::UserType(no) => ns.user_types[*no].ty.is_reference_type(ns),
             _ => false,
         }

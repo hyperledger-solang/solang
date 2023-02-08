@@ -14,7 +14,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: llvm15.0-1
-        release_name: LLVM Libraries v14.0 (v1)
+        release_name: LLVM Libraries v15.0 (v1)
         draft: false
         prerelease: false
 

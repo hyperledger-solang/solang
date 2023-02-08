@@ -681,7 +681,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                         )
                     };
 
-                    let val = if field.ty.is_fixed_reference_type() {
+                    let val = if field.ty.is_fixed_reference_type(ns) {
                         let load_ty = binary.llvm_type(&field.ty, ns);
                         binary
                             .builder
@@ -773,7 +773,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     ns,
                 );
 
-                let val = if elem_ty.deref_memory().is_fixed_reference_type() {
+                let val = if elem_ty.deref_memory().is_fixed_reference_type(ns) {
                     let load_ty = binary.llvm_type(elem_ty.deref_any(), ns);
                     binary
                         .builder
@@ -1084,7 +1084,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 elem_ty.deref_any(),
                 false, // storage already freed with storage_free
                 &mut offset_val,
-                if elem_ty.deref_memory().is_fixed_reference_type() {
+                if elem_ty.deref_memory().is_fixed_reference_type(ns) {
                     elem.into()
                 } else {
                     let load_ty = if elem_ty.is_dynamic(ns) {
@@ -1147,7 +1147,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     &field.ty,
                     existing,
                     &mut offset,
-                    if field.ty.is_fixed_reference_type() {
+                    if field.ty.is_fixed_reference_type(ns) {
                         elem.into()
                     } else {
                         let load_ty = if field.ty.is_dynamic(ns) {

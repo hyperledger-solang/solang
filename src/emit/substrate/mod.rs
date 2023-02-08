@@ -600,7 +600,7 @@ impl SubstrateTarget {
 
                     let val = self.decode_ty(binary, function, &field.ty, data, end, ns);
 
-                    let val = if field.ty.deref_memory().is_fixed_reference_type() {
+                    let val = if field.ty.deref_memory().is_fixed_reference_type(ns) {
                         let field_ty = binary.llvm_type(&field.ty, ns);
                         binary.builder.build_load(
                             field_ty,
@@ -659,7 +659,7 @@ impl SubstrateTarget {
 
                             let val = self.decode_ty(binary, function, &ty, data, end, ns);
 
-                            let val = if ty.deref_memory().is_fixed_reference_type() {
+                            let val = if ty.deref_memory().is_fixed_reference_type(ns) {
                                 let field_ty = binary.llvm_type(ty.deref_memory(), ns);
                                 binary.builder.build_load(
                                     field_ty,
@@ -747,7 +747,7 @@ impl SubstrateTarget {
 
                             let val = self.decode_ty(binary, function, &ty, data, end, ns);
 
-                            let val = if ty.deref_memory().is_fixed_reference_type() {
+                            let val = if ty.deref_memory().is_fixed_reference_type(ns) {
                                 let load_ty = binary.llvm_type(ty.deref_memory(), ns);
                                 binary
                                     .builder
@@ -1071,7 +1071,7 @@ impl SubstrateTarget {
                         self.encode_ty(
                             binary,
                             ns,
-                            !elem_ty.is_fixed_reference_type(),
+                            !elem_ty.is_fixed_reference_type(ns),
                             packed,
                             function,
                             &elem_ty,
@@ -1165,7 +1165,7 @@ impl SubstrateTarget {
                         self.encode_ty(
                             binary,
                             ns,
-                            !elem_ty.deref_any().is_fixed_reference_type(),
+                            !elem_ty.deref_any().is_fixed_reference_type(ns),
                             packed,
                             function,
                             elem_ty.deref_any(),
@@ -1219,7 +1219,7 @@ impl SubstrateTarget {
                     self.encode_ty(
                         binary,
                         ns,
-                        !field.ty.is_fixed_reference_type(),
+                        !field.ty.is_fixed_reference_type(ns),
                         packed,
                         function,
                         &field.ty,
@@ -1271,7 +1271,7 @@ impl SubstrateTarget {
                 self.encode_ty(
                     binary,
                     ns,
-                    !ty.is_fixed_reference_type(),
+                    !ty.is_fixed_reference_type(ns),
                     packed,
                     function,
                     ty,
@@ -1489,7 +1489,7 @@ impl SubstrateTarget {
                         normal_sum,
                         SubstrateTarget::encoded_length(
                             elem.into(),
-                            !field.ty.is_fixed_reference_type(),
+                            !field.ty.is_fixed_reference_type(ns),
                             packed,
                             &field.ty,
                             function,
@@ -1591,7 +1591,7 @@ impl SubstrateTarget {
                             *sum = binary.builder.build_int_add(
                                 SubstrateTarget::encoded_length(
                                     elem.into(),
-                                    !elem_ty.deref_memory().is_fixed_reference_type(),
+                                    !elem_ty.deref_memory().is_fixed_reference_type(ns),
                                     packed,
                                     &elem_ty,
                                     function,
@@ -1711,7 +1711,7 @@ impl SubstrateTarget {
                             *sum = binary.builder.build_int_add(
                                 SubstrateTarget::encoded_length(
                                     p.into(),
-                                    !elem_ty.deref_memory().is_fixed_reference_type(),
+                                    !elem_ty.deref_memory().is_fixed_reference_type(ns),
                                     packed,
                                     &elem_ty,
                                     function,

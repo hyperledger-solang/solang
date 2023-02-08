@@ -323,7 +323,7 @@ pub(super) trait AbiEncoding {
 
         let qty = struct_ty.definition(ns).fields.len();
         let first_ty = struct_ty.definition(ns).fields[0].ty.clone();
-        let loaded = load_struct_member(first_ty, expr.clone(), 0);
+        let loaded = load_struct_member(first_ty, expr.clone(), 0, ns);
 
         let mut advance = self.encode(&loaded, buffer, &offset, arg_no, ns, vartab, cfg);
         let mut runtime_size = advance.clone();
@@ -336,7 +336,7 @@ pub(super) trait AbiEncoding {
                 offset.clone().into(),
                 advance.into(),
             );
-            let loaded = load_struct_member(ith_type.clone(), expr.clone(), i);
+            let loaded = load_struct_member(ith_type.clone(), expr.clone(), i, ns);
             // After fetching the struct member, we can encode it
             advance = self.encode(&loaded, buffer, &offset, arg_no, ns, vartab, cfg);
             runtime_size = Expression::Add(
@@ -812,11 +812,11 @@ pub(super) trait AbiEncoding {
             return Expression::NumberLiteral(Codegen, Uint(32), struct_size);
         }
         let first_type = struct_ty.definition(ns).fields[0].ty.clone();
-        let first_field = load_struct_member(first_type, expr.clone(), 0);
+        let first_field = load_struct_member(first_type, expr.clone(), 0, ns);
         let mut size = self.get_expr_size(arg_no, &first_field, ns, vartab, cfg);
         for i in 1..struct_ty.definition(ns).fields.len() {
             let ty = struct_ty.definition(ns).fields[i].ty.clone();
-            let field = load_struct_member(ty.clone(), expr.clone(), i);
+            let field = load_struct_member(ty.clone(), expr.clone(), i, ns);
             let expr_size = self.get_expr_size(arg_no, &field, ns, vartab, cfg).into();
             size = Expression::Add(Codegen, Uint(32), false, size.clone().into(), expr_size);
         }
@@ -1077,8 +1077,8 @@ fn finish_array_loop(for_loop: &ForLoop, vartab: &mut Vartable, cfg: &mut Contro
 }
 
 /// Loads a struct member
-fn load_struct_member(ty: Type, expr: Expression, field: usize) -> Expression {
-    if ty.is_fixed_reference_type() {
+fn load_struct_member(ty: Type, expr: Expression, field: usize, ns: &Namespace) -> Expression {
+    if ty.is_fixed_reference_type(ns) {
         // We should not dereference a struct or fixed array
         return Expression::StructMember(Codegen, ty, expr.into(), field);
     }

@@ -222,7 +222,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 )
             };
             let value = expression(target, bin, value, &w.vars, function, ns);
-            let value = if elem_ty.is_fixed_reference_type() {
+            let value = if elem_ty.is_fixed_reference_type(ns) {
                 w.vars.get_mut(res).unwrap().value = slot_ptr.into();
                 let load_ty = bin.llvm_type(&elem_ty, ns);
                 bin.builder
@@ -343,7 +343,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     "data",
                 )
             };
-            if elem_ty.is_fixed_reference_type() {
+            if elem_ty.is_fixed_reference_type(ns) {
                 w.vars.get_mut(res).unwrap().value = slot_ptr.into();
             } else {
                 let ret_val = bin

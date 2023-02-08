@@ -149,7 +149,7 @@ impl StorageSlot for SubstrateTarget {
                             let val =
                                 self.storage_load_slot(bin, &ty, slot, slot_ptr, function, ns);
 
-                            let val = if ty.deref_memory().is_fixed_reference_type() {
+                            let val = if ty.deref_memory().is_fixed_reference_type(ns) {
                                 let load_ty = bin.llvm_type(ty.deref_any(), ns);
                                 bin.builder
                                     .build_load(load_ty, val.into_pointer_value(), "elem")
@@ -220,7 +220,7 @@ impl StorageSlot for SubstrateTarget {
                             let entry =
                                 self.storage_load_slot(bin, elem_ty, slot, slot_ptr, function, ns);
 
-                            let entry = if elem_ty.deref_memory().is_fixed_reference_type() {
+                            let entry = if elem_ty.deref_memory().is_fixed_reference_type(ns) {
                                 bin.builder.build_load(
                                     bin.llvm_type(elem_ty.deref_memory(), ns),
                                     entry.into_pointer_value(),
@@ -264,7 +264,7 @@ impl StorageSlot for SubstrateTarget {
                         )
                     };
 
-                    let val = if field.ty.deref_memory().is_fixed_reference_type() {
+                    let val = if field.ty.deref_memory().is_fixed_reference_type(ns) {
                         let load_ty = bin.llvm_type(field.ty.deref_memory(), ns);
                         bin.builder.build_load(
                             load_ty,
@@ -387,7 +387,7 @@ impl StorageSlot for SubstrateTarget {
                             };
 
                             if elem_ty.is_reference_type(ns)
-                                && !elem_ty.deref_memory().is_fixed_reference_type()
+                                && !elem_ty.deref_memory().is_fixed_reference_type(ns)
                             {
                                 let load_ty =
                                     bin.llvm_type(elem_ty, ns).ptr_type(AddressSpace::default());
@@ -496,7 +496,7 @@ impl StorageSlot for SubstrateTarget {
                             };
 
                             if elem_ty.is_reference_type(ns)
-                                && !elem_ty.deref_memory().is_fixed_reference_type()
+                                && !elem_ty.deref_memory().is_fixed_reference_type(ns)
                             {
                                 elem = bin
                                     .builder
@@ -559,7 +559,7 @@ impl StorageSlot for SubstrateTarget {
                         )
                     };
 
-                    if field.ty.is_reference_type(ns) && !field.ty.is_fixed_reference_type() {
+                    if field.ty.is_reference_type(ns) && !field.ty.is_fixed_reference_type(ns) {
                         let load_ty = bin
                             .llvm_type(&field.ty, ns)
                             .ptr_type(AddressSpace::default());

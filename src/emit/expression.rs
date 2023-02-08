@@ -94,7 +94,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let elem = expression(target, bin, expr, vartab, function, ns);
 
-                let elem = if expr.ty().is_fixed_reference_type() {
+                let elem = if expr.ty().is_fixed_reference_type(ns) {
                     let load_type = bin.llvm_type(&expr.ty(), ns);
                     bin.builder
                         .build_load(load_type, elem.into_pointer_value(), "elem")
@@ -846,7 +846,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Load(_, ty, e) => {
             let ptr = expression(target, bin, e, vartab, function, ns).into_pointer_value();
 
-            if ty.is_reference_type(ns) && !ty.is_fixed_reference_type() {
+            if ty.is_reference_type(ns) && !ty.is_fixed_reference_type(ns) {
                 let loaded_type = bin.llvm_type(ty, ns).ptr_type(AddressSpace::default());
                 let value = bin.builder.build_load(loaded_type, ptr, "");
                 // if the pointer is null, it needs to be allocated
@@ -1228,7 +1228,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let elem = expression(target, bin, expr, vartab, function, ns);
 
-                let elem = if expr.ty().is_fixed_reference_type() {
+                let elem = if expr.ty().is_fixed_reference_type(ns) {
                     let load_type = bin.llvm_type(&expr.ty(), ns);
                     bin.builder
                         .build_load(load_type, elem.into_pointer_value(), "elem")
