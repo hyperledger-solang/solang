@@ -96,7 +96,7 @@ fn decode_compact(
         Codegen,
         Uint(32),
         two.clone().into(),
-        size_width.clone().into(),
+        Expression::ZeroExt(Codegen, Uint(32), size_width.clone().into()).into(),
         false,
     );
     cfg.add(
@@ -128,7 +128,7 @@ fn decode_compact(
         Codegen,
         Uint(32),
         two.clone().into(),
-        read_byte.into(),
+        Expression::ZeroExt(Codegen, Uint(32), read_byte.into()).into(),
         false,
     );
     cfg.add(
