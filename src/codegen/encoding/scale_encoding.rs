@@ -31,9 +31,9 @@ fn decode_compact(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> (usize, Expression) {
-    vartab.new_dirty_tracker();
     let decoded_var = vartab.temp_anonymous(&Uint(32));
     let size_width_var = vartab.temp_anonymous(&Uint(32));
+    vartab.new_dirty_tracker();
     let read_byte = Expression::Builtin(
         Codegen,
         vec![Uint(8)],
@@ -79,7 +79,7 @@ fn decode_compact(
     let done = cfg.new_basic_block("done".into());
     // sizes of 2**30 (1GB) or larger are not allowed
     cfg.set_basic_block(default);
-    cfg.add(vartab, Instr::Unreachable);
+    cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
 
     cfg.set_basic_block(cases[0].1);
     let expr = Expression::ShiftRight(
