@@ -106,11 +106,11 @@ jobs:
       with:
         submodules: recursive
     - name: Download LLVM
-      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-win.zip
+      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm15.0-win.zip
     - name: Extract LLVM
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
-      run: echo "c:\llvm14.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+      run: echo "c:\llvm15.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
     - uses: dtolnay/rust-toolchain@1.64.0
       with:
         components: clippy
@@ -137,11 +137,11 @@ jobs:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.64.0
     - name: Get LLVM
-      run: curl -L --output llvm14.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-mac-arm.tar.xz
+      run: curl -L --output llvm15.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm15.0-mac-arm.tar.xz
     - name: Extract LLVM
-      run: tar Jxf llvm14.0-mac-arm.tar.xz
+      run: tar Jxf llvm15.0-mac-arm.tar.xz
     - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm14.0/bin" >> $GITHUB_PATH
+      run: echo "$(pwd)/llvm15.0/bin" >> $GITHUB_PATH
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -161,11 +161,11 @@ jobs:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.64.0
     - name: Get LLVM
-      run: wget -q -O llvm14.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-mac-intel.tar.xz
+      run: wget -q -O llvm15.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm15.0-mac-intel.tar.xz
     - name: Extract LLVM
-      run: tar Jxf llvm14.0-mac-intel.tar.xz
+      run: tar Jxf llvm15.0-mac-intel.tar.xz
     - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm14.0/bin" >> $GITHUB_PATH
+      run: echo "$(pwd)/llvm15.0/bin" >> $GITHUB_PATH
     - name: Build
       run: cargo build --verbose
     - name: Run tests

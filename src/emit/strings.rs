@@ -6,7 +6,7 @@ use crate::emit::expression::expression;
 use crate::emit::{TargetRuntime, Variable};
 use crate::sema::ast::{FormatArg, Namespace, RetrieveType, StringLocation, Type};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
-use inkwell::{AddressSpace, IntPredicate};
+use inkwell::IntPredicate;
 use std::collections::HashMap;
 
 /// Implement "...{}...{}".format(a, b)
@@ -110,7 +110,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     "",
                 );
 
-                output = unsafe { bin.builder.build_gep(output, &[len], "") };
+                output = unsafe {
+                    bin.builder
+                        .build_gep(bin.context.i8_type(), output, &[len], "")
+                };
             }
         } else {
             let val = evaluated_arg[i]
@@ -142,7 +145,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         "",
                     );
 
-                    output = unsafe { bin.builder.build_gep(output, &[len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[len], "")
+                    };
                 }
                 Type::String => {
                     let s = bin.vector_bytes(val);
@@ -154,7 +160,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         "",
                     );
 
-                    output = unsafe { bin.builder.build_gep(output, &[len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[len], "")
+                    };
                 }
                 Type::DynamicBytes => {
                     let s = bin.vector_bytes(val);
@@ -168,7 +177,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let hex_len = bin.builder.build_int_add(len, len, "hex_len");
 
-                    output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[hex_len], "")
+                    };
                 }
                 Type::Address(_) | Type::Contract(_) => {
                     // for Solana/Substrate, we should encode in base58
@@ -181,21 +193,18 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         .i32_type()
                         .const_int(ns.address_length as u64, false);
 
-                    let s = bin.builder.build_pointer_cast(
-                        buf,
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
-                        "address_bytes",
-                    );
-
                     bin.builder.build_call(
                         bin.module.get_function("hex_encode").unwrap(),
-                        &[output.into(), s.into(), len.into()],
+                        &[output.into(), buf.into(), len.into()],
                         "",
                     );
 
                     let hex_len = bin.builder.build_int_add(len, len, "hex_len");
 
-                    output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[hex_len], "")
+                    };
                 }
                 Type::Bytes(size) => {
                     let buf = bin.build_alloca(function, bin.llvm_type(&arg_ty, ns), "bytesN");
@@ -204,21 +213,18 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let len = bin.context.i32_type().const_int(size as u64, false);
 
-                    let s = bin.builder.build_pointer_cast(
-                        buf,
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
-                        "bytes",
-                    );
-
                     bin.builder.build_call(
                         bin.module.get_function("hex_encode_rev").unwrap(),
-                        &[output.into(), s.into(), len.into()],
+                        &[output.into(), buf.into(), len.into()],
                         "",
                     );
 
                     let hex_len = bin.builder.build_int_add(len, len, "hex_len");
 
-                    output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
+                    output = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[hex_len], "")
+                    };
                 }
                 Type::Enum(_) => {
                     let val = bin.builder.build_int_z_extend(
@@ -319,12 +325,6 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                         bin.builder.build_store(buf, val.into_int_value());
 
-                        let s = bin.builder.build_pointer_cast(
-                            buf,
-                            bin.context.i8_type().ptr_type(AddressSpace::default()),
-                            "uint",
-                        );
-
                         let len = bin.context.i32_type().const_int(bits as u64 / 8, false);
 
                         let func_name = if *spec == FormatArg::Hex {
@@ -337,7 +337,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .builder
                             .build_call(
                                 bin.module.get_function(func_name).unwrap(),
-                                &[output.into(), s.into(), len.into()],
+                                &[output.into(), buf.into(), len.into()],
                                 "",
                             )
                             .try_as_basic_value()
@@ -371,7 +371,10 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
                     let minus_len = bin.context.i32_type().const_int(1, false);
 
-                    let neg_data = unsafe { bin.builder.build_gep(output, &[minus_len], "") };
+                    let neg_data = unsafe {
+                        bin.builder
+                            .build_gep(bin.context.i8_type(), output, &[minus_len], "")
+                    };
                     let neg_val = bin.builder.build_int_neg(val, "negative_int");
 
                     bin.builder.build_unconditional_branch(positive);
@@ -470,12 +473,6 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.builder
                             .build_store(buf, val_phi.as_basic_value().into_int_value());
 
-                        let s = bin.builder.build_pointer_cast(
-                            buf,
-                            bin.context.i8_type().ptr_type(AddressSpace::default()),
-                            "int",
-                        );
-
                         let len = bin.context.i32_type().const_int(bits as u64 / 8, false);
 
                         let func_name = if *spec == FormatArg::Hex {
@@ -490,7 +487,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                             .builder
                             .build_call(
                                 bin.module.get_function(func_name).unwrap(),
-                                &[output_after_minus.into(), s.into(), len.into()],
+                                &[output_after_minus.into(), buf.into(), len.into()],
                                 "",
                             )
                             .try_as_basic_value()
@@ -515,6 +512,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
     let data_len = unsafe {
         bin.builder.build_gep(
+            bin.module.get_struct_type("struct.vector").unwrap(),
             vector,
             &[
                 bin.context.i32_type().const_zero(),

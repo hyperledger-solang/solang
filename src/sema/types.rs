@@ -1025,7 +1025,7 @@ impl Type {
         }
     }
 
-    /// Give the type of an memory array after dereference
+    /// Give the type of a memory array after dereference
     #[must_use]
     pub fn array_deref(&self) -> Self {
         match self {
@@ -1068,7 +1068,7 @@ impl Type {
             Type::Ref(_) => false,
             Type::StorageRef(..) => false,
             Type::InternalFunction { .. } => false,
-            Type::ExternalFunction { .. } => false,
+            Type::ExternalFunction { .. } => true,
             Type::Slice(_) => false,
             Type::Unresolved => false,
             Type::FunctionSelector => false,
@@ -1490,7 +1490,7 @@ impl Type {
             Type::Ref(r) => r.is_reference_type(ns),
             Type::StorageRef(_, r) => r.is_reference_type(ns),
             Type::InternalFunction { .. } => false,
-            Type::ExternalFunction { .. } => false,
+            Type::ExternalFunction { .. } => true,
             Type::UserType(no) => ns.user_types[*no].ty.is_reference_type(ns),
             _ => false,
         }

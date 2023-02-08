@@ -12,7 +12,7 @@ contract c {
         uint64[4] f2;
     }
 
-// BEGIN-CHECK: @"c::c::function::foo__c.S"({ [2 x i8], i1, [3 x { [2 x i1], [4 x i64] }] }* %0
+// BEGIN-CHECK: @"c::c::function::foo__c.S"(ptr %17, ptr %0)
     function foo(S s) public pure {
     }
 }

@@ -79,15 +79,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap()
                 .into_pointer_value();
 
-            let s = bin.builder.build_pointer_cast(
-                s,
-                struct_ty.ptr_type(AddressSpace::default()),
-                "struct_literal",
-            );
-
             for (i, expr) in exprs.iter().enumerate() {
                 let elemptr = unsafe {
                     bin.builder.build_gep(
+                        struct_ty,
                         s,
                         &[
                             bin.context.i32_type().const_zero(),
@@ -100,7 +95,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let elem = expression(target, bin, expr, vartab, function, ns);
 
                 let elem = if expr.ty().is_fixed_reference_type() {
-                    bin.builder.build_load(elem.into_pointer_value(), "elem")
+                    let load_type = bin.llvm_type(&expr.ty(), ns);
+                    bin.builder
+                        .build_load(load_type, elem.into_pointer_value(), "elem")
                 } else {
                     elem
                 };
@@ -262,7 +259,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let quotient = bin
                     .builder
-                    .build_load(quotient, "quotient")
+                    .build_load(ty, quotient, "quotient")
                     .into_int_value();
 
                 if bits < div_bits {
@@ -357,7 +354,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let quotient = bin
                     .builder
-                    .build_load(quotient, "quotient")
+                    .build_load(ty, quotient, "quotient")
                     .into_int_value();
 
                 if bits < div_bits {
@@ -498,7 +495,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 bin.builder.position_at_end(success_block);
 
-                let rem = bin.builder.build_load(rem, "urem").into_int_value();
+                let rem = bin.builder.build_load(ty, rem, "urem").into_int_value();
 
                 if bits < div_bits {
                     bin.builder
@@ -590,7 +587,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 bin.builder.position_at_end(success_block);
 
-                let rem = bin.builder.build_load(rem, "srem").into_int_value();
+                let rem = bin.builder.build_load(ty, rem, "srem").into_int_value();
 
                 if bits < div_bits {
                     bin.builder
@@ -671,7 +668,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap();
 
             // Load the result pointer
-            let res = bin.builder.build_load(o, "");
+            let res = bin.builder.build_load(left.get_type(), o, "");
 
             if !bin.options.math_overflow_check || *unchecked || ns.target != Target::Solana {
                 // In Substrate, overflow case will hit an unreachable expression, so no additional checks are needed.
@@ -849,9 +846,9 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Load(_, ty, e) => {
             let ptr = expression(target, bin, e, vartab, function, ns).into_pointer_value();
 
-            let value = bin.builder.build_load(ptr, "");
-
             if ty.is_reference_type(ns) && !ty.is_fixed_reference_type() {
+                let loaded_type = bin.llvm_type(ty, ns).ptr_type(AddressSpace::default());
+                let value = bin.builder.build_load(loaded_type, ptr, "");
                 // if the pointer is null, it needs to be allocated
                 let allocation_needed = bin
                     .builder
@@ -893,12 +890,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .unwrap()
                     .into_pointer_value();
 
-                let new_struct = bin.builder.build_pointer_cast(
-                    new_struct,
-                    llvm_ty.ptr_type(AddressSpace::default()),
-                    &format!("new_{}", ty.to_string(ns)),
-                );
-
                 bin.builder.build_store(ptr, new_struct);
 
                 bin.builder.build_unconditional_branch(already_allocated);
@@ -915,7 +906,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 combined_struct_ptr.as_basic_value()
             } else {
-                value
+                let loaded_type = bin.llvm_type(ty, ns);
+                bin.builder.build_load(loaded_type, ptr, "")
             }
         }
 
@@ -965,16 +957,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             // Swap the byte order
             let bytes_ptr = bin.build_alloca(function, e.get_type(), "bytes_ptr");
             bin.builder.build_store(bytes_ptr, e);
-            let bytes_ptr = bin.builder.build_pointer_cast(
-                bytes_ptr,
-                bin.context.i8_type().ptr_type(AddressSpace::default()),
-                "bytes_ptr",
-            );
-            let init = bin.builder.build_pointer_cast(
-                bin.build_alloca(function, e.get_type(), "init"),
-                bin.context.i8_type().ptr_type(AddressSpace::default()),
-                "init",
-            );
+            let init = bin.build_alloca(function, e.get_type(), "init");
             bin.builder.build_call(
                 bin.module.get_function("__leNtobeN").unwrap(),
                 &[bytes_ptr.into(), init.into(), size.into()],
@@ -1028,20 +1011,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.build_call(
                 bin.module.get_function("__beNtoleN").unwrap(),
-                &[
-                    bytes_ptr.into(),
-                    bin.builder
-                        .build_pointer_cast(
-                            le_bytes_ptr,
-                            bin.context.i8_type().ptr_type(AddressSpace::default()),
-                            "le_bytes_ptr",
-                        )
-                        .into(),
-                    len.into(),
-                ],
+                &[bytes_ptr.into(), le_bytes_ptr.into(), len.into()],
                 "",
             );
-            bin.builder.build_load(le_bytes_ptr, "bytes")
+            bin.builder.build_load(ty, le_bytes_ptr, "bytes")
         }
         Expression::Not(_, e) => {
             let e = expression(target, bin, e, vartab, function, ns).into_int_value();
@@ -1105,15 +1078,14 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 let array = expression(target, bin, a, vartab, function, ns).into_pointer_value();
                 let index = expression(target, bin, i, vartab, function, ns).into_int_value();
 
+                let llvm_ty = bin.module.get_struct_type("struct.SolAccountInfo").unwrap();
                 unsafe {
                     bin.builder
-                        .build_gep(array, &[index], "account_info")
+                        .build_gep(llvm_ty, array, &[index], "account_info")
                         .into()
                 }
             } else if ty.is_dynamic_memory() {
                 let array = expression(target, bin, a, vartab, function, ns);
-
-                let ty = bin.llvm_field_ty(elem_ty, ns);
 
                 let mut array_index =
                     expression(target, bin, i, vartab, function, ns).into_int_value();
@@ -1129,29 +1101,31 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 let index = bin.builder.build_int_mul(
                     array_index,
-                    ty.into_pointer_type()
-                        .get_element_type()
+                    bin.llvm_type(elem_ty.deref_memory(), ns)
                         .size_of()
                         .unwrap()
                         .const_cast(bin.context.i32_type(), false),
                     "",
                 );
 
-                let elem = unsafe {
-                    bin.builder
-                        .build_gep(bin.vector_bytes(array), &[index], "index_access")
-                };
-
-                bin.builder
-                    .build_pointer_cast(elem, ty.into_pointer_type(), "elem")
-                    .into()
+                unsafe {
+                    bin.builder.build_gep(
+                        bin.context.i8_type(),
+                        bin.vector_bytes(array),
+                        &[index],
+                        "index_access",
+                    )
+                }
+                .into()
             } else {
                 let array = expression(target, bin, a, vartab, function, ns).into_pointer_value();
                 let index = expression(target, bin, i, vartab, function, ns).into_int_value();
 
+                let llvm_ty = bin.llvm_type(ty.deref_memory(), ns);
                 unsafe {
                     bin.builder
                         .build_gep(
+                            llvm_ty,
                             array,
                             &[bin.context.i32_type().const_zero(), index],
                             "index_access",
@@ -1166,10 +1140,11 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             target.builtin(bin, e, vartab, function, ns)
         }
         Expression::StructMember(_, _, a, i) => {
+            let struct_ty = bin.llvm_type(a.ty().deref_memory(), ns);
             let struct_ptr = expression(target, bin, a, vartab, function, ns).into_pointer_value();
 
             bin.builder
-                .build_struct_gep(struct_ptr, *i as u32, "struct member")
+                .build_struct_gep(struct_ty, struct_ptr, *i as u32, "struct member")
                 .unwrap()
                 .into()
         }
@@ -1235,12 +1210,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .left()
                 .unwrap();
 
-            let array = bin.builder.build_pointer_cast(
-                p.into_pointer_value(),
-                ty.ptr_type(AddressSpace::default()),
-                "array_literal",
-            );
-
             for (i, expr) in exprs.iter().enumerate() {
                 let mut ind = vec![bin.context.i32_type().const_zero()];
 
@@ -1252,12 +1221,17 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     e /= *d;
                 }
 
-                let elemptr = unsafe { bin.builder.build_gep(array, &ind, &format!("elemptr{i}")) };
+                let elemptr = unsafe {
+                    bin.builder
+                        .build_gep(ty, p.into_pointer_value(), &ind, &format!("elemptr{i}"))
+                };
 
                 let elem = expression(target, bin, expr, vartab, function, ns);
 
                 let elem = if expr.ty().is_fixed_reference_type() {
-                    bin.builder.build_load(elem.into_pointer_value(), "elem")
+                    let load_type = bin.llvm_type(&expr.ty(), ns);
+                    bin.builder
+                        .build_load(load_type, elem.into_pointer_value(), "elem")
                 } else {
                     elem
                 };
@@ -1265,7 +1239,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.build_store(elemptr, elem);
             }
 
-            array.into()
+            p
         }
         Expression::AllocDynamicBytes(_, ty, size, init) => {
             if matches!(ty, Type::Slice(_)) {
@@ -1317,47 +1291,30 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 v.into_pointer_value()
             };
 
-            let start = unsafe { bin.builder.build_gep(data, &[offset], "start") };
+            let start = unsafe {
+                bin.builder
+                    .build_gep(bin.context.i8_type(), data, &[offset], "start")
+            };
 
             if matches!(returns[0], Type::Bytes(_) | Type::FunctionSelector) {
                 let n = returns[0].bytes(ns);
+                let bytes_ty = bin.context.custom_width_int_type(n as u32 * 8);
 
-                let store = bin.build_alloca(
-                    function,
-                    bin.context.custom_width_int_type(n as u32 * 8),
-                    "stack",
-                );
+                let store = bin.build_alloca(function, bytes_ty, "stack");
                 bin.builder.build_call(
                     bin.module.get_function("__beNtoleN").unwrap(),
                     &[
-                        bin.builder
-                            .build_pointer_cast(
-                                start,
-                                bin.context.i8_type().ptr_type(AddressSpace::default()),
-                                "",
-                            )
-                            .into(),
-                        bin.builder
-                            .build_pointer_cast(
-                                store,
-                                bin.context.i8_type().ptr_type(AddressSpace::default()),
-                                "",
-                            )
-                            .into(),
+                        start.into(),
+                        store.into(),
                         bin.context.i32_type().const_int(n as u64, false).into(),
                     ],
                     "",
                 );
-                bin.builder.build_load(store, &format!("bytes{n}"))
+                bin.builder
+                    .build_load(bytes_ty, store, &format!("bytes{n}"))
             } else {
-                let start = bin.builder.build_pointer_cast(
-                    start,
-                    bin.llvm_type(&returns[0], ns)
-                        .ptr_type(AddressSpace::default()),
-                    "start",
-                );
-
-                bin.builder.build_load(start, "value")
+                bin.builder
+                    .build_load(bin.llvm_type(&returns[0], ns), start, "value")
             }
         }
         Expression::Keccak256(_, _, exprs) => {
@@ -1391,7 +1348,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let mut offset = bin.context.i32_type().const_zero();
 
             for (v, len, ty) in values {
-                let elem = unsafe { bin.builder.build_gep(src, &[offset], "elem") };
+                let elem = unsafe {
+                    bin.builder
+                        .build_gep(bin.context.i8_type(), src, &[offset], "elem")
+                };
 
                 offset = bin.builder.build_int_add(offset, len, "");
 
@@ -1401,38 +1361,21 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                         bin.builder.build_call(
                             bin.module.get_function("__memcpy").unwrap(),
-                            &[
-                                elem.into(),
-                                bin.builder
-                                    .build_pointer_cast(
-                                        data,
-                                        bin.context.i8_type().ptr_type(AddressSpace::default()),
-                                        "data",
-                                    )
-                                    .into(),
-                                len.into(),
-                            ],
+                            &[elem.into(), data.into(), len.into()],
                             "",
                         );
                     }
                     _ => {
-                        let elem = bin.builder.build_pointer_cast(
-                            elem,
-                            v.get_type().ptr_type(AddressSpace::default()),
-                            "",
-                        );
-
                         bin.builder.build_store(elem, v);
                     }
                 }
             }
-            let dst = bin
-                .builder
-                .build_alloca(bin.context.custom_width_int_type(256), "keccak_dst");
+            let dst_type = bin.context.custom_width_int_type(256);
+            let dst = bin.builder.build_alloca(dst_type, "keccak_dst");
 
             target.keccak256_hash(bin, src, length, dst, ns);
 
-            bin.builder.build_load(dst, "keccak256_hash")
+            bin.builder.build_load(dst_type, dst, "keccak256_hash")
         }
         Expression::StringCompare(_, l, r) => {
             let (left, left_len) = string_location(target, bin, l, vartab, function, ns);
@@ -1490,32 +1433,21 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             .into(),
         Expression::Builtin(_, _, Builtin::Signature, _) if ns.target != Target::Solana => {
             // need to byte-reverse selector
-            let selector = bin.build_alloca(function, bin.context.i32_type(), "selector");
+            let selector_type = bin.context.i32_type();
+            let selector = bin.build_alloca(function, selector_type, "selector");
 
             // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
             bin.builder.build_call(
                 bin.module.get_function("__beNtoleN").unwrap(),
                 &[
-                    bin.builder
-                        .build_pointer_cast(
-                            bin.selector.as_pointer_value(),
-                            bin.context.i8_type().ptr_type(AddressSpace::default()),
-                            "",
-                        )
-                        .into(),
-                    bin.builder
-                        .build_pointer_cast(
-                            selector,
-                            bin.context.i8_type().ptr_type(AddressSpace::default()),
-                            "",
-                        )
-                        .into(),
+                    bin.selector.as_pointer_value().into(),
+                    selector.into(),
                     bin.context.i32_type().const_int(4, false).into(),
                 ],
                 "",
             );
 
-            bin.builder.build_load(selector, "selector")
+            bin.builder.build_load(selector_type, selector, "selector")
         }
         Expression::Builtin(_, _, Builtin::AddMod, args) => {
             let arith_ty = bin.context.custom_width_int_type(512);
@@ -1584,7 +1516,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.build_return(Some(&ret));
             bin.builder.position_at_end(success_block);
 
-            let remainder = bin.builder.build_load(rem, "remainder").into_int_value();
+            let remainder = bin
+                .builder
+                .build_load(arith_ty, rem, "remainder")
+                .into_int_value();
 
             bin.builder
                 .build_int_truncate(remainder, res_ty, "quotient")
@@ -1608,33 +1543,15 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.build_call(
                 bin.module.get_function("__mul32").unwrap(),
                 &[
-                    bin.builder
-                        .build_pointer_cast(
-                            x_m,
-                            bin.context.i32_type().ptr_type(AddressSpace::default()),
-                            "left",
-                        )
-                        .into(),
-                    bin.builder
-                        .build_pointer_cast(
-                            y_m,
-                            bin.context.i32_type().ptr_type(AddressSpace::default()),
-                            "right",
-                        )
-                        .into(),
-                    bin.builder
-                        .build_pointer_cast(
-                            x_times_y_m,
-                            bin.context.i32_type().ptr_type(AddressSpace::default()),
-                            "output",
-                        )
-                        .into(),
+                    x_m.into(),
+                    y_m.into(),
+                    x_times_y_m.into(),
                     bin.context.i32_type().const_int(512 / 32, false).into(),
                 ],
                 "",
             );
             let k = expression(target, bin, &args[2], vartab, function, ns).into_int_value();
-            let dividend = bin.builder.build_load(x_times_y_m, "x_t_y");
+            let dividend = bin.builder.build_load(arith_ty, x_times_y_m, "x_t_y");
 
             let divisor = bin.builder.build_int_z_extend(k, arith_ty, "wide_k");
 
@@ -1691,7 +1608,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(success_block);
 
-            let remainder = bin.builder.build_load(rem, "quotient").into_int_value();
+            let remainder = bin
+                .builder
+                .build_load(arith_ty, rem, "quotient")
+                .into_int_value();
 
             bin.builder
                 .build_int_truncate(remainder, res_ty, "quotient")
@@ -1742,7 +1662,10 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             };
             let offset =
                 expression(target, bin, bytes_offset, vartab, function, ns).into_int_value();
-            let advanced = unsafe { bin.builder.build_gep(pointer, &[offset], "adv_pointer") };
+            let advanced = unsafe {
+                bin.builder
+                    .build_gep(bin.context.i8_type(), pointer, &[offset], "adv_pointer")
+            };
 
             advanced.into()
         }
@@ -1781,22 +1704,8 @@ pub(super) fn compare_address<'a, T: TargetRuntime<'a> + ?Sized>(
         .build_call(
             binary.module.get_function("__memcmp_ord").unwrap(),
             &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        left,
-                        binary.context.i8_type().ptr_type(AddressSpace::default()),
-                        "left",
-                    )
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        right,
-                        binary.context.i8_type().ptr_type(AddressSpace::default()),
-                        "right",
-                    )
-                    .into(),
+                left.into(),
+                right.into(),
                 binary
                     .context
                     .i32_type()
@@ -1844,27 +1753,11 @@ fn runtime_cast<'a>(
 
         bin.builder.build_call(
             bin.module.get_function("__leNtobeN").unwrap(),
-            &[
-                bin.builder
-                    .build_pointer_cast(
-                        src,
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
-                        "address_ptr",
-                    )
-                    .into(),
-                bin.builder
-                    .build_pointer_cast(
-                        dest,
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
-                        "dest_ptr",
-                    )
-                    .into(),
-                len.into(),
-            ],
+            &[src.into(), dest.into(), len.into()],
             "",
         );
 
-        bin.builder.build_load(dest, "val")
+        bin.builder.build_load(bin.address_type(ns), dest, "val")
     } else if let Type::Address(_) = from {
         let llvm_ty = bin.llvm_type(to, ns);
 
@@ -1881,27 +1774,11 @@ fn runtime_cast<'a>(
 
         bin.builder.build_call(
             bin.module.get_function("__beNtoleN").unwrap(),
-            &[
-                bin.builder
-                    .build_pointer_cast(
-                        src,
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
-                        "address_ptr",
-                    )
-                    .into(),
-                bin.builder
-                    .build_pointer_cast(
-                        dest,
-                        bin.context.i8_type().ptr_type(AddressSpace::default()),
-                        "dest_ptr",
-                    )
-                    .into(),
-                len.into(),
-            ],
+            &[src.into(), dest.into(), len.into()],
             "",
         );
 
-        bin.builder.build_load(dest, "val")
+        bin.builder.build_load(llvm_ty, dest, "val")
     } else if matches!(from, Type::Bool) && matches!(to, Type::Int(_) | Type::Uint(_)) {
         bin.builder
             .build_int_cast(
@@ -1930,11 +1807,15 @@ fn runtime_cast<'a>(
             )
             .into()
     } else if matches!((from, to), (Type::DynamicBytes, Type::Slice(_))) {
-        let slice = bin.build_alloca(function, bin.llvm_type(to, ns), "slice");
+        let slice_ty = bin.llvm_type(to, ns);
+        let slice = bin.build_alloca(function, slice_ty, "slice");
 
         let data = bin.vector_bytes(val);
 
-        let data_ptr = bin.builder.build_struct_gep(slice, 0, "data").unwrap();
+        let data_ptr = bin
+            .builder
+            .build_struct_gep(slice_ty, slice, 0, "data")
+            .unwrap();
 
         bin.builder.build_store(data_ptr, data);
 
@@ -1942,11 +1823,14 @@ fn runtime_cast<'a>(
             bin.builder
                 .build_int_z_extend(bin.vector_len(val), bin.context.i64_type(), "len");
 
-        let len_ptr = bin.builder.build_struct_gep(slice, 1, "len").unwrap();
+        let len_ptr = bin
+            .builder
+            .build_struct_gep(slice_ty, slice, 1, "len")
+            .unwrap();
 
         bin.builder.build_store(len_ptr, len);
 
-        bin.builder.build_load(slice, "slice")
+        bin.builder.build_load(slice_ty, slice, "slice")
     } else {
         val
     }

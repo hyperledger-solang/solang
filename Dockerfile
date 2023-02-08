@@ -1,9 +1,8 @@
 FROM ghcr.io/hyperledger/solang:ci as builder
 
 COPY . src
-# TODO: bigint.c does not compile with llvm 14.0, disable for now
-# WORKDIR /src/stdlib/
-# RUN make
+WORKDIR /src/stdlib/
+RUN make
 
 RUN rustup default 1.64.0
 

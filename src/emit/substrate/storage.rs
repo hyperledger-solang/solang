@@ -6,18 +6,21 @@ use crate::emit::substrate::{log_return_code, SubstrateTarget};
 use crate::emit::TargetRuntime;
 use crate::emit_context;
 use crate::sema::ast::{ArrayLength, Namespace, Type};
-use inkwell::types::BasicType;
+use inkwell::types::{BasicType, BasicTypeEnum};
 use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::{AddressSpace, IntPredicate};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
 impl StorageSlot for SubstrateTarget {
-    fn set_storage(&self, binary: &Binary, slot: PointerValue, dest: PointerValue) {
+    fn set_storage(
+        &self,
+        binary: &Binary,
+        slot: PointerValue,
+        dest: PointerValue,
+        dest_ty: BasicTypeEnum,
+    ) {
         emit_context!(binary);
-
-        // TODO: check for non-zero
-        let dest_ty = dest.get_type().get_element_type();
 
         let dest_size = if dest_ty.is_array_type() {
             dest_ty
@@ -33,9 +36,9 @@ impl StorageSlot for SubstrateTarget {
         };
 
         let ret = seal_set_storage!(
-            cast_byte_ptr!(slot).into(),
+            slot.into(),
             i32_const!(32).into(),
-            cast_byte_ptr!(dest).into(),
+            dest.into(),
             dest_size.into()
         );
 
@@ -57,7 +60,7 @@ impl StorageSlot for SubstrateTarget {
             .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
         let exists = seal_get_storage!(
-            cast_byte_ptr!(slot).into(),
+            slot.into(),
             i32_const!(32).into(),
             scratch_buf.into(),
             scratch_len.into()
@@ -78,14 +81,7 @@ impl StorageSlot for SubstrateTarget {
                 exists,
                 binary
                     .builder
-                    .build_load(
-                        binary.builder.build_pointer_cast(
-                            scratch_buf,
-                            binary.address_type(ns).ptr_type(AddressSpace::default()),
-                            "address_ptr",
-                        ),
-                        "address",
-                    )
+                    .build_load(binary.address_type(ns), scratch_buf, "address")
                     .into_array_value(),
                 binary.address_type(ns).const_zero(),
                 "retrieved_address",
@@ -96,14 +92,11 @@ impl StorageSlot for SubstrateTarget {
     fn storage_delete_single_slot(&self, binary: &Binary, slot: PointerValue) {
         emit_context!(binary);
 
-        let ret = call!(
-            "seal_clear_storage",
-            &[cast_byte_ptr!(slot).into(), i32_const!(32).into()]
-        )
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value();
+        let ret = call!("seal_clear_storage", &[slot.into(), i32_const!(32).into()])
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         log_return_code(binary, "seal_clear_storage", ret);
     }
@@ -138,12 +131,6 @@ impl StorageSlot for SubstrateTarget {
                         .unwrap()
                         .into_pointer_value();
 
-                    let dest = bin.builder.build_pointer_cast(
-                        new,
-                        llvm_ty.ptr_type(AddressSpace::default()),
-                        "dest",
-                    );
-
                     bin.emit_static_loop_with_int(
                         function,
                         bin.context.i64_type().const_zero(),
@@ -151,15 +138,21 @@ impl StorageSlot for SubstrateTarget {
                         slot,
                         |index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let elem = unsafe {
-                                bin.builder
-                                    .build_gep(dest, &[i32_zero!(), index], "index_access")
+                                bin.builder.build_gep(
+                                    llvm_ty,
+                                    new,
+                                    &[i32_zero!(), index],
+                                    "index_access",
+                                )
                             };
 
                             let val =
                                 self.storage_load_slot(bin, &ty, slot, slot_ptr, function, ns);
 
                             let val = if ty.deref_memory().is_fixed_reference_type() {
-                                bin.builder.build_load(val.into_pointer_value(), "elem")
+                                let load_ty = bin.llvm_type(ty.deref_any(), ns);
+                                bin.builder
+                                    .build_load(load_ty, val.into_pointer_value(), "elem")
                             } else {
                                 val
                             };
@@ -168,7 +161,7 @@ impl StorageSlot for SubstrateTarget {
                         },
                     );
 
-                    dest.into()
+                    new.into()
                 } else {
                     // iterate over dynamic array
                     let slot_ty = Type::Uint(256);
@@ -213,7 +206,7 @@ impl StorageSlot for SubstrateTarget {
 
                     let mut elem_slot = bin
                         .builder
-                        .build_load(slot_ptr, "elem_slot")
+                        .build_load(slot.get_type(), slot_ptr, "elem_slot")
                         .into_int_value();
 
                     bin.emit_loop_cond_first_with_int(
@@ -228,7 +221,11 @@ impl StorageSlot for SubstrateTarget {
                                 self.storage_load_slot(bin, elem_ty, slot, slot_ptr, function, ns);
 
                             let entry = if elem_ty.deref_memory().is_fixed_reference_type() {
-                                bin.builder.build_load(entry.into_pointer_value(), "elem")
+                                bin.builder.build_load(
+                                    bin.llvm_type(elem_ty.deref_memory(), ns),
+                                    entry.into_pointer_value(),
+                                    "elem",
+                                )
                             } else {
                                 entry
                             };
@@ -255,26 +252,25 @@ impl StorageSlot for SubstrateTarget {
                     .unwrap()
                     .into_pointer_value();
 
-                let dest = bin.builder.build_pointer_cast(
-                    new,
-                    llvm_ty.ptr_type(AddressSpace::default()),
-                    "dest",
-                );
-
                 for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let val = self.storage_load_slot(bin, &field.ty, slot, slot_ptr, function, ns);
 
                     let elem = unsafe {
                         bin.builder.build_gep(
-                            dest,
+                            llvm_ty,
+                            new,
                             &[i32_zero!(), i32_const!(i as u64)],
                             field.name_as_str(),
                         )
                     };
 
                     let val = if field.ty.deref_memory().is_fixed_reference_type() {
-                        bin.builder
-                            .build_load(val.into_pointer_value(), field.name_as_str())
+                        let load_ty = bin.llvm_type(field.ty.deref_memory(), ns);
+                        bin.builder.build_load(
+                            load_ty,
+                            val.into_pointer_value(),
+                            field.name_as_str(),
+                        )
                     } else {
                         val
                     };
@@ -282,7 +278,7 @@ impl StorageSlot for SubstrateTarget {
                     bin.builder.build_store(elem, val);
                 }
 
-                dest.into()
+                new.into()
             }
             Type::String | Type::DynamicBytes => {
                 bin.builder.build_store(slot_ptr, *slot);
@@ -309,7 +305,8 @@ impl StorageSlot for SubstrateTarget {
                 bin.builder
                     .build_int_to_ptr(
                         ret,
-                        bin.llvm_type(ty.deref_any(), ns).into_pointer_type(),
+                        bin.llvm_type(ty.deref_any(), ns)
+                            .ptr_type(AddressSpace::default()),
                         "",
                     )
                     .into()
@@ -382,6 +379,7 @@ impl StorageSlot for SubstrateTarget {
                         |index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let mut elem = unsafe {
                                 bin.builder.build_gep(
+                                    bin.llvm_type(ty.deref_any(), ns),
                                     dest.into_pointer_value(),
                                     &[bin.context.i32_type().const_zero(), index],
                                     "index_access",
@@ -391,7 +389,12 @@ impl StorageSlot for SubstrateTarget {
                             if elem_ty.is_reference_type(ns)
                                 && !elem_ty.deref_memory().is_fixed_reference_type()
                             {
-                                elem = bin.builder.build_load(elem, "").into_pointer_value();
+                                let load_ty =
+                                    bin.llvm_type(elem_ty, ns).ptr_type(AddressSpace::default());
+                                elem = bin
+                                    .builder
+                                    .build_load(load_ty, elem, "")
+                                    .into_pointer_value();
                             }
 
                             self.storage_store_slot(
@@ -450,7 +453,7 @@ impl StorageSlot for SubstrateTarget {
                         ),
                     );
 
-                    self.set_storage(bin, slot_ptr, new_slot);
+                    self.set_storage(bin, slot_ptr, new_slot, bin.llvm_type(&slot_ty, ns));
 
                     self.keccak256_hash(
                         bin,
@@ -464,7 +467,11 @@ impl StorageSlot for SubstrateTarget {
 
                     let mut elem_slot = bin
                         .builder
-                        .build_load(new_slot, "elem_slot")
+                        .build_load(
+                            bin.llvm_type(&slot_ty, ns).into_int_type(),
+                            new_slot,
+                            "elem_slot",
+                        )
                         .into_int_value();
 
                     bin.emit_loop_cond_first_with_int(
@@ -475,8 +482,9 @@ impl StorageSlot for SubstrateTarget {
                         |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let index = bin.builder.build_int_mul(elem_no, elem_size, "");
 
-                            let data = unsafe {
+                            let mut elem = unsafe {
                                 bin.builder.build_gep(
+                                    bin.llvm_type(ty.deref_any(), ns),
                                     dest.into_pointer_value(),
                                     &[
                                         bin.context.i32_type().const_zero(),
@@ -487,16 +495,13 @@ impl StorageSlot for SubstrateTarget {
                                 )
                             };
 
-                            let mut elem = bin.builder.build_pointer_cast(
-                                data,
-                                llvm_elem_ty.ptr_type(AddressSpace::default()),
-                                "entry",
-                            );
-
                             if elem_ty.is_reference_type(ns)
                                 && !elem_ty.deref_memory().is_fixed_reference_type()
                             {
-                                elem = bin.builder.build_load(elem, "").into_pointer_value();
+                                elem = bin
+                                    .builder
+                                    .build_load(llvm_elem_ty, elem, "")
+                                    .into_pointer_value();
                             }
 
                             self.storage_store_slot(
@@ -544,6 +549,7 @@ impl StorageSlot for SubstrateTarget {
                 for (i, field) in str_ty.definition(ns).fields.iter().enumerate() {
                     let mut elem = unsafe {
                         bin.builder.build_gep(
+                            bin.llvm_type(ty.deref_any(), ns),
                             dest.into_pointer_value(),
                             &[
                                 bin.context.i32_type().const_zero(),
@@ -554,9 +560,12 @@ impl StorageSlot for SubstrateTarget {
                     };
 
                     if field.ty.is_reference_type(ns) && !field.ty.is_fixed_reference_type() {
+                        let load_ty = bin
+                            .llvm_type(&field.ty, ns)
+                            .ptr_type(AddressSpace::default());
                         elem = bin
                             .builder
-                            .build_load(elem, field.name_as_str())
+                            .build_load(load_ty, elem, field.name_as_str())
                             .into_pointer_value();
                     }
 
@@ -589,7 +598,13 @@ impl StorageSlot for SubstrateTarget {
             Type::ExternalFunction { .. } => {
                 bin.builder.build_store(slot_ptr, *slot);
 
-                self.set_storage_extfunc(bin, function, slot_ptr, dest.into_pointer_value());
+                self.set_storage_extfunc(
+                    bin,
+                    function,
+                    slot_ptr,
+                    dest.into_pointer_value(),
+                    bin.llvm_type(ty, ns),
+                );
             }
             Type::InternalFunction { .. } => {
                 let ptr_ty = bin
@@ -609,13 +624,18 @@ impl StorageSlot for SubstrateTarget {
 
                 bin.builder.build_store(slot_ptr, *slot);
 
-                self.set_storage(bin, slot_ptr, m);
+                self.set_storage(bin, slot_ptr, m, ptr_ty.as_basic_type_enum());
             }
             Type::Address(_) | Type::Contract(_) => {
                 if dest.is_pointer_value() {
                     bin.builder.build_store(slot_ptr, *slot);
 
-                    self.set_storage(bin, slot_ptr, dest.into_pointer_value());
+                    self.set_storage(
+                        bin,
+                        slot_ptr,
+                        dest.into_pointer_value(),
+                        bin.llvm_type(ty, ns),
+                    );
                 } else {
                     let address = bin.builder.build_alloca(bin.address_type(ns), "address");
 
@@ -623,7 +643,12 @@ impl StorageSlot for SubstrateTarget {
 
                     bin.builder.build_store(slot_ptr, *slot);
 
-                    self.set_storage(bin, slot_ptr, address);
+                    self.set_storage(
+                        bin,
+                        slot_ptr,
+                        address,
+                        bin.address_type(ns).as_basic_type_enum(),
+                    );
                 }
             }
             _ => {
@@ -641,7 +666,7 @@ impl StorageSlot for SubstrateTarget {
                 // TODO ewasm allocates 32 bytes here, even though we have just
                 // allocated test. This can be folded into one allocation, if llvm
                 // does not already fold it into one.
-                self.set_storage(bin, slot_ptr, dest);
+                self.set_storage(bin, slot_ptr, dest, bin.llvm_type(ty.deref_any(), ns));
             }
         }
     }
@@ -700,7 +725,10 @@ impl StorageSlot for SubstrateTarget {
                         ns,
                     );
 
-                    let mut entry_slot = bin.builder.build_load(buf, "entry_slot").into_int_value();
+                    let mut entry_slot = bin
+                        .builder
+                        .build_load(slot.get_type(), buf, "entry_slot")
+                        .into_int_value();
 
                     // now loop from first slot to first slot + length
                     bin.emit_loop_cond_first_with_int(
