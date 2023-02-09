@@ -10,6 +10,8 @@ use solang_parser::pt::Loc::Codegen;
 use std::collections::HashMap;
 use std::ops::AddAssign;
 
+use super::increment_by;
+
 /// This struct implements the trait AbiEncoding for Borsh encoding
 pub(super) struct BorshEncoding {
     storage_cache: HashMap<usize, Expression>,
@@ -102,6 +104,27 @@ impl AbiEncoding for BorshEncoding {
         )
     }
 
+    fn calculate_string_size(
+        &self,
+        expr: &Expression,
+        _vartab: &mut Vartable,
+        _cfg: &mut ControlFlowGraph,
+    ) -> Expression {
+        // When encoding a variable length array, the total size is "length (u32)" + elements
+        let length = Expression::Builtin(
+            Codegen,
+            vec![Uint(32)],
+            Builtin::ArrayLength,
+            vec![expr.clone()],
+        );
+
+        if self.is_packed() {
+            length
+        } else {
+            increment_four(length)
+        }
+    }
+
     fn storage_cache_insert(&mut self, arg_no: usize, expr: Expression) {
         self.storage_cache.insert(arg_no, expr);
     }
@@ -122,4 +145,10 @@ impl BorshEncoding {
             packed_encoder: packed,
         }
     }
+}
+
+/// Increment an expression by four. This is useful because we save array sizes as uint32, so we
+/// need to increment the offset by four constantly.
+fn increment_four(expr: Expression) -> Expression {
+    increment_by(expr, Expression::NumberLiteral(Codegen, Uint(32), 4.into()))
 }

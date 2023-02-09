@@ -832,42 +832,37 @@ pub(super) trait AbiEncoding {
         // Checks if we can memcpy the elements from the buffer directly to the allocated array
         if allow_direct_copy(array_ty, elem_ty, dims, ns) {
             // Calculate number of elements
-            let (bytes_size, offset, var_no) =
+            let (array_length, size_length, offset, var_no) =
                 if matches!(dims.last(), Some(&ArrayLength::Fixed(_))) {
                     let elem_no = calculate_direct_copy_bytes_size(dims, elem_ty, ns);
                     let allocated_vector = vartab.temp_anonymous(array_ty);
+                    let expr = Expression::ArrayLiteral(Codegen, array_ty.clone(), vec![], vec![]);
                     cfg.add(
                         vartab,
                         Instr::Set {
                             loc: Codegen,
                             res: allocated_vector,
-                            expr: Expression::ArrayLiteral(
-                                Codegen,
-                                array_ty.clone(),
-                                vec![],
-                                vec![],
-                            ),
+                            expr,
                         },
                     );
-
                     (
                         Expression::NumberLiteral(Codegen, Uint(32), elem_no),
+                        Expression::NumberLiteral(Codegen, Uint(32), 0.into()),
                         offset.clone(),
                         allocated_vector,
                     )
                 } else {
-                    // TODO need to figure out (SCALE can read 1 to 4 bytes here)
-                    validator.validate_offset(increment_four(offset.clone()), ns, vartab, cfg);
-                    let (array_length, size) =
+                    let (array_length, size_length) =
                         self.retrieve_array_length(buffer, offset, vartab, cfg);
-
-                    let allocated_array = allocate_array(array_ty, array_length, vartab, cfg);
-
-                    let size = calculate_array_bytes_size(array_length, elem_ty, ns);
-                    (size, increment_four(offset.clone()), allocated_array)
+                    (
+                        calculate_array_bytes_size(array_length, elem_ty, ns),
+                        size_length.clone(),
+                        increment_by(offset.clone(), size_length),
+                        allocate_array(array_ty, array_length, vartab, cfg),
+                    )
                 };
 
-            validator.validate_offset_plus_size(&offset, &bytes_size, ns, vartab, cfg);
+            validator.validate_offset_plus_size(&offset, &array_length, ns, vartab, cfg);
 
             let source_address = Expression::AdvancePointer {
                 pointer: Box::new(buffer.clone()),
@@ -880,14 +875,14 @@ pub(super) trait AbiEncoding {
                 Instr::MemCopy {
                     source: source_address,
                     destination: array_expr.clone(),
-                    bytes: bytes_size.clone(),
+                    bytes: array_length.clone(),
                 },
             );
 
             let bytes_size = if matches!(dims.last(), Some(ArrayLength::Dynamic)) {
-                increment_four(bytes_size)
+                increment_by(array_length, size_length)
             } else {
-                bytes_size
+                array_length
             };
 
             (array_expr, bytes_size)
@@ -993,15 +988,16 @@ pub(super) trait AbiEncoding {
 
         // Dynamic dimensions mean that the subarray we are processing must be allocated in memory.
         if dims[dimension] == ArrayLength::Dynamic {
-            let offset_to_validate = increment_four(offset_expr.clone());
+            let (array_length, size_length) =
+                self.retrieve_array_length(buffer, offset_expr, vartab, cfg);
+            let offset_to_validate = increment_by(offset_expr.clone(), size_length.clone());
             validator.validate_offset(offset_to_validate, ns, vartab, cfg);
-            let (array_length, size) = self.retrieve_array_length(buffer, offset_expr, vartab, cfg);
             cfg.add(
                 vartab,
                 Instr::Set {
                     loc: Codegen,
                     res: offset_var,
-                    expr: increment_by(offset_expr.clone(), size),
+                    expr: increment_by(offset_expr.clone(), size_length),
                 },
             );
             let new_ty = Type::Array(Box::new(elem_ty.clone()), dims[0..(dimension + 1)].to_vec());
@@ -1495,21 +1491,7 @@ pub(super) trait AbiEncoding {
         expr: &Expression,
         _vartab: &mut Vartable,
         _cfg: &mut ControlFlowGraph,
-    ) -> Expression {
-        // When encoding a variable length array, the total size is "length (u32)" + elements
-        let length = Expression::Builtin(
-            Codegen,
-            vec![Uint(32)],
-            Builtin::ArrayLength,
-            vec![expr.clone()],
-        );
-
-        if self.is_packed() {
-            length
-        } else {
-            increment_four(length)
-        }
-    }
+    ) -> Expression;
 
     /// Encoding happens in two steps. First, we look at each argument to calculate its size. If an
     /// argument is a storage variable, we load it and save it to a local variable.
@@ -1767,13 +1749,6 @@ fn array_outer_length(
 /// Increment an expression by some value.
 fn increment_by(expr: Expression, value: Expression) -> Expression {
     Expression::Add(Codegen, Uint(32), false, expr.into(), value.into())
-}
-
-/// Increment an expression by four. This is useful because we save array sizes as uint32, so we
-/// need to increment the offset by four constantly.
-fn increment_four(expr: Expression) -> Expression {
-    let four = Expression::NumberLiteral(Codegen, Uint(32), 4.into());
-    increment_by(expr, four)
 }
 
 /// Check if we can MemCpy elements of an array to/from a buffer

@@ -359,24 +359,6 @@ impl AbiEncoding for ScaleEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> (usize, Expression) {
         decode_compact(buffer, offset, vartab, cfg)
-        //let array_length = vartab.temp_anonymous(&Uint(32));
-        //cfg.add(
-        //    vartab,
-        //    Instr::Set {
-        //        loc: Codegen,
-        //        res: array_length,
-        //        expr: Expression::Builtin(
-        //            Codegen,
-        //            vec![Uint(32)],
-        //            Builtin::ReadFromBuffer,
-        //            vec![buffer.clone(), offset.clone()],
-        //        ),
-        //    },
-        //);
-        //(
-        //    array_length,
-        //    Expression::NumberLiteral(Codegen, Uint(32), 4.into()),
-        //)
     }
 
     fn storage_cache_insert(&mut self, arg_no: usize, expr: Expression) {
