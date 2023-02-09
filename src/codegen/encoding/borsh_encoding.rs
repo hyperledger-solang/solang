@@ -4,6 +4,7 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
+use crate::sema::ast::StructType;
 use crate::sema::ast::{Namespace, Type, Type::Uint};
 use num_bigint::BigInt;
 use solang_parser::pt::Loc::Codegen;
@@ -102,6 +103,57 @@ impl AbiEncoding for BorshEncoding {
             array_length,
             Expression::NumberLiteral(Codegen, Uint(32), 4.into()),
         )
+    }
+
+    fn decode_external_function(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        ty: &Type,
+        validator: &mut super::buffer_validator::BufferValidator,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (Expression, Expression) {
+        let selector_size = Type::FunctionSelector.memory_size_of(ns);
+        // External function has selector + address
+        let size = Expression::NumberLiteral(
+            Codegen,
+            Uint(32),
+            BigInt::from(ns.address_length) + &selector_size,
+        );
+        validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
+
+        let selector = Expression::Builtin(
+            Codegen,
+            vec![Type::FunctionSelector],
+            Builtin::ReadFromBuffer,
+            vec![buffer.clone(), offset.clone()],
+        );
+
+        let new_offset = increment_by(
+            offset.clone(),
+            Expression::NumberLiteral(Codegen, Uint(32), selector_size),
+        );
+
+        let address = Expression::Builtin(
+            Codegen,
+            vec![Type::Address(false)],
+            Builtin::ReadFromBuffer,
+            vec![buffer.clone(), new_offset],
+        );
+
+        let external_func = Expression::Cast(
+            Codegen,
+            ty.clone(),
+            Box::new(Expression::StructLiteral(
+                Codegen,
+                Type::Struct(StructType::ExternalFunction),
+                vec![selector, address],
+            )),
+        );
+
+        (external_func, size)
     }
 
     fn calculate_string_size(

@@ -330,3 +330,45 @@ fn ext() {
     runtime.function("test1", Vec::new());
     runtime.function("test2", Vec::new());
 }
+
+// external function types tests
+#[test]
+fn encode_decode_ext_func() {
+    let mut runtime = build_solidity(
+        r##"
+        contract ft {
+            function(int32) external returns (uint64) func;
+
+            function test1() public {
+                func = this.foo;
+            }
+
+            function test2() public {
+                this.bar(func);
+            }
+
+            function foo(int32) public returns (uint64) {
+                return 0xabbaabba;
+            }
+
+            function bar(function(int32) external returns (uint64) f) public {
+                assert(f(102) == 0xabbaabba);
+            }
+
+            function encode_decode() public {
+                bytes enc = abi.encode(func);
+                function(int32) external returns (uint64) dec = abi.decode(enc, (function(int32) external returns (uint64)));
+                dec = this.foo;
+                assert(dec(102) == 0xabbaabba);
+
+                bytes enc2 = abi.encode(this.foo);
+                function(int32) external returns (uint64) dec2 = abi.decode(enc2, (function(int32) external returns (uint64)));
+                assert(dec2(102) == 0xabbaabba);
+            }
+        }"##,
+    );
+
+    runtime.function("test1", Vec::new());
+    runtime.function("test2", Vec::new());
+    runtime.function("encode_decode", Vec::new());
+}

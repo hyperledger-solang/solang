@@ -4,6 +4,7 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::{increment_by, AbiEncoding};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
+use crate::sema::ast::StructType;
 use crate::sema::ast::{Namespace, Parameter, Type, Type::Uint};
 use solang_parser::pt::{Loc, Loc::Codegen};
 use std::collections::HashMap;
@@ -351,6 +352,41 @@ impl AbiEncoding for ScaleEncoding {
         encode_compact(expr, Some(buffer), Some(offset), vartab, cfg)
     }
 
+    fn decode_external_function(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        ty: &Type,
+        validator: &mut super::buffer_validator::BufferValidator,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (Expression, Expression) {
+        let size = Expression::NumberLiteral(Codegen, Uint(32), (ns.address_length + 4).into());
+        validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
+        let address = Expression::Builtin(
+            Codegen,
+            vec![Type::Address(false)],
+            Builtin::ReadFromBuffer,
+            vec![buffer.clone(), offset.clone()],
+        );
+        let new_offset = increment_by(
+            offset.clone(),
+            Expression::NumberLiteral(Codegen, Uint(32), 4.into()).into(),
+        );
+        let selector = Expression::Builtin(
+            Codegen,
+            vec![Type::FunctionSelector],
+            Builtin::ReadFromBuffer,
+            vec![buffer.clone(), new_offset],
+        );
+        let ext_func = Expression::StructLiteral(
+            Codegen,
+            Type::Struct(StructType::ExternalFunction),
+            vec![selector, address],
+        );
+        (Expression::Cast(Codegen, ty.clone(), ext_func.into()), size)
+    }
     fn retrieve_array_length(
         &self,
         buffer: &Expression,

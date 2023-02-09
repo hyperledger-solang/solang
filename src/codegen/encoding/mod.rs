@@ -725,49 +725,7 @@ pub(super) trait AbiEncoding {
             }
 
             Type::ExternalFunction { .. } => {
-                let selector_size = Type::FunctionSelector.memory_size_of(ns);
-                // Extneral function has selector + address
-                let size = Expression::NumberLiteral(
-                    Codegen,
-                    Uint(32),
-                    BigInt::from(ns.address_length).add(&selector_size),
-                );
-
-                validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
-
-                let selector = Expression::Builtin(
-                    Codegen,
-                    vec![Type::FunctionSelector],
-                    Builtin::ReadFromBuffer,
-                    vec![buffer.clone(), offset.clone()],
-                );
-
-                let new_offset = Expression::Add(
-                    Codegen,
-                    Uint(32),
-                    false,
-                    offset.clone().into(),
-                    Expression::NumberLiteral(Codegen, Uint(32), selector_size).into(),
-                );
-
-                let address = Expression::Builtin(
-                    Codegen,
-                    vec![Type::Address(false)],
-                    Builtin::ReadFromBuffer,
-                    vec![buffer.clone(), new_offset],
-                );
-
-                let external_func = Expression::Cast(
-                    Codegen,
-                    ty.clone(),
-                    Box::new(Expression::StructLiteral(
-                        Codegen,
-                        Type::Struct(StructType::ExternalFunction),
-                        vec![selector, address],
-                    )),
-                );
-
-                (external_func, size)
+                self.decode_external_function(buffer, offset, ty, validator, ns, vartab, cfg)
             }
 
             Type::Array(elem_ty, dims) => self.decode_array(
@@ -1280,6 +1238,17 @@ pub(super) trait AbiEncoding {
             }
         }
     }
+
+    fn decode_external_function(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        ty: &Type,
+        validator: &mut BufferValidator,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (Expression, Expression);
 
     /// Calculate the size of an array
     fn calculate_array_size(
