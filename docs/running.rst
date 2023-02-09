@@ -47,8 +47,15 @@ Options:
   is ignored for any other target.
 
 -o, \-\-output *directory*
-  This option takes one argument, which is the directory where output should
-  be saved. The default is the current directory.
+  Sets the directory where the output should be saved. This defaults to the current directory if not specifed.
+
+\-\-output\-meta *directory*
+  Sets the directory where metadata should be saved. For Solana, the metadata is the Anchor IDL file,
+  and for Substrate this is the .contract file. If not specified, the directory specified by ``--output``
+  is used, and if that is not set either, the current directory is used.
+
+\-\-contract *contract-name*[,*contract-name*]...
+  Only compile the code for the specified contracts. If any those contracts cannot be found, produce an error.
 
 -O *optimization level*
   This takes one argument, which can either be ``none``, ``less``, ``default``,
