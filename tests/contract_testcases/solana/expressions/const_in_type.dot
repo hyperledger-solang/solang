@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/solana/expressions/const_in_type.sol" {
 	contract [label="contract x\ntests/contract_testcases/solana/expressions/const_in_type.sol:2:9-6:10"]
-	var [label="variable Y\nvisibility public\nconstant\ntests/contract_testcases/solana/expressions/const_in_type.sol:3:13-40"]
+	var [label="variable Y\nvisibility public\nconstant\nuint256\ntests/contract_testcases/solana/expressions/const_in_type.sol:3:13-40"]
 	number_literal [label="uint256 literal: 24\ntests/contract_testcases/solana/expressions/const_in_type.sol:3:38-40"]
 	Y [label="function Y\ncontract: x\ntests/contract_testcases/solana/expressions/const_in_type.sol:3:34-35\nsignature Y()\nvisibility public\nmutability view"]
-	returns [label="returns\nuint256 "]
+	returns [label="returns\nuint256 Y"]
 	return [label="return\nimplicit"]
 	constant [label="constant variable\nx.Y\nuint256\nimplicit"]
 	node_8 [label="constructor \ncontract: x\ntests/contract_testcases/solana/expressions/const_in_type.sol:5:13-48\nsignature (bytes32[24])\nvisibility public\nmutability nonpayable"]

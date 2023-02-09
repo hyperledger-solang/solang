@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/substrate/inheritance/inherit_variables_04.sol" {
 	contract [label="contract a\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:2:9-4:10"]
-	var [label="variable foo\nvisibility public\nconstant\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:3:13-45"]
+	var [label="variable foo\nvisibility public\nconstant\nint256\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:3:13-45"]
 	number_literal [label="int256 literal: 49150\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:3:39-45"]
 	foo [label="function foo\ncontract: a\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:3:33-36\nsignature foo()\nvisibility public\nmutability view"]
-	returns [label="returns\nint256 "]
+	returns [label="returns\nint256 foo"]
 	return [label="return\nimplicit"]
 	constant [label="constant variable\na.foo\nint256\nimplicit"]
 	contract_8 [label="contract c\ntests/contract_testcases/substrate/inheritance/inherit_variables_04.sol:6:9-10:10"]

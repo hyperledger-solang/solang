@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/primitives/address_07.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/primitives/address_07.sol:1:1-7:10"]
-	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/address_07.sol:2:13-102"]
+	var [label="variable foo\nvisibility internal\naddress\ntests/contract_testcases/substrate/primitives/address_07.sol:2:13-102"]
 	number_literal [label="address literal: 73912288468505514571274555706341599852387757617254816049584905325248786256596\ntests/contract_testcases/substrate/primitives/address_07.sol:2:27-102"]
 	bar [label="function bar\ncontract: test\ntests/contract_testcases/substrate/primitives/address_07.sol:4:13-53\nsignature bar()\nvisibility private\nmutability nonpayable"]
 	returns [label="returns\naddress "]

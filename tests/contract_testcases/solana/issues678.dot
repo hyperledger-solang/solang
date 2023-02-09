@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/solana/issues678.sol" {
 	Share [label="name:Share\ncontract: Shares\ntests/contract_testcases/solana/issues678.sol:7:12-17\nfield name:shareOwner ty:address payable\nfield name:amount ty:uint256"]
 	Transfer [label="name:Transfer\ncontract: 0\ntests/contract_testcases/solana/issues678.sol:5:11-19\nfield name:to ty:address indexed:no\nfield name:amount ty:uint256 indexed:no\nfield name:balance ty:uint256 indexed:no"]
 	contract [label="contract Shares\ntests/contract_testcases/solana/issues678.sol:4:1-56:2"]
-	var [label="variable _shares\nvisibility private\ntests/contract_testcases/solana/issues678.sol:12:5-28"]
+	var [label="variable _shares\nvisibility private\nstruct Shares.Share[]\ntests/contract_testcases/solana/issues678.sol:12:5-28"]
 	node_7 [label="constructor \ncontract: Shares\ntests/contract_testcases/solana/issues678.sol:15:5-41\nsignature (bytes32)\nvisibility public\nmutability nonpayable"]
 	tags [label="notice: Create the shares object that gives the shares to every body"]
 	parameters [label="parameters\naddress payable sender"]

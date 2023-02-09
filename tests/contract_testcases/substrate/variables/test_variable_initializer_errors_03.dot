@@ -1,10 +1,10 @@
 strict digraph "tests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:1:1-4:10"]
-	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:13-29"]
+	var [label="variable x\nvisibility internal\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:13-29"]
 	add [label="add\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:22-29"]
 	constant [label="constant variable\ntest.y\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:22-23"]
 	number_literal [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:26-29"]
-	var_6 [label="variable y\nvisibility internal\nconstant\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:3:13-34"]
+	var_6 [label="variable y\nvisibility internal\nconstant\nuint256\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:3:13-34"]
 	number_literal_7 [label="uint256 literal: 102\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:3:31-34"]
 	diagnostic [label="found abstract contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:1:1-4:10"]
 	diagnostic_10 [label="storage variable 'x' has been assigned, but never read\nlevel Warning\ntests/contract_testcases/substrate/variables/test_variable_initializer_errors_03.sol:2:13-29"]

@@ -13,7 +13,7 @@ strict digraph "tests/contract_testcases/evm/llvm_type.sol" {
 	builtins_13 [label="builtin Calldata\ntests/contract_testcases/evm/llvm_type.sol:7:25-33"]
 	contract_14 [label="contract Ownable\ntests/contract_testcases/evm/llvm_type.sol:11:1-43:2"]
 	base [label="base Context\ntests/contract_testcases/evm/llvm_type.sol:11:24-31"]
-	var [label="variable _owner\nvisibility private\ntests/contract_testcases/evm/llvm_type.sol:12:9-33"]
+	var [label="variable _owner\nvisibility private\naddress\ntests/contract_testcases/evm/llvm_type.sol:12:9-33"]
 	node_17 [label="constructor \ncontract: Ownable\ntests/contract_testcases/evm/llvm_type.sol:15:9-26\nsignature ()\nvisibility public\nmutability nonpayable"]
 	var_decl [label="variable decl address msgSender\ntests/contract_testcases/evm/llvm_type.sol:16:17-52"]
 	cast [label="cast address\ntests/contract_testcases/evm/llvm_type.sol:16:40-52"]

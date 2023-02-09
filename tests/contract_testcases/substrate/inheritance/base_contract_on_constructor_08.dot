@@ -15,7 +15,7 @@ strict digraph "tests/contract_testcases/substrate/inheritance/base_contract_on_
 	new_14 [label="constructor new\ncontract: b\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_08.sol:7:13-34\nsignature new(int64)\nvisibility public\nmutability nonpayable"]
 	parameters_15 [label="parameters\nint64 y"]
 	contract_16 [label="contract a\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_08.sol:10:9-14:10"]
-	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_08.sol:11:13-22"]
+	var [label="variable foo\nvisibility internal\nint64\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_08.sol:11:13-22"]
 	get_foo [label="function get_foo\ncontract: a\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_08.sol:12:13-54\nsignature get_foo()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nint64 "]
 	return [label="return\ntests/contract_testcases/substrate/inheritance/base_contract_on_constructor_08.sol:12:57-67"]

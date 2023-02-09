@@ -2,7 +2,7 @@ strict digraph "tests/contract_testcases/substrate/storage/double_index_storage.
 	Entry [label="name:Entry\ncontract: BeeeefRegistry\ntests/contract_testcases/substrate/storage/double_index_storage.sol:4:12-17\nfield name:index ty:uint256\nfield name:timestamp ty:uint64\nfield name:account ty:address\nfield name:token ty:address"]
 	Data [label="name:Data\ncontract: BeeeefRegistry\ntests/contract_testcases/substrate/storage/double_index_storage.sol:11:12-16\nfield name:initialised ty:bool\nfield name:entries ty:mapping(bytes32 => struct BeeeefRegistry.Entry)\nfield name:index ty:bytes32[]"]
 	contract [label="contract BeeeefRegistry\ntests/contract_testcases/substrate/storage/double_index_storage.sol:2:1-28:2"]
-	var [label="variable entries\nvisibility private\ntests/contract_testcases/substrate/storage/double_index_storage.sol:17:5-25"]
+	var [label="variable entries\nvisibility private\nstruct BeeeefRegistry.Data\ntests/contract_testcases/substrate/storage/double_index_storage.sol:17:5-25"]
 	getEntries [label="function getEntries\ncontract: BeeeefRegistry\ntests/contract_testcases/substrate/storage/double_index_storage.sol:20:5-74\nsignature getEntries()\nvisibility public\nmutability view"]
 	returns [label="returns\naddress[] accounts"]
 	var_decl [label="variable decl uint256 length\ntests/contract_testcases/substrate/storage/double_index_storage.sol:21:9-25"]

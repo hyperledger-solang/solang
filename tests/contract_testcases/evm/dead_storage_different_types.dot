@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/evm/dead_storage_different_types.sol" {
 	contract [label="contract C\ntests/contract_testcases/evm/dead_storage_different_types.sol:1:1-10:2"]
-	var [label="variable referralsKey\nvisibility private\ntests/contract_testcases/evm/dead_storage_different_types.sol:2:5-35"]
+	var [label="variable referralsKey\nvisibility private\naddress[]\ntests/contract_testcases/evm/dead_storage_different_types.sol:2:5-35"]
 	getReferralsByAddress [label="function getReferralsByAddress\ncontract: C\ntests/contract_testcases/evm/dead_storage_different_types.sol:4:5-98\nsignature getReferralsByAddress()\nvisibility public\nmutability view"]
 	returns [label="returns\naddress[] referralsKeyList\nuint256 "]
 	var_decl [label="variable decl uint256 length\ntests/contract_testcases/evm/dead_storage_different_types.sol:5:9-42"]

@@ -27,7 +27,7 @@ pub struct SolangServer {
     client: Client,
     target: Target,
     importpaths: Vec<PathBuf>,
-    importmaps: Vec<String>,
+    importmaps: Vec<(String, PathBuf)>,
     files: Mutex<HashMap<PathBuf, Hovers>>,
 }
 
@@ -42,9 +42,9 @@ pub async fn start_server(target: Target, matches: &ArgMatches) -> ! {
         }
     }
 
-    if let Some(maps) = matches.get_many::<String>("IMPORTMAP") {
-        for map in maps {
-            importmaps.push(map.to_string());
+    if let Some(maps) = matches.get_many::<(String, PathBuf)>("IMPORTMAP") {
+        for (map, path) in maps {
+            importmaps.push((map.clone(), path.clone()));
         }
     }
 
@@ -86,20 +86,10 @@ impl SolangServer {
                 }
             }
 
-            for p in &self.importmaps {
-                if let Some((map, path)) = p.split_once('=') {
-                    if let Err(e) =
-                        resolver.add_import_map(OsString::from(map), PathBuf::from(path))
-                    {
-                        diags.push(Diagnostic {
-                            message: format!("error: import path '{path}': {e}"),
-                            severity: Some(DiagnosticSeverity::ERROR),
-                            ..Default::default()
-                        });
-                    }
-                } else {
+            for (map, path) in &self.importmaps {
+                if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
                     diags.push(Diagnostic {
-                        message: format!("error: import map '{p}': contains no '='"),
+                        message: format!("error: import path '{}': {e}", path.display()),
                         severity: Some(DiagnosticSeverity::ERROR),
                         ..Default::default()
                     });

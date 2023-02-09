@@ -4,8 +4,8 @@ use super::tags::resolve_tags;
 use super::{annotions_not_allowed, ast, SourceUnit, SOLANA_BUCKET_SIZE};
 use super::{
     ast::{
-        ArrayLength, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
-        StructType, Symbol, Tag, Type, UserTypeDecl,
+        ArrayLength, Contract, Diagnostic, EnumDecl, EventDecl, Mapping, Namespace, Parameter,
+        StructDecl, StructType, Symbol, Tag, Type, UserTypeDecl,
     },
     diagnostics::Diagnostics,
     ContractDefinition, SOLANA_SPARSE_ARRAY_SIZE,
@@ -886,7 +886,22 @@ impl Type {
                     })
                     .collect::<String>()
             ),
-            Type::Mapping(k, v) => format!("mapping({} => {})", k.to_string(ns), v.to_string(ns)),
+            Type::Mapping(Mapping {
+                key,
+                key_name,
+                value,
+                value_name,
+            }) => {
+                format!(
+                    "mapping({}{}{} => {}{}{})",
+                    key.to_string(ns),
+                    if key_name.is_some() { " " } else { "" },
+                    key_name.as_ref().map(|id| id.name.as_str()).unwrap_or(""),
+                    value.to_string(ns),
+                    if value_name.is_some() { " " } else { "" },
+                    value_name.as_ref().map(|id| id.name.as_str()).unwrap_or(""),
+                )
+            }
             Type::ExternalFunction {
                 params,
                 mutability,
@@ -1079,7 +1094,7 @@ impl Type {
     #[must_use]
     pub fn storage_array_elem(&self) -> Self {
         match self {
-            Type::Mapping(_, v) => Type::StorageRef(false, v.clone()),
+            Type::Mapping(Mapping { value, .. }) => Type::StorageRef(false, value.clone()),
             Type::DynamicBytes | Type::String | Type::Bytes(_) => Type::Bytes(1),
             Type::Array(ty, dim) if dim.len() > 1 => Type::StorageRef(
                 false,
@@ -1611,7 +1626,7 @@ impl Type {
     ) -> Option<&'a Type> {
         match self {
             Type::Array(ty, _) => ty.contains_builtins(ns, builtin),
-            Type::Mapping(key, value) => key
+            Type::Mapping(Mapping { key, value, .. }) => key
                 .contains_builtins(ns, builtin)
                 .or_else(|| value.contains_builtins(ns, builtin)),
             Type::Struct(str_ty) if str_ty == builtin => Some(self),
@@ -1676,8 +1691,12 @@ impl Type {
                     })
                     .collect::<String>()
             ),
-            Type::Mapping(k, v) => {
-                format!("mapping:{}:{}", k.to_llvm_string(ns), v.to_llvm_string(ns))
+            Type::Mapping(Mapping { key, value, .. }) => {
+                format!(
+                    "mapping:{}:{}",
+                    key.to_llvm_string(ns),
+                    value.to_llvm_string(ns)
+                )
             }
             Type::Contract(i) => ns.contracts[*i].name.to_owned(),
             Type::InternalFunction { .. } => "function".to_owned(),

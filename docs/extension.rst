@@ -25,7 +25,7 @@ Solidity Language flavour
 
 The Solidity language flavour depends on what target you are compiling for, see :ref:`language-status` for a brief overview.
 
-You can choose the between the following targets:
+You can choose between the following targets:
 
 solana
    Solidity for Solana
@@ -78,7 +78,7 @@ Once you have node and npm installed, you can build the extension like so:
 You should now have an extension file called solang-0.3.0.vsix which can be
 installed using ``code --install-extension solang-0.3.0.vsix``.
 
-Alternatively, the extension be run from vscode itself.
+Alternatively, the extension is run from vscode itself.
 
 1. Inside a vscode instance, Ctrl+Shift+B to build the project
 2. On the task bar at the bottom of the IDE select Launch Client
