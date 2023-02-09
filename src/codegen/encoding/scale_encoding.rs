@@ -372,7 +372,7 @@ impl AbiEncoding for ScaleEncoding {
         );
         let new_offset = increment_by(
             offset.clone(),
-            Expression::NumberLiteral(Codegen, Uint(32), 4.into()).into(),
+            Expression::NumberLiteral(Codegen, Uint(32), ns.address_length.into()).into(),
         );
         let selector = Expression::Builtin(
             Codegen,

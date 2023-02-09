@@ -24,7 +24,7 @@ use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Zero};
 use solang_parser::pt::{Loc, Loc::Codegen};
-use std::ops::{Add, AddAssign, MulAssign, Sub};
+use std::ops::{AddAssign, MulAssign, Sub};
 
 use self::buffer_validator::BufferValidator;
 
@@ -1210,9 +1210,8 @@ pub(super) trait AbiEncoding {
             }
             Type::ExternalFunction { .. } => {
                 let selector_len: BigInt = ns.target.selector_length().into();
-                let mut address_size = Type::Address(false).memory_size_of(ns);
-                address_size.add_assign(selector_len);
-                Expression::NumberLiteral(Codegen, Uint(32), address_size)
+                let address_size = Type::Address(false).memory_size_of(ns);
+                Expression::NumberLiteral(Codegen, Uint(32), address_size + selector_len)
             }
             Type::Ref(r) => {
                 if let Type::Struct(struct_ty) = &**r {
