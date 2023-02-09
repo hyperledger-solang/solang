@@ -610,13 +610,15 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::Add(_, _, _, l, r) => format!(
-                "({} + {})",
+            Expression::Add(_, _, unchecked, l, r) => format!(
+                "({}{} + {})",
+                if *unchecked { "unchecked " } else { "" },
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Subtract(_, _, _, l, r) => format!(
-                "({} - {})",
+            Expression::Subtract(_, _, unchecked, l, r) => format!(
+                "({}{} - {})",
+                if *unchecked { "unchecked " } else { "" },
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -645,8 +647,9 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Multiply(_, _, _, l, r) => format!(
-                "({} * {})",
+            Expression::Multiply(_, _, unchecked, l, r) => format!(
+                "({}{} * {})",
+                if *unchecked { "unchecked " } else { "" },
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -670,8 +673,9 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Power(_, _, _, l, r) => format!(
-                "({} ** {})",
+            Expression::Power(_, _, unchecked, l, r) => format!(
+                "({}{} ** {})",
+                if *unchecked { "unchecked " } else { "" },
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),

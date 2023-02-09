@@ -93,6 +93,7 @@ fn main() {
                         Arg::new("STD-JSON")
                             .help("mimic solidity json output on stdout")
                             .conflicts_with_all(["VERBOSE", "OUTPUT", "EMIT"])
+                            .action(ArgAction::SetTrue)
                             .long("standard-json"),
                     )
                     .arg(
@@ -167,19 +168,22 @@ fn main() {
                         Arg::new("MATHOVERFLOW")
                             .help("Enable math overflow checking")
                             .long("math-overflow")
+                            .action(ArgAction::SetTrue)
                             .display_order(6),
                     )
                     .arg(
                         Arg::new("LOGAPIRETURNS")
                             .help("Log the return codes of runtime API calls in the environment")
                             .long("log-api-return-codes")
-                            .action(ArgAction::SetTrue),
+                            .action(ArgAction::SetTrue)
+                            .display_order(7),
                     )
                     .arg(
                         Arg::new("GENERATEDEBUGINFORMATION")
                             .help("Enable generating debug information for LLVM IR")
                             .short('g')
                             .long("generate-debug-info")
+                            .action(ArgAction::SetTrue)
                             .hide(true),
                     ),
             )
@@ -332,7 +336,7 @@ fn doc(matches: &ArgMatches) {
     let target = target_arg(matches);
     let mut resolver = imports_arg(matches);
 
-    let verbose = *matches.get_one::<bool>("VERBOSE").unwrap();
+    let verbose = *matches.get_one("VERBOSE").unwrap();
     let mut success = true;
     let mut files = Vec::new();
 
@@ -366,7 +370,7 @@ fn doc(matches: &ArgMatches) {
 fn compile(matches: &ArgMatches) {
     let target = target_arg(matches);
 
-    let verbose = *matches.get_one::<bool>("VERBOSE").unwrap();
+    let verbose = *matches.get_one("VERBOSE").unwrap();
     let mut json = JsonResult {
         errors: Vec::new(),
         target: target.to_string(),
@@ -378,11 +382,11 @@ fn compile(matches: &ArgMatches) {
         eprintln!("info: Solang version {}", env!("SOLANG_VERSION"));
     }
 
-    let math_overflow_check = matches.contains_id("MATHOVERFLOW");
+    let math_overflow_check = *matches.get_one("MATHOVERFLOW").unwrap();
 
-    let generate_debug_info = matches.contains_id("GENERATEDEBUGINFORMATION");
+    let generate_debug_info = *matches.get_one("GENERATEDEBUGINFORMATION").unwrap();
 
-    let log_api_return_codes = *matches.get_one::<bool>("LOGAPIRETURNS").unwrap();
+    let log_api_return_codes = *matches.get_one("LOGAPIRETURNS").unwrap();
 
     let mut resolver = imports_arg(matches);
 
@@ -395,14 +399,14 @@ fn compile(matches: &ArgMatches) {
     };
 
     let opt = Options {
-        dead_storage: *matches.get_one::<bool>("DEADSTORAGE").unwrap(),
-        constant_folding: *matches.get_one::<bool>("CONSTANTFOLDING").unwrap(),
-        strength_reduce: *matches.get_one::<bool>("STRENGTHREDUCE").unwrap(),
-        vector_to_slice: *matches.get_one::<bool>("VECTORTOSLICE").unwrap(),
+        dead_storage: *matches.get_one("DEADSTORAGE").unwrap(),
+        constant_folding: *matches.get_one("CONSTANTFOLDING").unwrap(),
+        strength_reduce: *matches.get_one("STRENGTHREDUCE").unwrap(),
+        vector_to_slice: *matches.get_one("VECTORTOSLICE").unwrap(),
         math_overflow_check,
         generate_debug_information: generate_debug_info,
         common_subexpression_elimination: *matches
-            .get_one::<bool>("COMMONSUBEXPRESSIONELIMINATION")
+            .get_one("COMMONSUBEXPRESSIONELIMINATION")
             .unwrap(),
         opt_level,
         log_api_return_codes,
@@ -425,8 +429,10 @@ fn compile(matches: &ArgMatches) {
         exit(0);
     }
 
+    let std_json = *matches.get_one("STD-JSON").unwrap();
+
     if errors {
-        if matches.contains_id("STD-JSON") {
+        if std_json {
             println!("{}", serde_json::to_string(&json).unwrap());
             exit(0);
         } else {
@@ -435,7 +441,7 @@ fn compile(matches: &ArgMatches) {
         }
     }
 
-    if matches.contains_id("STD-JSON") {
+    if std_json {
         println!("{}", serde_json::to_string(&json).unwrap());
     }
 }
@@ -466,7 +472,8 @@ fn process_file(
     json: &mut JsonResult,
     opt: &Options,
 ) -> Result<Namespace, ()> {
-    let verbose = *matches.get_one::<bool>("VERBOSE").unwrap();
+    let verbose = *matches.get_one("VERBOSE").unwrap();
+    let std_json = *matches.get_one("STD-JSON").unwrap();
 
     let mut json_contracts = HashMap::new();
 
@@ -476,7 +483,7 @@ fn process_file(
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, opt);
 
-    if matches.contains_id("STD-JSON") {
+    if std_json {
         let mut out = ns.diagnostics_as_json(resolver);
         json.errors.append(&mut out);
     } else {
@@ -546,7 +553,7 @@ fn process_file(
 
         let code = binary.code(Generate::Linked).expect("llvm build");
 
-        if matches.contains_id("STD-JSON") {
+        if std_json {
             json_contracts.insert(
                 binary.name.to_owned(),
                 JsonContract {
@@ -595,7 +602,7 @@ fn process_file(
 }
 
 fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatches) -> bool {
-    let verbose = *matches.get_one::<bool>("VERBOSE").unwrap();
+    let verbose = *matches.get_one("VERBOSE").unwrap();
 
     match matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         Some("llvm-ir") => {

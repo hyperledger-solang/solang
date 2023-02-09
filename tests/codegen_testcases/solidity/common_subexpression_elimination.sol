@@ -40,7 +40,7 @@ contract c1 {
         // CHECK: ty:int256 %d = (%x * %1.cse_temp)
         // CHECK: ty:int256 %2.cse_temp = (%x + %d)
         // CHECK: ty:int256 %3.cse_temp = ((arg #0) - (arg #1))
-        // CEHCK: branchcond (signed more %2.cse_temp > int256 0), block1, block2
+        // CHECK: branchcond (signed more %2.cse_temp > int256 0), block1, block2
         if (x + d > 0) {
 			int t = a-b;
             // CHECK: ty:int256 %t = %3.cse_temp
@@ -162,7 +162,7 @@ contract c1 {
         // CHECK: ty:int256 %d = (%x * %1.cse_temp)
         // CHECK: ty:int256 %2.cse_temp = (%x + %d)
         // CHECK: ty:int256 %3.cse_temp = ((arg #0) - (arg #1))
-        // CEHCK: branchcond (%2.cse_temp > int256 0), block1, block2
+        // CHECK: branchcond (signed more %2.cse_temp > int256 0), block1, block2
         if (x + d > 0) {
 			int t = a-b;
             // CHECK: ty:int256 %t = %3.cse_temp
