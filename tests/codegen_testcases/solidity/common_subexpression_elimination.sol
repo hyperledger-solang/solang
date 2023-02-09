@@ -457,7 +457,6 @@ contract c1 {
             return (a << b) + 1;
         }
 
-        // CHECK: ty:uint256 %3.cse_temp = ((arg #0) & (arg #1))
         // CHECK: branchcond %2.cse_temp, block4, block3
         if(!b1 || c > 0) {
             // CHECK: = %b1
@@ -470,6 +469,7 @@ contract c1 {
             c++;
         }
 
+        // CHECK: ty:uint256 %3.cse_temp = ((arg #0) & (arg #1))
         // CHECK: branchcond (%3.cse_temp == uint256 0), block13, block14
         if (a & b == 0) {
             return c--;

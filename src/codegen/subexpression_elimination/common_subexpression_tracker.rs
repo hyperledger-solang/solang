@@ -238,6 +238,24 @@ impl CommonSubExpressionTracker {
         self.cur_block = block_no;
     }
 
+    /// Find the depth of each control flow graph block
+    /// The definition of depth is the distance (in number o graph edges) from the entry block
+    /// to a desired block.
+    fn depth_dfs(&self, block: usize, level: u16, depth: &mut [u16]) -> u16 {
+        if level < depth[block] {
+            depth[block] = level;
+        } else {
+            return level;
+        }
+
+        let mut local_level: u16 = 100;
+        for child in &self.cfg_dag[block] {
+            local_level = std::cmp::min(local_level, self.depth_dfs(*child, level + 1, depth));
+        }
+
+        local_level
+    }
+
     /// For common subexpression elimination to work properly, we need to find the common parent of
     /// two blocks. The parent is the deepest block in which every path from the entry block to both
     /// 'block_1' and 'block_2' passes through such a block.
@@ -247,6 +265,12 @@ impl CommonSubExpressionTracker {
         }
         let mut colors: Vec<Color> = vec![Color::WHITE; self.cfg_dag.len()];
         let mut visited: Vec<bool> = vec![false; self.cfg_dag.len()];
+        let mut depth: Vec<u16> = vec![100; self.cfg_dag.len()];
+
+        // Here we calculate the depth of each block, i.e., how many blocks we pass through to reach
+        // a block when we start at the block 0.
+        let _ = self.depth_dfs(0, 0, &mut depth);
+
         /*
         Given a DAG (directed acyclic graph), we color all the ancestors of 'block_1' with yellow.
         Then, we color every ancestor of 'block_2' with blue. As the mixture of blue and yellow
@@ -258,9 +282,17 @@ impl CommonSubExpressionTracker {
 
          */
 
-        self.coloring_dfs(block_1, 0, Color::BLUE, &mut colors, &mut visited);
+        self.coloring_dfs(block_1, 0, Color::BLUE, &mut colors, &mut visited, &depth);
         visited.fill(false);
-        self.coloring_dfs(block_2, 0, Color::YELLOW, &mut colors, &mut visited);
+        self.coloring_dfs(block_2, 0, Color::YELLOW, &mut colors, &mut visited, &depth);
+
+        // Edge case: If any of the blocks is the parent of the other one, there is no need to run
+        // an algorithm to find the lowest common ancestor
+        if colors[block_1] == Color::GREEN {
+            return block_1;
+        } else if colors[block_2] == Color::GREEN {
+            return block_2;
+        }
 
         /*
         Having a bunch of green block, which of them are we looking for?
@@ -318,6 +350,7 @@ impl CommonSubExpressionTracker {
         color: Color,
         colors: &mut Vec<Color>,
         visited: &mut Vec<bool>,
+        depths: &[u16],
     ) -> bool {
         if colors[cur_block].contains(color) {
             return true;
@@ -334,7 +367,11 @@ impl CommonSubExpressionTracker {
         }
 
         for next in &self.cfg_dag[cur_block] {
-            if self.coloring_dfs(search_block, *next, color, colors, visited) {
+            // Checking the depth allows us to identify that blocks in a loop are not necessarily
+            // ancestors, if the precedent's depth is greater than the searched block's depth.
+            if self.coloring_dfs(search_block, *next, color, colors, visited, depths)
+                && depths[cur_block] < depths[search_block]
+            {
                 colors[cur_block].insert(color);
             }
         }
