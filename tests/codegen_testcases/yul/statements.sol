@@ -15,7 +15,7 @@ contract testing {
             // CHECK: assert-failure
             invalid()
 
-            // NOT-CHECK: ty:uint256 %x = 
+            // NOT-CHECK: ty:uint256 %x =
             let x := mul(a, b)
         }
     }
@@ -26,10 +26,10 @@ contract testing {
             // CHECK: ty:uint256 %x = (sext uint256 ((sext int24 (arg #1)) >> (zext int24 (arg #0))))
             let x := shr(a, b)
             {
-                // CHECK: ty:uint256 %y = ((sext uint256 ((sext int24 (arg #1)) >> (zext int24 (arg #0)))) * (zext uint256 (arg #0)))
+                // CHECK: ty:uint256 %y = (unchecked (sext uint256 ((sext int24 (arg #1)) >> (zext int24 (arg #0)))) * (zext uint256 (arg #0)))
                 let y := mul(x, a)
 
-                // CHECK: ty:uint8 %g = uint8((unsigned less int256(((sext uint256 ((sext int24 (arg #1)) >> (zext int24 (arg #0)))) * (zext uint256 (arg #0)))) < (sext int256 (arg #1))))
+                // CHECK: ty:uint8 %g = uint8((unsigned less int256((unchecked (sext uint256 ((sext int24 (arg #1)) >> (zext int24 (arg #0)))) * (zext uint256 (arg #0)))) < (sext int256 (arg #1))))
                 let g : u8 := lt(y, b)
             }
         }
@@ -58,7 +58,7 @@ contract testing {
 
             // CHECK: ty:uint256 %f = uint256(((arg #0) == bool 0))
             let f := iszero(a)
-            
+
 
             // CHECK: ty:uint256 %g = undef
             // CHECK: ty:uint256 %h = undef
@@ -74,7 +74,7 @@ contract testing {
             // CHECK: branchcond (arg #0), block1, block2
             if a {
             // CHECK: block1: # then
-            // CHECK: ty:uint256 %x = (uint256((arg #0)) + uint256 5)
+            // CHECK: ty:uint256 %x = (unchecked uint256((arg #0)) + uint256 5)
                 x := add(a, x)
 
                 // CHECK: ty:bool %a = false
@@ -135,10 +135,10 @@ contract testing {
                 let i := 1
             // CHECK: branch block1
             // CHECK: block1: # cond
-            // CHECK: branchcond (uint256 0 != (%i + uint256 1)), block3, block4
+            // CHECK: branchcond (uint256 0 != (unchecked %i + uint256 1)), block3, block4
             } add(i, 1) {
                 // CHECK: block2: # next
-                // CHECK: ty:uint256 %i = (%i - uint256 1)
+                // CHECK: ty:uint256 %i = (unchecked %i - uint256 1)
                 i := sub(i, 1)
                 // CHECK: branch block1
             } {
@@ -158,7 +158,7 @@ contract testing {
             } lt(i, 10) {
                 // CHECK: block6: # next
                 i := add(i, 1)
-                // CHECK: ty:uint256 %i.27 = (%i.27 + uint256 1)
+                // CHECK: ty:uint256 %i.27 = (unchecked %i.27 + uint256 1)
                 // CHECK: branch block5
             } {
                 // CHECK: block7: # body
@@ -176,13 +176,13 @@ contract testing {
                 // CHECK: branchcond %a, block11, block12
             } a {
                 // CHECK: block10: # next
-                // CHECK: ty:uint256 %i.28 = (uint256(%a) + uint256 1)
+                // CHECK: ty:uint256 %i.28 = (unchecked uint256(%a) + uint256 1)
                 i := add(a, 1)
                 // CHECK: ty:bool %a = false
                 a := false
             } {
                 // CHECK: block11: # body
-                // CHECK: ty:bool %a = (uint256 0 != (%i.28 + uint256 2))
+                // CHECK: ty:bool %a = (uint256 0 != (unchecked %i.28 + uint256 2))
                 a := add(i, 2)
                 // CHECK: branch block10
             }
@@ -196,7 +196,7 @@ contract testing {
                 // CHECK: branchcond (uint256 2 == uint256 0), block15, block16
             } eq(i, 0) {
                 // CHECK: block14: # next
-                // NOT-CHECK: ty:uint256 %i.29 = 
+                // NOT-CHECK: ty:uint256 %i.29 =
                 i := sub(i, 2)
             } {
                 // CHECK: block15: # body
@@ -236,7 +236,7 @@ contract testing {
             } lt(i, 10) {
                 // CHECK: block22: # next
                 i := add(i, 1)
-                // CHECK: ty:uint256 %i.31 = (%i.31 + uint256 1)
+                // CHECK: ty:uint256 %i.31 = (unchecked %i.31 + uint256 1)
                 // CHECK: branch block21
             } {
                 // CHECK: block23: # body
@@ -253,12 +253,12 @@ contract testing {
                     // CHECK: block25: # cond
                     // CHECK: branchcond (unsigned less %j.32 < uint256 10), block27, block28
                 } lt(j, 10) {
-                    // CHECK: ty:uint256 %j.32 = (%j.32 + uint256 1)
+                    // CHECK: ty:uint256 %j.32 = (unchecked %j.32 + uint256 1)
                     j := add(j, 1)
                     // CHECK: branch block25
                 } {
                     // CHECK: block27: # body
-                    // CHECK: ty:bool %a = (uint256 0 != (%i.31 + %j.32))
+                    // CHECK: ty:bool %a = (uint256 0 != (unchecked %i.31 + %j.32))
                     a := add(i, j)
                     // CHECK: branch block26
                 }
@@ -288,7 +288,7 @@ contract testing {
             // CHECK: branchcond (unsigned less %i < uint256 10), block3, block4
             } lt(i, 10) {i := add(i, 1)
             // CHECK: block2: # next
-            // CHECK: ty:uint256 %i = (%i + uint256 1)
+            // CHECK: ty:uint256 %i = (unchecked %i + uint256 1)
             // CHECK: branch block1
             } {
                 // CHECK: block3: # body
@@ -323,7 +323,7 @@ contract testing {
             } lt(i, 10) {
                 // CHECK: block2: # next
                 i := add(i, 1)
-                // CHECK: ty:uint256 %i = (%i + uint256 1)
+                // CHECK: ty:uint256 %i = (unchecked %i + uint256 1)
                 // CHECK: branch block1
             } {
                 for {
@@ -340,7 +340,7 @@ contract testing {
                     // CHECK: block5: # cond
                     // CHECK: branchcond (unsigned less %j < uint256 10), block7, block8
                     // CHECK: block6: # next
-                    // CHECK: ty:uint256 %j = (%j + uint256 1)
+                    // CHECK: ty:uint256 %j = (unchecked %j + uint256 1)
                     // CHECK: branch block5
                     j := add(j, 1)
                 } {
@@ -352,14 +352,14 @@ contract testing {
                     // After inner for:
                     // CHECK: block8: # end_for
                     // CHECK: branchcond (unsigned more %i > uint256 5), block11, block12
-                    
+
                     // Inside inner if:
                     // CHECK: block9: # then
                     // CHECK: branch block8
 
                     // After inner if:
                     // CHECK: block10: # endif
-                    // CHECK: ty:uint256 %j = (%i - uint256 2)
+                    // CHECK: ty:uint256 %j = (unchecked %i - uint256 2)
                     j := sub(i, 2)
                     // CHECK: branch block6
                 }
@@ -369,7 +369,7 @@ contract testing {
                     // CHECK: branch block4
                 }
                 // CHECK: block12: # endif
-                // CHECK: ty:uint256 %i = (%i - uint256 4)
+                // CHECK: ty:uint256 %i = (unchecked %i - uint256 4)
                 i := sub(i, 4)
                 // CHECK: branch block2
             }
@@ -386,7 +386,7 @@ contract testing {
             // CHECK: branchcond (unsigned less %i < uint256 10), block3, block4
             } lt(i, 10) {i := add(i, 1)
             // CHECK: block2: # next
-            // CHECK: ty:uint256 %i = (%i + uint256 1)
+            // CHECK: ty:uint256 %i = (unchecked %i + uint256 1)
             // CHECK: branch block1
             } {
                 // CHECK: block3: # body
@@ -421,7 +421,7 @@ contract testing {
             } lt(i, 10) {
                 // CHECK: block2: # next
                 i := add(i, 1)
-                // CHECK: ty:uint256 %i = (%i + uint256 1)
+                // CHECK: ty:uint256 %i = (unchecked %i + uint256 1)
                 // CHECK: branch block1
             } {
                 for {
@@ -438,7 +438,7 @@ contract testing {
                     // CHECK: block5: # cond
                     // CHECK: branchcond (unsigned less %j < uint256 10), block7, block8
                     // CHECK: block6: # next
-                    // CHECK: ty:uint256 %j = (%j + uint256 1)
+                    // CHECK: ty:uint256 %j = (unchecked %j + uint256 1)
                     // CHECK: branch block5
                     j := add(j, 1)
                 } {
@@ -450,14 +450,14 @@ contract testing {
                     // After inner for:
                     // CHECK: block8: # end_for
                     // CHECK: branchcond (unsigned more %i > uint256 5), block11, block12
-                    
+
                     // Inside inner if:
                     // CHECK: block9: # then
                     // CHECK: branch block6
 
                     // After inner if:
                     // CHECK: block10: # endif
-                    // CHECK: ty:uint256 %j = (%i - uint256 2)
+                    // CHECK: ty:uint256 %j = (unchecked %i - uint256 2)
                     j := sub(i, 2)
                     // CHECK: branch block6
                 }
@@ -467,7 +467,7 @@ contract testing {
                     // CHECK: branch block2
                 }
                 // CHECK: block12: # endif
-                // CHECK: ty:uint256 %i = (%i - uint256 4)
+                // CHECK: ty:uint256 %i = (unchecked %i - uint256 4)
                 i := sub(i, 4)
                 // CHECK: branch block2
             }
