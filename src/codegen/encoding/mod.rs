@@ -18,6 +18,7 @@ use crate::codegen::encoding::scale_encoding::ScaleEncoding;
 use crate::codegen::expression::load_storage;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
+use crate::sema::ast::FormatArg;
 use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type, Type::Uint};
 use crate::Target;
 use num_bigint::BigInt;
@@ -95,6 +96,19 @@ pub(super) fn abi_decode(
                     vec![Uint(32)],
                     Builtin::ArrayLength,
                     vec![buffer.clone()],
+                ),
+            },
+        );
+
+        cfg.add(
+            vartab,
+            Instr::Print {
+                expr: Expression::FormatString(
+                    Codegen,
+                    vec![(
+                        FormatArg::Hex,
+                        Expression::Variable(Codegen, Uint(32), buffer_size),
+                    )],
                 ),
             },
         );
@@ -688,38 +702,45 @@ pub(super) trait AbiEncoding {
             }
 
             Type::DynamicBytes | Type::String => {
-                // String and Dynamic bytes are encoded as size (uint32) + elements
-                validator.validate_offset(increment_four(offset.clone()), ns, vartab, cfg);
+                // String and Dynamic bytes are encoded as size + elements
+                let (array_length_var, size_length) =
+                    self.retrieve_array_length(buffer, offset, vartab, cfg);
+                let array_length = Expression::Variable(Codegen, Uint(32), array_length_var);
 
-                let (array_length, size) = self.retrieve_array_length(buffer, offset, vartab, cfg);
-                let size =
-                    increment_by(Expression::Variable(Codegen, Uint(32), array_length), size);
-
-                let offset_to_validate = Expression::Add(
-                    Codegen,
-                    Uint(32),
-                    false,
-                    Box::new(size.clone()),
-                    Box::new(offset.clone()),
+                cfg.add(
+                    vartab,
+                    Instr::Print {
+                        expr: Expression::FormatString(
+                            Codegen,
+                            vec![
+                                (FormatArg::Hex, array_length.clone()),
+                                (FormatArg::Hex, size_length.clone()),
+                            ],
+                        ),
+                    },
                 );
 
-                validator.validate_offset(offset_to_validate, ns, vartab, cfg);
-                let allocated_array = allocate_array(ty, array_length, vartab, cfg);
+                let size = increment_by(array_length.clone(), size_length.clone());
+                validator.validate_offset(
+                    increment_by(offset.clone(), size.clone()),
+                    ns,
+                    vartab,
+                    cfg,
+                );
 
+                let allocated_array = allocate_array(ty, array_length_var, vartab, cfg);
                 let advanced_pointer = Expression::AdvancePointer {
-                    pointer: Box::new(buffer.clone()),
-                    bytes_offset: Box::new(increment_four(offset.clone())),
+                    pointer: buffer.clone().into(),
+                    bytes_offset: increment_by(offset.clone(), size_length).into(),
                 };
-
                 cfg.add(
                     vartab,
                     Instr::MemCopy {
                         source: advanced_pointer,
                         destination: Expression::Variable(Codegen, ty.clone(), allocated_array),
-                        bytes: Expression::Variable(Codegen, Uint(32), array_length),
+                        bytes: array_length,
                     },
                 );
-
                 (
                     Expression::Variable(Codegen, ty.clone(), allocated_array),
                     size,

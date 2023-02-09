@@ -146,13 +146,7 @@ fn decode_compact(
         Builtin::ReadFromBuffer,
         vec![buffer.clone(), offset.clone()],
     );
-    let expr = Expression::ShiftRight(
-        Codegen,
-        Uint(32),
-        read_byte.into(),
-        two.clone().into(),
-        false,
-    );
+    let expr = Expression::ShiftRight(Codegen, Uint(32), read_byte.into(), two.into(), false);
     cfg.add(
         vartab,
         Instr::Set {
