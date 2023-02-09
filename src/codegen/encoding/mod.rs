@@ -18,7 +18,6 @@ use crate::codegen::encoding::scale_encoding::ScaleEncoding;
 use crate::codegen::expression::load_storage;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::FormatArg;
 use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type, Type::Uint};
 use crate::Target;
 use num_bigint::BigInt;
@@ -96,19 +95,6 @@ pub(super) fn abi_decode(
                     vec![Uint(32)],
                     Builtin::ArrayLength,
                     vec![buffer.clone()],
-                ),
-            },
-        );
-
-        cfg.add(
-            vartab,
-            Instr::Print {
-                expr: Expression::FormatString(
-                    Codegen,
-                    vec![(
-                        FormatArg::Hex,
-                        Expression::Variable(Codegen, Uint(32), buffer_size),
-                    )],
                 ),
             },
         );
@@ -706,20 +692,6 @@ pub(super) trait AbiEncoding {
                 let (array_length_var, size_length) =
                     self.retrieve_array_length(buffer, offset, vartab, cfg);
                 let array_length = Expression::Variable(Codegen, Uint(32), array_length_var);
-
-                cfg.add(
-                    vartab,
-                    Instr::Print {
-                        expr: Expression::FormatString(
-                            Codegen,
-                            vec![
-                                (FormatArg::Hex, array_length.clone()),
-                                (FormatArg::Hex, size_length.clone()),
-                            ],
-                        ),
-                    },
-                );
-
                 let size = increment_by(array_length.clone(), size_length.clone());
                 validator.validate_offset(
                     increment_by(offset.clone(), size.clone()),
