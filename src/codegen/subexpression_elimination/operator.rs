@@ -7,14 +7,18 @@ use crate::sema::ast::Type;
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum Operator {
     Add,
+    UncheckedAdd,
     Subtract,
+    UncheckedSubtract,
     Multiply,
+    UncheckedMultiply,
     SignedDivide,
     UnsignedDivide,
     Modulo,
     SignedModulo,
     UnsignedModulo,
     Power,
+    UncheckedPower,
     BitwiseOr,
     BitwiseAnd,
     BitwiseXor,
@@ -49,14 +53,38 @@ impl Expression {
     /// Get the respective Operator from an Expression
     pub fn get_ave_operator(&self) -> Operator {
         match self {
-            Expression::Add(..) => Operator::Add,
-            Expression::Subtract(..) => Operator::Subtract,
-            Expression::Multiply(..) => Operator::Multiply,
+            Expression::Add(_, _, unchecked, _, _) => {
+                if *unchecked {
+                    Operator::UncheckedAdd
+                } else {
+                    Operator::Add
+                }
+            }
+            Expression::Subtract(_, _, unchecked, _, _) => {
+                if *unchecked {
+                    Operator::UncheckedSubtract
+                } else {
+                    Operator::Subtract
+                }
+            }
+            Expression::Multiply(_, _, unchecked, _, _) => {
+                if *unchecked {
+                    Operator::UncheckedMultiply
+                } else {
+                    Operator::Multiply
+                }
+            }
             Expression::SignedDivide(..) => Operator::SignedDivide,
             Expression::UnsignedDivide(..) => Operator::UnsignedDivide,
             Expression::SignedModulo(..) => Operator::SignedModulo,
             Expression::UnsignedModulo(..) => Operator::UnsignedModulo,
-            Expression::Power(..) => Operator::Power,
+            Expression::Power(_, _, unchecked, _, _) => {
+                if *unchecked {
+                    Operator::UncheckedPower
+                } else {
+                    Operator::Power
+                }
+            }
             Expression::BitwiseOr(..) => Operator::BitwiseOr,
             Expression::BitwiseAnd(..) => Operator::BitwiseAnd,
             Expression::BitwiseXor(..) => Operator::BitwiseXor,
