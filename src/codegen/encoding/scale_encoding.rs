@@ -191,7 +191,7 @@ fn encode_compact(
     let done = cfg.new_basic_block("done".into());
     let fail = cfg.new_basic_block("fail".into());
     let prepare = cfg.new_basic_block("prepare".into());
-    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), 0x40000000.into());
+    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), (0x40000000 - 1).into());
     let compare = Expression::UnsignedMore(Codegen, expr.clone().into(), cmp_val.into());
     cfg.add(
         vartab,
@@ -206,7 +206,7 @@ fn encode_compact(
     cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
 
     cfg.set_basic_block(prepare);
-    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), 0x40.into());
+    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), (0x40 - 1).into());
     let compare = Expression::UnsignedMore(Codegen, expr.clone().into(), cmp_val.into());
     cfg.add(
         vartab,
@@ -218,7 +218,7 @@ fn encode_compact(
     );
 
     cfg.set_basic_block(medium_or_big);
-    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), 0x4000.into());
+    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), (0x4000 - 1).into());
     let compare = Expression::UnsignedMore(Codegen, expr.clone().into(), cmp_val.into());
     cfg.add(
         vartab,
