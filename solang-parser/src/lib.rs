@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Solidity file parser
+#![doc = include_str!("../README.md")]
+
 use crate::lexer::LexicalError;
 use crate::lexer::Token;
 use crate::pt::CodeLocation;
