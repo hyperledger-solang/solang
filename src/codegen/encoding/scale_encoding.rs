@@ -240,7 +240,7 @@ fn encode_compact(
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: mul.clone(),
+                value: Expression::Cast(Codegen, Uint(8), mul.clone().into()),
             },
         );
     }
@@ -257,13 +257,13 @@ fn encode_compact(
 
     cfg.set_basic_block(medium);
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
-        let mul2 = Expression::BitwiseOr(Codegen, Uint(32), mul.clone().into(), one.into());
+        let mul = Expression::BitwiseOr(Codegen, Uint(32), mul.clone().into(), one.into());
         cfg.add(
             vartab,
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: mul2,
+                value: Expression::Cast(Codegen, Uint(16), mul.clone().into()),
             },
         );
     }
@@ -280,13 +280,12 @@ fn encode_compact(
 
     cfg.set_basic_block(big);
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
-        let mul2 = Expression::BitwiseOr(Codegen, Uint(32), mul.into(), two.into());
         cfg.add(
             vartab,
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: mul2,
+                value: Expression::BitwiseOr(Codegen, Uint(32), mul.into(), two.into()),
             },
         );
     }
