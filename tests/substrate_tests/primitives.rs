@@ -99,25 +99,25 @@ fn bytes() {
 
     // parse
     let mut runtime = build_solidity(
-        "
+        r##"
         contract test {
             function const3() public returns (bytes3) {
-                return hex\"112233\";
+                return hex"112233";
             }
 
             function const4() public returns (bytes4) {
-                return \"ABCD\";
+                return "ABCD";
             }
 
             function const32() public returns (bytes32) {
-                return \"The quick brown fox jumped over \";
+                return "The quick brown fox jumped over ";
             }
 
             function test4(uint32 x, bytes4 foo) public {
                 if (x == 1)
-                    assert(foo == \"abcd\");
+                    assert(foo == "abcd");
                 else if (x == 2)
-                    assert(foo == \"ABCD\");
+                    assert(foo == "ABCD");
                 else
                     assert(false);
             }
@@ -133,7 +133,16 @@ fn bytes() {
             function test7trunc(bytes7 foo) public returns (bytes3) {
                 return bytes3(foo);
             }
-        }",
+
+            function test8() public {
+                assert(bytes4(0x00) == hex"00000000");
+                assert(
+                    bytes32(0x00d4f4fc2f5752f06faf7ece82edbdcd093e8ee1144d482ea5820899b3520315)
+                    ==
+                    hex"00d4f4fc2f5752f06faf7ece82edbdcd093e8ee1144d482ea5820899b3520315"
+                );
+            }
+        }"##,
     );
 
     runtime.function("const3", Vec::new());
@@ -167,6 +176,8 @@ fn bytes() {
     // truncating should drop values on the right
     runtime.function("test7trunc", Bytes7(*b"XYWOLEH").encode());
     assert_eq!(runtime.vm.output, Bytes3(*b"XYW").encode());
+
+    runtime.function("test8", vec![]);
 }
 
 #[test]
