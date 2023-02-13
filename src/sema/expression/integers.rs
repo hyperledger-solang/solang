@@ -201,15 +201,10 @@ pub fn bigint_to_expression(
         }
     }
 
-    // Return smallest type
-
-    let int_size = if let Some(size) = hex_str_len {
-        (size * 4) as u64 // n bits = str_len / 2 * 8 = str_len * 4
-    } else if bits < 7 {
-        8
-    } else {
-        (bits + 7) & !7
-    } as u16;
+    // Return smallest type; hex literals with odd length are not allowed.
+    let int_size = hex_str_len
+        .map(|v| if v % 2 == 0 { v as u64 * 4 } else { bits })
+        .unwrap_or_else(|| if bits < 7 { 8 } else { (bits + 7) & !7 }) as u16;
 
     if n.sign() == Sign::Minus {
         if bits > 255 {
