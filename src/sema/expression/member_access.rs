@@ -237,6 +237,7 @@ pub(super) fn member_access(
                             ns,
                             diagnostics,
                             ResolveTo::Type(&Type::Uint(32)),
+                            None,
                         )
                     }
                     ArrayLength::AnyFixed => unreachable!(),
@@ -627,19 +628,19 @@ fn type_name_expr(
 
     match (&ty, field.name.as_str()) {
         (Type::Uint(_), "min") => {
-            bigint_to_expression(loc, &BigInt::zero(), ns, diagnostics, resolve_to)
+            bigint_to_expression(loc, &BigInt::zero(), ns, diagnostics, resolve_to, None)
         }
         (Type::Uint(bits), "max") => {
             let max = BigInt::one().shl(*bits as usize).sub(1);
-            bigint_to_expression(loc, &max, ns, diagnostics, resolve_to)
+            bigint_to_expression(loc, &max, ns, diagnostics, resolve_to, None)
         }
         (Type::Int(bits), "min") => {
             let min = BigInt::zero().sub(BigInt::one().shl(*bits as usize - 1));
-            bigint_to_expression(loc, &min, ns, diagnostics, resolve_to)
+            bigint_to_expression(loc, &min, ns, diagnostics, resolve_to, None)
         }
         (Type::Int(bits), "max") => {
             let max = BigInt::one().shl(*bits as usize - 1).sub(1);
-            bigint_to_expression(loc, &max, ns, diagnostics, resolve_to)
+            bigint_to_expression(loc, &max, ns, diagnostics, resolve_to, None)
         }
         (Type::Contract(n), "name") => Ok(Expression::BytesLiteral {
             loc: *loc,

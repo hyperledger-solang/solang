@@ -227,8 +227,6 @@ impl Expression {
             (Expression::NumberLiteral { value, .. }, p, &Type::Bytes(to_len))
                 if p.is_primitive() =>
             {
-                // round up the number of bits to bytes
-                let bytes = (value.bits() + 7) / 8;
                 return if value.sign() == Sign::Minus {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
@@ -238,12 +236,12 @@ impl Expression {
                         ),
                     ));
                     Err(())
-                } else if value.sign() == Sign::Plus && bytes != to_len as u64 {
+                } else if value.sign() == Sign::Plus && from.bytes(ns) != to_len {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "number of {} bytes cannot be converted to type '{}'",
-                            bytes,
+                            from.bytes(ns),
                             to.to_string(ns)
                         ),
                     ));

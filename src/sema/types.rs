@@ -1271,8 +1271,8 @@ impl Type {
         match self {
             Type::Contract(_) | Type::Address(_) => ns.address_length as u8,
             Type::Bool => 1,
-            Type::Int(n) => *n as u8,
-            Type::Uint(n) => *n as u8,
+            Type::Int(n) => ((*n + 7) / 8) as u8,
+            Type::Uint(n) => ((*n + 7) / 8) as u8,
             Type::Rational => unreachable!(),
             Type::Bytes(n) => *n,
             Type::Enum(n) => ns.enums[*n].ty.bytes(ns),

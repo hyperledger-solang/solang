@@ -172,12 +172,14 @@ pub fn coerce_number(
 }
 
 /// Try to convert a BigInt into a Expression::NumberLiteral.
+/// The `hex_str_len` parameter is used to specify a custom length for 0-prefixed hex-literals.
 pub fn bigint_to_expression(
     loc: &pt::Loc,
     n: &BigInt,
     ns: &Namespace,
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
+    hex_str_len: Option<usize>,
 ) -> Result<Expression, ()> {
     let bits = n.bits();
 
@@ -199,9 +201,10 @@ pub fn bigint_to_expression(
         }
     }
 
-    // Return smallest type
-
-    let int_size = if bits < 7 { 8 } else { (bits + 7) & !7 } as u16;
+    // Return smallest type; hex literals with odd length are not allowed.
+    let int_size = hex_str_len
+        .map(|v| if v % 2 == 0 { v as u64 * 4 } else { bits })
+        .unwrap_or_else(|| if bits < 7 { 8 } else { (bits + 7) & !7 }) as u16;
 
     if n.sign() == Sign::Minus {
         if bits > 255 {

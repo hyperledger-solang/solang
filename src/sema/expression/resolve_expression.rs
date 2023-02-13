@@ -294,7 +294,7 @@ pub fn expression(
 
                 let n = BigInt::from_str_radix(&s, 16).unwrap();
 
-                bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to)
+                bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to, Some(s.len()))
             }
             pt::Expression::RationalNumberLiteral(loc, integer, fraction, exp) => {
                 rational_number_literal(
@@ -315,7 +315,7 @@ pub fn expression(
                 let expr_type = expr.ty();
 
                 if let Expression::NumberLiteral { value, .. } = expr {
-                    bigint_to_expression(loc, &-value, ns, diagnostics, resolve_to)
+                    bigint_to_expression(loc, &-value, ns, diagnostics, resolve_to, None)
                 } else if let Expression::RationalNumberLiteral { ty, value: r, .. } = expr {
                     Ok(Expression::RationalNumberLiteral {
                         loc: *loc,

@@ -198,6 +198,7 @@ pub(crate) fn hex_number_literal(
         ns,
         diagnostics,
         resolve_to,
+        Some(s.len()),
     )
 }
 
@@ -363,7 +364,7 @@ pub(crate) fn number_literal(
         }
     };
 
-    bigint_to_expression(loc, &n.mul(unit), ns, diagnostics, resolve_to)
+    bigint_to_expression(loc, &n.mul(unit), ns, diagnostics, resolve_to, None)
 }
 
 /// Resolve the given rational number literal, multiplied by value of unit
@@ -449,7 +450,7 @@ pub(super) fn rational_number_literal(
     let res = n.mul(unit);
 
     if res.is_integer() {
-        bigint_to_expression(loc, &res.to_integer(), ns, diagnostics, resolve_to)
+        bigint_to_expression(loc, &res.to_integer(), ns, diagnostics, resolve_to, None)
     } else {
         Ok(Expression::RationalNumberLiteral {
             loc: *loc,

@@ -458,6 +458,7 @@ pub fn expression(
                         ns,
                         &mut Diagnostics::default(),
                         ResolveTo::Type(ty),
+                        None,
                     )
                     .unwrap();
                     expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt)
@@ -488,6 +489,7 @@ pub fn expression(
                             ns,
                             &mut Diagnostics::default(),
                             ResolveTo::Type(ty),
+                            None,
                         )
                         .unwrap();
                         expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt)
@@ -2648,6 +2650,7 @@ fn array_subscript(
                 ns,
                 &mut Diagnostics::default(),
                 ResolveTo::Unknown,
+                None,
             )
             .unwrap();
             expression(&ast_bigint, cfg, contract_no, func, ns, vartab, opt)
@@ -2699,6 +2702,7 @@ fn array_subscript(
                     ns,
                     &mut Diagnostics::default(),
                     ResolveTo::Unknown,
+                    None,
                 )
                 .unwrap();
                 expression(&ast_big_int, cfg, contract_no, func, ns, vartab, opt)
