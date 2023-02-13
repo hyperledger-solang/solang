@@ -134,7 +134,7 @@ fn bytes() {
                 return bytes3(foo);
             }
 
-            function test8() public {
+            function hex_lit_leading_zero() public pure {
                 assert(bytes4(0x00) == hex"00000000");
                 assert(
                     bytes32(0x00d4f4fc2f5752f06faf7ece82edbdcd093e8ee1144d482ea5820899b3520315)
@@ -177,7 +177,7 @@ fn bytes() {
     runtime.function("test7trunc", Bytes7(*b"XYWOLEH").encode());
     assert_eq!(runtime.vm.output, Bytes3(*b"XYW").encode());
 
-    runtime.function("test8", vec![]);
+    runtime.function("hex_lit_leading_zero", vec![]);
 }
 
 #[test]
