@@ -224,11 +224,9 @@ impl Expression {
                     })
                 };
             }
-            (Expression::NumberLiteral { value, .. }, p, &Type::Bytes(bytes))
+            (Expression::NumberLiteral { value, .. }, p, &Type::Bytes(to_len))
                 if p.is_primitive() =>
             {
-                // round up the number of bits to bytes
-                let literal_byte_size = (value.bits() + 7) / 8;
                 return if value.sign() == Sign::Minus {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
@@ -238,12 +236,12 @@ impl Expression {
                         ),
                     ));
                     Err(())
-                } else if value.sign() == Sign::Plus && literal_byte_size > bytes as u64 {
+                } else if value.sign() == Sign::Plus && from.bytes(ns) != to_len {
                     diagnostics.push(Diagnostic::cast_error(
                         *loc,
                         format!(
                             "number of {} bytes cannot be converted to type '{}'",
-                            literal_byte_size,
+                            from.bytes(ns),
                             to.to_string(ns)
                         ),
                     ));
@@ -251,7 +249,7 @@ impl Expression {
                 } else {
                     Ok(Expression::NumberLiteral {
                         loc: *loc,
-                        ty: Type::Bytes(bytes),
+                        ty: Type::Bytes(to_len),
                         value: value.clone(),
                     })
                 };
