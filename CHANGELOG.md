@@ -9,10 +9,10 @@ will be documented here.
 
 ### Changed
 - Solang now uses LLVM 15. [LucasSte](https://github.com/LucasSte)
-- The Substrate Scale encoding now happens during the compiler's code generation phase, instead of during the code 
-emission phase. [xermicus](https://github.com/xermicus)
 - Solidity on Solana now required the Anchor framework for the client code, and the `@solana/solidity.js`
   Typescript library is no longer compatible with Solidity.
+- When casting hex literal numbers into the `bytesN` type, the hex literal may use leading zeros to match the size 
+with the according `bytesN`, which aligns solang with `solc`. [xermicus](https://github.com/xermicus)
 
 ### Fixed
 - Many bugs have been fixed by [seanyoung](https://github.com/seanyoung), [LucasSte](https://github.com/LucasSte)

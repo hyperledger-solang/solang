@@ -942,15 +942,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 None => None,
             };
 
-            target.value_transfer(
-                bin,
-                function,
-                success,
-                addr,
-                value,
-                ns,
-                loc,
-            );
+            target.value_transfer(bin, function, success, addr, value, ns, loc);
         }
         Instr::AbiDecode {
             res,

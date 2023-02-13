@@ -15,10 +15,7 @@ use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
 use inkwell::{AddressSpace, IntPredicate};
-<<<<<<< HEAD
-use solang_parser::pt::{self, Loc};
-=======
->>>>>>> 00cf0477 (Adapt emit to LLVM 15)
+use solang_parser::pt::Loc;
 use std::collections::HashMap;
 
 impl<'a> TargetRuntime<'a> for SubstrateTarget {
@@ -1097,10 +1094,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let salt_len = i32_const!(32);
 
         if let Some(salt) = contract_args.salt {
-            binary.builder.build_store(
-                salt_buf,
-                salt,
-            );
+            binary.builder.build_store(salt_buf, salt);
         } else {
             let (ptr, len) = self.contract_unique_salt(binary, contract_no, ns);
 
