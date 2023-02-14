@@ -1412,7 +1412,7 @@ impl SubstrateTarget {
                     false,
                     false,
                     function,
-                    &ast::Type::Uint(32),
+                    &ast::Type::Bytes(4),
                     selector,
                     data,
                 );
@@ -1843,6 +1843,21 @@ impl SubstrateTarget {
 
         (salt, binary.context.i32_type().const_int(32, false))
     }
+}
+
+/// Substrate events should be prefixed with the index of the event in the metadata
+fn event_id<'b>(
+    binary: &Binary<'b>,
+    contract: &ast::Contract,
+    event_no: usize,
+) -> Option<IntValue<'b>> {
+    let event_id = contract
+        .emits_events
+        .iter()
+        .position(|e| *e == event_no)
+        .unwrap();
+
+    Some(binary.context.i8_type().const_int(event_id as u64, false))
 }
 
 /// Print the return code of API calls to the debug buffer.
