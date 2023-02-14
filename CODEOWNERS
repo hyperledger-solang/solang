@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
-# Solang Committers
-* @seanyoung
-* @xermicus
-* @LucasSte
+* @seanyoung @xermicus @LucasSte
+src/emit/substrate/ @xermicus
+src/emit/solana/ @LucasSte @seanyoung
+integration/substrate/ @xermicus
+integration/solana/ @LucasSte @seanyoung
+integration/anchor/ @LucasSte @seanyoung
