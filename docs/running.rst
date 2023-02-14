@@ -51,7 +51,7 @@ Options:
 
 \-\-output\-meta *directory*
   Sets the directory where metadata should be saved. For Solana, the metadata is the Anchor IDL file,
-  and for Substrate this is the .contract file. If not specified, the directory specified by ``--output``
+  and, for Substrate, the .contract file. If this option is not set, the directory specified by ``--output``
   is used, and if that is not set either, the current directory is used.
 
 \-\-contract *contract-name*[,*contract-name*]...
