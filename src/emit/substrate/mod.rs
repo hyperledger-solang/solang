@@ -1412,7 +1412,7 @@ impl SubstrateTarget {
                     false,
                     false,
                     function,
-                    &ast::Type::Uint(32),
+                    &ast::Type::Bytes(4),
                     selector,
                     data,
                 );
