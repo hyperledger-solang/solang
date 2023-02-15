@@ -36,7 +36,7 @@ pub(super) fn abi_encode(
     cfg: &mut ControlFlowGraph,
     packed: bool,
 ) -> (Expression, Expression) {
-    // TODO: Use the codegen version once the substrate dispatcher is refactor into codegen.
+    // TODO: Use the codegen version once the substrate dispatcher is refactored into codegen.
     if ns.target.is_substrate() {
         return scale_encoding::abi_encode(loc, args, vartab, cfg, packed);
     }
