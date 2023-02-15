@@ -1845,6 +1845,21 @@ impl SubstrateTarget {
     }
 }
 
+/// Substrate events should be prefixed with the index of the event in the metadata
+fn event_id<'b>(
+    binary: &Binary<'b>,
+    contract: &ast::Contract,
+    event_no: usize,
+) -> Option<IntValue<'b>> {
+    let event_id = contract
+        .emits_events
+        .iter()
+        .position(|e| *e == event_no)
+        .unwrap();
+
+    Some(binary.context.i8_type().const_int(event_id as u64, false))
+}
+
 /// Print the return code of API calls to the debug buffer.
 fn log_return_code(binary: &Binary, api: &'static str, code: IntValue) {
     if !binary.options.log_api_return_codes {

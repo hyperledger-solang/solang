@@ -1382,7 +1382,8 @@ impl CodeLocation for Instr {
             Instr::Call { args, .. } => args[0].loc(),
             Instr::Return { value } if value.is_empty() => pt::Loc::Codegen,
             Instr::Return { value } => value[0].loc(),
-            Instr::EmitEvent { data, .. } => data.loc(),
+            Instr::EmitEvent { data, .. } if data.is_empty() => pt::Loc::Codegen,
+            Instr::EmitEvent { data, .. } => data[0].loc(),
             Instr::BranchCond { cond, .. } => cond.loc(),
             Instr::Store { dest, .. } => dest.loc(),
             Instr::SetStorageBytes { storage, .. }
