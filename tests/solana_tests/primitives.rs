@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity_with_overflow_check;
+use crate::build_solidity_with_options;
 use crate::{build_solidity, BorshToken};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt};
 use num_traits::{One, ToPrimitive, Zero};
@@ -770,7 +770,7 @@ fn test_power_overflow_boundaries() {
         }"#
         .replace("intN", &format!("int{width}"));
 
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
         contract.constructor(&[]);
 
         let return_value = contract
@@ -827,7 +827,7 @@ fn test_overflow_boundaries() {
             }
         }"#
         .replace("intN", &format!("int{width}"));
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
         let mut upper_boundary: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1043,7 +1043,7 @@ fn test_mul_within_range() {
         }"#
         .replace("intN", &format!("int{width}"));
 
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
         contract.constructor(&[]);
         for _ in 0..10 {
             // Max number to fit unsigned N bits is (2^N)-1
@@ -1095,7 +1095,7 @@ fn test_overflow_detect_signed() {
             }
         }"#
         .replace("intN", &format!("int{width}"));
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         contract.constructor(&[]);
 
@@ -1164,7 +1164,7 @@ fn test_overflow_detect_unsigned() {
             }
         }"#
         .replace("intN", &format!("int{width}"));
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         contract.constructor(&[]);
 

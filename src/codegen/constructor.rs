@@ -91,6 +91,7 @@ pub(super) fn call_constructor(
             salt,
             address,
             seeds,
+            loc: *loc,
         },
     );
 }

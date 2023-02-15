@@ -1218,13 +1218,14 @@ impl MockSubstrate {
 }
 
 pub fn build_solidity(src: &str) -> MockSubstrate {
-    build_solidity_with_options(src, false, false)
+    build_solidity_with_options(src, false, false, false)
 }
 
 pub fn build_solidity_with_options(
     src: &str,
     math_overflow_flag: bool,
     log_api_return_codes: bool,
+    log_runtime_errors: bool,
 ) -> MockSubstrate {
     let mut cache = FileResolver::new();
 
@@ -1237,6 +1238,7 @@ pub fn build_solidity_with_options(
         Target::default_substrate(),
         math_overflow_flag,
         log_api_return_codes,
+        log_runtime_errors,
     );
 
     ns.print_diagnostics_in_plain(&cache, false);

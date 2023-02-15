@@ -201,8 +201,9 @@ impl SubstrateTarget {
 
         bin.builder.position_at_end(bb);
 
+        let function_name: Vec<&str> = f.name.split("::").collect();
         if nonpayable(f) {
-            abort_if_value_transfer(self, bin, function, ns);
+            abort_if_value_transfer(self, bin, function, ns, function_name.last().unwrap());
         }
 
         let mut args = Vec::new();
