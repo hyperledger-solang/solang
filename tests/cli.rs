@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use assert_cmd::Command;
-use std::fs::{remove_dir, remove_file, File};
+use std::{
+    fs::{remove_dir, remove_file, File},
+    path::PathBuf,
+};
 
 #[test]
 fn create_output_dir() {
@@ -78,7 +81,6 @@ fn create_output_dir() {
     .assert()
     .failure();
 
-    remove_file("tests/create_me/flipper.json").unwrap();
-    remove_file("tests/create_me/flipper.so").unwrap();
-    remove_dir("tests/create_me").unwrap();
+    // nothing should have been created
+    assert!(!PathBuf::from("tests/create_me").exists());
 }

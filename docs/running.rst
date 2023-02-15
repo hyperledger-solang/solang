@@ -47,12 +47,12 @@ Options:
   is ignored for any other target.
 
 -o, \-\-output *directory*
-  Sets the directory where the output should be saved. This defaults to the current directory if not specifed.
+  Sets the directory where the output should be saved. This defaults to the current working directory if not set.
 
 \-\-output\-meta *directory*
   Sets the directory where metadata should be saved. For Solana, the metadata is the Anchor IDL file,
   and, for Substrate, the .contract file. If this option is not set, the directory specified by ``--output``
-  is used, and if that is not set either, the current directory is used.
+  is used, and if that is not set either, the current working directory is used.
 
 \-\-contract *contract-name*[,*contract-name*]...
   Only compile the code for the specified contracts. If any those contracts cannot be found, produce an error.
@@ -63,7 +63,7 @@ Options:
 
 \-\-importpath *directory*
   When resolving ``import`` directives, search this directory. By default ``import``
-  will only search the current directory. This option can be specified multiple times
+  will only search the current working directory. This option can be specified multiple times
   and the directories will be searched in the order specified.
 
 \-\-importmap *map=directory*
@@ -150,7 +150,7 @@ Options:
 
 \-\-importpath *directory*
   When resolving ``import`` directives, search this directory. By default ``import``
-  will only search the current directory. This option can be specified multiple times
+  will only search the current working directory. This option can be specified multiple times
   and the directories will be searched in the order specified.
 
 \-\-importmap *map=directory*
