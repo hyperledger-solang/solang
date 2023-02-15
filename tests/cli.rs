@@ -74,13 +74,13 @@ fn create_output_dir() {
         "--target",
         "solana",
         "--contract",
-        "flapper,flipper", // not flipper
+        "flapper,flipper", // not just flipper
         "--output",
         "tests/create_me",
     ])
     .assert()
     .failure();
 
-    // nothing should have been created
+    // nothing should have been created because flapper does not exist
     assert!(!PathBuf::from("tests/create_me").exists());
 }

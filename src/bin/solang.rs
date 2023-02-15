@@ -468,7 +468,7 @@ fn compile(matches: &ArgMatches) {
         exit(0);
     }
 
-    // ensure we have any contracts
+    // ensure we have at least one contracts
     if !errors && namespaces.iter().all(|(ns, _)| ns.contracts.is_empty()) {
         eprintln!("error: no contacts found");
         errors = true;
