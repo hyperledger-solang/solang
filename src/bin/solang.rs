@@ -469,7 +469,7 @@ fn compile(matches: &ArgMatches) {
     }
 
     // ensure we have any contracts
-    if !errors && !namespaces.iter().any(|(ns, _)| !ns.contracts.is_empty()) {
+    if !errors && namespaces.iter().all(|(ns, _)| ns.contracts.is_empty()) {
         eprintln!("error: no contacts found");
         errors = true;
     }
