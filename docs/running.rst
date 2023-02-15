@@ -127,9 +127,7 @@ Options:
     If multiple Solidity source files define the same contract name, you will get a single
     compiled contract file for this contract name. As a result, you will only have a single
     contract with the duplicate name without knowing from which Solidity file it originated.
-
-    Solang will not give a warning about this problem. This is the same behavior as
-    Ethereum Solidity.
+    Solang will not give a warning about this problem.
 
 
 Generating Documentation Usage
