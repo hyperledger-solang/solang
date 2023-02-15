@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use assert_cmd::Command;
-use std::{
-    fs::{remove_dir, remove_file, File},
-    path::PathBuf,
-};
+use std::fs::File;
+use tempfile::TempDir;
 
 #[test]
 fn create_output_dir() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
+
+    let tmp = TempDir::new_in("tests").unwrap();
+
+    let test1 = tmp.path().join("test1");
 
     cmd.args([
         "compile",
@@ -16,19 +18,18 @@ fn create_output_dir() {
         "--target",
         "solana",
         "--output",
-        "tests/create_me",
     ])
+    .arg(test1.clone())
     .assert()
     .success();
 
-    File::open("tests/create_me/flipper.json").expect("should exist");
-    File::open("tests/create_me/flipper.so").expect("should exist");
-
-    remove_file("tests/create_me/flipper.json").unwrap();
-    remove_file("tests/create_me/flipper.so").unwrap();
-    remove_dir("tests/create_me").unwrap();
+    File::open(test1.join("flipper.json")).expect("should exist");
+    File::open(test1.join("flipper.so")).expect("should exist");
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
+
+    let test2 = tmp.path().join("test2");
+    let test2_meta = tmp.path().join("test2_meta");
 
     cmd.args([
         "compile",
@@ -38,20 +39,15 @@ fn create_output_dir() {
         "--contract",
         "flipper",
         "--output",
-        "tests/create_me",
-        "--output-meta",
-        "tests/create_me_meta",
     ])
+    .arg(test2.clone())
+    .arg("--output-meta")
+    .arg(test2_meta.clone())
     .assert()
     .success();
 
-    File::open("tests/create_me/flipper.so").expect("should exist");
-    File::open("tests/create_me_meta/flipper.json").expect("should exist");
-
-    remove_file("tests/create_me/flipper.so").unwrap();
-    remove_dir("tests/create_me").unwrap();
-    remove_file("tests/create_me_meta/flipper.json").unwrap();
-    remove_dir("tests/create_me_meta").unwrap();
+    File::open(test2.join("flipper.so")).expect("should exist");
+    File::open(test2_meta.join("flipper.json")).expect("should exist");
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
 
@@ -67,6 +63,8 @@ fn create_output_dir() {
     .failure();
 
     let mut cmd = Command::cargo_bin("solang").unwrap();
+
+    let test3 = tmp.path().join("test3");
 
     cmd.args([
         "compile",
@@ -76,11 +74,11 @@ fn create_output_dir() {
         "--contract",
         "flapper,flipper", // not just flipper
         "--output",
-        "tests/create_me",
     ])
+    .arg(test3.clone())
     .assert()
     .failure();
 
     // nothing should have been created because flapper does not exist
-    assert!(!PathBuf::from("tests/create_me").exists());
+    assert!(!test3.exists());
 }
