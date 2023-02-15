@@ -54,7 +54,7 @@ Options:
   and, for Substrate, the .contract file. If this option is not set, the directory specified by ``--output``
   is used, and if that is not set either, the current working directory is used.
 
-\-\-contract *contract-name*[,*contract-name*]...
+\-\-contract *contract-name* [, *contract-name*]...
   Only compile the code for the specified contracts. If any those contracts cannot be found, produce an error.
 
 -O *optimization level*
@@ -121,6 +121,16 @@ Options:
 
 \-\-log\-api\-return\-codes
    Disable the :ref:`common-subexpression-elimination` optimization
+
+.. warning::
+
+    If multiple Solidity source files define the same contract name, you will get a single
+    compiled contract file for this contract name. As a result, you will only have a single
+    contract with the duplicate name without knowing from which Solidity file it originated.
+
+    Solang will not give a warning about this problem. This is the same behavior as
+    Ethereum Solidity.
+
 
 Generating Documentation Usage
 ______________________________

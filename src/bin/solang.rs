@@ -432,13 +432,12 @@ fn compile(matches: &ArgMatches) {
     let mut errors = false;
 
     // build a map of requested contract names, and a flag specifying whether it was found or not
-    let mut contract_names: HashSet<&str> = HashSet::new();
-
-    if let Some(values) = matches.get_many::<String>("CONTRACT") {
-        for v in values {
-            contract_names.insert(v.as_str());
-        }
-    }
+    let contract_names: HashSet<&str> = if let Some(values) = matches.get_many::<String>("CONTRACT")
+    {
+        values.map(|v| v.as_str()).collect()
+    } else {
+        HashSet::new()
+    };
 
     for filename in matches.get_many::<OsString>("INPUT").unwrap() {
         // TODO: this could be parallelized using e.g. rayon
