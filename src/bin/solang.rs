@@ -431,7 +431,7 @@ fn compile(matches: &ArgMatches) {
 
     let mut errors = false;
 
-    // build a map of requested contract names, and a flag specifying whether it was found or not
+    // Build a map of requested contract names, and a flag specifying whether it was found or not
     let contract_names: HashSet<&str> = if let Some(values) = matches.get_many::<String>("CONTRACT")
     {
         values.map(|v| v.as_str()).collect()
@@ -467,13 +467,13 @@ fn compile(matches: &ArgMatches) {
         exit(0);
     }
 
-    // ensure we have at least one contracts
+    // Ensure we have at least one contract
     if !errors && namespaces.iter().all(|(ns, _)| ns.contracts.is_empty()) {
         eprintln!("error: no contacts found");
         errors = true;
     }
 
-    // ensure we all the requested contracts
+    // Ensure we have all the requested contracts
     let not_found: Vec<_> = contract_names
         .iter()
         .filter(|name| {
