@@ -212,6 +212,7 @@ impl SubstrateTarget {
         function: FunctionValue,
         abort_value_transfers: bool,
         ns: &ast::Namespace,
+        function_name: &str,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = binary.context.append_basic_block(function, "entry");
 
@@ -219,7 +220,7 @@ impl SubstrateTarget {
 
         // after copying stratch, first thing to do is abort value transfers if constructors not payable
         if abort_value_transfers {
-            abort_if_value_transfer(self, binary, function, ns);
+            abort_if_value_transfer(self, binary, function, ns, function_name);
         }
 
         // init our heap
@@ -367,7 +368,7 @@ impl SubstrateTarget {
 
         // deploy always receives an endowment so no value check here
         let (deploy_args, deploy_args_length) =
-            self.public_function_prelude(binary, function, false, ns);
+            self.public_function_prelude(binary, function, false, ns, "deploy");
 
         // init our storage vars
         binary.builder.build_call(initializer, &[], "");
@@ -409,11 +410,12 @@ impl SubstrateTarget {
             None,
         );
 
-        let (call_args, call_args_length) = self.public_function_prelude(
+        let (contract_args, contract_args_length) = self.public_function_prelude(
             binary,
             function,
             binary.function_abort_value_transfers,
             ns,
+            "call",
         );
 
         self.emit_function_dispatch(
@@ -421,8 +423,8 @@ impl SubstrateTarget {
             contract,
             ns,
             pt::FunctionTy::Function,
-            call_args,
-            call_args_length,
+            contract_args,
+            contract_args_length,
             function,
             &binary.functions,
             None,

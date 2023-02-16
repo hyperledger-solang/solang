@@ -4,7 +4,7 @@
   "description": "Integration tests with Solang and Solana",
   "scripts": {
     "test": "tsc; ts-node setup.ts; mocha --parallel *.spec.ts",
-    "build": "solang compile *.sol --target solana -v; solang compile --math-overflow overflow.sol --target solana -v"
+    "build": "solang compile *.sol --target solana -v --log-runtime-errors --math-overflow"
   },
   "author": "Sean Young <sean@mess.org>",
   "license": "MIT",

@@ -33,6 +33,7 @@ contract store {
     }
 
     function do_ops() public {
+        unchecked {
         // u64 will overflow to 1
         u64 += 2;
         u32 &= 0xffff;
@@ -45,6 +46,7 @@ contract store {
         // make upper case
         fixedbytes |= 0x20202020;
         bar = enum_bar.bar4;
+        }
     }
 
     function push_zero() public {

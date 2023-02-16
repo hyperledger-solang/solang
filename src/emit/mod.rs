@@ -12,6 +12,7 @@ use inkwell::types::IntType;
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
+use solang_parser::pt::Loc;
 
 pub mod binary;
 mod cfg;
@@ -32,6 +33,12 @@ use crate::sema::ast;
 #[derive(Clone)]
 pub struct Variable<'a> {
     value: BasicValueEnum<'a>,
+}
+
+pub struct ContractArgs<'b> {
+    value: Option<IntValue<'b>>,
+    salt: Option<IntValue<'b>>,
+    seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
 }
 
 #[derive(Clone, Copy)]
@@ -168,6 +175,8 @@ pub trait TargetRuntime<'a> {
         function: FunctionValue,
         slot: IntValue<'a>,
         index: IntValue<'a>,
+        loc: Loc,
+        ns: &Namespace,
     ) -> IntValue<'a>;
 
     fn set_storage_bytes_subscript(
@@ -177,6 +186,8 @@ pub trait TargetRuntime<'a> {
         slot: IntValue<'a>,
         index: IntValue<'a>,
         value: IntValue<'a>,
+        ns: &Namespace,
+        loc: Loc,
     );
 
     fn storage_subscript(
@@ -207,6 +218,7 @@ pub trait TargetRuntime<'a> {
         slot: IntValue<'a>,
         load: bool,
         ns: &Namespace,
+        loc: Loc,
     ) -> Option<BasicValueEnum<'a>>;
 
     fn storage_array_length(
@@ -230,6 +242,14 @@ pub trait TargetRuntime<'a> {
 
     /// Prints a string
     fn print(&self, bin: &Binary, string: PointerValue, length: IntValue);
+
+    fn log_runtime_error(
+        &self,
+        bin: &Binary,
+        reason_string: String,
+        reason_loc: Option<Loc>,
+        ns: &Namespace,
+    );
 
     /// Return success without any result
     fn return_empty_abi(&self, bin: &Binary);
@@ -263,13 +283,13 @@ pub trait TargetRuntime<'a> {
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
         gas: IntValue<'b>,
-        value: Option<IntValue<'b>>,
-        salt: Option<IntValue<'b>>,
-        seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
+        contract_args: ContractArgs<'b>,
         ns: &Namespace,
+        loc: Loc,
     );
 
     /// call external function
+    #[allow(clippy::too_many_arguments)]
     fn external_call<'b>(
         &self,
         bin: &Binary<'b>,
@@ -284,6 +304,7 @@ pub trait TargetRuntime<'a> {
         seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         ty: CallTy,
         ns: &Namespace,
+        loc: Loc,
     );
 
     /// send value to address
@@ -295,6 +316,7 @@ pub trait TargetRuntime<'a> {
         _address: PointerValue<'b>,
         _value: IntValue<'b>,
         _ns: &Namespace,
+        loc: Loc,
     );
 
     /// builtin expressions

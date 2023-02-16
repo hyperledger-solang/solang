@@ -2,18 +2,20 @@
 
 use crate::codegen;
 use crate::codegen::cfg::{HashTy, ReturnCode};
+use crate::codegen::error_msg_with_loc;
 use crate::emit::binary::Binary;
-use crate::emit::expression::expression;
+use crate::emit::expression::{expression, string_to_basic_value};
 use crate::emit::loop_builder::LoopBuilder;
 use crate::emit::solana::SolanaTarget;
-use crate::emit::{TargetRuntime, Variable};
-use crate::sema::ast;
+use crate::emit::{ContractArgs, TargetRuntime, Variable};
+use crate::sema::ast::{self, Namespace};
 use inkwell::types::{BasicType, BasicTypeEnum, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
 use inkwell::{AddressSpace, IntPredicate};
 use num_traits::ToPrimitive;
+use solang_parser::pt::Loc;
 use std::collections::HashMap;
 
 impl<'a> TargetRuntime<'a> for SolanaTarget {
@@ -78,6 +80,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue,
         slot: IntValue<'a>,
         index: IntValue<'a>,
+        loc: Loc,
+        ns: &Namespace,
     ) -> IntValue<'a> {
         let data = self.contract_storage_data(binary);
 
@@ -120,6 +124,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         binary.builder.position_at_end(bang_block);
 
+        self.log_runtime_error(
+            binary,
+            "storage array index out of bounds".to_string(),
+            Some(loc),
+            ns,
+        );
         self.assert_failure(
             binary,
             binary
@@ -146,6 +156,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         slot: IntValue,
         index: IntValue,
         val: IntValue,
+        ns: &Namespace,
+        loc: Loc,
     ) {
         let data = self.contract_storage_data(binary);
 
@@ -187,6 +199,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_conditional_branch(in_range, set_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
+        self.log_runtime_error(
+            binary,
+            "storage index out of bounds".to_string(),
+            Some(loc),
+            ns,
+        );
         self.assert_failure(
             binary,
             binary
@@ -384,6 +402,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         slot: IntValue<'a>,
         load: bool,
         ns: &ast::Namespace,
+        loc: Loc,
     ) -> Option<BasicValueEnum<'a>> {
         let data = self.contract_storage_data(binary);
         let account = self.contract_storage_account(binary);
@@ -428,6 +447,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
+        self.log_runtime_error(
+            binary,
+            "pop from empty storage array".to_string(),
+            Some(loc),
+            ns,
+        );
         self.assert_failure(
             binary,
             binary
@@ -1254,10 +1279,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
         _gas: IntValue<'b>,
-        _value: Option<IntValue<'b>>,
-        _salt: Option<IntValue<'b>>,
-        seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
+        contract_args: ContractArgs<'b>,
         ns: &ast::Namespace,
+        loc: Loc,
     ) {
         let const_program_id = binary.builder.build_pointer_cast(
             binary.emit_global_string(
@@ -1287,7 +1311,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             "address",
         );
 
-        let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = seeds {
+        let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = contract_args.seeds {
             (
                 binary.builder.build_pointer_cast(
                     seeds,
@@ -1351,6 +1375,12 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .build_conditional_branch(is_success, success_block, bail_block);
 
             binary.builder.position_at_end(bail_block);
+            self.log_runtime_error(
+                binary,
+                "contract creation failed".to_string(),
+                Some(loc),
+                ns,
+            );
 
             binary.builder.build_return(Some(&ret));
 
@@ -1483,6 +1513,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
         _ty: ast::CallTy,
         _ns: &ast::Namespace,
+        _loc: Loc,
     ) {
         let address = address.unwrap();
 
@@ -1692,7 +1723,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             binary.builder.position_at_end(bail_block);
 
-            // should we log "call failed?"
+            // We can inform the programmer about where the call failed using _loc. This can be done in all sol_log() in stdlib/solana.c.
             self.assert_failure(
                 binary,
                 binary
@@ -1863,6 +1894,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         address: PointerValue<'b>,
         value: IntValue<'b>,
         _ns: &ast::Namespace,
+        _loc: Loc,
     ) {
         let parameters = self.sol_parameters(binary);
 
@@ -2403,5 +2435,25 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary
             .builder
             .build_return(Some(&binary.return_values[&ReturnCode::Success]));
+    }
+
+    fn log_runtime_error(
+        &self,
+        bin: &Binary,
+        reason_string: String,
+        reason_loc: Option<Loc>,
+        ns: &Namespace,
+    ) {
+        if !bin.options.log_runtime_errors {
+            return;
+        }
+
+        let error_with_loc = error_msg_with_loc(ns, &reason_string, reason_loc);
+        let custom_error = string_to_basic_value(bin, ns, error_with_loc);
+        self.print(
+            bin,
+            bin.vector_bytes(custom_error),
+            bin.vector_len(custom_error),
+        );
     }
 }
