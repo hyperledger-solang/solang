@@ -1,4 +1,4 @@
-<img src="docs//hl_solang_horizontal-color.svg" alt="Solang Logo" width="75%"/>
+<img src="https://raw.githubusercontent.com/hyperledger/solang/main/docs/hl_solang_horizontal-color.svg" alt="Solang Logo" width="75%"/>
 
 # solang - Solidity Compiler for Solana and Substrate
 
