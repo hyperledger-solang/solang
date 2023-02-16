@@ -342,6 +342,7 @@ fn string() {
         salt: Some(compare2.clone()),
         address: None,
         seeds: None,
+        loc: Loc::Codegen,
     };
 
     let mut ave = AvailableExpression::default();

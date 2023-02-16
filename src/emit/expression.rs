@@ -120,7 +120,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .unwrap()
                 .into()
         }
-        Expression::Add(_, _, unchecked, l, r) => {
+        Expression::Add(loc, _, unchecked, l, r) => {
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
@@ -134,13 +134,15 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     right,
                     BinaryOp::Add,
                     signed,
+                    ns,
+                    *loc,
                 )
                 .into()
             } else {
                 bin.builder.build_int_add(left, right, "").into()
             }
         }
-        Expression::Subtract(_, _, unchecked, l, r) => {
+        Expression::Subtract(loc, _, unchecked, l, r) => {
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
@@ -154,13 +156,15 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     right,
                     BinaryOp::Subtract,
                     signed,
+                    ns,
+                    *loc,
                 )
                 .into()
             } else {
                 bin.builder.build_int_sub(left, right, "").into()
             }
         }
-        Expression::Multiply(_, res_ty, unchecked, l, r) => {
+        Expression::Multiply(loc, res_ty, unchecked, l, r) => {
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
@@ -172,10 +176,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 left,
                 right,
                 res_ty.is_signed_int(),
+                ns,
+                *loc,
             )
             .into()
         }
-        Expression::UnsignedDivide(_, _, l, r) => {
+        Expression::UnsignedDivide(loc, _, l, r) => {
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
@@ -242,6 +248,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.position_at_end(bail_block);
 
                 // throw division by zero error should be an assert
+                target.log_runtime_error(bin, "division by zero".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -269,7 +276,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.build_int_unsigned_div(left, right, "").into()
             }
         }
-        Expression::SignedDivide(_, _, l, r) => {
+        Expression::SignedDivide(loc, _, l, r) => {
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
@@ -336,6 +343,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.position_at_end(bail_block);
 
                 // throw division by zero error should be an assert
+                target.log_runtime_error(bin, "division by zero".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -411,7 +419,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.build_int_signed_div(left, right, "").into()
             }
         }
-        Expression::UnsignedModulo(_, _, l, r) => {
+        Expression::UnsignedModulo(loc, _, l, r) => {
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
@@ -478,6 +486,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.position_at_end(bail_block);
 
                 // throw division by zero error should be an assert
+                target.log_runtime_error(bin, "division by zero".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -502,7 +511,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.build_int_unsigned_rem(left, right, "").into()
             }
         }
-        Expression::SignedModulo(_, _, l, r) => {
+        Expression::SignedModulo(loc, _, l, r) => {
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
@@ -569,6 +578,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.position_at_end(bail_block);
 
                 // throw division by zero error should be an assert
+                target.log_runtime_error(bin, "division by zero".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -635,13 +645,22 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.build_int_signed_rem(left, right, "").into()
             }
         }
-        Expression::Power(_, res_ty, unchecked, l, r) => {
+        Expression::Power(loc, res_ty, unchecked, l, r) => {
             let left = expression(target, bin, l, vartab, function, ns);
             let right = expression(target, bin, r, vartab, function, ns);
 
             let bits = left.into_int_value().get_type().get_bit_width();
             let o = bin.build_alloca(function, left.get_type(), "");
-            let f = power(target, bin, *unchecked, bits, res_ty.is_signed_int(), o);
+            let f = power(
+                target,
+                bin,
+                *unchecked,
+                bits,
+                res_ty.is_signed_int(),
+                o,
+                ns,
+                *loc,
+            );
 
             // If the function returns zero, then the operation was successful.
             let error_return = bin
@@ -673,6 +692,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .build_conditional_branch(error_ret, error_block, return_block);
                 bin.builder.position_at_end(error_block);
 
+                target.log_runtime_error(bin, "math overflow".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -971,7 +991,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .left()
                 .unwrap()
         }
-        Expression::BytesCast(_, Type::Bytes(n), Type::DynamicBytes, e) => {
+        Expression::BytesCast(loc, Type::Bytes(n), Type::DynamicBytes, e) => {
             let array = expression(target, bin, e, vartab, function, ns);
 
             let len = bin.vector_len(array);
@@ -989,6 +1009,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_conditional_branch(is_equal_to_n, cast, error);
 
             bin.builder.position_at_end(error);
+            target.log_runtime_error(bin, "bytes cast error".to_string(), Some(*loc), ns);
             target.assert_failure(
                 bin,
                 bin.context
@@ -1066,12 +1087,12 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_right_shift(left, right, *signed, "")
                 .into()
         }
-        Expression::Subscript(_, elem_ty, ty, a, i) => {
+        Expression::Subscript(loc, elem_ty, ty, a, i) => {
             if ty.is_storage_bytes() {
                 let index = expression(target, bin, i, vartab, function, ns).into_int_value();
                 let slot = expression(target, bin, a, vartab, function, ns).into_int_value();
                 target
-                    .get_storage_bytes_subscript(bin, function, slot, index)
+                    .get_storage_bytes_subscript(bin, function, slot, index, *loc, ns)
                     .into()
             } else if ty.is_contract_storage() {
                 let array = expression(target, bin, a, vartab, function, ns).into_int_value();
@@ -1929,4 +1950,22 @@ fn runtime_cast<'a>(
     } else {
         val
     }
+}
+
+pub(crate) fn string_to_basic_value<'a>(
+    bin: &Binary<'a>,
+    ns: &Namespace,
+    input: String,
+) -> BasicValueEnum<'a> {
+    let elem = Type::Bytes(1);
+    let size = bin.context.i32_type().const_int(input.len() as u64, false);
+
+    let elem_size = bin
+        .llvm_type(&elem, ns)
+        .size_of()
+        .unwrap()
+        .const_cast(bin.context.i32_type(), false);
+
+    let init = Option::Some(input.as_bytes().to_vec());
+    bin.vector_new(size, elem_size, init.as_ref()).into()
 }

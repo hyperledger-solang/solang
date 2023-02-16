@@ -12,6 +12,7 @@ use super::{
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::encoding::create_encoder;
+use crate::codegen::error_msg_with_loc;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::{
@@ -791,6 +792,7 @@ pub fn expression(
                         res: address_res,
                         ty: args[0].ty(),
                         array: array_pos,
+                        loc: *loc,
                     },
                 );
                 cfg.modify_temp_array_length(*loc, true, array_pos, vartab);
@@ -818,12 +820,12 @@ pub fn expression(
             kind: ast::Builtin::Require,
             args,
             ..
-        } => require(cfg, args, contract_no, func, ns, vartab, opt),
+        } => require(cfg, args, contract_no, func, ns, vartab, opt, expr.loc()),
         ast::Expression::Builtin {
             kind: ast::Builtin::Revert,
             args,
             ..
-        } => revert(args, cfg, contract_no, func, ns, vartab, opt),
+        } => revert(args, cfg, contract_no, func, ns, vartab, opt, expr.loc()),
         ast::Expression::Builtin {
             kind: ast::Builtin::SelfDestruct,
             args,
@@ -1299,6 +1301,14 @@ fn expr_assert(
         },
     );
     cfg.set_basic_block(false_);
+    log_runtime_error(
+        opt.log_runtime_errors,
+        "assert failure",
+        args.loc(),
+        cfg,
+        vartab,
+        ns,
+    );
     assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
     cfg.set_basic_block(true_);
     Expression::Poison
@@ -1312,6 +1322,7 @@ fn require(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    loc: Loc,
 ) -> Expression {
     let true_ = cfg.new_basic_block("noassert".to_owned());
     let false_ = cfg.new_basic_block("doassert".to_owned());
@@ -1329,10 +1340,37 @@ fn require(
         .get(1)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
     match ns.target {
-        // On Solana and Substrate, print the reason, do not abi encoding it
+        // On Solana and Substrate, print the reason, do not abi encode it
         Target::Solana | Target::Substrate { .. } => {
-            if let Some(expr) = expr {
-                cfg.add(vartab, Instr::Print { expr });
+            if opt.log_runtime_errors {
+                if let Some(expr) = expr {
+                    let error_string =
+                        error_msg_with_loc(ns, " require condition failed", Some(expr.loc()));
+                    let print_expr = Expression::FormatString(
+                        Loc::Codegen,
+                        vec![
+                            (FormatArg::Default, expr),
+                            (
+                                FormatArg::StringLiteral,
+                                Expression::BytesLiteral(
+                                    Loc::Codegen,
+                                    Type::Bytes(error_string.as_bytes().len() as u8),
+                                    error_string.as_bytes().to_vec(),
+                                ),
+                            ),
+                        ],
+                    );
+                    cfg.add(vartab, Instr::Print { expr: print_expr });
+                } else {
+                    log_runtime_error(
+                        opt.log_runtime_errors,
+                        "require condition failed",
+                        loc,
+                        cfg,
+                        vartab,
+                        ns,
+                    );
+                }
             }
             assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
         }
@@ -1350,10 +1388,42 @@ fn revert(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    loc: Loc,
 ) -> Expression {
     let expr = args
         .get(0)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
+
+    if opt.log_runtime_errors {
+        if expr.is_some() {
+            let error_string = error_msg_with_loc(ns, " revert encountered", Some(loc));
+            let print_expr = Expression::FormatString(
+                Loc::Codegen,
+                vec![
+                    (FormatArg::Default, expr.clone().unwrap()),
+                    (
+                        FormatArg::StringLiteral,
+                        Expression::BytesLiteral(
+                            Loc::Codegen,
+                            Type::Bytes(error_string.as_bytes().len() as u8),
+                            error_string.as_bytes().to_vec(),
+                        ),
+                    ),
+                ],
+            );
+            cfg.add(vartab, Instr::Print { expr: print_expr });
+        } else {
+            log_runtime_error(
+                opt.log_runtime_errors,
+                "revert encountered",
+                loc,
+                cfg,
+                vartab,
+                ns,
+            )
+        }
+    }
+
     assert_failure(&Loc::Codegen, expr, ns, cfg, vartab);
     Expression::Poison
 }
@@ -1695,6 +1765,14 @@ fn expr_builtin(
             );
 
             cfg.set_basic_block(out_of_bounds);
+            log_runtime_error(
+                opt.log_runtime_errors,
+                "integer too large to write in buffer",
+                *loc,
+                cfg,
+                vartab,
+                ns,
+            );
             assert_failure(loc, None, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
@@ -1746,6 +1824,14 @@ fn expr_builtin(
             );
 
             cfg.set_basic_block(out_ouf_bounds);
+            log_runtime_error(
+                opt.log_runtime_errors,
+                "data does not fit into buffer",
+                *loc,
+                cfg,
+                vartab,
+                ns,
+            );
             assert_failure(loc, None, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
@@ -1814,6 +1900,14 @@ fn expr_builtin(
             );
 
             cfg.set_basic_block(out_of_bounds);
+            log_runtime_error(
+                opt.log_runtime_errors,
+                "read integer out of bounds",
+                *loc,
+                cfg,
+                vartab,
+                ns,
+            );
             assert_failure(loc, None, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
@@ -2011,6 +2105,14 @@ fn checking_trunc(
     );
 
     cfg.set_basic_block(out_of_bounds);
+    log_runtime_error(
+        opt.log_runtime_errors,
+        "truncated type overflows",
+        *loc,
+        cfg,
+        vartab,
+        ns,
+    );
     assert_failure(loc, None, ns, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
@@ -2760,6 +2862,14 @@ fn array_subscript(
     );
 
     cfg.set_basic_block(out_of_bounds);
+    log_runtime_error(
+        opt.log_runtime_errors,
+        "array index out of bounds",
+        *loc,
+        cfg,
+        vartab,
+        ns,
+    );
     assert_failure(loc, None, ns, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
@@ -3063,4 +3173,33 @@ fn code(loc: &Loc, contract_no: usize, ns: &Namespace, opt: &Options) -> Express
     let size = Expression::NumberLiteral(*loc, Type::Uint(32), code.len().into());
 
     Expression::AllocDynamicBytes(*loc, Type::DynamicBytes, size.into(), Some(code))
+}
+
+fn string_to_expr(string: String) -> Expression {
+    Expression::FormatString(
+        Loc::Codegen,
+        vec![(
+            FormatArg::StringLiteral,
+            Expression::BytesLiteral(
+                Loc::Codegen,
+                Type::Bytes(string.as_bytes().len() as u8),
+                string.as_bytes().to_vec(),
+            ),
+        )],
+    )
+}
+
+pub(crate) fn log_runtime_error(
+    report_error: bool,
+    reason: &str,
+    reason_loc: Loc,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) {
+    if report_error {
+        let error_with_loc = error_msg_with_loc(ns, reason, Some(reason_loc));
+        let expr = string_to_expr(error_with_loc);
+        cfg.add(vartab, Instr::Print { expr });
+    }
 }

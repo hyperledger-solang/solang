@@ -81,10 +81,22 @@ export function transaction(tx: SubmittableExtrinsic<"promise", ISubmittableResu
 
 // Returns the required gas estimated from a dry run
 export async function weight(api: ApiPromise, contract: ContractPromise, message: string, args?: unknown[], value?: number) {
+  let res = await dry_run(api, contract, message, args, value);
+  return res.gasRequired
+}
+
+// Returns the debug buffer from the dry run result
+export async function debug_buffer(api: ApiPromise, contract: ContractPromise, message: string, args?: unknown[], value?: number) {
+  let res = await dry_run(api, contract, message, args, value);
+  return res.debugMessage.toHuman()
+}
+
+// Return dry run result
+export async function dry_run(api: ApiPromise, contract: ContractPromise, message: string, args?: unknown[], value?: number) {
   const ALICE = new Keyring({ type: 'sr25519' }).addFromUri('//Alice').address;
   const msg = contract.abi.findMessage(message);
   const dry = await api.call.contractsApi.call(ALICE, contract.address, value ? value : 0, null, null, msg.toU8a(args ? args : []));
-  return dry.gasRequired;
+  return dry;
 }
 
 // FIXME: The old contract.query API does not support WeightV2 yet

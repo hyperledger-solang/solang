@@ -22,6 +22,7 @@ use num_traits::One;
 use parse_display::Display;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
+use solang_parser::pt::Loc;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ops::AddAssign;
 use std::str;
@@ -106,7 +107,12 @@ pub enum Instr {
     },
     /// Pop element from memory array. The push builtin returns a reference
     /// to the new element which is stored in res.
-    PopMemory { res: usize, ty: Type, array: usize },
+    PopMemory {
+        res: usize,
+        ty: Type,
+        array: usize,
+        loc: Loc,
+    },
     /// Create contract and call constructor. If creating the contract fails,
     /// either store the result in success or abort success.
     Constructor {
@@ -120,6 +126,7 @@ pub enum Instr {
         salt: Option<Expression>,
         address: Option<Expression>,
         seeds: Option<Expression>,
+        loc: Loc,
     },
     /// Call external functions. If the call fails, set the success failure
     /// or abort if this is None
@@ -999,7 +1006,7 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, value),
             ),
-            Instr::PopMemory { res, ty, array } => format!(
+            Instr::PopMemory { res, ty, array, loc:_ } => format!(
                 "%{}, %{} = pop array ty:{}",
                 self.vars[res].id.name,
                 self.vars[array].id.name,
@@ -1167,7 +1174,8 @@ impl ControlFlowGraph {
                 gas,
                 salt,
                 value,
-                address,seeds
+                address,seeds,
+                loc:_
 
             } => format!(
                 "%{}, {} = constructor salt:{} value:{} gas:{} address:{} seeds:{} {} (encoded buffer: {}, buffer len: {})",
