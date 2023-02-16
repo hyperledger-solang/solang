@@ -208,7 +208,8 @@ jobs:
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
         docker buildx build . \
           ${{steps.push.outputs.push}} \
-          -t ghcr.io/${GITHUB_REPOSITORY}:latest \
+          --provenance=false \
+          --tag ghcr.io/${GITHUB_REPOSITORY}:latest \
           --platform linux/arm64,linux/amd64 \
           --label org.opencontainers.image.description="Solidity Compiler for Solana and Substrate version $(git describe --tags)"
 
