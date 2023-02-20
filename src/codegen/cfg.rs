@@ -32,7 +32,7 @@ use std::{fmt, fmt::Write};
 // IndexMap <ArrayVariable res , res of temp variable>
 pub type ArrayLengthVars = IndexMap<usize, usize>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum Instr {
     /// Set variable
@@ -384,29 +384,14 @@ impl fmt::Display for HashTy {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct BasicBlock {
     pub phis: Option<BTreeSet<usize>>,
     pub name: String,
-    pub instr: Vec<(InstrOrigin, Instr)>,
+    pub instr: Vec<Instr>,
     pub defs: reaching_definitions::VarDefs,
     pub loop_reaching_variables: HashSet<usize>,
     pub transfers: Vec<Vec<reaching_definitions::Transfer>>,
-}
-
-/// This enum saves information about the origin of each instruction. They can originate from
-/// Solidity code, Yul code or during code generation.
-#[derive(Clone)]
-pub enum InstrOrigin {
-    Solidity,
-    Yul,
-    Codegen,
-}
-
-impl BasicBlock {
-    fn add(&mut self, instr_origin: InstrOrigin, ins: Instr) {
-        self.instr.push((instr_origin, ins));
-    }
 }
 
 #[derive(Clone)]
@@ -503,20 +488,12 @@ impl ControlFlowGraph {
         self.current = pos;
     }
 
-    /// Add an instruction from Solidity to the CFG
+    /// Add an instruction to the CFG
     pub fn add(&mut self, vartab: &mut Vartable, ins: Instr) {
         if let Instr::Set { res, .. } = ins {
             vartab.set_dirty(res);
         }
-        self.blocks[self.current].add(InstrOrigin::Solidity, ins);
-    }
-
-    /// Add an instruction from Yul to the CFG
-    pub fn add_yul(&mut self, vartab: &mut Vartable, ins: Instr) {
-        if let Instr::Set { res, .. } = ins {
-            vartab.set_dirty(res);
-        }
-        self.blocks[self.current].add(InstrOrigin::Yul, ins);
+        self.blocks[self.current].instr.push(ins);
     }
 
     /// Retrieve the basic block being processed
@@ -1311,7 +1288,7 @@ impl ControlFlowGraph {
             .unwrap();
         }
 
-        for (_, ins) in &self.blocks[pos].instr {
+        for ins in &self.blocks[pos].instr {
             writeln!(s, "\t{}", self.instr_to_string(contract, ns, ins)).unwrap();
         }
 

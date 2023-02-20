@@ -17,7 +17,6 @@ contract testing  {
 
             // CHECK: block1: # cond
             // CHECK: ty:uint256 %1.cse_temp = (zext uint256 (arg #0))
-            // CHECK: branch block1
             for {let i := 0} lt(i, 10) {i := add(i, 1)} {
                 // CHECK: block3: # body
                 // CHECK: branchcond (%1.cse_temp == uint256 259), block5, block6

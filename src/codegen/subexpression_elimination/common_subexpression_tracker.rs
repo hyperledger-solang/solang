@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::InstrOrigin;
+use crate::codegen::subexpression_elimination::anticipated_expressions::AnticipatedExpressions;
 use crate::codegen::subexpression_elimination::{BasicExpression, ExpressionType};
 use crate::codegen::{
     vartable::{Storage, Variable},
@@ -11,7 +11,7 @@ use crate::sema::ast::{Namespace, Type};
 use bitflags::bitflags;
 use solang_parser::pt::OptionalCodeLocation;
 use solang_parser::pt::{Identifier, Loc};
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 #[derive(Clone)]
 struct CommonSubexpression {
@@ -34,25 +34,22 @@ bitflags! {
 }
 
 #[derive(Default, Clone)]
-pub struct CommonSubExpressionTracker {
+pub struct CommonSubExpressionTracker<'a> {
     inserted_subexpressions: HashMap<ExpressionType, usize>,
     common_subexpressions: Vec<CommonSubexpression>,
     len: usize,
     name_cnt: usize,
     cur_block: usize,
-    new_cfg_instr: Vec<(InstrOrigin, Instr)>,
+    new_cfg_instr: Vec<Instr>,
     parent_block_instr: Vec<(usize, Instr)>,
     /// Map from variable number to common subexpression
     mapped_variables: HashMap<usize, usize>,
-    /// The CFG is a cyclic graph. In order properly find the lowest common block,
-    /// we transformed it in a DAG, removing cycles from loops.
-    cfg_dag: Vec<Vec<usize>>,
+    anticipated_expressions: AnticipatedExpressions<'a>,
 }
 
-impl CommonSubExpressionTracker {
-    /// Save the DAG to the CST
-    pub fn set_dag(&mut self, dag: Vec<Vec<usize>>) {
-        self.cfg_dag = dag;
+impl<'a> CommonSubExpressionTracker<'a> {
+    pub(super) fn set_anticipated(&mut self, anticipated: AnticipatedExpressions<'a>) {
+        self.anticipated_expressions = anticipated;
     }
 
     /// Add an expression to the tracker.
@@ -157,15 +154,21 @@ impl CommonSubExpressionTracker {
     /// '''
     ///
     /// This avoids the repeated calculation of 'a+b'
-    pub fn check_availability_on_branches(&mut self, expr_type: &ExpressionType) {
+    pub fn check_availability_on_branches(
+        &mut self,
+        expr_type: &ExpressionType,
+        expr: &Expression,
+    ) {
         if let Some(expr_id) = self.inserted_subexpressions.get(expr_type) {
             let expr_block = self.common_subexpressions[*expr_id].block;
             let expr_block = self.common_subexpressions[*expr_id]
                 .on_parent_block
                 .unwrap_or(expr_block);
-            let ancestor = self.find_parent_block(self.cur_block, expr_block);
-            if ancestor != expr_block {
-                self.common_subexpressions[*expr_id].on_parent_block = Some(ancestor);
+            let ancestor = self.find_parent_block(self.cur_block, expr_block, expr);
+            if let Some(ancestor_no) = ancestor {
+                if ancestor_no != expr_block {
+                    self.common_subexpressions[*expr_id].on_parent_block = Some(ancestor_no);
+                }
             }
         }
     }
@@ -196,7 +199,7 @@ impl CommonSubExpressionTracker {
             };
 
             if common_expression.on_parent_block.is_none() {
-                self.new_cfg_instr.push((InstrOrigin::Codegen, new_instr));
+                self.new_cfg_instr.push(new_instr);
             } else {
                 self.parent_block_instr
                     .push((common_expression.on_parent_block.unwrap(), new_instr));
@@ -217,18 +220,16 @@ impl CommonSubExpressionTracker {
     }
 
     /// Add new instructions to the instruction vector
-    pub fn add_new_instructions(&mut self, instr_vec: &mut Vec<(InstrOrigin, Instr)>) {
+    pub fn add_new_instructions(&mut self, instr_vec: &mut Vec<Instr>) {
         instr_vec.append(&mut self.new_cfg_instr);
     }
 
-    /// If a variable create should be hoisted in a different block than where it it read, we
+    /// If a variable create should be placed in a different block than where it it read, we
     /// do it here.
     pub fn add_parent_block_instructions(&self, cfg: &mut ControlFlowGraph) {
         for (block_no, instr) in &self.parent_block_instr {
             let index = cfg.blocks[*block_no].instr.len() - 1;
-            cfg.blocks[*block_no]
-                .instr
-                .insert(index, (InstrOrigin::Codegen, instr.to_owned()));
+            cfg.blocks[*block_no].instr.insert(index, instr.to_owned());
         }
     }
 
@@ -240,105 +241,17 @@ impl CommonSubExpressionTracker {
 
     /// For common subexpression elimination to work properly, we need to find the common parent of
     /// two blocks. The parent is the deepest block in which every path from the entry block to both
-    /// 'block_1' and 'block_2' passes through such a block.
-    pub fn find_parent_block(&self, block_1: usize, block_2: usize) -> usize {
-        if block_1 == block_2 {
-            return block_1;
-        }
-        let mut colors: Vec<Color> = vec![Color::WHITE; self.cfg_dag.len()];
-        let mut visited: Vec<bool> = vec![false; self.cfg_dag.len()];
-        /*
-        Given a DAG (directed acyclic graph), we color all the ancestors of 'block_1' with yellow.
-        Then, we color every ancestor of 'block_2' with blue. As the mixture of blue and yellow
-        results in green, green blocks are all possible common ancestors!
-
-        We can't add colors to code. Here, bitwise ORing 2 to a block's color mean painting with yellow.
-        Likewise, bitwise ORing 4 means painting with blue. Green blocks have 6 (2|4) as their color
-        number.
-
-         */
-
-        self.coloring_dfs(block_1, 0, Color::BLUE, &mut colors, &mut visited);
-        visited.fill(false);
-        self.coloring_dfs(block_2, 0, Color::YELLOW, &mut colors, &mut visited);
-
-        /*
-        Having a bunch of green block, which of them are we looking for?
-        We must choose the deepest block, in which all paths from the entry block to both block_1
-        and block_2 pass through this block.
-
-        Have a look at the 'find_ancestor' function to know more about the algorithm.
-         */
-        self.find_ancestor(0, &colors)
-    }
-
-    /// Given a colored graph, find the lowest common ancestor.
-    fn find_ancestor(&self, start_block: usize, colors: &[Color]) -> usize {
-        let mut candidate = start_block;
-        let mut queue: VecDeque<usize> = VecDeque::new();
-        let mut visited: Vec<bool> = vec![false; self.cfg_dag.len()];
-
-        visited[start_block] = true;
-        queue.push_back(start_block);
-
-        let mut six_child: usize = 0;
-        // This is a BFS (breadth first search) traversal
-        while let Some(cur_block) = queue.pop_front() {
-            let mut not_ancestors: usize = 0;
-            for child in &self.cfg_dag[cur_block] {
-                if colors[*child] == Color::WHITE {
-                    // counting the number of children which are not ancestors from neither block_1
-                    // nor block_2
-                    not_ancestors += 1;
-                }
-
-                if colors[*child] == Color::GREEN {
-                    // This is the possible candidate to search next.
-                    six_child = *child;
-                }
-            }
-
-            // If the current block has only one child that leads to both block_1 and block_2, it is
-            // a candidate to be the lowest common ancestor.
-            if not_ancestors + 1 == self.cfg_dag[cur_block].len() && !visited[six_child] {
-                visited[six_child] = true;
-                queue.push_back(six_child);
-                candidate = six_child;
-            }
-        }
-
-        candidate
-    }
-
-    /// This function performs a DFS (depth first search) to color all the ancestors of a block.
-    fn coloring_dfs(
+    /// 'block_1' and 'block_2' passes through such a block, provided that the expression is
+    /// anticipated there.
+    pub fn find_parent_block(
         &self,
-        search_block: usize,
-        cur_block: usize,
-        color: Color,
-        colors: &mut Vec<Color>,
-        visited: &mut Vec<bool>,
-    ) -> bool {
-        if colors[cur_block].contains(color) {
-            return true;
-        }
-
-        if visited[cur_block] {
-            return false;
-        }
-
-        visited[cur_block] = true;
-        if cur_block == search_block {
-            colors[cur_block].insert(color);
-            return true;
-        }
-
-        for next in &self.cfg_dag[cur_block] {
-            if self.coloring_dfs(search_block, *next, color, colors, visited) {
-                colors[cur_block].insert(color);
-            }
-        }
-
-        colors[cur_block].contains(color)
+        block_1: usize,
+        block_2: usize,
+        expr: &Expression,
+    ) -> Option<usize> {
+        // The analysis is done at another data structure to isolate the logic of traversing the
+        // CFG from the end to the beginning (backwards).
+        self.anticipated_expressions
+            .find_ancestor(block_1, block_2, expr)
     }
 }

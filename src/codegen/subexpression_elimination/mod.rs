@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{BasicBlock, ControlFlowGraph, Instr, InstrOrigin};
+use crate::codegen::cfg::{BasicBlock, ControlFlowGraph, Instr};
 use crate::codegen::reaching_definitions::block_edges;
+use crate::codegen::subexpression_elimination::anticipated_expressions::AnticipatedExpressions;
 use crate::codegen::subexpression_elimination::available_variable::AvailableVariable;
 use crate::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
 use crate::codegen::subexpression_elimination::operator::Operator;
+use crate::codegen::Expression;
 use crate::sema::ast::Namespace;
 use num_bigint::BigInt;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
 
+mod anticipated_expressions;
 mod available_expression;
 mod available_expression_set;
 mod available_variable;
@@ -48,10 +51,11 @@ pub struct AvailableExpression {
 
 /// Each BasicExpression is a graph node
 #[derive(Clone)]
-pub struct BasicExpression {
+pub struct BasicExpression<'a> {
     expr_type: ExpressionType,
     expression_id: NodeId,
-    children: HashMap<NodeId, Rc<RefCell<BasicExpression>>>,
+    children: HashMap<NodeId, Rc<RefCell<BasicExpression<'a>>>>,
+    pub reference: &'a Expression,
     pub available_variable: AvailableVariable,
     pub block: usize,
     pub parent_block: usize,
@@ -77,37 +81,74 @@ pub enum ExpressionType {
 }
 
 /// Sets contain the available expression at a certain portion of the CFG
-#[derive(Default)]
-pub struct AvailableExpressionSet {
+#[derive(Default, Clone)]
+pub struct AvailableExpressionSet<'a> {
     // node_no => BasicExpression
-    expression_memory: HashMap<NodeId, Rc<RefCell<BasicExpression>>>,
+    expression_memory: HashMap<NodeId, Rc<RefCell<BasicExpression<'a>>>>,
     // Expression => node_id
     expr_map: HashMap<ExpressionType, NodeId>,
     parent_block_no: usize,
 }
 
+/// This struct serves to be the return of function 'find_visiting_order', which helps finding all
+/// the CFG representations for the analysis.
+struct CfgAsDag {
+    visiting_order: Vec<(usize, bool)>,
+    reverse_visiting_order: Vec<(usize, bool)>,
+    dag: Vec<Vec<usize>>,
+    reverse_dag: Vec<Vec<usize>>,
+}
+
 /// Performs common subexpression elimination
 pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
+    // visiting_order: the order in which we should traverse the CFG (this is its topological sorting)
+    // dag: The CFG represented as a DAG (direct acyclic graph)
+    // reverse_dag: The CFG represented as a DAG, but with all the edges reversed.
+    let cfg_as_dag = find_visiting_order(cfg);
+
+    let mut old_instr: Vec<Vec<Instr>> = vec![Vec::new(); cfg.blocks.len()];
+    // We need to remove the instructions from the blocks, so we can store references in the
+    // available expressions set.
+    for (block_no, block) in cfg.blocks.iter_mut().enumerate() {
+        std::mem::swap(&mut old_instr[block_no], &mut block.instr);
+    }
+
+    // Anticipated expression is an analysis that calculated where in the CFG we can anticipate
+    // the evaluation of an expression, provided that none of its constituents variables have
+    // been assigned a new value.
+    let mut anticipated_expressions = AnticipatedExpressions::new(
+        &cfg_as_dag.dag,
+        cfg_as_dag.reverse_dag,
+        cfg_as_dag.reverse_visiting_order,
+    );
+    anticipated_expressions.calculate_anticipated_expressions(&old_instr, cfg);
+
     let mut ave = AvailableExpression::default();
     let mut cst = CommonSubExpressionTracker::default();
-
     let mut sets: HashMap<usize, AvailableExpressionSet> = HashMap::new();
-    let (visiting_order, dag) = find_visiting_order(cfg);
-    cst.set_dag(dag);
     sets.insert(0, AvailableExpressionSet::default());
+    // The anticipated expression values are part of the common subsexpression tracker, so we
+    // can always evaluate the common subexpressions in the correct place.
+    cst.set_anticipated(anticipated_expressions);
 
     // First pass: identify common subexpressions using available expressions analysis
-    for (block_no, cycle) in &visiting_order {
+    for (block_no, cycle) in &cfg_as_dag.visiting_order {
         let cur_block = &cfg.blocks[*block_no];
         ave.set_cur_block(*block_no);
         cst.set_cur_block(*block_no);
         let mut cur_set = sets.remove(block_no).unwrap();
         kill_loop_variables(cur_block, &mut cur_set, *cycle);
-        for (_, instr) in cur_block.instr.iter() {
-            cur_set.process_instruction(instr, &mut ave, &mut cst);
+        for instr in old_instr[*block_no].iter() {
+            cur_set.process_instruction(instr, &mut ave, &mut Some(&mut cst));
         }
 
-        add_neighbor_blocks(cur_block, &cur_set, block_no, &mut sets, &cst);
+        add_neighbor_blocks(
+            cur_set,
+            &cfg_as_dag.dag[*block_no],
+            *block_no,
+            &mut sets,
+            &cst,
+        );
     }
 
     cst.create_variables(ns, cfg);
@@ -117,39 +158,45 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
     sets.insert(0, AvailableExpressionSet::default());
 
     // Second pass: eliminate common subexpressions
-    for (block_no, cycle) in &visiting_order {
+    for (block_no, cycle) in &cfg_as_dag.visiting_order {
         let mut cur_set = sets.remove(block_no).unwrap();
         let mut cur_block = &mut cfg.blocks[*block_no];
         ave.set_cur_block(*block_no);
         cst.set_cur_block(*block_no);
-        let mut new_instructions: Vec<(InstrOrigin, Instr)> = Vec::new();
+        let mut new_instructions: Vec<Instr> = Vec::new();
         kill_loop_variables(cur_block, &mut cur_set, *cycle);
-        for (origin, instr) in cur_block.instr.iter() {
+        for instr in old_instr[*block_no].iter() {
             let instr = cur_set.regenerate_instruction(instr, &mut ave, &mut cst);
             cst.add_new_instructions(&mut new_instructions);
-            new_instructions.push((origin.clone(), instr));
+            new_instructions.push(instr);
         }
 
         cur_block.instr = new_instructions;
-        add_neighbor_blocks(cur_block, &cur_set, block_no, &mut sets, &cst);
+        add_neighbor_blocks(
+            cur_set,
+            &cfg_as_dag.dag[*block_no],
+            *block_no,
+            &mut sets,
+            &cst,
+        );
     }
 
     cst.add_parent_block_instructions(cfg);
 }
 
 /// Add neighbor block to the hashset of Available expressions to be processed
-fn add_neighbor_blocks(
-    cur_block: &BasicBlock,
-    cur_set: &AvailableExpressionSet,
-    block_no: &usize,
-    sets: &mut HashMap<usize, AvailableExpressionSet>,
+fn add_neighbor_blocks<'b>(
+    cur_set: AvailableExpressionSet<'b>,
+    edges: &[usize],
+    block_no: usize,
+    sets: &mut HashMap<usize, AvailableExpressionSet<'b>>,
     cst: &CommonSubExpressionTracker,
 ) {
-    for edge in block_edges(cur_block) {
-        if let Some(set) = sets.get_mut(&edge) {
-            set.intersect_sets(cur_set, cst);
+    for edge in edges {
+        if let Some(set) = sets.get_mut(edge) {
+            set.intersect_sets(&cur_set, cst);
         } else {
-            sets.insert(edge, cur_set.clone_for_parent_block(*block_no));
+            sets.insert(*edge, cur_set.clone_for_parent_block(block_no));
         }
     }
 }
@@ -168,14 +215,16 @@ fn kill_loop_variables(block: &BasicBlock, cur_set: &mut AvailableExpressionSet,
 /// Find the correct visiting order for the CFG traversal, using topological sorting. The visiting
 /// order should be the same as the execution order. This function also returns a DAG for the
 /// execution graph. This helps us find the lowest common ancestor later.
-fn find_visiting_order(cfg: &ControlFlowGraph) -> (Vec<(usize, bool)>, Vec<Vec<usize>>) {
+fn find_visiting_order(cfg: &ControlFlowGraph) -> CfgAsDag {
     let mut order: Vec<(usize, bool)> = Vec::with_capacity(cfg.blocks.len());
     let mut visited: HashSet<usize> = HashSet::new();
     let mut stack: HashSet<usize> = HashSet::new();
     let mut has_cycle: Vec<bool> = vec![false; cfg.blocks.len()];
     let mut degrees: Vec<i32> = vec![0; cfg.blocks.len()];
     let mut dag: Vec<Vec<usize>> = Vec::new();
+    let mut reverse_dag: Vec<Vec<usize>> = Vec::new();
     dag.resize(cfg.blocks.len(), vec![]);
+    reverse_dag.resize(cfg.blocks.len(), vec![]);
 
     cfg_dfs(
         0,
@@ -185,6 +234,7 @@ fn find_visiting_order(cfg: &ControlFlowGraph) -> (Vec<(usize, bool)>, Vec<Vec<u
         &mut degrees,
         &mut has_cycle,
         &mut dag,
+        &mut reverse_dag,
     );
 
     let mut queue: VecDeque<usize> = VecDeque::new();
@@ -200,7 +250,14 @@ fn find_visiting_order(cfg: &ControlFlowGraph) -> (Vec<(usize, bool)>, Vec<Vec<u
         }
     }
 
-    (order, dag)
+    let mut reverse_visiting_order = order.clone();
+    reverse_visiting_order.reverse();
+    CfgAsDag {
+        visiting_order: order,
+        reverse_visiting_order,
+        dag,
+        reverse_dag,
+    }
 }
 
 /// Run DFS (depth first search) in the CFG to find cycles.
@@ -212,6 +269,7 @@ fn cfg_dfs(
     degrees: &mut Vec<i32>,
     has_cycle: &mut Vec<bool>,
     dag: &mut Vec<Vec<usize>>,
+    reverse_dag: &mut Vec<Vec<usize>>,
 ) -> bool {
     if visited.contains(&block_no) {
         return true;
@@ -227,8 +285,18 @@ fn cfg_dfs(
 
     for edge in block_edges(&cfg.blocks[block_no]) {
         degrees[edge] += 1;
-        if cfg_dfs(edge, cfg, visited, stack, degrees, has_cycle, dag) {
+        if cfg_dfs(
+            edge,
+            cfg,
+            visited,
+            stack,
+            degrees,
+            has_cycle,
+            dag,
+            reverse_dag,
+        ) {
             dag[block_no].push(edge);
+            reverse_dag[edge].push(block_no);
         }
     }
 

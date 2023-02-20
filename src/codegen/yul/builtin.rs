@@ -163,7 +163,7 @@ pub(crate) fn process_builtin(
 
         YulBuiltInFunction::SelfDestruct => {
             let recipient = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Address(true), ns);
-            cfg.add_yul(vartab, Instr::SelfDestruct { recipient });
+            cfg.add(vartab, Instr::SelfDestruct { recipient });
             Expression::Poison
         }
 
@@ -404,7 +404,7 @@ fn branch_if_zero(
     let then = cfg.new_basic_block("then".to_string());
     let else_ = cfg.new_basic_block("else".to_string());
     let endif = cfg.new_basic_block("endif".to_string());
-    cfg.add_yul(
+    cfg.add(
         vartab,
         Instr::BranchCond {
             cond,
@@ -415,7 +415,7 @@ fn branch_if_zero(
 
     cfg.set_basic_block(then);
     vartab.new_dirty_tracker();
-    cfg.add_yul(
+    cfg.add(
         vartab,
         Instr::Set {
             loc: pt::Loc::Codegen,
@@ -423,10 +423,10 @@ fn branch_if_zero(
             expr: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(256), BigInt::from(0)),
         },
     );
-    cfg.add_yul(vartab, Instr::Branch { block: endif });
+    cfg.add(vartab, Instr::Branch { block: endif });
 
     cfg.set_basic_block(else_);
-    cfg.add_yul(
+    cfg.add(
         vartab,
         Instr::Set {
             loc: pt::Loc::Codegen,
@@ -434,7 +434,7 @@ fn branch_if_zero(
             expr: codegen_expr,
         },
     );
-    cfg.add_yul(vartab, Instr::Branch { block: endif });
+    cfg.add(vartab, Instr::Branch { block: endif });
     cfg.set_phis(endif, vartab.pop_dirty_tracker());
     cfg.set_basic_block(endif);
 
@@ -468,7 +468,7 @@ fn byte_builtin(
     let else_ = cfg.new_basic_block("else".to_string());
     let endif = cfg.new_basic_block("endif".to_string());
 
-    cfg.add_yul(
+    cfg.add(
         vartab,
         Instr::BranchCond {
             cond,
@@ -479,7 +479,7 @@ fn byte_builtin(
 
     cfg.set_basic_block(then);
     vartab.new_dirty_tracker();
-    cfg.add_yul(
+    cfg.add(
         vartab,
         Instr::Set {
             loc: pt::Loc::Codegen,
@@ -487,7 +487,7 @@ fn byte_builtin(
             expr: Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(256), BigInt::zero()),
         },
     );
-    cfg.add_yul(vartab, Instr::Branch { block: endif });
+    cfg.add(vartab, Instr::Branch { block: endif });
 
     cfg.set_basic_block(else_);
 
@@ -533,7 +533,7 @@ fn byte_builtin(
         )),
     );
 
-    cfg.add_yul(
+    cfg.add(
         vartab,
         Instr::Set {
             loc: *loc,
@@ -541,7 +541,7 @@ fn byte_builtin(
             expr: masked_result,
         },
     );
-    cfg.add_yul(vartab, Instr::Branch { block: endif });
+    cfg.add(vartab, Instr::Branch { block: endif });
 
     cfg.set_phis(endif, vartab.pop_dirty_tracker());
     cfg.set_basic_block(endif);
