@@ -1075,7 +1075,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         address: PointerValue<'b>,
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
-        gas: IntValue<'b>,
         contract_args: ContractArgs<'b>,
         ns: &ast::Namespace,
         loc: Loc,
@@ -1153,7 +1152,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "seal_instantiate",
             &[
                 codehash.into(),
-                gas.into(),
+                contract_args.gas.unwrap().into(),
                 value_ptr.into(),
                 encoded_args.into(),
                 encoded_args_len.into(),
@@ -1219,10 +1218,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
-        gas: IntValue<'b>,
-        value: IntValue<'b>,
-        _accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
-        _seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
+        contract_args: ContractArgs<'b>,
         _ty: ast::CallTy,
         ns: &ast::Namespace,
         loc: Loc,
@@ -1233,7 +1229,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let value_ptr = binary
             .builder
             .build_alloca(binary.value_type(ns), "balance");
-        binary.builder.build_store(value_ptr, value);
+        binary
+            .builder
+            .build_store(value_ptr, contract_args.value.unwrap());
 
         let (scratch_buf, scratch_len) = scratch_buf!();
 
@@ -1247,7 +1245,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             &[
                 i32_zero!().into(), // TODO implement flags (mostly used for proxy calls)
                 address.unwrap().into(),
-                gas.into(),
+                contract_args.gas.unwrap().into(),
                 value_ptr.into(),
                 payload.into(),
                 payload_len.into(),
