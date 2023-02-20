@@ -110,7 +110,7 @@ impl Expression {
 
         // First of all, if we have a ref then derefence it
         if let Type::Ref(r) = &from {
-            return if r.is_fixed_reference_type() {
+            return if r.is_fixed_reference_type(ns) {
                 // A struct/fixed array *value* is simply the type, e.g. Type::Struct(_)
                 // An assignable struct value, e.g. member of another struct, is Type::Ref(Type:Struct(_)).
                 // However, the underlying types are identical: simply a pointer.

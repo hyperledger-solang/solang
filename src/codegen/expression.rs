@@ -2278,7 +2278,7 @@ pub fn assign_single(
             let dest = expression(left, cfg, contract_no, func, ns, vartab, opt);
 
             let cfg_right =
-                if !left_ty.is_contract_storage() && cfg_right.ty().is_fixed_reference_type() {
+                if !left_ty.is_contract_storage() && cfg_right.ty().is_fixed_reference_type(ns) {
                     Expression::Load(pt::Loc::Codegen, cfg_right.ty(), Box::new(cfg_right))
                 } else {
                     cfg_right

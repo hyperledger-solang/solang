@@ -57,7 +57,7 @@ impl SubstrateTarget {
 
         let fid = bin
             .builder
-            .build_load(argsdata, "function_selector")
+            .build_load(bin.context.i32_type(), argsdata, "function_selector")
             .into_int_value();
 
         // TODO: solana does not support bss, so different solution is needed
@@ -67,6 +67,7 @@ impl SubstrateTarget {
         // step over the function selector
         let argsdata = unsafe {
             bin.builder.build_gep(
+                bin.context.i32_type(),
                 argsdata,
                 &[bin.context.i32_type().const_int(1, false)],
                 "argsdata",
