@@ -228,8 +228,8 @@ fn encode_compact(
             false_block: medium,
         },
     );
-    vartab.new_dirty_tracker();
     let size_variable = vartab.temp_anonymous(&Uint(32));
+    vartab.new_dirty_tracker();
     let four = Expression::NumberLiteral(Codegen, Uint(32), 4.into()).into();
     let mul = Expression::Multiply(Codegen, Uint(32), false, expr.clone().into(), four);
 
