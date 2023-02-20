@@ -105,7 +105,7 @@ pub(super) fn array_subscript(
 
                 array = array.cast(
                     &array.loc(),
-                    if array_ty.deref_memory().is_fixed_reference_type() {
+                    if array_ty.deref_memory().is_fixed_reference_type(ns) {
                         &array_ty
                     } else {
                         array_ty.deref_any()
