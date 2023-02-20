@@ -149,7 +149,7 @@ fn encode_compact(
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: Expression::Cast(Codegen, Uint(16), mul.clone().into()),
+                value: Expression::Cast(Codegen, Uint(16), mul.into()),
             },
         );
     }
