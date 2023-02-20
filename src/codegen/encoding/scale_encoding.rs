@@ -77,7 +77,7 @@ fn encode_compact(
     let done = cfg.new_basic_block("done".into());
     let fail = cfg.new_basic_block("fail".into());
     let prepare = cfg.new_basic_block("prepare".into());
-    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), 0x40000000.into());
+    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), (0x40000000 - 1).into());
     let compare = Expression::UnsignedMore(Codegen, expr.clone().into(), cmp_val.into());
     cfg.add(
         vartab,
@@ -92,7 +92,7 @@ fn encode_compact(
     cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
 
     cfg.set_basic_block(prepare);
-    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), 0x40.into());
+    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), (0x40 - 1).into());
     let compare = Expression::UnsignedMore(Codegen, expr.clone().into(), cmp_val.into());
     cfg.add(
         vartab,
@@ -104,7 +104,7 @@ fn encode_compact(
     );
 
     cfg.set_basic_block(medium_or_big);
-    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), 0x4000.into());
+    let cmp_val = Expression::NumberLiteral(Codegen, Uint(32), (0x4000 - 1).into());
     let compare = Expression::UnsignedMore(Codegen, expr.clone().into(), cmp_val.into());
     cfg.add(
         vartab,
@@ -114,8 +114,8 @@ fn encode_compact(
             false_block: medium,
         },
     );
-    vartab.new_dirty_tracker();
     let size_variable = vartab.temp_anonymous(&Uint(32));
+    vartab.new_dirty_tracker();
     let four = Expression::NumberLiteral(Codegen, Uint(32), 4.into()).into();
     let mul = Expression::Multiply(Codegen, Uint(32), false, expr.clone().into(), four);
 
@@ -126,7 +126,7 @@ fn encode_compact(
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: mul.clone(),
+                value: Expression::Cast(Codegen, Uint(8), mul.clone().into()),
             },
         );
     }
@@ -143,13 +143,13 @@ fn encode_compact(
 
     cfg.set_basic_block(medium);
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
-        let mul2 = Expression::BitwiseOr(Codegen, Uint(32), mul.clone().into(), one.into());
+        let mul = Expression::BitwiseOr(Codegen, Uint(32), mul.clone().into(), one.into());
         cfg.add(
             vartab,
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: mul2,
+                value: Expression::Cast(Codegen, Uint(16), mul.clone().into()),
             },
         );
     }
@@ -166,13 +166,12 @@ fn encode_compact(
 
     cfg.set_basic_block(big);
     if let (Some(buffer), Some(offset)) = (buffer, offset) {
-        let mul2 = Expression::BitwiseOr(Codegen, Uint(32), mul.into(), two.into());
         cfg.add(
             vartab,
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: mul2,
+                value: Expression::BitwiseOr(Codegen, Uint(32), mul.into(), two.into()),
             },
         );
     }
