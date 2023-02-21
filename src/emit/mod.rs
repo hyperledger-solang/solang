@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::Expression;
-use crate::sema::ast::{CallTy, Contract, Function, Namespace, Parameter, Type};
+use crate::sema::ast::{CallTy, Function, Namespace, Parameter, Type};
 use std::collections::HashMap;
 use std::fmt;
 use std::str;
@@ -352,14 +352,9 @@ pub trait TargetRuntime<'a> {
     fn emit_event<'b>(
         &self,
         bin: &Binary<'b>,
-        contract: &Contract,
         function: FunctionValue<'b>,
-        event_no: usize,
-        data: &[BasicValueEnum<'b>],
-        data_tys: &[Type],
+        data: BasicValueEnum<'b>,
         topics: &[BasicValueEnum<'b>],
-        topic_tys: &[Type],
-        ns: &Namespace,
     );
 
     /// Return ABI encoded data
