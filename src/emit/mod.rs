@@ -37,8 +37,10 @@ pub struct Variable<'a> {
 
 pub struct ContractArgs<'b> {
     value: Option<IntValue<'b>>,
+    gas: Option<IntValue<'b>>,
     salt: Option<IntValue<'b>>,
     seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
+    accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
 }
 
 #[derive(Clone, Copy)]
@@ -284,14 +286,12 @@ pub trait TargetRuntime<'a> {
         address: PointerValue<'b>,
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
-        gas: IntValue<'b>,
         contract_args: ContractArgs<'b>,
         ns: &Namespace,
         loc: Loc,
     );
 
     /// call external function
-    #[allow(clippy::too_many_arguments)]
     fn external_call<'b>(
         &self,
         bin: &Binary<'b>,
@@ -300,10 +300,7 @@ pub trait TargetRuntime<'a> {
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
-        gas: IntValue<'b>,
-        value: IntValue<'b>,
-        accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
-        seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
+        contract_args: ContractArgs<'b>,
         ty: CallTy,
         ns: &Namespace,
         loc: Loc,
