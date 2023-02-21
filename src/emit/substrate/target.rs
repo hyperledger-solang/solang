@@ -5,7 +5,7 @@ use crate::codegen::error_msg_with_loc;
 use crate::emit::binary::Binary;
 use crate::emit::expression::{expression, string_to_basic_value};
 use crate::emit::storage::StorageSlot;
-use crate::emit::substrate::{event_id, log_return_code, SubstrateTarget, SCRATCH_SIZE};
+use crate::emit::substrate::{log_return_code, SubstrateTarget, SCRATCH_SIZE};
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, Type};
@@ -1469,14 +1469,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn emit_event<'b>(
         &self,
         binary: &Binary<'b>,
-        contract: &ast::Contract,
-        function: FunctionValue<'b>,
-        event_no: usize,
-        data: &[BasicValueEnum<'b>],
-        data_tys: &[ast::Type],
+        _function: FunctionValue<'b>,
+        data: BasicValueEnum<'b>,
         topics: &[BasicValueEnum<'b>],
-        _topic_tys: &[ast::Type],
-        ns: &ast::Namespace,
     ) {
         emit_context!(binary);
 
@@ -1543,23 +1538,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             byte_ptr!().const_null()
         };
 
-        let (data_ptr, data_len) = self.abi_encode(
-            binary,
-            event_id(binary, contract, event_no),
-            false,
-            function,
-            data,
-            data_tys,
-            ns,
-        );
-
         call!(
             "seal_deposit_event",
             &[
                 topic_buf.into(),
                 topic_size.into(),
-                data_ptr.into(),
-                data_len.into(),
+                binary.vector_bytes(data).into(),
+                binary.vector_len(data).into(),
             ]
         );
     }

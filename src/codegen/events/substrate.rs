@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::VecDeque;
+use std::vec;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::encoding::abi_encode;
 use crate::codegen::events::EventEmitter;
 use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
@@ -41,16 +43,18 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         vartab: &mut Vartable,
         opt: &Options,
     ) {
-        let mut data = Vec::new();
-        let mut data_tys = Vec::new();
-        let mut topics = Vec::new();
-        let mut topic_tys = Vec::new();
-
         let loc = pt::Loc::Builtin;
         let event = &self.ns.events[self.event_no];
         // For freestanding events the name of the emitting contract is used
         let contract_name = &self.ns.contracts[event.contract.unwrap_or(contract_no)].name;
         let hash_len = Box::new(Expression::NumberLiteral(loc, Type::Uint(32), 32.into()));
+        let id = self.ns.contracts[contract_no]
+            .emits_events
+            .iter()
+            .position(|e| *e == self.event_no)
+            .expect("contract emits this event");
+        let mut data = vec![Expression::NumberLiteral(loc, Type::Uint(8), id.into())];
+        let mut topics = vec![];
 
         // Events that are not anonymous always have themselves as a topic.
         // This is static and can be calculated at compile time.
@@ -63,7 +67,6 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 hash_len.clone(),
                 Some(topic_hash(encoded.as_bytes())),
             ));
-            topic_tys.push(Type::DynamicBytes);
         };
 
         // Topic prefixes are static and can be calculated at compile time.
@@ -95,7 +98,6 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     expr: value_exp,
                 },
             );
-            data_tys.push(value.ty());
             data.push(value.clone());
 
             if !field.indexed {
@@ -172,14 +174,13 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             topics.push(buffer);
         }
 
+        let data = abi_encode(&loc, data, self.ns, vartab, cfg, false).0;
         cfg.add(
             vartab,
             Instr::EmitEvent {
                 event_no: self.event_no,
                 data,
-                data_tys,
                 topics,
-                topic_tys,
             },
         );
     }

@@ -4,48 +4,9 @@ use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::{increment_by, AbiEncoding};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Namespace, Parameter, RetrieveType, Type, Type::Uint};
+use crate::sema::ast::{Namespace, Parameter, Type, Type::Uint};
 use solang_parser::pt::{Loc, Loc::Codegen};
 use std::collections::HashMap;
-
-pub(super) fn abi_encode(
-    loc: &Loc,
-    mut args: Vec<Expression>,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-    packed_encoder: bool,
-) -> (Expression, Expression) {
-    let tys = args.iter().map(|e| e.ty()).collect::<Vec<Type>>();
-    let encoded_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
-    let mut packed: Vec<Expression> = Vec::new();
-    if packed_encoder {
-        std::mem::swap(&mut packed, &mut args);
-    }
-
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: *loc,
-            res: encoded_buffer,
-            expr: Expression::AbiEncode {
-                loc: *loc,
-                packed,
-                args,
-                tys,
-            },
-        },
-    );
-
-    let encoded_expr = Expression::Variable(*loc, Type::DynamicBytes, encoded_buffer);
-    let buffer_len = Expression::Builtin(
-        *loc,
-        vec![Type::Uint(32)],
-        Builtin::ArrayLength,
-        vec![encoded_expr.clone()],
-    );
-
-    (encoded_expr, buffer_len)
-}
 
 pub(super) struct ScaleEncoding {
     storage_cache: HashMap<usize, Expression>,
