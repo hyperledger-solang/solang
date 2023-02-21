@@ -1291,7 +1291,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         address: PointerValue<'b>,
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
-        _gas: IntValue<'b>,
         contract_args: ContractArgs<'b>,
         ns: &ast::Namespace,
         loc: Loc,
@@ -1469,17 +1468,14 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
-        _gas: IntValue<'b>,
-        _value: IntValue<'b>,
-        accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
-        seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
+        contract_args: ContractArgs<'b>,
         _ty: ast::CallTy,
         _ns: &ast::Namespace,
         _loc: Loc,
     ) {
         let address = address.unwrap();
 
-        let ret = if let Some((accounts, accounts_len)) = accounts {
+        let ret = if let Some((accounts, accounts_len)) = contract_args.accounts {
             // build instruction
             let instruction_ty: BasicTypeEnum = binary
                 .module
@@ -1578,7 +1574,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let external_call = binary.module.get_function("sol_invoke_signed_c").unwrap();
 
-            let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = seeds {
+            let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = contract_args.seeds {
                 (
                     seeds,
                     binary.builder.build_int_cast(
