@@ -51,10 +51,8 @@ impl EventEmitter for SolanaEventEmitter<'_> {
             vartab,
             Instr::EmitEvent {
                 event_no: self.event_no,
-                data: vec![data],
-                data_tys: vec![],
+                data,
                 topics: vec![],
-                topic_tys: vec![],
             },
         );
     }
