@@ -161,8 +161,8 @@ Here is a brief description of what we envision for the next versions.
 | Improvements in overflow checking          | Completed   |
 | Support Solana's Program Derived Addresses | Completed   |
 | Call Solidity from Solana's Rust contracts | Not started |
-| Improve developer experience for Substrate | Not started |
-| Tooling for calls between ink! <> solidity | Not started |
+| Improve developer experience for Substrate | In progress |
+| Tooling for calls between ink! <> solidity | In progress |
 | Support chain extensions for Substrate     | Not started |
 | Provide CLI for node interactions          | Not started |
 
