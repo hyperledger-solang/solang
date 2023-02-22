@@ -388,6 +388,7 @@ pub struct ErrorParameter {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct ErrorDefinition {
     pub loc: Loc,
+    pub keyword: Expression,
     pub name: Option<Identifier>,
     pub fields: Vec<ErrorParameter>,
 }

@@ -134,7 +134,6 @@ SolIdentifier: Identifier = {
     <l:@L> "leave" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "leave".to_string()},
     <l:@L> "case" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "case".to_string()},
     <l:@L> "default" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "default".to_string()},
-    <l:@L> "error" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()},
     <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
 }
 
@@ -146,7 +145,7 @@ SolIdentifierOrError: Option<Identifier> = {
     }
 }
 
-SolNoErrorIdentifier: Identifier = {
+SolNoRevertIdentifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
     <l:@L> "switch" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "switch".to_string()},
     <l:@L> "leave" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "leave".to_string()},
@@ -237,11 +236,11 @@ EventDefinition: Box<EventDefinition> = {
 }
 
 ErrorDefinition: Box<ErrorDefinition> = {
-    <l:@L> "error" <name:SolIdentifierOrError> "(" <v:Comma<ErrorParameter>> ")" <r:@R> ";" => {
+    <l:@L> <keyword:NoFunctionTyPrecedence0> <name:SolIdentifierOrError> "(" <fields:Comma<ErrorParameter>> ")" <r:@R> ";" => {
         Box::new(ErrorDefinition{
-            loc: Loc::File(file_no, l, r), name, fields: v
+            loc: Loc::File(file_no, l, r), keyword, name, fields
         })
-    },
+    }
 }
 
 EnumDefinition: Box<EnumDefinition> = {
@@ -260,13 +259,6 @@ VariableDefinition: Box<VariableDefinition> = {
         parser_errors.push (false_token);
         Box::new(VariableDefinition{
             loc: Loc::File(file_no, l, r), ty, attrs, name: Some(name), initializer: None,
-        })
-    },
-    <l:@L> "error" <er:@R> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
-        let ty = Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()});
-
-        Box::new(VariableDefinition{
-            loc: Loc::File(file_no, l, r), ty, attrs, name: Some(name), initializer: e,
         })
     },
     // attributes cause shift-reduce errors with function type, since a function type contract variable can be declare as
@@ -408,7 +400,6 @@ Precedence2: Expression = {
     <a:@L> "--" <e:Precedence2> <b:@R> => Expression::PreDecrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "+" <e:Precedence2> <b:@R>  => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "-" <e:Precedence2> <b:@R> => Expression::UnaryMinus(Loc::File(file_no, a, b), Box::new(e)),
-    <l:@L> "error" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()}),
     <l:@L> "revert" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()}),
     Precedence0,
 }
@@ -442,7 +433,6 @@ FunctionCallPrecedence: Expression = {
 }
 
 AnyType: Expression = {
-    <l:@L> "error" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()}),
     Precedence0
 }
 
@@ -471,7 +461,7 @@ NoFunctionTyPrecedence0: Expression = {
     <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc::File(file_no, a, b), v)
     },
-    <SolNoErrorIdentifier> => Expression::Variable(<>),
+    <SolNoRevertIdentifier> => Expression::Variable(<>),
     <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc::File(file_no, l, r), Box::new(e), u),
     <l:@L> <a:ParameterList> <r:@R> => {
         if a.len() == 1 {
@@ -1117,7 +1107,6 @@ extern {
         "interface" => Token::Interface,
         "library" => Token::Library,
         "event" => Token::Event,
-        "error" => Token::Error,
         "enum" => Token::Enum,
         "type" => Token::Type,
         "public" => Token::Public,
