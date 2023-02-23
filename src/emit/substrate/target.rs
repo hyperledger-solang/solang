@@ -1092,13 +1092,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             binary.build_alloca(function, binary.context.i8_type().array_type(36), "salt");
         let salt_len = i32_const!(32);
 
-        let salt = contract_args.salt.unwrap_or(
+        let salt = contract_args.salt.unwrap_or_else(|| {
             call!("instantiation_nonce", &[], "instantiation_nonce")
                 .try_as_basic_value()
                 .left()
                 .unwrap()
-                .into_int_value(),
-        );
+                .into_int_value()
+        });
         binary.builder.build_store(salt_buf, salt);
 
         let encoded_args = binary.vector_bytes(encoded_args);
