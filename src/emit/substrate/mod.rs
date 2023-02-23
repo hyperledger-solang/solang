@@ -174,7 +174,7 @@ impl SubstrateTarget {
             "seal_value_transferred",
             "seal_minimum_balance",
             "seal_weight_to_fee",
-            "seal_random",
+            "instantiation_nonce",
             "seal_address",
             "seal_balance",
             "seal_block_number",
@@ -266,7 +266,7 @@ impl SubstrateTarget {
         external!("seal_hash_sha2_256", void_type, u8_ptr, u32_val, u8_ptr);
         external!("seal_hash_blake2_128", void_type, u8_ptr, u32_val, u8_ptr);
         external!("seal_hash_blake2_256", void_type, u8_ptr, u32_val, u8_ptr);
-        external!("seal_random", void_type, u8_ptr, u32_val, u8_ptr, u32_ptr);
+        external!("instantiation_nonce", i64_type,);
         external!(
             "seal_set_storage",
             i32_type,

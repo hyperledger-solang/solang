@@ -1092,19 +1092,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             binary.build_alloca(function, binary.context.i8_type().array_type(36), "salt");
         let salt_len = i32_const!(32);
 
-        if let Some(salt) = contract_args.salt {
-            binary.builder.build_store(salt_buf, salt);
-        } else {
-            let (ptr, len) = self.contract_unique_salt(binary, contract_no, ns);
-
-            binary.builder.build_store(scratch_len, i32_const!(36));
-
-            call!(
-                "seal_random",
-                &[ptr.into(), len.into(), salt_buf.into(), scratch_len.into()],
-                "random"
-            );
-        }
+        let salt = contract_args.salt.unwrap_or(
+            call!("instantiation_nonce", &[], "instantiation_nonce")
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value(),
+        );
+        binary.builder.build_store(salt_buf, salt);
 
         let encoded_args = binary.vector_bytes(encoded_args);
 
