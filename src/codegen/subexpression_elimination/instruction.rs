@@ -39,10 +39,12 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     self.kill(*res);
                 }
 
+                self.remove_mapped(*res);
                 if let Some(node_id) = self.gen_expression(expr, ave, cst) {
                     let node = &mut *self.expression_memory.get(&node_id).unwrap().borrow_mut();
                     if !node.available_variable.is_available() {
                         node.available_variable = AvailableVariable::Available(*res, *loc);
+                        self.mapped_variable.insert(*res, node_id);
                     }
                 }
 

@@ -49,17 +49,26 @@ pub struct AvailableExpression {
     cur_block: usize,
 }
 
-/// Each BasicExpression is a graph node
+/// Each BasicExpression is a graph node that tracks a real codegen::Expression
 #[derive(Clone)]
 pub struct BasicExpression<'a> {
+    /// The expression type for this node
     expr_type: ExpressionType,
+    /// The node global id
     expression_id: NodeId,
+    /// This map tracks all the node's children
     children: HashMap<NodeId, Rc<RefCell<BasicExpression<'a>>>>,
+    /// Reference points to the real codegen::Expression this node represents
     pub reference: &'a Expression,
+    /// Available_variable tells us if a CFG variable is available for this node.
+    /// E.g. if 'x=a+b' is evaluated, 'a+b' is already assigned to a variable in the CFG, so it
+    /// does not need a temporary in case it happens to be a common subexpression.
     pub available_variable: AvailableVariable,
+    /// Block is the CFG block where the expression was first seen.
     pub block: usize,
-    pub parent_block: usize,
-    pub on_parent_block: bool,
+    /// When parent_block is set, the expression should be evaluated at the parent_block instead of
+    /// block (the parameter right above this one).
+    pub parent_block: Option<usize>,
 }
 
 /// Type of constant to streamline the use of a hashmap
@@ -87,7 +96,7 @@ pub struct AvailableExpressionSet<'a> {
     expression_memory: HashMap<NodeId, Rc<RefCell<BasicExpression<'a>>>>,
     // Expression => node_id
     expr_map: HashMap<ExpressionType, NodeId>,
-    parent_block_no: usize,
+    mapped_variable: HashMap<usize, NodeId>,
 }
 
 /// This struct serves to be the return of function 'find_visiting_order', which helps finding all
@@ -142,13 +151,7 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
             cur_set.process_instruction(instr, &mut ave, &mut Some(&mut cst));
         }
 
-        add_neighbor_blocks(
-            cur_set,
-            &cfg_as_dag.dag[*block_no],
-            *block_no,
-            &mut sets,
-            &cst,
-        );
+        add_neighbor_blocks(cur_set, &cfg_as_dag.dag[*block_no], &mut sets, &cst);
     }
 
     cst.create_variables(ns, cfg);
@@ -172,13 +175,7 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
         }
 
         cur_block.instr = new_instructions;
-        add_neighbor_blocks(
-            cur_set,
-            &cfg_as_dag.dag[*block_no],
-            *block_no,
-            &mut sets,
-            &cst,
-        );
+        add_neighbor_blocks(cur_set, &cfg_as_dag.dag[*block_no], &mut sets, &cst);
     }
 
     cst.add_parent_block_instructions(cfg);
@@ -188,7 +185,6 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
 fn add_neighbor_blocks<'b>(
     cur_set: AvailableExpressionSet<'b>,
     edges: &[usize],
-    block_no: usize,
     sets: &mut HashMap<usize, AvailableExpressionSet<'b>>,
     cst: &CommonSubExpressionTracker,
 ) {
@@ -196,7 +192,7 @@ fn add_neighbor_blocks<'b>(
         if let Some(set) = sets.get_mut(edge) {
             set.intersect_sets(&cur_set, cst);
         } else {
-            sets.insert(*edge, cur_set.clone_for_parent_block(block_no));
+            sets.insert(*edge, cur_set.clone_for_parent_block());
         }
     }
 }
@@ -208,6 +204,7 @@ fn kill_loop_variables(block: &BasicBlock, cur_set: &mut AvailableExpressionSet,
         return;
     }
     for var_no in &block.loop_reaching_variables {
+        cur_set.remove_mapped(*var_no);
         cur_set.kill(*var_no);
     }
 }

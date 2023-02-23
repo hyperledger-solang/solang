@@ -8,7 +8,6 @@ use crate::codegen::{
 };
 use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{Namespace, Type};
-use bitflags::bitflags;
 use solang_parser::pt::OptionalCodeLocation;
 use solang_parser::pt::{Identifier, Loc};
 use std::collections::HashMap;
@@ -24,26 +23,23 @@ struct CommonSubexpression {
     on_parent_block: Option<usize>,
 }
 
-bitflags! {
-  struct Color: u8 {
-     const WHITE = 0;
-     const BLUE = 2;
-     const YELLOW = 4;
-     const GREEN = 6;
-  }
-}
-
 #[derive(Default, Clone)]
 pub struct CommonSubExpressionTracker<'a> {
+    /// This hash map tracks the inserted common subexpressions. The usize is the index into
+    /// common_subexpressions vector
     inserted_subexpressions: HashMap<ExpressionType, usize>,
+    /// We store common subexpressions in this vector
     common_subexpressions: Vec<CommonSubexpression>,
-    len: usize,
-    name_cnt: usize,
+    /// The cur_block tracks the current block we are currently analysing
     cur_block: usize,
+    /// We save here the new instructions we need to add to the current block
     new_cfg_instr: Vec<Instr>,
+    /// Here, we store the instruction we must add to blocks different than the one we are
+    /// analysing now
     parent_block_instr: Vec<(usize, Instr)>,
     /// Map from variable number to common subexpression
     mapped_variables: HashMap<usize, usize>,
+    /// anticipated_expressions saves the ancipated expressions for every block in the CFG
     anticipated_expressions: AnticipatedExpressions<'a>,
 }
 
@@ -76,7 +72,13 @@ impl<'a> CommonSubExpressionTracker<'a> {
         }
 
         self.inserted_subexpressions
-            .insert(expr_type.clone(), self.len);
+            .insert(expr_type.clone(), self.common_subexpressions.len());
+
+        if let Some(var_no) = node.available_variable.get_var_number() {
+            // If we encounter an expression like 'x = y+2', we can map 'x' to 'y+2', whenever possible.
+            self.mapped_variables
+                .insert(var_no, self.common_subexpressions.len());
+        }
 
         self.common_subexpressions.push(CommonSubexpression {
             in_cfg: node.available_variable.is_available(),
@@ -85,19 +87,8 @@ impl<'a> CommonSubExpressionTracker<'a> {
             instantiated: false,
             var_type: exp.ty(),
             block: node.block,
-            on_parent_block: if node.on_parent_block {
-                Some(node.parent_block)
-            } else {
-                None
-            },
+            on_parent_block: node.parent_block,
         });
-
-        if let Some(var_no) = node.available_variable.get_var_number() {
-            // If we encounter an expression like 'x = y+2', we can map 'x' to 'y+2', whenever possible.
-            self.mapped_variables.insert(var_no, self.len);
-        }
-
-        self.len += 1;
     }
 
     /// Invalidate a mapped variable
@@ -111,15 +102,16 @@ impl<'a> CommonSubExpressionTracker<'a> {
 
     /// Create variables in the CFG
     pub fn create_variables(&mut self, ns: &mut Namespace, cfg: &mut ControlFlowGraph) {
+        let mut name_cnt: usize = 0;
         for exp in self.common_subexpressions.iter_mut() {
             if exp.var_no.is_none() {
-                self.name_cnt += 1;
+                name_cnt += 1;
                 cfg.vars.insert(
                     ns.next_id,
                     Variable {
                         id: Identifier {
                             loc: Loc::Codegen,
-                            name: format!("{}.cse_temp", self.name_cnt),
+                            name: format!("{name_cnt}.cse_temp"),
                         },
                         ty: exp.var_type.clone(),
                         storage: Storage::Local,
@@ -167,7 +159,13 @@ impl<'a> CommonSubExpressionTracker<'a> {
             let ancestor = self.find_parent_block(self.cur_block, expr_block, expr);
             if let Some(ancestor_no) = ancestor {
                 if ancestor_no != expr_block {
-                    self.common_subexpressions[*expr_id].on_parent_block = Some(ancestor_no);
+                    let common_expression = &mut self.common_subexpressions[*expr_id];
+                    // When an expression is going to be evaluated on a block that's different from
+                    // the place where we first saw it, it cannot be replaced by an existing variable.
+                    common_expression.var_no = None;
+                    common_expression.var_loc = None;
+                    common_expression.in_cfg = false;
+                    common_expression.on_parent_block = Some(ancestor_no);
                 }
             }
         }

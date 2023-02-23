@@ -14,12 +14,17 @@ use std::collections::HashMap;
 /// path before this expression's value is changed (any variables its evaluation depends
 /// on are reassigned)."
 ///
-/// The anticipated expression analysis helps us find where a common subexpression can be evaluated.
+/// Available expressions tell us which sub expressions we have already evaluated. The anticipated
+/// expression analysis lets us go further and determine where a subexpression can be evaluate
+/// before any variable it depends on changes value.
+///
+/// Chapters 9.5.4 and 9.5.5 of the book "Compilers, Principles, Techniques & Tools" from
+/// Alfred V. Aho present more details about anticipated expressions.
 #[derive(Default, Clone)]
 pub(super) struct AnticipatedExpressions<'a> {
     /// The AvailableExpressionSet for each CFG block, when the graph is evaluated in reverse
     reverse_sets: HashMap<usize, AvailableExpressionSet<'a>>,
-    /// The CFG represented ad a DAG, but with each edge reversed
+    /// The CFG represented as a DAG, but with each edge reversed
     reverse_dag: Vec<Vec<usize>>,
     /// The order in which we must traverse the CFG. It is its topological sort but reversed.
     traversing_order: Vec<(usize, bool)>,
@@ -51,15 +56,11 @@ impl<'a> AnticipatedExpressions<'a> {
             return level;
         }
 
-        let mut local_level: u16 = u16::MAX;
-        for child in &dag[block] {
-            local_level = std::cmp::min(
-                local_level,
-                AnticipatedExpressions::blocks_depth(dag, *child, level + 1, depth),
-            );
-        }
-
-        local_level
+        dag[block]
+            .iter()
+            .map(|child| AnticipatedExpressions::blocks_depth(dag, *child, level + 1, depth))
+            .min()
+            .unwrap_or(u16::MAX)
     }
 
     /// This function calculates the anticipated expressions for each block. The analysis is similar
@@ -94,7 +95,7 @@ impl<'a> AnticipatedExpressions<'a> {
                     set.union_sets(&cur_set);
                 } else {
                     self.reverse_sets
-                        .insert(*edge, cur_set.clone_for_parent_block(*block_no));
+                        .insert(*edge, cur_set.clone_for_parent_block());
                 }
             }
         }
@@ -110,13 +111,13 @@ impl<'a> AnticipatedExpressions<'a> {
     /// When I use the term flow, I am referring to a flow network (https://en.wikipedia.org/wiki/Flow_network).
     /// The flow of each vertex is equally divided between its children, and the flow a vertex
     /// receives is the sum of the flows from its incoming edges.
-    pub(super) fn calculate_flow(&self, block_1: usize, block_2: usize) -> Vec<f32> {
-        let mut flow: Vec<f32> = vec![0.0; self.reverse_dag.len()];
+    pub(super) fn calculate_flow(&self, block_1: usize, block_2: usize) -> Vec<f64> {
+        let mut flow: Vec<f64> = vec![0.0; self.reverse_dag.len()];
         flow[block_1] = 1000.0;
         flow[block_2] = 1000.0;
 
         for (block_no, _) in &self.traversing_order {
-            let divided_flow = flow[*block_no] / (self.reverse_dag[*block_no].len() as f32);
+            let divided_flow = flow[*block_no] / (self.reverse_dag[*block_no].len() as f64);
             for child in &self.reverse_dag[*block_no] {
                 flow[*child] += divided_flow;
             }

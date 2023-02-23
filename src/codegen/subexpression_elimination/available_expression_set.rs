@@ -14,11 +14,11 @@ use std::rc::Rc;
 
 impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     /// Clone a set for a given parent block
-    pub fn clone_for_parent_block(&self, parent_block: usize) -> AvailableExpressionSet<'a> {
+    pub fn clone_for_parent_block(&self) -> AvailableExpressionSet<'a> {
         let mut new_set = AvailableExpressionSet {
             expression_memory: HashMap::default(),
             expr_map: self.expr_map.clone(),
-            parent_block_no: parent_block,
+            mapped_variable: self.mapped_variable.clone(),
         };
 
         for (key, value) in &self.expression_memory {
@@ -29,9 +29,8 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     expression_id: value.borrow().expression_id,
                     children: HashMap::default(),
                     available_variable: value.borrow().available_variable.clone(),
-                    parent_block: value.borrow().parent_block,
-                    on_parent_block: value.borrow().on_parent_block,
                     block: value.borrow().block,
+                    parent_block: value.borrow().parent_block,
                     reference: value.borrow().reference,
                 })),
             );
@@ -88,16 +87,13 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 node_1.children.clear();
                 let node_2_id = set_2.expr_map.get(key).unwrap();
 
-                node_1.on_parent_block = true;
                 // Find the common ancestor of both blocks. The deepest block after which there are
                 // multiple paths to both blocks.
-                node_1.parent_block = cst
-                    .find_parent_block(
-                        node_1.block,
-                        set_2.expression_memory[node_2_id].borrow().block,
-                        node_1.reference,
-                    )
-                    .unwrap();
+                node_1.parent_block = cst.find_parent_block(
+                    node_1.block,
+                    set_2.expression_memory[node_2_id].borrow().block,
+                    node_1.reference,
+                );
                 if let (Some(var_id_1), Some(var_id_2)) = (
                     set_2.expression_memory[node_2_id]
                         .borrow()
@@ -339,6 +335,24 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
         }
 
         self.expr_map.remove(&basic_exp.expr_type);
+    }
+
+    /// This functions indicates that an available node that was once mapped to an existing variable
+    /// no longer should be linked to that variable.
+    ///
+    /// When we have an assignment 'x = a + b', and later we find the usage of 'a + b', we can
+    /// replace it by 'x', instead of creating a new cse temporary. Nonetheless, whenever the 'x'
+    /// is reassigned, we must indicate that 'x' does not represent 'a + b' anymore, so we would
+    /// need a temporary if we were to replace a repeated occurrence of 'a + b'
+    pub fn remove_mapped(&mut self, var_no: usize) {
+        if let Some(node_id) = self.mapped_variable.remove(&var_no) {
+            if let Some(node) = self.expression_memory.get(&node_id) {
+                let mut node_mut = node.borrow_mut();
+                if node_mut.available_variable.is_available() {
+                    node_mut.available_variable = AvailableVariable::Unavailable;
+                }
+            }
+        }
     }
 
     /// When a reaching definition change, we remove the variable node and all its descendants from

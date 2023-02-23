@@ -520,7 +520,7 @@ fn clone() {
     let mut cst = CommonSubExpressionTracker::default();
 
     set.process_instruction(&instr, &mut ave, &mut Some(&mut cst));
-    let set_2 = set.clone_for_parent_block(1);
+    let set_2 = set.clone_for_parent_block();
 
     // Available expressions
     assert!(set_2.find_expression(&unary).is_some());
@@ -654,7 +654,7 @@ fn intersect() {
     cst.set_cur_block(0);
     set.process_instruction(&instr, &mut ave, &mut Some(&mut cst));
     set.process_instruction(&instr2, &mut ave, &mut Some(&mut cst));
-    let mut set_2 = set.clone().clone_for_parent_block(0);
+    let mut set_2 = set.clone().clone_for_parent_block();
     cst.set_cur_block(2);
     ave.set_cur_block(2);
     set.kill(1);
@@ -811,10 +811,9 @@ fn test_flow() {
     let flow = anticipated_expressions.calculate_flow(3, 5);
     for (item_no, flow_mag) in flow.iter().enumerate() {
         if item_no == 0 {
-            // TODO: Is this precision enough
-            assert!((*flow_mag - 2000.0).abs() < 0.01);
+            assert!((*flow_mag - 2000.0).abs() < 0.000001);
         } else {
-            assert!((*flow_mag - 2000.0).abs() > 0.01);
+            assert!((*flow_mag - 2000.0).abs() > 0.000001);
         }
     }
 
@@ -857,17 +856,17 @@ fn test_flow() {
     let flow = anticipated_expressions.calculate_flow(8, 6);
     for (item_no, flow_mag) in flow.iter().enumerate() {
         if item_no == 0 {
-            assert!((*flow_mag - 2000.0).abs() < 0.01);
+            assert!((*flow_mag - 2000.0).abs() < 0.000001);
         } else {
-            assert!((*flow_mag - 2000.0).abs() > 0.01);
+            assert!((*flow_mag - 2000.0).abs() > 0.000001);
         }
     }
     let flow = anticipated_expressions.calculate_flow(8, 3);
     for (item_no, flow_mag) in flow.iter().enumerate() {
         if item_no == 0 {
-            assert!((*flow_mag - 2000.0).abs() < 0.01);
+            assert!((*flow_mag - 2000.0).abs() < 0.000001);
         } else {
-            assert!((*flow_mag - 2000.0).abs() > 0.01);
+            assert!((*flow_mag - 2000.0).abs() > 0.000001);
         }
     }
 }
@@ -930,5 +929,140 @@ fn unite_expressions() {
     assert!(id_2.is_some());
 }
 
-// TODO: Test find ancestor
-// TODO: Add more codegen cases
+#[test]
+fn ancestor_found() {
+    let dag = vec![
+        vec![1],    // 0 -> 1
+        vec![2, 3], // 1 -> 2, 3
+        vec![],     // 2
+        vec![],     // 3
+    ];
+    let reverse_dag = vec![
+        vec![],  // 0
+        vec![0], // 1 -> 0
+        vec![1], // 2 -> 1
+        vec![1], // 3 -> 1
+    ];
+    let mut traversing_order = vec![(0, false), (1, false), (2, false), (3, false)];
+    traversing_order.reverse();
+    let mut anticipated = AnticipatedExpressions::new(&dag, reverse_dag, traversing_order);
+    let var1 = Expression::Variable(Loc::Implicit, Type::Uint(32), 0);
+    let var2 = Expression::Variable(Loc::Implicit, Type::Uint(32), 1);
+    let addition = Expression::Add(
+        Loc::Implicit,
+        Type::Uint(32),
+        false,
+        Box::new(var1.clone()),
+        Box::new(var2.clone()),
+    );
+    let instr = vec![
+        vec![
+            Instr::Set {
+                res: 0,
+                loc: Loc::Implicit,
+                expr: Expression::NumberLiteral(Loc::Implicit, Type::Uint(32), 9.into()),
+            },
+            Instr::Set {
+                res: 1,
+                loc: Loc::Implicit,
+                expr: Expression::NumberLiteral(Loc::Implicit, Type::Uint(32), 8.into()),
+            },
+            Instr::Branch { block: 1 },
+        ],
+        vec![Instr::BranchCond {
+            cond: Expression::LessEqual(Loc::Implicit, Box::new(var1), Box::new(var2)),
+            true_block: 2,
+            false_block: 3,
+        }],
+        vec![Instr::Set {
+            loc: Loc::Implicit,
+            res: 3,
+            expr: addition.clone(),
+        }],
+        vec![Instr::Set {
+            loc: Loc::Implicit,
+            res: 4,
+            expr: addition.clone(),
+        }],
+    ];
+    let mut cfg = ControlFlowGraph::new("func".to_string(), ASTFunction::None);
+    cfg.blocks = vec![BasicBlock::default(); 4];
+    anticipated.calculate_anticipated_expressions(&instr, &cfg);
+    let ancestor = anticipated.find_ancestor(2, 3, &addition);
+    assert_eq!(ancestor, Some(1));
+}
+
+#[test]
+fn ancestor_not_found() {
+    let dag = vec![
+        vec![1, 2], // 0 -> 1, 2
+        vec![3],    // 1 -> 3
+        vec![],     // 2
+        vec![],     // 3
+    ];
+    let reverse_dag = vec![
+        vec![],  // 0
+        vec![0], // 1 -> 0
+        vec![0], // 2 -> 0
+        vec![1], // 3 -> 1
+    ];
+    let mut traversing_order = vec![(0, false), (0, false), (2, false), (3, false)];
+    traversing_order.reverse();
+    let mut anticipated = AnticipatedExpressions::new(&dag, reverse_dag, traversing_order);
+    let var1 = Expression::Variable(Loc::Implicit, Type::Int(32), 0);
+    let var2 = Expression::Variable(Loc::Implicit, Type::Int(32), 1);
+    let expr = Expression::Multiply(
+        Loc::Implicit,
+        Type::Int(32),
+        false,
+        Box::new(var1.clone()),
+        Box::new(var2.clone()),
+    );
+    let instr = vec![
+        vec![
+            Instr::Set {
+                res: 0,
+                loc: Loc::Implicit,
+                expr: Expression::NumberLiteral(Loc::Implicit, Type::Int(32), 8.into()),
+            },
+            Instr::Set {
+                res: 1,
+                loc: Loc::Implicit,
+                expr: Expression::NumberLiteral(Loc::Implicit, Type::Int(32), 7.into()),
+            },
+            Instr::BranchCond {
+                cond: Expression::MoreEqual(Loc::Implicit, Box::new(var1), Box::new(var2)),
+                true_block: 1,
+                false_block: 2,
+            },
+        ],
+        vec![
+            Instr::Set {
+                res: 0,
+                loc: Loc::Implicit,
+                expr: Expression::NumberLiteral(Loc::Implicit, Type::Int(32), 10.into()),
+            },
+            Instr::Set {
+                res: 1,
+                loc: Loc::Implicit,
+                expr: Expression::NumberLiteral(Loc::Implicit, Type::Int(32), 27.into()),
+            },
+            Instr::Branch { block: 3 },
+        ],
+        vec![Instr::Set {
+            res: 2,
+            loc: Loc::Implicit,
+            expr: expr.clone(),
+        }],
+        vec![Instr::Set {
+            res: 3,
+            loc: Loc::Implicit,
+            expr: expr.clone(),
+        }],
+    ];
+    let mut cfg = ControlFlowGraph::new("func".to_string(), ASTFunction::None);
+    cfg.blocks = vec![BasicBlock::default(); 4];
+    anticipated.calculate_anticipated_expressions(&instr, &cfg);
+    let ancestor = anticipated.find_ancestor(2, 3, &expr);
+    assert!(ancestor.is_none());
+}
