@@ -69,7 +69,7 @@ enum SubstrateExternal {
     seal_instantiate,
     seal_value_transferred,
     seal_minimum_balance,
-    seal_random,
+    instantiation_nonce,
     seal_address,
     seal_balance,
     seal_terminate,
@@ -435,46 +435,8 @@ impl Externals for MockSubstrate {
 
                 Ok(Some(RuntimeValue::I32(0)))
             }
-            Some(SubstrateExternal::seal_random) => {
-                let data_ptr: u32 = args.nth_checked(0)?;
-                let len: u32 = args.nth_checked(1)?;
-                let dest_ptr: u32 = args.nth_checked(2)?;
-                let len_ptr: u32 = args.nth_checked(3)?;
-
-                let mut buf = Vec::new();
-                buf.resize(len as usize, 0u8);
-
-                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut buf) {
-                    panic!("seal_random: {e}");
-                }
-
-                let mut hash = [0u8; 32];
-
-                hash.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &buf).as_bytes());
-
-                println!("seal_random: {} {}", hex::encode(buf), hex::encode(hash));
-
-                let len = self
-                    .vm
-                    .memory
-                    .get_value::<u32>(len_ptr)
-                    .expect("seal_random len_ptr should be valid");
-
-                assert!(
-                    (len as usize) >= hash.len(),
-                    "seal_random dest buffer is too small"
-                );
-
-                if let Err(e) = self.vm.memory.set(dest_ptr, &hash) {
-                    panic!("seal_random: {e}");
-                }
-
-                self.vm
-                    .memory
-                    .set_value(len_ptr, hash.len() as u32)
-                    .expect("seal_random len_ptr should be valid");
-
-                Ok(None)
+            Some(SubstrateExternal::instantiation_nonce) => {
+                Ok(Some(RuntimeValue::I64(self.accounts.len() as i64)))
             }
             Some(SubstrateExternal::seal_call) => {
                 let flags: u32 = args.nth_checked(0)?;
@@ -910,7 +872,7 @@ impl ModuleImportResolver for MockSubstrate {
             "seal_instantiate" => SubstrateExternal::seal_instantiate,
             "seal_value_transferred" => SubstrateExternal::seal_value_transferred,
             "seal_minimum_balance" => SubstrateExternal::seal_minimum_balance,
-            "seal_random" => SubstrateExternal::seal_random,
+            "instantiation_nonce" => SubstrateExternal::instantiation_nonce,
             "seal_address" => SubstrateExternal::seal_address,
             "seal_balance" => SubstrateExternal::seal_balance,
             "seal_terminate" => SubstrateExternal::seal_terminate,

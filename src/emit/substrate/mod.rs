@@ -9,7 +9,6 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use num_traits::ToPrimitive;
 use solang_parser::pt;
-use std::collections::HashMap;
 
 use crate::emit::functions::{abort_if_value_transfer, emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};
@@ -101,9 +100,7 @@ macro_rules! emit_context {
     };
 }
 
-pub struct SubstrateTarget {
-    unique_strings: HashMap<usize, usize>,
-}
+pub struct SubstrateTarget;
 
 impl SubstrateTarget {
     pub fn build<'a>(
@@ -145,9 +142,7 @@ impl SubstrateTarget {
         scratch.set_initializer(&context.i8_type().array_type(SCRATCH_SIZE).get_undef());
         binary.scratch = Some(scratch);
 
-        let mut target = SubstrateTarget {
-            unique_strings: HashMap::new(),
-        };
+        let mut target = SubstrateTarget;
 
         target.declare_externals(&binary);
 
@@ -174,7 +169,7 @@ impl SubstrateTarget {
             "seal_value_transferred",
             "seal_minimum_balance",
             "seal_weight_to_fee",
-            "seal_random",
+            "instantiation_nonce",
             "seal_address",
             "seal_balance",
             "seal_block_number",
@@ -266,7 +261,7 @@ impl SubstrateTarget {
         external!("seal_hash_sha2_256", void_type, u8_ptr, u32_val, u8_ptr);
         external!("seal_hash_blake2_128", void_type, u8_ptr, u32_val, u8_ptr);
         external!("seal_hash_blake2_256", void_type, u8_ptr, u32_val, u8_ptr);
-        external!("seal_random", void_type, u8_ptr, u32_val, u8_ptr, u32_ptr);
+        external!("instantiation_nonce", i64_type,);
         external!(
             "seal_set_storage",
             i32_type,
@@ -1794,30 +1789,6 @@ impl SubstrateTarget {
             ),
             _ => unreachable!(),
         }
-    }
-
-    /// Create a unique salt each time this function is called.
-    fn contract_unique_salt<'x>(
-        &mut self,
-        binary: &'x Binary,
-        binary_no: usize,
-        ns: &ast::Namespace,
-    ) -> (PointerValue<'x>, IntValue<'x>) {
-        let counter = *self.unique_strings.get(&binary_no).unwrap_or(&0);
-
-        let binary_name = &ns.contracts[binary_no].name;
-
-        let unique = format!("{binary_name}-{counter}");
-
-        let salt = binary.emit_global_string(
-            &format!("salt_{binary_name}_{counter}"),
-            blake2_rfc::blake2b::blake2b(32, &[], unique.as_bytes()).as_bytes(),
-            true,
-        );
-
-        self.unique_strings.insert(binary_no, counter + 1);
-
-        (salt, binary.context.i32_type().const_int(32, false))
     }
 }
 
