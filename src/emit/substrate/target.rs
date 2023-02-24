@@ -1093,11 +1093,16 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let salt_len = i32_const!(32);
 
         let salt = contract_args.salt.unwrap_or_else(|| {
-            call!("instantiation_nonce", &[], "instantiation_nonce")
+            let nonce = call!("instantiation_nonce", &[], "instantiation_nonce_ext")
                 .try_as_basic_value()
                 .left()
                 .unwrap()
-                .into_int_value()
+                .into_int_value();
+            let i256_t = binary.context.custom_width_int_type(256);
+            binary
+                .builder
+                .build_int_z_extend_or_bit_cast(nonce, i256_t, "instantiation_nonce")
+                .into()
         });
         binary.builder.build_store(salt_buf, salt);
 
