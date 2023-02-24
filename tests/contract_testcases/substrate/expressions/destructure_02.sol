@@ -3,6 +3,6 @@ contract test {
                 int a;
                 int b;
 
-                (a memory, b) = (1, 2);
+                (a, b) = (1, 2);
             }
         }

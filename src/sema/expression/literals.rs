@@ -518,6 +518,53 @@ pub(super) fn struct_literal(
     }
 }
 
+pub(crate) fn unit_literal(
+    loc: &pt::Loc,
+    unit: &Option<pt::Identifier>,
+    ns: &mut Namespace,
+    diagnostics: &mut Diagnostics,
+) -> BigInt {
+    if let Some(unit) = unit {
+        match unit.name.as_str() {
+            "wei" | "gwei" | "ether" if ns.target != crate::Target::EVM => {
+                diagnostics.push(Diagnostic::warning(
+                    *loc,
+                    format!("ethereum currency unit used while targeting {}", ns.target),
+                ));
+            }
+            "sol" | "lamports" if ns.target != crate::Target::Solana => {
+                diagnostics.push(Diagnostic::warning(
+                    *loc,
+                    format!("solana currency unit used while targeting {}", ns.target),
+                ));
+            }
+            _ => (),
+        }
+
+        match unit.name.as_str() {
+            "seconds" => BigInt::from(1),
+            "minutes" => BigInt::from(60),
+            "hours" => BigInt::from(60 * 60),
+            "days" => BigInt::from(60 * 60 * 24),
+            "weeks" => BigInt::from(60 * 60 * 24 * 7),
+            "wei" => BigInt::from(1),
+            "gwei" => BigInt::from(10).pow(9u32),
+            "ether" => BigInt::from(10).pow(18u32),
+            "sol" => BigInt::from(10).pow(9u32),
+            "lamports" => BigInt::from(1),
+            _ => {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("unknown unit '{}'", unit.name),
+                ));
+                BigInt::from(1)
+            }
+        }
+    } else {
+        BigInt::from(1)
+    }
+}
+
 /// Resolve a struct literal with named fields
 pub(super) fn named_struct_literal(
     loc: &pt::Loc,

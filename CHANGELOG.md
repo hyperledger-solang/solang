@@ -2,6 +2,12 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## Unreleased
+
+### Added
+- The Solana units `sol` and `lamports` are now supported, e.g. `10 sol` and `100 lamports`.
+   [seanyoung](https://github.com/seanyoung)
+
 ## v0.2.2 Alexandria
 
 ### Added
