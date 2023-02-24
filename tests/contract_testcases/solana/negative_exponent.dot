@@ -14,7 +14,7 @@ strict digraph "tests/contract_testcases/solana/negative_exponent.sol" {
 	h [label="function h\ncontract: c\ntests/contract_testcases/solana/negative_exponent.sol:8:5-44\nsignature h()\nvisibility public\nmutability pure"]
 	returns_14 [label="returns\nuint256 "]
 	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/solana/negative_exponent.sol:1:1-11:2"]
-	diagnostic_17 [label="ethereum currency unit used while not targetting ethereum\nlevel Warning\ntests/contract_testcases/solana/negative_exponent.sol:6:23-26"]
+	diagnostic_17 [label="ethereum currency unit used while targeting solana\nlevel Warning\ntests/contract_testcases/solana/negative_exponent.sol:6:16-26"]
 	diagnostic_18 [label="conversion to uint256 from rational not allowed\nlevel Error\ntests/contract_testcases/solana/negative_exponent.sol:9:2-20"]
 	contracts -> contract
 	contract -> f [label="function"]

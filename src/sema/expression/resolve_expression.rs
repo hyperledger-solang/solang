@@ -15,7 +15,7 @@ use crate::sema::expression::integers::{
 };
 use crate::sema::expression::literals::{
     address_literal, array_literal, hex_literal, hex_number_literal, number_literal,
-    rational_number_literal, string_literal,
+    rational_number_literal, string_literal, unit_literal,
 };
 use crate::sema::expression::member_access::member_access;
 use crate::sema::expression::subscript::array_subscript;
@@ -27,7 +27,7 @@ use crate::sema::unused_variable::{
 };
 use crate::sema::Recurse;
 use num_bigint::BigInt;
-use num_traits::{Num, One};
+use num_traits::Num;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
@@ -63,28 +63,32 @@ pub fn expression(
             Ok(string_literal(v, context.file_no, diagnostics, resolve_to))
         }
         pt::Expression::HexLiteral(v) => hex_literal(v, diagnostics, resolve_to),
-        pt::Expression::NumberLiteral(loc, integer, exp) => number_literal(
-            loc,
-            integer,
-            exp,
-            ns,
-            &BigInt::one(),
-            diagnostics,
-            resolve_to,
-        ),
-        pt::Expression::RationalNumberLiteral(loc, integer, fraction, exp) => {
+        pt::Expression::NumberLiteral(loc, integer, exp, unit) => {
+            let unit = unit_literal(loc, unit, ns, diagnostics);
+
+            number_literal(loc, integer, exp, ns, &unit, diagnostics, resolve_to)
+        }
+        pt::Expression::RationalNumberLiteral(loc, integer, fraction, exp, unit) => {
+            let unit = unit_literal(loc, unit, ns, diagnostics);
+
             rational_number_literal(
                 loc,
                 integer,
                 fraction,
                 exp,
-                &BigInt::one(),
+                &unit,
                 ns,
                 diagnostics,
                 resolve_to,
             )
         }
-        pt::Expression::HexNumberLiteral(loc, n) => {
+        pt::Expression::HexNumberLiteral(loc, n, unit) => {
+            if unit.is_some() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "hexadecimal numbers cannot be used with unit denominations".into(),
+                ));
+            }
             hex_number_literal(loc, n, ns, diagnostics, resolve_to)
         }
         pt::Expression::AddressLiteral(loc, address) => {
@@ -279,16 +283,19 @@ pub fn expression(
             })
         }
         pt::Expression::UnaryMinus(loc, e) => match e.as_ref() {
-            pt::Expression::NumberLiteral(_, integer, exp) => number_literal(
-                loc,
-                integer,
-                exp,
-                ns,
-                &BigInt::from(-1),
-                diagnostics,
-                resolve_to,
-            ),
-            pt::Expression::HexNumberLiteral(_, v) => {
+            pt::Expression::NumberLiteral(_, integer, exp, unit) => {
+                let unit = unit_literal(loc, unit, ns, diagnostics);
+
+                number_literal(loc, integer, exp, ns, &-unit, diagnostics, resolve_to)
+            }
+            pt::Expression::HexNumberLiteral(_, v, unit) => {
+                if unit.is_some() {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "hexadecimal numbers cannot be used with unit denominations".into(),
+                    ));
+                }
+
                 // a hex literal with a minus before it cannot be an address literal or a bytesN value
                 let s: String = v.chars().skip(2).filter(|v| *v != '_').collect();
 
@@ -296,13 +303,15 @@ pub fn expression(
 
                 bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to, Some(s.len()))
             }
-            pt::Expression::RationalNumberLiteral(loc, integer, fraction, exp) => {
+            pt::Expression::RationalNumberLiteral(loc, integer, fraction, exp, unit) => {
+                let unit = unit_literal(loc, unit, ns, diagnostics);
+
                 rational_number_literal(
                     loc,
                     integer,
                     fraction,
                     exp,
-                    &BigInt::from(-1),
+                    &-unit,
                     ns,
                     diagnostics,
                     resolve_to,
@@ -593,62 +602,6 @@ pub fn expression(
                 "unexpect block encountered".to_owned(),
             ));
             Err(())
-        }
-        pt::Expression::Unit(loc, expr, unit) => {
-            match unit {
-                pt::Unit::Wei(loc) | pt::Unit::Gwei(loc) | pt::Unit::Ether(loc)
-                    if ns.target != crate::Target::EVM =>
-                {
-                    diagnostics.push(Diagnostic::warning(
-                        *loc,
-                        "ethereum currency unit used while not targetting ethereum".to_owned(),
-                    ));
-                }
-                _ => (),
-            }
-
-            let unit = match unit {
-                pt::Unit::Seconds(_) => BigInt::from(1),
-                pt::Unit::Minutes(_) => BigInt::from(60),
-                pt::Unit::Hours(_) => BigInt::from(60 * 60),
-                pt::Unit::Days(_) => BigInt::from(60 * 60 * 24),
-                pt::Unit::Weeks(_) => BigInt::from(60 * 60 * 24 * 7),
-                pt::Unit::Wei(_) => BigInt::from(1),
-                pt::Unit::Gwei(_) => BigInt::from(10).pow(9u32),
-                pt::Unit::Ether(_) => BigInt::from(10).pow(18u32),
-            };
-
-            match expr.as_ref() {
-                pt::Expression::NumberLiteral(_, integer, exp) => {
-                    number_literal(loc, integer, exp, ns, &unit, diagnostics, resolve_to)
-                }
-                pt::Expression::RationalNumberLiteral(_, significant, mantissa, exp) => {
-                    rational_number_literal(
-                        loc,
-                        significant,
-                        mantissa,
-                        exp,
-                        &unit,
-                        ns,
-                        diagnostics,
-                        resolve_to,
-                    )
-                }
-                pt::Expression::HexNumberLiteral(loc, _) => {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "hexadecimal numbers cannot be used with unit denominations".to_owned(),
-                    ));
-                    Err(())
-                }
-                _ => {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "unit denominations can only be used with number literals".to_owned(),
-                    ));
-                    Err(())
-                }
-            }
         }
         pt::Expression::This(loc) => match context.contract_no {
             Some(contract_no) => Ok(Expression::Builtin {

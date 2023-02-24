@@ -155,16 +155,17 @@ Here is a brief description of what we envision for the next versions.
 
 ### V0.3
 
-| Milestone                                  | Status      |
-|--------------------------------------------|-------------|
-| Call Solana's Rust contracts from Solidity | Completed   |
-| Improvements in overflow checking          | Completed   |
-| Support Solana's Program Derived Addresses | Completed   |
-| Call Solidity from Solana's Rust contracts | Not started |
-| Improve developer experience for Substrate | In progress |
-| Tooling for calls between ink! <> solidity | In progress |
-| Support chain extensions for Substrate     | Not started |
-| Provide CLI for node interactions          | Not started |
+| Milestone                                    | Status      |
+|----------------------------------------------|-------------|
+| Specify values as "1 sol" and "1e9 lamports" | Completed   |
+| Call Solana's Rust contracts from Solidity   | Completed   |
+| Improvements in overflow checking            | Completed   |
+| Support Solana's Program Derived Addresses   | Completed   |
+| Call Solidity from Solana's Rust contracts   | Not started |
+| Improve developer experience for Substrate   | In progress |
+| Tooling for calls between ink! <> solidity   | In progress |
+| Support chain extensions for Substrate       | Not started |
+| Provide CLI for node interactions            | Not started |
 
 
 ### V0.4
@@ -172,12 +173,9 @@ Here is a brief description of what we envision for the next versions.
 | Milestone                                          | Status      |
 |----------------------------------------------------|-------------|
 | Improve management over optimization passes        | Not started |
-| Specify values as "1 sol" and "1e9 lamports"       | In progress |
 | Adopt single static assignment for code generation | Not started |
 | Support openzeppelin on Substrate target           | Not started |
 | Provide Solidity -> Substrate porting guide        | Not started |
-
-
 
 ## License
 
