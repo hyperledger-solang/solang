@@ -1089,7 +1089,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         // salt
         let salt_buf =
-            binary.build_alloca(function, binary.context.i8_type().array_type(36), "salt");
+            binary.build_alloca(function, binary.context.i8_type().array_type(32), "salt");
         let salt_len = i32_const!(32);
 
         let salt = contract_args.salt.unwrap_or_else(|| {
@@ -1102,7 +1102,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             binary
                 .builder
                 .build_int_z_extend_or_bit_cast(nonce, i256_t, "instantiation_nonce")
-                .into()
         });
         binary.builder.build_store(salt_buf, salt);
 
