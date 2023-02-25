@@ -19,6 +19,7 @@ use super::diagnostics::Diagnostics;
 use super::eval::eval_const_rational;
 use crate::sema::contracts::is_base;
 use crate::sema::eval::eval_const_number;
+use crate::sema::using::find_user_defined_oper;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, ToPrimitive, Zero};
@@ -1249,4 +1250,37 @@ impl Expression {
             }
         }
     }
+}
+
+pub(super) fn user_defined_oper(
+    loc: &pt::Loc,
+    args: &[&Expression],
+    oper: pt::UserDefinedOperator,
+    diagnostics: &mut Diagnostics,
+    ns: &Namespace,
+) -> Option<Expression> {
+    let ty = args[0].ty();
+
+    let user_ty = ty.deref_any();
+
+    if let Type::UserType(..) = user_ty {
+        if let Some(using_function) = find_user_defined_oper(user_ty, oper, ns) {
+            if args.iter().all(|expr| expr.ty().deref_any() == user_ty) {
+                let func = &ns.functions[using_function.function_no];
+
+                return Some(Expression::UserDefinedOperator {
+                    loc: *loc,
+                    ty: func.returns[0].ty.clone(),
+                    oper,
+                    function_no: using_function.function_no,
+                    args: args
+                        .iter()
+                        .map(|e| e.cast(&e.loc(), user_ty, true, ns, diagnostics).unwrap())
+                        .collect(),
+                });
+            }
+        }
+    }
+
+    None
 }

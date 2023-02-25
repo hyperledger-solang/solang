@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    ast::{Diagnostic, Expression, Namespace, Note, Type, Using, UsingList},
+    ast::{
+        Diagnostic, Expression, Mutability, Namespace, Note, Type, Using, UsingFunction, UsingList,
+    },
     diagnostics::Diagnostics,
     expression::{ExprContext, ResolveTo},
     symtable::Symtable,
 };
 use crate::sema::expression::function_call::{function_returns, function_type};
 use crate::sema::expression::resolve_expression::expression;
-use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{self};
 use std::collections::HashSet;
 
 /// Resolve a using declaration in either file scope or contract scope
@@ -73,10 +75,11 @@ pub(crate) fn using_decl(
         pt::UsingList::Functions(functions) => {
             let mut res = Vec::new();
 
-            for function_name in functions {
+            for using_function in functions {
+                let function_name = &using_function.path;
                 if let Ok(list) = ns.resolve_free_function_with_namespace(
                     file_no,
-                    function_name,
+                    &using_function.path,
                     &mut diagnostics,
                 ) {
                     if list.len() > 1 {
@@ -125,7 +128,127 @@ pub(crate) fn using_decl(
                         }
                     }
 
-                    res.push(func_no);
+                    let oper = if let Some(mut oper) = using_function.oper {
+                        if contract_no.is_some() || using.global.is_none() || ty.is_none() {
+                            diagnostics.push(Diagnostic::error(
+                                using_function.loc,
+                                "operator overloading can only be set in a global 'using for' directive".into(),
+                            ));
+                            break;
+                        }
+
+                        let ty = ty.as_ref().unwrap();
+
+                        // The '-' operator may be for subtract or negation, the parser cannot not know which one it was
+                        if oper == pt::UserDefinedOperator::Subtract
+                            || oper == pt::UserDefinedOperator::Negate
+                        {
+                            oper = match func.params.len() {
+                                1 => pt::UserDefinedOperator::Negate,
+                                2 => pt::UserDefinedOperator::Subtract,
+                                _ => {
+                                    diagnostics.push(Diagnostic::error_with_note(
+                                        using_function.loc,
+                                            "user defined operator function for '-' must have 1 parameter for negate, or 2 parameters for subtract".into(),
+                                        loc,
+                                        format!("definition of '{function_name}'"),
+                                    ));
+                                    continue;
+                                }
+                            }
+                        };
+
+                        if !matches!(func.params[0].ty, Type::UserType(_))
+                            || func.params.len() != oper.args()
+                            || func.params.iter().any(|param| param.ty != *ty)
+                        {
+                            diagnostics.push(Diagnostic::error_with_note(
+                                using_function.loc,
+                                format!(
+                                    "user defined operator function for '{}' must have {} arguments of the same user type",
+                                    oper,
+                                    oper.args()
+                                ),
+                                loc,
+                                format!("definition of '{function_name}'"),
+                            ));
+                            continue;
+                        }
+
+                        if oper.is_comparison() {
+                            if func.returns.len() != 1 || func.returns[0].ty != Type::Bool {
+                                diagnostics.push(Diagnostic::error_with_note(
+                                    using_function.loc,
+                                    format!(
+                                        "user defined operator function for '{}' must have one bool return type",
+                                        oper,
+                                    ),
+                                    loc,
+                                    format!("definition of '{function_name}'"),
+                                ));
+                                continue;
+                            }
+                        } else if func.returns.len() != 1 || func.returns[0].ty != *ty {
+                            diagnostics.push(Diagnostic::error_with_note(
+                                using_function.loc,
+                                    format!(
+                                        "user defined operator function for '{}' must have single return type {}",
+                                        oper, ty.to_string(ns)
+                                    ),
+                                    loc,
+                                    format!("definition of '{function_name}'"),
+                                ));
+                            continue;
+                        }
+
+                        if !matches!(func.mutability, Mutability::Pure(_)) {
+                            diagnostics.push(Diagnostic::error_with_note(
+                                using_function.loc,
+                                format!(
+                                    "user defined operator function for '{}' must have pure mutability",
+                                    oper,
+                                ),
+                                loc,
+                                format!("definition of '{function_name}'"),
+                            ));
+                            continue;
+                        }
+
+                        if let Some(existing) = find_user_defined_oper(ty, oper, ns) {
+                            if existing.function_no != func_no {
+                                diagnostics.push(Diagnostic::error_with_note(
+                                    using_function.loc,
+                                    format!("user defined operator for '{oper}' redefined"),
+                                    existing.loc,
+                                    format!(
+                                        "previous definition of '{oper}' was '{}'",
+                                        ns.functions[existing.function_no].name
+                                    ),
+                                ));
+                            } else {
+                                diagnostics.push(Diagnostic::warning_with_note(
+                                    using_function.loc,
+                                    format!("user defined operator for '{oper}' redefined to same function"),
+                                    existing.loc,
+                                    format!(
+                                        "previous definition of '{oper}' was '{}'",
+                                        ns.functions[existing.function_no].name
+                                    ),
+                                ));
+                            }
+                            continue;
+                        }
+
+                        Some(oper)
+                    } else {
+                        None
+                    };
+
+                    res.push(UsingFunction {
+                        loc: using_function.loc,
+                        function_no: func_no,
+                        oper,
+                    });
                 }
             }
 
@@ -198,9 +321,23 @@ fn possible_functions(
                 true
             }
         })
-        .flat_map(|using| match &using.list {
-            UsingList::Library(library_no) => ns.contracts[*library_no].functions.iter(),
-            UsingList::Functions(functions) => functions.iter(),
+        .flat_map(|using| {
+            let iterator: Box<dyn Iterator<Item = _>> = match &using.list {
+                UsingList::Library(library_no) => {
+                    Box::new(ns.contracts[*library_no].functions.iter())
+                }
+                UsingList::Functions(functions) => {
+                    Box::new(functions.iter().filter_map(move |using| {
+                        if using.oper.is_none() {
+                            Some(&using.function_no)
+                        } else {
+                            None
+                        }
+                    }))
+                }
+            };
+
+            iterator
         })
         .filter(|func_no| {
             let func = &ns.functions[**func_no];
@@ -209,6 +346,26 @@ fn possible_functions(
         })
         .cloned()
         .collect()
+}
+
+/// Given the type and oper, find the user defined operator. Note there can only be one.
+pub(crate) fn find_user_defined_oper<'a>(
+    ty: &Type,
+    oper: pt::UserDefinedOperator,
+    ns: &'a Namespace,
+) -> Option<&'a UsingFunction> {
+    let oper = Some(oper);
+
+    ns.using
+        .iter()
+        .filter(|using| Some(ty) == using.ty.as_ref())
+        .find_map(|using| {
+            if let UsingList::Functions(funcs) = &using.list {
+                funcs.iter().find(|using| using.oper == oper)
+            } else {
+                None
+            }
+        })
 }
 
 pub(super) fn try_resolve_using_call(

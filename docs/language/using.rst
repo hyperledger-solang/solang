@@ -33,6 +33,32 @@ Now even when ``User`` is imported, the clear_count() method can be used.
 .. include:: ../examples/using_imports.sol
   :code: solidity
 
+.. _user_defined_operators:
+
+User defined Operators
+______________________
+
+The ``using`` directive can be used to define operators for :ref:`user defined types <user_defined_types>`.
+The operators that can be defined are ``==``, ``!=``, ``>=``, ``>``, ``<=``, ``<``, ``~``,
+``&``, ``|``, ``^``, ``-`` (both negate and subtract), ``+``, ``*``, ``/``, and ``%``.
+
+First, declare a function with the correct prototype that implements the operator.
+
+* The function must be free standing: declared outside a contract.
+* The function must have ``pure`` mutability.
+* All the parameters must be the same user type.
+* The number of arguments depends on which operator is implemented; binary operators require two and unary operators, one.
+* The function must return either ``bool`` for the comparison operators, or the same user type as the parameters for the other operators.
+
+Then bind the function to the operator using the syntax ``using {function-name as operator} for user-type global;``.
+Operators can only be defined with ``global`` set. Note that the ``-`` operator is
+used for two operators: subtract and negate. In order to override the negate operator,
+the function must have a single parameter since negate is an unary operator, and subtract
+must have two parameters.
+
+.. include:: ../examples/user_defined_operators.sol
+   :code: solidity
+
 ``using`` with libraries
 ________________________
 

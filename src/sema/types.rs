@@ -1383,6 +1383,7 @@ impl Type {
                 Type::Mapping(..) => BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4),
                 Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_slots(ns),
                 Type::Unresolved => BigInt::one(),
+                Type::UserType(no) => ns.user_types[*no].ty.storage_slots(ns),
                 _ => unimplemented!(),
             }
         } else {
