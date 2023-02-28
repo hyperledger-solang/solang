@@ -203,10 +203,16 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
     let mut types_seen: HashSet<usize> = HashSet::new();
 
     for (field_no, field) in def.fields.iter().enumerate() {
+        dbg!(&field.ty);
         let field_struct_no = match &field.ty {
+            Type::Mapping(m) => match m.value.as_ref() {
+                Type::Struct(StructType::UserDefined(n)) => *n,
+                _ => continue,
+            },
             Type::Struct(StructType::UserDefined(n)) => *n,
             Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
-                (Type::Struct(StructType::UserDefined(n)), Some(ArrayLength::Fixed(_))) => *n,
+                //(Type::Struct(StructType::UserDefined(n)), Some(ArrayLength::Fixed(_))) => *n,
+                (Type::Struct(StructType::UserDefined(n)), Some(_)) => *n,
                 _ => continue,
             },
             _ => continue,
@@ -217,17 +223,27 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
         }
 
         if structs_visited.contains(&field_struct_no) {
-            ns.diagnostics.push(Diagnostic::error_with_note(
-                def.loc,
-                format!("struct '{}' has infinite size", def.name),
-                field.loc,
-                format!("recursive field '{}'", field.name_as_str()),
-            ));
-
-            ns.structs[struct_no].fields[field_no].unsizeable = true;
+            ns.structs[struct_no].fields[field_no].recursive = true;
+            match &field.ty {
+                Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
+                    (Type::Struct(StructType::UserDefined(n)), Some(ArrayLength::Fixed(_))) => {
+                        ns.diagnostics.push(Diagnostic::error_with_note(
+                            def.loc,
+                            format!("struct '{}' has infinite size", def.name),
+                            field.loc,
+                            format!("recursive field '{}'", field.name_as_str()),
+                        ));
+                        ns.structs[struct_no].fields[field_no].unsizeable = true;
+                    }
+                    _ => continue,
+                },
+                _ => continue,
+            }
         } else {
             structs_visited.push(field_struct_no);
+            println!("1");
             find_struct_recursion(field_struct_no, structs_visited, ns);
+            println!("2");
             structs_visited.pop();
         }
     }
