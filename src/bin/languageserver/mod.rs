@@ -27,7 +27,7 @@ pub struct SolangServer {
     client: Client,
     target: Target,
     importpaths: Vec<PathBuf>,
-    importmaps: Vec<String>,
+    importmaps: Vec<(String, PathBuf)>,
     files: Mutex<HashMap<PathBuf, Hovers>>,
 }
 
@@ -42,9 +42,9 @@ pub async fn start_server(target: Target, matches: &ArgMatches) -> ! {
         }
     }
 
-    if let Some(maps) = matches.get_many::<String>("IMPORTMAP") {
-        for map in maps {
-            importmaps.push(map.to_string());
+    if let Some(maps) = matches.get_many::<(String, PathBuf)>("IMPORTMAP") {
+        for (map, path) in maps {
+            importmaps.push((map.clone(), path.clone()));
         }
     }
 
@@ -86,20 +86,10 @@ impl SolangServer {
                 }
             }
 
-            for p in &self.importmaps {
-                if let Some((map, path)) = p.split_once('=') {
-                    if let Err(e) =
-                        resolver.add_import_map(OsString::from(map), PathBuf::from(path))
-                    {
-                        diags.push(Diagnostic {
-                            message: format!("error: import path '{}': {}", path, e),
-                            severity: Some(DiagnosticSeverity::ERROR),
-                            ..Default::default()
-                        });
-                    }
-                } else {
+            for (map, path) in &self.importmaps {
+                if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
                     diags.push(Diagnostic {
-                        message: format!("error: import map '{}': contains no '='", p),
+                        message: format!("error: import path '{}': {e}", path.display()),
                         severity: Some(DiagnosticSeverity::ERROR),
                         ..Default::default()
                     });
@@ -199,7 +189,7 @@ impl<'a> Builder<'a> {
                         }
                         codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
                         | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
-                            write!(val, " = {}", n).unwrap();
+                            write!(val, " = {n}").unwrap();
                         }
                         _ => (),
                     }
@@ -544,7 +534,7 @@ impl<'a> Builder<'a> {
                         }
                         codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
                         | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
-                            write!(val, " {}", n).unwrap();
+                            write!(val, " {n}").unwrap();
                         }
                         _ => (),
                     }
@@ -663,10 +653,10 @@ impl<'a> Builder<'a> {
                             parm.name_as_str(),
                             self.expanded_ty(&parm.ty)
                         );
-                        val = format!("{} {}", val, msg);
+                        val = format!("{val} {msg}");
                     }
 
-                    val = format!("{} ) returns (", val);
+                    val = format!("{val} ) returns (");
 
                     for ret in &*fnc.returns {
                         let msg = format!(
@@ -674,10 +664,10 @@ impl<'a> Builder<'a> {
                             ret.name_as_str(),
                             self.expanded_ty(&ret.ty)
                         );
-                        val = format!("{} {}", val, msg);
+                        val = format!("{val} {msg}");
                     }
 
-                    val = format!("{})", val);
+                    val = format!("{val})");
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
                         stop: loc.end(),
@@ -713,10 +703,10 @@ impl<'a> Builder<'a> {
                             parm.name_as_str(),
                             self.expanded_ty(&parm.ty)
                         );
-                        val = format!("{} {}", val, msg);
+                        val = format!("{val} {msg}");
                     }
 
-                    val = format!("{} ) \n\n returns (", val);
+                    val = format!("{val} ) \n\n returns (");
 
                     for ret in &*fnc.returns {
                         let msg = format!(
@@ -724,10 +714,10 @@ impl<'a> Builder<'a> {
                             ret.name_as_str(),
                             self.expanded_ty(&ret.ty)
                         );
-                        val = format!("{} {}", val, msg);
+                        val = format!("{val} {msg}");
                     }
 
-                    val = format!("{})", val);
+                    val = format!("{val})");
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
                         stop: loc.end(),
@@ -852,7 +842,7 @@ impl<'a> Builder<'a> {
 
         for enum_decl in &builder.ns.enums {
             for (discriminant, (nam, loc)) in enum_decl.values.iter().enumerate() {
-                let val = format!("{} {}, \n\n", nam, discriminant);
+                let val = format!("{nam} {discriminant}, \n\n");
                 builder.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
@@ -995,7 +985,7 @@ impl<'a> Builder<'a> {
 
                 let mut msg = render(&strct.tags);
 
-                writeln!(msg, "```\nstruct {} {{", strct).unwrap();
+                writeln!(msg, "```\nstruct {strct} {{").unwrap();
 
                 let mut iter = strct.fields.iter().peekable();
                 while let Some(field) = iter.next() {
@@ -1018,7 +1008,7 @@ impl<'a> Builder<'a> {
 
                 let mut msg = render(&enm.tags);
 
-                write!(msg, "```\nenum {} {{\n", enm).unwrap();
+                write!(msg, "```\nenum {enm} {{\n").unwrap();
 
                 // display the enum values in-order
                 let mut values = Vec::new();

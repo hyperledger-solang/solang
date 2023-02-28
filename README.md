@@ -1,4 +1,4 @@
-<img src="docs//hl_solang_horizontal-color.svg" alt="Solang Logo" width="75%"/>
+<img src="https://raw.githubusercontent.com/hyperledger/solang/main/docs/hl_solang_horizontal-color.svg" alt="Solang Logo" width="75%"/>
 
 # solang - Solidity Compiler for Solana and Substrate
 
@@ -59,58 +59,73 @@ solang compile --target solana flipper.sol
 
 Alternatively if you want to use the solang container, run:
 
-```
-docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang compile -v -o /sources --target solana /sources/flipper.sol
+```bash
+docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang compile -v -o /sources --target solana /sources/solana/flipper.sol
 ```
 
-A file called `flipper.abi` and `flipper.so`. Now install `@solana/solidity`:
+This generates a file called `flipper.json` and `flipper.so`. In order to deploy the contract code to the account
+`F1ipperKF9EfD821ZbbYjS319LXYiBmjhzkkf5a26rC`, save the private key to the file `flipper-keypair.json`:
+
+```bash
+echo "[4,10,246,143,43,1,234,17,159,249,41,16,230,9,198,162,107,221,233,124,34,15,16,57,205,53,237,217,149,17,229,195,3,150,242,90,91,222,117,26,196,224,214,105,82,62,237,137,92,67,213,23,14,206,230,155,43,36,85,254,247,11,226,145]" > flipper-keypair.json
+ ```
+
+Now you can deploy the contract code using:
+
+```bash
+solana program deploy flipper.so
+```
+
+Now install `@project-serum/anchor`:
 
 ```
-npm install @solana/solidity
+npm install @project-serum/anchor
 ```
 
 Save the following to `flipper.js`:
 ```javascript
-const { Connection, LAMPORTS_PER_SOL, Keypair } = require('@solana/web3.js');
-const { Contract, Program } = require('@solana/solidity');
 const { readFileSync } = require('fs');
+const anchor = require('@project-serum/anchor');
 
-const FLIPPER_ABI = JSON.parse(readFileSync('./flipper.abi', 'utf8'));
+const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
 const PROGRAM_SO = readFileSync('./flipper.so');
 
 (async function () {
-    console.log('Connecting to your local Solana node ...');
-    const connection = new Connection('http://localhost:8899', 'confirmed');
+	const provider = anchor.AnchorProvider.env();
 
-    const payer = Keypair.generate();
+	const dataAccount = anchor.web3.Keypair.generate();
 
-    console.log('Airdropping SOL to a new wallet ...');
-    const signature = await connection.requestAirdrop(payer.publicKey, LAMPORTS_PER_SOL);
-    await connection.confirmTransaction(signature, 'confirmed');
+	const programId = new anchor.web3.PublicKey(IDL.metadata.address);
 
-    const program = Keypair.generate();
-    const storage = Keypair.generate();
+	const wallet = provider.wallet.publicKey;
 
-    const contract = new Contract(connection, program.publicKey, storage.publicKey, FLIPPER_ABI, payer);
+	const program = new anchor.Program(IDL, programId, provider);
 
-    await contract.load(program, PROGRAM_SO);
+	await program.methods.new(wallet, true)
+		.accounts({ dataAccount: dataAccount.publicKey })
+		.signers([dataAccount]).rpc();
 
-    console.log('Program deployment finished, deploying the flipper contract ...');
+	const val1 = await program.methods.get()
+		.accounts({ dataAccount: dataAccount.publicKey })
+		.view();
 
-    await contract.deploy('flipper', [true], storage, 17);
+	console.log(`state: ${val1}`);
 
-    const res = await contract.functions.get();
-    console.log('state: ' + res.result);
+	await program.methods.flip()
+		.accounts({ dataAccount: dataAccount.publicKey })
+		.rpc();
 
-    await contract.functions.flip();
+	const val2 = await program.methods.get()
+		.accounts({ dataAccount: dataAccount.publicKey })
+		.view();
 
-    const res2 = await contract.functions.get();
-    console.log('state: ' + res2.result);
+	console.log(`state: ${val2}`);
 })();
 ```
-
 And now run:
 ```
+export ANCHOR_WALLET=$HOME/.config/solana/id.json
+export ANCHOR_PROVIDER_URL=http://127.0.0.1:8899
 node flipper.js
 ```
 
@@ -140,16 +155,17 @@ Here is a brief description of what we envision for the next versions.
 
 ### V0.3
 
-| Milestone                                  | Status      |
-|--------------------------------------------|-------------|
-| Call Solana's Rust contracts from Solidity | Completed   |
-| Improvements in overflow checking          | Completed   |
-| Support Solana's Program Derived Addresses | Completed   |
-| Call Solidity from Solana's Rust contracts | Not started |
-| Improve developer experience for Substrate | Not started |
-| Tooling for calls between ink! <> solidity | Not started |
-| Support chain extensions for Substrate     | Not started |
-| Provide CLI for node interactions          | Not started |
+| Milestone                                    | Status      |
+|----------------------------------------------|-------------|
+| Specify values as "1 sol" and "1e9 lamports" | Completed   |
+| Call Solana's Rust contracts from Solidity   | Completed   |
+| Improvements in overflow checking            | Completed   |
+| Support Solana's Program Derived Addresses   | Completed   |
+| Call Solidity from Solana's Rust contracts   | Not started |
+| Improve developer experience for Substrate   | In progress |
+| Tooling for calls between ink! <> solidity   | In progress |
+| Support chain extensions for Substrate       | Not started |
+| Provide CLI for node interactions            | Not started |
 
 
 ### V0.4
@@ -157,12 +173,9 @@ Here is a brief description of what we envision for the next versions.
 | Milestone                                          | Status      |
 |----------------------------------------------------|-------------|
 | Improve management over optimization passes        | Not started |
-| Specify values as "1 sol" and "1e9 lamports"       | In progress |
 | Adopt single static assignment for code generation | Not started |
 | Support openzeppelin on Substrate target           | Not started |
 | Provide Solidity -> Substrate porting guide        | Not started |
-
-
 
 ## License
 

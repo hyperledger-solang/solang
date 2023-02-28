@@ -91,7 +91,7 @@ impl Dot {
         );
 
         if node.name.is_empty() || node.name == "node" {
-            node.name = format!("node_{}", no);
+            node.name = format!("node_{no}");
         } else {
             while self.nodes.iter().any(|n| n.name == node.name) {
                 node.name = format!("{}_{}", node.name, no);
@@ -245,7 +245,7 @@ impl Dot {
             );
 
             for (no, arg) in args.iter().enumerate() {
-                self.add_expression(arg, Some(func), ns, node, format!("arg #{}", no));
+                self.add_expression(arg, Some(func), ns, node, format!("arg #{no}"));
             }
         }
 
@@ -343,7 +343,7 @@ impl Dot {
                 );
 
                 for (no, arg) in values.iter().enumerate() {
-                    self.add_expression(arg, func, ns, node, format!("arg #{}", no));
+                    self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
             }
             Expression::ArrayLiteral {
@@ -361,7 +361,7 @@ impl Dot {
                 );
 
                 for (no, arg) in values.iter().enumerate() {
-                    self.add_expression(arg, func, ns, node, format!("arg #{}", no));
+                    self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
             }
             Expression::ConstArrayLiteral {
@@ -379,7 +379,7 @@ impl Dot {
                 );
 
                 for (no, arg) in values.iter().enumerate() {
-                    self.add_expression(arg, func, ns, node, format!("arg #{}", no));
+                    self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
             }
             Expression::Add {
@@ -1160,7 +1160,7 @@ impl Dot {
                 }
 
                 if let Some(signature) = signature {
-                    labels.insert(1, format!("signature {}", signature))
+                    labels.insert(1, format!("signature {signature}"))
                 }
 
                 self.add_node(
@@ -1211,7 +1211,7 @@ impl Dot {
                 self.add_expression(function, func, ns, node, String::from("function"));
 
                 for (no, arg) in args.iter().enumerate() {
-                    self.add_expression(arg, func, ns, node, format!("arg #{}", no));
+                    self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
             }
             Expression::ExternalFunctionCall {
@@ -1235,7 +1235,7 @@ impl Dot {
                 self.add_expression(function, func, ns, node, String::from("function"));
 
                 for (no, arg) in args.iter().enumerate() {
-                    self.add_expression(arg, func, ns, node, format!("arg #{}", no));
+                    self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
 
                 self.add_call_args(call_args, func, ns, node);
@@ -1281,7 +1281,7 @@ impl Dot {
                 );
 
                 for (no, arg) in args.iter().enumerate() {
-                    self.add_expression(arg, func, ns, node, format!("arg #{}", no));
+                    self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
 
                 self.add_call_args(call_args, func, ns, node);
@@ -1297,13 +1297,13 @@ impl Dot {
                 );
 
                 for (no, (_, arg)) in format.iter().enumerate() {
-                    self.add_expression(arg, func, ns, node, format!("arg #{}", no));
+                    self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
             }
             Expression::Builtin {
                 loc, kind, args, ..
             } => {
-                let labels = vec![format!("builtin {:?}", kind), ns.loc_to_string(loc)];
+                let labels = vec![format!("builtin {kind:?}"), ns.loc_to_string(loc)];
 
                 let node = self.add_node(
                     Node::new("builtins", labels),
@@ -1312,7 +1312,7 @@ impl Dot {
                 );
 
                 for (no, arg) in args.iter().enumerate() {
-                    self.add_expression(arg, func, ns, node, format!("arg #{}", no));
+                    self.add_expression(arg, func, ns, node, format!("arg #{no}"));
                 }
             }
             Expression::InterfaceId { loc, contract_no } => {
@@ -1333,7 +1333,7 @@ impl Dot {
                 let node = self.add_node(Node::new("list", labels), Some(parent), Some(parent_rel));
 
                 for (no, expr) in list.iter().enumerate() {
-                    self.add_expression(expr, func, ns, node, format!("entry #{}", no));
+                    self.add_expression(expr, func, ns, node, format!("entry #{no}"));
                 }
             }
         }
@@ -1517,7 +1517,7 @@ impl Dot {
                     );
 
                     for (no, field) in fields.iter().enumerate() {
-                        let parent_rel = format!("arg #{}", no);
+                        let parent_rel = format!("arg #{no}");
 
                         match field {
                             DestructureField::None => {
@@ -1597,7 +1597,7 @@ impl Dot {
                         self.add_node(Node::new("emit", labels), Some(parent), Some(parent_rel));
 
                     for (no, arg) in args.iter().enumerate() {
-                        self.add_expression(arg, Some(func), ns, parent, format!("arg #{}", no));
+                        self.add_expression(arg, Some(func), ns, parent, format!("arg #{no}"));
                     }
                 }
                 Statement::TryCatch(loc, _, try_catch) => {
@@ -1615,7 +1615,7 @@ impl Dot {
                         self.add_node(Node::new("try", labels), Some(parent), Some(parent_rel));
 
                     for (no, (_, param)) in try_catch.returns.iter().enumerate() {
-                        let parent_rel = format!("return #{}", no);
+                        let parent_rel = format!("return #{no}");
 
                         self.add_node(
                             Node::new(
@@ -1709,7 +1709,7 @@ impl Dot {
                         local_parent = self.add_yul_statement(
                             item,
                             local_parent,
-                            format!("statement #{}", item_no),
+                            format!("statement #{item_no}"),
                             &func.symtable,
                             ns,
                         );
@@ -1751,7 +1751,7 @@ impl Dot {
             local_parent = self.add_node(
                 Node::new("yul_function_parameter", labels),
                 Some(local_parent),
-                Some(format!("parameter #{}", item_no)),
+                Some(format!("parameter #{item_no}")),
             );
         }
 
@@ -1768,7 +1768,7 @@ impl Dot {
             local_parent = self.add_node(
                 Node::new("yul_function_return", labels),
                 Some(local_parent),
-                Some(format!("return #{}", item_no)),
+                Some(format!("return #{item_no}")),
             );
         }
 
@@ -1777,7 +1777,7 @@ impl Dot {
             local_parent = self.add_yul_statement(
                 item,
                 local_parent,
-                format!("statement #{}", item_no),
+                format!("statement #{item_no}"),
                 &ns.yul_functions[func_no].symtable,
                 ns,
             );
@@ -1994,7 +1994,7 @@ impl Dot {
                             ],
                         ),
                         Some(node),
-                        Some(format!("decl item #{}", decl_no)),
+                        Some(format!("decl item #{decl_no}")),
                     );
                 }
 
@@ -2014,7 +2014,7 @@ impl Dot {
                 );
 
                 for (item_no, item) in lhs.iter().enumerate() {
-                    self.add_yul_expression(item, symtable, ns, node, format!("rhs #{}", item_no));
+                    self.add_yul_expression(item, symtable, ns, node, format!("rhs #{item_no}"));
                 }
 
                 self.add_yul_expression(rhs, symtable, ns, node, "lhs".to_string());
@@ -2050,7 +2050,7 @@ impl Dot {
                             vec!["yul switch case".to_string(), ns.loc_to_string(&item.loc)],
                         ),
                         Some(node),
-                        Some(format!("case #{}", item_no)),
+                        Some(format!("case #{item_no}")),
                     );
                     self.add_yul_expression(
                         &item.condition,
@@ -2154,7 +2154,7 @@ impl Dot {
             parent = self.add_yul_statement(
                 child_statement,
                 parent,
-                format!("statement #{}", statement_no),
+                format!("statement #{statement_no}"),
                 symtable,
                 ns,
             );
@@ -2185,7 +2185,7 @@ impl Dot {
         );
 
         for (arg_no, arg) in args.iter().enumerate() {
-            self.add_yul_expression(arg, symtable, ns, node, format!("arg #{}", arg_no));
+            self.add_yul_expression(arg, symtable, ns, node, format!("arg #{arg_no}"));
         }
 
         node
@@ -2213,7 +2213,7 @@ impl Dot {
         );
 
         for (arg_no, arg) in args.iter().enumerate() {
-            self.add_yul_expression(arg, symtable, ns, node, format!("arg #{}", arg_no));
+            self.add_yul_expression(arg, symtable, ns, node, format!("arg #{arg_no}"));
         }
 
         node
@@ -2236,12 +2236,12 @@ impl Namespace {
                 let mut labels = decl
                     .values
                     .iter()
-                    .map(|(name, _)| format!("value: {}", name))
+                    .map(|(name, _)| format!("value: {name}"))
                     .collect::<Vec<String>>();
 
                 labels.insert(0, self.loc_to_string(&decl.loc));
                 if let Some(contract) = &decl.contract {
-                    labels.insert(0, format!("contract: {}", contract));
+                    labels.insert(0, format!("contract: {contract}"));
                 }
                 labels.insert(0, format!("name: {}", decl.name));
 
@@ -2263,7 +2263,7 @@ impl Namespace {
                         vec![format!("name:{}", decl.name), self.loc_to_string(&decl.loc)];
 
                     if let Some(contract) = &decl.contract {
-                        labels.insert(1, format!("contract: {}", contract));
+                        labels.insert(1, format!("contract: {contract}"));
                     }
 
                     for field in &decl.fields {
@@ -2291,7 +2291,7 @@ impl Namespace {
                 let mut labels = vec![format!("name:{}", decl.name), self.loc_to_string(&decl.loc)];
 
                 if let Some(contract) = &decl.contract {
-                    labels.insert(1, format!("contract: {}", contract));
+                    labels.insert(1, format!("contract: {contract}"));
                 }
 
                 if decl.anonymous {
@@ -2326,7 +2326,7 @@ impl Namespace {
                 ];
 
                 if let Some(contract) = &decl.contract {
-                    labels.insert(1, format!("contract: {}", contract));
+                    labels.insert(1, format!("contract: {contract}"));
                 }
 
                 let e = Node::new(&decl.name, labels);
@@ -2382,7 +2382,7 @@ impl Namespace {
 
                 if let Some((_, args)) = &base.constructor {
                     for (no, arg) in args.iter().enumerate() {
-                        dot.add_expression(arg, None, self, node, format!("arg #{}", no));
+                        dot.add_expression(arg, None, self, node, format!("arg #{no}"));
                     }
                 }
             }
@@ -2391,6 +2391,7 @@ impl Namespace {
                 let mut labels = vec![
                     format!("variable {}", var.name),
                     format!("visibility {}", var.visibility),
+                    var.ty.to_string(self),
                     self.loc_to_string(&var.loc),
                 ];
 

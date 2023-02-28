@@ -66,7 +66,7 @@ contract c {
         x = 102 + t*y/(t+5*y) + g + test3() - vec.push(2) + ct.sum(1, 2);
 		return 2;
 // CHECK: push array ty:int32[] value:int32 2
-// CHECK: _ = external call::regular address:%ct payload:%temp.75 value:uint128 0 gas:uint64 0 accounts: seeds:
+// CHECK: _ = external call::regular address:%ct payload:%abi_encoded.temp.75 value:uint128 0 gas:uint64 0 accounts: seeds:
 }
 
 }
@@ -77,13 +77,13 @@ contract c3 {
         c2 ct = new c2();
 
         return 3;
-// CHECK: constructor salt: value: gas:uint64 0 address: seeds: c2 (encoded buffer: %temp.79, buffer len: (builtin ArrayLength (%temp.79)))
+// CHECK: constructor salt: value: gas:uint64 0 address: seeds: c2 (encoded buffer: %abi_encoded.temp.79, buffer len: uint32 4)
     }
 
 // BEGIN-CHECK: c3::function::test7
     function test7() public returns (int32) {
         c2 ct = new c2();
-// CHECK: constructor salt: value: gas:uint64 0 address: seeds: c2 (encoded buffer: %temp.81, buffer len: (builtin ArrayLength (%temp.81)))
+// constructor salt: value: gas:uint64 0 address: seeds: c2 (encoded buffer: %abi_encoded.temp.81, buffer len: uint32 4)
         address ad = address(ct);
         (bool p, ) = ad.call(hex'ba');
 // CHECK: external call::regular address:%ad payload:(alloc bytes uint32 1 hex"ba") value:uint128 0 gas:uint64 0
@@ -115,7 +115,7 @@ return 3;
         it2 = 1;
 
         return 2;
-// CHECK: store storage slot((%t2 + uint256 0)) ty:int256 =
+// CHECK: store storage slot((unchecked %t2 + uint256 0)) ty:int256 =
 // CHECK: store storage slot(uint256 2) ty:int256 =
 // NOT-CHECK: ty:struct c1.testStruct %t3 = struct { int256 1, int256 2 }
 // NOT-CHECK: alloc int256[] len uint32 5

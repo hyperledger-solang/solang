@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/arrays/storage_dynamic_array_pop.sol" {
 	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop.sol:2:9-9:10"]
-	var [label="variable bar\nvisibility internal\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop.sol:3:13-24"]
+	var [label="variable bar\nvisibility internal\nint32[]\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop.sol:3:13-24"]
 	test [label="function test\ncontract: foo\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop.sol:5:13-35\nsignature test()\nvisibility public\nmutability nonpayable"]
 	diagnostic [label="found contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop.sol:2:9-9:10"]
 	diagnostic_6 [label="method 'pop()' does not take any arguments\nlevel Error\ntests/contract_testcases/substrate/arrays/storage_dynamic_array_pop.sol:7:21-24"]

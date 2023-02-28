@@ -30,17 +30,12 @@ mod caller {
             max_gas: Option<u64>,
             transfer_value: Option<u128>,
         ) -> u32 {
-            let my_return_value = build_call::<DefaultEnvironment>()
-                .call_type(
-                    Call::new()
-                        .callee(callee)
-                        .gas_limit(max_gas.unwrap_or_default()),
-                )
+            build_call::<DefaultEnvironment>()
+                .call_type(Call::new(callee).gas_limit(max_gas.unwrap_or_default()))
                 .transferred_value(transfer_value.unwrap_or_default())
                 .exec_input(ExecutionInput::new(Selector::new(selector)).push_arg(arg))
                 .returns::<u32>() // FIXME: This should be Result<u32, u8> to respect LanguageError
-                .fire();
-            my_return_value.unwrap()
+                .invoke()
         }
     }
 }

@@ -6,6 +6,7 @@ use clap::{
     value_parser, Arg, ArgMatches, Command,
 };
 use clap_complete::{generate, Shell};
+use itertools::Itertools;
 use solang::{
     abi,
     codegen::{codegen, OptimizationLevel, Options},
@@ -16,7 +17,7 @@ use solang::{
     Target,
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     ffi::{OsStr, OsString},
     fs::{create_dir_all, File},
     io::prelude::*,
@@ -57,6 +58,13 @@ fn main() {
                             ]),
                     )
                     .arg(
+                        Arg::new("CONTRACT")
+                            .help("Contract names to compile (defaults to all)")
+                            .value_delimiter(',')
+                            .action(ArgAction::Append)
+                            .long("contract"),
+                    )
+                    .arg(
                         Arg::new("OPT")
                             .help("Set llvm optimizer level")
                             .short('O')
@@ -93,6 +101,7 @@ fn main() {
                         Arg::new("STD-JSON")
                             .help("mimic solidity json output on stdout")
                             .conflicts_with_all(["VERBOSE", "OUTPUT", "EMIT"])
+                            .action(ArgAction::SetTrue)
                             .long("standard-json"),
                     )
                     .arg(
@@ -107,6 +116,13 @@ fn main() {
                             .help("output directory")
                             .short('o')
                             .long("output")
+                            .num_args(1)
+                            .value_parser(ValueParser::os_string()),
+                    )
+                    .arg(
+                        Arg::new("OUTPUTMETA")
+                            .help("output directory for metadata")
+                            .long("output-meta")
                             .num_args(1)
                             .value_parser(ValueParser::os_string()),
                     )
@@ -167,20 +183,29 @@ fn main() {
                         Arg::new("MATHOVERFLOW")
                             .help("Enable math overflow checking")
                             .long("math-overflow")
+                            .action(ArgAction::SetTrue)
                             .display_order(6),
                     )
                     .arg(
                         Arg::new("LOGAPIRETURNS")
                             .help("Log the return codes of runtime API calls in the environment")
                             .long("log-api-return-codes")
-                            .action(ArgAction::SetTrue),
+                            .action(ArgAction::SetTrue)
+                            .display_order(7),
                     )
                     .arg(
                         Arg::new("GENERATEDEBUGINFORMATION")
                             .help("Enable generating debug information for LLVM IR")
                             .short('g')
                             .long("generate-debug-info")
+                            .action(ArgAction::SetTrue)
                             .hide(true),
+                    )
+                    .arg(
+                        Arg::new("LOGRUNTIMEERRORS")
+                            .help("Log runtime errors in the environment")
+                            .long("log-runtime-errors")
+                            .action(ArgAction::SetTrue),
                     ),
             )
             .subcommand(
@@ -332,7 +357,7 @@ fn doc(matches: &ArgMatches) {
     let target = target_arg(matches);
     let mut resolver = imports_arg(matches);
 
-    let verbose = *matches.get_one::<bool>("VERBOSE").unwrap();
+    let verbose = *matches.get_one("VERBOSE").unwrap();
     let mut success = true;
     let mut files = Vec::new();
 
@@ -366,7 +391,7 @@ fn doc(matches: &ArgMatches) {
 fn compile(matches: &ArgMatches) {
     let target = target_arg(matches);
 
-    let verbose = *matches.get_one::<bool>("VERBOSE").unwrap();
+    let verbose = *matches.get_one("VERBOSE").unwrap();
     let mut json = JsonResult {
         errors: Vec::new(),
         target: target.to_string(),
@@ -378,11 +403,13 @@ fn compile(matches: &ArgMatches) {
         eprintln!("info: Solang version {}", env!("SOLANG_VERSION"));
     }
 
-    let math_overflow_check = matches.contains_id("MATHOVERFLOW");
+    let math_overflow_check = *matches.get_one("MATHOVERFLOW").unwrap();
 
-    let generate_debug_info = matches.contains_id("GENERATEDEBUGINFORMATION");
+    let generate_debug_info = *matches.get_one("GENERATEDEBUGINFORMATION").unwrap();
 
-    let log_api_return_codes = *matches.get_one::<bool>("LOGAPIRETURNS").unwrap();
+    let log_api_return_codes = *matches.get_one("LOGAPIRETURNS").unwrap();
+
+    let log_runtime_errors = *matches.get_one::<bool>("LOGRUNTIMEERRORS").unwrap();
 
     let mut resolver = imports_arg(matches);
 
@@ -395,29 +422,53 @@ fn compile(matches: &ArgMatches) {
     };
 
     let opt = Options {
-        dead_storage: *matches.get_one::<bool>("DEADSTORAGE").unwrap(),
-        constant_folding: *matches.get_one::<bool>("CONSTANTFOLDING").unwrap(),
-        strength_reduce: *matches.get_one::<bool>("STRENGTHREDUCE").unwrap(),
-        vector_to_slice: *matches.get_one::<bool>("VECTORTOSLICE").unwrap(),
+        dead_storage: *matches.get_one("DEADSTORAGE").unwrap(),
+        constant_folding: *matches.get_one("CONSTANTFOLDING").unwrap(),
+        strength_reduce: *matches.get_one("STRENGTHREDUCE").unwrap(),
+        vector_to_slice: *matches.get_one("VECTORTOSLICE").unwrap(),
         math_overflow_check,
         generate_debug_information: generate_debug_info,
         common_subexpression_elimination: *matches
-            .get_one::<bool>("COMMONSUBEXPRESSIONELIMINATION")
+            .get_one("COMMONSUBEXPRESSIONELIMINATION")
             .unwrap(),
         opt_level,
         log_api_return_codes,
+        log_runtime_errors,
     };
 
     let mut namespaces = Vec::new();
 
     let mut errors = false;
 
+    // Build a map of requested contract names, and a flag specifying whether it was found or not
+    let contract_names: HashSet<&str> = if let Some(values) = matches.get_many::<String>("CONTRACT")
+    {
+        values.map(|v| v.as_str()).collect()
+    } else {
+        HashSet::new()
+    };
+
     for filename in matches.get_many::<OsString>("INPUT").unwrap() {
-        match process_file(filename, &mut resolver, target, matches, &mut json, &opt) {
-            Ok(ns) => namespaces.push(ns),
-            Err(_) => {
-                errors = true;
-            }
+        // TODO: this could be parallelized using e.g. rayon
+        let ns = process_file(filename, &mut resolver, target, matches, &opt);
+
+        namespaces.push((ns, filename));
+    }
+
+    let mut json_contracts = HashMap::new();
+
+    let std_json = *matches.get_one("STD-JSON").unwrap();
+
+    for (ns, _) in &namespaces {
+        if std_json {
+            let mut out = ns.diagnostics_as_json(&resolver);
+            json.errors.append(&mut out);
+        } else {
+            ns.print_diagnostics(&resolver, verbose);
+        }
+
+        if ns.diagnostics.any_errors() {
+            errors = true;
         }
     }
 
@@ -425,18 +476,50 @@ fn compile(matches: &ArgMatches) {
         exit(0);
     }
 
-    if errors {
-        if matches.contains_id("STD-JSON") {
-            println!("{}", serde_json::to_string(&json).unwrap());
-            exit(0);
-        } else {
-            eprintln!("error: not all contracts are valid");
-            exit(1);
+    // Ensure we have at least one contract
+    if !errors && namespaces.iter().all(|(ns, _)| ns.contracts.is_empty()) {
+        eprintln!("error: no contacts found");
+        errors = true;
+    }
+
+    // Ensure we have all the requested contracts
+    let not_found: Vec<_> = contract_names
+        .iter()
+        .filter(|name| {
+            !namespaces
+                .iter()
+                .flat_map(|(ns, _)| ns.contracts.iter())
+                .any(|contract| **name == contract.name)
+        })
+        .collect();
+
+    if !errors && !not_found.is_empty() {
+        eprintln!("error: contacts {} not found", not_found.iter().join(", "));
+        errors = true;
+    }
+
+    if !errors {
+        for (ns, filename) in &namespaces {
+            for contract_no in 0..ns.contracts.len() {
+                contract_results(
+                    contract_no,
+                    filename,
+                    matches,
+                    ns,
+                    &mut json_contracts,
+                    &opt,
+                );
+            }
         }
     }
 
-    if matches.contains_id("STD-JSON") {
+    if std_json {
         println!("{}", serde_json::to_string(&json).unwrap());
+        exit(0);
+    }
+
+    if errors {
+        exit(1);
     }
 }
 
@@ -449,13 +532,15 @@ fn shell_complete(mut app: Command, matches: &ArgMatches) {
     }
 }
 
-fn output_file(matches: &ArgMatches, stem: &str, ext: &str) -> PathBuf {
-    Path::new(
+fn output_file(matches: &ArgMatches, stem: &str, ext: &str, meta: bool) -> PathBuf {
+    let dir = if meta {
         matches
-            .get_one::<OsString>("OUTPUT")
-            .unwrap_or(&OsString::from(".")),
-    )
-    .join(format!("{}.{}", stem, ext))
+            .get_one::<OsString>("OUTPUTMETA")
+            .or_else(|| matches.get_one::<OsString>("OUTPUT"))
+    } else {
+        matches.get_one::<OsString>("OUTPUT")
+    };
+    Path::new(dir.unwrap_or(&OsString::from("."))).join(format!("{stem}.{ext}"))
 }
 
 fn process_file(
@@ -463,12 +548,9 @@ fn process_file(
     resolver: &mut FileResolver,
     target: solang::Target,
     matches: &ArgMatches,
-    json: &mut JsonResult,
     opt: &Options,
-) -> Result<Namespace, ()> {
-    let verbose = *matches.get_one::<bool>("VERBOSE").unwrap();
-
-    let mut json_contracts = HashMap::new();
+) -> Namespace {
+    let verbose = *matches.get_one("VERBOSE").unwrap();
 
     // resolve phase
     let mut ns = solang::parse_and_resolve(filename, resolver, target);
@@ -476,17 +558,10 @@ fn process_file(
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, opt);
 
-    if matches.contains_id("STD-JSON") {
-        let mut out = ns.diagnostics_as_json(resolver);
-        json.errors.append(&mut out);
-    } else {
-        ns.print_diagnostics(resolver, verbose);
-    }
-
     if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         let filepath = PathBuf::from(filename);
         let stem = filepath.file_stem().unwrap().to_string_lossy();
-        let dot_filename = output_file(matches, &stem, "dot");
+        let dot_filename = output_file(matches, &stem, "dot", false);
 
         if verbose {
             eprintln!("info: Saving graphviz dot {}", dot_filename.display());
@@ -500,106 +575,106 @@ fn process_file(
             eprintln!("{}: error: {}", dot_filename.display(), err);
             exit(1);
         }
-
-        return Ok(ns);
     }
 
-    if ns.contracts.is_empty() || ns.diagnostics.any_errors() {
-        return Err(());
+    ns
+}
+
+fn contract_results(
+    contract_no: usize,
+    filename: &OsStr,
+    matches: &ArgMatches,
+    ns: &Namespace,
+    json_contracts: &mut HashMap<String, JsonContract>,
+    opt: &Options,
+) {
+    let verbose = *matches.get_one("VERBOSE").unwrap();
+    let std_json = *matches.get_one("STD-JSON").unwrap();
+
+    let resolved_contract = &ns.contracts[contract_no];
+
+    if !resolved_contract.instantiable {
+        return;
     }
 
-    // emit phase
-    for contract_no in 0..ns.contracts.len() {
-        let resolved_contract = &ns.contracts[contract_no];
+    if let Some("cfg") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
+        println!("{}", resolved_contract.print_cfg(ns));
+        return;
+    }
 
-        if !resolved_contract.instantiable {
-            continue;
+    if verbose {
+        if ns.target == solang::Target::Solana {
+            eprintln!(
+                "info: contract {} uses at least {} bytes account data",
+                resolved_contract.name, resolved_contract.fixed_layout_size,
+            );
         }
 
-        if let Some("cfg") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
-            println!("{}", resolved_contract.print_cfg(&ns));
-            continue;
-        }
+        eprintln!(
+            "info: Generating LLVM IR for contract {} with target {}",
+            resolved_contract.name, ns.target
+        );
+    }
+
+    let context = inkwell::context::Context::create();
+    let filename_string = filename.to_string_lossy();
+
+    let binary = resolved_contract.binary(ns, &context, &filename_string, opt);
+
+    if save_intermediates(&binary, matches) {
+        return;
+    }
+
+    let code = binary.code(Generate::Linked).expect("llvm build");
+
+    if std_json {
+        json_contracts.insert(
+            binary.name,
+            JsonContract {
+                abi: abi::ethereum::gen_abi(contract_no, ns),
+                ewasm: Some(EwasmContract {
+                    wasm: hex::encode_upper(code),
+                }),
+                minimum_space: None,
+            },
+        );
+    } else {
+        let bin_filename = output_file(matches, &binary.name, ns.target.file_extension(), false);
 
         if verbose {
-            if target == solang::Target::Solana {
-                eprintln!(
-                    "info: contract {} uses at least {} bytes account data",
-                    resolved_contract.name, resolved_contract.fixed_layout_size,
-                );
-            }
-
             eprintln!(
-                "info: Generating LLVM IR for contract {} with target {}",
-                resolved_contract.name, ns.target
+                "info: Saving binary {} for contract {}",
+                bin_filename.display(),
+                binary.name
             );
         }
 
-        let context = inkwell::context::Context::create();
-        let filename_string = filename.to_string_lossy();
+        let mut file = create_file(&bin_filename);
 
-        let binary = resolved_contract.binary(&ns, &context, &filename_string, opt);
+        file.write_all(&code).unwrap();
 
-        if save_intermediates(&binary, matches) {
-            continue;
-        }
+        let (metadata, meta_ext) = abi::generate_abi(contract_no, ns, &code, verbose);
+        let meta_filename = output_file(matches, &binary.name, meta_ext, true);
 
-        let code = binary.code(Generate::Linked).expect("llvm build");
-
-        if matches.contains_id("STD-JSON") {
-            json_contracts.insert(
-                binary.name.to_owned(),
-                JsonContract {
-                    abi: abi::ethereum::gen_abi(contract_no, &ns),
-                    ewasm: Some(EwasmContract {
-                        wasm: hex::encode_upper(code),
-                    }),
-                    minimum_space: None,
-                },
+        if verbose {
+            eprintln!(
+                "info: Saving metadata {} for contract {}",
+                meta_filename.display(),
+                binary.name
             );
-        } else {
-            let bin_filename = output_file(matches, &binary.name, target.file_extension());
-
-            if verbose {
-                eprintln!(
-                    "info: Saving binary {} for contract {}",
-                    bin_filename.display(),
-                    binary.name
-                );
-            }
-
-            let mut file = create_file(&bin_filename);
-
-            file.write_all(&code).unwrap();
-
-            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
-            let abi_filename = output_file(matches, &binary.name, abi_ext);
-
-            if verbose {
-                eprintln!(
-                    "info: Saving ABI {} for contract {}",
-                    abi_filename.display(),
-                    binary.name
-                );
-            }
-
-            let mut file = create_file(&abi_filename);
-            file.write_all(abi_bytes.as_bytes()).unwrap();
         }
+
+        let mut file = create_file(&meta_filename);
+        file.write_all(metadata.as_bytes()).unwrap();
     }
-
-    json.contracts
-        .insert(filename.to_string_lossy().to_string(), json_contracts);
-
-    Ok(ns)
 }
 
 fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatches) -> bool {
-    let verbose = *matches.get_one::<bool>("VERBOSE").unwrap();
+    let verbose = *matches.get_one("VERBOSE").unwrap();
 
     match matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         Some("llvm-ir") => {
-            let llvm_filename = output_file(matches, &binary.name, "ll");
+            let llvm_filename = output_file(matches, &binary.name, "ll", false);
 
             if verbose {
                 eprintln!(
@@ -615,7 +690,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
         }
 
         Some("llvm-bc") => {
-            let bc_filename = output_file(matches, &binary.name, "bc");
+            let bc_filename = output_file(matches, &binary.name, "bc", false);
 
             if verbose {
                 eprintln!(
@@ -634,12 +709,12 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
             let obj = match binary.code(Generate::Object) {
                 Ok(o) => o,
                 Err(s) => {
-                    println!("error: {}", s);
+                    println!("error: {s}");
                     exit(1);
                 }
             };
 
-            let obj_filename = output_file(matches, &binary.name, "o");
+            let obj_filename = output_file(matches, &binary.name, "o", false);
 
             if verbose {
                 eprintln!(
@@ -657,12 +732,12 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
             let obj = match binary.code(Generate::Assembly) {
                 Ok(o) => o,
                 Err(s) => {
-                    println!("error: {}", s);
+                    println!("error: {s}");
                     exit(1);
                 }
             };
 
-            let obj_filename = output_file(matches, &binary.name, "asm");
+            let obj_filename = output_file(matches, &binary.name, "asm", false);
 
             if verbose {
                 eprintln!(
@@ -721,20 +796,14 @@ fn target_arg(matches: &ArgMatches) -> Target {
     if !target.is_substrate()
         && matches.value_source("ADDRESS_LENGTH") == Some(ValueSource::CommandLine)
     {
-        eprintln!(
-            "error: address length cannot be modified for target '{}'",
-            target
-        );
+        eprintln!("error: address length cannot be modified for target '{target}'");
         exit(1);
     }
 
     if !target.is_substrate()
         && matches.value_source("VALUE_LENGTH") == Some(ValueSource::CommandLine)
     {
-        eprintln!(
-            "error: value length cannot be modified for target '{}'",
-            target
-        );
+        eprintln!("error: value length cannot be modified for target '{target}'");
         exit(1);
     }
 
@@ -751,7 +820,7 @@ fn imports_arg(matches: &ArgMatches) -> FileResolver {
     }
 
     if let Err(e) = resolver.add_import_path(&PathBuf::from(".")) {
-        eprintln!("error: cannot add current directory to import path: {}", e);
+        eprintln!("error: cannot add current directory to import path: {e}");
         exit(1);
     }
 

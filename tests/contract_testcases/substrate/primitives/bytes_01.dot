@@ -1,0 +1,10 @@
+strict digraph "tests/contract_testcases/substrate/primitives/bytes_01.sol" {
+	contract [label="contract Foo\ntests/contract_testcases/substrate/primitives/bytes_01.sol:1:1-7:2"]
+	foo [label="function foo\ncontract: Foo\ntests/contract_testcases/substrate/primitives/bytes_01.sol:2:2-28\nsignature foo()\nvisibility public\nmutability pure"]
+	diagnostic [label="found contract 'Foo'\nlevel Debug\ntests/contract_testcases/substrate/primitives/bytes_01.sol:1:1-7:2"]
+	diagnostic_5 [label="hex literal 0x00bffc must be 4 digits for type 'bytes2'\nlevel Error\ntests/contract_testcases/substrate/primitives/bytes_01.sol:5:14-22"]
+	contracts -> contract
+	contract -> foo [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_5 [label="Error"]
+}

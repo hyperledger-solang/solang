@@ -15,7 +15,7 @@ suite('Extension Test Suite', function () {
   test('Testing for Row and Col pos.', async () => {
     await testdiagnos(diagnosdoc1, [
       {
-        message: `unrecognised token 'aa', expected ";", "="`,
+        message: `unrecognised token 'aa', expected "(", ";", "="`,
         range: toRange(5, 0, 5, 2),
         severity: vscode.DiagnosticSeverity.Error,
         source: 'solidity',
@@ -29,7 +29,7 @@ suite('Extension Test Suite', function () {
     await testdiagnos(diagnosdoc2, [
       {
         message:
-          `unrecognised token '}', expected "!", "(", "+", "++", "-", "--", "[", "address", "bool", "byte", "bytes", "case", "default", "delete", "error", "false", "function", "leave", "mapping", "new", "payable", "revert", "string", "switch", "this", "true", "type", "~", Bytes, Int, Uint, address, hexnumber, hexstring, identifier, number, rational, string`,
+          `unrecognised token '}', expected "!", "(", "+", "++", "-", "--", "[", "address", "bool", "byte", "bytes", "case", "default", "delete", "false", "function", "leave", "mapping", "new", "payable", "revert", "string", "switch", "this", "true", "type", "~", Bytes, Int, Uint, address, hexnumber, hexstring, identifier, number, rational, string`,
         range: toRange(13, 1, 13, 2),
         severity: vscode.DiagnosticSeverity.Error,
         source: 'solidity',

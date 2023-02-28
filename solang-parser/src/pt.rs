@@ -210,7 +210,13 @@ pub enum Type {
     Bytes(u8),
     Rational,
     DynamicBytes,
-    Mapping(Loc, Box<Expression>, Box<Expression>),
+    Mapping {
+        loc: Loc,
+        key: Box<Expression>,
+        key_name: Option<Identifier>,
+        value: Box<Expression>,
+        value_name: Option<Identifier>,
+    },
     Function {
         params: Vec<(Loc, Option<Parameter>)>,
         attributes: Vec<FunctionAttribute>,
@@ -382,6 +388,7 @@ pub struct ErrorParameter {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct ErrorDefinition {
     pub loc: Loc,
+    pub keyword: Expression,
     pub name: Option<Identifier>,
     pub fields: Vec<ErrorParameter>,
 }
@@ -454,19 +461,6 @@ pub struct NamedArgument {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
-pub enum Unit {
-    Seconds(Loc),
-    Minutes(Loc),
-    Hours(Loc),
-    Days(Loc),
-    Weeks(Loc),
-    Wei(Loc),
-    Gwei(Loc),
-    Ether(Loc),
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
@@ -522,9 +516,9 @@ pub enum Expression {
     AssignDivide(Loc, Box<Expression>, Box<Expression>),
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
     BoolLiteral(Loc, bool),
-    NumberLiteral(Loc, String, String),
-    RationalNumberLiteral(Loc, String, String, String),
-    HexNumberLiteral(Loc, String),
+    NumberLiteral(Loc, String, String, Option<Identifier>),
+    RationalNumberLiteral(Loc, String, String, String, Option<Identifier>),
+    HexNumberLiteral(Loc, String, Option<Identifier>),
     StringLiteral(Vec<StringLiteral>),
     Type(Loc, Type),
     HexLiteral(Vec<HexLiteral>),
@@ -532,7 +526,6 @@ pub enum Expression {
     Variable(Identifier),
     List(Loc, ParameterList),
     ArrayLiteral(Loc, Vec<Expression>),
-    Unit(Loc, Box<Expression>, Unit),
     This(Loc),
 }
 
@@ -590,11 +583,10 @@ impl CodeLocation for Expression {
             | Expression::BoolLiteral(loc, _)
             | Expression::NumberLiteral(loc, ..)
             | Expression::RationalNumberLiteral(loc, ..)
-            | Expression::HexNumberLiteral(loc, _)
+            | Expression::HexNumberLiteral(loc, ..)
             | Expression::ArrayLiteral(loc, _)
             | Expression::List(loc, _)
             | Expression::Type(loc, _)
-            | Expression::Unit(loc, ..)
             | Expression::This(loc)
             | Expression::Variable(Identifier { loc, .. })
             | Expression::AddressLiteral(loc, _) => *loc,

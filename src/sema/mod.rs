@@ -519,7 +519,7 @@ fn annotions_not_allowed(annotations: &[&pt::Annotation], item: &str, ns: &mut a
     for note in annotations {
         ns.diagnostics.push(ast::Diagnostic::error(
             note.loc,
-            format!("annotations not allowed on {}", item),
+            format!("annotations not allowed on {item}"),
         ));
     }
 }

@@ -33,7 +33,6 @@ pub enum Token<'input> {
 
     Struct,
     Event,
-    Error,
     Enum,
     Type,
 
@@ -152,15 +151,6 @@ pub enum Token<'input> {
     Receive,
     Fallback,
 
-    Seconds,
-    Minutes,
-    Hours,
-    Days,
-    Weeks,
-    Gwei,
-    Wei,
-    Ether,
-
     This,
     As,
     Is,
@@ -185,23 +175,23 @@ pub enum Token<'input> {
 impl<'input> fmt::Display for Token<'input> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Token::Identifier(id) => write!(f, "{}", id),
-            Token::StringLiteral(false, s) => write!(f, "\"{}\"", s),
-            Token::StringLiteral(true, s) => write!(f, "unicode\"{}\"", s),
-            Token::HexLiteral(hex) => write!(f, "{}", hex),
-            Token::AddressLiteral(address) => write!(f, "{}", address),
-            Token::Number(integer, exp) if exp.is_empty() => write!(f, "{}", integer),
-            Token::Number(integer, exp) => write!(f, "{}e{}", integer, exp),
+            Token::Identifier(id) => write!(f, "{id}"),
+            Token::StringLiteral(false, s) => write!(f, "\"{s}\""),
+            Token::StringLiteral(true, s) => write!(f, "unicode\"{s}\""),
+            Token::HexLiteral(hex) => write!(f, "{hex}"),
+            Token::AddressLiteral(address) => write!(f, "{address}"),
+            Token::Number(integer, exp) if exp.is_empty() => write!(f, "{integer}"),
+            Token::Number(integer, exp) => write!(f, "{integer}e{exp}"),
             Token::RationalNumber(integer, fraction, exp) if exp.is_empty() => {
-                write!(f, "{}.{}", integer, fraction)
+                write!(f, "{integer}.{fraction}")
             }
             Token::RationalNumber(integer, fraction, exp) => {
-                write!(f, "{}.{}e{}", integer, fraction, exp)
+                write!(f, "{integer}.{fraction}e{exp}")
             }
-            Token::HexNumber(n) => write!(f, "{}", n),
-            Token::Uint(w) => write!(f, "uint{}", w),
-            Token::Int(w) => write!(f, "int{}", w),
-            Token::Bytes(w) => write!(f, "bytes{}", w),
+            Token::HexNumber(n) => write!(f, "{n}"),
+            Token::Uint(w) => write!(f, "uint{w}"),
+            Token::Int(w) => write!(f, "int{w}"),
+            Token::Bytes(w) => write!(f, "bytes{w}"),
             Token::Byte => write!(f, "byte"),
             Token::DynamicBytes => write!(f, "bytes"),
             Token::Semicolon => write!(f, ";"),
@@ -261,7 +251,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Import => write!(f, "import"),
             Token::Struct => write!(f, "struct"),
             Token::Event => write!(f, "event"),
-            Token::Error => write!(f, "error"),
             Token::Enum => write!(f, "enum"),
             Token::Type => write!(f, "type"),
             Token::Memory => write!(f, "memory"),
@@ -300,14 +289,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Catch => write!(f, "catch"),
             Token::Receive => write!(f, "receive"),
             Token::Fallback => write!(f, "fallback"),
-            Token::Seconds => write!(f, "seconds"),
-            Token::Minutes => write!(f, "minutes"),
-            Token::Hours => write!(f, "hours"),
-            Token::Days => write!(f, "days"),
-            Token::Weeks => write!(f, "weeks"),
-            Token::Gwei => write!(f, "gwei"),
-            Token::Wei => write!(f, "wei"),
-            Token::Ether => write!(f, "ether"),
             Token::This => write!(f, "this"),
             Token::As => write!(f, "as"),
             Token::Is => write!(f, "is"),
@@ -363,10 +344,10 @@ impl fmt::Display for LexicalError {
             }
             LexicalError::MissingNumber(..) => write!(f, "missing number"),
             LexicalError::InvalidCharacterInHexLiteral(_, ch) => {
-                write!(f, "invalid character '{}' in hex literal string", ch)
+                write!(f, "invalid character '{ch}' in hex literal string")
             }
-            LexicalError::UnrecognisedToken(_, t) => write!(f, "unrecognised token '{}'", t),
-            LexicalError::ExpectedFrom(_, t) => write!(f, "'{}' found where 'from' expected", t),
+            LexicalError::UnrecognisedToken(_, t) => write!(f, "unrecognised token '{t}'"),
+            LexicalError::ExpectedFrom(_, t) => write!(f, "'{t}' found where 'from' expected"),
             LexicalError::MissingExponent(..) => write!(f, "missing number"),
         }
     }
@@ -444,7 +425,6 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "emit" => Token::Emit,
     "enum" => Token::Enum,
     "event" => Token::Event,
-    "error" => Token::Error,
     "external" => Token::External,
     "false" => Token::False,
     "for" => Token::For,
@@ -546,14 +526,6 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "catch" => Token::Catch,
     "receive" => Token::Receive,
     "fallback" => Token::Fallback,
-    "seconds" => Token::Seconds,
-    "minutes" => Token::Minutes,
-    "hours" => Token::Hours,
-    "days" => Token::Days,
-    "weeks" => Token::Weeks,
-    "wei" => Token::Wei,
-    "gwei" => Token::Gwei,
-    "ether" => Token::Ether,
     "this" => Token::This,
     "as" => Token::As,
     "is" => Token::Is,

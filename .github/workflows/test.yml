@@ -19,7 +19,7 @@ jobs:
   lints:
     name: Lints
     runs-on: ubuntu-20.04
-    container: ghcr.io/hyperledger/solang:ci
+    container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -59,7 +59,7 @@ jobs:
   linux-x86-64:
     name: Linux x86-64
     runs-on: ubuntu-20.04
-    container: ghcr.io/hyperledger/solang:ci
+    container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -80,7 +80,7 @@ jobs:
     name: Linux Arm
     runs-on: linux-arm64
     if: ${{ github.repository_owner == 'hyperledger' }}
-    container: ghcr.io/hyperledger/solang:ci
+    container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -106,11 +106,11 @@ jobs:
       with:
         submodules: recursive
     - name: Download LLVM
-      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-win.zip
+      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-win.zip
     - name: Extract LLVM
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
-      run: echo "c:\llvm14.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+      run: echo "c:\llvm15.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
     - uses: dtolnay/rust-toolchain@1.64.0
       with:
         components: clippy
@@ -137,11 +137,11 @@ jobs:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.64.0
     - name: Get LLVM
-      run: curl -L --output llvm14.0-mac-arm.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-mac-arm.tar.xz
+      run: curl -L --output llvm15.0-mac-arm.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-mac-arm.tar.xz
     - name: Extract LLVM
-      run: tar Jxf llvm14.0-mac-arm.tar.xz
+      run: tar Jxf llvm15.0-mac-arm.tar.xz
     - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm14.0/bin" >> $GITHUB_PATH
+      run: echo "$(pwd)/llvm15.0/bin" >> $GITHUB_PATH
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -161,11 +161,11 @@ jobs:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.64.0
     - name: Get LLVM
-      run: wget -q -O llvm14.0-mac-intel.tar.xz https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-mac-intel.tar.xz
+      run: wget -q -O llvm15.0-mac-intel.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-mac-intel.tar.xz
     - name: Extract LLVM
-      run: tar Jxf llvm14.0-mac-intel.tar.xz
+      run: tar Jxf llvm15.0-mac-intel.tar.xz
     - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm14.0/bin" >> $GITHUB_PATH
+      run: echo "$(pwd)/llvm15.0/bin" >> $GITHUB_PATH
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -208,14 +208,15 @@ jobs:
         echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
         docker buildx build . \
           ${{steps.push.outputs.push}} \
-          -t ghcr.io/${GITHUB_REPOSITORY}:latest \
+          --provenance=false \
+          --tag ghcr.io/${GITHUB_REPOSITORY}:latest \
           --platform linux/arm64,linux/amd64 \
           --label org.opencontainers.image.description="Solidity Compiler for Solana and Substrate version $(git describe --tags)"
 
   anchor:
     name: Anchor Integration test
     runs-on: ubuntu-latest
-    container: ghcr.io/hyperledger/solang:ci
+    container: ghcr.io/hyperledger/solang-llvm:ci
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -259,7 +260,7 @@ jobs:
   solana:
     name: Solana Integration test
     runs-on: ubuntu-latest
-    container: ghcr.io/hyperledger/solang:ci
+    container: ghcr.io/hyperledger/solang-llvm:ci
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -297,7 +298,7 @@ jobs:
       # We can't run substrate as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
-      run: docker run -d -p 9944:9944 paritytech/contracts-ci-linux:latest substrate-contracts-node --dev --ws-external
+      run: docker run -d -p 9944:9944 paritytech/contracts-ci-linux@sha256:513518822f09eba6452ac14ba2a84d12529da86dff850c7c0f067dad6a58af70 substrate-contracts-node --dev --ws-external
     - uses: actions/setup-node@v3
       with:
         node-version: '14'

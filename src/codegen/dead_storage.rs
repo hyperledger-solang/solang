@@ -29,7 +29,7 @@ impl fmt::Display for Definition {
                 instr_no,
                 assignment_no,
             } => {
-                write!(f, "({}, {}, {})", block_no, instr_no, assignment_no)
+                write!(f, "({block_no}, {instr_no}, {assignment_no})")
             }
         }
     }
@@ -59,16 +59,16 @@ impl fmt::Display for Transfer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Transfer::Gen { def, var_no } => {
-                write!(f, "Gen %{} = {}", var_no, def)
+                write!(f, "Gen %{var_no} = {def}")
             }
             Transfer::Copy { var_no, src } => {
-                write!(f, "Copy %{} from %{}", var_no, src)
+                write!(f, "Copy %{var_no} from %{src}")
             }
             Transfer::Kill { var_no } => {
-                write!(f, "Kill %{}", var_no)
+                write!(f, "Kill %{var_no}")
             }
             Transfer::Store { def, expr } => {
-                write!(f, "Storage: {:?} at {}", expr, def)
+                write!(f, "Storage: {expr:?} at {def}")
             }
         }
     }

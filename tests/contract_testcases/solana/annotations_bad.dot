@@ -19,7 +19,7 @@ strict digraph "tests/contract_testcases/solana/annotations_bad.sol" {
 	number_literal [label="uint256 literal: 1\ntests/contract_testcases/solana/annotations_bad.sol:23:17-18"]
 	number_literal_23 [label="uint256 literal: 0\ntests/contract_testcases/solana/annotations_bad.sol:23:23-24"]
 	contract [label="contract c\ntests/contract_testcases/solana/annotations_bad.sol:35:1-65:2"]
-	var [label="variable state\nvisibility internal\ntests/contract_testcases/solana/annotations_bad.sol:37:2-11"]
+	var [label="variable state\nvisibility internal\nint256\ntests/contract_testcases/solana/annotations_bad.sol:37:2-11"]
 	using [label="using for uint256\nfunction odd tests/contract_testcases/solana/annotations_bad.sol:22:1-36"]
 	node_28 [label="constructor \ncontract: c\ntests/contract_testcases/solana/annotations_bad.sol:58:2-16\nsignature ()\nvisibility public\nmutability nonpayable"]
 	annotations [label="annotations"]

@@ -1,6 +1,6 @@
 [package]
 name = "solang-parser"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Sean Young <sean@mess.org>", "Lucas Steuernagel <lucas.tnagel@gmail.com>", "Cyrill Leutwiler <bigcyrill@hotmail.com>"]
 homepage = "https://github.com/hyperledger/solang"
 documentation = "https://solang.readthedocs.io/"
@@ -16,14 +16,14 @@ lalrpop = "0.19"
 [dependencies]
 lalrpop-util = "0.19"
 phf = { version = "0.11", features = ["macros"] }
-unicode-xid = "0.2.0"
+unicode-xid = "0.2"
 itertools = "0.10"
-serde = { version = "1.0.145", features = ["derive"], optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
 walkdir = "2.3.2"
-regex = "1.5.5"
-pretty_assertions = "1.2"
+regex = "1"
+pretty_assertions = "1.3"
 
 [features]
 default = []

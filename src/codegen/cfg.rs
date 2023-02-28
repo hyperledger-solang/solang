@@ -22,6 +22,7 @@ use num_traits::One;
 use parse_display::Display;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
+use solang_parser::pt::Loc;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ops::AddAssign;
 use std::str;
@@ -106,7 +107,12 @@ pub enum Instr {
     },
     /// Pop element from memory array. The push builtin returns a reference
     /// to the new element which is stored in res.
-    PopMemory { res: usize, ty: Type, array: usize },
+    PopMemory {
+        res: usize,
+        ty: Type,
+        array: usize,
+        loc: Loc,
+    },
     /// Create contract and call constructor. If creating the contract fails,
     /// either store the result in success or abort success.
     Constructor {
@@ -120,6 +126,7 @@ pub enum Instr {
         salt: Option<Expression>,
         address: Option<Expression>,
         seeds: Option<Expression>,
+        loc: Loc,
     },
     /// Call external functions. If the call fails, set the success failure
     /// or abort if this is None
@@ -156,10 +163,8 @@ pub enum Instr {
     /// Emit event
     EmitEvent {
         event_no: usize,
-        data: Vec<Expression>,
-        data_tys: Vec<Type>,
+        data: Expression,
         topics: Vec<Expression>,
-        topic_tys: Vec<Type>,
     },
     /// Write Buffer
     WriteBuffer {
@@ -312,10 +317,7 @@ impl Instr {
             }
 
             Instr::EmitEvent { data, topics, .. } => {
-                for expr in data {
-                    expr.recurse(cx, f);
-                }
-
+                data.recurse(cx, f);
                 for expr in topics {
                     expr.recurse(cx, f);
                 }
@@ -574,7 +576,7 @@ impl ControlFlowGraph {
 
     pub fn expr_to_string(&self, contract: &Contract, ns: &Namespace, expr: &Expression) -> String {
         match expr {
-            Expression::FunctionArg(_, _, pos) => format!("(arg #{})", pos),
+            Expression::FunctionArg(_, _, pos) => format!("(arg #{pos})"),
             Expression::BoolLiteral(_, false) => "false".to_string(),
             Expression::BoolLiteral(_, true) => "true".to_string(),
             Expression::BytesLiteral(_, Type::String, s) => {
@@ -599,7 +601,7 @@ impl ControlFlowGraph {
             ),
             Expression::ConstArrayLiteral(_, _, dims, exprs) => format!(
                 "constant {} [ {} ]",
-                dims.iter().map(|d| format!("[{}]", d)).collect::<String>(),
+                dims.iter().map(|d| format!("[{d}]")).collect::<String>(),
                 exprs
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
@@ -608,20 +610,22 @@ impl ControlFlowGraph {
             ),
             Expression::ArrayLiteral(_, _, dims, exprs) => format!(
                 "{} [ {} ]",
-                dims.iter().map(|d| format!("[{}]", d)).collect::<String>(),
+                dims.iter().map(|d| format!("[{d}]")).collect::<String>(),
                 exprs
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::Add(_, _, _, l, r) => format!(
-                "({} + {})",
+            Expression::Add(_, _, unchecked, l, r) => format!(
+                "({}{} + {})",
+                if *unchecked { "unchecked " } else { "" },
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Subtract(_, _, _, l, r) => format!(
-                "({} - {})",
+            Expression::Subtract(_, _, unchecked, l, r) => format!(
+                "({}{} - {})",
+                if *unchecked { "unchecked " } else { "" },
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -650,8 +654,9 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Multiply(_, _, _, l, r) => format!(
-                "({} * {})",
+            Expression::Multiply(_, _, unchecked, l, r) => format!(
+                "({}{} * {})",
+                if *unchecked { "unchecked " } else { "" },
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -675,8 +680,9 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Power(_, _, _, l, r) => format!(
-                "({} ** {})",
+            Expression::Power(_, _, unchecked, l, r) => format!(
+                "({}{} ** {})",
+                if *unchecked { "unchecked " } else { "" },
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
@@ -684,7 +690,7 @@ impl ControlFlowGraph {
                 if let Some(var) = self.vars.get(res) {
                     format!("%{}", var.id.name)
                 } else {
-                    panic!("error: non-existing variable {} in CFG", res);
+                    panic!("error: non-existing variable {res} in CFG");
                 }
             }
             Expression::Load(_, _, expr) => {
@@ -869,7 +875,7 @@ impl ControlFlowGraph {
             Expression::GetRef(_, _, expr) => {
                 format!("(deref {}", self.expr_to_string(contract, ns, expr))
             }
-            _ => panic!("{:?}", expr),
+            _ => panic!("{expr:?}"),
         }
     }
 
@@ -904,7 +910,7 @@ impl ControlFlowGraph {
                 self.vars[res].id.name,
                 self.expr_to_string(contract, ns, expr)
             ),
-            Instr::Branch { block } => format!("branch block{}", block),
+            Instr::Branch { block } => format!("branch block{block}"),
             Instr::BranchCond {
                 cond,
                 true_block,
@@ -995,7 +1001,7 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, value),
             ),
-            Instr::PopMemory { res, ty, array } => format!(
+            Instr::PopMemory { res, ty, array, loc:_ } => format!(
                 "%{}, %{} = pop array ty:{}",
                 self.vars[res].id.name,
                 self.vars[array].id.name,
@@ -1127,11 +1133,11 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, data),
                     selector
                         .iter()
-                        .map(|s| format!("selector:0x{:08x} ", s))
+                        .map(|s| format!("selector:0x{s:08x} "))
                         .collect::<String>(),
                     exception
                         .iter()
-                        .map(|block| format!("exception: block{} ", block))
+                        .map(|block| format!("exception: block{block} "))
                         .collect::<String>(),
                     tys.iter()
                         .map(|ty| ty.ty.to_string(ns))
@@ -1163,7 +1169,8 @@ impl ControlFlowGraph {
                 gas,
                 salt,
                 value,
-                address,seeds
+                address,seeds,
+                loc:_
 
             } => format!(
                 "%{}, {} = constructor salt:{} value:{} gas:{} address:{} seeds:{} {} (encoded buffer: {}, buffer len: {})",
@@ -1211,17 +1218,14 @@ impl ControlFlowGraph {
                 event_no,
                 ..
             } => format!(
-                "emit event {} topics {} data {}",
+                "emit event {} topics {} data {} ",
                 ns.events[*event_no].symbol_name(ns),
                 topics
                     .iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
                     .collect::<Vec<String>>()
                     .join(", "),
-                data.iter()
-                    .map(|expr| self.expr_to_string(contract, ns, expr))
-                    .collect::<Vec<String>>()
-                    .join(", ")
+                self.expr_to_string(contract, ns, data)
             ),
             Instr::Nop => String::from("nop"),
             Instr::MemCopy {
@@ -1253,7 +1257,7 @@ impl ControlFlowGraph {
                         .as_str(),
                     );
                 }
-                description.push_str(format!("\n\t\tdefault: goto block #{}", default).as_str());
+                description.push_str(format!("\n\t\tdefault: goto block #{default}").as_str());
                 description
             }
 
@@ -1266,7 +1270,7 @@ impl ControlFlowGraph {
             }
 
             Instr::ReturnCode { code } => {
-                format!("return code: {}", code)
+                format!("return code: {code}")
             }
         }
     }
@@ -1950,7 +1954,13 @@ impl Contract {
                     "# params: {}",
                     cfg.params
                         .iter()
-                        .map(|p| p.ty.to_string(ns))
+                        .map(|p| {
+                            if p.id.is_some() {
+                                format!("{} {}", p.ty.to_string(ns), p.name_as_str())
+                            } else {
+                                p.ty.to_string(ns)
+                            }
+                        })
                         .collect::<Vec<String>>()
                         .join(",")
                 )
@@ -1961,7 +1971,13 @@ impl Contract {
                     "# returns: {}",
                     cfg.returns
                         .iter()
-                        .map(|p| p.ty.to_string(ns))
+                        .map(|p| {
+                            if p.id.is_some() {
+                                format!("{} {}", p.ty.to_string(ns), p.name_as_str())
+                            } else {
+                                p.ty.to_string(ns)
+                            }
+                        })
                         .collect::<Vec<String>>()
                         .join(",")
                 )

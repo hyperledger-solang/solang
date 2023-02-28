@@ -2,7 +2,6 @@
 
 use crate::sema::ast::{ArrayLength, Contract, Namespace, StructType, Type};
 use std::cell::RefCell;
-use std::ffi::CStr;
 use std::path::Path;
 use std::str;
 
@@ -234,14 +233,17 @@ impl<'a> Binary<'a> {
 
         module.link_in_module(std_lib.clone()).unwrap();
 
-        let selector =
-            module.add_global(context.i32_type(), Some(AddressSpace::Generic), "selector");
+        let selector = module.add_global(
+            context.i32_type(),
+            Some(AddressSpace::default()),
+            "selector",
+        );
         selector.set_linkage(Linkage::Internal);
         selector.set_initializer(&context.i32_type().const_zero());
 
         let calldata_len = module.add_global(
             context.i32_type(),
-            Some(AddressSpace::Generic),
+            Some(AddressSpace::default()),
             "calldata_len",
         );
         calldata_len.set_linkage(Linkage::Internal);
@@ -320,7 +322,7 @@ impl<'a> Binary<'a> {
 
         let gv = self
             .module
-            .add_global(ty, Some(AddressSpace::Generic), name);
+            .add_global(ty, Some(AddressSpace::default()), name);
 
         gv.set_linkage(Linkage::Internal);
 
@@ -331,11 +333,7 @@ impl<'a> Binary<'a> {
             gv.set_unnamed_addr(true);
         }
 
-        self.builder.build_pointer_cast(
-            gv.as_pointer_value(),
-            self.context.i8_type().ptr_type(AddressSpace::Generic),
-            name,
-        )
+        gv.as_pointer_value()
     }
 
     /// Wrapper for alloca. Ensures that the alloca is done on the first basic block.
@@ -612,12 +610,12 @@ impl<'a> Binary<'a> {
         for ty in returns {
             args.push(if ty.is_reference_type(ns) && !ty.is_contract_storage() {
                 self.llvm_type(ty, ns)
-                    .ptr_type(AddressSpace::Generic)
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
+                    .ptr_type(AddressSpace::default())
                     .into()
             } else {
                 self.llvm_type(ty, ns)
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .into()
             });
         }
@@ -628,7 +626,7 @@ impl<'a> Binary<'a> {
                 self.module
                     .get_struct_type("struct.SolParameters")
                     .unwrap()
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .into(),
             );
         }
@@ -641,7 +639,7 @@ impl<'a> Binary<'a> {
 
     // Create the llvm intrinsic for counting leading zeros
     pub fn llvm_ctlz(&self, bit: u32) -> FunctionValue<'a> {
-        let name = format!("llvm.ctlz.i{}", bit);
+        let name = format!("llvm.ctlz.i{bit}");
         let ty = self.context.custom_width_int_type(bit);
 
         if let Some(f) = self.module.get_function(&name) {
@@ -657,7 +655,7 @@ impl<'a> Binary<'a> {
 
     // Create the llvm intrinsic for bswap
     pub fn llvm_bswap(&self, bit: u32) -> FunctionValue<'a> {
-        let name = format!("llvm.bswap.i{}", bit);
+        let name = format!("llvm.bswap.i{bit}");
         let ty = self.context.custom_width_int_type(bit);
 
         if let Some(f) = self.module.get_function(&name) {
@@ -696,9 +694,13 @@ impl<'a> Binary<'a> {
     pub(crate) fn llvm_var_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty, ns);
         match ty.deref_memory() {
-            Type::Struct(_) | Type::Array(..) | Type::DynamicBytes | Type::String => {
-                llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
-            }
+            Type::Struct(_)
+            | Type::Array(..)
+            | Type::DynamicBytes
+            | Type::String
+            | Type::ExternalFunction { .. } => llvm_ty
+                .ptr_type(AddressSpace::default())
+                .as_basic_type_enum(),
             _ => llvm_ty,
         }
     }
@@ -721,12 +723,12 @@ impl<'a> Binary<'a> {
     pub(crate) fn llvm_field_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty, ns);
         match ty.deref_memory() {
-            Type::Array(_, dim) if dim.last() == Some(&ArrayLength::Dynamic) => {
-                llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
-            }
-            Type::DynamicBytes | Type::String => {
-                llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
-            }
+            Type::Array(_, dim) if dim.last() == Some(&ArrayLength::Dynamic) => llvm_ty
+                .ptr_type(AddressSpace::default())
+                .as_basic_type_enum(),
+            Type::DynamicBytes | Type::String => llvm_ty
+                .ptr_type(AddressSpace::default())
+                .as_basic_type_enum(),
             _ => llvm_ty,
         }
     }
@@ -808,7 +810,7 @@ impl<'a> Binary<'a> {
                 Type::Mapping(..) => self.llvm_type(&ns.storage_type(), ns),
                 Type::Ref(r) => self
                     .llvm_type(r, ns)
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .as_basic_type_enum(),
                 Type::StorageRef(..) => self.llvm_type(&ns.storage_type(), ns),
                 Type::InternalFunction {
@@ -816,23 +818,20 @@ impl<'a> Binary<'a> {
                 } => {
                     let ftype = self.function_type(params, returns, ns);
 
-                    BasicTypeEnum::PointerType(ftype.ptr_type(AddressSpace::Generic))
+                    BasicTypeEnum::PointerType(ftype.ptr_type(AddressSpace::default()))
                 }
                 Type::ExternalFunction { .. } => {
                     let address = self.llvm_type(&Type::Address(false), ns);
                     let selector = self.llvm_type(&Type::FunctionSelector, ns);
-
-                    BasicTypeEnum::PointerType(
-                        self.context
-                            .struct_type(&[selector, address], false)
-                            .ptr_type(AddressSpace::Generic),
-                    )
+                    self.context
+                        .struct_type(&[selector, address], false)
+                        .as_basic_type_enum()
                 }
                 Type::Slice(ty) => BasicTypeEnum::StructType(
                     self.context.struct_type(
                         &[
                             self.llvm_type(ty, ns)
-                                .ptr_type(AddressSpace::Generic)
+                                .ptr_type(AddressSpace::default())
                                 .into(),
                             self.context
                                 .custom_width_int_type(ns.target.ptr_size().into())
@@ -845,7 +844,7 @@ impl<'a> Binary<'a> {
                 Type::BufferPointer => self
                     .context
                     .i8_type()
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .as_basic_type_enum(),
                 Type::FunctionSelector => {
                     self.llvm_type(&Type::Bytes(ns.target.selector_length()), ns)
@@ -868,7 +867,7 @@ impl<'a> Binary<'a> {
                     .module
                     .get_struct_type("struct.vector")
                     .unwrap()
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
                     .const_null();
             }
         }
@@ -876,7 +875,7 @@ impl<'a> Binary<'a> {
         let init = match init {
             None => self.builder.build_int_to_ptr(
                 self.context.i32_type().const_all_ones(),
-                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                self.context.i8_type().ptr_type(AddressSpace::default()),
                 "invalid",
             ),
             Some(s) => self.emit_global_string("const_string", s, true),
@@ -909,67 +908,32 @@ impl<'a> Binary<'a> {
                 "len",
             )
         } else {
-            let struct_ty = vector
-                .into_pointer_value()
-                .get_type()
-                .get_element_type()
-                .into_struct_type();
-            let name = struct_ty.get_name().unwrap();
+            // field 0 is the length
+            let vector = vector.into_pointer_value();
+            let vector_type = self.module.get_struct_type("struct.vector").unwrap();
 
-            if name == CStr::from_bytes_with_nul(b"struct.SolAccountInfo\0").unwrap() {
-                // load the data pointer
-                let data = self
-                    .builder
-                    .build_load(
-                        self.builder
-                            .build_struct_gep(vector.into_pointer_value(), 3, "data")
-                            .unwrap(),
-                        "data",
-                    )
-                    .into_pointer_value();
-
-                // get the offset of the return data
-                let header_ptr = self.builder.build_pointer_cast(
-                    data,
-                    self.context.i32_type().ptr_type(AddressSpace::Generic),
-                    "header_ptr",
-                );
-
-                let data_len_ptr = unsafe {
-                    self.builder.build_gep(
-                        header_ptr,
-                        &[self.context.i64_type().const_int(1, false)],
-                        "data_len_ptr",
-                    )
-                };
-
-                self.builder
-                    .build_load(data_len_ptr, "len")
-                    .into_int_value()
-            } else {
-                // field 0 is the length
-                let vector = vector.into_pointer_value();
-
-                let len = unsafe {
-                    self.builder.build_gep(
-                        vector,
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_zero(),
-                        ],
-                        "vector_len",
-                    )
-                };
-
-                self.builder
-                    .build_select(
-                        self.builder.build_is_null(vector, "vector_is_null"),
+            let len = unsafe {
+                self.builder.build_gep(
+                    vector_type,
+                    vector,
+                    &[
                         self.context.i32_type().const_zero(),
-                        self.builder.build_load(len, "vector_len").into_int_value(),
-                        "length",
-                    )
-                    .into_int_value()
-            }
+                        self.context.i32_type().const_zero(),
+                    ],
+                    "vector_len",
+                )
+            };
+
+            self.builder
+                .build_select(
+                    self.builder.build_is_null(vector, "vector_is_null"),
+                    self.context.i32_type().const_zero(),
+                    self.builder
+                        .build_load(self.context.i32_type(), len, "vector_len")
+                        .into_int_value(),
+                    "length",
+                )
+                .into_int_value()
         }
     }
 
@@ -978,14 +942,15 @@ impl<'a> Binary<'a> {
         if vector.is_struct_value() {
             // slice
             let slice = vector.into_struct_value();
-
             self.builder
                 .build_extract_value(slice, 0, "slice_data")
                 .unwrap()
                 .into_pointer_value()
         } else {
-            let data = unsafe {
+            let vector_type = self.module.get_struct_type("struct.vector").unwrap();
+            unsafe {
                 self.builder.build_gep(
+                    vector_type,
                     vector.into_pointer_value(),
                     &[
                         self.context.i32_type().const_zero(),
@@ -993,13 +958,7 @@ impl<'a> Binary<'a> {
                     ],
                     "data",
                 )
-            };
-
-            self.builder.build_pointer_cast(
-                data,
-                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                "data",
-            )
+            }
         }
     }
 
@@ -1015,8 +974,10 @@ impl<'a> Binary<'a> {
             Type::Array(_, dim) => {
                 if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
                     // fixed size array
+                    let llvm_ty = self.llvm_type(array_ty, ns);
                     unsafe {
                         self.builder.build_gep(
+                            llvm_ty,
                             array,
                             &[self.context.i32_type().const_zero(), index],
                             "index_access",
@@ -1024,22 +985,23 @@ impl<'a> Binary<'a> {
                     }
                 } else {
                     let elem_ty = array_ty.array_deref();
-                    let llvm_elem_ty = self.llvm_field_ty(&elem_ty, ns);
+                    let llvm_elem_ty = self.llvm_type(elem_ty.deref_memory(), ns);
 
                     // dynamic length array or vector
                     let index = self.builder.build_int_mul(
                         index,
                         llvm_elem_ty
-                            .into_pointer_type()
-                            .get_element_type()
                             .size_of()
                             .unwrap()
                             .const_cast(self.context.i32_type(), false),
                         "",
                     );
 
-                    let elem = unsafe {
+                    let vector_type = self.module.get_struct_type("struct.vector").unwrap();
+
+                    unsafe {
                         self.builder.build_gep(
+                            vector_type,
                             array,
                             &[
                                 self.context.i32_type().const_zero(),
@@ -1048,10 +1010,7 @@ impl<'a> Binary<'a> {
                             ],
                             "index_access",
                         )
-                    };
-
-                    self.builder
-                        .build_pointer_cast(elem, llvm_elem_ty.into_pointer_type(), "elem")
+                    }
                 }
             }
             _ => unreachable!(),

@@ -1,5 +1,4 @@
 *.js
-*.abi
 *.so
 *.key
 node_modules

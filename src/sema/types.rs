@@ -4,8 +4,8 @@ use super::tags::resolve_tags;
 use super::{annotions_not_allowed, ast, SourceUnit, SOLANA_BUCKET_SIZE};
 use super::{
     ast::{
-        ArrayLength, Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl,
-        StructType, Symbol, Tag, Type, UserTypeDecl,
+        ArrayLength, Contract, Diagnostic, EnumDecl, EventDecl, Mapping, Namespace, Parameter,
+        StructDecl, StructType, Symbol, Tag, Type, UserTypeDecl,
     },
     diagnostics::Diagnostics,
     ContractDefinition, SOLANA_SPARSE_ARRAY_SIZE,
@@ -455,7 +455,7 @@ fn contract_annotations(
                     Err(FromBase58Error::InvalidBase58Length) => {
                         ns.diagnostics.push(Diagnostic::error(
                             loc,
-                            format!("address literal {} invalid base58 length", string),
+                            format!("address literal {string} invalid base58 length"),
                         ));
                     }
                     Err(FromBase58Error::InvalidBase58Character(ch, pos)) => {
@@ -465,7 +465,7 @@ fn contract_annotations(
                         }
                         ns.diagnostics.push(Diagnostic::error(
                             loc,
-                            format!("address literal {} invalid character '{}'", string, ch),
+                            format!("address literal {string} invalid character '{ch}'"),
                         ));
                     }
                 }
@@ -532,10 +532,7 @@ pub fn struct_decl(
         if let Some(storage) = &field.storage {
             ns.diagnostics.push(Diagnostic::error(
                 storage.loc(),
-                format!(
-                    "storage location '{}' not allowed for struct field",
-                    storage
-                ),
+                format!("storage location '{storage}' not allowed for struct field"),
             ));
         }
 
@@ -875,11 +872,11 @@ impl Type {
             Type::Bool => "bool".to_string(),
             Type::Address(false) => "address".to_string(),
             Type::Address(true) => "address payable".to_string(),
-            Type::Int(n) => format!("int{}", n),
-            Type::Uint(n) => format!("uint{}", n),
+            Type::Int(n) => format!("int{n}"),
+            Type::Uint(n) => format!("uint{n}"),
             Type::Rational => "rational".to_string(),
             Type::Value => format!("uint{}", ns.value_length * 8),
-            Type::Bytes(n) => format!("bytes{}", n),
+            Type::Bytes(n) => format!("bytes{n}"),
             Type::String => "string".to_string(),
             Type::DynamicBytes => "bytes".to_string(),
             Type::Enum(n) => format!("enum {}", ns.enums[*n]),
@@ -889,12 +886,27 @@ impl Type {
                 ty.to_string(ns),
                 len.iter()
                     .map(|len| match len {
-                        ArrayLength::Fixed(len) => format!("[{}]", len),
+                        ArrayLength::Fixed(len) => format!("[{len}]"),
                         _ => "[]".to_string(),
                     })
                     .collect::<String>()
             ),
-            Type::Mapping(k, v) => format!("mapping({} => {})", k.to_string(ns), v.to_string(ns)),
+            Type::Mapping(Mapping {
+                key,
+                key_name,
+                value,
+                value_name,
+            }) => {
+                format!(
+                    "mapping({}{}{} => {}{}{})",
+                    key.to_string(ns),
+                    if key_name.is_some() { " " } else { "" },
+                    key_name.as_ref().map(|id| id.name.as_str()).unwrap_or(""),
+                    value.to_string(ns),
+                    if value_name.is_some() { " " } else { "" },
+                    value_name.as_ref().map(|id| id.name.as_str()).unwrap_or(""),
+                )
+            }
             Type::ExternalFunction {
                 params,
                 mutability,
@@ -920,7 +932,7 @@ impl Type {
                 );
 
                 if !mutability.is_default() {
-                    write!(s, " {}", mutability).unwrap();
+                    write!(s, " {mutability}").unwrap();
                 }
 
                 if !returns.is_empty() {
@@ -977,10 +989,10 @@ impl Type {
                 format!("bytes{}", ns.address_length)
             }
             Type::Contract(_) | Type::Address(_) => "address".to_string(),
-            Type::Int(n) => format!("int{}", n),
-            Type::Uint(n) => format!("uint{}", n),
+            Type::Int(n) => format!("int{n}"),
+            Type::Uint(n) => format!("uint{n}"),
             Type::Rational => "rational".to_string(),
-            Type::Bytes(n) => format!("bytes{}", n),
+            Type::Bytes(n) => format!("bytes{n}"),
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
             Type::Enum(n) => ns.enums[*n].ty.to_signature_string(say_tuple, ns),
@@ -989,7 +1001,7 @@ impl Type {
                 ty.to_signature_string(say_tuple, ns),
                 len.iter()
                     .map(|len| match len {
-                        ArrayLength::Fixed(len) => format!("[{}]", len),
+                        ArrayLength::Fixed(len) => format!("[{len}]"),
                         _ => "[]".to_string(),
                     })
                     .collect::<String>()
@@ -1018,7 +1030,7 @@ impl Type {
         }
     }
 
-    /// Give the type of an memory array after dereference
+    /// Give the type of a memory array after dereference
     #[must_use]
     pub fn array_deref(&self) -> Self {
         match self {
@@ -1043,7 +1055,7 @@ impl Type {
     }
 
     /// Is this a reference type of fixed size
-    pub fn is_fixed_reference_type(&self) -> bool {
+    pub fn is_fixed_reference_type(&self, ns: &Namespace) -> bool {
         match self {
             Type::Bool => false,
             Type::Address(_) => false,
@@ -1061,7 +1073,9 @@ impl Type {
             Type::Ref(_) => false,
             Type::StorageRef(..) => false,
             Type::InternalFunction { .. } => false,
-            Type::ExternalFunction { .. } => false,
+            // On EVM, an external function is saved on an 256-bit register, so it is not
+            // a reference type.
+            Type::ExternalFunction { .. } => ns.target != Target::EVM,
             Type::Slice(_) => false,
             Type::Unresolved => false,
             Type::FunctionSelector => false,
@@ -1087,7 +1101,7 @@ impl Type {
     #[must_use]
     pub fn storage_array_elem(&self) -> Self {
         match self {
-            Type::Mapping(_, v) => Type::StorageRef(false, v.clone()),
+            Type::Mapping(Mapping { value, .. }) => Type::StorageRef(false, value.clone()),
             Type::DynamicBytes | Type::String | Type::Bytes(_) => Type::Bytes(1),
             Type::Array(ty, dim) if dim.len() > 1 => Type::StorageRef(
                 false,
@@ -1264,8 +1278,8 @@ impl Type {
         match self {
             Type::Contract(_) | Type::Address(_) => ns.address_length as u8,
             Type::Bool => 1,
-            Type::Int(n) => *n as u8,
-            Type::Uint(n) => *n as u8,
+            Type::Int(n) => ((*n + 7) / 8) as u8,
+            Type::Uint(n) => ((*n + 7) / 8) as u8,
             Type::Rational => unreachable!(),
             Type::Bytes(n) => *n,
             Type::Enum(n) => ns.enums[*n].ty.bytes(ns),
@@ -1483,7 +1497,9 @@ impl Type {
             Type::Ref(r) => r.is_reference_type(ns),
             Type::StorageRef(_, r) => r.is_reference_type(ns),
             Type::InternalFunction { .. } => false,
-            Type::ExternalFunction { .. } => false,
+            // On EVM, an external function is saved on an 256-bit register, so it is not
+            // a reference type.
+            Type::ExternalFunction { .. } => ns.target != Target::EVM,
             Type::UserType(no) => ns.user_types[*no].ty.is_reference_type(ns),
             _ => false,
         }
@@ -1619,7 +1635,7 @@ impl Type {
     ) -> Option<&'a Type> {
         match self {
             Type::Array(ty, _) => ty.contains_builtins(ns, builtin),
-            Type::Mapping(key, value) => key
+            Type::Mapping(Mapping { key, value, .. }) => key
                 .contains_builtins(ns, builtin)
                 .or_else(|| value.contains_builtins(ns, builtin)),
             Type::Struct(str_ty) if str_ty == builtin => Some(self),
@@ -1667,9 +1683,9 @@ impl Type {
         match self {
             Type::Bool => "bool".to_string(),
             Type::Address(_) => "address".to_string(),
-            Type::Int(n) => format!("int{}", n),
-            Type::Uint(n) => format!("uint{}", n),
-            Type::Bytes(n) => format!("bytes{}", n),
+            Type::Int(n) => format!("int{n}"),
+            Type::Uint(n) => format!("uint{n}"),
+            Type::Bytes(n) => format!("bytes{n}"),
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
             Type::Enum(i) => format!("{}", ns.enums[*i]),
@@ -1680,12 +1696,16 @@ impl Type {
                 len.iter()
                     .map(|r| match r {
                         ArrayLength::Dynamic | ArrayLength::AnyFixed => ":".to_string(),
-                        ArrayLength::Fixed(r) => format!(":{}", r),
+                        ArrayLength::Fixed(r) => format!(":{r}"),
                     })
                     .collect::<String>()
             ),
-            Type::Mapping(k, v) => {
-                format!("mapping:{}:{}", k.to_llvm_string(ns), v.to_llvm_string(ns))
+            Type::Mapping(Mapping { key, value, .. }) => {
+                format!(
+                    "mapping:{}:{}",
+                    key.to_llvm_string(ns),
+                    value.to_llvm_string(ns)
+                )
             }
             Type::Contract(i) => ns.contracts[*i].name.to_owned(),
             Type::InternalFunction { .. } => "function".to_owned(),

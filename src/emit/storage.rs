@@ -2,11 +2,18 @@
 
 use crate::emit::binary::Binary;
 use crate::sema::ast::{Namespace, Type};
+use inkwell::types::BasicTypeEnum;
 use inkwell::values::{ArrayValue, BasicValueEnum, FunctionValue, IntValue, PointerValue};
 
 /// This trait species the methods for managing storage on slot based environments
 pub(super) trait StorageSlot {
-    fn set_storage(&self, binary: &Binary, slot: PointerValue, dest: PointerValue);
+    fn set_storage(
+        &self,
+        binary: &Binary,
+        slot: PointerValue,
+        dest: PointerValue,
+        dest_ty: BasicTypeEnum,
+    );
 
     fn get_storage_address<'a>(
         &self,
@@ -16,7 +23,7 @@ pub(super) trait StorageSlot {
     ) -> ArrayValue<'a>;
 
     /// Clear a particlar storage slot (slot-based storage chains should implement)
-    fn storage_delete_single_slot<'a>(&self, binary: &Binary<'a>, slot: PointerValue);
+    fn storage_delete_single_slot(&self, binary: &Binary, slot: PointerValue);
 
     /// Recursively load a type from storage for slot based storage
     fn storage_load_slot<'a>(

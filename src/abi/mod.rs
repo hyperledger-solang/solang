@@ -18,14 +18,26 @@ pub fn generate_abi(
         Target::Substrate { .. } => {
             if verbose {
                 eprintln!(
-                    "info: Generating Substrate ABI for contract {}",
+                    "info: Generating Substrate metadata for contract {}",
                     ns.contracts[contract_no].name
                 );
             }
 
-            let abi = substrate::metadata(contract_no, code, ns);
+            let metadata = substrate::metadata(contract_no, code, ns);
 
-            (serde_json::to_string_pretty(&abi).unwrap(), "contract")
+            (serde_json::to_string_pretty(&metadata).unwrap(), "contract")
+        }
+        Target::Solana => {
+            if verbose {
+                eprintln!(
+                    "info: Generating Anchor metadata for contract {}",
+                    ns.contracts[contract_no].name
+                );
+            }
+
+            let idl = anchor::generate_anchor_idl(contract_no, ns);
+
+            (serde_json::to_string_pretty(&idl).unwrap(), "json")
         }
         _ => {
             if verbose {

@@ -27,12 +27,10 @@ fn simple_event() {
 
     vm.function("go", &[]);
 
-    let log = vm.events();
+    assert_eq!(vm.events.len(), 1);
+    assert_eq!(vm.events[0].len(), 1);
 
-    assert_eq!(log.len(), 1);
-    assert_eq!(log[0].topics.len(), 0);
-
-    let encoded = log[0].data.clone();
+    let encoded = &vm.events[0][0];
 
     let discriminator = calculate_discriminator("myevent");
 
@@ -83,11 +81,11 @@ fn less_simple_event() {
 
     vm.function("go", &[]);
 
-    let log = vm.events();
-    assert_eq!(log.len(), 1);
-    assert_eq!(log[0].topics.len(), 0);
+    assert_eq!(vm.events.len(), 1);
+    assert_eq!(vm.events[0].len(), 1);
 
-    let encoded = log[0].data.clone();
+    let encoded = &vm.events[0][0];
+
     let discriminator = calculate_discriminator("MyOtherEvent");
     assert_eq!(&encoded[..8], &discriminator[..]);
 
@@ -100,7 +98,7 @@ fn less_simple_event() {
 }
 
 fn calculate_discriminator(event_name: &str) -> Vec<u8> {
-    let image = format!("event:{}", event_name);
+    let image = format!("event:{event_name}");
     let mut hasher = Sha256::new();
     hasher.update(image.as_bytes());
     let finalized = hasher.finalize();

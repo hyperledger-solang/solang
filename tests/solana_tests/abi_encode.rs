@@ -946,3 +946,46 @@ contract caller {
         }
     );
 }
+
+#[test]
+fn test_double_dynamic_array() {
+    #[derive(Debug, BorshDeserialize)]
+    struct Res {
+        item_1: u32,
+        item_2: Vec<Vec<u16>>,
+        item_3: i64,
+    }
+
+    let mut vm = build_solidity(
+        r#"
+contract Testing {
+    function testThis() public pure returns (bytes) {
+        uint16[][] memory vec;
+        vec = new uint16[][](2);
+        vec[0] = new uint16[](2);
+        vec[1] = new uint16[](2);
+        vec[0][0] = 90;
+        vec[0][1] = 31;
+        vec[1][0] = 52;
+        vec[1][1] = 89;
+        uint32 gg = 99;
+        int64 tt = -190;
+        bytes b = abi.encode(gg, vec, tt);
+        return b;
+    }
+}
+        "#,
+    );
+
+    vm.constructor(&[]);
+
+    let returns = vm.function("testThis", &[]).unwrap();
+    let encoded = returns.into_bytes().unwrap();
+    let decoded = Res::try_from_slice(&encoded).unwrap();
+    assert_eq!(decoded.item_1, 99);
+    assert_eq!(decoded.item_2[0][0], 90);
+    assert_eq!(decoded.item_2[0][1], 31);
+    assert_eq!(decoded.item_2[1][0], 52);
+    assert_eq!(decoded.item_2[1][1], 89);
+    assert_eq!(decoded.item_3, -190);
+}

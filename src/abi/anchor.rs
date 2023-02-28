@@ -29,7 +29,7 @@ pub fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
         .from_case(Case::Camel)
         .without_boundaries(&[Boundary::LowerDigit])
         .to_case(Case::Snake);
-    hasher.update(format!("{}:{}", namespace, normalized));
+    hasher.update(format!("{namespace}:{normalized}"));
     hasher.finalize()[..8].to_vec()
 }
 
@@ -112,7 +112,7 @@ fn idl_instructions(
             name: "new".to_string(),
             docs: None,
             accounts: vec![IdlAccountItem::IdlAccount(IdlAccount {
-                name: "data_account".to_string(),
+                name: "dataAccount".to_string(),
                 is_mut: true,
                 is_signer: false,
                 is_optional: Some(false),
@@ -138,13 +138,13 @@ fn idl_instructions(
         let func = &ns.functions[*func_no];
         let tags = idl_docs(&func.tags);
 
-        let accounts = match &func.mutability {
+        let mut accounts = match &func.mutability {
             Mutability::Pure(_) => {
                 vec![]
             }
             Mutability::View(_) => {
                 vec![IdlAccountItem::IdlAccount(IdlAccount {
-                    name: "data_account".to_string(),
+                    name: "dataAccount".to_string(),
                     is_mut: false,
                     is_signer: false,
                     is_optional: Some(false),
@@ -155,9 +155,9 @@ fn idl_instructions(
             }
             _ => {
                 vec![IdlAccountItem::IdlAccount(IdlAccount {
-                    name: "data_account".to_string(),
+                    name: "dataAccount".to_string(),
                     is_mut: true,
-                    is_signer: false,
+                    is_signer: func.has_payer_annotation(),
                     is_optional: Some(false),
                     docs: None,
                     pda: None,
@@ -170,21 +170,47 @@ fn idl_instructions(
         let mut dedup = Deduplicate::new("arg".to_owned());
         for item in &*func.params {
             let name = dedup.unique_name(item);
+            let normalized = name
+                .from_case(Case::Snake)
+                .without_boundaries(&[Boundary::LowerDigit])
+                .to_case(Case::Camel);
 
             args.push(IdlField {
-                name,
+                name: normalized,
                 docs: None,
                 ty: type_manager.convert(&item.ty),
             });
         }
 
         let name = if func.is_constructor() {
+            if func.has_payer_annotation() {
+                accounts.push(IdlAccountItem::IdlAccount(IdlAccount {
+                    name: "wallet".to_string(),
+                    is_mut: false,
+                    is_signer: true,
+                    is_optional: Some(false),
+                    docs: None,
+                    pda: None,
+                    relations: vec![],
+                }));
+            }
+
             "new".to_string()
         } else if func.mangled_name_contracts.contains(&contract_no) {
             func.mangled_name.clone()
         } else {
             func.name.clone()
         };
+
+        accounts.push(IdlAccountItem::IdlAccount(IdlAccount {
+            name: "systemProgram".to_string(),
+            is_mut: false,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }));
 
         let returns = if func.returns.is_empty() {
             None
@@ -246,7 +272,7 @@ impl TypeManager<'_> {
             });
         }
 
-        let name = format!("{}_returns", effective_name);
+        let name = format!("{effective_name}_returns");
         self.returns_structs.push(IdlTypeDefinition {
             name: name.clone(),
             docs: Some(vec![format!(
@@ -274,7 +300,7 @@ impl TypeManager<'_> {
             || other_contract.as_ref().unwrap() == &self.namespace.contracts[self.contract_no].name
         {
             let new_name = if let Some(this_name) = contract {
-                format!("{}_{}", this_name, type_name)
+                format!("{this_name}_{type_name}")
             } else {
                 type_name.clone()
             };
@@ -283,9 +309,9 @@ impl TypeManager<'_> {
             // If the type we are adding now belongs to the current contract, we change the name
             // of a previously added IDL type
             let new_other_name = if let Some(other_name) = &other_contract {
-                format!("{}_{}", other_name, real_name)
+                format!("{other_name}_{real_name}")
             } else {
-                format!("_{}", real_name)
+                format!("_{real_name}")
             };
             let unique_name = self.unique_string(new_other_name);
             self.types[idx].name = unique_name.clone();
@@ -454,7 +480,7 @@ impl TypeManager<'_> {
         let mut unique_name = name.clone();
         while self.added_names.contains_key(&unique_name) {
             num += 1;
-            unique_name = format!("{}_{}", name, num);
+            unique_name = format!("{name}_{num}");
         }
 
         unique_name
@@ -514,7 +540,7 @@ impl Deduplicate {
         let prefix = candidate.clone();
         while self.existing_names.contains(candidate) {
             counter += 1;
-            *candidate = format!("{}_{}", prefix, counter);
+            *candidate = format!("{prefix}_{counter}");
         }
         self.existing_names.insert(candidate.clone());
     }

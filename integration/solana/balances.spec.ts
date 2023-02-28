@@ -1,31 +1,33 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import expect from 'expect';
-import * as web3 from '@solana/web3.js';
+import { Transaction, SystemProgram, sendAndConfirmTransaction } from '@solana/web3.js';
 import { loadContract } from './setup';
+import { BN } from '@project-serum/anchor';
 
 describe('Deploy solang contract and test', function () {
     this.timeout(500000);
 
     it('balances', async function () {
-        let { contract, connection, payer, storage } = await loadContract('balances');
+        let { program, storage, payer, provider } = await loadContract('balances', []);
 
-        let res = await contract.functions.get_balance(payer.publicKey.toBytes(), {
-            accounts: [payer.publicKey],
-        });
+        let res = await program.methods.getBalance(payer.publicKey)
+            .accounts({ dataAccount: storage.publicKey })
+            .remainingAccounts([{ pubkey: payer.publicKey, isSigner: false, isWritable: false }])
+            .view();
 
-        let bal = Number(res.result);
+        let bal = Number(res);
 
-        let rpc_bal = await connection.getBalance(payer.publicKey);
+        let rpc_bal = await provider.connection.getBalance(payer.publicKey);
 
         expect(bal + 5000).toBe(rpc_bal);
 
         // we wish to test the `.send()` function, so first top up the storage balance
-        let before_bal = await connection.getBalance(storage.publicKey);
+        let before_bal = await provider.connection.getBalance(storage.publicKey);
 
         /// transfer some lamports to the storage account
-        const transaction = new web3.Transaction().add(
-            web3.SystemProgram.transfer({
+        const transaction = new Transaction().add(
+            SystemProgram.transfer({
                 fromPubkey: payer.publicKey,
                 toPubkey: storage.publicKey,
                 lamports: 1500,
@@ -33,13 +35,17 @@ describe('Deploy solang contract and test', function () {
         );
 
         // Sign transaction, broadcast, and confirm
-        await web3.sendAndConfirmTransaction(connection, transaction, [payer]);
+        await sendAndConfirmTransaction(provider.connection, transaction, [payer]);
 
-        await contract.functions.send(payer.publicKey.toBytes(), 500, {
-            writableAccounts: [payer.publicKey],
-            //  signers: [storage],
-        });
+        await program.methods.send(payer.publicKey, new BN(500))
+            .accounts({ dataAccount: storage.publicKey })
+            .remainingAccounts([
+                { pubkey: storage.publicKey, isSigner: true, isWritable: true },
+                { pubkey: payer.publicKey, isSigner: false, isWritable: true }
+            ])
+            .signers([storage])
+            .rpc();
 
-        expect(await connection.getBalance(storage.publicKey)).toBe(before_bal + 1000);
+        expect(await provider.connection.getBalance(storage.publicKey)).toBe(before_bal + 1000);
     });
 });

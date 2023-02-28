@@ -954,9 +954,9 @@ fn test_power_overflow_boundaries() {
                 return a ** b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
-        let mut contract = build_solidity_with_options(&src, true, false);
+        let mut contract = build_solidity_with_options(&src, true, false, false);
 
         let base = BigUint::from(2_u32);
         let mut base_data = base.to_bytes_le();
@@ -1036,7 +1036,7 @@ fn multiply() {
         let (a, a_data) = rand();
         let (b, b_data) = rand();
 
-        println!("in: a:{:?} b:{:?}", a_data, b_data);
+        println!("in: a:{a_data:?} b:{b_data:?}");
 
         runtime.function(
             "multiply",
@@ -1047,7 +1047,7 @@ fn multiply() {
 
         let res = BigInt::from_bytes_le(Sign::Plus, &runtime.vm.output);
 
-        println!("{} = {} * {}", res, a, b);
+        println!("{res} = {a} * {b}");
 
         // the result is truncated to $size bytes. We do this here by converting to Vec<u8> and truncating
         // it. A truncating bigint multiply would be nicer.
@@ -1069,7 +1069,7 @@ fn test_mul_within_range_signed() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
         let width_rounded = (width / 8_usize).next_power_of_two();
 
@@ -1114,7 +1114,7 @@ fn test_mul_within_range() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
         let width_rounded = (width as usize / 8).next_power_of_two();
         let mut runtime = build_solidity(&src);
@@ -1155,8 +1155,8 @@ fn test_overflow_boundaries() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity_with_options(&src, true, false);
+        .replace("intN", &format!("int{width}"));
+        let mut contract = build_solidity_with_options(&src, true, false, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
         let upper_boundary = BigInt::from(2_u32).pow(width - 1).sub(1_u32);
@@ -1286,8 +1286,8 @@ fn test_overflow_detect_signed() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity_with_options(&src, true, false);
+        .replace("intN", &format!("int{width}"));
+        let mut contract = build_solidity_with_options(&src, true, false, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .Generate a value that will overflow this range:
         let limit = BigInt::from(2_u32).pow(width - 1).sub(1_u32);
@@ -1348,8 +1348,8 @@ fn test_overflow_detect_unsigned() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity_with_options(&src, true, false);
+        .replace("intN", &format!("int{width}"));
+        let mut contract = build_solidity_with_options(&src, true, false, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1].
         let limit = BigUint::from(2_u32).pow(width).sub(1_u32);
@@ -1709,6 +1709,7 @@ fn addition_overflow() {
         "#,
         true,
         false,
+        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1733,6 +1734,7 @@ fn unchecked_addition_overflow() {
         "#,
         true,
         false,
+        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1755,6 +1757,7 @@ fn subtraction_underflow() {
         }
         "#,
         true,
+        false,
         false,
     );
 
@@ -1780,6 +1783,7 @@ fn unchecked_subtraction_underflow() {
         "#,
         true,
         false,
+        false,
     );
 
     runtime.function("bar", Vec::new());
@@ -1802,6 +1806,7 @@ fn multiplication_overflow() {
         }
         "#,
         true,
+        false,
         false,
     );
 
@@ -1826,6 +1831,7 @@ fn unchecked_multiplication_overflow() {
         }
         "#,
         true,
+        false,
         false,
     );
 

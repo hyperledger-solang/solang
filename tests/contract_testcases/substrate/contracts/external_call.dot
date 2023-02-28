@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/contracts/external_call.sol" {
 	contract [label="contract c\ntests/contract_testcases/substrate/contracts/external_call.sol:2:9-7:10"]
-	var [label="variable x\nvisibility internal\ntests/contract_testcases/substrate/contracts/external_call.sol:3:13-16"]
+	var [label="variable x\nvisibility internal\ncontract b\ntests/contract_testcases/substrate/contracts/external_call.sol:3:13-16"]
 	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/contracts/external_call.sol:4:13-51\nsignature test()\nvisibility public\nmutability nonpayable"]
 	returns [label="returns\nint32 "]
 	contract_5 [label="contract b\ntests/contract_testcases/substrate/contracts/external_call.sol:9:9-13:10"]

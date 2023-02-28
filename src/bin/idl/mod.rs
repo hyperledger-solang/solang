@@ -115,7 +115,7 @@ fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
 
             let name = &ty_names.iter().find(|e| *e.0 == ty_def.name).unwrap().1;
 
-            writeln!(f, "enum {} {{", name)?;
+            writeln!(f, "enum {name} {{")?;
             let mut iter = variants.iter().enumerate();
             let mut next = iter.next();
             while let Some((no, _)) = next {
@@ -151,7 +151,7 @@ fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
 
                 let name = &ty_names.iter().find(|e| *e.0 == ty_def.name).unwrap().1;
 
-                writeln!(f, "struct {} {{", name)?;
+                writeln!(f, "struct {name} {{")?;
 
                 for (no, field) in fields.iter().enumerate() {
                     docs(&mut f, 1, &field.docs)?;
@@ -194,7 +194,7 @@ fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
 
                 let name = &ty_names.iter().find(|e| *e.0 == event.name).unwrap().1;
 
-                writeln!(f, "event {} {{", name)?;
+                writeln!(f, "event {name} {{")?;
                 let mut iter = event.fields.iter().enumerate();
                 let mut next = iter.next();
                 while let Some((no, e)) = next {
@@ -287,7 +287,7 @@ fn instruction(
         write!(
             f,
             "\t@selector([{}])\n\tfunction {}(",
-            selector.iter().map(|v| format!("{:#04x}", v)).join(","),
+            selector.iter().map(|v| format!("{v:#04x}")).join(","),
             if instr.name == "new" {
                 "initialize"
             } else {
@@ -338,7 +338,7 @@ fn docs(f: &mut File, indent: usize, docs: &Option<Vec<String>>) -> std::io::Res
             for _ in 0..indent {
                 write!(f, "\t")?;
             }
-            writeln!(f, "/// {}", doc)?;
+            writeln!(f, "/// {doc}")?;
         }
     }
 
@@ -380,12 +380,12 @@ fn idltype_to_solidity(ty: &IdlType, ty_names: &[(String, String)]) -> Result<St
             }
         }
         IdlType::Vec(ty) => match idltype_to_solidity(ty, ty_names) {
-            Ok(ty) => Ok(format!("{}[]", ty)),
-            Err(ty) => Err(format!("{}[]", ty)),
+            Ok(ty) => Ok(format!("{ty}[]")),
+            Err(ty) => Err(format!("{ty}[]")),
         },
         IdlType::Array(ty, size) => match idltype_to_solidity(ty, ty_names) {
-            Ok(ty) => Ok(format!("{}[{}]", ty, size)),
-            Err(ty) => Err(format!("{}[{}]", ty, size)),
+            Ok(ty) => Ok(format!("{ty}[{size}]")),
+            Err(ty) => Err(format!("{ty}[{size}]")),
         },
     }
 }
@@ -410,7 +410,7 @@ fn rename_keywords(name_map: &mut Vec<(String, String)>) {
         if is_keyword(name) {
             let mut name = name.to_owned();
             loop {
-                name = format!("_{}", name);
+                name = format!("_{name}");
                 if name_map.iter().all(|(_, n)| *n != name) {
                     break;
                 }

@@ -15,6 +15,8 @@ use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
 use solang_parser::{pt, pt::Loc};
 
+use super::encoding::abi_encode;
+
 /// Create the dispatch for the Solana target
 pub(super) fn function_dispatch(
     contract_no: usize,
@@ -42,7 +44,7 @@ pub(super) fn function_dispatch(
             loc: Loc::Codegen,
             expr: Expression::Load(
                 Loc::Codegen,
-                Type::Ref(Type::BufferPointer.into()),
+                Type::BufferPointer,
                 Expression::StructMember(
                     Loc::Codegen,
                     Type::Ref(Type::BufferPointer.into()),
@@ -64,7 +66,7 @@ pub(super) fn function_dispatch(
             loc: Loc::Codegen,
             expr: Expression::Load(
                 Loc::Codegen,
-                Type::Ref(Type::Uint(64).into()),
+                Type::Uint(64),
                 Expression::StructMember(
                     Loc::Codegen,
                     Type::Ref(Type::Uint(64).into()),
@@ -262,41 +264,49 @@ fn add_function_dispatch_case(
     vartab: &mut Vartable,
     cfg: &mut ControlFlowGraph,
 ) -> usize {
-    let entry = cfg.new_basic_block(format!("function_cfg_{}", cfg_no));
+    let entry = cfg.new_basic_block(format!("function_cfg_{cfg_no}"));
     cfg.set_basic_block(entry);
 
-    // check for magic in data account, to see if data account is initialized
-    let magic_ok = cfg.new_basic_block("magic_ok".into());
-    let magic_bad = cfg.new_basic_block("magic_bad".into());
+    let needs_account = if let ASTFunction::SolidityFunction(func_no) = func_cfg.function_no {
+        !ns.functions[func_no].is_pure()
+    } else {
+        true
+    };
 
-    cfg.add(
-        vartab,
-        Instr::BranchCond {
-            cond: Expression::Equal(
-                Loc::Codegen,
-                Expression::Variable(Loc::Codegen, Type::Uint(32), magic).into(),
-                Expression::NumberLiteral(
+    if needs_account {
+        // check for magic in data account, to see if data account is initialized
+        let magic_ok = cfg.new_basic_block("magic_ok".into());
+        let magic_bad = cfg.new_basic_block("magic_bad".into());
+
+        cfg.add(
+            vartab,
+            Instr::BranchCond {
+                cond: Expression::Equal(
                     Loc::Codegen,
-                    Type::Uint(32),
-                    ns.contracts[contract_no].selector().into(),
-                )
-                .into(),
-            ),
-            true_block: magic_ok,
-            false_block: magic_bad,
-        },
-    );
+                    Expression::Variable(Loc::Codegen, Type::Uint(32), magic).into(),
+                    Expression::NumberLiteral(
+                        Loc::Codegen,
+                        Type::Uint(32),
+                        ns.contracts[contract_no].selector().into(),
+                    )
+                    .into(),
+                ),
+                true_block: magic_ok,
+                false_block: magic_bad,
+            },
+        );
 
-    cfg.set_basic_block(magic_bad);
+        cfg.set_basic_block(magic_bad);
 
-    cfg.add(
-        vartab,
-        Instr::ReturnCode {
-            code: ReturnCode::InvalidDataError,
-        },
-    );
+        cfg.add(
+            vartab,
+            Instr::ReturnCode {
+                code: ReturnCode::InvalidDataError,
+            },
+        );
 
-    cfg.set_basic_block(magic_ok);
+        cfg.set_basic_block(magic_ok);
+    }
 
     let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(argslen));
 
@@ -305,7 +315,7 @@ fn add_function_dispatch_case(
         .iter()
         .map(|e| e.ty.clone())
         .collect::<Vec<Type>>();
-    let mut encoder = create_encoder(ns, false);
+    let encoder = create_encoder(ns, false);
     let decoded = encoder.abi_decode(
         &Loc::Codegen,
         argsdata,
@@ -337,7 +347,7 @@ fn add_function_dispatch_case(
     );
 
     if !func_cfg.returns.is_empty() {
-        let (data, data_len) = encoder.abi_encode(&Loc::Codegen, returns_expr, ns, vartab, cfg);
+        let (data, data_len) = abi_encode(&Loc::Codegen, returns_expr, ns, vartab, cfg, false);
         let zext_len = Expression::ZeroExt(Loc::Codegen, Type::Uint(64), Box::new(data_len));
         cfg.add(
             vartab,
@@ -383,7 +393,7 @@ fn add_constructor_dispatch_case(
     cfg: &mut ControlFlowGraph,
     opt: &Options,
 ) -> usize {
-    let entry = cfg.new_basic_block(format!("constructor_cfg_{}", cfg_no));
+    let entry = cfg.new_basic_block(format!("constructor_cfg_{cfg_no}"));
     cfg.set_basic_block(entry);
 
     let mut returns: Vec<Expression> = Vec::new();

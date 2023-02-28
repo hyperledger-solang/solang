@@ -46,7 +46,7 @@ fn dump_set(name: &str, set: &HashSet<Value>) {
         "{}:{}",
         name,
         set.iter()
-            .map(|v| format!("{}", v))
+            .map(|v| format!("{v}"))
             .collect::<Vec<String>>()
             .join(",")
     );

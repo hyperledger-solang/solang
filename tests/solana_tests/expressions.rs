@@ -74,7 +74,7 @@ fn write_buffer() {
     assert_eq!(returns, BorshToken::Bytes(buf));
 
     let res = vm.function_must_fail("test3", &[]);
-    assert_eq!(res, Ok(4294967296));
+    assert_eq!(res.unwrap(), 4294967296);
 }
 
 #[test]
@@ -124,7 +124,7 @@ fn read_buffer() {
             [0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2].to_vec(),
         )],
     );
-    assert_eq!(res, Ok(4294967296));
+    assert_eq!(res.unwrap(), 4294967296);
 
     let mut buf = vec![0x42u8, 0x41u8];
     buf.extend_from_slice(&vm.origin);
@@ -148,7 +148,7 @@ fn read_buffer() {
     buf.pop();
 
     let res = vm.function_must_fail("test2", &[BorshToken::Bytes(buf)]);
-    assert_eq!(res, Ok(4294967296));
+    assert_eq!(res.unwrap(), 4294967296);
 }
 
 #[test]

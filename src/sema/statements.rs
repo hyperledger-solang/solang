@@ -5,12 +5,18 @@ use super::contracts::is_base;
 use super::diagnostics::Diagnostics;
 use super::eval::check_term_for_constant_overflow;
 use super::expression::{
-    available_functions, call_expr, constructor_named_args, expression, function_call_expr,
-    function_call_pos_args, match_constructor_to_args, named_call_expr, named_function_call_expr,
-    new, ExprContext, ResolveTo,
+    function_call::{available_functions, call_expr, named_call_expr},
+    ExprContext, ResolveTo,
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::sema::builtin;
+use crate::sema::expression::constructor::{
+    constructor_named_args, match_constructor_to_args, new,
+};
+use crate::sema::expression::function_call::{
+    function_call_expr, function_call_pos_args, named_function_call_expr,
+};
+use crate::sema::expression::resolve_expression::expression;
 use crate::sema::function_annotation::function_body_annotations;
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
@@ -696,10 +702,7 @@ fn statement(
             if symtable.returns.len() != no_returns {
                 ns.diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!(
-                        "missing return value, {} return values expected",
-                        no_returns
-                    ),
+                    format!("missing return value, {no_returns} return values expected"),
                 ));
                 return Err(());
             }
@@ -878,7 +881,7 @@ fn statement(
             if let Some(error) = error {
                 ns.diagnostics.push(Diagnostic::error(
                     error.loc,
-                    format!("revert with custom error '{}' not supported yet", error),
+                    format!("revert with custom error '{error}' not supported yet"),
                 ));
                 return Err(());
             }
@@ -1088,8 +1091,7 @@ fn emit_event(
                     temp_diagnostics.push(Diagnostic::cast_error_with_note(
                         *loc,
                         format!(
-                            "event cannot be emmited with named fields as {} of its fields do not have names",
-                            unnamed_fields,
+                            "event cannot be emmited with named fields as {unnamed_fields} of its fields do not have names"
                         ),
                         event.loc,
                         format!("definition of {}", event.name),
@@ -1229,7 +1231,7 @@ fn destructure(
                 if let Some(storage) = storage {
                     diagnostics.push(Diagnostic::error(
                         storage.loc(),
-                        format!("storage modifier '{}' not permitted on assignment", storage),
+                        format!("storage modifier '{storage}' not permitted on assignment"),
                     ));
                     return Err(());
                 }
@@ -1532,10 +1534,7 @@ fn resolve_var_decl_ty(
         if !var_ty.can_have_data_location() {
             diagnostics.push(Diagnostic::error(
                 storage.loc(),
-                format!(
-                    "data location '{}' only allowed for array, struct or mapping type",
-                    storage
-                ),
+                format!("data location '{storage}' only allowed for array, struct or mapping type"),
             ));
             return Err(());
         }
@@ -1643,10 +1642,7 @@ fn return_with_values(
             if no_returns > 0 && returns.is_empty() {
                 diagnostics.push(Diagnostic::error(
                     *loc,
-                    format!(
-                        "missing return value, {} return values expected",
-                        no_returns
-                    ),
+                    format!("missing return value, {no_returns} return values expected"),
                 ));
                 return Err(());
             }
@@ -1715,10 +1711,7 @@ fn return_with_values(
     if no_returns > 0 && expr_return_tys.is_empty() {
         diagnostics.push(Diagnostic::error(
             *loc,
-            format!(
-                "missing return value, {} return values expected",
-                no_returns
-            ),
+            format!("missing return value, {no_returns} return values expected"),
         ));
         return Err(());
     }
@@ -2133,7 +2126,7 @@ fn try_catch(
                 if name.is_empty() {
                     "duplicate catch clause".to_string()
                 } else {
-                    format!("duplicate '{}' catch clause", name)
+                    format!("duplicate '{name}' catch clause")
                 },
             ));
             return Err(());

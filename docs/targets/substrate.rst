@@ -14,7 +14,7 @@ The Parity Substrate has the following differences to Ethereum Solidity:
 - Only functions called via rpc may return values; when calling a function in a transaction, the return values cannot be accessed
 - An `assert()`, `require()`, or `revert()` executes the wasm unreachable instruction. The reason code is lost
 
-There is an solidity example which can be found in the
+There is a solidity example which can be found in the
 `examples <https://github.com/hyperledger/solang/tree/main/examples>`_
 directory. Write this to flipper.sol and run:
 

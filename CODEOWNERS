@@ -1,1 +1,8 @@
-*	@seanyoung
+# SPDX-License-Identifier: Apache-2.0
+
+* @seanyoung @xermicus @LucasSte
+src/emit/substrate/ @xermicus
+src/emit/solana/ @LucasSte @seanyoung
+integration/substrate/ @xermicus
+integration/solana/ @LucasSte @seanyoung
+integration/anchor/ @LucasSte @seanyoung

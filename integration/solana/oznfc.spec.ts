@@ -7,27 +7,39 @@ describe('Deploy solang contract and test', function () {
     this.timeout(500000);
 
     it('Events', async function () {
-        const { contract } = await loadContract('Events');
+        const { program, storage } = await loadContract('Events');
 
-        let res = await contract.functions.getName();
+        let res = await program.methods.getName()
+            .accounts({ dataAccount: storage.publicKey })
+            .view();
 
-        expect(res.result).toBe("myName");
+        expect(res).toBe("myName");
 
-        await contract.functions.setName('ozan');
+        await program.methods.setName('ozan')
+            .accounts({ dataAccount: storage.publicKey })
+            .rpc();
 
-        res = await contract.functions.getName();
+        res = await program.methods.getName()
+            .accounts({ dataAccount: storage.publicKey })
+            .view();
 
-        expect(res.result).toBe('ozan');
+        expect(res).toBe('ozan');
 
-        await contract.functions.setSurname('martin');
+        await program.methods.setSurname('martin')
+            .accounts({ dataAccount: storage.publicKey })
+            .rpc();
 
-        res = await contract.functions.getSurname();
+        res = await program.methods.getSurname()
+            .accounts({ dataAccount: storage.publicKey })
+            .view();
 
-        expect(res.result).toBe('martin');
+        expect(res).toBe('martin');
 
-        res = await contract.functions.getNames();
+        res = await program.methods.getNames()
+            .accounts({ dataAccount: storage.publicKey })
+            .view();
 
-        expect(res.result[0]).toBe('ozan');
-        expect(res.result[1]).toBe('martin');
+        expect(res.name).toBe('ozan');
+        expect(res.surname).toBe('martin');
     });
 });

@@ -196,6 +196,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     salt,
                     address,
                     seeds,
+                    loc,
                 } => {
                     let encoded_args = expression(encoded_args, Some(&vars), cfg, ns).0;
                     let encoded_args_len = expression(encoded_args_len, Some(&vars), cfg, ns).0;
@@ -224,6 +225,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         salt,
                         address,
                         seeds,
+                        loc: *loc,
                     };
                 }
                 Instr::ExternalCall {
@@ -290,15 +292,8 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 Instr::EmitEvent {
                     event_no,
                     data,
-                    data_tys,
                     topics,
-                    topic_tys,
                 } => {
-                    let data = data
-                        .iter()
-                        .map(|e| expression(e, Some(&vars), cfg, ns).0)
-                        .collect();
-
                     let topics = topics
                         .iter()
                         .map(|e| expression(e, Some(&vars), cfg, ns).0)
@@ -306,10 +301,8 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
 
                     cfg.blocks[block_no].instr[instr_no].1 = Instr::EmitEvent {
                         event_no: *event_no,
-                        data,
-                        data_tys: data_tys.clone(),
+                        data: expression(data, Some(&vars), cfg, ns).0,
                         topics,
-                        topic_tys: topic_tys.clone(),
                     }
                 }
                 Instr::MemCopy {
@@ -517,7 +510,7 @@ fn expression(
                 if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("left shift by {} is not possible", right),
+                        format!("left shift by {right} is not possible"),
                     ));
                 } else {
                     let right: u64 = right.to_u64().unwrap();
@@ -540,7 +533,7 @@ fn expression(
                 if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("right shift by {} is not possible", right),
+                        format!("right shift by {right} is not possible"),
                     ));
                 } else {
                     let right: u64 = right.to_u64().unwrap();
@@ -570,7 +563,7 @@ fn expression(
                 if right.sign() == Sign::Minus || right >= &BigInt::from(u32::MAX) {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("power {} not possible", right),
+                        format!("power {right} not possible"),
                     ));
                 } else {
                     let right: u32 = right.to_u32().unwrap();
@@ -1174,7 +1167,7 @@ fn expression(
         | Expression::GetRef(..)
         | Expression::InternalFunctionCfg(_) => (expr.clone(), false),
         // nothing else is permitted in cfg
-        _ => panic!("expr should not be in cfg: {:?}", expr),
+        _ => panic!("expr should not be in cfg: {expr:?}"),
     }
 }
 

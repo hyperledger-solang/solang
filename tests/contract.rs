@@ -133,7 +133,7 @@ fn add_file(cache: &mut FileResolver, path: &Path, target: Target) -> io::Result
     // make sure the path uses unix file separators, this is what the dot file uses
     let filename = path.to_slash_lossy();
 
-    println!("Parsing {} for {}", filename, target);
+    println!("Parsing {filename} for {target}");
 
     // The files may have had their end of lines mangled on Windows
     cache.set_file_contents(&filename, source.replace("\r\n", "\n"));

@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/primitives/test_literal_overflow_10.sol" {
 	contract [label="contract test\ntests/contract_testcases/substrate/primitives/test_literal_overflow_10.sol:1:1-3:10"]
-	var [label="variable foo\nvisibility internal\ntests/contract_testcases/substrate/primitives/test_literal_overflow_10.sol:2:13-38"]
+	var [label="variable foo\nvisibility internal\nbytes4\ntests/contract_testcases/substrate/primitives/test_literal_overflow_10.sol:2:13-38"]
 	diagnostic [label="found abstract contract 'test'\nlevel Debug\ntests/contract_testcases/substrate/primitives/test_literal_overflow_10.sol:1:1-3:10"]
 	diagnostic_5 [label="hex literal 0x0122334455 must be 8 digits for type 'bytes4'\nlevel Error\ntests/contract_testcases/substrate/primitives/test_literal_overflow_10.sol:2:26-38"]
 	contracts -> contract

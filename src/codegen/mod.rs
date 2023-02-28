@@ -41,7 +41,7 @@ use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
-use solang_parser::{pt, pt::CodeLocation};
+use solang_parser::{pt, pt::CodeLocation, pt::Loc};
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
@@ -89,6 +89,7 @@ pub struct Options {
     pub generate_debug_information: bool,
     pub opt_level: OptimizationLevel,
     pub log_api_return_codes: bool,
+    pub log_runtime_errors: bool,
 }
 
 impl Default for Options {
@@ -103,6 +104,7 @@ impl Default for Options {
             generate_debug_information: false,
             opt_level: OptimizationLevel::Default,
             log_api_return_codes: false,
+            log_runtime_errors: false,
         }
     }
 }
@@ -656,9 +658,7 @@ impl Expression {
 
         // When converting from literals, there is not need to trunc or extend.
         match (self, &from, to) {
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Uint(to_len))
-                if p.is_primitive() =>
-            {
+            (Expression::NumberLiteral(_, _, n), p, &Type::Uint(to_len)) if p.is_primitive() => {
                 return if n.sign() == Sign::Minus {
                     let mut bs = n.to_signed_bytes_le();
                     bs.resize(to_len as usize / 8, 0xff);
@@ -671,43 +671,37 @@ impl Expression {
                     Expression::NumberLiteral(self.loc(), Type::Uint(to_len), n.clone())
                 }
             }
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Int(to_len))
-                if p.is_primitive() =>
-            {
+            (Expression::NumberLiteral(_, _, n), p, &Type::Int(to_len)) if p.is_primitive() => {
                 return Expression::NumberLiteral(self.loc(), Type::Int(to_len), n.clone());
             }
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Bytes(to_len))
-                if p.is_primitive() =>
-            {
+            (Expression::NumberLiteral(_, _, n), p, &Type::Bytes(to_len)) if p.is_primitive() => {
                 return Expression::NumberLiteral(self.loc(), Type::Bytes(to_len), n.clone());
             }
-            (&Expression::NumberLiteral(_, _, ref n), p, &Type::Address(payable))
+            (Expression::NumberLiteral(_, _, n), p, &Type::Address(payable))
                 if p.is_primitive() =>
             {
                 return Expression::NumberLiteral(self.loc(), Type::Address(payable), n.clone());
             }
 
-            (&Expression::BytesLiteral(_, _, ref bs), p, &Type::Bytes(to_len))
-                if p.is_primitive() =>
-            {
+            (Expression::BytesLiteral(_, _, bs), p, &Type::Bytes(to_len)) if p.is_primitive() => {
                 let mut bs = bs.to_owned();
                 bs.resize(to_len as usize, 0);
                 return Expression::BytesLiteral(self.loc(), Type::Bytes(to_len), bs);
             }
-            (&Expression::BytesLiteral(loc, _, ref init), _, &Type::DynamicBytes)
-            | (&Expression::BytesLiteral(loc, _, ref init), _, &Type::String) => {
+            (Expression::BytesLiteral(loc, _, init), _, &Type::DynamicBytes)
+            | (Expression::BytesLiteral(loc, _, init), _, &Type::String) => {
                 return Expression::AllocDynamicBytes(
-                    loc,
+                    *loc,
                     to.clone(),
                     Box::new(Expression::NumberLiteral(
-                        loc,
+                        *loc,
                         Type::Uint(32),
                         BigInt::from(init.len()),
                     )),
                     Some(init.clone()),
                 );
             }
-            (&Expression::NumberLiteral(_, _, ref n), _, &Type::Rational) => {
+            (Expression::NumberLiteral(_, _, n), _, &Type::Rational) => {
                 return Expression::RationalNumberLiteral(
                     self.loc(),
                     Type::Rational,
@@ -918,6 +912,40 @@ impl Expression {
             | (Type::InternalFunction { .. }, Type::InternalFunction { .. })
             | (Type::ExternalFunction { .. }, Type::ExternalFunction { .. }) => {
                 Expression::Cast(self.loc(), to.clone(), Box::new(self.clone()))
+            }
+
+            _ if !from.is_contract_storage()
+                && !to.is_contract_storage()
+                && from.is_reference_type(ns)
+                && !to.is_reference_type(ns) =>
+            {
+                let expr = Expression::Cast(
+                    self.loc(),
+                    Type::Uint(ns.target.ptr_size()),
+                    self.clone().into(),
+                );
+
+                expr.cast(to, ns)
+            }
+
+            _ if !from.is_contract_storage()
+                && !to.is_contract_storage()
+                && !from.is_reference_type(ns)
+                && to.is_reference_type(ns) =>
+            {
+                // cast non-pointer to pointer
+                let ptr_ty = Type::Uint(ns.target.ptr_size());
+
+                Expression::Cast(self.loc(), to.clone(), self.cast(&ptr_ty, ns).into())
+            }
+
+            _ if !from.is_contract_storage()
+                && !to.is_contract_storage()
+                && !from.is_reference_type(ns)
+                && !to.is_reference_type(ns) =>
+            {
+                // cast pointer to different pointer
+                Expression::Cast(self.loc(), to.clone(), self.clone().into())
             }
 
             _ => self.clone(),
@@ -1231,7 +1259,6 @@ pub enum Builtin {
     MulMod,
     Keccak256,
     Origin,
-    Random,
     ReadFromBuffer,
     Ripemd160,
     Sender,
@@ -1279,7 +1306,6 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::MulMod => Builtin::MulMod,
             ast::Builtin::Keccak256 => Builtin::Keccak256,
             ast::Builtin::Origin => Builtin::Origin,
-            ast::Builtin::Random => Builtin::Random,
             ast::Builtin::ReadAddress
             | ast::Builtin::ReadInt8
             | ast::Builtin::ReadInt16LE
@@ -1316,5 +1342,27 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::WriteBytes | ast::Builtin::WriteString => Builtin::WriteBytes,
             _ => panic!("Builtin should not be in the cfg"),
         }
+    }
+}
+
+pub(super) fn error_msg_with_loc(ns: &Namespace, error: &str, loc: Option<Loc>) -> String {
+    if let Some(loc) = loc {
+        match loc {
+            Loc::File(..) => {
+                let file_no = loc.file_no();
+                let curr_file = &ns.files[file_no];
+                let (line_no, offset) = curr_file.offset_to_line_column(loc.start());
+                format!(
+                    "{} in {}:{}:{}",
+                    error,
+                    curr_file.path.file_name().unwrap().to_str().unwrap(),
+                    line_no + 1,
+                    offset
+                )
+            }
+            _ => error.to_string(),
+        }
+    } else {
+        error.to_string()
     }
 }

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::ast::{Diagnostic, Expression, FormatArg, Namespace, RetrieveType, Type};
-use super::expression::{expression, ExprContext, ResolveTo};
+use super::expression::{ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::sema::diagnostics::Diagnostics;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 
+use crate::sema::expression::resolve_expression::expression;
 use std::iter::Peekable;
 use std::slice::Iter;
 use std::str::CharIndices;
@@ -173,7 +174,7 @@ fn parse_format_specifier(
                 Some((loc, ch)) => {
                     diagnostics.push(Diagnostic::error(
                         loc,
-                        format!("unexpected format char '{}'", ch),
+                        format!("unexpected format char '{ch}'"),
                     ));
                     return Err(());
                 }
@@ -191,7 +192,7 @@ fn parse_format_specifier(
                 Some((loc, ch)) => {
                     diagnostics.push(Diagnostic::error(
                         loc,
-                        format!("unexpected format char '{:}', expected closing '}}'", ch),
+                        format!("unexpected format char '{ch}', expected closing '}}'"),
                     ));
                     Err(())
                 }
@@ -207,7 +208,7 @@ fn parse_format_specifier(
         Some((loc, ch)) => {
             diagnostics.push(Diagnostic::error(
                 loc,
-                format!("unexpected format char '{}'", ch),
+                format!("unexpected format char '{ch}'"),
             ));
             Err(())
         }

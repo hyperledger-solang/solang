@@ -3,11 +3,12 @@
 use super::{
     annotions_not_allowed, ast,
     diagnostics::Diagnostics,
-    expression::{compatible_mutability, match_constructor_to_args, ExprContext},
+    expression::{compatible_mutability, ExprContext},
     functions, statements,
     symtable::Symtable,
     using, variables, ContractDefinition,
 };
+use crate::sema::expression::constructor::match_constructor_to_args;
 use crate::{sema::ast::Namespace, sema::unused_variable::emit_warning_local_variable};
 use num_bigint::BigInt;
 use num_traits::Zero;
@@ -126,7 +127,7 @@ pub fn resolve_base_contracts(
                 if no == contract.contract_no {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         name.loc,
-                        format!("contract '{}' cannot have itself as a base contract", name),
+                        format!("contract '{name}' cannot have itself as a base contract"),
                     ));
                 } else if ns.contracts[contract.contract_no]
                     .bases
@@ -309,9 +310,9 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     {
                         diagnostics.push(ast::Diagnostic::error_with_note(
                             sym.loc(),
-                            format!("already defined '{}'", name),
+                            format!("already defined '{name}'"),
                             prev.loc(),
-                            format!("previous definition of '{}'", name),
+                            format!("previous definition of '{name}'"),
                         ));
                     }
                 }

@@ -28,11 +28,11 @@ Option 2: Download binaries
 
 There are binaries available on github releases:
 
-- `Linux x86-64 <https://github.com/hyperledger/solang/releases/download/v0.2.1/solang-linux-x86-64>`_
-- `Linux arm64 <https://github.com/hyperledger/solang/releases/download/v0.2.1/solang-linux-arm64>`_
-- `Windows x64 <https://github.com/hyperledger/solang/releases/download/v0.2.1/solang.exe>`_
-- `MacOS intel <https://github.com/hyperledger/solang/releases/download/v0.2.1/solang-mac-intel>`_
-- `MacOS arm <https://github.com/hyperledger/solang/releases/download/v0.2.1/solang-mac-arm>`_
+- `Linux x86-64 <https://github.com/hyperledger/solang/releases/download/v0.2.2/solang-linux-x86-64>`_
+- `Linux arm64 <https://github.com/hyperledger/solang/releases/download/v0.2.2/solang-linux-arm64>`_
+- `Windows x64 <https://github.com/hyperledger/solang/releases/download/v0.2.2/solang.exe>`_
+- `MacOS intel <https://github.com/hyperledger/solang/releases/download/v0.2.2/solang-mac-intel>`_
+- `MacOS arm <https://github.com/hyperledger/solang/releases/download/v0.2.2/solang-mac-arm>`_
 
 Download the file and save it somewhere in your ``$PATH``, for example the bin directory in your home directory. If the
 path you use is not already in ``$PATH``, then you need to add it yourself.
@@ -56,7 +56,7 @@ Option 3: Use ghcr.io/hyperledger/solang containers
 
 New images are automatically made available on
 `solang containers <https://github.com/hyperledger/solang/pkgs/container/solang>`_.
-There is a release `v0.2.1` tag and a `latest` tag:
+There is a release `v0.2.2` tag and a `latest` tag:
 
 .. code-block:: bash
 
@@ -113,7 +113,7 @@ These patches make it possible to generate code for Solana, and fixes
 concurrency issues in the lld linker.
 
 You can either download the pre-built libraries from
-`github <https://github.com/hyperledger/solang/releases/tag/v0.2.1>`_
+`github <https://github.com/hyperledger/solang/releases/tag/v0.2.2>`_
 or :ref:`build your own from source <llvm-from-source>`. After that, you need to add the ``bin`` of your
 LLVM directory to your path, so that the build system of Solang can find the correct version of LLVM to use.
 
@@ -121,40 +121,40 @@ Linux
 ~~~~~
 
 A pre-built version of LLVM, specifically configured for Solang, is available at
-`<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-linux-x86-64.tar.xz>`_ for x86 processors
-and at `<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-linux-arm64.tar.xz>`_ for ARM.
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-linux-x86-64.tar.xz>`_ for x86 processors
+and at `<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-linux-arm64.tar.xz>`_ for ARM.
 After downloading, untar the file in a terminal and add it to your path.
 
 .. code-block:: bash
 
-	tar Jxf llvm14.0-linux-x86-64.tar.xz
-	export PATH=$(pwd)/llvm14.0/bin:$PATH
+	tar Jxf llvm15.0-linux-x86-64.tar.xz
+	export PATH=$(pwd)/llvm15.0/bin:$PATH
 
 Windows
 ~~~~~~~
 
 A pre-built version of LLVM, specifically configured for Solang, is available at
-`<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-win.zip>`_.
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-win.zip>`_.
 
 After unzipping the file, add the bin directory to your path.
 
 .. code-block:: batch
 
-	set PATH=%PATH%;C:\llvm14.0\bin
+	set PATH=%PATH%;C:\llvm15.0\bin
 
 Mac
 ~~~
 
 A pre-built version of LLVM for intel macs, is available at
-`<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-mac-intel.tar.xz>`_ and for arm macs there is
-`<https://github.com/hyperledger/solang/releases/download/v0.2.1/llvm14.0-mac-arm.tar.xz>`_. After downloading,
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-mac-intel.tar.xz>`_ and for arm macs there is
+`<https://github.com/hyperledger/solang-llvm/releases/download/llvm15-0/llvm15.0-mac-arm.tar.xz>`_. After downloading,
 untar the file in a terminal and add it to your path like so:
 
 .. code-block:: bash
 
-	tar Jxf llvm14.0-mac-arm.tar.xz
-	xattr -rd com.apple.quarantine llvm14.0
-	export PATH=$(pwd)/llvm14.0/bin:$PATH
+	tar Jxf llvm15.0-mac-arm.tar.xz
+	xattr -rd com.apple.quarantine llvm15.0
+	export PATH=$(pwd)/llvm15.0/bin:$PATH
 
 .. _llvm-from-source:
 
@@ -166,7 +166,7 @@ you may need to consult. First if all clone our LLVM repository:
 
 .. code-block:: bash
 
-	git clone --depth 1 --branch solana-rustc/14.0-2022-03-22 https://github.com/solana-labs/llvm-project
+	git clone --depth 1 --branch solana-rustc/15.0-2022-08-09 https://github.com/solana-labs/llvm-project
 	cd llvm-project
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have LLVM installed, and then run the build:

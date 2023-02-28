@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::encoding::abi_encode;
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
 };
@@ -11,6 +12,7 @@ use super::{
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::encoding::create_encoder;
+use crate::codegen::error_msg_with_loc;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::{
@@ -21,7 +23,8 @@ use crate::sema::{
     },
     diagnostics::Diagnostics,
     eval::{eval_const_number, eval_const_rational},
-    expression::{bigint_to_expression, ResolveTo},
+    expression::integers::bigint_to_expression,
+    expression::ResolveTo,
 };
 use crate::Target;
 use num_bigint::BigInt;
@@ -456,6 +459,7 @@ pub fn expression(
                         ns,
                         &mut Diagnostics::default(),
                         ResolveTo::Type(ty),
+                        None,
                     )
                     .unwrap();
                     expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt)
@@ -486,6 +490,7 @@ pub fn expression(
                             ns,
                             &mut Diagnostics::default(),
                             ResolveTo::Type(ty),
+                            None,
                         )
                         .unwrap();
                         expression(&ast_expr, cfg, contract_no, func, ns, vartab, opt)
@@ -787,6 +792,7 @@ pub fn expression(
                         res: address_res,
                         ty: args[0].ty(),
                         array: array_pos,
+                        loc: *loc,
                     },
                 );
                 cfg.modify_temp_array_length(*loc, true, array_pos, vartab);
@@ -814,12 +820,12 @@ pub fn expression(
             kind: ast::Builtin::Require,
             args,
             ..
-        } => require(cfg, args, contract_no, func, ns, vartab, opt),
+        } => require(cfg, args, contract_no, func, ns, vartab, opt, expr.loc()),
         ast::Expression::Builtin {
             kind: ast::Builtin::Revert,
             args,
             ..
-        } => revert(args, cfg, contract_no, func, ns, vartab, opt),
+        } => revert(args, cfg, contract_no, func, ns, vartab, opt, expr.loc()),
         ast::Expression::Builtin {
             kind: ast::Builtin::SelfDestruct,
             args,
@@ -842,7 +848,7 @@ pub fn expression(
             kind: ast::Builtin::AbiEncode,
             args,
             ..
-        } => abi_encode(args, cfg, contract_no, func, ns, vartab, loc, opt),
+        } => abi_encode_many(args, cfg, contract_no, func, ns, vartab, loc, opt),
         ast::Expression::Builtin {
             loc,
             kind: ast::Builtin::AbiEncodePacked,
@@ -1295,6 +1301,14 @@ fn expr_assert(
         },
     );
     cfg.set_basic_block(false_);
+    log_runtime_error(
+        opt.log_runtime_errors,
+        "assert failure",
+        args.loc(),
+        cfg,
+        vartab,
+        ns,
+    );
     assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
     cfg.set_basic_block(true_);
     Expression::Poison
@@ -1308,6 +1322,7 @@ fn require(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    loc: Loc,
 ) -> Expression {
     let true_ = cfg.new_basic_block("noassert".to_owned());
     let false_ = cfg.new_basic_block("doassert".to_owned());
@@ -1325,10 +1340,37 @@ fn require(
         .get(1)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
     match ns.target {
-        // On Solana and Substrate, print the reason, do not abi encoding it
+        // On Solana and Substrate, print the reason, do not abi encode it
         Target::Solana | Target::Substrate { .. } => {
-            if let Some(expr) = expr {
-                cfg.add(vartab, Instr::Print { expr });
+            if opt.log_runtime_errors {
+                if let Some(expr) = expr {
+                    let error_string =
+                        error_msg_with_loc(ns, " require condition failed", Some(expr.loc()));
+                    let print_expr = Expression::FormatString(
+                        Loc::Codegen,
+                        vec![
+                            (FormatArg::Default, expr),
+                            (
+                                FormatArg::StringLiteral,
+                                Expression::BytesLiteral(
+                                    Loc::Codegen,
+                                    Type::Bytes(error_string.as_bytes().len() as u8),
+                                    error_string.as_bytes().to_vec(),
+                                ),
+                            ),
+                        ],
+                    );
+                    cfg.add(vartab, Instr::Print { expr: print_expr });
+                } else {
+                    log_runtime_error(
+                        opt.log_runtime_errors,
+                        "require condition failed",
+                        loc,
+                        cfg,
+                        vartab,
+                        ns,
+                    );
+                }
             }
             assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
         }
@@ -1346,10 +1388,42 @@ fn revert(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
+    loc: Loc,
 ) -> Expression {
     let expr = args
         .get(0)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
+
+    if opt.log_runtime_errors {
+        if expr.is_some() {
+            let error_string = error_msg_with_loc(ns, " revert encountered", Some(loc));
+            let print_expr = Expression::FormatString(
+                Loc::Codegen,
+                vec![
+                    (FormatArg::Default, expr.clone().unwrap()),
+                    (
+                        FormatArg::StringLiteral,
+                        Expression::BytesLiteral(
+                            Loc::Codegen,
+                            Type::Bytes(error_string.as_bytes().len() as u8),
+                            error_string.as_bytes().to_vec(),
+                        ),
+                    ),
+                ],
+            );
+            cfg.add(vartab, Instr::Print { expr: print_expr });
+        } else {
+            log_runtime_error(
+                opt.log_runtime_errors,
+                "revert encountered",
+                loc,
+                cfg,
+                vartab,
+                ns,
+            )
+        }
+    }
+
     assert_failure(&Loc::Codegen, expr, ns, cfg, vartab);
     Expression::Poison
 }
@@ -1473,7 +1547,7 @@ fn payable_transfer(
     Expression::Poison
 }
 
-fn abi_encode(
+fn abi_encode_many(
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -1488,8 +1562,7 @@ fn abi_encode(
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
 
-    let mut encoder = create_encoder(ns, false);
-    encoder.abi_encode(loc, args, ns, vartab, cfg).0
+    abi_encode(loc, args, ns, vartab, cfg, false).0
 }
 
 fn abi_encode_packed(
@@ -1507,12 +1580,11 @@ fn abi_encode_packed(
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
 
-    let mut encoder = create_encoder(ns, true);
-    let (encoded, _) = encoder.abi_encode(loc, packed, ns, vartab, cfg);
+    let (encoded, _) = abi_encode(loc, packed, ns, vartab, cfg, true);
     encoded
 }
 
-fn encode_with_selector(
+fn encode_many_with_selector(
     loc: &pt::Loc,
     selector: Expression,
     mut args: Vec<Expression>,
@@ -1523,8 +1595,7 @@ fn encode_with_selector(
     let mut encoder_args: Vec<Expression> = Vec::with_capacity(args.len() + 1);
     encoder_args.push(selector);
     encoder_args.append(&mut args);
-    let mut encoder = create_encoder(ns, false);
-    encoder.abi_encode(loc, encoder_args, ns, vartab, cfg).0
+    abi_encode(loc, encoder_args, ns, vartab, cfg, false).0
 }
 
 fn abi_encode_with_selector(
@@ -1550,7 +1621,7 @@ fn abi_encode_with_selector(
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-    encode_with_selector(loc, selector, args, ns, vartab, cfg)
+    encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
 fn abi_encode_with_signature(
@@ -1581,7 +1652,7 @@ fn abi_encode_with_signature(
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-    encode_with_selector(loc, selector, args, ns, vartab, cfg)
+    encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
 fn abi_encode_call(
@@ -1612,7 +1683,7 @@ fn abi_encode_call(
     let args = args_iter
         .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<Expression>>();
-    encode_with_selector(loc, selector, args, ns, vartab, cfg)
+    encode_many_with_selector(loc, selector, args, ns, vartab, cfg)
 }
 
 fn builtin_evm_gasprice(
@@ -1694,6 +1765,14 @@ fn expr_builtin(
             );
 
             cfg.set_basic_block(out_of_bounds);
+            log_runtime_error(
+                opt.log_runtime_errors,
+                "integer too large to write in buffer",
+                *loc,
+                cfg,
+                vartab,
+                ns,
+            );
             assert_failure(loc, None, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
@@ -1745,6 +1824,14 @@ fn expr_builtin(
             );
 
             cfg.set_basic_block(out_ouf_bounds);
+            log_runtime_error(
+                opt.log_runtime_errors,
+                "data does not fit into buffer",
+                *loc,
+                cfg,
+                vartab,
+                ns,
+            );
             assert_failure(loc, None, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
@@ -1813,6 +1900,14 @@ fn expr_builtin(
             );
 
             cfg.set_basic_block(out_of_bounds);
+            log_runtime_error(
+                opt.log_runtime_errors,
+                "read integer out of bounds",
+                *loc,
+                cfg,
+                vartab,
+                ns,
+            );
             assert_failure(loc, None, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
@@ -2010,6 +2105,14 @@ fn checking_trunc(
     );
 
     cfg.set_basic_block(out_of_bounds);
+    log_runtime_error(
+        opt.log_runtime_errors,
+        "truncated type overflows",
+        *loc,
+        cfg,
+        vartab,
+        ns,
+    );
     assert_failure(loc, None, ns, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
@@ -2175,7 +2278,7 @@ pub fn assign_single(
             let dest = expression(left, cfg, contract_no, func, ns, vartab, opt);
 
             let cfg_right =
-                if !left_ty.is_contract_storage() && cfg_right.ty().is_fixed_reference_type() {
+                if !left_ty.is_contract_storage() && cfg_right.ty().is_fixed_reference_type(ns) {
                     Expression::Load(pt::Loc::Codegen, cfg_right.ty(), Box::new(cfg_right))
                 } else {
                     cfg_right
@@ -2468,8 +2571,7 @@ pub fn emit_function_call(
                     Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector),
                 );
 
-                let mut encoder = create_encoder(ns, false);
-                let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
+                let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
                 cfg.add(
                     vartab,
@@ -2533,8 +2635,7 @@ pub fn emit_function_call(
                 tys.insert(0, Type::Bytes(ns.target.selector_length()));
                 args.insert(0, selector);
 
-                let mut encoder = create_encoder(ns, false);
-                let (payload, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
+                let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
                 cfg.add(
                     vartab,
@@ -2651,6 +2752,7 @@ fn array_subscript(
                 ns,
                 &mut Diagnostics::default(),
                 ResolveTo::Unknown,
+                None,
             )
             .unwrap();
             expression(&ast_bigint, cfg, contract_no, func, ns, vartab, opt)
@@ -2702,6 +2804,7 @@ fn array_subscript(
                     ns,
                     &mut Diagnostics::default(),
                     ResolveTo::Unknown,
+                    None,
                 )
                 .unwrap();
                 expression(&ast_big_int, cfg, contract_no, func, ns, vartab, opt)
@@ -2759,6 +2862,14 @@ fn array_subscript(
     );
 
     cfg.set_basic_block(out_of_bounds);
+    log_runtime_error(
+        opt.log_runtime_errors,
+        "array index out of bounds",
+        *loc,
+        cfg,
+        vartab,
+        ns,
+    );
     assert_failure(loc, None, ns, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
@@ -3043,8 +3154,7 @@ pub(super) fn assert_failure(
     let selector = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(selector));
     let args = vec![selector, arg.unwrap()];
 
-    let mut encoder = create_encoder(ns, false);
-    let (encoded_buffer, _) = encoder.abi_encode(loc, args, ns, vartab, cfg);
+    let (encoded_buffer, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
     cfg.add(
         vartab,
@@ -3063,4 +3173,33 @@ fn code(loc: &Loc, contract_no: usize, ns: &Namespace, opt: &Options) -> Express
     let size = Expression::NumberLiteral(*loc, Type::Uint(32), code.len().into());
 
     Expression::AllocDynamicBytes(*loc, Type::DynamicBytes, size.into(), Some(code))
+}
+
+fn string_to_expr(string: String) -> Expression {
+    Expression::FormatString(
+        Loc::Codegen,
+        vec![(
+            FormatArg::StringLiteral,
+            Expression::BytesLiteral(
+                Loc::Codegen,
+                Type::Bytes(string.as_bytes().len() as u8),
+                string.as_bytes().to_vec(),
+            ),
+        )],
+    )
+}
+
+pub(crate) fn log_runtime_error(
+    report_error: bool,
+    reason: &str,
+    reason_loc: Loc,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) {
+    if report_error {
+        let error_with_loc = error_msg_with_loc(ns, reason, Some(reason_loc));
+        let expr = string_to_expr(error_with_loc);
+        cfg.add(vartab, Instr::Print { expr });
+    }
 }

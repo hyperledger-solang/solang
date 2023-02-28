@@ -182,7 +182,7 @@ impl Externals for MockSubstrate {
                 );
 
                 if let Err(e) = self.vm.memory.set(dest_ptr, &self.vm.input) {
-                    panic!("seal_input: {}", e);
+                    panic!("seal_input: {e}");
                 }
 
                 self.vm
@@ -204,11 +204,11 @@ impl Externals for MockSubstrate {
                 let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key) {
-                    panic!("seal_get_storage: {}", e);
+                    panic!("seal_get_storage: {e}");
                 }
 
                 if let Some(value) = self.store.get(&(self.vm.account, key)) {
-                    println!("seal_get_storage: {:?} = {:?}", key, value);
+                    println!("seal_get_storage: {key:?} = {value:?}");
 
                     let len = self
                         .vm
@@ -222,7 +222,7 @@ impl Externals for MockSubstrate {
                     );
 
                     if let Err(e) = self.vm.memory.set(dest_ptr, value) {
-                        panic!("seal_get_storage: {}", e);
+                        panic!("seal_get_storage: {e}");
                     }
 
                     self.vm
@@ -232,7 +232,7 @@ impl Externals for MockSubstrate {
 
                     Ok(Some(RuntimeValue::I32(0)))
                 } else {
-                    println!("seal_get_storage: {:?} = nil", key);
+                    println!("seal_get_storage: {key:?} = nil");
                     Ok(Some(RuntimeValue::I32(1)))
                 }
             }
@@ -244,10 +244,10 @@ impl Externals for MockSubstrate {
                 let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key) {
-                    panic!("seal_clear_storage: {}", e);
+                    panic!("seal_clear_storage: {e}");
                 }
 
-                println!("seal_clear_storage: {:?}", key);
+                println!("seal_clear_storage: {key:?}");
                 let pre_existing_len = self
                     .store
                     .remove(&(self.vm.account, key))
@@ -268,16 +268,16 @@ impl Externals for MockSubstrate {
                 let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key[..]) {
-                    panic!("seal_set_storage: {}", e);
+                    panic!("seal_set_storage: {e}");
                 }
 
                 let mut data = Vec::new();
                 data.resize(len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
-                    panic!("seal_set_storage: {}", e);
+                    panic!("seal_set_storage: {e}");
                 }
-                println!("seal_set_storage: {:?} = {:?}", key, data);
+                println!("seal_set_storage: {key:?} = {data:?}");
 
                 let pre_existing_len = self
                     .store
@@ -297,7 +297,7 @@ impl Externals for MockSubstrate {
                 data.resize(len as usize, 0);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
-                    panic!("seal_hash_keccak_256: {}", e);
+                    panic!("seal_hash_keccak_256: {e}");
                 }
 
                 let mut hasher = Keccak::v256();
@@ -312,7 +312,7 @@ impl Externals for MockSubstrate {
                 );
 
                 if let Err(e) = self.vm.memory.set(out_ptr, &hash) {
-                    panic!("seal_hash_keccak_256: {}", e);
+                    panic!("seal_hash_keccak_256: {e}");
                 }
 
                 Ok(None)
@@ -327,7 +327,7 @@ impl Externals for MockSubstrate {
                 data.resize(len as usize, 0);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
-                    panic!("seal_hash_sha2_256: {}", e);
+                    panic!("seal_hash_sha2_256: {e}");
                 }
 
                 let mut hasher = Sha256::new();
@@ -342,7 +342,7 @@ impl Externals for MockSubstrate {
                 );
 
                 if let Err(e) = self.vm.memory.set(out_ptr, &hash) {
-                    panic!("seal_hash_sha2_256: {}", e);
+                    panic!("seal_hash_sha2_256: {e}");
                 }
 
                 Ok(None)
@@ -357,7 +357,7 @@ impl Externals for MockSubstrate {
                 data.resize(len as usize, 0);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
-                    panic!("seal_hash_blake2_128: {}", e);
+                    panic!("seal_hash_blake2_128: {e}");
                 }
                 let hash = blake2_rfc::blake2b::blake2b(16, &[], &data);
 
@@ -368,7 +368,7 @@ impl Externals for MockSubstrate {
                 );
 
                 if let Err(e) = self.vm.memory.set(out_ptr, hash.as_bytes()) {
-                    panic!("seal_hash_blake2_128: {}", e);
+                    panic!("seal_hash_blake2_128: {e}");
                 }
 
                 Ok(None)
@@ -383,7 +383,7 @@ impl Externals for MockSubstrate {
                 data.resize(len as usize, 0);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
-                    panic!("seal_hash_blake2_256: {}", e);
+                    panic!("seal_hash_blake2_256: {e}");
                 }
 
                 let hash = blake2_rfc::blake2b::blake2b(32, &[], &data);
@@ -395,7 +395,7 @@ impl Externals for MockSubstrate {
                 );
 
                 if let Err(e) = self.vm.memory.set(out_ptr, hash.as_bytes()) {
-                    panic!("seal_hash_blake2_256: {}", e);
+                    panic!("seal_hash_blake2_256: {e}");
                 }
 
                 Ok(None)
@@ -408,12 +408,12 @@ impl Externals for MockSubstrate {
                 self.vm.output.resize(len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut self.vm.output) {
-                    panic!("seal_return: {}", e);
+                    panic!("seal_return: {e}");
                 }
 
                 match flags {
                     0 | 1 => Err(Trap::new(TrapKind::Host(Box::new(HostCodeReturn(flags))))),
-                    _ => panic!("seal_return flag {} not valid", flags),
+                    _ => panic!("seal_return flag {flags} not valid"),
                 }
             }
             Some(SubstrateExternal::seal_debug_message) => {
@@ -424,12 +424,12 @@ impl Externals for MockSubstrate {
                 buf.resize(len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut buf) {
-                    panic!("seal_debug_message: {}", e);
+                    panic!("seal_debug_message: {e}");
                 }
 
                 let s = String::from_utf8(buf).expect("seal_debug_message: Invalid UFT8");
 
-                println!("seal_debug_message: {}", s);
+                println!("seal_debug_message: {s}");
 
                 self.printbuf.push_str(&s);
 
@@ -445,7 +445,7 @@ impl Externals for MockSubstrate {
                 buf.resize(len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut buf) {
-                    panic!("seal_random: {}", e);
+                    panic!("seal_random: {e}");
                 }
 
                 let mut hash = [0u8; 32];
@@ -466,7 +466,7 @@ impl Externals for MockSubstrate {
                 );
 
                 if let Err(e) = self.vm.memory.set(dest_ptr, &hash) {
-                    panic!("seal_random: {}", e);
+                    panic!("seal_random: {e}");
                 }
 
                 self.vm
@@ -490,13 +490,13 @@ impl Externals for MockSubstrate {
                 let mut account = [0u8; 32];
 
                 if let Err(e) = self.vm.memory.get_into(account_ptr, &mut account) {
-                    panic!("seal_call: {}", e);
+                    panic!("seal_call: {e}");
                 }
 
                 let mut value = [0u8; 16];
 
                 if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
-                    panic!("seal_call: {}", e);
+                    panic!("seal_call: {e}");
                 }
 
                 let value = u128::from_le_bytes(value);
@@ -510,7 +510,7 @@ impl Externals for MockSubstrate {
                 input.resize(input_len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(input_ptr, &mut input) {
-                    panic!("seal_call: {}", e);
+                    panic!("seal_call: {e}");
                 }
 
                 println!(
@@ -545,7 +545,7 @@ impl Externals for MockSubstrate {
                         }
                     },
                     Ok(v) => v,
-                    Err(e) => panic!("fail to invoke call: {}", e),
+                    Err(e) => panic!("fail to invoke call: {e}"),
                 };
 
                 let output = self.vm.output.clone();
@@ -570,18 +570,18 @@ impl Externals for MockSubstrate {
 
                 let mut account = [0u8; 32];
 
-                assert!(account_len == 32, "seal_transfer: len = {}", account_len);
+                assert!(account_len == 32, "seal_transfer: len = {account_len}");
 
                 if let Err(e) = self.vm.memory.get_into(account_ptr, &mut account) {
-                    panic!("seal_transfer: {}", e);
+                    panic!("seal_transfer: {e}");
                 }
 
                 let mut value = [0u8; 16];
 
-                assert!(value_len == 16, "seal_transfer: len = {}", value_len);
+                assert!(value_len == 16, "seal_transfer: len = {value_len}");
 
                 if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
-                    panic!("seal_transfer: {}", e);
+                    panic!("seal_transfer: {e}");
                 }
 
                 let value = u128::from_le_bytes(value);
@@ -613,13 +613,13 @@ impl Externals for MockSubstrate {
                 let mut codehash = [0u8; 32];
 
                 if let Err(e) = self.vm.memory.get_into(codehash_ptr, &mut codehash) {
-                    panic!("seal_instantiate: {}", e);
+                    panic!("seal_instantiate: {e}");
                 }
 
                 let mut value = [0u8; 16];
 
                 if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
-                    panic!("seal_instantiate: {}", e);
+                    panic!("seal_instantiate: {e}");
                 }
 
                 let value = u128::from_le_bytes(value);
@@ -628,14 +628,14 @@ impl Externals for MockSubstrate {
                 input.resize(input_len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(input_ptr, &mut input) {
-                    panic!("seal_instantiate: {}", e);
+                    panic!("seal_instantiate: {e}");
                 }
 
                 let mut salt = Vec::new();
                 salt.resize(salt_len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(salt_ptr, &mut salt) {
-                    panic!("seal_instantiate: {}", e);
+                    panic!("seal_instantiate: {e}");
                 }
 
                 println!(
@@ -671,7 +671,7 @@ impl Externals for MockSubstrate {
                 input.resize(input_len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(input_ptr, &mut input) {
-                    panic!("seal_instantiate: {}", e);
+                    panic!("seal_instantiate: {e}");
                 }
 
                 let mut vm = VirtualMachine::new(account, self.vm.account, value);
@@ -696,7 +696,7 @@ impl Externals for MockSubstrate {
                         }
                     },
                     Ok(v) => v,
-                    Err(e) => panic!("fail to invoke deploy: {}", e),
+                    Err(e) => panic!("fail to invoke deploy: {e}"),
                 };
 
                 let output = self.vm.output.clone();
@@ -720,7 +720,7 @@ impl Externals for MockSubstrate {
                     );
                 }
 
-                println!("seal_instantiate ret:{:?}", ret);
+                println!("seal_instantiate ret:{ret:?}");
 
                 Ok(ret)
             }
@@ -821,7 +821,7 @@ impl Externals for MockSubstrate {
                 let mut account = [0u8; 32];
 
                 if let Err(e) = self.vm.memory.get_into(account_ptr, &mut account) {
-                    panic!("seal_terminate: {}", e);
+                    panic!("seal_terminate: {e}");
                 }
 
                 let remaining = self.accounts[&self.vm.account].1;
@@ -849,7 +849,7 @@ impl Externals for MockSubstrate {
                     let mut vec_length = [0u8];
 
                     if let Err(e) = self.vm.memory.get_into(topic_ptr, &mut vec_length) {
-                        panic!("seal_deposit_event: topic: {}", e);
+                        panic!("seal_deposit_event: topic: {e}");
                     }
 
                     println!("topic_len: {} first byte: {}", topic_len, vec_length[0]);
@@ -861,7 +861,7 @@ impl Externals for MockSubstrate {
                 for _ in 0..topic_len / 32 {
                     let mut topic = [0u8; 32];
                     if let Err(e) = self.vm.memory.get_into(topic_ptr, &mut topic) {
-                        panic!("seal_deposit_event: topic: {}", e);
+                        panic!("seal_deposit_event: topic: {e}");
                     }
                     topics.push(topic);
                     topic_ptr += 32;
@@ -871,7 +871,7 @@ impl Externals for MockSubstrate {
                 data.resize(data_len as usize, 0);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
-                    panic!("seal_deposit_event: data: {}", e);
+                    panic!("seal_deposit_event: data: {e}");
                 }
 
                 println!(
@@ -888,7 +888,7 @@ impl Externals for MockSubstrate {
 
                 Ok(None)
             }
-            _ => panic!("external {} unknown", index),
+            _ => panic!("external {index} unknown"),
         }
     }
 }
@@ -922,7 +922,7 @@ impl ModuleImportResolver for MockSubstrate {
             "seal_deposit_event" => SubstrateExternal::seal_deposit_event,
             "seal_transfer" => SubstrateExternal::seal_transfer,
             _ => {
-                panic!("{} not implemented", field_name);
+                panic!("{field_name} not implemented");
             }
         };
 
@@ -965,10 +965,10 @@ impl MockSubstrate {
                         panic!("did not go as planned");
                     }
                 }
-                _ => panic!("fail to invoke deploy: {}", trap),
+                _ => panic!("fail to invoke deploy: {trap}"),
             },
             Ok(v) => v,
-            Err(e) => panic!("fail to invoke deploy: {}", e),
+            Err(e) => panic!("fail to invoke deploy: {e}"),
         }
     }
 
@@ -984,10 +984,10 @@ impl MockSubstrate {
                         panic!("did not go as planned");
                     }
                 }
-                _ => panic!("fail to invoke call: {}", trap),
+                _ => panic!("fail to invoke call: {trap}"),
             },
             Ok(v) => v,
-            Err(e) => panic!("fail to invoke call: {}", e),
+            Err(e) => panic!("fail to invoke call: {e}"),
         }
     }
 
@@ -1045,10 +1045,7 @@ impl MockSubstrate {
         let ret = self.invoke_deploy(module);
 
         if let Some(RuntimeValue::I32(ret)) = ret {
-            println!(
-                "function_expected_return: got {} expected {}",
-                ret, expected_ret
-            );
+            println!("function_expected_return: got {ret} expected {expected_ret}");
 
             if expected_ret != ret {
                 panic!("non one return")
@@ -1078,7 +1075,7 @@ impl MockSubstrate {
         println!("input:{}", hex::encode(&self.vm.input));
 
         if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
-            assert!(ret == 0, "non zero return: {}", ret);
+            assert!(ret == 0, "non zero return: {ret}");
         }
     }
 
@@ -1104,13 +1101,13 @@ impl MockSubstrate {
         match module.invoke_export("call", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Unreachable => (),
-                _ => panic!("trap: {:?}", trap),
+                _ => panic!("trap: {trap:?}"),
             },
             Err(err) => {
-                panic!("unexpected error: {:?}", err);
+                panic!("unexpected error: {err:?}");
             }
             Ok(v) => {
-                panic!("unexpected return value: {:?}", v);
+                panic!("unexpected return value: {v:?}");
             }
         }
     }
@@ -1135,13 +1132,13 @@ impl MockSubstrate {
         match module.invoke_export("call", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Unreachable => (),
-                _ => panic!("trap: {:?}", trap),
+                _ => panic!("trap: {trap:?}"),
             },
             Err(err) => {
-                panic!("unexpected error: {:?}", err);
+                panic!("unexpected error: {err:?}");
             }
             Ok(v) => {
-                panic!("unexpected return value: {:?}", v);
+                panic!("unexpected return value: {v:?}");
             }
         }
     }
@@ -1160,7 +1157,7 @@ impl MockSubstrate {
 
     pub fn heap_verify(&self) {
         let memsize = self.vm.memory.current_size().0 * 0x10000;
-        println!("memory size:{}", memsize);
+        println!("memory size:{memsize}");
         let mut buf = Vec::new();
         buf.resize(memsize, 0);
 
@@ -1173,10 +1170,7 @@ impl MockSubstrate {
             let length: u32 = self.vm.memory.get_value(current_elem + 8).unwrap();
             let allocated: u32 = self.vm.memory.get_value(current_elem + 12).unwrap();
 
-            println!(
-                "next:{:08x} prev:{:08x} length:{} allocated:{}",
-                next, prev, length, allocated
-            );
+            println!("next:{next:08x} prev:{prev:08x} length:{length} allocated:{allocated}");
 
             let mut buf = vec![0u8; length as usize];
 
@@ -1200,14 +1194,14 @@ impl MockSubstrate {
                             break;
                         }
                         let b = buf[offset + i];
-                        write!(hex, " {:02x}", b).unwrap();
+                        write!(hex, " {b:02x}").unwrap();
                         if b.is_ascii() && !b.is_ascii_control() {
                             write!(chars, "  {}", b as char).unwrap();
                         } else {
                             chars.push_str("   ");
                         }
                     }
-                    println!("{}\n{}", hex, chars);
+                    println!("{hex}\n{chars}");
                 }
             }
 
@@ -1224,13 +1218,14 @@ impl MockSubstrate {
 }
 
 pub fn build_solidity(src: &str) -> MockSubstrate {
-    build_solidity_with_options(src, false, false)
+    build_solidity_with_options(src, false, false, false)
 }
 
 pub fn build_solidity_with_options(
     src: &str,
     math_overflow_flag: bool,
     log_api_return_codes: bool,
+    log_runtime_errors: bool,
 ) -> MockSubstrate {
     let mut cache = FileResolver::new();
 
@@ -1243,6 +1238,7 @@ pub fn build_solidity_with_options(
         Target::default_substrate(),
         math_overflow_flag,
         log_api_return_codes,
+        log_runtime_errors,
     );
 
     ns.print_diagnostics_in_plain(&cache, false);

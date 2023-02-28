@@ -23,59 +23,94 @@ This is how to build your Solidity for Solana:
 
   solang compile --target solana flipper.sol -v
 
-This will produce two files called `flipper.abi` and `flipper.so`. The former is an ethereum style abi file and the latter is
-the ELF BPF shared object which can be deployed on Solana. For each contract, Solang will create an ABI file and a binary file
-`contract-name.so`, which contains the code.
+This will produce two files called `flipper.json` and `flipper.so`. The former is an Anchor style IDL file and the latter is
+the ELF BPF shared object containing the program. For each contract in the source code, Solang will create both an IDL file
+and a binary file.
+
+Each program will need to be deployed to a program_id. Usually, the program_id is a well-known account which is specified
+in the Solidity source code using the `@program_id("F1ipperKF9EfD821ZbbYjS319LXYiBmjhzkkf5a26rC")` annotation on the contract.
+A private key for the account is needed to deploy. You can generate your own private key using the command line tool
+``solana-keygen``.
 
 .. code-block:: bash
 
-    npm install @solana/solidity
+    echo "[4,10,246,143,43,1,234,17,159,249,41,16,230,9,198,162,107,221,233,124,34,15,16,57,205,53,237,217,149,17,229,195,3,150,242,90,91,222,117,26,196,224,214,105,82,62,237,137,92,67,213,23,14,206,230,155,43,36,85,254,247,11,226,145]" > flipper-keypair.json
+    solana program deploy flipper.so
 
-Now run the following javascript by saving it to `flipper.js` and running it with ``node flipper.js``.
+After deploying the program, you can start on the client side, which needs the anchor npm library:
+
+.. code-block:: bash
+
+    npm install @project-serum/anchor
+
+Write the following javascript to a file called `flipper.js`.
 
 .. code-block:: javascript
 
-    const { Connection, LAMPORTS_PER_SOL, Keypair } = require('@solana/web3.js');
-    const { Contract, Program } = require('@solana/solidity');
     const { readFileSync } = require('fs');
+    const anchor = require('@project-serum/anchor');
 
-    const FLIPPER_ABI = JSON.parse(readFileSync('./flipper.abi', 'utf8'));
+    const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
     const PROGRAM_SO = readFileSync('./flipper.so');
 
     (async function () {
-        console.log('Connecting to your local Solana node ...');
-        const connection = new Connection('http://localhost:8899', 'confirmed');
+        const provider = anchor.AnchorProvider.env();
 
-        const payer = Keypair.generate();
+        const dataAccount = anchor.web3.Keypair.generate();
 
-        console.log('Airdropping SOL to a new wallet ...');
-        const signature = await connection.requestAirdrop(payer.publicKey, LAMPORTS_PER_SOL);
-        await connection.confirmTransaction(signature, 'confirmed');
+        const programId = new anchor.web3.PublicKey(IDL.metadata.address);
 
-        const program = Keypair.generate();
-        const storage = Keypair.generate();
+        const wallet = provider.wallet.publicKey;
 
-        const contract = new Contract(connection, program.publicKey, storage.publicKey, FLIPPER_ABI, payer);
+        const program = new anchor.Program(IDL, programId, provider);
 
-        await contract.load(program, PROGRAM_SO);
+        await program.methods.new(wallet, true)
+            .accounts({ dataAccount: dataAccount.publicKey })
+            .signers([dataAccount]).rpc();
 
-        console.log('Program deployment finished, deploying the flipper contract ...');
+        const val1 = await program.methods.get()
+            .accounts({ dataAccount: dataAccount.publicKey })
+            .view();
 
-        await contract.deploy('flipper', [true], storage, 17);
+        console.log(`state: ${val1}`);
 
-        const res = await contract.functions.get();
-        console.log('state: ' + res.result);
+        await program.methods.flip()
+            .accounts({ dataAccount: dataAccount.publicKey })
+            .rpc();
 
-        await contract.functions.flip();
+        const val2 = await program.methods.get()
+            .accounts({ dataAccount: dataAccount.publicKey })
+            .view();
 
-        const res2 = await contract.functions.get();
-        console.log('state: ' + res2.result);
+        console.log(`state: ${val2}`);
     })();
 
-The contract can be used via the `@solana/solidity <https://www.npmjs.com/package/@solana/solidity>`_  npm package. This
-package has `documentation <https://solana-labs.github.io/solana-solidity.js/>`_ and there
-are `some examples <https://solana-labs.github.io/solana-solidity.js/>`_. There is also
+Now you'll have to set the `ANCHOR_WALLET` and `ANCHOR_PROVIDER_URL` environment variables to the correct values in order to run the example.
+
+.. code-block:: bash
+
+    export ANCHOR_WALLET=$HOME/.config/solana/id.json
+    export ANCHOR_PROVIDER_URL=http://127.0.0.1:8899
+    node flipper.js
+
+For more examples, see the
 `solang's integration tests <https://github.com/hyperledger/solang/tree/main/integration/solana>`_.
+
+Using the Anchor client library
+_______________________________
+
+Some notes on using the anchor javascript npm library.
+
+* Solidity function names are converted to camelCase. This means that if in Solidity a function is called ``foo_bar()``,
+  you must write ``fooBar()`` in your javascript.
+* Anchor only allows you to call ``.view()`` on Solidity functions which are declared ``view`` or ``pure``.
+* Named return values in Solidity are also converted to camelCase. Unnamed returned are given the name ``return0``, ``return1``, etc,
+  depending on the position in the returns values.
+* Only return values from ``view`` and ``pure`` functions can be decoded. Return values from other functions and are not accessible.
+  This is a limitation in the Anchor library. Possibly this can be fixed.
+* In the case of an error, no return data is decoded. This means that the reason provided in ``revert('reason');`` is not
+  available as a return value.
+* Number arguments for functions are expressed as ``BN`` values and not plain javascript ``Number`` or ``BigInt``.
 
 .. _call_anchor:
 
@@ -156,10 +191,10 @@ or a hex string with the format ``hex"4142"``, or a constructor argument of type
 
 .. _value_transfer:
 
-Transfering native value with a function call
-_____________________________________________
+Transferring native value with a function call
+______________________________________________
 
-The Solidity langauge on Ethereum allows value transfers with an external call
+The Solidity language on Ethereum allows value transfers with an external call
 or constructor, using the ``auction.bid{value: 501}()`` syntax.
 Solana Cross Program Invocation (CPI) does not support this. This means that:
 
@@ -179,7 +214,7 @@ ________________
 
 In Solidity the ``receive()`` function, when defined, is called whenever the native
 balance for an account gets credited, for example through a contract calling
-``account.transfer(value);``. On Solana, there is no method that implement
+``account.transfer(value);``. On Solana, there is no method that implements
 this. The balance of an account can be credited without any code being executed.
 
 ``receive()`` functions are not permitted on the Solana target.
@@ -287,7 +322,7 @@ Builtin create_program_address
 
 This function returns the program derived address for a program address and
 the provided seeds. See the Solana documentation on
-`program derived adddresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
+`program derived addresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
 
 .. include:: ../examples/solana/builtin_create_program_address.sol
   :code: solidity
@@ -297,7 +332,7 @@ Builtin try_find_program_address
 
 This function returns the program derived address for a program address and
 the provided seeds, along with a seed bump. See the Solana documentation on
-`program derived adddresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
+`program derived addresses <https://edge.docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_.
 
 .. include:: ../examples/solana/builtin_try_find_program_address.sol
   :code: solidity
@@ -329,7 +364,7 @@ There is an example in our integration tests of how this should be used. See
 System Instructions
 +++++++++++++++++++
 
-Solana's system instructions enables developers to interact with Solana's System Program. There are functions to
+Solana's system instructions enable developers to interact with Solana's System Program. There are functions to
 create new accounts, allocate account data, assign accounts to owning programs, transfer lamports from System Program
 owned accounts and pay transaction fees. More information about the functions offered can be found both on
 `Solana documentation <https://docs.rs/solana-program/1.11.10/solana_program/system_instruction/enum.SystemInstruction.html>`_

@@ -145,7 +145,7 @@ fn pda() {
             "2fnQrngrQT4SeLcdToJAD96phoEjNL2man2kfRLCASVk"
         );
     } else {
-        panic!("{:?} not expected", returns);
+        panic!("{returns:?} not expected");
     }
 
     let returns = vm
@@ -158,7 +158,7 @@ fn pda() {
             "7YgSsrAiAEJFqBNujFBRsEossqdpV31byeJLBsZ5QSJE"
         );
     } else {
-        panic!("{:?} not expected", returns);
+        panic!("{returns:?} not expected");
     }
 
     let returns = vm
@@ -177,7 +177,7 @@ fn pda() {
             "2fnQrngrQT4SeLcdToJAD96phoEjNL2man2kfRLCASVk"
         );
     } else {
-        panic!("{:?} not expected", returns);
+        panic!("{returns:?} not expected");
     }
 
     let returns = vm
@@ -193,7 +193,7 @@ fn pda() {
             "DZpR2BwsPVtbXxUUbMx5tK58Ln2T9RUtAshtR2ePqDcu"
         );
     } else {
-        panic!("{:?} not expected", returns);
+        panic!("{returns:?} not expected");
     }
 
     let returns = vm
@@ -209,7 +209,7 @@ fn pda() {
             "3Y19WiAiLD8kT8APmtk41NgHEpkYTzx28s1uwAX8LJq4"
         );
     } else {
-        panic!("{:?} not expected", returns);
+        panic!("{returns:?} not expected");
     }
 }
 

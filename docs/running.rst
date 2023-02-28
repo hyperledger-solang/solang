@@ -47,8 +47,15 @@ Options:
   is ignored for any other target.
 
 -o, \-\-output *directory*
-  This option takes one argument, which is the directory where output should
-  be saved. The default is the current directory.
+  Sets the directory where the output should be saved. This defaults to the current working directory if not set.
+
+\-\-output\-meta *directory*
+  Sets the directory where metadata should be saved. For Solana, the metadata is the Anchor IDL file,
+  and, for Substrate, the .contract file. If this option is not set, the directory specified by ``--output``
+  is used, and if that is not set either, the current working directory is used.
+
+\-\-contract *contract-name* [, *contract-name*]...
+  Only compile the code for the specified contracts. If any those contracts cannot be found, produce an error.
 
 -O *optimization level*
   This takes one argument, which can either be ``none``, ``less``, ``default``,
@@ -56,7 +63,7 @@ Options:
 
 \-\-importpath *directory*
   When resolving ``import`` directives, search this directory. By default ``import``
-  will only search the current directory. This option can be specified multiple times
+  will only search the current working directory. This option can be specified multiple times
   and the directories will be searched in the order specified.
 
 \-\-importmap *map=directory*
@@ -115,6 +122,14 @@ Options:
 \-\-log\-api\-return\-codes
    Disable the :ref:`common-subexpression-elimination` optimization
 
+.. warning::
+
+    If multiple Solidity source files define the same contract name, you will get a single
+    compiled contract file for this contract name. As a result, you will only have a single
+    contract with the duplicate name without knowing from which Solidity file it originated.
+    Solang will not give a warning about this problem.
+
+
 Generating Documentation Usage
 ______________________________
 
@@ -143,7 +158,7 @@ Options:
 
 \-\-importpath *directory*
   When resolving ``import`` directives, search this directory. By default ``import``
-  will only search the current directory. This option can be specified multiple times
+  will only search the current working directory. This option can be specified multiple times
   and the directories will be searched in the order specified.
 
 \-\-importmap *map=directory*

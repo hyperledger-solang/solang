@@ -203,11 +203,7 @@ fn block_reduce(
                     .iter()
                     .map(|e| expression_reduce(e, &vars, ns))
                     .collect();
-
-                *data = data
-                    .iter()
-                    .map(|e| expression_reduce(e, &vars, ns))
-                    .collect();
+                *data = expression_reduce(data, &vars, ns);
             }
             Instr::WriteBuffer { offset, .. } => {
                 *offset = expression_reduce(offset, &vars, ns);

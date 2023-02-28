@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity_with_overflow_check;
+use crate::build_solidity_with_options;
 use crate::{build_solidity, BorshToken};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt};
-use num_traits::{ToPrimitive, Zero};
+use num_traits::{One, ToPrimitive, Zero};
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::ops::BitAnd;
@@ -209,7 +209,7 @@ fn bytes() {
                 return a >> r;
             }
         }"#
-        .replace("bytesN", &format!("bytes{}", width));
+        .replace("bytesN", &format!("bytes{width}"));
 
         let mut vm = build_solidity(&src);
 
@@ -295,7 +295,7 @@ fn bytes() {
 
             let r = rng.gen::<u32>() % (width as u32 * 8);
 
-            println!("w = {} r = {}", width, r);
+            println!("w = {width} r = {r}");
 
             let shl = vm
                 .function(
@@ -406,13 +406,13 @@ fn uint() {
                 return a >> r;
             }
         }"#
-        .replace("uintN", &format!("uint{}", width));
+        .replace("uintN", &format!("uint{width}"));
 
         let mut vm = build_solidity(&src);
 
         vm.constructor(&[]);
 
-        println!("width:{}", width);
+        println!("width:{width}");
         let returned_width = width.next_power_of_two();
 
         for _ in 0..10 {
@@ -430,7 +430,7 @@ fn uint() {
                 }],
             );
 
-            println!("{:x} = {:?} o", a, res);
+            println!("{a:x} = {res:?} o");
 
             let add = vm
                 .function(
@@ -451,7 +451,7 @@ fn uint() {
             let mut res = a.clone().add(&b);
             truncate_biguint(&mut res, width);
 
-            println!("{:x} + {:x} = {:?} or {:x}", a, b, add, res);
+            println!("{a:x} + {b:x} = {add:?} or {res:x}");
 
             assert_eq!(
                 add,
@@ -768,9 +768,9 @@ fn test_power_overflow_boundaries() {
                 return a ** b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
         contract.constructor(&[]);
 
         let return_value = contract
@@ -813,7 +813,7 @@ fn test_power_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(sesa, Ok(0));
+        assert_ne!(sesa.unwrap(), 0);
     }
 }
 
@@ -826,8 +826,8 @@ fn test_overflow_boundaries() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        .replace("intN", &format!("int{width}"));
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
         let mut upper_boundary: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -911,7 +911,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         let res = contract.function_must_fail(
             "mul",
@@ -927,7 +927,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         let res = contract.function_must_fail(
             "mul",
@@ -943,7 +943,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         let res = contract.function_must_fail(
             "mul",
@@ -959,7 +959,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         let res = contract.function_must_fail(
             "mul",
@@ -975,7 +975,7 @@ fn test_overflow_boundaries() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
     }
 }
 
@@ -990,18 +990,18 @@ fn test_mul_within_range_signed() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
         let mut contract = build_solidity(&src);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. Here we generate a random number within this range and multiply it by -1, 1 or 0.
         let first_operand_rand = rng.gen_bigint(width - 1).sub(1_u32);
-        println!("First op : {:?}", first_operand_rand);
+        println!("First op : {first_operand_rand:?}");
 
         let side = vec![-1, 0, 1];
         // -1, 1 or 0
         let second_op = BigInt::from(*side.choose(&mut rng).unwrap());
-        println!("second op : {:?}", second_op);
+        println!("second op : {second_op:?}");
 
         contract.constructor(&[]);
         let return_value = contract
@@ -1041,9 +1041,9 @@ fn test_mul_within_range() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        let mut contract = build_solidity_with_options(&src, true, false);
         contract.constructor(&[]);
         for _ in 0..10 {
             // Max number to fit unsigned N bits is (2^N)-1
@@ -1094,8 +1094,8 @@ fn test_overflow_detect_signed() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        .replace("intN", &format!("int{width}"));
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         contract.constructor(&[]);
 
@@ -1124,7 +1124,7 @@ fn test_overflow_detect_signed() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
         let mut lower_limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1149,7 +1149,7 @@ fn test_overflow_detect_signed() {
             ],
         );
 
-        assert_ne!(res, Ok(0));
+        assert_ne!(res.unwrap(), 0);
     }
 }
 
@@ -1163,8 +1163,8 @@ fn test_overflow_detect_unsigned() {
                 return a * b;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
-        let mut contract = build_solidity_with_overflow_check(&src, true);
+        .replace("intN", &format!("int{width}"));
+        let mut contract = build_solidity_with_options(&src, true, false);
 
         contract.constructor(&[]);
 
@@ -1193,7 +1193,7 @@ fn test_overflow_detect_unsigned() {
                     },
                 ],
             );
-            assert_ne!(res, Ok(0));
+            assert_ne!(res.unwrap(), 0);
         }
     }
 }
@@ -1247,7 +1247,7 @@ fn int() {
                 return a >> r;
             }
         }"#
-        .replace("intN", &format!("int{}", width));
+        .replace("intN", &format!("int{width}"));
 
         let mut vm = build_solidity(&src);
 
@@ -1577,4 +1577,48 @@ fn bytes_cast() {
         .unwrap();
 
     assert_eq!(returns, BorshToken::uint8_fixed_array(b"abcde".to_vec()));
+}
+
+#[test]
+fn shift_after_load() {
+    let mut vm = build_solidity(
+        r#"
+    contract OneSwapToken {
+        function testIt(uint256[] calldata mixedAddrVal) public pure returns (uint256, uint256) {
+            uint256 a = mixedAddrVal[0]<<2;
+            uint256 b = mixedAddrVal[1]>>2;
+            return (a, b);
+        }
+    }
+        "#,
+    );
+
+    vm.constructor(&[]);
+    let args = BorshToken::Array(vec![
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::one(),
+        },
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(4u8),
+        },
+    ]);
+    let returns = vm.function("testIt", &[args]).unwrap().unwrap_tuple();
+
+    assert_eq!(returns.len(), 2);
+    assert_eq!(
+        returns[0],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(4u8)
+        }
+    );
+    assert_eq!(
+        returns[1],
+        BorshToken::Uint {
+            width: 256,
+            value: BigInt::one(),
+        }
+    );
 }

@@ -6,9 +6,10 @@ use super::ast::{
 };
 use super::diagnostics::Diagnostics;
 use super::eval::eval_const_number;
-use super::expression::{expression, ExprContext, ResolveTo};
+use super::expression::{ExprContext, ResolveTo};
 use super::symtable::Symtable;
 use crate::sema::ast::{RetrieveType, Tag, UserTypeDecl};
+use crate::sema::expression::resolve_expression::expression;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
@@ -1089,7 +1090,7 @@ pub(super) fn resolve_namespace_call(
                         if let Some(storage) = &param.storage {
                             diagnostics.push(Diagnostic::error(
                                 storage.loc(),
-                                format!("storage modifier '{}' not allowed", storage),
+                                format!("storage modifier '{storage}' not allowed"),
                             ));
                             broken = true;
                         }
@@ -1484,7 +1485,7 @@ impl Namespace {
             None,
             Vec::new(),
             pt::FunctionTy::Function,
-            None,
+            Some(pt::Mutability::Pure(pt::Loc::Builtin)),
             pt::Visibility::Public(None),
             vec![
                 Parameter {
@@ -1544,7 +1545,7 @@ impl Namespace {
             None,
             Vec::new(),
             pt::FunctionTy::Function,
-            None,
+            Some(pt::Mutability::Pure(pt::Loc::Builtin)),
             pt::Visibility::Public(None),
             vec![
                 Parameter {

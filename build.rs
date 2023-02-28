@@ -34,9 +34,9 @@ fn main() {
             .unwrap();
         let libdir = String::from_utf8(libdir.stdout).unwrap();
 
-        println!("cargo:libdir={}", libdir);
+        println!("cargo:libdir={libdir}");
         for lib in &["lldELF", "lldCommon", "lldWasm"] {
-            println!("cargo:rustc-link-lib=static={}", lib);
+            println!("cargo:rustc-link-lib=static={lib}");
         }
 
         // And all the symbols we're not using, needed by Windows and debug builds
@@ -53,7 +53,7 @@ fn main() {
         String::from_utf8(output.stdout).unwrap()
     };
 
-    println!("cargo:rustc-env=SOLANG_VERSION={}", solang_version);
+    println!("cargo:rustc-env=SOLANG_VERSION={solang_version}");
 
     // Make sure we have an 8MiB stack on Windows. Windows defaults to a 1MB
     // stack, which is not big enough for debug builds

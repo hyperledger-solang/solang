@@ -66,7 +66,7 @@ contract Seed2 {
         print("In Seed2 constructor");
     }
 
-    function check() public {
+    function check() public view {
         address pda = create_program_address([ "sunflower", my_seed ], tx.program_id);
 
         if (pda == address(this)) {

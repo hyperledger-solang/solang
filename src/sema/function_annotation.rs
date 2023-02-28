@@ -4,13 +4,15 @@ use super::{
     ast::{ConstructorAnnotation, Diagnostic, Expression, Function, Namespace, Type},
     diagnostics::Diagnostics,
     eval::overflow_check,
-    expression::{expression, hex_number_literal, number_literal, ExprContext, ResolveTo},
+    expression::literals::{hex_number_literal, unit_literal},
+    expression::{ExprContext, ResolveTo},
     unused_variable::used_variable,
     Symtable,
 };
+use crate::sema::expression::literals::number_literal;
+use crate::sema::expression::resolve_expression::expression;
 use crate::Target;
-use num_bigint::BigInt;
-use num_traits::{One, ToPrimitive};
+use num_traits::ToPrimitive;
 use solang_parser::pt::{self, CodeLocation};
 
 /// Resolve the prototype annotation for functions (just the selector). These
@@ -91,18 +93,22 @@ fn function_selector(
                 let uint8 = Type::Uint(8);
 
                 let expr = match expr {
-                    pt::Expression::HexNumberLiteral(loc, n) => {
+                    pt::Expression::HexNumberLiteral(loc, n, None) => {
                         hex_number_literal(loc, n, ns, diagnostics, ResolveTo::Type(&uint8))
                     }
-                    pt::Expression::NumberLiteral(loc, base, exp) => number_literal(
-                        loc,
-                        base,
-                        exp,
-                        ns,
-                        &BigInt::one(),
-                        diagnostics,
-                        ResolveTo::Type(&uint8),
-                    ),
+                    pt::Expression::NumberLiteral(loc, base, exp, unit) => {
+                        let unit = unit_literal(loc, unit, ns, diagnostics);
+
+                        number_literal(
+                            loc,
+                            base,
+                            exp,
+                            ns,
+                            &unit,
+                            diagnostics,
+                            ResolveTo::Type(&uint8),
+                        )
+                    }
                     _ => {
                         diagnostics.push(Diagnostic::error(
                             expr.loc(),

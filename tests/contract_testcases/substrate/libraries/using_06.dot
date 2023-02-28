@@ -5,7 +5,7 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_06.sol" {
 	parameters [label="parameters\nuint32 x"]
 	returns [label="returns\nuint64 "]
 	contract_6 [label="contract ints\ntests/contract_testcases/substrate/libraries/using_06.sol:10:9-16:10"]
-	var [label="variable nada\nvisibility internal\nconstant\ntests/contract_testcases/substrate/libraries/using_06.sol:11:13-37"]
+	var [label="variable nada\nvisibility internal\nconstant\nuint64\ntests/contract_testcases/substrate/libraries/using_06.sol:11:13-37"]
 	number_literal [label="uint64 literal: 0\ntests/contract_testcases/substrate/libraries/using_06.sol:11:36-37"]
 	max [label="function max\ncontract: ints\ntests/contract_testcases/substrate/libraries/using_06.sol:13:13-76\nsignature max(uint64,uint64)\nvisibility internal\nmutability pure"]
 	parameters_10 [label="parameters\nuint64 a\nuint64 b"]

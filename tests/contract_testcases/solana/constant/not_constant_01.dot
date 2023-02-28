@@ -1,9 +1,9 @@
 strict digraph "tests/contract_testcases/solana/constant/not_constant_01.sol" {
 	contract [label="contract C\ntests/contract_testcases/solana/constant/not_constant_01.sol:2:9-4:10"]
-	var [label="variable NOT_CONSTANT\nvisibility public\ntests/contract_testcases/solana/constant/not_constant_01.sol:3:13-45"]
+	var [label="variable NOT_CONSTANT\nvisibility public\nuint256\ntests/contract_testcases/solana/constant/not_constant_01.sol:3:13-45"]
 	number_literal [label="uint256 literal: 42\ntests/contract_testcases/solana/constant/not_constant_01.sol:3:43-45"]
 	NOT_CONSTANT [label="function NOT_CONSTANT\ncontract: C\ntests/contract_testcases/solana/constant/not_constant_01.sol:3:28-40\nsignature NOT_CONSTANT()\nvisibility public\nmutability view"]
-	returns [label="returns\nuint256 "]
+	returns [label="returns\nuint256 NOT_CONSTANT"]
 	return [label="return\nimplicit"]
 	storage_load [label="storage load uint256\nimplicit"]
 	storage_var [label="storage variable\nC.NOT_CONSTANT\nuint256 storage\nimplicit"]

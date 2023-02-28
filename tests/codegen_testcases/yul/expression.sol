@@ -2,7 +2,7 @@
 
 uint128 constant global_cte = 5;
 contract testing {
-    
+
 // BEGIN-CHECK: testing::testing::function::boolLiteral
     function boolLiteral() public pure {
         assembly {
@@ -58,10 +58,10 @@ contract testing {
 // BEGIN-CHECK: testing::testing::function::yulLocalVariable__uint256
     function yulLocalVariable(uint256 a) public pure {
         assembly {
-            // CHECK: ty:uint256 %x = (uint256 2 + (arg #0))
+            // CHECK: ty:uint256 %x = (unchecked uint256 2 + (arg #0))
             let x := add(2, a)
 
-            // CHECK: ty:uint256 %y = (uint256 2 + (arg #0))
+            // CHECK: ty:uint256 %y = (unchecked uint256 2 + (arg #0))
             let y := x
         }
     }
@@ -96,25 +96,25 @@ contract testing {
             // CHECK: ty:uint256 %k = uint256 1
             let k := a
 
-            // CHECK: ty:uint256 %l = %vec
+            // CHECK: ty:uint256 %l = (zext uint256 uint64(%vec))
             let l := vec
 
-            // CHECK: ty:uint256 %m = %mem_vec
+            // CHECK: ty:uint256 %m = (zext uint256 uint64(%mem_vec))
             let m := mem_vec
 
-            // CHECK: ty:uint256 %n = %cte_vec
+            // CHECK: ty:uint256 %n = (zext uint256 uint64(%cte_vec))
             let n := cte_vec
 
-            // CHECK: ty:uint256 %o = %mem_cte_vec
+            // CHECK: ty:uint256 %o = (zext uint256 uint64(%mem_cte_vec))
             let o := mem_cte_vec
 
-            // CHECK: ty:uint256 %p = %b
+            // CHECK: ty:uint256 %p = (zext uint256 uint64(%b))
             let p := b
 
-            // CHECK: ty:uint256 %r = %struct_test
+            // CHECK: ty:uint256 %r = (zext uint256 uint64(%struct_test))
             let r := struct_test
 
-            // CHECK: ty:uint256 %s = %mem_struct_test
+            // CHECK: ty:uint256 %s = (zext uint256 uint64(%mem_struct_test))
             let s := mem_struct_test
         }
     }
@@ -150,7 +150,7 @@ contract testing {
             // CHECK: ty:uint256 %r = (zext uint256 bytes8((load (struct %fPtr field 0))))
             let r := fPtr.selector
 
-            // CHECK: ty:uint256 %s = (arg #1)
+            // CHECK: ty:uint256 %s = (zext uint256 uint64((arg #1)))
             let s := vl_2
         }
     }
@@ -166,14 +166,14 @@ contract testing {
                 let y := 9
             }
 
-            // CHECK: ty:int32 %k = (trunc int32 ((zext uint256 (arg #0)) + uint256 2))
+            // CHECK: ty:int32 %k = (trunc int32 (unchecked (zext uint256 (arg #0)) + uint256 2))
             let k : s32 := add(a, 2)
 
-            // CHECK: %ret.temp.58 = call testing::yul_function_0::get (sext uint256 (trunc int32 ((zext uint256 (arg #0)) + uint256 2)))
+            // CHECK: %ret.temp.58 = call testing::yul_function_0::get (sext uint256 (trunc int32 (unchecked (zext uint256 (arg #0)) + uint256 2)))
             let x := get(k)
             // CHECK: ty:uint256 %x = %ret.temp.58
 
-            // CHECK: %ret1.temp.59, %ret2.temp.60 = call testing::yul_function_2::multipleReturns %x, (trunc int32 ((zext uint256 (arg #0)) + uint256 2))
+            // CHECK: %ret1.temp.59, %ret2.temp.60 = call testing::yul_function_2::multipleReturns %x, (trunc int32 (unchecked (zext uint256 (arg #0)) + uint256 2))
             let l, m := multipleReturns(x, k)
             // CHECK: ty:uint256 %l = (zext uint256 %ret1.temp.59)
             // CHECK: ty:uint256 %m = (sext uint256 %ret2.temp.60)

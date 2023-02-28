@@ -252,6 +252,7 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             kind:
                 Builtin::GetAddress
                 | Builtin::BlockNumber
+                | Builtin::Slot
                 | Builtin::Timestamp
                 | Builtin::ProgramId
                 | Builtin::BlockCoinbase
@@ -264,7 +265,6 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
                 | Builtin::GasLimit
                 | Builtin::MinimumBalance
                 | Builtin::Balance
-                | Builtin::Random
                 | Builtin::Accounts,
             ..
         } => state.read(loc),

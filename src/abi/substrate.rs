@@ -225,9 +225,9 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                 _ => resolved,
             }
         }
-        ast::Type::Mapping(k, v) => {
-            resolve_ast(k, ns, registry);
-            resolve_ast(v, ns, registry)
+        ast::Type::Mapping(ast::Mapping { key, value, .. }) => {
+            resolve_ast(key, ns, registry);
+            resolve_ast(value, ns, registry)
         }
         _ => unreachable!(),
     }
