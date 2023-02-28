@@ -224,6 +224,7 @@ impl AbiEncoding for ScaleEncoding {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
+                unsizeable: false,
                 recursive: false,
             });
         }

@@ -732,7 +732,7 @@ fn check_arguments() {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
-                recursive: false,
+                unsizeable: false,
             },
             Parameter {
                 loc,
@@ -744,7 +744,7 @@ fn check_arguments() {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
-                recursive: false,
+                unsizeable: false,
             },
         ],
     );

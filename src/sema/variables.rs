@@ -584,6 +584,7 @@ fn collect_parameters(
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
+                unsizeable: false,
                 recursive: false,
             });
 
@@ -634,6 +635,7 @@ fn collect_parameters(
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
+                    unsizeable: false,
                     recursive: false,
                 });
             }
@@ -651,6 +653,7 @@ fn collect_parameters(
             ty_loc: None,
             indexed: false,
             readonly: false,
+            unsizeable: false,
             recursive: false,
         },
     }

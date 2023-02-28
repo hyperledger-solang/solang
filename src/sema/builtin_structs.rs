@@ -22,6 +22,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: true,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -34,6 +35,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -46,6 +48,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: true,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -58,6 +61,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: true,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -70,6 +74,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: true,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -82,6 +87,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: true,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -94,6 +100,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: true,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -106,6 +113,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: true,
+                    unsizeable: false,
                     recursive: false,
                 },
             ],
@@ -128,6 +136,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -140,6 +149,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -152,6 +162,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
+                    unsizeable: false,
                     recursive: false,
                 },
             ],
@@ -171,6 +182,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
+                    unsizeable: false,
                     recursive: false,
                 },
                 Parameter {
@@ -180,6 +192,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
+                    unsizeable: false,
                     recursive: false,
                 },
             ],

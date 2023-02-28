@@ -1105,6 +1105,7 @@ fn try_catch(
                             loc: pt::Loc::Codegen,
                             indexed: false,
                             readonly: false,
+                            unsizeable: false,
                             recursive: false,
                         })
                         .collect();

@@ -224,7 +224,7 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
                 format!("recursive field '{}'", field.name_as_str()),
             ));
 
-            ns.structs[struct_no].fields[field_no].recursive = true;
+            ns.structs[struct_no].fields[field_no].unsizeable = true;
         } else {
             structs_visited.push(field_struct_no);
             find_struct_recursion(field_struct_no, structs_visited, ns);
@@ -546,6 +546,7 @@ pub fn struct_decl(
             ty_loc: Some(field.ty.loc()),
             indexed: false,
             readonly: false,
+            unsizeable: false,
             recursive: false,
         });
     }
@@ -652,6 +653,7 @@ fn event_decl(
             ty_loc: Some(field.ty.loc()),
             indexed: field.indexed,
             readonly: false,
+            unsizeable: false,
             recursive: false,
         });
     }
@@ -802,7 +804,7 @@ fn struct_offsets(ns: &mut Namespace) {
 
                 offsets.push(offset.clone());
 
-                if !field.recursive {
+                if !field.unsizeable {
                     offset += field.ty.solana_storage_size(ns);
                 }
             }
@@ -828,7 +830,7 @@ fn struct_offsets(ns: &mut Namespace) {
             let mut largest_alignment = BigInt::zero();
 
             for field in &ns.structs[struct_no].fields {
-                if !field.recursive {
+                if !field.unsizeable {
                     let alignment = field.ty.storage_align(ns);
                     largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
                     let remainder = offset.clone() % alignment.clone();
@@ -1266,7 +1268,7 @@ impl Type {
                 .definition(ns)
                 .fields
                 .iter()
-                .map(|f| if f.recursive { 1 } else { f.ty.align_of(ns) })
+                .map(|f| if f.unsizeable { 1 } else { f.ty.align_of(ns) })
                 .max()
                 .unwrap(),
             Type::InternalFunction { .. } => ns.target.ptr_size().into(),
@@ -1398,7 +1400,7 @@ impl Type {
                     .fields
                     .iter()
                     .map(|f| {
-                        if f.recursive {
+                        if f.unsizeable {
                             BigInt::one()
                         } else {
                             f.ty.storage_slots(ns)
@@ -1451,7 +1453,7 @@ impl Type {
                     .fields
                     .iter()
                     .map(|field| {
-                        if field.recursive {
+                        if field.unsizeable {
                             BigInt::one()
                         } else {
                             field.ty.storage_align(ns)
@@ -1591,7 +1593,7 @@ impl Type {
                 .definition(ns)
                 .fields
                 .iter()
-                .any(|f| !f.recursive && f.ty.contains_mapping(ns)),
+                .any(|f| !f.unsizeable && f.ty.contains_mapping(ns)),
             Type::StorageRef(_, r) | Type::Ref(r) => r.contains_mapping(ns),
             _ => false,
         }
@@ -1606,7 +1608,7 @@ impl Type {
                 .definition(ns)
                 .fields
                 .iter()
-                .any(|f| !f.recursive && f.ty.contains_internal_function(ns)),
+                .any(|f| !f.unsizeable && f.ty.contains_internal_function(ns)),
             Type::StorageRef(_, r) | Type::Ref(r) => r.contains_internal_function(ns),
             _ => false,
         }
@@ -1640,7 +1642,7 @@ impl Type {
                 .or_else(|| value.contains_builtins(ns, builtin)),
             Type::Struct(str_ty) if str_ty == builtin => Some(self),
             Type::Struct(str_ty) => str_ty.definition(ns).fields.iter().find_map(|f| {
-                if f.recursive {
+                if f.unsizeable {
                     None
                 } else {
                     f.ty.contains_builtins(ns, builtin)
