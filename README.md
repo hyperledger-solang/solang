@@ -86,40 +86,54 @@ Save the following to `flipper.js`:
 ```javascript
 const { readFileSync } = require('fs');
 const anchor = require('@project-serum/anchor');
+const solana =  require('@solana/web3.js');
 
 const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
 const PROGRAM_SO = readFileSync('./flipper.so');
 
 (async function () {
-	const provider = anchor.AnchorProvider.env();
+    const provider = anchor.AnchorProvider.env();
 
-	const dataAccount = anchor.web3.Keypair.generate();
+    const dataAccount = anchor.web3.Keypair.generate();
 
-	const programId = new anchor.web3.PublicKey(IDL.metadata.address);
+    const programId = new anchor.web3.PublicKey(IDL.metadata.address);
 
-	const wallet = provider.wallet.publicKey;
+    const space = 8192;
+    const lamports = await provider.connection.getMinimumBalanceForRentExemption(space);
+    const transaction = new solana.Transaction();
+    transaction.add(
+        solana.SystemProgram.createAccount({
+            fromPubkey: provider.wallet.publicKey,
+            newAccountPubkey: dataAccount.publicKey,
+            lamports,
+            space,
+            programId,
+        }));
+    await provider.sendAndConfirm(transaction, [dataAccount]);
 
-	const program = new anchor.Program(IDL, programId, provider);
+    const wallet = provider.wallet.publicKey;
 
-	await program.methods.new(wallet, true)
-		.accounts({ dataAccount: dataAccount.publicKey })
-		.signers([dataAccount]).rpc();
+    const program = new anchor.Program(IDL, programId, provider);
 
-	const val1 = await program.methods.get()
-		.accounts({ dataAccount: dataAccount.publicKey })
-		.view();
+    await program.methods.new(true)
+        .accounts({dataAccount: dataAccount.publicKey})
+        .rpc();
 
-	console.log(`state: ${val1}`);
+    const val1 = await program.methods.get()
+        .accounts({ dataAccount: dataAccount.publicKey })
+        .view();
 
-	await program.methods.flip()
-		.accounts({ dataAccount: dataAccount.publicKey })
-		.rpc();
+    console.log(`state: ${val1}`);
 
-	const val2 = await program.methods.get()
-		.accounts({ dataAccount: dataAccount.publicKey })
-		.view();
+    await program.methods.flip()
+        .accounts({ dataAccount: dataAccount.publicKey })
+        .rpc();
 
-	console.log(`state: ${val2}`);
+    const val2 = await program.methods.get()
+        .accounts({ dataAccount: dataAccount.publicKey })
+        .view();
+
+    console.log(`state: ${val2}`);
 })();
 ```
 And now run:

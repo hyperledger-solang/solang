@@ -49,6 +49,7 @@ Write the following javascript to a file called `flipper.js`.
 
     const { readFileSync } = require('fs');
     const anchor = require('@project-serum/anchor');
+    const solana =  require('@solana/web3.js');
 
     const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
     const PROGRAM_SO = readFileSync('./flipper.so');
@@ -60,13 +61,26 @@ Write the following javascript to a file called `flipper.js`.
 
         const programId = new anchor.web3.PublicKey(IDL.metadata.address);
 
+        const space = 8192;
+        const lamports = await provider.connection.getMinimumBalanceForRentExemption(space);
+        const transaction = new solana.Transaction();
+        transaction.add(
+            solana.SystemProgram.createAccount({
+                fromPubkey: provider.wallet.publicKey,
+                newAccountPubkey: dataAccount.publicKey,
+                lamports,
+                space,
+                programId,
+            }));
+        await provider.sendAndConfirm(transaction, [dataAccount]);
+
         const wallet = provider.wallet.publicKey;
 
         const program = new anchor.Program(IDL, programId, provider);
-
-        await program.methods.new(wallet, true)
-            .accounts({ dataAccount: dataAccount.publicKey })
-            .signers([dataAccount]).rpc();
+    
+        await program.methods.new(true)
+            .accounts({dataAccount: dataAccount.publicKey})
+            .rpc();
 
         const val1 = await program.methods.get()
             .accounts({ dataAccount: dataAccount.publicKey })
