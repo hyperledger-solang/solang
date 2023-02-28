@@ -444,11 +444,18 @@ impl Function {
         matches!(self.mutability, Mutability::Payable(_))
     }
 
-    /// Does this function have an @payer annotation
+    /// Does this function have an @payer annotation?
     pub fn has_payer_annotation(&self) -> bool {
         self.annotations
             .iter()
             .any(|note| matches!(note, ConstructorAnnotation::Payer(..)))
+    }
+
+    /// Does this function have an @seed annotation?
+    pub fn has_seed_annotation(&self) -> bool {
+        self.annotations
+            .iter()
+            .any(|note| matches!(note, ConstructorAnnotation::Seed(..)))
     }
 
     /// Does this function have the pure state

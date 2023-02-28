@@ -8,6 +8,10 @@ will be documented here.
 - The Solana units `sol` and `lamports` are now supported, e.g. `10 sol` and `100 lamports`.
    [seanyoung](https://github.com/seanyoung)
 
+### Fixed
+- Solana: contracts with a seed for the constructor do not require a signer in the Anchor IDL
+  [seanyoung](https://github.com/seanyoung)
+
 ## v0.2.2 Alexandria
 
 ### Added
