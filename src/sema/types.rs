@@ -39,21 +39,6 @@ struct ResolveStructFields<'a> {
     contract: Option<usize>,
 }
 
-#[derive(Default)]
-pub struct TypeInfo {
-    align: usize,
-    s: String,
-}
-
-impl TypeInfo {
-    fn align(align: usize) -> Self {
-        Self {
-            align,
-            s: Default::default(),
-        }
-    }
-}
-
 /// Resolve all the types we can find (enums, structs, contracts). structs can have other
 /// structs as fields, including ones that have not been declared yet.
 pub fn resolve_typenames<'a>(
@@ -1288,17 +1273,15 @@ impl Type {
 
     /// Calculate the alignment
     pub fn align_of(&self, ns: &Namespace) -> usize {
-        let f = |t: &Type, ns: &Namespace| {
-            TypeInfo::align(match t {
-                Type::Uint(8) | Type::Int(8) => 1,
-                Type::Uint(n) | Type::Int(n) if *n <= 16 => 2,
-                Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
-                Type::Uint(_) | Type::Int(_) => 8,
-                Type::InternalFunction { .. } => ns.target.ptr_size().into(),
-                _ => 1,
-            })
+        let f = |t: &Type, ns: &Namespace| match t {
+            Type::Uint(8) | Type::Int(8) => 1,
+            Type::Uint(n) | Type::Int(n) if *n <= 16 => 2,
+            Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
+            Type::Uint(_) | Type::Int(_) => 8,
+            Type::InternalFunction { .. } => ns.target.ptr_size().into(),
+            _ => 1 as usize,
         };
-        self.recurse(ns, f).iter().map(|t| t.align).max().unwrap()
+        *self.recurse(ns, f).iter().max().unwrap()
     }
 
     pub fn bytes(&self, ns: &Namespace) -> u8 {
@@ -1769,21 +1752,21 @@ impl Type {
 
     /// Recursively walk over a type.
     /// Accounts for the possibility of infinitively recursive types.
-    pub fn recurse<F>(&self, ns: &Namespace, f: F) -> Vec<TypeInfo>
+    pub fn recurse<F, O>(&self, ns: &Namespace, f: F) -> Vec<O>
     where
-        F: FnMut(&Type, &Namespace) -> TypeInfo + Clone,
+        F: FnMut(&Type, &Namespace) -> O + Clone,
     {
         self.recurse_internal(HashSet::new(), ns, f).0
     }
 
-    fn recurse_internal<F>(
+    fn recurse_internal<F, O>(
         &self,
         mut structs_visited: HashSet<StructDecl>,
         ns: &Namespace,
         mut f: F,
-    ) -> (Vec<TypeInfo>, HashSet<StructDecl>)
+    ) -> (Vec<O>, HashSet<StructDecl>)
     where
-        F: FnMut(&Type, &Namespace) -> TypeInfo + Clone,
+        F: FnMut(&Type, &Namespace) -> O + Clone,
     {
         let mut type_info = vec![f(&self, ns)];
 
