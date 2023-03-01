@@ -28,6 +28,7 @@ function cmp2(Bitmap a, Bitmap b) pure returns (bool) {
 	return false;
 }
 
+using {cmp as +} for bytes32 global;
 using {bad_cmp as ==} for * global;
 using {bad_cmp as ==} for Bitmap;
 using {bad_cmp as ==} for Bitmap global;

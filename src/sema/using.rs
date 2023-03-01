@@ -116,28 +116,24 @@ pub(crate) fn using_decl(
                         continue;
                     }
 
-                    if let Some(ty) = &ty {
-                        if *ty != func.params[0].ty {
-                            diagnostics.push(Diagnostic::error_with_note(
-                                function_name.loc,
-                                format!("function cannot be used since first argument is '{}' rather than the required '{}'", func.params[0].ty.to_string(ns), ty.to_string(ns)),
-                                loc,
-                                format!("definition of '{function_name}'"),
-                            ));
-                            continue;
-                        }
-                    }
-
                     let oper = if let Some(mut oper) = using_function.oper {
                         if contract_no.is_some() || using.global.is_none() || ty.is_none() {
                             diagnostics.push(Diagnostic::error(
                                 using_function.loc,
-                                "operator overloading can only be set in a global 'using for' directive".into(),
+                                "user defined operator can only be set in a global 'using for' directive".into(),
                             ));
                             break;
                         }
 
                         let ty = ty.as_ref().unwrap();
+
+                        if !matches!(*ty, Type::UserType(_)) {
+                            diagnostics.push(Diagnostic::error(
+                                using_function.loc,
+                                format!("user defined operator can only be used with user defined types, type {} not permitted", ty.to_string(ns))
+                            ));
+                            break;
+                        }
 
                         // The '-' operator may be for subtract or negation, the parser cannot not know which one it was
                         if oper == pt::UserDefinedOperator::Subtract
@@ -158,16 +154,14 @@ pub(crate) fn using_decl(
                             }
                         };
 
-                        if !matches!(func.params[0].ty, Type::UserType(_))
-                            || func.params.len() != oper.args()
+                        if func.params.len() != oper.args()
                             || func.params.iter().any(|param| param.ty != *ty)
                         {
                             diagnostics.push(Diagnostic::error_with_note(
                                 using_function.loc,
                                 format!(
-                                    "user defined operator function for '{}' must have {} arguments of the same user type",
-                                    oper,
-                                    oper.args()
+                                    "user defined operator function for '{}' must have {} arguments of type {}",
+                                    oper, oper.args(), ty.to_string(ns)
                                 ),
                                 loc,
                                 format!("definition of '{function_name}'"),
@@ -241,6 +235,18 @@ pub(crate) fn using_decl(
 
                         Some(oper)
                     } else {
+                        if let Some(ty) = &ty {
+                            if *ty != func.params[0].ty {
+                                diagnostics.push(Diagnostic::error_with_note(
+                                    function_name.loc,
+                                    format!("function cannot be used since first argument is '{}' rather than the required '{}'", func.params[0].ty.to_string(ns), ty.to_string(ns)),
+                                    loc,
+                                    format!("definition of '{function_name}'"),
+                                ));
+                                continue;
+                            }
+                        }
+
                         None
                     };
 
