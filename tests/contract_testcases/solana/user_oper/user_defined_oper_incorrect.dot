@@ -48,7 +48,7 @@ strict digraph "tests/contract_testcases/solana/user_oper/user_defined_oper_inco
 	note_50 [label="definition of 'bad_cmp2'\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:7:10-18"]
 	diagnostic_51 [label="user defined operator function for '==' must have 2 arguments of type usertype Bitmap\nlevel Error\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:35:24-38"]
 	note_52 [label="definition of 'bad_cmp3'\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:11:10-18"]
-	diagnostic_53 [label="'bad_cmp4' has no arguments, at least one argument required\nlevel Error\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:35:40-48"]
+	diagnostic_53 [label="'bad_cmp4' has no arguments. At least one argument required\nlevel Error\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:35:40-48"]
 	note_54 [label="definition of 'bad_cmp4'\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:15:10-18"]
 	diagnostic_55 [label="user defined operator function for '+' must have single return type usertype Bitmap\nlevel Error\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:35:56-69"]
 	note_56 [label="definition of 'bad_cmp5'\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:19:10-18"]

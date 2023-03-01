@@ -130,12 +130,12 @@ pub(crate) fn using_decl(
                         if !matches!(*ty, Type::UserType(_)) {
                             diagnostics.push(Diagnostic::error(
                                 using_function.loc,
-                                format!("user defined operator can only be used with user defined types, type {} not permitted", ty.to_string(ns))
+                                format!("user defined operator can only be used with user defined types. Type {} not permitted", ty.to_string(ns))
                             ));
                             break;
                         }
 
-                        // The '-' operator may be for subtract or negation, the parser cannot not know which one it was
+                        // The '-' operator may be for subtract or negation, the parser cannot know which one it was
                         if oper == pt::UserDefinedOperator::Subtract
                             || oper == pt::UserDefinedOperator::Negate
                         {

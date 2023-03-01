@@ -50,7 +50,7 @@ First, declare a function with the correct prototype that implements the operato
 * The number of arguments depends on which operator is implemented; binary operators require two and unary operators, one.
 * The function must return either ``bool`` for the comparison operators, or the same user type as the parameters for the other operators.
 
-Then bind the function to the operator using the syntax ``using {function-name as operator} for user-type global;``.
+Then, bind the function to the operator using the syntax ``using {function-name as operator} for user-type global;``.
 Operators can only be defined with ``global`` set. Note that the ``-`` operator is
 used for two operators: subtract and negate. In order to override the negate operator,
 the function must have a single parameter since negate is an unary operator, and subtract
