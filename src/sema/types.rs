@@ -17,6 +17,7 @@ use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
 use std::collections::HashSet;
+use std::ops::DerefMut;
 use std::{fmt::Write, ops::Mul};
 
 /// List the types which should be resolved later
@@ -241,9 +242,7 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
             }
         } else {
             structs_visited.push(field_struct_no);
-            println!("1");
             find_struct_recursion(field_struct_no, structs_visited, ns);
-            println!("2");
             structs_visited.pop();
         }
     }
@@ -1756,6 +1755,49 @@ impl Type {
             }
             _ => false,
         }
+    }
+
+    /// Recursively walk over a type.
+    /// Accounts for the possibility of infinitively recursive types.
+    pub fn recurse<F>(&mut self, ns: &Namespace, f: F)
+    where
+        F: FnMut(&mut Type, &Namespace) + Clone,
+    {
+        self.recurse_internal(HashSet::new(), ns, f);
+    }
+
+    fn recurse_internal<F>(
+        &mut self,
+        mut structs_visited: HashSet<usize>,
+        ns: &Namespace,
+        mut f: F,
+    ) -> HashSet<usize>
+    where
+        F: FnMut(&mut Type, &Namespace) + Clone,
+    {
+        f(self, ns);
+
+        let struct_no = match self.clone() {
+            Type::Array(mut t, _) => return t.recurse_internal(structs_visited, ns, f),
+            Type::Struct(s) => match s {
+                StructType::UserDefined(n) => n,
+                _ => return HashSet::new(),
+            },
+            Type::Mapping(mut m) => {
+                let structs_visited = m.key.recurse_internal(structs_visited, ns, f.clone());
+                return m.value.recurse_internal(structs_visited, ns, f);
+            }
+            Type::Ref(mut t) => return t.recurse_internal(structs_visited, ns, f),
+            Type::StorageRef(_, mut t) => return t.recurse_internal(structs_visited, ns, f),
+            Type::Slice(mut t) => return t.recurse_internal(structs_visited, ns, f),
+            _ => return HashSet::new(),
+        };
+
+        if structs_visited.insert(struct_no) {
+            return self.recurse_internal(structs_visited, ns, f);
+        }
+        // Oops, infinite recursion
+        return HashSet::new();
     }
 }
 
