@@ -17,7 +17,6 @@ use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
 use std::collections::HashSet;
-use std::ops::DerefMut;
 use std::{fmt::Write, ops::Mul};
 
 /// List the types which should be resolved later
@@ -38,6 +37,21 @@ struct ResolveStructFields<'a> {
     pt: &'a pt::StructDefinition,
     comments: Vec<DocComment>,
     contract: Option<usize>,
+}
+
+#[derive(Default)]
+pub struct TypeInfo {
+    align: usize,
+    s: String,
+}
+
+impl TypeInfo {
+    fn align(align: usize) -> Self {
+        Self {
+            align,
+            s: Default::default(),
+        }
+    }
 }
 
 /// Resolve all the types we can find (enums, structs, contracts). structs can have other
@@ -225,21 +239,21 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
 
         if structs_visited.contains(&field_struct_no) {
             ns.structs[struct_no].fields[field_no].recursive = true;
-            match &field.ty {
-                Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
-                    (Type::Struct(StructType::UserDefined(n)), Some(ArrayLength::Fixed(_))) => {
-                        ns.diagnostics.push(Diagnostic::error_with_note(
-                            def.loc,
-                            format!("struct '{}' has infinite size", def.name),
-                            field.loc,
-                            format!("recursive field '{}'", field.name_as_str()),
-                        ));
-                        ns.structs[struct_no].fields[field_no].unsizeable = true;
-                    }
-                    _ => continue,
-                },
-                _ => continue,
-            }
+            //match &field.ty {
+            //    Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
+            //        (Type::Struct(StructType::UserDefined(_)), Some(ArrayLength::Fixed(_))) => {
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                def.loc,
+                format!("struct '{}' has infinite size", def.name),
+                field.loc,
+                format!("recursive field '{}'", field.name_as_str()),
+            ));
+            ns.structs[struct_no].fields[field_no].unsizeable = true;
+            //        }
+            //        _ => continue,
+            //    },
+            //    _ => continue,
+            //}
         } else {
             structs_visited.push(field_struct_no);
             find_struct_recursion(field_struct_no, structs_visited, ns);
@@ -1274,21 +1288,17 @@ impl Type {
 
     /// Calculate the alignment
     pub fn align_of(&self, ns: &Namespace) -> usize {
-        match self {
-            Type::Uint(8) | Type::Int(8) => 1,
-            Type::Uint(n) | Type::Int(n) if *n <= 16 => 2,
-            Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
-            Type::Uint(_) | Type::Int(_) => 8,
-            Type::Struct(str_ty) => str_ty
-                .definition(ns)
-                .fields
-                .iter()
-                .map(|f| if f.unsizeable { 1 } else { f.ty.align_of(ns) })
-                .max()
-                .unwrap(),
-            Type::InternalFunction { .. } => ns.target.ptr_size().into(),
-            _ => 1,
-        }
+        let f = |t: &Type, ns: &Namespace| {
+            TypeInfo::align(match t {
+                Type::Uint(8) | Type::Int(8) => 1,
+                Type::Uint(n) | Type::Int(n) if *n <= 16 => 2,
+                Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
+                Type::Uint(_) | Type::Int(_) => 8,
+                Type::InternalFunction { .. } => ns.target.ptr_size().into(),
+                _ => 1,
+            })
+        };
+        self.recurse(ns, f).iter().map(|t| t.align).max().unwrap()
     }
 
     pub fn bytes(&self, ns: &Namespace) -> u8 {
@@ -1759,45 +1769,54 @@ impl Type {
 
     /// Recursively walk over a type.
     /// Accounts for the possibility of infinitively recursive types.
-    pub fn recurse<F>(&mut self, ns: &Namespace, f: F)
+    pub fn recurse<F>(&self, ns: &Namespace, f: F) -> Vec<TypeInfo>
     where
-        F: FnMut(&mut Type, &Namespace) + Clone,
+        F: FnMut(&Type, &Namespace) -> TypeInfo + Clone,
     {
-        self.recurse_internal(HashSet::new(), ns, f);
+        self.recurse_internal(HashSet::new(), ns, f).0
     }
 
     fn recurse_internal<F>(
-        &mut self,
-        mut structs_visited: HashSet<usize>,
+        &self,
+        mut structs_visited: HashSet<StructDecl>,
         ns: &Namespace,
         mut f: F,
-    ) -> HashSet<usize>
+    ) -> (Vec<TypeInfo>, HashSet<StructDecl>)
     where
-        F: FnMut(&mut Type, &Namespace) + Clone,
+        F: FnMut(&Type, &Namespace) -> TypeInfo + Clone,
     {
-        f(self, ns);
+        let mut type_info = vec![f(&self, ns)];
 
-        let struct_no = match self.clone() {
-            Type::Array(mut t, _) => return t.recurse_internal(structs_visited, ns, f),
-            Type::Struct(s) => match s {
-                StructType::UserDefined(n) => n,
-                _ => return HashSet::new(),
-            },
-            Type::Mapping(mut m) => {
-                let structs_visited = m.key.recurse_internal(structs_visited, ns, f.clone());
-                return m.value.recurse_internal(structs_visited, ns, f);
+        match &self {
+            Type::Array(t, _) => t.recurse_internal(structs_visited, ns, f),
+            Type::Struct(s) => {
+                let def = s.definition(ns);
+                if structs_visited.insert(def.clone()) {
+                    for field in def.fields.iter() {
+                        let field_info =
+                            field
+                                .ty
+                                .recurse_internal(structs_visited.clone(), ns, f.clone());
+                        structs_visited.extend(field_info.1);
+                        type_info.extend(field_info.0);
+                    }
+                }
+                (type_info, structs_visited)
             }
-            Type::Ref(mut t) => return t.recurse_internal(structs_visited, ns, f),
-            Type::StorageRef(_, mut t) => return t.recurse_internal(structs_visited, ns, f),
-            Type::Slice(mut t) => return t.recurse_internal(structs_visited, ns, f),
-            _ => return HashSet::new(),
-        };
-
-        if structs_visited.insert(struct_no) {
-            return self.recurse_internal(structs_visited, ns, f);
+            Type::Mapping(m) => {
+                let mut left = m.key.recurse_internal(structs_visited, ns, f.clone());
+                let mut right = m.value.recurse_internal(left.1, ns, f);
+                right.0.append(&mut left.0);
+                right
+            }
+            Type::Ref(t) => t.recurse_internal(structs_visited, ns, f),
+            Type::StorageRef(_, t) => t.recurse_internal(structs_visited, ns, f),
+            Type::Slice(t) => t.recurse_internal(structs_visited, ns, f),
+            Type::UserType(n) => ns.user_types[*n]
+                .ty
+                .recurse_internal(structs_visited, ns, f),
+            _ => (type_info, structs_visited),
         }
-        // Oops, infinite recursion
-        return HashSet::new();
     }
 }
 

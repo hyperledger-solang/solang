@@ -151,7 +151,7 @@ pub enum StructType {
     SolParameters,
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct StructDecl {
     pub tags: Vec<Tag>,
     pub name: String,
@@ -216,7 +216,7 @@ impl fmt::Display for EnumDecl {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Parameter {
     pub loc: pt::Loc,
     /// The name can empty (e.g. in an event field or unnamed parameter/return)
@@ -1700,7 +1700,7 @@ impl Statement {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct Tag {
     pub loc: pt::Loc,
     pub tag: String,
