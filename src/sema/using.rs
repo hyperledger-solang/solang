@@ -107,7 +107,7 @@ pub(crate) fn using_decl(
                         diagnostics.push(Diagnostic::error_with_note(
                             function_name.loc,
                             format!(
-                                "'{function_name}' has no arguments, at least one argument required"
+                                "'{function_name}' has no arguments. At least one argument required"
 
                             ),
                             loc,
@@ -208,7 +208,7 @@ pub(crate) fn using_decl(
                             continue;
                         }
 
-                        if let Some(existing) = find_user_defined_oper(ty, oper, ns) {
+                        if let Some(existing) = user_defined_operator_binding(ty, oper, ns) {
                             if existing.function_no != func_no {
                                 diagnostics.push(Diagnostic::error_with_note(
                                     using_function.loc,
@@ -354,8 +354,8 @@ fn possible_functions(
         .collect()
 }
 
-/// Given the type and oper, find the user defined operator. Note there can only be one.
-pub(crate) fn find_user_defined_oper<'a>(
+/// Given the type and oper, find the user defined operator function binding. Note there can only be one.
+pub(crate) fn user_defined_operator_binding<'a>(
     ty: &Type,
     oper: pt::UserDefinedOperator,
     ns: &'a Namespace,

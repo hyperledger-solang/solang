@@ -16,7 +16,7 @@ use crate::sema::expression::{
     member_access::member_access,
     subscript::array_subscript,
     variable::variable,
-    {user_defined_oper, ExprContext, ResolveTo},
+    {user_defined_operator, ExprContext, ResolveTo},
 };
 use crate::sema::{
     symtable::Symtable,
@@ -137,7 +137,7 @@ pub fn expression(
 
             check_var_usage_expression(ns, &left, &right, symtable);
 
-            if let Some(expr) = user_defined_oper(
+            if let Some(expr) = user_defined_operator(
                 loc,
                 &[&left, &right],
                 pt::UserDefinedOperator::More,
@@ -178,7 +178,7 @@ pub fn expression(
 
             check_var_usage_expression(ns, &left, &right, symtable);
 
-            if let Some(expr) = user_defined_oper(
+            if let Some(expr) = user_defined_operator(
                 loc,
                 &[&left, &right],
                 pt::UserDefinedOperator::Less,
@@ -218,7 +218,7 @@ pub fn expression(
             let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
-            if let Some(expr) = user_defined_oper(
+            if let Some(expr) = user_defined_operator(
                 loc,
                 &[&left, &right],
                 pt::UserDefinedOperator::MoreEqual,
@@ -258,7 +258,7 @@ pub fn expression(
             let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
             check_var_usage_expression(ns, &left, &right, symtable);
 
-            if let Some(expr) = user_defined_oper(
+            if let Some(expr) = user_defined_operator(
                 loc,
                 &[&left, &right],
                 pt::UserDefinedOperator::LessEqual,
@@ -294,11 +294,44 @@ pub fn expression(
             Ok(expr)
         }
         pt::Expression::Equal(loc, l, r) => {
-            equal(loc, l, r, false, context, ns, symtable, diagnostics)
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+
+            check_var_usage_expression(ns, &left, &right, symtable);
+
+            if let Some(expr) = user_defined_operator(
+                loc,
+                &[&left, &right],
+                pt::UserDefinedOperator::Equal,
+                diagnostics,
+                ns,
+            ) {
+                return Ok(expr);
+            }
+
+            equal(loc, left, right, ns, diagnostics)
         }
 
         pt::Expression::NotEqual(loc, l, r) => {
-            equal(loc, l, r, true, context, ns, symtable, diagnostics)
+            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+
+            check_var_usage_expression(ns, &left, &right, symtable);
+
+            if let Some(expr) = user_defined_operator(
+                loc,
+                &[&left, &right],
+                pt::UserDefinedOperator::NotEqual,
+                diagnostics,
+                ns,
+            ) {
+                return Ok(expr);
+            }
+
+            Ok(Expression::Not {
+                loc: *loc,
+                expr: equal(loc, left, right, ns, diagnostics)?.into(),
+            })
         }
         // unary expressions
         pt::Expression::Not(loc, e) => {
@@ -315,7 +348,7 @@ pub fn expression(
 
             used_variable(ns, &expr, symtable);
 
-            if let Some(expr) = user_defined_oper(
+            if let Some(expr) = user_defined_operator(
                 loc,
                 &[&expr],
                 pt::UserDefinedOperator::Complement,
@@ -375,7 +408,7 @@ pub fn expression(
 
                 used_variable(ns, &expr, symtable);
 
-                if let Some(expr) = user_defined_oper(
+                if let Some(expr) = user_defined_operator(
                     loc,
                     &[&expr],
                     pt::UserDefinedOperator::Negate,

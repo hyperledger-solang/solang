@@ -5,7 +5,7 @@ use crate::sema::diagnostics::Diagnostics;
 use crate::sema::eval::eval_const_rational;
 use crate::sema::expression::integers::{coerce, coerce_number, get_int_length};
 use crate::sema::expression::resolve_expression::expression;
-use crate::sema::expression::{user_defined_oper, ExprContext, ResolveTo};
+use crate::sema::expression::{user_defined_operator, ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::{check_var_usage_expression, used_variable};
 use solang_parser::diagnostics::Diagnostic;
@@ -27,7 +27,7 @@ pub(super) fn subtract(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    if let Some(expr) = user_defined_oper(
+    if let Some(expr) = user_defined_operator(
         loc,
         &[&left, &right],
         pt::UserDefinedOperator::Subtract,
@@ -90,7 +90,7 @@ pub(super) fn bitwise_or(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    if let Some(expr) = user_defined_oper(
+    if let Some(expr) = user_defined_operator(
         loc,
         &[&left, &right],
         pt::UserDefinedOperator::BitwiseOr,
@@ -134,7 +134,7 @@ pub(super) fn bitwise_and(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    if let Some(expr) = user_defined_oper(
+    if let Some(expr) = user_defined_operator(
         loc,
         &[&left, &right],
         pt::UserDefinedOperator::BitwiseAnd,
@@ -178,7 +178,7 @@ pub(super) fn bitwise_xor(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    if let Some(expr) = user_defined_oper(
+    if let Some(expr) = user_defined_operator(
         loc,
         &[&left, &right],
         pt::UserDefinedOperator::BitwiseXor,
@@ -279,7 +279,7 @@ pub(super) fn multiply(
     let left = expression(l, context, ns, symtable, diagnostics, resolve_to)?;
     let right = expression(r, context, ns, symtable, diagnostics, resolve_to)?;
 
-    if let Some(expr) = user_defined_oper(
+    if let Some(expr) = user_defined_operator(
         loc,
         &[&left, &right],
         pt::UserDefinedOperator::Multiply,
@@ -373,7 +373,7 @@ pub(super) fn divide(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    if let Some(expr) = user_defined_oper(
+    if let Some(expr) = user_defined_operator(
         loc,
         &[&left, &right],
         pt::UserDefinedOperator::Divide,
@@ -417,7 +417,7 @@ pub(super) fn modulo(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    if let Some(expr) = user_defined_oper(
+    if let Some(expr) = user_defined_operator(
         loc,
         &[&left, &right],
         pt::UserDefinedOperator::Modulo,
@@ -521,40 +521,18 @@ pub(super) fn power(
 /// Test for equality; first check string equality, then integer equality
 pub(super) fn equal(
     loc: &pt::Loc,
-    l: &pt::Expression,
-    r: &pt::Expression,
-    not_equal: bool,
-    context: &ExprContext,
+    left: Expression,
+    right: Expression,
     ns: &mut Namespace,
-    symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-
-    check_var_usage_expression(ns, &left, &right, symtable);
-
-    if let Some(expr) = user_defined_oper(
-        loc,
-        &[&left, &right],
-        if not_equal {
-            pt::UserDefinedOperator::NotEqual
-        } else {
-            pt::UserDefinedOperator::Equal
-        },
-        diagnostics,
-        ns,
-    ) {
-        return Ok(expr);
-    }
-
     // Comparing stringliteral against stringliteral
     if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
         (&left, &right)
     {
         return Ok(Expression::BoolLiteral {
             loc: *loc,
-            value: if not_equal { l != r } else { l == r },
+            value: l == r,
         });
     }
 
@@ -565,26 +543,17 @@ pub(super) fn equal(
     match (&left, &right_type.deref_any()) {
         (Expression::BytesLiteral { value: l, .. }, Type::String)
         | (Expression::BytesLiteral { value: l, .. }, Type::DynamicBytes) => {
-            let mut expr = Expression::StringCompare {
+            return Ok(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(right.cast(
-                    &r.loc(),
+                    &right.loc(),
                     right_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
                 )?)),
                 right: StringLocation::CompileTime(l.clone()),
-            };
-
-            if not_equal {
-                expr = Expression::Not {
-                    loc: *loc,
-                    expr: expr.into(),
-                };
-            }
-
-            return Ok(expr);
+            });
         }
         _ => {}
     }
@@ -592,26 +561,17 @@ pub(super) fn equal(
     match (&right, &left_type.deref_any()) {
         (Expression::BytesLiteral { value, .. }, Type::String)
         | (Expression::BytesLiteral { value, .. }, Type::DynamicBytes) => {
-            let mut expr = Expression::StringCompare {
+            return Ok(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(left.cast(
-                    &l.loc(),
+                    &left.loc(),
                     left_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
                 )?)),
                 right: StringLocation::CompileTime(value.clone()),
-            };
-
-            if not_equal {
-                expr = Expression::Not {
-                    loc: *loc,
-                    expr: expr.into(),
-                };
-            }
-
-            return Ok(expr);
+            });
         }
         _ => {}
     }
@@ -619,42 +579,40 @@ pub(super) fn equal(
     // compare string
     match (&left_type.deref_any(), &right_type.deref_any()) {
         (Type::String, Type::String) | (Type::DynamicBytes, Type::DynamicBytes) => {
-            let mut expr = Expression::StringCompare {
+            return Ok(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(left.cast(
-                    &l.loc(),
+                    &left.loc(),
                     left_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
                 )?)),
                 right: StringLocation::RunTime(Box::new(right.cast(
-                    &r.loc(),
+                    &right.loc(),
                     right_type.deref_any(),
                     true,
                     ns,
                     diagnostics,
                 )?)),
-            };
-
-            if not_equal {
-                expr = Expression::Not {
-                    loc: *loc,
-                    expr: expr.into(),
-                };
-            }
-
-            return Ok(expr);
+            });
         }
         _ => {}
     }
 
-    let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, diagnostics)?;
+    let ty = coerce(
+        &left_type,
+        &left.loc(),
+        &right_type,
+        &right.loc(),
+        ns,
+        diagnostics,
+    )?;
 
     let expr = Expression::Equal {
         loc: *loc,
-        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+        left: Box::new(left.cast(&left.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&right.loc(), &ty, true, ns, diagnostics)?),
     };
 
     if ty.is_rational() {
@@ -663,14 +621,7 @@ pub(super) fn equal(
         }
     }
 
-    if not_equal {
-        Ok(Expression::Not {
-            loc: *loc,
-            expr: expr.into(),
-        })
-    } else {
-        Ok(expr)
-    }
+    Ok(expr)
 }
 
 /// Try string concatenation
@@ -689,7 +640,7 @@ pub(super) fn addition(
 
     check_var_usage_expression(ns, &left, &right, symtable);
 
-    if let Some(expr) = user_defined_oper(
+    if let Some(expr) = user_defined_operator(
         loc,
         &[&left, &right],
         pt::UserDefinedOperator::Add,

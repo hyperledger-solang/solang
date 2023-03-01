@@ -38,7 +38,7 @@ strict digraph "tests/contract_testcases/solana/user_oper/user_defined_oper_inco
 	contract [label="contract C\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:40:1-43:2"]
 	using [label="using for usertype Bitmap"]
 	using_41 [label="using for usertype Bitmap"]
-	diagnostic [label="user defined operator can only be used with user defined types, type bytes32 not permitted\nlevel Error\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:31:8-16"]
+	diagnostic [label="user defined operator can only be used with user defined types. Type bytes32 not permitted\nlevel Error\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:31:8-16"]
 	diagnostic_44 [label="'global' only permitted on user defined types\nlevel Error\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:31:30-36"]
 	diagnostic_45 [label="using must be bound to specific type, '*' cannot be used on file scope\nlevel Error\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:32:1-35"]
 	diagnostic_46 [label="user defined operator can only be set in a global 'using for' directive\nlevel Error\ntests/contract_testcases/solana/user_oper/user_defined_oper_incorrect.sol:33:8-21"]

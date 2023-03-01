@@ -19,7 +19,7 @@ use super::diagnostics::Diagnostics;
 use super::eval::eval_const_rational;
 use crate::sema::contracts::is_base;
 use crate::sema::eval::eval_const_number;
-use crate::sema::using::find_user_defined_oper;
+use crate::sema::using::user_defined_operator_binding;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, ToPrimitive, Zero};
@@ -1252,7 +1252,8 @@ impl Expression {
     }
 }
 
-pub(super) fn user_defined_oper(
+/// Resolve operation with the given arguments to an expression, if possible
+pub(super) fn user_defined_operator(
     loc: &pt::Loc,
     args: &[&Expression],
     oper: pt::UserDefinedOperator,
@@ -1260,12 +1261,11 @@ pub(super) fn user_defined_oper(
     ns: &Namespace,
 ) -> Option<Expression> {
     let ty = args[0].ty();
+    let ty = ty.deref_any();
 
-    let user_ty = ty.deref_any();
-
-    if let Type::UserType(..) = user_ty {
-        if let Some(using_function) = find_user_defined_oper(user_ty, oper, ns) {
-            if args.iter().all(|expr| expr.ty().deref_any() == user_ty) {
+    if let Type::UserType(..) = ty {
+        if let Some(using_function) = user_defined_operator_binding(ty, oper, ns) {
+            if args.iter().all(|expr| expr.ty().deref_any() == ty) {
                 let func = &ns.functions[using_function.function_no];
 
                 return Some(Expression::UserDefinedOperator {
@@ -1275,7 +1275,7 @@ pub(super) fn user_defined_oper(
                     function_no: using_function.function_no,
                     args: args
                         .iter()
-                        .map(|e| e.cast(&e.loc(), user_ty, true, ns, diagnostics).unwrap())
+                        .map(|e| e.cast(&e.loc(), ty, true, ns, diagnostics).unwrap())
                         .collect(),
                 });
             }
