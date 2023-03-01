@@ -38,8 +38,8 @@ Now even when ``User`` is imported, the clear_count() method can be used.
 User defined Operators
 ______________________
 
-The ``using`` directive can be used to define operators for :ref:`user defined types <user_defined_types>`.
-The operators that can be defined are ``==``, ``!=``, ``>=``, ``>``, ``<=``, ``<``, ``~``,
+The ``using`` directive can be used to bind operators for :ref:`user defined types <user_defined_types>`
+to functions. A binding can be set for the operators: ``==``, ``!=``, ``>=``, ``>``, ``<=``, ``<``, ``~``,
 ``&``, ``|``, ``^``, ``-`` (both negate and subtract), ``+``, ``*``, ``/``, and ``%``.
 
 First, declare a function with the correct prototype that implements the operator.
