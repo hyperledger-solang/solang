@@ -13,6 +13,7 @@ use super::{
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use indexmap::IndexMap;
+use itertools::structs;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
@@ -211,7 +212,6 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
             },
             Type::Struct(StructType::UserDefined(n)) => *n,
             Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
-                //(Type::Struct(StructType::UserDefined(n)), Some(ArrayLength::Fixed(_))) => *n,
                 (Type::Struct(StructType::UserDefined(n)), Some(_)) => *n,
                 _ => continue,
             },
@@ -999,7 +999,7 @@ impl Type {
 
     /// The eth abi file wants to hear "tuple" rather than "(ty, ty)"
     pub fn to_signature_string(&self, say_tuple: bool, ns: &Namespace) -> String {
-        match self {
+        let f = |t: &Type, ns: &Namespace| match t {
             Type::Bool => "bool".to_string(),
             Type::Contract(_) | Type::Address(_) if ns.target == Target::Solana => {
                 format!("bytes{}", ns.address_length)
@@ -1042,8 +1042,10 @@ impl Type {
             // TODO: should an unresolved type not match another unresolved type?
             Type::Unresolved => "unresolved".to_owned(),
             Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
-            _ => unreachable!(),
-        }
+            _ => "".to_owned(),
+        };
+        let result = self.recurse(ns, f)[0].to_owned();
+        result
     }
 
     /// Give the type of a memory array after dereference
@@ -1761,11 +1763,11 @@ impl Type {
         F: FnMut(&Type, &Namespace) -> O + Clone,
     {
         let mut type_info = vec![f(&self, ns)];
-
-        match &self {
+        let recursive = match &self {
             Type::Array(t, _) => t.recurse_internal(structs_visited, ns, f),
             Type::Struct(s) => {
                 let def = s.definition(ns);
+                let mut type_info = vec![];
                 if structs_visited.insert(def.clone()) {
                     for field in def.fields.iter() {
                         let field_info =
@@ -1790,8 +1792,10 @@ impl Type {
             Type::UserType(n) => ns.user_types[*n]
                 .ty
                 .recurse_internal(structs_visited, ns, f),
-            _ => (type_info, structs_visited),
-        }
+            _ => (vec![], HashSet::new()),
+        };
+        type_info.extend(recursive.0);
+        (type_info, recursive.1)
     }
 }
 
