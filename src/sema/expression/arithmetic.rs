@@ -38,7 +38,7 @@ pub(super) fn subtract(
         diagnostics,
     )?;
 
-    if ty.is_rational() {
+    if ty.is_rational(ns) {
         let expr = Expression::Subtract {
             loc: *loc,
             ty,
@@ -252,7 +252,7 @@ pub(super) fn multiply(
         diagnostics,
     )?;
 
-    if ty.is_rational() {
+    if ty.is_rational(ns) {
         let expr = Expression::Multiply {
             loc: *loc,
             ty,
@@ -545,7 +545,7 @@ pub(super) fn equal(
         right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
     };
 
-    if ty.is_rational() {
+    if ty.is_rational(ns) {
         if let Err(diag) = eval_const_rational(&expr, ns) {
             diagnostics.push(diag);
         }
@@ -638,7 +638,7 @@ pub(super) fn addition(
         diagnostics,
     )?;
 
-    if ty.is_rational() {
+    if ty.is_rational(ns) {
         let expr = Expression::Add {
             loc: *loc,
             ty,

@@ -1338,16 +1338,8 @@ impl Type {
         }
     }
 
-    pub fn is_rational(&self) -> bool {
-        match self {
-            Type::Rational => true,
-            Type::Ref(r) => r.is_rational(),
-            Type::StorageRef(_, r) => r.is_rational(),
-            Type::Int(_) => false,
-            Type::Uint(_) => false,
-            Type::Value => false,
-            _ => false,
-        }
+    pub fn is_rational(&self, ns: &Namespace) -> bool {
+        self.recurse(ns, |t: &Type, _| matches!(t, Type::Rational))[0]
     }
 
     /// Calculate how many storage slots a type occupies. Note that storage arrays can
