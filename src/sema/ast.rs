@@ -669,6 +669,7 @@ pub enum UsingList {
     Functions(Vec<UsingFunction>),
 }
 
+/// Using binding for a function, optionally for an operator
 pub struct UsingFunction {
     pub loc: pt::Loc,
     pub function_no: usize,

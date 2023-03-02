@@ -1252,7 +1252,7 @@ impl Expression {
     }
 }
 
-/// Resolve operation with the given arguments to an expression, if possible
+/// Resolve operator with the given arguments to an expression, if possible
 pub(super) fn user_defined_operator(
     loc: &pt::Loc,
     args: &[&Expression],
