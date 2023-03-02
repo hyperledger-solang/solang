@@ -53,7 +53,7 @@ First, declare a function with the correct prototype that implements the operato
 Then, bind the function to the operator using the syntax ``using {function-name as operator} for user-type global;``.
 Operators can only be defined with ``global`` set. Note that the ``-`` operator is
 used for two operators: subtract and negate. In order to bind the unary negate operator,
-the function must have a single parameter. For the subtract operator two parameters are required.
+the function must have a single parameter. For the subtract operator, two parameters are required.
 
 .. include:: ../examples/user_defined_operators.sol
    :code: solidity
