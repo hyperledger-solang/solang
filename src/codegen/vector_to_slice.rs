@@ -37,7 +37,7 @@ fn find_writable_vectors(
     writable: &mut HashSet<Def>,
 ) {
     for instr_no in 0..block.instr.len() {
-        match &block.instr[instr_no].1 {
+        match &block.instr[instr_no] {
             Instr::Set {
                 res,
                 expr: Expression::Variable(_, _, var_no),
@@ -177,7 +177,7 @@ fn update_vectors_to_slice(
             if let Instr::Set {
                 expr: Expression::AllocDynamicBytes(..),
                 ..
-            } = &cfg.blocks[block_no].instr[instr_no].1
+            } = &cfg.blocks[block_no].instr[instr_no]
             {
                 let cur = Def {
                     block_no,
@@ -216,10 +216,10 @@ fn update_vectors_to_slice(
             loc,
             res,
             expr: Expression::AllocDynamicBytes(_, _, len, Some(bs)),
-        } = &cfg.blocks[def.block_no].instr[def.instr_no].1
+        } = &cfg.blocks[def.block_no].instr[def.instr_no]
         {
             let res = *res;
-            cfg.blocks[def.block_no].instr[def.instr_no].1 = Instr::Set {
+            cfg.blocks[def.block_no].instr[def.instr_no] = Instr::Set {
                 loc: *loc,
                 res,
                 expr: Expression::AllocDynamicBytes(

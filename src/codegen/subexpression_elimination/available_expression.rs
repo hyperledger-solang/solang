@@ -10,23 +10,23 @@ use std::rc::Rc;
 
 impl AvailableExpression {
     /// Add a node to represent a literal
-    pub fn add_literal_node(
+    pub fn add_literal_node<'b, 'a: 'b>(
         &mut self,
-        expr: &Expression,
-        expr_set: &mut AvailableExpressionSet,
+        expr: &'a Expression,
+        expr_set: &mut AvailableExpressionSet<'b>,
     ) -> NodeId {
         let expr_type = expr.get_constant_expression_type();
 
-        self.add_node_to_memory(expr_set, expr_type);
+        self.add_node_to_memory(expr_set, expr_type, expr);
 
         self.global_id_counter - 1
     }
 
     /// Add a node to represent a variable
-    pub fn add_variable_node(
+    pub fn add_variable_node<'b, 'a: 'b>(
         &mut self,
-        expr: &Expression,
-        expr_set: &mut AvailableExpressionSet,
+        expr: &'a Expression,
+        expr_set: &mut AvailableExpressionSet<'b>,
     ) -> NodeId {
         let expr_type = match expr {
             Expression::Variable(_, _, pos) => ExpressionType::Variable(*pos),
@@ -36,16 +36,16 @@ impl AvailableExpression {
             _ => unreachable!("This expression is not a variable or a function argument"),
         };
 
-        self.add_node_to_memory(expr_set, expr_type);
+        self.add_node_to_memory(expr_set, expr_type, expr);
 
         self.global_id_counter - 1
     }
 
     /// Add a node to represent a binary expression
-    pub fn add_binary_node(
+    pub fn add_binary_node<'b, 'a: 'b>(
         &mut self,
-        exp: &Expression,
-        expr_set: &mut AvailableExpressionSet,
+        exp: &'a Expression,
+        expr_set: &mut AvailableExpressionSet<'b>,
         left: NodeId,
         right: NodeId,
     ) -> NodeId {
@@ -55,9 +55,9 @@ impl AvailableExpression {
             expression_id: self.global_id_counter,
             children: Default::default(),
             available_variable: AvailableVariable::Unavailable,
-            parent_block: expr_set.parent_block_no,
-            on_parent_block: false,
+            parent_block: None,
             block: self.cur_block,
+            reference: exp,
         }));
         expr_set
             .expression_memory
@@ -88,11 +88,11 @@ impl AvailableExpression {
     }
 
     /// Add a node to represent an unary operation
-    pub fn add_unary_node(
+    pub fn add_unary_node<'b, 'a: 'b>(
         &mut self,
-        exp: &Expression,
+        exp: &'a Expression,
         parent: usize,
-        expr_set: &mut AvailableExpressionSet,
+        expr_set: &mut AvailableExpressionSet<'b>,
     ) -> NodeId {
         let operation = exp.get_ave_operator();
         let new_node = Rc::new(RefCell::new(BasicExpression {
@@ -100,9 +100,9 @@ impl AvailableExpression {
             expression_id: self.global_id_counter,
             children: Default::default(),
             available_variable: AvailableVariable::Unavailable,
-            parent_block: expr_set.parent_block_no,
-            on_parent_block: false,
+            parent_block: None,
             block: self.cur_block,
+            reference: exp,
         }));
 
         expr_set
@@ -126,10 +126,11 @@ impl AvailableExpression {
         self.global_id_counter - 1
     }
 
-    fn add_node_to_memory(
+    fn add_node_to_memory<'b, 'a: 'b>(
         &mut self,
-        expr_set: &mut AvailableExpressionSet,
+        expr_set: &mut AvailableExpressionSet<'b>,
         expr_type: ExpressionType,
+        expr: &'a Expression,
     ) {
         expr_set.expression_memory.insert(
             self.global_id_counter,
@@ -138,9 +139,9 @@ impl AvailableExpression {
                 expression_id: self.global_id_counter,
                 children: Default::default(),
                 available_variable: AvailableVariable::Unavailable,
-                parent_block: expr_set.parent_block_no,
-                on_parent_block: false,
+                parent_block: None,
                 block: self.cur_block,
+                reference: expr,
             })),
         );
 

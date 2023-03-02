@@ -6,13 +6,13 @@ use crate::codegen::subexpression_elimination::AvailableExpression;
 use crate::codegen::subexpression_elimination::{AvailableExpressionSet, AvailableVariable};
 use crate::codegen::Expression;
 
-impl AvailableExpressionSet {
+impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     /// Check if we can add the expressions of an instruction to the graph
     pub fn process_instruction(
         &mut self,
-        instr: &Instr,
+        instr: &'b Instr,
         ave: &mut AvailableExpression,
-        cst: &mut CommonSubExpressionTracker,
+        cst: &mut Option<&mut CommonSubExpressionTracker>,
     ) {
         match instr {
             Instr::BranchCond { cond: expr, .. }
@@ -29,19 +29,35 @@ impl AvailableExpressionSet {
             }
 
             Instr::Set { res, expr, loc } => {
-                let node_id = self.gen_expression(expr, ave, cst);
-                if node_id.is_some() {
-                    let node = &mut *self
-                        .expression_memory
-                        .get(node_id.as_ref().unwrap())
-                        .unwrap()
-                        .borrow_mut();
+                if cst.is_none() {
+                    // If there is no cst, we are traversing the CFG in reverse, so we kill the
+                    // definition before processing the assignment
+                    // e.g.
+                    // -- Here we have a previous definition of x and x + y is available
+                    // x = x + y -> kill x first, then make x+y available
+                    // -- x+y is not available
+                    self.kill(*res);
+                }
+
+                self.remove_mapped(*res);
+                if let Some(node_id) = self.gen_expression(expr, ave, cst) {
+                    let node = &mut *self.expression_memory.get(&node_id).unwrap().borrow_mut();
                     if !node.available_variable.is_available() {
                         node.available_variable = AvailableVariable::Available(*res, *loc);
+                        self.mapped_variable.insert(*res, node_id);
                     }
                 }
-                cst.invalidate_mapped_variable(res);
-                self.kill(*res);
+
+                if let Some(tracker) = cst {
+                    // If there is a cst, we are traversing the CFG in the same order as code
+                    // execution , so we kill the definition after processing the assignment
+                    // e.g.
+                    // -- x+y not available
+                    // x = x + y -> make x+y available, than make kill x, which also kills x+y
+                    // -- x + y is not available here, because x has a new definition
+                    self.kill(*res);
+                    tracker.invalidate_mapped_variable(res);
+                }
             }
 
             Instr::PushMemory { value: expr, .. } => {
@@ -185,7 +201,7 @@ impl AvailableExpressionSet {
     /// Regenerate instructions after that we exchanged common subexpressions for temporaries
     pub fn regenerate_instruction(
         &mut self,
-        instr: &Instr,
+        instr: &'b Instr,
         ave: &mut AvailableExpression,
         cst: &mut CommonSubExpressionTracker,
     ) -> Instr {
