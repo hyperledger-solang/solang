@@ -42,7 +42,7 @@ impl RetrieveType for Expression {
             | Expression::GetRef { ty, .. }
             | Expression::StorageLoad { ty, .. }
             | Expression::Complement { ty, .. }
-            | Expression::UnaryMinus { ty, .. }
+            | Expression::Negate { ty, .. }
             | Expression::ConditionalOperator { ty, .. }
             | Expression::StructMember { ty, .. }
             | Expression::AllocDynamicBytes { ty, .. }
@@ -76,9 +76,9 @@ impl RetrieveType for Expression {
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
             Expression::InterfaceId { .. } => Type::FunctionSelector,
             Expression::FormatString { .. } => Type::String,
-            // codegen Expressions
-            Expression::InternalFunction { ty, .. } => ty.clone(),
-            Expression::ExternalFunction { ty, .. } => ty.clone(),
+            Expression::UserDefinedOperator { ty, .. }
+            | Expression::InternalFunction { ty, .. }
+            | Expression::ExternalFunction { ty, .. } => ty.clone(),
         }
     }
 }

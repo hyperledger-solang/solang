@@ -134,7 +134,7 @@ pub fn eval_const_number(
         Expression::Cast { loc, expr, .. } => Ok((*loc, eval_const_number(expr, ns)?.1)),
         Expression::Not { loc, expr: n } => Ok((*loc, !eval_const_number(n, ns)?.1)),
         Expression::Complement { loc, expr, .. } => Ok((*loc, !eval_const_number(expr, ns)?.1)),
-        Expression::UnaryMinus { loc, expr, .. } => Ok((*loc, -eval_const_number(expr, ns)?.1)),
+        Expression::Negate { loc, expr, .. } => Ok((*loc, -eval_const_number(expr, ns)?.1)),
         Expression::ConstantVariable {
             contract_no: Some(contract_no),
             var_no,
@@ -221,7 +221,7 @@ pub fn eval_const_rational(
         }
         Expression::RationalNumberLiteral { loc, value, .. } => Ok((*loc, value.clone())),
         Expression::Cast { loc, expr, .. } => Ok((*loc, eval_const_rational(expr, ns)?.1)),
-        Expression::UnaryMinus { loc, expr, .. } => Ok((*loc, -eval_const_rational(expr, ns)?.1)),
+        Expression::Negate { loc, expr, .. } => Ok((*loc, -eval_const_rational(expr, ns)?.1)),
         Expression::ConstantVariable {
             contract_no: Some(contract_no),
             var_no,

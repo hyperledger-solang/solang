@@ -171,7 +171,7 @@ fn not_tracked() {
     let var = Expression::Variable(Loc::Codegen, Type::Int(2), 1);
     let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(1), 1);
     let load = Expression::Load(Loc::Codegen, Type::DynamicBytes, Box::new(var));
-    let minus = Expression::UnaryMinus(Loc::Codegen, Type::Int(32), Box::new(load.clone()));
+    let minus = Expression::Negate(Loc::Codegen, Type::Int(32), Box::new(load.clone()));
     let exp = Expression::ShiftLeft(
         Loc::Codegen,
         Type::Int(32),
@@ -270,7 +270,7 @@ fn complex_expression() {
     );
 
     let zero = Expression::ZeroExt(Loc::Codegen, Type::Int(54), Box::new(shift.clone()));
-    let unary = Expression::UnaryMinus(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
+    let unary = Expression::Negate(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
 
     let pot = Expression::Power(
         Loc::Codegen,
@@ -410,7 +410,7 @@ fn kill() {
     );
 
     let zero = Expression::ZeroExt(Loc::Codegen, Type::Int(54), Box::new(shift.clone()));
-    let unary = Expression::UnaryMinus(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
+    let unary = Expression::Negate(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
 
     let pot = Expression::Power(
         Loc::Codegen,
@@ -499,7 +499,7 @@ fn clone() {
     );
 
     let zero = Expression::ZeroExt(Loc::Codegen, Type::Int(54), Box::new(shift.clone()));
-    let unary = Expression::UnaryMinus(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
+    let unary = Expression::Negate(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
 
     let pot = Expression::Power(
         Loc::Codegen,
@@ -586,7 +586,7 @@ fn intersect() {
     );
 
     let zero = Expression::ZeroExt(Loc::Codegen, Type::Int(54), Box::new(shift.clone()));
-    let unary = Expression::UnaryMinus(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
+    let unary = Expression::Negate(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
 
     let pot = Expression::Power(
         Loc::Codegen,

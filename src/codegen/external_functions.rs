@@ -93,8 +93,12 @@ pub fn add_external_functions(contract_no: usize, ns: &mut Namespace) {
 }
 
 fn check_expression(expr: &Expression, call_list: &mut CallList) -> bool {
-    if let Expression::InternalFunction { function_no, .. } = expr {
-        call_list.solidity.insert(*function_no);
+    match expr {
+        Expression::UserDefinedOperator { function_no, .. }
+        | Expression::InternalFunction { function_no, .. } => {
+            call_list.solidity.insert(*function_no);
+        }
+        _ => (),
     }
 
     true
