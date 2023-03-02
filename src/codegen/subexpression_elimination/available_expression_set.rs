@@ -12,13 +12,13 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-impl AvailableExpressionSet {
+impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     /// Clone a set for a given parent block
-    pub fn clone_for_parent_block(&self, parent_block: usize) -> AvailableExpressionSet {
+    pub fn clone_for_parent_block(&self) -> AvailableExpressionSet<'a> {
         let mut new_set = AvailableExpressionSet {
             expression_memory: HashMap::default(),
             expr_map: self.expr_map.clone(),
-            parent_block_no: parent_block,
+            mapped_variable: self.mapped_variable.clone(),
         };
 
         for (key, value) in &self.expression_memory {
@@ -29,9 +29,9 @@ impl AvailableExpressionSet {
                     expression_id: value.borrow().expression_id,
                     children: HashMap::default(),
                     available_variable: value.borrow().available_variable.clone(),
-                    parent_block: value.borrow().parent_block,
-                    on_parent_block: value.borrow().on_parent_block,
                     block: value.borrow().block,
+                    parent_block: value.borrow().parent_block,
+                    reference: value.borrow().reference,
                 })),
             );
         }
@@ -87,12 +87,12 @@ impl AvailableExpressionSet {
                 node_1.children.clear();
                 let node_2_id = set_2.expr_map.get(key).unwrap();
 
-                node_1.on_parent_block = true;
                 // Find the common ancestor of both blocks. The deepest block after which there are
                 // multiple paths to both blocks.
                 node_1.parent_block = cst.find_parent_block(
-                    node_1.parent_block,
-                    set_2.expression_memory[node_2_id].borrow().parent_block,
+                    node_1.block,
+                    set_2.expression_memory[node_2_id].borrow().block,
+                    node_1.reference,
                 );
                 if let (Some(var_id_1), Some(var_id_2)) = (
                     set_2.expression_memory[node_2_id]
@@ -123,6 +123,42 @@ impl AvailableExpressionSet {
                 value.borrow_mut().children.retain(|child_id, _| {
                     node.borrow().children.contains_key(child_id) || to_maintain.contains(child_id)
                 });
+            }
+        }
+    }
+
+    /// Calculate the union between two sets
+    pub fn union_sets(&mut self, set_2: &AvailableExpressionSet<'a>) {
+        let mut node_translation: HashMap<NodeId, NodeId> = HashMap::new();
+        for (key, node_id) in &set_2.expr_map {
+            if let Some(other_id) = self.expr_map.get(key) {
+                node_translation.insert(*node_id, *other_id);
+            }
+        }
+
+        for (key, node_id) in &set_2.expr_map {
+            if !self.expr_map.contains_key(key) {
+                let new_key = match key {
+                    ExpressionType::BinaryOperation(id_1, id_2, op) => {
+                        ExpressionType::BinaryOperation(
+                            node_translation.get(id_1).cloned().unwrap_or(*id_1),
+                            node_translation.get(id_2).cloned().unwrap_or(*id_2),
+                            op.clone(),
+                        )
+                    }
+                    ExpressionType::UnaryOperation(id, op) => ExpressionType::UnaryOperation(
+                        node_translation.get(id).cloned().unwrap_or(*id),
+                        op.clone(),
+                    ),
+                    _ => key.clone(),
+                };
+                self.expr_map.insert(new_key, *node_id);
+            }
+        }
+
+        for (key, expr) in &set_2.expression_memory {
+            if !self.expression_memory.contains_key(key) {
+                self.expression_memory.insert(*key, expr.clone());
             }
         }
     }
@@ -163,10 +199,10 @@ impl AvailableExpressionSet {
     /// Try to fetch the ID of left and right operands.
     fn process_left_right(
         &mut self,
-        left: &Expression,
-        right: &Expression,
+        left: &'a Expression,
+        right: &'a Expression,
         ave: &mut AvailableExpression,
-        cst: &mut CommonSubExpressionTracker,
+        cst: &mut Option<&mut CommonSubExpressionTracker>,
     ) -> Option<(NodeId, NodeId)> {
         let left_id = self.gen_expression(left, ave, cst)?;
         let right_id = self.gen_expression(right, ave, cst)?;
@@ -177,11 +213,11 @@ impl AvailableExpressionSet {
     /// Add a commutative expression to the set if it is not there yet
     fn process_commutative(
         &mut self,
-        exp: &Expression,
-        left: &Expression,
-        right: &Expression,
+        exp: &'a Expression,
+        left: &'a Expression,
+        right: &'a Expression,
         ave: &mut AvailableExpression,
-        cst: &mut CommonSubExpressionTracker,
+        cst: &mut Option<&mut CommonSubExpressionTracker>,
     ) -> Option<NodeId> {
         let (left_id, right_id) = self.process_left_right(left, right, ave, cst)?;
         Some(ave.add_binary_node(exp, self, left_id, right_id))
@@ -190,14 +226,16 @@ impl AvailableExpressionSet {
     /// Add expression to the graph and check if it is available on a parallel branch.
     pub fn gen_expression(
         &mut self,
-        exp: &Expression,
+        exp: &'a Expression,
         ave: &mut AvailableExpression,
-        cst: &mut CommonSubExpressionTracker,
+        cst: &mut Option<&mut CommonSubExpressionTracker>,
     ) -> Option<NodeId> {
         let id = self.gen_expression_aux(exp, ave, cst);
         if let Some(id) = id {
             let node = &*self.expression_memory.get(&id).unwrap().borrow();
-            cst.check_availability_on_branches(&node.expr_type);
+            if let Some(tracker) = cst.as_mut() {
+                tracker.check_availability_on_branches(&node.expr_type, exp);
+            }
         }
         id
     }
@@ -205,12 +243,14 @@ impl AvailableExpressionSet {
     /// Add an expression to the graph if it is not there
     pub fn gen_expression_aux(
         &mut self,
-        exp: &Expression,
+        exp: &'a Expression,
         ave: &mut AvailableExpression,
-        cst: &mut CommonSubExpressionTracker,
+        cst: &mut Option<&mut CommonSubExpressionTracker>,
     ) -> Option<NodeId> {
         if let Some(id) = self.find_expression(exp) {
-            self.add_to_cst(exp, &id, cst);
+            if let Some(tracker) = cst.as_mut() {
+                self.add_to_cst(exp, &id, tracker);
+            }
             return Some(id);
         }
 
@@ -295,6 +335,24 @@ impl AvailableExpressionSet {
         }
 
         self.expr_map.remove(&basic_exp.expr_type);
+    }
+
+    /// This functions indicates that an available node that was once mapped to an existing variable
+    /// no longer should be linked to that variable.
+    ///
+    /// When we have an assignment 'x = a + b', and later we find the usage of 'a + b', we can
+    /// replace it by 'x', instead of creating a new cse temporary. Nonetheless, whenever the 'x'
+    /// is reassigned, we must indicate that 'x' does not represent 'a + b' anymore, so we would
+    /// need a temporary if we were to replace a repeated occurrence of 'a + b'
+    pub fn remove_mapped(&mut self, var_no: usize) {
+        if let Some(node_id) = self.mapped_variable.remove(&var_no) {
+            if let Some(node) = self.expression_memory.get(&node_id) {
+                let mut node_mut = node.borrow_mut();
+                if node_mut.available_variable.is_available() {
+                    node_mut.available_variable = AvailableVariable::Unavailable;
+                }
+            }
+        }
     }
 
     /// When a reaching definition change, we remove the variable node and all its descendants from
@@ -391,9 +449,9 @@ impl AvailableExpressionSet {
     /// Regenerate commutative expressions
     fn regenerate_commutative(
         &mut self,
-        exp: &Expression,
-        left: &Expression,
-        right: &Expression,
+        exp: &'a Expression,
+        left: &'a Expression,
+        right: &'a Expression,
         ave: &mut AvailableExpression,
         cst: &mut CommonSubExpressionTracker,
     ) -> (Option<NodeId>, Expression) {
@@ -436,7 +494,7 @@ impl AvailableExpressionSet {
     /// a temporary, we do it here.
     pub fn regenerate_expression(
         &mut self,
-        exp: &Expression,
+        exp: &'a Expression,
         ave: &mut AvailableExpression,
         cst: &mut CommonSubExpressionTracker,
     ) -> (Option<NodeId>, Expression) {
@@ -448,7 +506,7 @@ impl AvailableExpressionSet {
             | Expression::NumberLiteral(..)
             | Expression::BoolLiteral(..)
             | Expression::BytesLiteral(..) => {
-                return (self.gen_expression(exp, ave, cst), exp.clone());
+                return (self.gen_expression(exp, ave, &mut Some(cst)), exp.clone());
             }
 
             Expression::StringCompare(_, left, right)

@@ -36,7 +36,7 @@ pub(super) fn reaching_values(
         block_vars.insert(block_no, vars.clone());
     }
 
-    for (_, instr) in &cfg.blocks[block_no].instr {
+    for instr in &cfg.blocks[block_no].instr {
         transfer(instr, vars, ns);
 
         match instr {

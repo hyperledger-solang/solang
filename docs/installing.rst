@@ -173,10 +173,11 @@ Now run cmake to create the makefiles. Replace the *installdir* argument to ``CM
 
 .. code-block:: bash
 
-	cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On '-DLLVM_ENABLE_PROJECTS=clang;lld'  \
-		-DLLVM_ENABLE_TERMINFO=Off -DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_INSTALL_PREFIX=installdir -B build llvm
-	cmake --build build --target install
+    cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On '-DLLVM_ENABLE_PROJECTS=clang;lld'  \
+        -DLLVM_ENABLE_TERMINFO=Off -DCMAKE_BUILD_TYPE=Release \
+        -DLLVM_ENABLE_ZSTD=Off \
+        -DCMAKE_INSTALL_PREFIX=installdir -B build llvm
+    cmake --build build --target install
 
 Once the build has succeeded, the *installdir*/bin has to be added to your path so the
 Solang build can find the ``llvm-config`` from this build:
