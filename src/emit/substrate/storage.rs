@@ -414,7 +414,7 @@ impl StorageSlot for SubstrateTarget {
                                     *slot,
                                     bin.number_literal(
                                         256,
-                                        &elem_ty.storage_slots(ns, HashSet::new()),
+                                        &elem_ty.storage_slots(ns, &mut HashSet::new()),
                                         ns,
                                     ),
                                     "",
@@ -525,7 +525,7 @@ impl StorageSlot for SubstrateTarget {
                                     *slot,
                                     bin.number_literal(
                                         256,
-                                        &elem_ty.storage_slots(ns, HashSet::new()),
+                                        &elem_ty.storage_slots(ns, &mut HashSet::new()),
                                         ns,
                                     ),
                                     "",
@@ -549,7 +549,7 @@ impl StorageSlot for SubstrateTarget {
                                     *slot,
                                     bin.number_literal(
                                         256,
-                                        &elem_ty.storage_slots(ns, HashSet::new()),
+                                        &elem_ty.storage_slots(ns, &mut HashSet::new()),
                                         ns,
                                     ),
                                     "",
@@ -600,7 +600,7 @@ impl StorageSlot for SubstrateTarget {
                             *slot,
                             bin.number_literal(
                                 256,
-                                &field.ty.storage_slots(ns, HashSet::new()),
+                                &field.ty.storage_slots(ns, &mut HashSet::new()),
                                 ns,
                             ),
                             field.name_as_str(),
@@ -716,7 +716,7 @@ impl StorageSlot for SubstrateTarget {
                                     *slot,
                                     bin.number_literal(
                                         256,
-                                        &ty.storage_slots(ns, HashSet::new()),
+                                        &ty.storage_slots(ns, &mut HashSet::new()),
                                         ns,
                                     ),
                                     "",
@@ -766,7 +766,7 @@ impl StorageSlot for SubstrateTarget {
                                     *slot,
                                     bin.number_literal(
                                         256,
-                                        &ty.storage_slots(ns, HashSet::new()),
+                                        &ty.storage_slots(ns, &mut HashSet::new()),
                                         ns,
                                     ),
                                     "",
@@ -790,7 +790,7 @@ impl StorageSlot for SubstrateTarget {
                             *slot,
                             bin.number_literal(
                                 256,
-                                &field.ty.storage_slots(ns, HashSet::new()),
+                                &field.ty.storage_slots(ns, &mut HashSet::new()),
                                 ns,
                             ),
                             field.name_as_str(),

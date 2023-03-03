@@ -592,7 +592,7 @@ pub fn expression(
                 } else {
                     struct_ty.definition(ns).fields[..*field_no]
                         .iter()
-                        .map(|field| field.ty.storage_slots(ns, HashSet::new()))
+                        .map(|field| field.ty.storage_slots(ns, &mut HashSet::new()))
                         .sum()
                 };
 
@@ -2942,7 +2942,9 @@ fn array_subscript(
 
                 if ty.array_length().is_some() {
                     // fixed length array
-                    let elem_size = elem_ty.deref_any().solana_storage_size(ns, HashSet::new());
+                    let elem_size = elem_ty
+                        .deref_any()
+                        .solana_storage_size(ns, &mut HashSet::new());
 
                     Expression::Add(
                         *loc,
@@ -2968,7 +2970,7 @@ fn array_subscript(
                 }
             }
         } else {
-            let elem_size = elem_ty.storage_slots(ns, HashSet::new());
+            let elem_size = elem_ty.storage_slots(ns, &mut HashSet::new());
 
             if let Expression::NumberLiteral(_, _, arr_length) = &array_length {
                 if arr_length.mul(elem_size.clone()).to_u64().is_some() {

@@ -295,7 +295,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let elem_size = binary.context.i32_type().const_int(
                 elem_ty
-                    .solana_storage_size(ns, HashSet::new())
+                    .solana_storage_size(ns, &mut HashSet::new())
                     .to_u64()
                     .unwrap(),
                 false,
@@ -347,7 +347,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .into_int_value();
 
         let member_size = binary.context.i32_type().const_int(
-            ty.storage_slots(ns, HashSet::new()).to_u64().unwrap(),
+            ty.storage_slots(ns, &mut HashSet::new()).to_u64().unwrap(),
             false,
         );
         let new_length = binary
@@ -487,7 +487,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary.builder.position_at_end(retrieve_block);
 
         let member_size = binary.context.i32_type().const_int(
-            ty.storage_slots(ns, HashSet::new()).to_u64().unwrap(),
+            ty.storage_slots(ns, &mut HashSet::new()).to_u64().unwrap(),
             false,
         );
 
@@ -544,7 +544,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .into_int_value();
 
         let member_size = binary.context.i32_type().const_int(
-            elem_ty.storage_slots(ns, HashSet::new()).to_u64().unwrap(),
+            elem_ty
+                .storage_slots(ns, &mut HashSet::new())
+                .to_u64()
+                .unwrap(),
             false,
         );
 
@@ -752,7 +755,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 };
 
                 let elem_size = elem_ty
-                    .solana_storage_size(ns, HashSet::new())
+                    .solana_storage_size(ns, &mut HashSet::new())
                     .to_u64()
                     .unwrap();
 
@@ -1012,7 +1015,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 // reallocate to the right size
                 let member_size = binary.context.i32_type().const_int(
                     elem_ty
-                        .solana_storage_size(ns, HashSet::new())
+                        .solana_storage_size(ns, &mut HashSet::new())
                         .to_u64()
                         .unwrap(),
                     false,
@@ -1072,7 +1075,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
 
             let elem_size = elem_ty
-                .solana_storage_size(ns, HashSet::new())
+                .solana_storage_size(ns, &mut HashSet::new())
                 .to_u64()
                 .unwrap();
 
@@ -1099,7 +1102,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 if elem_ty.deref_memory().is_fixed_reference_type(ns) {
                     elem.into()
                 } else {
-                    let load_ty = if elem_ty.is_dynamic(ns, HashSet::new()) {
+                    let load_ty = if elem_ty.is_dynamic(ns, &mut HashSet::new()) {
                         binary
                             .llvm_type(elem_ty.deref_memory(), ns)
                             .ptr_type(AddressSpace::default())
@@ -1162,7 +1165,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     if field.ty.is_fixed_reference_type(ns) {
                         elem.into()
                     } else {
-                        let load_ty = if field.ty.is_dynamic(ns, HashSet::new()) {
+                        let load_ty = if field.ty.is_dynamic(ns, &mut HashSet::new()) {
                             binary
                                 .llvm_type(&field.ty, ns)
                                 .ptr_type(AddressSpace::default())

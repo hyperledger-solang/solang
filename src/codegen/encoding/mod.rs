@@ -567,7 +567,11 @@ pub(super) trait AbiEncoding {
                 BigInt::from(n.next_power_of_two() / 8),
             ),
             Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
-                Expression::NumberLiteral(Codegen, Uint(32), ty.memory_size_of(ns, HashSet::new()))
+                Expression::NumberLiteral(
+                    Codegen,
+                    Uint(32),
+                    ty.memory_size_of(ns, &mut HashSet::new()),
+                )
             }
             Type::FunctionSelector => Expression::NumberLiteral(
                 Codegen,
@@ -586,7 +590,7 @@ pub(super) trait AbiEncoding {
             }
             Type::ExternalFunction { .. } => {
                 let selector_len: BigInt = ns.target.selector_length().into();
-                let mut address_size = Type::Address(false).memory_size_of(ns, HashSet::new());
+                let mut address_size = Type::Address(false).memory_size_of(ns, &mut HashSet::new());
                 address_size.add_assign(selector_len);
                 Expression::NumberLiteral(Codegen, Uint(32), address_size)
             }
@@ -637,7 +641,7 @@ pub(super) trait AbiEncoding {
 
         // Check if the array contains only fixed sized elements
         let primitive_size = if elem_ty.is_primitive() && direct_assessment {
-            Some(elem_ty.memory_size_of(ns, HashSet::new()))
+            Some(elem_ty.memory_size_of(ns, &mut HashSet::new()))
         } else if let Type::Struct(struct_ty) = elem_ty {
             if direct_assessment {
                 ns.calculate_struct_non_padded_size(struct_ty)
@@ -1131,7 +1135,7 @@ fn allow_direct_copy(
             let padded_size = struct_ty.struct_padded_size(ns);
             // This remainder tells us if padding is needed between the elements of an array
             let remainder =
-                padded_size.mod_floor(&elem_ty.struct_elem_alignment(ns, HashSet::new()));
+                padded_size.mod_floor(&elem_ty.struct_elem_alignment(ns, &mut HashSet::new()));
 
             no_padded_size.eq(&padded_size) && ns.target == Target::Solana && remainder.is_zero()
         } else {
@@ -1144,7 +1148,7 @@ fn allow_direct_copy(
         elem_ty.is_primitive()
     };
 
-    if array_ty.is_dynamic(ns, HashSet::new()) {
+    if array_ty.is_dynamic(ns, &mut HashSet::new()) {
         // If this is a dynamic array, we can only MemCpy if its elements are of
         // any primitive type and we don't need to index it.
         dims.len() == 1 && type_direct_copy
@@ -1165,7 +1169,7 @@ fn calculate_direct_copy_bytes_size(
         debug_assert!(matches!(item, &ArrayLength::Fixed(_)));
         elem_no.mul_assign(item.array_length().unwrap());
     }
-    let bytes = elem_ty.memory_size_of(ns, HashSet::new());
+    let bytes = elem_ty.memory_size_of(ns, &mut HashSet::new());
     elem_no.mul_assign(bytes);
     elem_no
 }
@@ -1177,7 +1181,7 @@ fn calculate_array_bytes_size(length_var: usize, elem_ty: &Type, ns: &Namespace)
     let size = Expression::NumberLiteral(
         Codegen,
         Uint(32),
-        elem_ty.memory_size_of(ns, HashSet::new()),
+        elem_ty.memory_size_of(ns, &mut HashSet::new()),
     );
     Expression::Multiply(Codegen, Uint(32), false, var.into(), size.into())
 }
@@ -1232,13 +1236,13 @@ impl StructType {
     fn struct_padded_size(&self, ns: &Namespace) -> BigInt {
         let mut total = BigInt::zero();
         for item in &self.definition(ns).fields {
-            let ty_align = item.ty.struct_elem_alignment(ns, HashSet::new());
+            let ty_align = item.ty.struct_elem_alignment(ns, &mut HashSet::new());
             let remainder = total.mod_floor(&ty_align);
             if !remainder.is_zero() {
                 let padding = ty_align.sub(remainder);
                 total.add_assign(padding);
             }
-            total.add_assign(item.ty.memory_size_of(ns, HashSet::new()));
+            total.add_assign(item.ty.memory_size_of(ns, &mut HashSet::new()));
         }
         total
     }

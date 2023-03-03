@@ -1550,7 +1550,7 @@ fn resolve_var_decl_ty(
         // will be stored in memory.
     }
 
-    if var_ty.contains_mapping(ns, HashSet::new()) && !var_ty.is_contract_storage() {
+    if var_ty.contains_mapping(ns, &mut HashSet::new()) && !var_ty.is_contract_storage() {
         diagnostics.push(Diagnostic::error(
             ty.loc(),
             "mapping only allowed in storage".to_string(),
@@ -1558,7 +1558,7 @@ fn resolve_var_decl_ty(
         return Err(());
     }
 
-    if !var_ty.is_contract_storage() && !var_ty.fits_in_memory(ns, HashSet::new()) {
+    if !var_ty.is_contract_storage() && !var_ty.fits_in_memory(ns, &mut HashSet::new()) {
         diagnostics.push(Diagnostic::error(
             ty.loc(),
             "type is too large to fit into memory".to_string(),

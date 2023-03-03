@@ -285,7 +285,7 @@ fn layout(contract_no: usize, ns: &mut Namespace) {
 
                 if ns.target == Target::Solana {
                     // elements need to be aligned on solana
-                    let alignment = ty.align_of(ns, HashSet::new());
+                    let alignment = ty.align_of(ns, &mut HashSet::new());
 
                     let offset = slot.clone() % alignment;
 
@@ -301,7 +301,7 @@ fn layout(contract_no: usize, ns: &mut Namespace) {
                     ty: ty.clone(),
                 });
 
-                slot += ty.storage_slots(ns, HashSet::new());
+                slot += ty.storage_slots(ns, &mut HashSet::new());
             }
         }
     }

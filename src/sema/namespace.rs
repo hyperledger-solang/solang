@@ -1389,7 +1389,7 @@ impl Namespace {
             name,
             params
                 .iter()
-                .map(|p| p.ty.to_signature_string(false, self, HashSet::new()))
+                .map(|p| p.ty.to_signature_string(false, self, &mut HashSet::new()))
                 .collect::<Vec<String>>()
                 .join(",")
         )

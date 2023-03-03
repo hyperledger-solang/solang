@@ -29,7 +29,7 @@ pub fn array_offset(
     elem_ty: Type,
     ns: &Namespace,
 ) -> Expression {
-    let elem_size = elem_ty.storage_slots(ns, HashSet::new());
+    let elem_size = elem_ty.storage_slots(ns, &mut HashSet::new());
     let slot_ty = ns.storage_type();
 
     // the index needs to be cast to i256 and multiplied by the number

@@ -476,7 +476,7 @@ pub(super) fn struct_literal(
     let ty = Type::Struct(*struct_ty);
 
     if ty
-        .contains_builtins(ns, &StructType::AccountInfo, HashSet::new())
+        .contains_builtins(ns, &StructType::AccountInfo, &mut HashSet::new())
         .is_some()
     {
         diagnostics.push(Diagnostic::error(
@@ -583,7 +583,7 @@ pub(super) fn named_struct_literal(
     let ty = Type::Struct(*str_ty);
 
     if ty
-        .contains_builtins(ns, &StructType::AccountInfo, HashSet::new())
+        .contains_builtins(ns, &StructType::AccountInfo, &mut HashSet::new())
         .is_some()
     {
         diagnostics.push(Diagnostic::error(

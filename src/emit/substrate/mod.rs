@@ -1546,7 +1546,7 @@ impl SubstrateTarget {
 
                 let elem_ty = ty.array_deref();
 
-                if elem_ty.is_dynamic(ns, HashSet::new()) {
+                if elem_ty.is_dynamic(ns, &mut HashSet::new()) {
                     let arg = if load {
                         let load_ty = binary.llvm_var_ty(ty, ns);
                         binary
@@ -1678,7 +1678,7 @@ impl SubstrateTarget {
                 let elem_ty = ty.array_deref();
                 let llvm_elem_ty = binary.llvm_field_ty(&elem_ty, ns);
 
-                if elem_ty.is_dynamic(ns, HashSet::new()) {
+                if elem_ty.is_dynamic(ns, &mut HashSet::new()) {
                     // if the array contains elements of dynamic length, we have to iterate over all of them
                     binary.emit_loop_cond_first_with_int(
                         function,
@@ -1792,7 +1792,10 @@ impl SubstrateTarget {
                 binary,
                 ns,
             ),
-            _ => unreachable!(),
+            _ => {
+                dbg!(&ty);
+                unreachable!()
+            }
         }
     }
 
