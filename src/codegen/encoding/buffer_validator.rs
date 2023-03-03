@@ -8,6 +8,7 @@ use crate::sema::ast::{Namespace, Type};
 use num_bigint::BigInt;
 use num_traits::Zero;
 use solang_parser::pt::Loc;
+use std::collections::HashSet;
 use std::ops::AddAssign;
 
 /// When we are decoding serialized data from a bytes array, we must constantly verify if
@@ -154,7 +155,7 @@ impl BufferValidator<'_> {
         // Calculate the what arguments we can validate
         let mut maximum_verifiable = self.current_arg;
         for i in self.current_arg..self.types.len() {
-            if !self.types[i].is_dynamic(ns) {
+            if !self.types[i].is_dynamic(ns, HashSet::new()) {
                 maximum_verifiable = i;
             } else {
                 break;
@@ -169,7 +170,7 @@ impl BufferValidator<'_> {
         // Create validation check
         let mut advance = BigInt::zero();
         for i in self.current_arg..=maximum_verifiable {
-            advance.add_assign(self.types[i].memory_size_of(ns));
+            advance.add_assign(self.types[i].memory_size_of(ns, HashSet::new()));
         }
 
         let reach = Expression::Add(

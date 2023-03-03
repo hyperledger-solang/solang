@@ -293,7 +293,7 @@ impl SolanaTarget {
         zero: bool,
         ns: &ast::Namespace,
     ) {
-        if !zero && !ty.is_dynamic(ns) {
+        if !zero && !ty.is_dynamic(ns, HashSet::new()) {
             // nothing to do
             return;
         }
@@ -326,7 +326,7 @@ impl SolanaTarget {
             let mut elem_slot = slot;
             let mut free_array = None;
 
-            if elem_ty.is_dynamic(ns) || zero {
+            if elem_ty.is_dynamic(ns, HashSet::new()) || zero {
                 let length = if let Some(ast::ArrayLength::Fixed(length)) = dim.last() {
                     binary
                         .context

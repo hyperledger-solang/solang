@@ -13,7 +13,7 @@ use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type, T
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::pt::{Loc, Loc::Codegen};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::{Add, AddAssign, MulAssign};
 
 use super::index_array;
@@ -63,7 +63,7 @@ impl AbiEncoding for BorshEncoding {
                 value: expr.external_function_selector(),
             },
         );
-        let mut size = Type::FunctionSelector.memory_size_of(ns);
+        let mut size = Type::FunctionSelector.memory_size_of(ns, HashSet::new());
         let offset = Expression::Add(
             Codegen,
             Uint(32),
@@ -212,7 +212,7 @@ impl BorshEncoding {
             | Type::Enum(_)
             | Type::Value
             | Type::Bytes(_) => {
-                let read_bytes = ty.memory_size_of(ns);
+                let read_bytes = ty.memory_size_of(ns, HashSet::new());
 
                 let size = Expression::NumberLiteral(Codegen, Uint(32), read_bytes);
                 validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
@@ -283,7 +283,7 @@ impl BorshEncoding {
             }
 
             Type::ExternalFunction { .. } => {
-                let selector_size = Type::FunctionSelector.memory_size_of(ns);
+                let selector_size = Type::FunctionSelector.memory_size_of(ns, HashSet::new());
                 // Extneral function has selector + address
                 let size = Expression::NumberLiteral(
                     Codegen,
@@ -525,13 +525,13 @@ impl BorshEncoding {
             && !dims[0..(dimension + 1)]
                 .iter()
                 .any(|d| *d == ArrayLength::Dynamic)
-            && !elem_ty.is_dynamic(ns)
+            && !elem_ty.is_dynamic(ns, HashSet::new())
         {
             let mut elems = BigInt::one();
             for item in &dims[0..(dimension + 1)] {
                 elems.mul_assign(item.array_length().unwrap());
             }
-            elems.mul_assign(elem_ty.memory_size_of(ns));
+            elems.mul_assign(elem_ty.memory_size_of(ns, HashSet::new()));
             let elems_size = Expression::NumberLiteral(Codegen, Uint(32), elems);
             validator.validate_offset_plus_size(offset_expr, &elems_size, ns, vartab, cfg);
             validator.validate_array();

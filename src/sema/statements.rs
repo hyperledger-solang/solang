@@ -1558,7 +1558,7 @@ fn resolve_var_decl_ty(
         return Err(());
     }
 
-    if !var_ty.is_contract_storage() && !var_ty.fits_in_memory(ns) {
+    if !var_ty.is_contract_storage() && !var_ty.fits_in_memory(ns, HashSet::new()) {
         diagnostics.push(Diagnostic::error(
             ty.loc(),
             "type is too large to fit into memory".to_string(),

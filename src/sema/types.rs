@@ -815,7 +815,9 @@ fn struct_offsets(ns: &mut Namespace) {
                     offset += alignment - remainder;
                 }
 
-                offsets.push(offset.clone());
+                if !field.unsizeable {
+                    offsets.push(offset.clone());
+                }
 
                 offset += field.ty.solana_storage_size(ns, HashSet::new());
             }
@@ -841,17 +843,19 @@ fn struct_offsets(ns: &mut Namespace) {
             let mut largest_alignment = BigInt::zero();
 
             for field in &ns.structs[struct_no].fields {
-                let alignment = field.ty.storage_align(ns, HashSet::new());
-                largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
-                let remainder = offset.clone() % alignment.clone();
+                if !field.unsizeable {
+                    let alignment = field.ty.storage_align(ns, HashSet::new());
+                    largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
+                    let remainder = offset.clone() % alignment.clone();
 
-                if remainder > BigInt::zero() {
-                    offset += alignment - remainder;
+                    if remainder > BigInt::zero() {
+                        offset += alignment - remainder;
+                    }
+
+                    storage_offsets.push(offset.clone());
+
+                    offset += field.ty.storage_slots(ns, HashSet::new());
                 }
-
-                storage_offsets.push(offset.clone());
-
-                offset += field.ty.storage_slots(ns, HashSet::new());
             }
 
             // add entry for overall size
@@ -1150,8 +1154,8 @@ impl Type {
     }
 
     /// Returns the size a type occupies in memory
-    pub fn memory_size_of(&self, ns: &Namespace) -> BigInt {
-        match self {
+    pub fn memory_size_of(&self, ns: &Namespace, structs_visited: HashSet<usize>) -> BigInt {
+        let f = |structs_visited: HashSet<usize>| match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
             Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
@@ -1161,7 +1165,7 @@ impl Type {
             Type::Rational => unreachable!(),
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(ns.target.ptr_size() / 8);
-                ty.memory_size_of(ns).mul(
+                ty.memory_size_of(ns, structs_visited).mul(
                     dims.iter()
                         .map(|d| match d {
                             ArrayLength::Dynamic => &pointer_size,
@@ -1175,7 +1179,7 @@ impl Type {
                 .definition(ns)
                 .fields
                 .iter()
-                .map(|d| d.ty.memory_size_of(ns))
+                .map(|d| d.ty.memory_size_of(ns, structs_visited.clone()))
                 .sum::<BigInt>(),
             Type::String
             | Type::DynamicBytes
@@ -1184,20 +1188,22 @@ impl Type {
             | Type::StorageRef(..) => BigInt::from(ns.target.ptr_size() / 8),
             Type::ExternalFunction { .. } => {
                 // Address and selector
-                Type::Address(false).memory_size_of(ns) + Type::Uint(32).memory_size_of(ns)
+                Type::Address(false).memory_size_of(ns, structs_visited.clone())
+                    + Type::Uint(32).memory_size_of(ns, structs_visited)
             }
             Type::Unresolved | Type::Mapping(..) => BigInt::zero(),
-            Type::UserType(no) => ns.user_types[*no].ty.memory_size_of(ns),
+            Type::UserType(no) => ns.user_types[*no].ty.memory_size_of(ns, structs_visited),
             Type::FunctionSelector => BigInt::from(ns.target.selector_length()),
             _ => unimplemented!("sizeof on {:?}", self),
-        }
+        };
+        self.recurse(structs_visited, f)
     }
 
     /// Retrieve the alignment for each type, if it is a struct member.
     /// Arrays are always reference types when declared as local variables. Inside structs, however,
     /// they are the object itself, if they are of fixed length.
-    pub fn struct_elem_alignment(&self, ns: &Namespace) -> BigInt {
-        match self {
+    pub fn struct_elem_alignment(&self, ns: &Namespace, structs_visited: HashSet<usize>) -> BigInt {
+        let f = |structs_visited: HashSet<usize>| match self {
             Type::Bool
             // Contract and address are arrays of u8, so they align with one.
             | Type::Contract(_)
@@ -1220,12 +1226,12 @@ impl Type {
                 if dims.iter().any(|d| *d == ArrayLength::Dynamic) {
                     BigInt::from(ns.target.ptr_size() / 8)
                 } else {
-                    ty.struct_elem_alignment(ns)
+                    ty.struct_elem_alignment(ns, structs_visited)
                 }
             }
 
             Type::Struct(def) => {
-                def.definition(ns).fields.iter().map(|d| d.ty.struct_elem_alignment(ns)).max().unwrap()
+                def.definition(ns).fields.iter().map(|d| d.ty.struct_elem_alignment(ns, structs_visited.clone())).max().unwrap()
             }
 
             Type::String
@@ -1235,13 +1241,14 @@ impl Type {
             | Type::StorageRef(..) => BigInt::from(ns.target.ptr_size() / 8),
 
             Type::ExternalFunction { .. } => {
-                Type::Address(false).struct_elem_alignment(ns)
+                Type::Address(false).struct_elem_alignment(ns, structs_visited)
             }
-            Type::UserType(no) => ns.user_types[*no].ty.struct_elem_alignment(ns),
+            Type::UserType(no) => ns.user_types[*no].ty.struct_elem_alignment(ns, structs_visited),
 
             _ => unreachable!("Type should not appear on a struct"),
 
-        }
+        };
+        self.recurse(structs_visited, f)
     }
 
     /// Calculate how much memory this type occupies in Solana's storage.
@@ -1273,14 +1280,16 @@ impl Type {
                 .ty
                 .solana_storage_size(ns, structs_visited),
             // Other types have the same size both in storage and in memory
-            _ => self.memory_size_of(ns),
+            _ => self.memory_size_of(ns, structs_visited),
         };
         self.recurse(structs_visited, f)
     }
 
     /// Does this type fit into memory
-    pub fn fits_in_memory(&self, ns: &Namespace) -> bool {
-        self.memory_size_of(ns) < BigInt::from(u16::MAX)
+    pub fn fits_in_memory(&self, ns: &Namespace, structs_visited: HashSet<usize>) -> bool {
+        self.recurse(structs_visited, |structs_visited| {
+            self.memory_size_of(ns, structs_visited) < BigInt::from(u16::MAX)
+        })
     }
 
     /// Calculate the alignment
@@ -1531,26 +1540,25 @@ impl Type {
     }
 
     /// Does this type contain any types which are variable-length
-    pub fn is_dynamic(&self, ns: &Namespace) -> bool {
-        match self {
+    pub fn is_dynamic(&self, ns: &Namespace, structs_visited: HashSet<usize>) -> bool {
+        self.recurse(structs_visited, |structs_visited| match self {
             Type::String | Type::DynamicBytes => true,
-            Type::Ref(r) => r.is_dynamic(ns),
+            Type::Ref(r) => r.is_dynamic(ns, structs_visited),
             Type::Array(ty, dim) => {
                 if dim.iter().any(|d| d == &ArrayLength::Dynamic) {
                     return true;
                 }
-
-                ty.is_dynamic(ns)
+                ty.is_dynamic(ns, structs_visited)
             }
             Type::Struct(str_ty) => str_ty
                 .definition(ns)
                 .fields
                 .iter()
-                .any(|f| f.ty.is_dynamic(ns)),
-            Type::StorageRef(_, r) => r.is_dynamic(ns),
+                .any(|f| f.ty.is_dynamic(ns, structs_visited.clone())),
+            Type::StorageRef(_, r) => r.is_dynamic(ns, structs_visited),
             Type::Slice(_) => true,
             _ => false,
-        }
+        })
     }
 
     /// Can this type have a calldata, memory, or storage location. This is to be

@@ -2040,7 +2040,7 @@ impl Namespace {
                 }
                 return None;
             } else {
-                size.add_assign(field.ty.memory_size_of(self));
+                size.add_assign(field.ty.memory_size_of(self, HashSet::new()));
             }
         }
 

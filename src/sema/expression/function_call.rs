@@ -18,7 +18,7 @@ use crate::Target;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Resolve a function call via function type
 /// Function types do not have names so call cannot be using named parameters
@@ -1379,7 +1379,11 @@ fn try_type_method(
                     Type::Bytes(_) => {
                         args_ty = Type::DynamicBytes;
                     }
-                    Type::Array(..) | Type::Struct(..) if !args_ty.is_dynamic(ns) => (),
+                    Type::Array(..) | Type::Struct(..)
+                        if !args_ty.is_dynamic(ns, HashSet::new()) =>
+                    {
+                        ()
+                    }
                     _ => {
                         diagnostics.push(Diagnostic::error(
                             args.loc(),

@@ -1099,7 +1099,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 if elem_ty.deref_memory().is_fixed_reference_type(ns) {
                     elem.into()
                 } else {
-                    let load_ty = if elem_ty.is_dynamic(ns) {
+                    let load_ty = if elem_ty.is_dynamic(ns, HashSet::new()) {
                         binary
                             .llvm_type(elem_ty.deref_memory(), ns)
                             .ptr_type(AddressSpace::default())
@@ -1162,7 +1162,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     if field.ty.is_fixed_reference_type(ns) {
                         elem.into()
                     } else {
-                        let load_ty = if field.ty.is_dynamic(ns) {
+                        let load_ty = if field.ty.is_dynamic(ns, HashSet::new()) {
                             binary
                                 .llvm_type(&field.ty, ns)
                                 .ptr_type(AddressSpace::default())
