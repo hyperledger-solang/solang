@@ -176,7 +176,7 @@ arguments. The ``@space`` should at least be the size given when you run ``solan
 
 .. code-block:: bash
 
-    $ solang compile --target solana -v examples/flipper.sol
+    $ solang compile --target solana -v examples/solana/flipper.sol
     ...
     info: contract flipper uses at least 17 bytes account data
     ...

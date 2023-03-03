@@ -27,34 +27,14 @@ brew install hyperledger/solang/solang
 
 For other operating systems, please check the [installation guide](https://solang.readthedocs.io/en/latest/installing.html).
 
-## Simple example
+## Simple examples
 
-After installing the compiler, write the following to flipper.sol:
+### Build for Solana
 
-```solidity
-contract flipper {
-	bool private value;
-
-	constructor(bool initvalue) public {
-		value = initvalue;
-	}
-
-	function flip() public {
-		value = !value;
-	}
-
-	function get() public view returns (bool) {
-		return value;
-	}
-}
-```
-
-## Build for Solana
-
-Run:
+Run the following command, selecting the flipper example available in Solang's repository:
 
 ```bash
-solang compile --target solana flipper.sol
+solang compile --target solana examples/solana/flipper.sol
 ```
 
 Alternatively if you want to use the solang container, run:
@@ -129,12 +109,12 @@ export ANCHOR_PROVIDER_URL=http://127.0.0.1:8899
 node flipper.js
 ```
 
-## Build for Substrate
+### Build for Substrate
 
-Run:
+Run the following command, selecting the flipper example available on Solang's repository:
 
 ```bash
-solang compile --target substrate flipper.sol
+solang compile --target substrate examples/substrate/flipper.sol
 ```
 
 Alternatively if you want to use the solang container, run:
