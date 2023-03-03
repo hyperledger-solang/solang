@@ -399,7 +399,7 @@ Precedence2: Expression = {
     <a:@L> "++" <e:Precedence2> <b:@R> => Expression::PreIncrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "--" <e:Precedence2> <b:@R> => Expression::PreDecrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "+" <e:Precedence2> <b:@R>  => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "-" <e:Precedence2> <b:@R> => Expression::UnaryMinus(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "-" <e:Precedence2> <b:@R> => Expression::Negate(Loc::File(file_no, a, b), Box::new(e)),
     <l:@L> "revert" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()}),
 
     Precedence1
@@ -712,7 +712,7 @@ Using: Box<Using> = {
         ty: None,
         global,
     }),
-  <l:@L> "using" <false_token:!> <r:@R> ";" => {
+    <l:@L> "using" <false_token:!> <r:@R> ";" => {
         parser_errors.push(false_token);
         let list = UsingList::Error();
         let global = None;
@@ -727,7 +727,31 @@ Using: Box<Using> = {
 
 UsingList: UsingList = {
     SolIdentifierPath => UsingList::Library(<>),
-    "{" <Comma<SolIdentifierPath>> "}" => UsingList::Functions(<>),
+    "{" <Comma<UsingFunction>> "}" => UsingList::Functions(<>),
+}
+
+UsingFunction: UsingFunction = {
+    <l:@L> <path:SolIdentifierPath> <oper:UserDefinedOperator?> <r:@R> => {
+        UsingFunction { loc: Loc::File(file_no, l, r), path, oper }
+    }
+}
+
+UserDefinedOperator: UserDefinedOperator = {
+    "as" "&" => UserDefinedOperator::BitwiseAnd,
+    "as" "~" => UserDefinedOperator::Complement,
+    "as" "|" => UserDefinedOperator::BitwiseOr,
+    "as" "^" => UserDefinedOperator::BitwiseXor,
+    "as" "+" => UserDefinedOperator::Add,
+    "as" "/" => UserDefinedOperator::Divide,
+    "as" "%" => UserDefinedOperator::Modulo,
+    "as" "*" => UserDefinedOperator::Multiply,
+    "as" "-" => UserDefinedOperator::Subtract,
+    "as" "==" => UserDefinedOperator::Equal,
+    "as" ">" => UserDefinedOperator::More,
+    "as" ">=" => UserDefinedOperator::MoreEqual,
+    "as" "<" => UserDefinedOperator::Less,
+    "as" "<=" => UserDefinedOperator::LessEqual,
+    "as" "!=" => UserDefinedOperator::NotEqual,
 }
 
 BlockStatement: Statement = {

@@ -406,7 +406,7 @@ pub enum Expression {
     Subscript(pt::Loc, Type, Type, Box<Expression>, Box<Expression>),
     Subtract(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
     Trunc(pt::Loc, Type, Box<Expression>),
-    UnaryMinus(pt::Loc, Type, Box<Expression>),
+    Negate(pt::Loc, Type, Box<Expression>),
     Undefined(Type),
     Variable(pt::Loc, Type, usize),
     ZeroExt(pt::Loc, Type, Box<Expression>),
@@ -451,7 +451,7 @@ impl CodeLocation for Expression {
             | Expression::Equal(loc, ..)
             | Expression::NotEqual(loc, ..)
             | Expression::Complement(loc, ..)
-            | Expression::UnaryMinus(loc, ..)
+            | Expression::Negate(loc, ..)
             | Expression::UnsignedLess(loc, ..)
             | Expression::SignedLess(loc, ..)
             | Expression::Not(loc, ..)
@@ -531,7 +531,7 @@ impl Recurse for Expression {
             | Expression::GetRef(_, _, exp)
             | Expression::Not(_, exp)
             | Expression::Trunc(_, _, exp)
-            | Expression::UnaryMinus(_, _, exp)
+            | Expression::Negate(_, _, exp)
             | Expression::ZeroExt(_, _, exp)
             | Expression::SignExt(_, _, exp)
             | Expression::Complement(_, _, exp)
@@ -608,7 +608,7 @@ impl RetrieveType for Expression {
             | Expression::ShiftRight(_, ty, ..)
             | Expression::Complement(_, ty, ..)
             | Expression::StorageArrayLength { ty, .. }
-            | Expression::UnaryMinus(_, ty, ..)
+            | Expression::Negate(_, ty, ..)
             | Expression::StructLiteral(_, ty, ..)
             | Expression::ArrayLiteral(_, ty, ..)
             | Expression::ConstArrayLiteral(_, ty, ..)
@@ -1125,8 +1125,8 @@ impl Expression {
                 Expression::Complement(loc, ty, expr) => {
                     Expression::Complement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
                 }
-                Expression::UnaryMinus(loc, ty, expr) => {
-                    Expression::UnaryMinus(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                Expression::Negate(loc, ty, expr) => {
+                    Expression::Negate(*loc, ty.clone(), Box::new(filter(expr, ctx)))
                 }
                 Expression::Subscript(loc, elem_ty, array_ty, left, right) => {
                     Expression::Subscript(

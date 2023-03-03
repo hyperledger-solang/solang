@@ -955,7 +955,7 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::UnaryMinus { loc, ty, expr } => {
+            Expression::Negate { loc, ty, expr } => {
                 let node = self.add_node(
                     Node::new(
                         "unary_minus",
@@ -1326,6 +1326,34 @@ impl Dot {
                     Some(parent),
                     Some(parent_rel),
                 );
+            }
+            Expression::UserDefinedOperator {
+                loc,
+                oper,
+                function_no,
+                args,
+                ..
+            } => {
+                let user_func = &ns.functions[*function_no];
+
+                let labels = vec![
+                    format!("user defined operator {} {}", oper, ns.loc_to_string(loc)),
+                    format!(
+                        "function {} {}",
+                        user_func.name,
+                        ns.loc_to_string(&user_func.loc)
+                    ),
+                ];
+
+                let node = self.add_node(
+                    Node::new("user_defined_operator", labels),
+                    Some(parent),
+                    Some(parent_rel),
+                );
+
+                for (no, arg) in args.iter().enumerate() {
+                    self.add_expression(arg, func, ns, node, format!("arg #{no}"));
+                }
             }
             Expression::List { loc, list } => {
                 let labels = vec![String::from("list"), ns.loc_to_string(loc)];
@@ -2420,10 +2448,16 @@ impl Namespace {
                 let mut labels = match &using.list {
                     UsingList::Functions(functions) => functions
                         .iter()
-                        .map(|func_no| {
-                            let func = &self.functions[*func_no];
+                        .map(|using| {
+                            let func = &self.functions[using.function_no];
 
-                            format!("function {} {}", func.name, self.loc_to_string(&func.loc))
+                            let mut label =
+                                format!("function {} {}", func.name, self.loc_to_string(&func.loc));
+
+                            if let Some(oper) = &using.oper {
+                                label.push_str(&format!(" for operator {oper}"));
+                            }
+                            label
                         })
                         .collect(),
                     UsingList::Library(library_no) => {

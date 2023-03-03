@@ -746,7 +746,7 @@ impl ControlFlowGraph {
             ),
             Expression::Not(_, e) => format!("!{}", self.expr_to_string(contract, ns, e)),
             Expression::Complement(_, _, e) => format!("~{}", self.expr_to_string(contract, ns, e)),
-            Expression::UnaryMinus(_, _, e) => format!("-{}", self.expr_to_string(contract, ns, e)),
+            Expression::Negate(_, _, e) => format!("-{}", self.expr_to_string(contract, ns, e)),
             Expression::Poison => "☠".to_string(),
             Expression::AllocDynamicBytes(_, ty, size, None) => {
                 let ty = if let Type::Slice(ty) = ty {
