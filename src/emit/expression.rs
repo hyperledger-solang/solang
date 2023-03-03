@@ -919,7 +919,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_int_z_extend(e, ty.into_int_type(), "")
                 .into()
         }
-        Expression::UnaryMinus(_, _, e) => {
+        Expression::Negate(_, _, e) => {
             let e = expression(target, bin, e, vartab, function, ns).into_int_value();
 
             bin.builder.build_int_neg(e, "").into()

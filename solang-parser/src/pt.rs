@@ -307,8 +307,81 @@ impl ContractPart {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum UsingList {
     Library(IdentifierPath),
-    Functions(Vec<IdentifierPath>),
+    Functions(Vec<UsingFunction>),
     Error(),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
+pub struct UsingFunction {
+    pub loc: Loc,
+    pub path: IdentifierPath,
+    pub oper: Option<UserDefinedOperator>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
+pub enum UserDefinedOperator {
+    BitwiseAnd,
+    Complement,
+    Negate,
+    BitwiseOr,
+    BitwiseXor,
+    Add,
+    Divide,
+    Modulo,
+    Multiply,
+    Subtract,
+    Equal,
+    More,
+    MoreEqual,
+    Less,
+    LessEqual,
+    NotEqual,
+}
+
+impl UserDefinedOperator {
+    pub fn args(&self) -> usize {
+        match self {
+            UserDefinedOperator::Complement | UserDefinedOperator::Negate => 1,
+            _ => 2,
+        }
+    }
+
+    pub fn is_comparison(&self) -> bool {
+        matches!(
+            self,
+            UserDefinedOperator::Equal
+                | UserDefinedOperator::NotEqual
+                | UserDefinedOperator::More
+                | UserDefinedOperator::Less
+                | UserDefinedOperator::MoreEqual
+                | UserDefinedOperator::LessEqual
+        )
+    }
+}
+
+impl fmt::Display for UserDefinedOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UserDefinedOperator::BitwiseAnd => write!(f, "&"),
+            UserDefinedOperator::Complement => write!(f, "~"),
+            UserDefinedOperator::Negate => write!(f, "-"),
+            UserDefinedOperator::BitwiseOr => write!(f, "|"),
+            UserDefinedOperator::BitwiseXor => write!(f, "^"),
+            UserDefinedOperator::Add => write!(f, "+"),
+            UserDefinedOperator::Divide => write!(f, "/"),
+            UserDefinedOperator::Modulo => write!(f, "%"),
+            UserDefinedOperator::Multiply => write!(f, "*"),
+            UserDefinedOperator::Subtract => write!(f, "-"),
+            UserDefinedOperator::Equal => write!(f, "=="),
+            UserDefinedOperator::More => write!(f, ">"),
+            UserDefinedOperator::MoreEqual => write!(f, ">="),
+            UserDefinedOperator::Less => write!(f, "<"),
+            UserDefinedOperator::LessEqual => write!(f, "<="),
+            UserDefinedOperator::NotEqual => write!(f, "!="),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -483,7 +556,7 @@ pub enum Expression {
     PreIncrement(Loc, Box<Expression>),
     PreDecrement(Loc, Box<Expression>),
     UnaryPlus(Loc, Box<Expression>),
-    UnaryMinus(Loc, Box<Expression>),
+    Negate(Loc, Box<Expression>),
     Power(Loc, Box<Expression>, Box<Expression>),
     Multiply(Loc, Box<Expression>, Box<Expression>),
     Divide(Loc, Box<Expression>, Box<Expression>),
@@ -548,7 +621,7 @@ impl CodeLocation for Expression {
             | Expression::PreIncrement(loc, _)
             | Expression::PreDecrement(loc, _)
             | Expression::UnaryPlus(loc, _)
-            | Expression::UnaryMinus(loc, _)
+            | Expression::Negate(loc, _)
             | Expression::Power(loc, ..)
             | Expression::Multiply(loc, ..)
             | Expression::Divide(loc, ..)

@@ -504,6 +504,8 @@ is called via the ABI encoder/decoder, it is not possible to pass references, ju
 However it is possible to use storage reference variables in public functions, as
 demonstrated in function all_pumas().
 
+.. _user_defined_types:
+
 User Defined Types
 __________________
 
@@ -516,3 +518,5 @@ is used, for example in function arguments or return values.
 
 Note that the wrapped value ``Value v`` cannot be used in any type of arithmetic or comparision. It needs to
 be unwrapped before it can be used.
+
+User Defined Types can be used with :ref:`user defined operators <user_defined_operators>`.

@@ -698,13 +698,13 @@ fn expression(
                 )
             }
         }
-        Expression::UnaryMinus(loc, ty, expr) => {
+        Expression::Negate(loc, ty, expr) => {
             let expr = expression(expr, vars, cfg, ns);
             if let Expression::NumberLiteral(_, _, n) = expr.0 {
                 bigint_to_expression(loc, ty, -n)
             } else {
                 (
-                    Expression::UnaryMinus(*loc, ty.clone(), Box::new(expr.0)),
+                    Expression::Negate(*loc, ty.clone(), Box::new(expr.0)),
                     expr.1,
                 )
             }

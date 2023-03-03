@@ -6,7 +6,9 @@ will be documented here.
 
 ### Added
 - The Solana units `sol` and `lamports` are now supported, e.g. `10 sol` and `100 lamports`.
-   [seanyoung](https://github.com/seanyoung)
+  [seanyoung](https://github.com/seanyoung)
+- User defined operators are now supported. This is a feature in Ethereum Solidity v0.8.19.
+  [seanyoung](https://github.com/seanyoung)
 
 ### Fixed
 - Solana: contracts with a seed for the constructor do not require a signer in the Anchor IDL

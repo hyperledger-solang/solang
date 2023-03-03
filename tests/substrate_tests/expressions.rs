@@ -1544,7 +1544,7 @@ fn bytesn_overflow_index_acccess() {
 }
 
 #[test]
-fn unaryminus_and_subtract() {
+fn negation_and_subtract() {
     // The minus sign can be a unary negative or subtract.
     let mut runtime = build_solidity(
         r#"
