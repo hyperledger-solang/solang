@@ -31,6 +31,7 @@ use num_bigint::BigInt;
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, Loc};
+use std::collections::HashSet;
 use std::{cmp::Ordering, ops::Mul};
 
 pub fn expression(
@@ -591,7 +592,7 @@ pub fn expression(
                 } else {
                     struct_ty.definition(ns).fields[..*field_no]
                         .iter()
-                        .map(|field| field.ty.storage_slots(ns))
+                        .map(|field| field.ty.storage_slots(ns, HashSet::new()))
                         .sum()
                 };
 
@@ -2967,7 +2968,7 @@ fn array_subscript(
                 }
             }
         } else {
-            let elem_size = elem_ty.storage_slots(ns);
+            let elem_size = elem_ty.storage_slots(ns, HashSet::new());
 
             if let Expression::NumberLiteral(_, _, arr_length) = &array_length {
                 if arr_length.mul(elem_size.clone()).to_u64().is_some() {

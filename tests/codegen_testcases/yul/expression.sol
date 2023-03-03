@@ -129,7 +129,7 @@ contract testing {
             // CHECK: ty:uint256 %k = uint256 16
             let k := storage_vec.slot
 
-            // CHECK: ty:uint256 %l = uint32 24
+            // CHECK: ty:uint256 %l = uint32 20
             let l := l_storage_vec.slot
 
             // CHECK: ty:uint256 %m = uint256 0

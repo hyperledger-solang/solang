@@ -13,7 +13,6 @@ use super::{
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use indexmap::IndexMap;
-use itertools::structs;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
@@ -808,7 +807,7 @@ fn struct_offsets(ns: &mut Namespace) {
             let mut largest_alignment = 0;
 
             for field in &ns.structs[struct_no].fields {
-                let alignment = field.ty.align_of(ns);
+                let alignment = field.ty.align_of(ns, HashSet::new());
                 largest_alignment = std::cmp::max(alignment, largest_alignment);
                 let remainder = offset.clone() % alignment;
 
@@ -855,7 +854,7 @@ fn struct_offsets(ns: &mut Namespace) {
 
                     storage_offsets.push(offset.clone());
 
-                    offset += field.ty.storage_slots(ns);
+                    offset += field.ty.storage_slots(ns, HashSet::new());
                 }
             }
 
@@ -998,8 +997,13 @@ impl Type {
     }
 
     /// The eth abi file wants to hear "tuple" rather than "(ty, ty)"
-    pub fn to_signature_string(&self, say_tuple: bool, ns: &Namespace) -> String {
-        let f = |t: &Type, ns: &Namespace| match t {
+    pub fn to_signature_string(
+        &self,
+        say_tuple: bool,
+        ns: &Namespace,
+        structs_visited: HashSet<usize>,
+    ) -> String {
+        let f = |structs_visited: HashSet<usize>| match self {
             Type::Bool => "bool".to_string(),
             Type::Contract(_) | Type::Address(_) if ns.target == Target::Solana => {
                 format!("bytes{}", ns.address_length)
@@ -1011,10 +1015,12 @@ impl Type {
             Type::Bytes(n) => format!("bytes{n}"),
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
-            Type::Enum(n) => ns.enums[*n].ty.to_signature_string(say_tuple, ns),
+            Type::Enum(n) => ns.enums[*n]
+                .ty
+                .to_signature_string(say_tuple, ns, structs_visited),
             Type::Array(ty, len) => format!(
                 "{}{}",
-                ty.to_signature_string(say_tuple, ns),
+                ty.to_signature_string(say_tuple, ns, structs_visited),
                 len.iter()
                     .map(|len| match len {
                         ArrayLength::Fixed(len) => format!("[{len}]"),
@@ -1032,20 +1038,25 @@ impl Type {
                         .definition(ns)
                         .fields
                         .iter()
-                        .map(|f| f.ty.to_signature_string(say_tuple, ns))
+                        .map(|f| f
+                            .ty
+                            .to_signature_string(say_tuple, ns, structs_visited.clone()))
                         .collect::<Vec<String>>()
                         .join(",")
                 )
             }
             Type::InternalFunction { .. } | Type::ExternalFunction { .. } => "function".to_owned(),
-            Type::UserType(n) => ns.user_types[*n].ty.to_signature_string(say_tuple, ns),
+            Type::UserType(n) => {
+                ns.user_types[*n]
+                    .ty
+                    .to_signature_string(say_tuple, ns, structs_visited)
+            }
             // TODO: should an unresolved type not match another unresolved type?
             Type::Unresolved => "unresolved".to_owned(),
             Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
-            _ => "".to_owned(),
+            _ => unreachable!(),
         };
-        let result = self.recurse(ns, f)[0].to_owned();
-        result
+        self.recurse(structs_visited, f)
     }
 
     /// Give the type of a memory array after dereference
@@ -1274,16 +1285,23 @@ impl Type {
     }
 
     /// Calculate the alignment
-    pub fn align_of(&self, ns: &Namespace) -> usize {
-        let f = |t: &Type, ns: &Namespace| match t {
+    pub fn align_of(&self, ns: &Namespace, structs_visited: HashSet<usize>) -> usize {
+        let f = |structs_visited: HashSet<usize>| match self {
             Type::Uint(8) | Type::Int(8) => 1,
             Type::Uint(n) | Type::Int(n) if *n <= 16 => 2,
             Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
             Type::Uint(_) | Type::Int(_) => 8,
+            Type::Struct(str_ty) => str_ty
+                .definition(ns)
+                .fields
+                .iter()
+                .map(|f| f.ty.align_of(ns, structs_visited.clone()))
+                .max()
+                .unwrap(),
             Type::InternalFunction { .. } => ns.target.ptr_size().into(),
-            _ => 1 as usize,
+            _ => 1,
         };
-        *self.recurse(ns, f).iter().max().unwrap()
+        self.recurse(structs_visited, f)
     }
 
     pub fn bytes(&self, ns: &Namespace) -> u8 {
@@ -1341,92 +1359,97 @@ impl Type {
     }
 
     pub fn is_rational(&self, ns: &Namespace) -> bool {
-        self.recurse(ns, |t: &Type, _| matches!(t, Type::Rational))[0]
+        match self {
+            Type::Rational => true,
+            Type::Ref(r) => r.is_rational(ns),
+            Type::StorageRef(_, r) => r.is_rational(ns),
+            _ => false,
+        }
     }
 
     /// Calculate how many storage slots a type occupies. Note that storage arrays can
     /// be very large
-    pub fn storage_slots(&self, ns: &Namespace) -> BigInt {
-        if ns.target == Target::Solana {
-            match self {
-                Type::Enum(_) => BigInt::one(),
-                Type::Bool => BigInt::one(),
-                Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
-                Type::Bytes(n) => BigInt::from(*n),
-                Type::Value => BigInt::from(ns.value_length),
-                Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
-                Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
-                    BigInt::from(4)
+    pub fn storage_slots(&self, ns: &Namespace, structs_visited: HashSet<usize>) -> BigInt {
+        let f = |structs_visited: HashSet<usize>| {
+            if ns.target == Target::Solana {
+                match self {
+                    Type::Enum(_) => BigInt::one(),
+                    Type::Bool => BigInt::one(),
+                    Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
+                    Type::Bytes(n) => BigInt::from(*n),
+                    Type::Value => BigInt::from(ns.value_length),
+                    Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
+                    Type::Rational => unreachable!(),
+                    Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                        BigInt::from(4)
+                    }
+                    Type::Array(ty, dims) => {
+                        let pointer_size = BigInt::from(4);
+                        if self.is_sparse_solana(ns) {
+                            BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4)
+                        } else {
+                            ty.storage_slots(ns, structs_visited).mul(
+                                dims.iter()
+                                    .map(|d| match d {
+                                        ArrayLength::Dynamic => &pointer_size,
+                                        ArrayLength::Fixed(d) => d,
+                                        ArrayLength::AnyFixed => {
+                                            panic!("unknown length");
+                                        }
+                                    })
+                                    .product::<BigInt>(),
+                            )
+                        }
+                    }
+                    Type::Struct(str_ty) => str_ty
+                        .definition(ns)
+                        .storage_offsets
+                        .last()
+                        .cloned()
+                        .unwrap_or_else(BigInt::zero),
+                    Type::String | Type::DynamicBytes => BigInt::from(4),
+                    Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
+                    Type::ExternalFunction { .. } => {
+                        // Address and selector
+                        BigInt::from(ns.address_length + 4)
+                    }
+                    Type::Mapping(..) => BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4),
+                    Type::Ref(ty) | Type::StorageRef(_, ty) => {
+                        ty.storage_slots(ns, structs_visited)
+                    }
+                    Type::Unresolved => BigInt::one(),
+                    Type::UserType(no) => ns.user_types[*no].ty.storage_slots(ns, structs_visited),
+                    _ => unimplemented!(),
                 }
-                Type::Array(ty, dims) => {
-                    let pointer_size = BigInt::from(4);
-                    if self.is_sparse_solana(ns) {
-                        BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4)
-                    } else {
-                        ty.storage_slots(ns).mul(
-                            dims.iter()
-                                .map(|d| match d {
-                                    ArrayLength::Dynamic => &pointer_size,
-                                    ArrayLength::Fixed(d) => d,
+            } else {
+                match self {
+                    Type::StorageRef(_, r) | Type::Ref(r) => r.storage_slots(ns, structs_visited),
+                    Type::Struct(str_ty) => str_ty
+                        .definition(ns)
+                        .fields
+                        .iter()
+                        .map(|f| f.ty.storage_slots(ns, structs_visited.clone()))
+                        .sum(),
+                    Type::Array(ty, dims) => {
+                        let one = BigInt::one();
+
+                        ty.storage_slots(ns, structs_visited)
+                            * dims
+                                .iter()
+                                .map(|len| match len {
+                                    ArrayLength::Dynamic => &one,
+                                    ArrayLength::Fixed(len) => len,
                                     ArrayLength::AnyFixed => {
-                                        panic!("unknown length");
+                                        unreachable!("unknown length")
                                     }
                                 })
-                                .product::<BigInt>(),
-                        )
+                                .product::<BigInt>()
                     }
+                    _ => BigInt::one(),
                 }
-                Type::Struct(str_ty) => str_ty
-                    .definition(ns)
-                    .storage_offsets
-                    .last()
-                    .cloned()
-                    .unwrap_or_else(BigInt::zero),
-                Type::String | Type::DynamicBytes => BigInt::from(4),
-                Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
-                Type::ExternalFunction { .. } => {
-                    // Address and selector
-                    BigInt::from(ns.address_length + 4)
-                }
-                Type::Mapping(..) => BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4),
-                Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_slots(ns),
-                Type::Unresolved => BigInt::one(),
-                _ => unimplemented!(),
             }
-        } else {
-            match self {
-                Type::StorageRef(_, r) | Type::Ref(r) => r.storage_slots(ns),
-                Type::Struct(str_ty) => str_ty
-                    .definition(ns)
-                    .fields
-                    .iter()
-                    .map(|f| {
-                        if f.unsizeable {
-                            BigInt::one()
-                        } else {
-                            f.ty.storage_slots(ns)
-                        }
-                    })
-                    .sum(),
-                Type::Array(ty, dims) => {
-                    let one = BigInt::one();
-
-                    ty.storage_slots(ns)
-                        * dims
-                            .iter()
-                            .map(|len| match len {
-                                ArrayLength::Dynamic => &one,
-                                ArrayLength::Fixed(len) => len,
-                                ArrayLength::AnyFixed => {
-                                    unreachable!("unknown length")
-                                }
-                            })
-                            .product::<BigInt>()
-                }
-                _ => BigInt::one(),
-            }
-        }
+        };
+        self.recurse(structs_visited, f)
     }
 
     /// Alignment of elements in storage
@@ -1729,7 +1752,7 @@ impl Type {
             Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => false,
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
-                let len = ty.storage_slots(ns).mul(
+                let len = ty.storage_slots(ns, HashSet::new()).mul(
                     dims.iter()
                         .map(|d| match d {
                             ArrayLength::Fixed(d) => d,
@@ -1745,57 +1768,18 @@ impl Type {
     }
 
     /// Recursively walk over a type.
-    /// Accounts for the possibility of infinitively recursive types.
-    pub fn recurse<F, O>(&self, ns: &Namespace, f: F) -> Vec<O>
+    /// This function protects against overflows on infinitively recursive types.
+    fn recurse<F, O>(&self, mut structs_visited: HashSet<usize>, f: F) -> O
     where
-        F: FnMut(&Type, &Namespace) -> O + Clone,
+        F: FnOnce(HashSet<usize>) -> O,
+        O: Default,
     {
-        self.recurse_internal(HashSet::new(), ns, f).0
-    }
-
-    fn recurse_internal<F, O>(
-        &self,
-        mut structs_visited: HashSet<StructDecl>,
-        ns: &Namespace,
-        mut f: F,
-    ) -> (Vec<O>, HashSet<StructDecl>)
-    where
-        F: FnMut(&Type, &Namespace) -> O + Clone,
-    {
-        let mut type_info = vec![f(&self, ns)];
-        let recursive = match &self {
-            Type::Array(t, _) => t.recurse_internal(structs_visited, ns, f),
-            Type::Struct(s) => {
-                let def = s.definition(ns);
-                let mut type_info = vec![];
-                if structs_visited.insert(def.clone()) {
-                    for field in def.fields.iter() {
-                        let field_info =
-                            field
-                                .ty
-                                .recurse_internal(structs_visited.clone(), ns, f.clone());
-                        structs_visited.extend(field_info.1);
-                        type_info.extend(field_info.0);
-                    }
-                }
-                (type_info, structs_visited)
+        if let Type::Struct(StructType::UserDefined(n)) = &self {
+            if !structs_visited.insert(*n) {
+                return O::default();
             }
-            Type::Mapping(m) => {
-                let mut left = m.key.recurse_internal(structs_visited, ns, f.clone());
-                let mut right = m.value.recurse_internal(left.1, ns, f);
-                right.0.append(&mut left.0);
-                right
-            }
-            Type::Ref(t) => t.recurse_internal(structs_visited, ns, f),
-            Type::StorageRef(_, t) => t.recurse_internal(structs_visited, ns, f),
-            Type::Slice(t) => t.recurse_internal(structs_visited, ns, f),
-            Type::UserType(n) => ns.user_types[*n]
-                .ty
-                .recurse_internal(structs_visited, ns, f),
-            _ => (vec![], HashSet::new()),
-        };
-        type_info.extend(recursive.0);
-        (type_info, recursive.1)
+        }
+        f(structs_visited)
     }
 }
 

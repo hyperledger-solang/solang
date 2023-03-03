@@ -111,7 +111,7 @@ contract EncodingTest {
     function complexArray() public view returns (bytes memory) {
         bytes memory b = abi.encode(complex_array);
 
-        // CHECK: %temp.21 = load storage slot(uint32 24) ty:struct EncodingTest.NonConstantStruct[]
+        // CHECK: %temp.21 = load storage slot(uint32 20) ty:struct EncodingTest.NonConstantStruct[]
         // CHECK: ty:uint32 %array_bytes_size_0.temp.22 = uint32 4
         // CHECK: ty:uint32 %for_i_0.temp.23 = uint32 0
         // CHECK: branch block1

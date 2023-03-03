@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+
 use crate::emit::binary::Binary;
 use crate::emit::storage::StorageSlot;
 use crate::emit::substrate::{log_return_code, SubstrateTarget};
@@ -410,7 +412,11 @@ impl StorageSlot for SubstrateTarget {
                             if !elem_ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &elem_ty.storage_slots(ns), ns),
+                                    bin.number_literal(
+                                        256,
+                                        &elem_ty.storage_slots(ns, HashSet::new()),
+                                        ns,
+                                    ),
                                     "",
                                 );
                             }
@@ -517,7 +523,11 @@ impl StorageSlot for SubstrateTarget {
                             if !elem_ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &elem_ty.storage_slots(ns), ns),
+                                    bin.number_literal(
+                                        256,
+                                        &elem_ty.storage_slots(ns, HashSet::new()),
+                                        ns,
+                                    ),
                                     "",
                                 );
                             }
@@ -537,7 +547,11 @@ impl StorageSlot for SubstrateTarget {
                             if !elem_ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &elem_ty.storage_slots(ns), ns),
+                                    bin.number_literal(
+                                        256,
+                                        &elem_ty.storage_slots(ns, HashSet::new()),
+                                        ns,
+                                    ),
                                     "",
                                 );
                             }
@@ -584,7 +598,11 @@ impl StorageSlot for SubstrateTarget {
                     {
                         *slot = bin.builder.build_int_add(
                             *slot,
-                            bin.number_literal(256, &field.ty.storage_slots(ns), ns),
+                            bin.number_literal(
+                                256,
+                                &field.ty.storage_slots(ns, HashSet::new()),
+                                ns,
+                            ),
                             field.name_as_str(),
                         );
                     }
@@ -696,7 +714,11 @@ impl StorageSlot for SubstrateTarget {
                             if !ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
+                                    bin.number_literal(
+                                        256,
+                                        &ty.storage_slots(ns, HashSet::new()),
+                                        ns,
+                                    ),
                                     "",
                                 );
                             }
@@ -742,7 +764,11 @@ impl StorageSlot for SubstrateTarget {
                             if !ty.is_reference_type(ns) {
                                 *slot = bin.builder.build_int_add(
                                     *slot,
-                                    bin.number_literal(256, &ty.storage_slots(ns), ns),
+                                    bin.number_literal(
+                                        256,
+                                        &ty.storage_slots(ns, HashSet::new()),
+                                        ns,
+                                    ),
                                     "",
                                 );
                             }
@@ -762,7 +788,11 @@ impl StorageSlot for SubstrateTarget {
                     {
                         *slot = bin.builder.build_int_add(
                             *slot,
-                            bin.number_literal(256, &field.ty.storage_slots(ns), ns),
+                            bin.number_literal(
+                                256,
+                                &field.ty.storage_slots(ns, HashSet::new()),
+                                ns,
+                            ),
                             field.name_as_str(),
                         );
                     }
