@@ -329,6 +329,22 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .iter()
                         .map(|(exp, goto)| (expression(exp, Some(&vars), cfg, ns).0, *goto))
                         .collect::<Vec<(Expression, usize)>>();
+
+                    if let Expression::NumberLiteral(_, _, num) = &cond.0 {
+                        let mut simplified_branch = None;
+                        for (match_item, block) in &cases {
+                            if let Expression::NumberLiteral(_, _, match_num) = match_item {
+                                if match_num == num {
+                                    simplified_branch = Some(*block);
+                                }
+                            }
+                        }
+                        cfg.blocks[block_no].instr[instr_no] = Instr::Branch {
+                            block: simplified_branch.unwrap_or(*default),
+                        };
+                        continue;
+                    }
+
                     cfg.blocks[block_no].instr[instr_no] = Instr::Switch {
                         cond: cond.0,
                         cases,

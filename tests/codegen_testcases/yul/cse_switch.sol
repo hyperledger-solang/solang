@@ -2,14 +2,12 @@
 
 contract foo {
     // BEGIN-CHECK: foo::foo::function::test
-    function test() public {
+    function test(uint x) public {
         uint256 yy=0;
         assembly {
         // Ensure the CSE temp is not before the switch
-        // CHECK: ty:uint256 %x = uint256 54
         // CHECK: ty:uint256 %y = uint256 5
-	    // CHECK: switch uint256 2:
-            let x := 54
+	    // CHECK: switch ((arg #0) & uint256 3):
             let y := 5
 
             switch and(x, 3)
