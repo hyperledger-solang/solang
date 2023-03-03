@@ -4,6 +4,7 @@ pub(super) mod target;
 
 use crate::sema::ast;
 use crate::Target;
+use std::collections::HashSet;
 use std::str;
 
 use crate::codegen::{cfg::ReturnCode, Options};
@@ -342,7 +343,10 @@ impl SolanaTarget {
                     self.storage_array_length(binary, function, slot, elem_ty, ns)
                 };
 
-                let elem_size = elem_ty.solana_storage_size(ns).to_u64().unwrap();
+                let elem_size = elem_ty
+                    .solana_storage_size(ns, HashSet::new())
+                    .to_u64()
+                    .unwrap();
 
                 // loop over the array
                 let mut builder = LoopBuilder::new(binary, function);

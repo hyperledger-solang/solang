@@ -613,7 +613,7 @@ fn event_decl(
             }
         };
 
-        if ty.contains_mapping(ns) {
+        if ty.contains_mapping(ns, HashSet::new()) {
             ns.diagnostics.push(Diagnostic::error(
                 field.loc,
                 "mapping type is not permitted as event field".to_string(),
@@ -817,9 +817,7 @@ fn struct_offsets(ns: &mut Namespace) {
 
                 offsets.push(offset.clone());
 
-                if !field.unsizeable {
-                    offset += field.ty.solana_storage_size(ns);
-                }
+                offset += field.ty.solana_storage_size(ns, HashSet::new());
             }
 
             // add entry for overall size
@@ -843,19 +841,17 @@ fn struct_offsets(ns: &mut Namespace) {
             let mut largest_alignment = BigInt::zero();
 
             for field in &ns.structs[struct_no].fields {
-                if !field.unsizeable {
-                    let alignment = field.ty.storage_align(ns);
-                    largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
-                    let remainder = offset.clone() % alignment.clone();
+                let alignment = field.ty.storage_align(ns, HashSet::new());
+                largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
+                let remainder = offset.clone() % alignment.clone();
 
-                    if remainder > BigInt::zero() {
-                        offset += alignment - remainder;
-                    }
-
-                    storage_offsets.push(offset.clone());
-
-                    offset += field.ty.storage_slots(ns, HashSet::new());
+                if remainder > BigInt::zero() {
+                    offset += alignment - remainder;
                 }
+
+                storage_offsets.push(offset.clone());
+
+                offset += field.ty.storage_slots(ns, HashSet::new());
             }
 
             // add entry for overall size
@@ -1251,11 +1247,11 @@ impl Type {
     /// Calculate how much memory this type occupies in Solana's storage.
     /// Depending on the llvm implementation there might be padding between elements
     /// which is not accounted for.
-    pub fn solana_storage_size(&self, ns: &Namespace) -> BigInt {
-        match self {
+    pub fn solana_storage_size(&self, ns: &Namespace, structs_visited: HashSet<usize>) -> BigInt {
+        let f = |structs_visited: HashSet<usize>| match self {
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
-                ty.solana_storage_size(ns).mul(
+                ty.solana_storage_size(ns, structs_visited).mul(
                     dims.iter()
                         .map(|d| match d {
                             ArrayLength::Dynamic => &pointer_size,
@@ -1272,11 +1268,14 @@ impl Type {
                 .cloned()
                 .unwrap_or_else(BigInt::zero),
             Type::String | Type::DynamicBytes => BigInt::from(4),
-            Type::Ref(ty) | Type::StorageRef(_, ty) => ty.solana_storage_size(ns),
-            Type::UserType(no) => ns.user_types[*no].ty.solana_storage_size(ns),
+            Type::Ref(ty) | Type::StorageRef(_, ty) => ty.solana_storage_size(ns, structs_visited),
+            Type::UserType(no) => ns.user_types[*no]
+                .ty
+                .solana_storage_size(ns, structs_visited),
             // Other types have the same size both in storage and in memory
             _ => self.memory_size_of(ns),
-        }
+        };
+        self.recurse(structs_visited, f)
     }
 
     /// Does this type fit into memory
@@ -1453,56 +1452,55 @@ impl Type {
     }
 
     /// Alignment of elements in storage
-    pub fn storage_align(&self, ns: &Namespace) -> BigInt {
-        if ns.target == Target::Solana {
-            let length = match self {
-                Type::Enum(_) => BigInt::one(),
-                Type::Bool => BigInt::one(),
-                Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
-                Type::Bytes(n) => BigInt::from(*n),
-                Type::Value => BigInt::from(ns.value_length),
-                Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
-                Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
-                    BigInt::from(4)
-                }
-                Type::Array(ty, _) => {
-                    if self.is_sparse_solana(ns) {
+    pub fn storage_align(&self, ns: &Namespace, structs_visited: HashSet<usize>) -> BigInt {
+        let f = |structs_visited: HashSet<usize>| {
+            if ns.target == Target::Solana {
+                let length = match self {
+                    Type::Enum(_) => BigInt::one(),
+                    Type::Bool => BigInt::one(),
+                    Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
+                    Type::Bytes(n) => BigInt::from(*n),
+                    Type::Value => BigInt::from(ns.value_length),
+                    Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
+                    Type::Rational => unreachable!(),
+                    Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
                         BigInt::from(4)
-                    } else {
-                        ty.storage_align(ns)
                     }
-                }
-                Type::Struct(str_ty) => str_ty
-                    .definition(ns)
-                    .fields
-                    .iter()
-                    .map(|field| {
-                        if field.unsizeable {
-                            BigInt::one()
+                    Type::Array(ty, _) => {
+                        if self.is_sparse_solana(ns) {
+                            BigInt::from(4)
                         } else {
-                            field.ty.storage_align(ns)
+                            ty.storage_align(ns, structs_visited)
                         }
-                    })
-                    .max()
-                    .unwrap(),
-                Type::String | Type::DynamicBytes => BigInt::from(4),
-                Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
-                Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
-                Type::Mapping(..) => BigInt::from(4),
-                Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_align(ns),
-                Type::Unresolved => BigInt::one(),
-                _ => unimplemented!(),
-            };
+                    }
+                    Type::Struct(str_ty) => str_ty
+                        .definition(ns)
+                        .fields
+                        .iter()
+                        .map(|field| field.ty.storage_align(ns, structs_visited.clone()))
+                        .max()
+                        .unwrap(),
+                    Type::String | Type::DynamicBytes => BigInt::from(4),
+                    Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
+                    Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
+                    Type::Mapping(..) => BigInt::from(4),
+                    Type::Ref(ty) | Type::StorageRef(_, ty) => {
+                        ty.storage_align(ns, structs_visited)
+                    }
+                    Type::Unresolved => BigInt::one(),
+                    _ => unimplemented!(),
+                };
 
-            if length > BigInt::from(8) {
-                BigInt::from(8)
+                if length > BigInt::from(8) {
+                    BigInt::from(8)
+                } else {
+                    length
+                }
             } else {
-                length
+                BigInt::one()
             }
-        } else {
-            BigInt::one()
-        }
+        };
+        self.recurse(structs_visited, f)
     }
 
     /// Is this type an reference type in the solidity language? (struct, array, mapping)
@@ -1610,33 +1608,41 @@ impl Type {
     }
 
     /// Does the type contain any mapping type
-    pub fn contains_mapping(&self, ns: &Namespace) -> bool {
-        match self {
+    pub fn contains_mapping(&self, ns: &Namespace, structs_visited: HashSet<usize>) -> bool {
+        let f = |structs_visited: HashSet<usize>| match self {
             Type::Mapping(..) => true,
-            Type::Array(ty, _) => ty.contains_mapping(ns),
+            Type::Array(ty, _) => ty.contains_mapping(ns, structs_visited),
             Type::Struct(str_ty) => str_ty
                 .definition(ns)
                 .fields
                 .iter()
-                .any(|f| !f.unsizeable && f.ty.contains_mapping(ns)),
-            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_mapping(ns),
+                .any(|f| f.ty.contains_mapping(ns, structs_visited.clone())),
+            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_mapping(ns, structs_visited),
             _ => false,
-        }
+        };
+        self.recurse(structs_visited, f)
     }
 
     /// Does the type contain any internal function type
-    pub fn contains_internal_function(&self, ns: &Namespace) -> bool {
-        match self {
+    pub fn contains_internal_function(
+        &self,
+        ns: &Namespace,
+        structs_visited: HashSet<usize>,
+    ) -> bool {
+        let f = |structs_visited: HashSet<usize>| match self {
             Type::InternalFunction { .. } => true,
-            Type::Array(ty, _) => ty.contains_internal_function(ns),
+            Type::Array(ty, _) => ty.contains_internal_function(ns, structs_visited),
             Type::Struct(str_ty) => str_ty
                 .definition(ns)
                 .fields
                 .iter()
-                .any(|f| !f.unsizeable && f.ty.contains_internal_function(ns)),
-            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_internal_function(ns),
+                .any(|f| f.ty.contains_internal_function(ns, structs_visited.clone())),
+            Type::StorageRef(_, r) | Type::Ref(r) => {
+                r.contains_internal_function(ns, structs_visited)
+            }
             _ => false,
-        }
+        };
+        self.recurse(structs_visited, f)
     }
 
     /// Is this structure a builtin
@@ -1659,23 +1665,25 @@ impl Type {
         &'a self,
         ns: &'a Namespace,
         builtin: &StructType,
+        structs_visited: HashSet<usize>,
     ) -> Option<&'a Type> {
-        match self {
-            Type::Array(ty, _) => ty.contains_builtins(ns, builtin),
+        let f = |structs_visited: HashSet<usize>| match self {
+            Type::Array(ty, _) => ty.contains_builtins(ns, builtin, structs_visited),
             Type::Mapping(Mapping { key, value, .. }) => key
-                .contains_builtins(ns, builtin)
-                .or_else(|| value.contains_builtins(ns, builtin)),
+                .contains_builtins(ns, builtin, structs_visited.clone())
+                .or_else(|| value.contains_builtins(ns, builtin, structs_visited)),
             Type::Struct(str_ty) if str_ty == builtin => Some(self),
-            Type::Struct(str_ty) => str_ty.definition(ns).fields.iter().find_map(|f| {
-                if f.unsizeable {
-                    None
-                } else {
-                    f.ty.contains_builtins(ns, builtin)
-                }
-            }),
-            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_builtins(ns, builtin),
+            Type::Struct(str_ty) => str_ty
+                .definition(ns)
+                .fields
+                .iter()
+                .find_map(|f| f.ty.contains_builtins(ns, builtin, structs_visited.clone())),
+            Type::StorageRef(_, r) | Type::Ref(r) => {
+                r.contains_builtins(ns, builtin, structs_visited)
+            }
             _ => None,
-        }
+        };
+        self.recurse(structs_visited, f)
     }
 
     /// If the type is Ref or StorageRef, get the underlying type

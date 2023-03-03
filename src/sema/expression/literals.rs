@@ -17,6 +17,7 @@ use num_traits::{FromPrimitive, Num, Zero};
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, Loc};
+use std::collections::HashSet;
 use std::ops::Mul;
 use std::str::FromStr;
 
@@ -474,7 +475,10 @@ pub(super) fn struct_literal(
 
     let ty = Type::Struct(*struct_ty);
 
-    if ty.contains_builtins(ns, &StructType::AccountInfo).is_some() {
+    if ty
+        .contains_builtins(ns, &StructType::AccountInfo, HashSet::new())
+        .is_some()
+    {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(
@@ -578,7 +582,10 @@ pub(super) fn named_struct_literal(
     let struct_def = str_ty.definition(ns).clone();
     let ty = Type::Struct(*str_ty);
 
-    if ty.contains_builtins(ns, &StructType::AccountInfo).is_some() {
+    if ty
+        .contains_builtins(ns, &StructType::AccountInfo, HashSet::new())
+        .is_some()
+    {
         diagnostics.push(Diagnostic::error(
             *loc,
             format!(

@@ -1550,7 +1550,7 @@ fn resolve_var_decl_ty(
         // will be stored in memory.
     }
 
-    if var_ty.contains_mapping(ns) && !var_ty.is_contract_storage() {
+    if var_ty.contains_mapping(ns, HashSet::new()) && !var_ty.is_contract_storage() {
         diagnostics.push(Diagnostic::error(
             ty.loc(),
             "mapping only allowed in storage".to_string(),
