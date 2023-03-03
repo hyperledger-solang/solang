@@ -8,7 +8,7 @@ When a contract is deployed, the contract storage is initialized to the initiali
 and any constructor is called. A constructor is not required for a contract. A constructor is defined
 like so:
 
-.. include:: ../../examples/flipper.sol
+.. include:: ../../examples/substrate/flipper.sol
   :code: solidity
 
 A constructor can have any number of arguments.

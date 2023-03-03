@@ -14,7 +14,7 @@ fn create_output_dir() {
 
     cmd.args([
         "compile",
-        "examples/flipper.sol",
+        "examples/solana/flipper.sol",
         "--target",
         "solana",
         "--output",
@@ -33,7 +33,7 @@ fn create_output_dir() {
 
     cmd.args([
         "compile",
-        "examples/flipper.sol",
+        "examples/solana/flipper.sol",
         "--target",
         "solana",
         "--contract",
@@ -53,11 +53,11 @@ fn create_output_dir() {
 
     cmd.args([
         "compile",
-        "examples/flipper.sol",
+        "examples/solana/flipper.sol",
         "--target",
         "solana",
         "--output",
-        "examples/flipper.sol",
+        "examples/solana/flipper.sol",
     ])
     .assert()
     .failure();
@@ -68,7 +68,7 @@ fn create_output_dir() {
 
     cmd.args([
         "compile",
-        "examples/flipper.sol",
+        "examples/solana/flipper.sol",
         "--target",
         "solana",
         "--contract",
