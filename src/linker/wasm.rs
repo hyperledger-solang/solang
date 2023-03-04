@@ -76,11 +76,12 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
                     | "seal_get_storage"
                     | "seal_instantiate"
                     | "seal_terminate"
-                    | "seal_random"
                     | "seal_call" => "seal1",
                     _ => "seal0",
                 };
                 *imports[ind].module_mut() = module_name.to_owned();
+            } else if imports[ind].field() == "instantiation_nonce" {
+                *imports[ind].module_mut() = "seal0".to_owned();
             }
 
             ind += 1;

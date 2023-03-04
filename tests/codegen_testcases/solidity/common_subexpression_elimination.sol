@@ -226,7 +226,6 @@ contract c1 {
         // CHECK:  ty:int256 %1.cse_temp = ((arg #0) + (arg #1))
         int x = a + b + instance.a;
         // CHECK: ty:int256 %x = (%1.cse_temp + (load (struct %instance field 0)))
-        // CHECK: ty:int256 %2.cse_temp = ((arg #0) * (arg #1))
         // CHECK: branchcond (signed less (%x + int256((load (struct %instance field 1)))) < int256 0)
         if(x  + int(instance.b) < 0) {
             // CHECK: ty:uint256 %p = uint256((%1.cse_temp + (load (struct %instance field 0))))
@@ -244,6 +243,7 @@ contract c1 {
         // CHECK: branchcond %e3, block3, block4
         if (trunc2 < trunc && trunc > 2) {
             // CHECK: = %e2
+            // CHECK: ty:int256 %2.cse_temp = ((arg #0) * (arg #1))
             // CHECK: ty:int256 %p2 = %1.cse_temp
             int p2 = a+b;
             int p3 = p2 - x + a + b;
@@ -457,7 +457,6 @@ contract c1 {
             return (a << b) + 1;
         }
 
-        // CHECK: ty:uint256 %3.cse_temp = ((arg #0) & (arg #1))
         // CHECK: branchcond %2.cse_temp, block4, block3
         if(!b1 || c > 0) {
             // CHECK: = %b1
@@ -470,6 +469,7 @@ contract c1 {
             c++;
         }
 
+        // CHECK: ty:uint256 %3.cse_temp = ((arg #0) & (arg #1))
         // CHECK: branchcond (%3.cse_temp == uint256 0), block13, block14
         if (a & b == 0) {
             return c--;

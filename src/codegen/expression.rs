@@ -83,7 +83,7 @@ pub fn expression(
             unchecked,
             left,
             right,
-        } => substract(
+        } => subtract(
             loc,
             ty,
             unchecked,
@@ -149,14 +149,14 @@ pub fn expression(
             loc,
             ty,
             unchecked,
-            base: left,
-            exp: right,
+            base,
+            exp,
         } => Expression::Power(
             *loc,
             ty.clone(),
             *unchecked,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+            Box::new(expression(base, cfg, contract_no, func, ns, vartab, opt)),
+            Box::new(expression(exp, cfg, contract_no, func, ns, vartab, opt)),
         ),
         ast::Expression::BitwiseOr {
             loc,
@@ -291,7 +291,7 @@ pub fn expression(
             ty.clone(),
             Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::UnaryMinus { loc, ty, expr } => Expression::UnaryMinus(
+        ast::Expression::Negate { loc, ty, expr } => Expression::Negate(
             *loc,
             ty.clone(),
             Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
@@ -960,6 +960,31 @@ pub fn expression(
             ty.clone(),
             Box::new(expression(exp, cfg, contract_no, func, ns, vartab, opt)),
         ),
+        ast::Expression::UserDefinedOperator {
+            loc,
+            ty,
+            function_no,
+            args,
+            ..
+        } => {
+            let var = vartab.temp_anonymous(ty);
+            let cfg_no = ns.contracts[contract_no].all_functions[function_no];
+            let args = args
+                .iter()
+                .map(|a| expression(a, cfg, contract_no, func, ns, vartab, opt))
+                .collect::<Vec<Expression>>();
+
+            cfg.add(
+                vartab,
+                Instr::Call {
+                    res: vec![var],
+                    call: InternalCallTy::Static { cfg_no },
+                    args,
+                    return_tys: vec![ty.clone()],
+                },
+            );
+            Expression::Variable(*loc, ty.clone(), var)
+        }
     }
 }
 
@@ -2027,7 +2052,7 @@ fn add(
     )
 }
 
-fn substract(
+fn subtract(
     loc: &pt::Loc,
     ty: &Type,
     unchecked: &bool,

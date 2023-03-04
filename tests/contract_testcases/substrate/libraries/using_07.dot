@@ -36,7 +36,7 @@ strict digraph "tests/contract_testcases/substrate/libraries/using_07.sol" {
 	variable_37 [label="variable: a\nint256\ntests/contract_testcases/substrate/libraries/using_07.sol:20:3-4"]
 	number_literal_38 [label="int256 literal: 1\ntests/contract_testcases/substrate/libraries/using_07.sol:20:10-11"]
 	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/libraries/using_07.sol:11:1-22:2"]
-	diagnostic_41 [label="'foo1' has no arguments, at least one argument required\nlevel Error\ntests/contract_testcases/substrate/libraries/using_07.sol:12:9-13"]
+	diagnostic_41 [label="'foo1' has no arguments. At least one argument required\nlevel Error\ntests/contract_testcases/substrate/libraries/using_07.sol:12:9-13"]
 	note [label="definition of 'foo1'\ntests/contract_testcases/substrate/libraries/using_07.sol:1:10-14"]
 	diagnostic_43 [label="'global' on using within contract not permitted\nlevel Error\ntests/contract_testcases/substrate/libraries/using_07.sol:12:23-29"]
 	diagnostic_44 [label="'foo2' is an overloaded function\nlevel Error\ntests/contract_testcases/substrate/libraries/using_07.sol:13:9-13"]

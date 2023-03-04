@@ -309,7 +309,7 @@ fn expresson_known_bits() {
 
     assert_eq!(v.value.into_inner(), &bs[..]);
 
-    // substract: unknown minus constant
+    // subtract: unknown minus constant
     let expr = Expression::Subtract(
         loc,
         Type::Int(32),
