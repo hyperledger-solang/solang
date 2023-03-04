@@ -230,9 +230,7 @@ pub struct Parameter {
     pub readonly: bool,
     /// A struct may contain itself which make the struct infinite size in
     /// memory. This boolean specifies which field introduces the recursion.
-    pub unsizeable: bool,
-    /// If a struct contains itself in a mapping or dynamic array, it is sizeable.
-    pub recursive: bool,
+    pub infinite_size: bool,
 }
 
 impl Parameter {

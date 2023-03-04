@@ -588,8 +588,7 @@ fn collect_parameters(
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
-                unsizeable: false,
-                recursive: false,
+                infinite_size: false,
             });
 
             collect_parameters(value, value_name, symtable, params, expr, ns)
@@ -639,8 +638,7 @@ fn collect_parameters(
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
-                    unsizeable: false,
-                    recursive: false,
+                    infinite_size: false,
                 });
             }
 
@@ -657,8 +655,7 @@ fn collect_parameters(
             ty_loc: None,
             indexed: false,
             readonly: false,
-            unsizeable: false,
-            recursive: false,
+            infinite_size: false,
         },
     }
 }

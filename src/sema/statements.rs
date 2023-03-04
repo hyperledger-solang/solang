@@ -381,8 +381,7 @@ fn statement(
                         id: Some(decl.name.clone().unwrap()),
                         indexed: false,
                         readonly: false,
-                        unsizeable: false,
-                        recursive: false,
+                        infinite_size: false,
                     },
                     initializer,
                 ));
@@ -1332,8 +1331,7 @@ fn destructure(
                             ty_loc: Some(ty_loc),
                             indexed: false,
                             readonly: false,
-                            unsizeable: false,
-                            recursive: false,
+                            infinite_size: false,
                         },
                     ));
                 }
@@ -2064,8 +2062,7 @@ fn try_catch(
                                 id: Some(name.clone()),
                                 indexed: false,
                                 readonly: false,
-                                unsizeable: false,
-                                recursive: false,
+                                infinite_size: false,
                             },
                         ));
                     }
@@ -2079,8 +2076,7 @@ fn try_catch(
                             indexed: false,
                             id: None,
                             readonly: false,
-                            unsizeable: false,
-                            recursive: false,
+                            infinite_size: false,
                         },
                     ));
                 }
@@ -2162,8 +2158,7 @@ fn try_catch(
                         id: None,
                         indexed: false,
                         readonly: false,
-                        unsizeable: false,
-                        recursive: false,
+                        infinite_size: false,
                     };
 
                     if let Some(name) = &param.name {
@@ -2245,8 +2240,7 @@ fn try_catch(
                     id: None,
                     indexed: false,
                     readonly: false,
-                    unsizeable: false,
-                    recursive: false,
+                    infinite_size: false,
                 };
 
                 if let Some(name) = &param.name {

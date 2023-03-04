@@ -919,8 +919,7 @@ pub fn resolve_params(
                     ty_loc: Some(ty_loc),
                     indexed: false,
                     readonly: false,
-                    unsizeable: false,
-                    recursive: false,
+                    infinite_size: false,
                 });
             }
             Err(()) => success = false,
@@ -1034,8 +1033,7 @@ pub fn resolve_returns(
                     ty_loc: Some(ty_loc),
                     indexed: false,
                     readonly: false,
-                    unsizeable: false,
-                    recursive: false,
+                    infinite_size: false,
                 });
             }
             Err(()) => success = false,
@@ -1074,8 +1072,7 @@ fn signatures() {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
-                unsizeable: false,
-                recursive: false,
+                infinite_size: false,
             },
             Parameter {
                 loc: pt::Loc::Implicit,
@@ -1084,8 +1081,7 @@ fn signatures() {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
-                unsizeable: false,
-                recursive: false,
+                infinite_size: false,
             },
         ],
         Vec::new(),

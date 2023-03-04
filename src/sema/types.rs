@@ -235,7 +235,7 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
                 field.loc,
                 format!("recursive field '{}'", field.name_as_str()),
             ));
-            ns.structs[struct_no].fields[field_no].unsizeable = true;
+            ns.structs[struct_no].fields[field_no].infinite_size = true;
         } else {
             structs_visited.push(field_struct_no);
             find_struct_recursion(field_struct_no, structs_visited, ns);
@@ -557,8 +557,7 @@ pub fn struct_decl(
             ty_loc: Some(field.ty.loc()),
             indexed: false,
             readonly: false,
-            unsizeable: false,
-            recursive: false,
+            infinite_size: false,
         });
     }
 
@@ -664,8 +663,7 @@ fn event_decl(
             ty_loc: Some(field.ty.loc()),
             indexed: field.indexed,
             readonly: false,
-            unsizeable: false,
-            recursive: false,
+            infinite_size: false,
         });
     }
 
@@ -818,7 +816,7 @@ fn struct_offsets(ns: &mut Namespace) {
 
                 offsets.push(offset.clone());
 
-                if !field.unsizeable {
+                if !field.infinite_size {
                     offset += field.ty.solana_storage_size(ns, &mut HashSet::new());
                 }
             }
@@ -844,7 +842,7 @@ fn struct_offsets(ns: &mut Namespace) {
             let mut largest_alignment = BigInt::zero();
 
             for field in &ns.structs[struct_no].fields {
-                if !field.unsizeable {
+                if !field.infinite_size {
                     let alignment = field.ty.storage_align(ns, &mut HashSet::new());
                     largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
                     let remainder = offset.clone() % alignment.clone();

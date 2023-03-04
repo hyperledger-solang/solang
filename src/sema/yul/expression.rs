@@ -423,8 +423,7 @@ pub(crate) fn resolve_function_call(
             ty_loc: None,
             indexed: false,
             readonly: false,
-            unsizeable: false,
-            recursive: false,
+            infinite_size: false,
         };
 
         for item in &resolved_arguments {
