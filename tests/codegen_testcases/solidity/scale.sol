@@ -20,12 +20,13 @@ contract ExternalFunctions {
 
     // BEGIN-CHECK: ExternalFunctions::ExternalFunctions::function::storage_callback
     function storage_callback() public {
-        // CHECK: %temp.6 = load storage slot(uint256 0) ty:function(int32) external returns (uint64)
-        // CHECK: ty:bytes %abi_encoded.temp.7 = (alloc bytes len uint32 40)
-        // CHECK: writebuffer buffer:%abi_encoded.temp.7 offset:uint32 0 value:hex"f503f5fe"
-        // CHECK: writebuffer buffer:%abi_encoded.temp.7 offset:uint32 4 value:(load (struct function(int32) external returns (uint64)(%temp.6) field 1))
-        // CHECK: writebuffer buffer:%abi_encoded.temp.7 offset:uint32 36 value:(load (struct function(int32) external returns (uint64)(%temp.6) field 0))
-        // CHECK: _ = external call::regular address:(builtin GetAddress ()) payload:%abi_encoded.temp.7 value:uint128 0 gas:uint64 0 accounts: seeds:
+        // CHECK: block0: # entry
+        // CHECK: %temp.7 = load storage slot(uint256 0) ty:function(int32) external returns (uint64)
+        // CHECK: ty:bytes %abi_encoded.temp.8 = (alloc bytes len uint32 40)
+        // CHECK: writebuffer buffer:%abi_encoded.temp.8 offset:uint32 0 value:hex"f503f5fe"
+        // CHECK: writebuffer buffer:%abi_encoded.temp.8 offset:uint32 4 value:(load (struct function(int32) external returns (uint64)(%temp.7) field 1))
+        // CHECK: writebuffer buffer:%abi_encoded.temp.8 offset:uint32 36 value:(load (struct function(int32) external returns (uint64)(%temp.7) field 0))
+        // CHECK: _ = external call::regular address:(builtin GetAddress ()) payload:%abi_encoded.temp.8 value:uint128 0 gas:uint64 0 accounts: seeds:
         this.bar(func);
     }
 }

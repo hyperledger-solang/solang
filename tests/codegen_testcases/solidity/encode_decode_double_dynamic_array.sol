@@ -89,10 +89,10 @@ contract Testing {
 
 	    // CHECK: ty:uint32 %temp.14 = (builtin ArrayLength ((arg #0)))
 	    // CHECK: ty:uint32 %temp.16 = uint32 0
+	    // CHECK: ty:uint32 %temp.17 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	    // CHECK: branchcond (uint32 4 <= %temp.14), block1, block2
         
         // CHECK: block1: # inbounds
-	    // CHECK: ty:uint32 %temp.17 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	    // CHECK: ty:uint32 %temp.16 = uint32 4
 	    // CHECK: ty:uint16[][] %temp.18 = (alloc uint16[][] len %temp.17)
 	    // CHECK: ty:uint16[][] %temp.15 = %temp.18
@@ -110,6 +110,7 @@ contract Testing {
         // CHECK: branch block3
 
         // CHECK: block5: # body
+	    // CHECK: ty:uint32 %temp.20 = (builtin ReadFromBuffer ((arg #0), %temp.16))
 	    // CHECK: ty:uint32 %1.cse_temp = (%temp.16 + uint32 4)
 	    // CHECK: branchcond (%1.cse_temp <= %temp.14), block7, block8
 
@@ -118,7 +119,6 @@ contract Testing {
 	    // CHECK: branchcond (unsigned less (uint32 0 + %temp.16) < %temp.14), block15, block16
 
         // CHECK: block7: # inbounds
-	    // CHECK: ty:uint32 %temp.20 = (builtin ReadFromBuffer ((arg #0), %temp.16))
 	    // CHECK: ty:uint32 %temp.16 = %1.cse_temp
 	    // CHECK: ty:uint16[] %temp.21 = (alloc uint16[] len %temp.20)
 	    // CHECK: store (subscript uint16[][] %temp.15[%for_i_1.temp.19]), %temp.21
