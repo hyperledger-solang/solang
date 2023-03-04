@@ -113,7 +113,7 @@ fn yul_function_cfg(
     if yul_func.body.is_empty()
         || (!yul_func.body.is_empty() && yul_func.body.last().unwrap().is_reachable())
     {
-        cfg.add_yul(&mut vartab, returns);
+        cfg.add(&mut vartab, returns);
     }
 
     vartab.finalize(ns, &mut cfg);

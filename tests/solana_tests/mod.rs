@@ -22,6 +22,7 @@ mod modifiers;
 mod primitives;
 mod rational;
 mod returns;
+mod runtime_errors;
 mod signature_verify;
 mod simple;
 mod storage;

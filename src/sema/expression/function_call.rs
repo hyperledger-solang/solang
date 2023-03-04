@@ -547,20 +547,23 @@ pub(super) fn function_call_named_args(
     Err(())
 }
 
-/// Resolve a method call with positional arguments
-pub(super) fn method_call_pos_args(
+/// Check if the function is a method of a variable
+/// Returns:
+/// 1. Err, when there is an error
+/// 2. Ok(Some()), when we have indeed received a method of a variable
+/// 3. Ok(None), when we have not received a function that is a method of a variable
+fn try_namespace(
     loc: &pt::Loc,
     var: &pt::Expression,
     func: &pt::Identifier,
     args: &[pt::Expression],
-    call_args: &[&pt::NamedArgument],
     call_args_loc: Option<pt::Loc>,
     context: &ExprContext,
     ns: &mut Namespace,
     symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
     resolve_to: ResolveTo,
-) -> Result<Expression, ()> {
+) -> Result<Option<Expression>, ()> {
     if let pt::Expression::Variable(namespace) = var {
         if builtin::is_builtin_call(Some(&namespace.name), &func.name, ns) {
             if let Some(loc) = call_args_loc {
@@ -571,7 +574,7 @@ pub(super) fn method_call_pos_args(
                 return Err(());
             }
 
-            return builtin::resolve_namespace_call(
+            return Ok(Some(builtin::resolve_namespace_call(
                 loc,
                 &namespace.name,
                 &func.name,
@@ -580,7 +583,7 @@ pub(super) fn method_call_pos_args(
                 ns,
                 symtable,
                 diagnostics,
-            );
+            )?));
         }
 
         // is it a call to super
@@ -594,7 +597,7 @@ pub(super) fn method_call_pos_args(
                     return Err(());
                 }
 
-                return function_call_pos_args(
+                return Ok(Some(function_call_pos_args(
                     loc,
                     func,
                     pt::FunctionTy::Function,
@@ -606,7 +609,7 @@ pub(super) fn method_call_pos_args(
                     resolve_to,
                     symtable,
                     diagnostics,
-                );
+                )?));
             } else {
                 diagnostics.push(Diagnostic::error(
                     *loc,
@@ -627,7 +630,7 @@ pub(super) fn method_call_pos_args(
                     return Err(());
                 }
 
-                return function_call_pos_args(
+                return Ok(Some(function_call_pos_args(
                     loc,
                     func,
                     pt::FunctionTy::Function,
@@ -645,7 +648,7 @@ pub(super) fn method_call_pos_args(
                     resolve_to,
                     symtable,
                     diagnostics,
-                );
+                )?));
             }
 
             // is a base contract of us
@@ -659,7 +662,7 @@ pub(super) fn method_call_pos_args(
                         return Err(());
                     }
 
-                    return function_call_pos_args(
+                    return Ok(Some(function_call_pos_args(
                         loc,
                         func,
                         pt::FunctionTy::Function,
@@ -677,7 +680,7 @@ pub(super) fn method_call_pos_args(
                         resolve_to,
                         symtable,
                         diagnostics,
-                    );
+                    )?));
                 } else {
                     diagnostics.push(Diagnostic::error(
                         *loc,
@@ -688,6 +691,247 @@ pub(super) fn method_call_pos_args(
         }
     }
 
+    Ok(None)
+}
+
+/// Check if the function is a method of a storage reference
+/// Returns:
+/// 1. Err, when there is an error
+/// 2. Ok(Some()), when we have indeed received a method of a storage reference
+/// 3. Ok(None), when we have not received a function that is a method of a storage reference
+fn try_storage_reference(
+    loc: &pt::Loc,
+    var_expr: &Expression,
+    func: &pt::Identifier,
+    args: &[pt::Expression],
+    context: &ExprContext,
+    diagnostics: &mut Diagnostics,
+    call_args_loc: Option<pt::Loc>,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    resolve_to: &ResolveTo,
+) -> Result<Option<Expression>, ()> {
+    if let Type::StorageRef(immutable, ty) = &var_expr.ty() {
+        match ty.as_ref() {
+            Type::Array(_, dim) => {
+                if *immutable {
+                    if let Some(function_no) = context.function_no {
+                        if !ns.functions[function_no].is_constructor() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                "cannot call method on immutable array outside of constructor"
+                                    .to_string(),
+                            ));
+                            return Err(());
+                        }
+                    }
+                }
+
+                if let Some(loc) = call_args_loc {
+                    diagnostics.push(Diagnostic::error(
+                        loc,
+                        "call arguments not allowed on arrays".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                if func.name == "push" {
+                    if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
+                        diagnostics.push(Diagnostic::error(
+                            func.loc,
+                            "method 'push()' not allowed on fixed length array".to_string(),
+                        ));
+                        return Err(());
+                    }
+
+                    let elem_ty = ty.array_elem();
+                    let mut builtin_args = vec![var_expr.clone()];
+
+                    let ret_ty = match args.len() {
+                        1 => {
+                            let expr = expression(
+                                &args[0],
+                                context,
+                                ns,
+                                symtable,
+                                diagnostics,
+                                ResolveTo::Type(&elem_ty),
+                            )?;
+
+                            builtin_args.push(expr.cast(
+                                &args[0].loc(),
+                                &elem_ty,
+                                true,
+                                ns,
+                                diagnostics,
+                            )?);
+
+                            Type::Void
+                        }
+                        0 => {
+                            if elem_ty.is_reference_type(ns) {
+                                Type::StorageRef(false, Box::new(elem_ty))
+                            } else {
+                                elem_ty
+                            }
+                        }
+                        _ => {
+                            diagnostics.push(Diagnostic::error(
+                                func.loc,
+                                "method 'push()' takes at most 1 argument".to_string(),
+                            ));
+                            return Err(());
+                        }
+                    };
+
+                    return Ok(Some(Expression::Builtin {
+                        loc: func.loc,
+                        tys: vec![ret_ty],
+                        kind: Builtin::ArrayPush,
+                        args: builtin_args,
+                    }));
+                }
+                if func.name == "pop" {
+                    if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
+                        diagnostics.push(Diagnostic::error(
+                            func.loc,
+                            "method 'pop()' not allowed on fixed length array".to_string(),
+                        ));
+
+                        return Err(());
+                    }
+
+                    if !args.is_empty() {
+                        diagnostics.push(Diagnostic::error(
+                            func.loc,
+                            "method 'pop()' does not take any arguments".to_string(),
+                        ));
+                        return Err(());
+                    }
+
+                    let storage_elem = ty.storage_array_elem();
+                    let elem_ty = storage_elem.deref_any();
+
+                    let return_ty = if *resolve_to == ResolveTo::Discard {
+                        Type::Void
+                    } else {
+                        elem_ty.clone()
+                    };
+
+                    return Ok(Some(Expression::Builtin {
+                        loc: func.loc,
+                        tys: vec![return_ty],
+                        kind: Builtin::ArrayPop,
+                        args: vec![var_expr.clone()],
+                    }));
+                }
+            }
+            Type::DynamicBytes => {
+                if *immutable {
+                    if let Some(function_no) = context.function_no {
+                        if !ns.functions[function_no].is_constructor() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                "cannot call method on immutable bytes outside of constructor"
+                                    .to_string(),
+                            ));
+                            return Err(());
+                        }
+                    }
+                }
+
+                if let Some(loc) = call_args_loc {
+                    diagnostics.push(Diagnostic::error(
+                        loc,
+                        "call arguments not allowed on bytes".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                if func.name == "push" {
+                    let mut builtin_args = vec![var_expr.clone()];
+
+                    let elem_ty = Type::Bytes(1);
+
+                    let ret_ty = match args.len() {
+                        1 => {
+                            let expr = expression(
+                                &args[0],
+                                context,
+                                ns,
+                                symtable,
+                                diagnostics,
+                                ResolveTo::Type(&elem_ty),
+                            )?;
+
+                            builtin_args.push(expr.cast(
+                                &args[0].loc(),
+                                &elem_ty,
+                                true,
+                                ns,
+                                diagnostics,
+                            )?);
+
+                            Type::Void
+                        }
+                        0 => elem_ty,
+                        _ => {
+                            diagnostics.push(Diagnostic::error(
+                                func.loc,
+                                "method 'push()' takes at most 1 argument".to_string(),
+                            ));
+                            return Err(());
+                        }
+                    };
+                    return Ok(Some(Expression::Builtin {
+                        loc: func.loc,
+                        tys: vec![ret_ty],
+                        kind: Builtin::ArrayPush,
+                        args: builtin_args,
+                    }));
+                }
+
+                if func.name == "pop" {
+                    if !args.is_empty() {
+                        diagnostics.push(Diagnostic::error(
+                            func.loc,
+                            "method 'pop()' does not take any arguments".to_string(),
+                        ));
+                        return Err(());
+                    }
+
+                    return Ok(Some(Expression::Builtin {
+                        loc: func.loc,
+                        tys: vec![Type::Bytes(1)],
+                        kind: Builtin::ArrayPop,
+                        args: vec![var_expr.clone()],
+                    }));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(None)
+}
+
+/// Check if we can resolve the call with ns.resolve_type
+/// Returns:
+/// 1. Err, when there is an error
+/// 2. Ok(Some()), when we have indeed received a method that has correctly been resolved with
+///    ns.resolve_type
+/// 3. Ok(None), when the function we have received could not be resolved with ns.resolve_type
+fn try_user_type(
+    loc: &pt::Loc,
+    var: &pt::Expression,
+    func: &pt::Identifier,
+    args: &[pt::Expression],
+    call_args_loc: Option<pt::Loc>,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+) -> Result<Option<Expression>, ()> {
     if let Ok(Type::UserType(no)) = ns.resolve_type(
         context.file_no,
         context.contract_no,
@@ -723,12 +967,12 @@ pub(super) fn method_call_pos_args(
                     ResolveTo::Type(&user_ty),
                 )?;
 
-                Ok(Expression::Builtin {
+                Ok(Some(Expression::Builtin {
                     loc: *loc,
                     tys: vec![elem_ty],
                     kind: Builtin::UserTypeUnwrap,
                     args: vec![expr.cast(&expr.loc(), &user_ty, true, ns, diagnostics)?],
-                })
+                }))
             };
         } else if func.name == "wrap" {
             return if args.len() != 1 {
@@ -747,14 +991,470 @@ pub(super) fn method_call_pos_args(
                     ResolveTo::Type(&elem_ty),
                 )?;
 
-                Ok(Expression::Builtin {
+                Ok(Some(Expression::Builtin {
                     loc: *loc,
                     tys: vec![user_ty],
                     kind: Builtin::UserTypeWrap,
                     args: vec![expr.cast(&expr.loc(), &elem_ty, true, ns, diagnostics)?],
-                })
+                }))
             };
         }
+    }
+
+    Ok(None)
+}
+
+/// Check if the function call is to a type's method
+/// Returns:
+/// 1. Err, when there is an error
+/// 2. Ok(Some()), when we have indeed received a method of a type
+/// 3. Ok(None), when we have received a function that is not a method of a type
+fn try_type_method(
+    loc: &pt::Loc,
+    func: &pt::Identifier,
+    var: &pt::Expression,
+    args: &[pt::Expression],
+    call_args: &[&pt::NamedArgument],
+    call_args_loc: Option<pt::Loc>,
+    context: &ExprContext,
+    var_expr: &Expression,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    resolve_to: ResolveTo,
+) -> Result<Option<Expression>, ()> {
+    let var_ty = var_expr.ty();
+
+    match var_ty.deref_any() {
+        Type::Bytes(..) | Type::String if func.name == "format" => {
+            return if let pt::Expression::StringLiteral(bs) = var {
+                if let Some(loc) = call_args_loc {
+                    diagnostics.push(Diagnostic::error(
+                        loc,
+                        "call arguments not allowed on builtins".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                Ok(Some(string_format(
+                    loc,
+                    bs,
+                    args,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                )?))
+            } else {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "format only allowed on string literals".to_string(),
+                ));
+                Err(())
+            };
+        }
+
+        Type::Array(..) | Type::DynamicBytes => {
+            if func.name == "push" {
+                let elem_ty = var_ty.array_elem();
+
+                let val = match args.len() {
+                    0 => {
+                        return Ok(Some(Expression::Builtin {
+                            loc: *loc,
+                            tys: vec![elem_ty.clone()],
+                            kind: Builtin::ArrayPush,
+                            args: vec![var_expr.clone()],
+                        }));
+                    }
+                    1 => {
+                        let val_expr = expression(
+                            &args[0],
+                            context,
+                            ns,
+                            symtable,
+                            diagnostics,
+                            ResolveTo::Type(&elem_ty),
+                        )?;
+
+                        val_expr.cast(&args[0].loc(), &elem_ty, true, ns, diagnostics)?
+                    }
+                    _ => {
+                        diagnostics.push(Diagnostic::error(
+                            func.loc,
+                            "method 'push()' takes at most 1 argument".to_string(),
+                        ));
+                        return Err(());
+                    }
+                };
+
+                return Ok(Some(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![elem_ty.clone()],
+                    kind: Builtin::ArrayPush,
+                    args: vec![var_expr.clone(), val],
+                }));
+            }
+            if func.name == "pop" {
+                if !args.is_empty() {
+                    diagnostics.push(Diagnostic::error(
+                        func.loc,
+                        "method 'pop()' does not take any arguments".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                let elem_ty = match &var_ty {
+                    Type::Array(ty, _) => ty,
+                    Type::DynamicBytes => &Type::Uint(8),
+                    _ => unreachable!(),
+                };
+
+                return Ok(Some(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![elem_ty.clone()],
+                    kind: Builtin::ArrayPop,
+                    args: vec![var_expr.clone()],
+                }));
+            }
+        }
+
+        Type::Contract(ext_contract_no) => {
+            let call_args =
+                parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
+
+            let mut errors = Diagnostics::default();
+            let mut name_matches: Vec<usize> = Vec::new();
+
+            for function_no in ns.contracts[*ext_contract_no].all_functions.keys() {
+                if func.name != ns.functions[*function_no].name
+                    || ns.functions[*function_no].ty != pt::FunctionTy::Function
+                {
+                    continue;
+                }
+
+                name_matches.push(*function_no);
+            }
+
+            for function_no in &name_matches {
+                let params_len = ns.functions[*function_no].params.len();
+
+                if params_len != args.len() {
+                    errors.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "function expects {} arguments, {} provided",
+                            params_len,
+                            args.len()
+                        ),
+                    ));
+                    continue;
+                }
+
+                let mut matches = true;
+                let mut cast_args = Vec::new();
+
+                // check if arguments can be implicitly casted
+                for (i, arg) in args.iter().enumerate() {
+                    let ty = ns.functions[*function_no].params[i].ty.clone();
+
+                    let arg = match expression(
+                        arg,
+                        context,
+                        ns,
+                        symtable,
+                        &mut errors,
+                        ResolveTo::Type(&ty),
+                    ) {
+                        Ok(e) => e,
+                        Err(_) => {
+                            matches = false;
+                            continue;
+                        }
+                    };
+
+                    match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
+                        Ok(expr) => cast_args.push(expr),
+                        Err(()) => {
+                            matches = false;
+                            continue;
+                        }
+                    }
+                }
+
+                if matches {
+                    if !ns.functions[*function_no].is_public() {
+                        diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!("function '{}' is not 'public' or 'external'", func.name),
+                        ));
+                        return Err(());
+                    }
+
+                    if let Some(value) = &call_args.value {
+                        if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
+                            diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "sending value to function '{}' which is not payable",
+                                    func.name
+                                ),
+                            ));
+                            return Err(());
+                        }
+                    }
+
+                    let func = &ns.functions[*function_no];
+                    let returns = function_returns(func, resolve_to);
+                    let ty = function_type(func, true, resolve_to);
+
+                    return Ok(Some(Expression::ExternalFunctionCall {
+                        loc: *loc,
+                        returns,
+                        function: Box::new(Expression::ExternalFunction {
+                            loc: *loc,
+                            ty,
+                            function_no: *function_no,
+                            address: Box::new(var_expr.cast(
+                                &var.loc(),
+                                &Type::Contract(func.contract_no.unwrap()),
+                                true,
+                                ns,
+                                diagnostics,
+                            )?),
+                        }),
+                        args: cast_args,
+                        call_args,
+                    }));
+                } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
+                    return Err(());
+                }
+            }
+
+            // what about call args
+            match using::try_resolve_using_call(
+                loc,
+                func,
+                var_expr,
+                context,
+                args,
+                symtable,
+                diagnostics,
+                ns,
+                resolve_to,
+            ) {
+                Ok(Some(expr)) => {
+                    return Ok(Some(expr));
+                }
+                Ok(None) => (),
+                Err(_) => {
+                    return Err(());
+                }
+            }
+
+            if name_matches.len() == 1 {
+                diagnostics.extend(errors);
+            } else if name_matches.len() != 1 {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find overloaded function which matches signature".to_string(),
+                ));
+            }
+
+            return Err(());
+        }
+
+        Type::Address(is_payable) => {
+            if func.name == "transfer" || func.name == "send" {
+                if !is_payable {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "method '{}' available on type 'address payable' not 'address'",
+                            func.name,
+                        ),
+                    ));
+
+                    return Err(());
+                }
+
+                if args.len() != 1 {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "'{}' expects 1 argument, {} provided",
+                            func.name,
+                            args.len()
+                        ),
+                    ));
+
+                    return Err(());
+                }
+
+                if let Some(loc) = call_args_loc {
+                    diagnostics.push(Diagnostic::error(
+                        loc,
+                        format!("call arguments not allowed on '{}'", func.name),
+                    ));
+                    return Err(());
+                }
+
+                let expr = expression(
+                    &args[0],
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Type(&Type::Value),
+                )?;
+
+                let address =
+                    var_expr.cast(&var_expr.loc(), var_ty.deref_any(), true, ns, diagnostics)?;
+
+                let value = expr.cast(&args[0].loc(), &Type::Value, true, ns, diagnostics)?;
+
+                return if func.name == "transfer" {
+                    Ok(Some(Expression::Builtin {
+                        loc: *loc,
+                        tys: vec![Type::Void],
+                        kind: Builtin::PayableTransfer,
+                        args: vec![address, value],
+                    }))
+                } else {
+                    Ok(Some(Expression::Builtin {
+                        loc: *loc,
+                        tys: vec![Type::Bool],
+                        kind: Builtin::PayableSend,
+                        args: vec![address, value],
+                    }))
+                };
+            }
+
+            let ty = match func.name.as_str() {
+                "call" => Some(CallTy::Regular),
+                "delegatecall" if ns.target == Target::EVM => Some(CallTy::Delegate),
+                "staticcall" if ns.target == Target::EVM => Some(CallTy::Static),
+                _ => None,
+            };
+
+            if let Some(ty) = ty {
+                let call_args =
+                    parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
+
+                if ty != CallTy::Regular && call_args.value.is_some() {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!("'{}' cannot have value specifed", func.name,),
+                    ));
+
+                    return Err(());
+                }
+
+                if args.len() != 1 {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "'{}' expects 1 argument, {} provided",
+                            func.name,
+                            args.len()
+                        ),
+                    ));
+
+                    return Err(());
+                }
+
+                let args = expression(
+                    &args[0],
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Type(&Type::DynamicBytes),
+                )?;
+
+                let mut args_ty = args.ty();
+
+                match args_ty.deref_any() {
+                    Type::DynamicBytes => (),
+                    Type::Bytes(_) => {
+                        args_ty = Type::DynamicBytes;
+                    }
+                    Type::Array(..) | Type::Struct(..) if !args_ty.is_dynamic(ns) => (),
+                    _ => {
+                        diagnostics.push(Diagnostic::error(
+                            args.loc(),
+                            format!("'{}' is not fixed length type", args_ty.to_string(ns),),
+                        ));
+
+                        return Err(());
+                    }
+                }
+
+                let args = args.cast(&args.loc(), args_ty.deref_any(), true, ns, diagnostics)?;
+
+                return Ok(Some(Expression::ExternalFunctionCallRaw {
+                    loc: *loc,
+                    ty,
+                    args: Box::new(args),
+                    address: Box::new(var_expr.cast(
+                        &var_expr.loc(),
+                        &Type::Address(*is_payable),
+                        true,
+                        ns,
+                        diagnostics,
+                    )?),
+                    call_args,
+                }));
+            }
+        }
+
+        _ => (),
+    }
+
+    Ok(None)
+}
+
+/// Resolve a method call with positional arguments
+pub(super) fn method_call_pos_args(
+    loc: &pt::Loc,
+    var: &pt::Expression,
+    func: &pt::Identifier,
+    args: &[pt::Expression],
+    call_args: &[&pt::NamedArgument],
+    call_args_loc: Option<pt::Loc>,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    resolve_to: ResolveTo,
+) -> Result<Expression, ()> {
+    if let Some(resolved_call) = try_namespace(
+        loc,
+        var,
+        func,
+        args,
+        call_args_loc,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+        resolve_to,
+    )? {
+        return Ok(resolved_call);
+    }
+
+    if let Some(resolved_call) = try_user_type(
+        loc,
+        var,
+        func,
+        args,
+        call_args_loc,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+    )? {
+        return Ok(resolved_call);
     }
 
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
@@ -796,582 +1496,36 @@ pub(super) fn method_call_pos_args(
         return Ok(expr);
     }
 
-    let var_ty = var_expr.ty();
-
-    if matches!(var_ty, Type::Bytes(_) | Type::String) && func.name == "format" {
-        return if let pt::Expression::StringLiteral(bs) = var {
-            if let Some(loc) = call_args_loc {
-                diagnostics.push(Diagnostic::error(
-                    loc,
-                    "call arguments not allowed on builtins".to_string(),
-                ));
-                return Err(());
-            }
-
-            string_format(loc, bs, args, context, ns, symtable, diagnostics)
-        } else {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                "format only allowed on string literals".to_string(),
-            ));
-            Err(())
-        };
+    if let Some(resolved_call) = try_storage_reference(
+        loc,
+        &var_expr,
+        func,
+        args,
+        context,
+        diagnostics,
+        call_args_loc,
+        ns,
+        symtable,
+        &resolve_to,
+    )? {
+        return Ok(resolved_call);
     }
 
-    if let Type::StorageRef(immutable, ty) = &var_ty {
-        match ty.as_ref() {
-            Type::Array(_, dim) => {
-                if *immutable {
-                    if let Some(function_no) = context.function_no {
-                        if !ns.functions[function_no].is_constructor() {
-                            diagnostics.push(Diagnostic::error(
-                                *loc,
-                                "cannot call method on immutable array outside of constructor"
-                                    .to_string(),
-                            ));
-                            return Err(());
-                        }
-                    }
-                }
-
-                if let Some(loc) = call_args_loc {
-                    diagnostics.push(Diagnostic::error(
-                        loc,
-                        "call arguments not allowed on arrays".to_string(),
-                    ));
-                    return Err(());
-                }
-
-                if func.name == "push" {
-                    if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
-                        diagnostics.push(Diagnostic::error(
-                            func.loc,
-                            "method 'push()' not allowed on fixed length array".to_string(),
-                        ));
-                        return Err(());
-                    }
-
-                    let elem_ty = ty.array_elem();
-                    let mut builtin_args = vec![var_expr];
-
-                    let ret_ty = match args.len() {
-                        1 => {
-                            let expr = expression(
-                                &args[0],
-                                context,
-                                ns,
-                                symtable,
-                                diagnostics,
-                                ResolveTo::Type(&elem_ty),
-                            )?;
-
-                            builtin_args.push(expr.cast(
-                                &args[0].loc(),
-                                &elem_ty,
-                                true,
-                                ns,
-                                diagnostics,
-                            )?);
-
-                            Type::Void
-                        }
-                        0 => {
-                            if elem_ty.is_reference_type(ns) {
-                                Type::StorageRef(false, Box::new(elem_ty))
-                            } else {
-                                elem_ty
-                            }
-                        }
-                        _ => {
-                            diagnostics.push(Diagnostic::error(
-                                func.loc,
-                                "method 'push()' takes at most 1 argument".to_string(),
-                            ));
-                            return Err(());
-                        }
-                    };
-
-                    return Ok(Expression::Builtin {
-                        loc: func.loc,
-                        tys: vec![ret_ty],
-                        kind: Builtin::ArrayPush,
-                        args: builtin_args,
-                    });
-                }
-                if func.name == "pop" {
-                    if matches!(dim.last(), Some(ArrayLength::Fixed(_))) {
-                        diagnostics.push(Diagnostic::error(
-                            func.loc,
-                            "method 'pop()' not allowed on fixed length array".to_string(),
-                        ));
-
-                        return Err(());
-                    }
-
-                    if !args.is_empty() {
-                        diagnostics.push(Diagnostic::error(
-                            func.loc,
-                            "method 'pop()' does not take any arguments".to_string(),
-                        ));
-                        return Err(());
-                    }
-
-                    let storage_elem = ty.storage_array_elem();
-                    let elem_ty = storage_elem.deref_any();
-
-                    let return_ty = if resolve_to == ResolveTo::Discard {
-                        Type::Void
-                    } else {
-                        elem_ty.clone()
-                    };
-
-                    return Ok(Expression::Builtin {
-                        loc: func.loc,
-                        tys: vec![return_ty],
-                        kind: Builtin::ArrayPop,
-                        args: vec![var_expr],
-                    });
-                }
-            }
-            Type::DynamicBytes => {
-                if *immutable {
-                    if let Some(function_no) = context.function_no {
-                        if !ns.functions[function_no].is_constructor() {
-                            diagnostics.push(Diagnostic::error(
-                                *loc,
-                                "cannot call method on immutable bytes outside of constructor"
-                                    .to_string(),
-                            ));
-                            return Err(());
-                        }
-                    }
-                }
-
-                if let Some(loc) = call_args_loc {
-                    diagnostics.push(Diagnostic::error(
-                        loc,
-                        "call arguments not allowed on bytes".to_string(),
-                    ));
-                    return Err(());
-                }
-
-                if func.name == "push" {
-                    let mut builtin_args = vec![var_expr];
-
-                    let elem_ty = Type::Bytes(1);
-
-                    let ret_ty = match args.len() {
-                        1 => {
-                            let expr = expression(
-                                &args[0],
-                                context,
-                                ns,
-                                symtable,
-                                diagnostics,
-                                ResolveTo::Type(&elem_ty),
-                            )?;
-
-                            builtin_args.push(expr.cast(
-                                &args[0].loc(),
-                                &elem_ty,
-                                true,
-                                ns,
-                                diagnostics,
-                            )?);
-
-                            Type::Void
-                        }
-                        0 => elem_ty,
-                        _ => {
-                            diagnostics.push(Diagnostic::error(
-                                func.loc,
-                                "method 'push()' takes at most 1 argument".to_string(),
-                            ));
-                            return Err(());
-                        }
-                    };
-                    return Ok(Expression::Builtin {
-                        loc: func.loc,
-                        tys: vec![ret_ty],
-                        kind: Builtin::ArrayPush,
-                        args: builtin_args,
-                    });
-                }
-
-                if func.name == "pop" {
-                    if !args.is_empty() {
-                        diagnostics.push(Diagnostic::error(
-                            func.loc,
-                            "method 'pop()' does not take any arguments".to_string(),
-                        ));
-                        return Err(());
-                    }
-
-                    return Ok(Expression::Builtin {
-                        loc: func.loc,
-                        tys: vec![Type::Bytes(1)],
-                        kind: Builtin::ArrayPop,
-                        args: vec![var_expr],
-                    });
-                }
-            }
-            _ => {}
-        }
-    }
-
-    if matches!(var_ty, Type::Array(..) | Type::DynamicBytes) {
-        if func.name == "push" {
-            let elem_ty = var_ty.array_elem();
-
-            let val = match args.len() {
-                0 => {
-                    return Ok(Expression::Builtin {
-                        loc: *loc,
-                        tys: vec![elem_ty.clone()],
-                        kind: Builtin::ArrayPush,
-                        args: vec![var_expr],
-                    });
-                }
-                1 => {
-                    let val_expr = expression(
-                        &args[0],
-                        context,
-                        ns,
-                        symtable,
-                        diagnostics,
-                        ResolveTo::Type(&elem_ty),
-                    )?;
-
-                    val_expr.cast(&args[0].loc(), &elem_ty, true, ns, diagnostics)?
-                }
-                _ => {
-                    diagnostics.push(Diagnostic::error(
-                        func.loc,
-                        "method 'push()' takes at most 1 argument".to_string(),
-                    ));
-                    return Err(());
-                }
-            };
-
-            return Ok(Expression::Builtin {
-                loc: *loc,
-                tys: vec![elem_ty.clone()],
-                kind: Builtin::ArrayPush,
-                args: vec![var_expr, val],
-            });
-        }
-        if func.name == "pop" {
-            if !args.is_empty() {
-                diagnostics.push(Diagnostic::error(
-                    func.loc,
-                    "method 'pop()' does not take any arguments".to_string(),
-                ));
-                return Err(());
-            }
-
-            let elem_ty = match &var_ty {
-                Type::Array(ty, _) => ty,
-                Type::DynamicBytes => &Type::Uint(8),
-                _ => unreachable!(),
-            };
-
-            return Ok(Expression::Builtin {
-                loc: *loc,
-                tys: vec![elem_ty.clone()],
-                kind: Builtin::ArrayPop,
-                args: vec![var_expr],
-            });
-        }
-    }
-
-    if let Type::Contract(ext_contract_no) = &var_ty.deref_any() {
-        let call_args = parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
-
-        let mut errors = Diagnostics::default();
-        let mut name_matches: Vec<usize> = Vec::new();
-
-        for function_no in ns.contracts[*ext_contract_no].all_functions.keys() {
-            if func.name != ns.functions[*function_no].name
-                || ns.functions[*function_no].ty != pt::FunctionTy::Function
-            {
-                continue;
-            }
-
-            name_matches.push(*function_no);
-        }
-
-        for function_no in &name_matches {
-            let params_len = ns.functions[*function_no].params.len();
-
-            if params_len != args.len() {
-                errors.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "function expects {} arguments, {} provided",
-                        params_len,
-                        args.len()
-                    ),
-                ));
-                continue;
-            }
-
-            let mut matches = true;
-            let mut cast_args = Vec::new();
-
-            // check if arguments can be implicitly casted
-            for (i, arg) in args.iter().enumerate() {
-                let ty = ns.functions[*function_no].params[i].ty.clone();
-
-                let arg = match expression(
-                    arg,
-                    context,
-                    ns,
-                    symtable,
-                    &mut errors,
-                    ResolveTo::Type(&ty),
-                ) {
-                    Ok(e) => e,
-                    Err(_) => {
-                        matches = false;
-                        continue;
-                    }
-                };
-
-                match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
-                    Ok(expr) => cast_args.push(expr),
-                    Err(()) => {
-                        matches = false;
-                        continue;
-                    }
-                }
-            }
-
-            if matches {
-                if !ns.functions[*function_no].is_public() {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!("function '{}' is not 'public' or 'external'", func.name),
-                    ));
-                    return Err(());
-                }
-
-                if let Some(value) = &call_args.value {
-                    if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
-                        diagnostics.push(Diagnostic::error(
-                            *loc,
-                            format!(
-                                "sending value to function '{}' which is not payable",
-                                func.name
-                            ),
-                        ));
-                        return Err(());
-                    }
-                }
-
-                let func = &ns.functions[*function_no];
-                let returns = function_returns(func, resolve_to);
-                let ty = function_type(func, true, resolve_to);
-
-                return Ok(Expression::ExternalFunctionCall {
-                    loc: *loc,
-                    returns,
-                    function: Box::new(Expression::ExternalFunction {
-                        loc: *loc,
-                        ty,
-                        function_no: *function_no,
-                        address: Box::new(var_expr.cast(
-                            &var.loc(),
-                            &Type::Contract(func.contract_no.unwrap()),
-                            true,
-                            ns,
-                            diagnostics,
-                        )?),
-                    }),
-                    args: cast_args,
-                    call_args,
-                });
-            } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
-                return Err(());
-            }
-        }
-
-        // what about call args
-        match using::try_resolve_using_call(
-            loc,
-            func,
-            &var_expr,
-            context,
-            args,
-            symtable,
-            diagnostics,
-            ns,
-            resolve_to,
-        ) {
-            Ok(Some(expr)) => {
-                return Ok(expr);
-            }
-            Ok(None) => (),
-            Err(_) => {
-                return Err(());
-            }
-        }
-
-        if name_matches.len() == 1 {
-            diagnostics.extend(errors);
-        } else if name_matches.len() != 1 {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                "cannot find overloaded function which matches signature".to_string(),
-            ));
-        }
-
-        return Err(());
-    }
-
-    if let Type::Address(is_payable) = &var_ty.deref_any() {
-        if func.name == "transfer" || func.name == "send" {
-            if !is_payable {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "method '{}' available on type 'address payable' not 'address'",
-                        func.name,
-                    ),
-                ));
-
-                return Err(());
-            }
-
-            if args.len() != 1 {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "'{}' expects 1 argument, {} provided",
-                        func.name,
-                        args.len()
-                    ),
-                ));
-
-                return Err(());
-            }
-
-            if let Some(loc) = call_args_loc {
-                diagnostics.push(Diagnostic::error(
-                    loc,
-                    format!("call arguments not allowed on '{}'", func.name),
-                ));
-                return Err(());
-            }
-
-            let expr = expression(
-                &args[0],
-                context,
-                ns,
-                symtable,
-                diagnostics,
-                ResolveTo::Type(&Type::Value),
-            )?;
-
-            let address =
-                var_expr.cast(&var_expr.loc(), var_ty.deref_any(), true, ns, diagnostics)?;
-
-            let value = expr.cast(&args[0].loc(), &Type::Value, true, ns, diagnostics)?;
-
-            return if func.name == "transfer" {
-                Ok(Expression::Builtin {
-                    loc: *loc,
-                    tys: vec![Type::Void],
-                    kind: Builtin::PayableTransfer,
-                    args: vec![address, value],
-                })
-            } else {
-                Ok(Expression::Builtin {
-                    loc: *loc,
-                    tys: vec![Type::Bool],
-                    kind: Builtin::PayableSend,
-                    args: vec![address, value],
-                })
-            };
-        }
-    }
-
-    if let Type::Address(payable) = &var_ty.deref_any() {
-        let ty = match func.name.as_str() {
-            "call" => Some(CallTy::Regular),
-            "delegatecall" if ns.target == Target::EVM => Some(CallTy::Delegate),
-            "staticcall" if ns.target == Target::EVM => Some(CallTy::Static),
-            _ => None,
-        };
-
-        if let Some(ty) = ty {
-            let call_args =
-                parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
-
-            if ty != CallTy::Regular && call_args.value.is_some() {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!("'{}' cannot have value specifed", func.name,),
-                ));
-
-                return Err(());
-            }
-
-            if args.len() != 1 {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "'{}' expects 1 argument, {} provided",
-                        func.name,
-                        args.len()
-                    ),
-                ));
-
-                return Err(());
-            }
-
-            let args = expression(
-                &args[0],
-                context,
-                ns,
-                symtable,
-                diagnostics,
-                ResolveTo::Type(&Type::DynamicBytes),
-            )?;
-
-            let mut args_ty = args.ty();
-
-            match args_ty.deref_any() {
-                Type::DynamicBytes => (),
-                Type::Bytes(_) => {
-                    args_ty = Type::DynamicBytes;
-                }
-                Type::Array(..) | Type::Struct(..) if !args_ty.is_dynamic(ns) => (),
-                _ => {
-                    diagnostics.push(Diagnostic::error(
-                        args.loc(),
-                        format!("'{}' is not fixed length type", args_ty.to_string(ns),),
-                    ));
-
-                    return Err(());
-                }
-            }
-
-            let args = args.cast(&args.loc(), args_ty.deref_any(), true, ns, diagnostics)?;
-
-            return Ok(Expression::ExternalFunctionCallRaw {
-                loc: *loc,
-                ty,
-                args: Box::new(args),
-                address: Box::new(var_expr.cast(
-                    &var_expr.loc(),
-                    &Type::Address(*payable),
-                    true,
-                    ns,
-                    diagnostics,
-                )?),
-                call_args,
-            });
-        }
+    if let Some(resolved_call) = try_type_method(
+        loc,
+        func,
+        var,
+        args,
+        call_args,
+        call_args_loc,
+        context,
+        &var_expr,
+        ns,
+        symtable,
+        diagnostics,
+        resolve_to,
+    )? {
+        return Ok(resolved_call);
     }
 
     // resolve it using library extension

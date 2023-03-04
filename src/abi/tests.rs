@@ -462,6 +462,7 @@ contract caller {
             generate_debug_information: false,
             opt_level: OptimizationLevel::None,
             log_api_return_codes: false,
+            log_runtime_errors: false,
         },
     );
 
@@ -1254,6 +1255,7 @@ fn deduplication() {
             generate_debug_information: false,
             opt_level: OptimizationLevel::None,
             log_api_return_codes: false,
+            log_runtime_errors: false,
         },
     );
 
@@ -1635,4 +1637,107 @@ contract C {
         idl.metadata.unwrap(),
         json!({"address": "Foo5mMfYo5RhRcWa4NZ2bwFn4Kdhe8rNK5jchxsKrivA"})
     );
+}
+
+#[test]
+fn data_account_signer() {
+    let src = r#"
+    contract caller {
+        // signer required
+        @payer(wallet)
+        constructor(address wallet) {}
+    }"#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(0, &ns);
+
+    assert_eq!(idl.instructions.len(), 1);
+
+    // implicit constructor
+    assert_eq!(idl.instructions[0].name, "new");
+    assert!(idl.instructions[0].docs.is_none());
+    assert_eq!(
+        idl.instructions[0].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: true,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "wallet".to_string(),
+                is_mut: false,
+                is_signer: true,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
+    );
+    assert!(idl.instructions[0].args.len() == 1);
+    assert!(idl.instructions[0].returns.is_none());
+
+    let src = r#"
+    contract caller {
+        // pda, signer NOT required
+        @payer(wallet)
+        @seed("watchword")
+        constructor(address wallet) {}
+    }"#;
+
+    let ns = generate_namespace(src);
+    let idl = generate_anchor_idl(0, &ns);
+
+    assert_eq!(idl.instructions.len(), 1);
+
+    assert_eq!(idl.instructions[0].name, "new");
+    assert!(idl.instructions[0].docs.is_none());
+    assert_eq!(
+        idl.instructions[0].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "wallet".to_string(),
+                is_mut: false,
+                is_signer: true,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            })
+        ]
+    );
+    assert!(idl.instructions[0].args.len() == 1);
+    assert!(idl.instructions[0].returns.is_none());
 }

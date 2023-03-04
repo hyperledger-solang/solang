@@ -33,7 +33,7 @@ contract ExternalFunctions {
 contract CompactEncoding {
     // BEGIN-CHECK: CompactEncoding::CompactEncoding::function::vector_length
     function vector_length(string memory s) public {
-        // CHECK: branchcond (unsigned more (builtin ArrayLength ((arg #0))) > uint32 1073741824), block6, block7
+        // CHECK: branchcond (unsigned more (builtin ArrayLength ((arg #0))) > uint32 1073741823), block6, block7
         // CHECK: block1: # small
         // CHECK: ty:uint32 %temp.8 = uint32 1
         // CHECK: block2: # medium
@@ -42,16 +42,16 @@ contract CompactEncoding {
         // CHECK: ty:uint32 %temp.8 = uint32 4
         // CHECK: ty:bytes %abi_encoded.temp.9 = (alloc bytes len (%temp.8 + (builtin ArrayLength ((arg #0)))))
         // CHECK: ty:uint32 %temp.10 = (builtin ArrayLength ((arg #0)))
-        // CHECK: branchcond (unsigned more %temp.10 > uint32 1073741824), block13, block14
-        // CHECK: branchcond (unsigned more (builtin ArrayLength ((arg #0))) > uint32 64), block3, block1
-        // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 0 value:(%temp.10 * uint32 4)
+        // CHECK: branchcond (unsigned more %temp.10 > uint32 1073741823), block13, block14
+        // CHECK: branchcond (unsigned more (builtin ArrayLength ((arg #0))) > uint32 63), block3, block1
+        // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 0 value:uint8((%temp.10 * uint32 4))
         // CHECK: ty:uint32 %temp.11 = uint32 1
-        // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 0 value:((%temp.10 * uint32 4) | uint32 1)
+        // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 0 value:uint16(((%temp.10 * uint32 4) | uint32 1))
         // CHECK: ty:uint32 %temp.11 = uint32 2
         // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 0 value:((%temp.10 * uint32 4) | uint32 2)
         // CHECK: ty:uint32 %temp.11 = uint32 4
         // CHECK: memcpy src: (arg #0), dest: (advance ptr: %abi_encoded.temp.9, by: (uint32 0 + %temp.11)), bytes_len: %temp.10
-        // CHECK: branchcond (unsigned more %temp.10 > uint32 64), block10, block8
+        // CHECK: branchcond (unsigned more %temp.10 > uint32 63), block10, block8
         abi.encode(s);
     }
 }

@@ -2,6 +2,35 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## Unreleased
+
+### Added
+- The Solana units `sol` and `lamports` are now supported, e.g. `10 sol` and `100 lamports`.
+  [seanyoung](https://github.com/seanyoung)
+- User defined operators are now supported. This is a feature in Ethereum Solidity v0.8.19.
+  [seanyoung](https://github.com/seanyoung)
+
+### Fixed
+- Solana: contracts with a seed for the constructor do not require a signer in the Anchor IDL
+  [seanyoung](https://github.com/seanyoung)
+
+## v0.2.2 Alexandria
+
+### Added
+- Solidity mappings can now have named key and named value types. [seanyoung](https://github.com/seanyoung)
+
+### Changed
+- Solang now uses LLVM 15. [LucasSte](https://github.com/LucasSte)
+- Solidity on Solana now required the Anchor framework for the client code, and the `@solana/solidity.js`
+  Typescript library is no longer compatible with Solidity.
+- When casting hex literal numbers into the `bytesN` type, the hex literal may use leading zeros to match the size
+with the according `bytesN`, which aligns solang with `solc`. [xermicus](https://github.com/xermicus)
+
+### Fixed
+- Many bugs have been fixed by [seanyoung](https://github.com/seanyoung), [LucasSte](https://github.com/LucasSte)
+  and [xermicus](https://github.com/xermicus)
+- Typos throughout the code have been fixed. [omahs](https://github.com/omahs)
+
 ## v0.2.1 Rio
 
 ### Added

@@ -57,7 +57,7 @@ impl SubstrateTarget {
 
         let fid = bin
             .builder
-            .build_load(argsdata, "function_selector")
+            .build_load(bin.context.i32_type(), argsdata, "function_selector")
             .into_int_value();
 
         // TODO: solana does not support bss, so different solution is needed
@@ -67,6 +67,7 @@ impl SubstrateTarget {
         // step over the function selector
         let argsdata = unsafe {
             bin.builder.build_gep(
+                bin.context.i32_type(),
                 argsdata,
                 &[bin.context.i32_type().const_int(1, false)],
                 "argsdata",
@@ -201,8 +202,9 @@ impl SubstrateTarget {
 
         bin.builder.position_at_end(bb);
 
+        let function_name: Vec<&str> = f.name.split("::").collect();
         if nonpayable(f) {
-            abort_if_value_transfer(self, bin, function, ns);
+            abort_if_value_transfer(self, bin, function, ns, function_name.last().unwrap());
         }
 
         let mut args = Vec::new();

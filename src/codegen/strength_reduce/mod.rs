@@ -101,7 +101,7 @@ fn block_reduce(
     mut vars: Variables,
     ns: &mut Namespace,
 ) {
-    for (_, instr) in &mut cfg.blocks[block_no].instr {
+    for instr in &mut cfg.blocks[block_no].instr {
         match instr {
             Instr::Set { expr, .. } => {
                 *expr = expression_reduce(expr, &vars, ns);

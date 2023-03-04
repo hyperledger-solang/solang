@@ -85,7 +85,7 @@ NoFunctionType: Type = {
     Bytes => Type::Bytes(<>),
     // prior to 0.8.0 `byte` used to be an alias for `bytes1`
     "byte" => Type::Bytes(1),
-    <l:@L> "mapping" "(" <k:AnyType> <key_name:SolIdentifier?> "=>" <v:AnyType> <value_name:SolIdentifier?> ")" <r:@R> => {
+    <l:@L> "mapping" "(" <k:Precedence0> <key_name:SolIdentifier?> "=>" <v:Precedence0> <value_name:SolIdentifier?> ")" <r:@R> => {
         Type::Mapping {
             loc: Loc::File(file_no, l, r),
             key: Box::new(k),
@@ -134,7 +134,6 @@ SolIdentifier: Identifier = {
     <l:@L> "leave" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "leave".to_string()},
     <l:@L> "case" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "case".to_string()},
     <l:@L> "default" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "default".to_string()},
-    <l:@L> "error" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()},
     <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
 }
 
@@ -146,7 +145,7 @@ SolIdentifierOrError: Option<Identifier> = {
     }
 }
 
-SolNoErrorIdentifier: Identifier = {
+SolNoRevertIdentifier: Identifier = {
     <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: n.to_string()},
     <l:@L> "switch" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "switch".to_string()},
     <l:@L> "leave" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "leave".to_string()},
@@ -163,7 +162,7 @@ SolIdentifierPath: IdentifierPath = {
 }
 
 VariableDeclaration: VariableDeclaration = {
-    <l:@L> <ty:AnyType> <storage:StorageLocation?> <name:SolIdentifierOrError> <r:@R> => VariableDeclaration {
+    <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifierOrError> <r:@R> => VariableDeclaration {
         loc: Loc::File(file_no, l, r), ty, storage, name
     },
 }
@@ -217,13 +216,13 @@ ContractDefinition: Box<ContractDefinition> = {
 }
 
 EventParameter: EventParameter = {
-    <l:@L> <ty:AnyType> <i:"indexed"?> <name:SolIdentifier?> <r:@R> => EventParameter{
+    <l:@L> <ty:Precedence0> <i:"indexed"?> <name:SolIdentifier?> <r:@R> => EventParameter{
         loc: Loc::File(file_no, l, r), ty, indexed: i.is_some(), name
     }
 }
 
 ErrorParameter: ErrorParameter = {
-    <l:@L> <ty:AnyType> <name:SolIdentifier?> <r:@R> => ErrorParameter{
+    <l:@L> <ty:Precedence0> <name:SolIdentifier?> <r:@R> => ErrorParameter{
         loc: Loc::File(file_no, l, r), ty, name
     }
 }
@@ -237,11 +236,11 @@ EventDefinition: Box<EventDefinition> = {
 }
 
 ErrorDefinition: Box<ErrorDefinition> = {
-    <l:@L> "error" <name:SolIdentifierOrError> "(" <v:Comma<ErrorParameter>> ")" <r:@R> ";" => {
+    <l:@L> <keyword:NoFunctionTyPrecedence0> <name:SolIdentifierOrError> "(" <fields:Comma<ErrorParameter>> ")" <r:@R> ";" => {
         Box::new(ErrorDefinition{
-            loc: Loc::File(file_no, l, r), name, fields: v
+            loc: Loc::File(file_no, l, r), keyword, name, fields
         })
-    },
+    }
 }
 
 EnumDefinition: Box<EnumDefinition> = {
@@ -262,13 +261,6 @@ VariableDefinition: Box<VariableDefinition> = {
             loc: Loc::File(file_no, l, r), ty, attrs, name: Some(name), initializer: None,
         })
     },
-    <l:@L> "error" <er:@R> <attrs:VariableAttribute*> <name:SolIdentifier> <e:("=" <Expression>)?> <r:@R> ";" => {
-        let ty = Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()});
-
-        Box::new(VariableDefinition{
-            loc: Loc::File(file_no, l, r), ty, attrs, name: Some(name), initializer: e,
-        })
-    },
     // attributes cause shift-reduce errors with function type, since a function type contract variable can be declare as
     // contract foo {
     //     // f is a variable with internal visibility referencing an external function
@@ -282,7 +274,7 @@ VariableDefinition: Box<VariableDefinition> = {
 }
 
 TypeDefinition: Box<TypeDefinition> = {
-    <l:@L> "type" <name:SolIdentifier> "is" <ty:AnyType> <r:@R> ";" => {
+    <l:@L> "type" <name:SolIdentifier> "is" <ty:Precedence0> <r:@R> ";" => {
         Box::new(TypeDefinition{
             loc: Loc::File(file_no, l, r), name, ty
         })
@@ -407,10 +399,30 @@ Precedence2: Expression = {
     <a:@L> "++" <e:Precedence2> <b:@R> => Expression::PreIncrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "--" <e:Precedence2> <b:@R> => Expression::PreDecrement(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "+" <e:Precedence2> <b:@R>  => Expression::UnaryPlus(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "-" <e:Precedence2> <b:@R> => Expression::UnaryMinus(Loc::File(file_no, a, b), Box::new(e)),
-    <l:@L> "error" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()}),
+    <a:@L> "-" <e:Precedence2> <b:@R> => Expression::Negate(Loc::File(file_no, a, b), Box::new(e)),
     <l:@L> "revert" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()}),
-    Precedence0,
+
+    Precedence1
+}
+
+Precedence1: Expression = {
+    <l:@L> <n:number> <unit:SolNoRevertIdentifier?> <r:@R> => {
+        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
+        let exp: String = n.1.chars().filter(|v| *v != '_').collect();
+
+        Expression::NumberLiteral(Loc::File(file_no, l, r), integer, exp, unit)
+    },
+    <l:@L> <n:rational> <unit:SolNoRevertIdentifier?> <r:@R> => {
+        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
+        let fraction: String = n.1.chars().filter(|v| *v != '_').collect();
+        let exp: String = n.2.chars().filter(|v| *v != '_').collect();
+
+        Expression::RationalNumberLiteral(Loc::File(file_no, l, r), integer, fraction, exp, unit)
+    },
+    <l:@L> <n:hexnumber> <unit:SolNoRevertIdentifier?> <r:@R> => {
+        Expression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned(), unit)
+    },
+    Precedence0
 }
 
 NamedArgument: NamedArgument = {
@@ -441,11 +453,6 @@ FunctionCallPrecedence: Expression = {
     <l:@L> "type" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "type".to_string()}),
 }
 
-AnyType: Expression = {
-    <l:@L> "error" <r:@R> => Expression::Variable(Identifier{loc: Loc::File(file_no, l, r), name: "error".to_string()}),
-    Precedence0
-}
-
 Precedence0: Expression = {
     NoFunctionTyPrecedence0,
     FunctionTyPrecedence0
@@ -456,14 +463,14 @@ FunctionTyPrecedence0: Expression = {
 }
 
 NoFunctionTyPrecedence0: Expression = {
-    <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> <e:Precedence1> "++" <b:@R> => Expression::PostIncrement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> <e:Precedence1> "--" <b:@R> => Expression::PostDecrement(Loc::File(file_no, a, b), Box::new(e)),
     <FunctionCall> => <>,
-    <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc::File(file_no, a, b), Box::new(e), i.map(Box::new)),
-    <a:@L> <e:Precedence0> "[" <l:Expression?> ":" <r:Expression?> "]" <b:@R> => Expression::ArraySlice(Loc::File(file_no, a, b), Box::new(e), l.map(Box::new), r.map(Box::new)),
-    <a:@L> <e:Precedence0> "." <i:SolIdentifier> <b:@R> => Expression::MemberAccess(Loc::File(file_no, a, b), Box::new(e), i),
+    <a:@L> <e:Precedence1> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc::File(file_no, a, b), Box::new(e), i.map(Box::new)),
+    <a:@L> <e:Precedence1> "[" <l:Expression?> ":" <r:Expression?> "]" <b:@R> => Expression::ArraySlice(Loc::File(file_no, a, b), Box::new(e), l.map(Box::new), r.map(Box::new)),
+    <a:@L> <e:Precedence1> "." <i:SolIdentifier> <b:@R> => Expression::MemberAccess(Loc::File(file_no, a, b), Box::new(e), i),
     // Solidity has ".address" members on external function types. Address is a keyword, so special casing needed
-    <a:@L> <e:Precedence0> "." <al:@L> "address" <b:@R> => {
+    <a:@L> <e:Precedence1> "." <al:@L> "address" <b:@R> => {
         Expression::MemberAccess(Loc::File(file_no, a, b), Box::new(e),
             Identifier { loc: Loc::File(file_no, al, b), name: "address".to_string() })
     },
@@ -471,9 +478,8 @@ NoFunctionTyPrecedence0: Expression = {
     <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc::File(file_no, a, b), v)
     },
-    <SolNoErrorIdentifier> => Expression::Variable(<>),
-    <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc::File(file_no, l, r), Box::new(e), u),
-    <l:@L> <a:ParameterList> <r:@R> => {
+    <SolNoRevertIdentifier> => Expression::Variable(<>),
+    <l:@L> <a:NamedParameterList> <r:@R> => {
         if a.len() == 1 {
             if let Some(Parameter{ ty, storage: None, name: None, .. }) = &a[0].1 {
                 // this means "(" Expression ")"
@@ -498,33 +504,6 @@ LiteralExpression: Expression = {
 
         Expression::AddressLiteral(Loc::File(file_no, l, r), a.chars().skip(8).filter(|c|  *c != '"' && *c != '\'').collect())
     },
-    <l:@L> <n:number> <r:@R> => {
-        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
-        let exp: String = n.1.chars().filter(|v| *v != '_').collect();
-
-        Expression::NumberLiteral(Loc::File(file_no, l, r), integer, exp)
-    },
-    <l:@L> <n:rational> <r:@R> => {
-        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
-        let fraction: String = n.1.chars().filter(|v| *v != '_').collect();
-        let exp: String = n.2.chars().filter(|v| *v != '_').collect();
-
-        Expression::RationalNumberLiteral(Loc::File(file_no, l, r), integer, fraction, exp)
-    },
-    <l:@L> <n:hexnumber> <r:@R> => {
-        Expression::HexNumberLiteral(Loc::File(file_no, l, r), n.to_owned())
-    }
-}
-
-Unit: Unit = {
-    <@L> "seconds" <@R> => Unit::Seconds(Loc::File(file_no, <>)),
-    <@L> "minutes" <@R> => Unit::Minutes(Loc::File(file_no, <>)),
-    <@L> "hours" <@R> => Unit::Hours(Loc::File(file_no, <>)),
-    <@L> "days" <@R> => Unit::Days(Loc::File(file_no, <>)),
-    <@L> "weeks" <@R> => Unit::Weeks(Loc::File(file_no, <>)),
-    <@L> "wei" <@R> => Unit::Wei(Loc::File(file_no, <>)),
-    <@L> "gwei" <@R> => Unit::Gwei(Loc::File(file_no, <>)),
-    <@L> "ether" <@R> => Unit::Ether(Loc::File(file_no, <>)),
 }
 
 StringLiteral: StringLiteral = {
@@ -547,7 +526,7 @@ HexLiteral: HexLiteral = {
 // and as an added bonus we can generate error messages about missing parameters/returns
 // to functions
 Parameter: Parameter = {
-    <l:@L> <ty:Expression> <storage:StorageLocation?> <name:SolIdentifier?> <r:@R> => {
+    <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier?> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
         Parameter{loc, ty, storage, name}
     }
@@ -561,6 +540,31 @@ ParameterList: Vec<(Loc, Option<Parameter>)> = {
     "(" ")" => Vec::new(),
     "(" <l:@L> <p:Parameter> <r:@R> ")" => vec!((Loc::File(file_no, l, r), Some(p))),
     "(" <CommaTwo<OptParameter>> ")" => <>,
+    "(" <false_token:!> ")"=> {
+        parser_errors.push(<>);
+        Vec::new()
+    }
+}
+
+NamedParameter: Parameter = {
+    <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier> <r:@R> => {
+        let loc = Loc::File(file_no, l, r);
+        Parameter{ loc, ty, storage, name: Some(name) }
+    },
+    <l:@L> <ty:Expression> <r:@R> => {
+        let loc = Loc::File(file_no, l, r);
+        Parameter{ loc, ty, storage: None, name: None }
+    }
+}
+
+OptNamedParameter: (Loc, Option<Parameter>) = {
+    <l:@L> <p:NamedParameter?> <r:@R> => (Loc::File(file_no, l, r), p),
+}
+
+NamedParameterList: Vec<(Loc, Option<Parameter>)> = {
+    "(" ")" => Vec::new(),
+    "(" <l:@L> <p:NamedParameter> <r:@R> ")" => vec!((Loc::File(file_no, l, r), Some(p))),
+    "(" <CommaTwo<OptNamedParameter>> ")" => <>,
     "(" <false_token:!> ")"=> {
         parser_errors.push(<>);
         Vec::new()
@@ -696,7 +700,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
 }
 
 Using: Box<Using> = {
-    <l:@L> "using" <list:UsingList> "for" <ty:AnyType> <global:SolIdentifier?> <r:@R> ";" => Box::new(Using {
+    <l:@L> "using" <list:UsingList> "for" <ty:Precedence0> <global:SolIdentifier?> <r:@R> ";" => Box::new(Using {
         loc: Loc::File(file_no, l, r),
         list,
         ty: Some(ty),
@@ -708,7 +712,7 @@ Using: Box<Using> = {
         ty: None,
         global,
     }),
-  <l:@L> "using" <false_token:!> <r:@R> ";" => {
+    <l:@L> "using" <false_token:!> <r:@R> ";" => {
         parser_errors.push(false_token);
         let list = UsingList::Error();
         let global = None;
@@ -723,7 +727,31 @@ Using: Box<Using> = {
 
 UsingList: UsingList = {
     SolIdentifierPath => UsingList::Library(<>),
-    "{" <Comma<SolIdentifierPath>> "}" => UsingList::Functions(<>),
+    "{" <Comma<UsingFunction>> "}" => UsingList::Functions(<>),
+}
+
+UsingFunction: UsingFunction = {
+    <l:@L> <path:SolIdentifierPath> <oper:UserDefinedOperator?> <r:@R> => {
+        UsingFunction { loc: Loc::File(file_no, l, r), path, oper }
+    }
+}
+
+UserDefinedOperator: UserDefinedOperator = {
+    "as" "&" => UserDefinedOperator::BitwiseAnd,
+    "as" "~" => UserDefinedOperator::Complement,
+    "as" "|" => UserDefinedOperator::BitwiseOr,
+    "as" "^" => UserDefinedOperator::BitwiseXor,
+    "as" "+" => UserDefinedOperator::Add,
+    "as" "/" => UserDefinedOperator::Divide,
+    "as" "%" => UserDefinedOperator::Modulo,
+    "as" "*" => UserDefinedOperator::Multiply,
+    "as" "-" => UserDefinedOperator::Subtract,
+    "as" "==" => UserDefinedOperator::Equal,
+    "as" ">" => UserDefinedOperator::More,
+    "as" ">=" => UserDefinedOperator::MoreEqual,
+    "as" "<" => UserDefinedOperator::Less,
+    "as" "<=" => UserDefinedOperator::LessEqual,
+    "as" "!=" => UserDefinedOperator::NotEqual,
 }
 
 BlockStatement: Statement = {
@@ -1117,7 +1145,6 @@ extern {
         "interface" => Token::Interface,
         "library" => Token::Library,
         "event" => Token::Event,
-        "error" => Token::Error,
         "enum" => Token::Enum,
         "type" => Token::Type,
         "public" => Token::Public,
@@ -1151,14 +1178,6 @@ extern {
         "catch" => Token::Catch,
         "receive" => Token::Receive,
         "fallback" => Token::Fallback,
-        "seconds" => Token::Seconds,
-        "minutes" => Token::Minutes,
-        "hours" => Token::Hours,
-        "days" => Token::Days,
-        "weeks" => Token::Weeks,
-        "wei" => Token::Wei,
-        "gwei" => Token::Gwei,
-        "ether" => Token::Ether,
         "this" => Token::This,
         "as" => Token::As,
         "is" => Token::Is,

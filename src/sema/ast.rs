@@ -444,11 +444,18 @@ impl Function {
         matches!(self.mutability, Mutability::Payable(_))
     }
 
-    /// Does this function have an @payer annotation
+    /// Does this function have an @payer annotation?
     pub fn has_payer_annotation(&self) -> bool {
         self.annotations
             .iter()
             .any(|note| matches!(note, ConstructorAnnotation::Payer(..)))
+    }
+
+    /// Does this function have an @seed annotation?
+    pub fn has_seed_annotation(&self) -> bool {
+        self.annotations
+            .iter()
+            .any(|note| matches!(note, ConstructorAnnotation::Seed(..)))
     }
 
     /// Does this function have the pure state
@@ -659,7 +666,14 @@ pub struct Using {
 
 pub enum UsingList {
     Library(usize),
-    Functions(Vec<usize>),
+    Functions(Vec<UsingFunction>),
+}
+
+/// Using binding for a function, optionally for an operator
+pub struct UsingFunction {
+    pub loc: pt::Loc,
+    pub function_no: usize,
+    pub oper: Option<pt::UserDefinedOperator>,
 }
 
 pub struct Contract {
@@ -990,7 +1004,7 @@ pub enum Expression {
         ty: Type,
         expr: Box<Expression>,
     },
-    UnaryMinus {
+    Negate {
         loc: pt::Loc,
         ty: Type,
         expr: Box<Expression>,
@@ -1108,6 +1122,13 @@ pub enum Expression {
         loc: pt::Loc,
         list: Vec<Expression>,
     },
+    UserDefinedOperator {
+        loc: pt::Loc,
+        ty: Type,
+        oper: pt::UserDefinedOperator,
+        function_no: usize,
+        args: Vec<Expression>,
+    },
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
@@ -1165,7 +1186,7 @@ impl Recurse for Expression {
                 | Expression::PostDecrement { expr, .. }
                 | Expression::Not { expr, .. }
                 | Expression::Complement { expr, .. }
-                | Expression::UnaryMinus { expr, .. }
+                | Expression::Negate { expr, .. }
                 | Expression::StructMember { expr, .. } => expr.recurse(cx, f),
 
                 Expression::Add { left, right, .. }
@@ -1266,11 +1287,14 @@ impl Recurse for Expression {
                     }
                     call_args.recurse(cx, f);
                 }
-                Expression::Builtin { args: exprs, .. } | Expression::List { list: exprs, .. } => {
+                Expression::UserDefinedOperator { args: exprs, .. }
+                | Expression::Builtin { args: exprs, .. }
+                | Expression::List { list: exprs, .. } => {
                     for e in exprs {
                         e.recurse(cx, f);
                     }
                 }
+
                 _ => (),
             }
         }
@@ -1319,7 +1343,7 @@ impl CodeLocation for Expression {
             | Expression::NotEqual { loc, .. }
             | Expression::Not { loc, expr: _ }
             | Expression::Complement { loc, .. }
-            | Expression::UnaryMinus { loc, .. }
+            | Expression::Negate { loc, .. }
             | Expression::ConditionalOperator { loc, .. }
             | Expression::Subscript { loc, .. }
             | Expression::StructMember { loc, .. }
@@ -1343,7 +1367,8 @@ impl CodeLocation for Expression {
             | Expression::List { loc, list: _ }
             | Expression::FormatString { loc, format: _ }
             | Expression::InterfaceId { loc, .. }
-            | Expression::And { loc, .. } => *loc,
+            | Expression::And { loc, .. }
+            | Expression::UserDefinedOperator { loc, .. } => *loc,
         }
     }
 }

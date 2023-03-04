@@ -1,4 +1,4 @@
-<img src="docs//hl_solang_horizontal-color.svg" alt="Solang Logo" width="75%"/>
+<img src="https://raw.githubusercontent.com/hyperledger/solang/main/docs/hl_solang_horizontal-color.svg" alt="Solang Logo" width="75%"/>
 
 # solang - Solidity Compiler for Solana and Substrate
 
@@ -27,34 +27,14 @@ brew install hyperledger/solang/solang
 
 For other operating systems, please check the [installation guide](https://solang.readthedocs.io/en/latest/installing.html).
 
-## Simple example
+## Simple examples
 
-After installing the compiler, write the following to flipper.sol:
+### Build for Solana
 
-```solidity
-contract flipper {
-	bool private value;
-
-	constructor(bool initvalue) public {
-		value = initvalue;
-	}
-
-	function flip() public {
-		value = !value;
-	}
-
-	function get() public view returns (bool) {
-		return value;
-	}
-}
-```
-
-## Build for Solana
-
-Run:
+Run the following command, selecting the flipper example available in Solang's repository:
 
 ```bash
-solang compile --target solana flipper.sol
+solang compile --target solana examples/solana/flipper.sol
 ```
 
 Alternatively if you want to use the solang container, run:
@@ -129,12 +109,12 @@ export ANCHOR_PROVIDER_URL=http://127.0.0.1:8899
 node flipper.js
 ```
 
-## Build for Substrate
+### Build for Substrate
 
-Run:
+Run the following command, selecting the flipper example available on Solang's repository:
 
 ```bash
-solang compile --target substrate flipper.sol
+solang compile --target substrate examples/substrate/flipper.sol
 ```
 
 Alternatively if you want to use the solang container, run:
@@ -155,16 +135,17 @@ Here is a brief description of what we envision for the next versions.
 
 ### V0.3
 
-| Milestone                                  | Status      |
-|--------------------------------------------|-------------|
-| Call Solana's Rust contracts from Solidity | Completed   |
-| Improvements in overflow checking          | Completed   |
-| Support Solana's Program Derived Addresses | Completed   |
-| Call Solidity from Solana's Rust contracts | Not started |
-| Improve developer experience for Substrate | Not started |
-| Tooling for calls between ink! <> solidity | Not started |
-| Support chain extensions for Substrate     | Not started |
-| Provide CLI for node interactions          | Not started |
+| Milestone                                    | Status      |
+|----------------------------------------------|-------------|
+| Specify values as "1 sol" and "1e9 lamports" | Completed   |
+| Call Solana's Rust contracts from Solidity   | Completed   |
+| Improvements in overflow checking            | Completed   |
+| Support Solana's Program Derived Addresses   | Completed   |
+| Call Solidity from Solana's Rust contracts   | Not started |
+| Improve developer experience for Substrate   | In progress |
+| Tooling for calls between ink! <> solidity   | In progress |
+| Support chain extensions for Substrate       | Not started |
+| Provide CLI for node interactions            | Not started |
 
 
 ### V0.4
@@ -172,12 +153,9 @@ Here is a brief description of what we envision for the next versions.
 | Milestone                                          | Status      |
 |----------------------------------------------------|-------------|
 | Improve management over optimization passes        | Not started |
-| Specify values as "1 sol" and "1e9 lamports"       | In progress |
 | Adopt single static assignment for code generation | Not started |
 | Support openzeppelin on Substrate target           | Not started |
 | Provide Solidity -> Substrate porting guide        | Not started |
-
-
 
 ## License
 

@@ -584,7 +584,7 @@ impl<'a> Builder<'a> {
             // Other Unary
             | ast::Expression::Not { expr, .. }
             | ast::Expression::Complement { expr, .. }
-            | ast::Expression::UnaryMinus { expr, .. } => {
+            | ast::Expression::Negate { expr, .. } => {
                 self.expression(expr, symtab);
             }
 

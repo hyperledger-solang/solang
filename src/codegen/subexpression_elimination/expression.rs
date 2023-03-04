@@ -208,8 +208,8 @@ impl Expression {
                 Expression::Complement(*loc, expr_type.clone(), Box::new(operand.clone()))
             }
 
-            Expression::UnaryMinus(loc, expr_type, ..) => {
-                Expression::UnaryMinus(*loc, expr_type.clone(), Box::new(operand.clone()))
+            Expression::Negate(loc, expr_type, ..) => {
+                Expression::Negate(*loc, expr_type.clone(), Box::new(operand.clone()))
             }
 
             _ => unreachable!("Cannot rebuild this unary expression"),
@@ -267,7 +267,7 @@ impl Expression {
             | Expression::BytesCast(_, _, _, operand)
             | Expression::Not(_, operand)
             | Expression::Complement(_, _, operand)
-            | Expression::UnaryMinus(_, _, operand) => Some(operand),
+            | Expression::Negate(_, _, operand) => Some(operand),
 
             _ => None,
         }

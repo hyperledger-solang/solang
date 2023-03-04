@@ -179,7 +179,7 @@ char *uint128dec(char *output, __uint128_t val128)
     return output;
 }
 
-typedef unsigned _ExtInt(256) uint256_t;
+typedef unsigned _BitInt(256) uint256_t;
 
 extern int udivmod256(const uint256_t *dividend, const uint256_t *divisor, uint256_t *remainder, uint256_t *quotient);
 

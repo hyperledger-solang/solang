@@ -41,7 +41,7 @@ use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
-use solang_parser::{pt, pt::CodeLocation};
+use solang_parser::{pt, pt::CodeLocation, pt::Loc};
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
@@ -89,6 +89,7 @@ pub struct Options {
     pub generate_debug_information: bool,
     pub opt_level: OptimizationLevel,
     pub log_api_return_codes: bool,
+    pub log_runtime_errors: bool,
 }
 
 impl Default for Options {
@@ -103,6 +104,7 @@ impl Default for Options {
             generate_debug_information: false,
             opt_level: OptimizationLevel::Default,
             log_api_return_codes: false,
+            log_runtime_errors: false,
         }
     }
 }
@@ -404,7 +406,7 @@ pub enum Expression {
     Subscript(pt::Loc, Type, Type, Box<Expression>, Box<Expression>),
     Subtract(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
     Trunc(pt::Loc, Type, Box<Expression>),
-    UnaryMinus(pt::Loc, Type, Box<Expression>),
+    Negate(pt::Loc, Type, Box<Expression>),
     Undefined(Type),
     Variable(pt::Loc, Type, usize),
     ZeroExt(pt::Loc, Type, Box<Expression>),
@@ -449,7 +451,7 @@ impl CodeLocation for Expression {
             | Expression::Equal(loc, ..)
             | Expression::NotEqual(loc, ..)
             | Expression::Complement(loc, ..)
-            | Expression::UnaryMinus(loc, ..)
+            | Expression::Negate(loc, ..)
             | Expression::UnsignedLess(loc, ..)
             | Expression::SignedLess(loc, ..)
             | Expression::Not(loc, ..)
@@ -529,7 +531,7 @@ impl Recurse for Expression {
             | Expression::GetRef(_, _, exp)
             | Expression::Not(_, exp)
             | Expression::Trunc(_, _, exp)
-            | Expression::UnaryMinus(_, _, exp)
+            | Expression::Negate(_, _, exp)
             | Expression::ZeroExt(_, _, exp)
             | Expression::SignExt(_, _, exp)
             | Expression::Complement(_, _, exp)
@@ -606,7 +608,7 @@ impl RetrieveType for Expression {
             | Expression::ShiftRight(_, ty, ..)
             | Expression::Complement(_, ty, ..)
             | Expression::StorageArrayLength { ty, .. }
-            | Expression::UnaryMinus(_, ty, ..)
+            | Expression::Negate(_, ty, ..)
             | Expression::StructLiteral(_, ty, ..)
             | Expression::ArrayLiteral(_, ty, ..)
             | Expression::ConstArrayLiteral(_, ty, ..)
@@ -1123,8 +1125,8 @@ impl Expression {
                 Expression::Complement(loc, ty, expr) => {
                     Expression::Complement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
                 }
-                Expression::UnaryMinus(loc, ty, expr) => {
-                    Expression::UnaryMinus(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                Expression::Negate(loc, ty, expr) => {
+                    Expression::Negate(*loc, ty.clone(), Box::new(filter(expr, ctx)))
                 }
                 Expression::Subscript(loc, elem_ty, array_ty, left, right) => {
                     Expression::Subscript(
@@ -1340,5 +1342,27 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::WriteBytes | ast::Builtin::WriteString => Builtin::WriteBytes,
             _ => panic!("Builtin should not be in the cfg"),
         }
+    }
+}
+
+pub(super) fn error_msg_with_loc(ns: &Namespace, error: &str, loc: Option<Loc>) -> String {
+    if let Some(loc) = loc {
+        match loc {
+            Loc::File(..) => {
+                let file_no = loc.file_no();
+                let curr_file = &ns.files[file_no];
+                let (line_no, offset) = curr_file.offset_to_line_column(loc.start());
+                format!(
+                    "{} in {}:{}:{}",
+                    error,
+                    curr_file.path.file_name().unwrap().to_str().unwrap(),
+                    line_no + 1,
+                    offset
+                )
+            }
+            _ => error.to_string(),
+        }
+    } else {
+        error.to_string()
     }
 }

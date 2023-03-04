@@ -22,6 +22,7 @@ use num_traits::One;
 use parse_display::Display;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
+use solang_parser::pt::Loc;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ops::AddAssign;
 use std::str;
@@ -106,7 +107,12 @@ pub enum Instr {
     },
     /// Pop element from memory array. The push builtin returns a reference
     /// to the new element which is stored in res.
-    PopMemory { res: usize, ty: Type, array: usize },
+    PopMemory {
+        res: usize,
+        ty: Type,
+        array: usize,
+        loc: Loc,
+    },
     /// Create contract and call constructor. If creating the contract fails,
     /// either store the result in success or abort success.
     Constructor {
@@ -120,6 +126,7 @@ pub enum Instr {
         salt: Option<Expression>,
         address: Option<Expression>,
         seeds: Option<Expression>,
+        loc: Loc,
     },
     /// Call external functions. If the call fails, set the success failure
     /// or abort if this is None
@@ -377,29 +384,14 @@ impl fmt::Display for HashTy {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct BasicBlock {
     pub phis: Option<BTreeSet<usize>>,
     pub name: String,
-    pub instr: Vec<(InstrOrigin, Instr)>,
+    pub instr: Vec<Instr>,
     pub defs: reaching_definitions::VarDefs,
     pub loop_reaching_variables: HashSet<usize>,
     pub transfers: Vec<Vec<reaching_definitions::Transfer>>,
-}
-
-/// This enum saves information about the origin of each instruction. They can originate from
-/// Solidity code, Yul code or during code generation.
-#[derive(Clone)]
-pub enum InstrOrigin {
-    Solidity,
-    Yul,
-    Codegen,
-}
-
-impl BasicBlock {
-    fn add(&mut self, instr_origin: InstrOrigin, ins: Instr) {
-        self.instr.push((instr_origin, ins));
-    }
 }
 
 #[derive(Clone)]
@@ -496,20 +488,12 @@ impl ControlFlowGraph {
         self.current = pos;
     }
 
-    /// Add an instruction from Solidity to the CFG
+    /// Add an instruction to the CFG
     pub fn add(&mut self, vartab: &mut Vartable, ins: Instr) {
         if let Instr::Set { res, .. } = ins {
             vartab.set_dirty(res);
         }
-        self.blocks[self.current].add(InstrOrigin::Solidity, ins);
-    }
-
-    /// Add an instruction from Yul to the CFG
-    pub fn add_yul(&mut self, vartab: &mut Vartable, ins: Instr) {
-        if let Instr::Set { res, .. } = ins {
-            vartab.set_dirty(res);
-        }
-        self.blocks[self.current].add(InstrOrigin::Yul, ins);
+        self.blocks[self.current].instr.push(ins);
     }
 
     /// Retrieve the basic block being processed
@@ -762,7 +746,7 @@ impl ControlFlowGraph {
             ),
             Expression::Not(_, e) => format!("!{}", self.expr_to_string(contract, ns, e)),
             Expression::Complement(_, _, e) => format!("~{}", self.expr_to_string(contract, ns, e)),
-            Expression::UnaryMinus(_, _, e) => format!("-{}", self.expr_to_string(contract, ns, e)),
+            Expression::Negate(_, _, e) => format!("-{}", self.expr_to_string(contract, ns, e)),
             Expression::Poison => "☠".to_string(),
             Expression::AllocDynamicBytes(_, ty, size, None) => {
                 let ty = if let Type::Slice(ty) = ty {
@@ -994,7 +978,7 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, value),
             ),
-            Instr::PopMemory { res, ty, array } => format!(
+            Instr::PopMemory { res, ty, array, loc:_ } => format!(
                 "%{}, %{} = pop array ty:{}",
                 self.vars[res].id.name,
                 self.vars[array].id.name,
@@ -1162,7 +1146,8 @@ impl ControlFlowGraph {
                 gas,
                 salt,
                 value,
-                address,seeds
+                address,seeds,
+                loc:_
 
             } => format!(
                 "%{}, {} = constructor salt:{} value:{} gas:{} address:{} seeds:{} {} (encoded buffer: {}, buffer len: {})",
@@ -1303,7 +1288,7 @@ impl ControlFlowGraph {
             .unwrap();
         }
 
-        for (_, ins) in &self.blocks[pos].instr {
+        for ins in &self.blocks[pos].instr {
             writeln!(s, "\t{}", self.instr_to_string(contract, ns, ins)).unwrap();
         }
 

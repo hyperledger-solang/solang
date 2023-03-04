@@ -76,7 +76,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
                     di_flags,
                 );
 
-                let func_loc = cfg.blocks[0].instr.first().unwrap().1.loc();
+                let func_loc = cfg.blocks[0].instr.first().unwrap().loc();
                 let line_num = if let pt::Loc::File(file_offset, offset, _) = func_loc {
                     let (line, _) = ns.files[file_offset].offset_to_line_column(offset);
                     line
@@ -180,7 +180,7 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
             w.vars.get_mut(v).unwrap().value = (*phi).as_basic_value();
         }
 
-        for (_, ins) in &cfg.blocks[w.block_no].instr {
+        for ins in &cfg.blocks[w.block_no].instr {
             if bin.options.generate_debug_information {
                 let debug_loc = ins.loc();
                 if let pt::Loc::File(file_offset, offset, _) = debug_loc {

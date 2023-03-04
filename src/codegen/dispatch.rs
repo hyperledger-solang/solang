@@ -43,7 +43,7 @@ pub(super) fn function_dispatch(
             loc: Loc::Codegen,
             expr: Expression::Load(
                 Loc::Codegen,
-                Type::Ref(Type::BufferPointer.into()),
+                Type::BufferPointer,
                 Expression::StructMember(
                     Loc::Codegen,
                     Type::Ref(Type::BufferPointer.into()),
@@ -65,7 +65,7 @@ pub(super) fn function_dispatch(
             loc: Loc::Codegen,
             expr: Expression::Load(
                 Loc::Codegen,
-                Type::Ref(Type::Uint(64).into()),
+                Type::Uint(64),
                 Expression::StructMember(
                     Loc::Codegen,
                     Type::Ref(Type::Uint(64).into()),

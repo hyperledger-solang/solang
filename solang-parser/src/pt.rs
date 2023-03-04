@@ -307,8 +307,81 @@ impl ContractPart {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum UsingList {
     Library(IdentifierPath),
-    Functions(Vec<IdentifierPath>),
+    Functions(Vec<UsingFunction>),
     Error(),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
+pub struct UsingFunction {
+    pub loc: Loc,
+    pub path: IdentifierPath,
+    pub oper: Option<UserDefinedOperator>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
+pub enum UserDefinedOperator {
+    BitwiseAnd,
+    Complement,
+    Negate,
+    BitwiseOr,
+    BitwiseXor,
+    Add,
+    Divide,
+    Modulo,
+    Multiply,
+    Subtract,
+    Equal,
+    More,
+    MoreEqual,
+    Less,
+    LessEqual,
+    NotEqual,
+}
+
+impl UserDefinedOperator {
+    pub fn args(&self) -> usize {
+        match self {
+            UserDefinedOperator::Complement | UserDefinedOperator::Negate => 1,
+            _ => 2,
+        }
+    }
+
+    pub fn is_comparison(&self) -> bool {
+        matches!(
+            self,
+            UserDefinedOperator::Equal
+                | UserDefinedOperator::NotEqual
+                | UserDefinedOperator::More
+                | UserDefinedOperator::Less
+                | UserDefinedOperator::MoreEqual
+                | UserDefinedOperator::LessEqual
+        )
+    }
+}
+
+impl fmt::Display for UserDefinedOperator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UserDefinedOperator::BitwiseAnd => write!(f, "&"),
+            UserDefinedOperator::Complement => write!(f, "~"),
+            UserDefinedOperator::Negate => write!(f, "-"),
+            UserDefinedOperator::BitwiseOr => write!(f, "|"),
+            UserDefinedOperator::BitwiseXor => write!(f, "^"),
+            UserDefinedOperator::Add => write!(f, "+"),
+            UserDefinedOperator::Divide => write!(f, "/"),
+            UserDefinedOperator::Modulo => write!(f, "%"),
+            UserDefinedOperator::Multiply => write!(f, "*"),
+            UserDefinedOperator::Subtract => write!(f, "-"),
+            UserDefinedOperator::Equal => write!(f, "=="),
+            UserDefinedOperator::More => write!(f, ">"),
+            UserDefinedOperator::MoreEqual => write!(f, ">="),
+            UserDefinedOperator::Less => write!(f, "<"),
+            UserDefinedOperator::LessEqual => write!(f, "<="),
+            UserDefinedOperator::NotEqual => write!(f, "!="),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -388,6 +461,7 @@ pub struct ErrorParameter {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct ErrorDefinition {
     pub loc: Loc,
+    pub keyword: Expression,
     pub name: Option<Identifier>,
     pub fields: Vec<ErrorParameter>,
 }
@@ -460,19 +534,6 @@ pub struct NamedArgument {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
-pub enum Unit {
-    Seconds(Loc),
-    Minutes(Loc),
-    Hours(Loc),
-    Days(Loc),
-    Weeks(Loc),
-    Wei(Loc),
-    Gwei(Loc),
-    Ether(Loc),
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
@@ -495,7 +556,7 @@ pub enum Expression {
     PreIncrement(Loc, Box<Expression>),
     PreDecrement(Loc, Box<Expression>),
     UnaryPlus(Loc, Box<Expression>),
-    UnaryMinus(Loc, Box<Expression>),
+    Negate(Loc, Box<Expression>),
     Power(Loc, Box<Expression>, Box<Expression>),
     Multiply(Loc, Box<Expression>, Box<Expression>),
     Divide(Loc, Box<Expression>, Box<Expression>),
@@ -528,9 +589,9 @@ pub enum Expression {
     AssignDivide(Loc, Box<Expression>, Box<Expression>),
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
     BoolLiteral(Loc, bool),
-    NumberLiteral(Loc, String, String),
-    RationalNumberLiteral(Loc, String, String, String),
-    HexNumberLiteral(Loc, String),
+    NumberLiteral(Loc, String, String, Option<Identifier>),
+    RationalNumberLiteral(Loc, String, String, String, Option<Identifier>),
+    HexNumberLiteral(Loc, String, Option<Identifier>),
     StringLiteral(Vec<StringLiteral>),
     Type(Loc, Type),
     HexLiteral(Vec<HexLiteral>),
@@ -538,7 +599,6 @@ pub enum Expression {
     Variable(Identifier),
     List(Loc, ParameterList),
     ArrayLiteral(Loc, Vec<Expression>),
-    Unit(Loc, Box<Expression>, Unit),
     This(Loc),
 }
 
@@ -561,7 +621,7 @@ impl CodeLocation for Expression {
             | Expression::PreIncrement(loc, _)
             | Expression::PreDecrement(loc, _)
             | Expression::UnaryPlus(loc, _)
-            | Expression::UnaryMinus(loc, _)
+            | Expression::Negate(loc, _)
             | Expression::Power(loc, ..)
             | Expression::Multiply(loc, ..)
             | Expression::Divide(loc, ..)
@@ -596,11 +656,10 @@ impl CodeLocation for Expression {
             | Expression::BoolLiteral(loc, _)
             | Expression::NumberLiteral(loc, ..)
             | Expression::RationalNumberLiteral(loc, ..)
-            | Expression::HexNumberLiteral(loc, _)
+            | Expression::HexNumberLiteral(loc, ..)
             | Expression::ArrayLiteral(loc, _)
             | Expression::List(loc, _)
             | Expression::Type(loc, _)
-            | Expression::Unit(loc, ..)
             | Expression::This(loc)
             | Expression::Variable(Identifier { loc, .. })
             | Expression::AddressLiteral(loc, _) => *loc,

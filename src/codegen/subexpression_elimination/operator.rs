@@ -45,7 +45,7 @@ pub enum Operator {
     Trunc(Type),
     Cast(Type),
     BytesCast,
-    UnaryMinus,
+    Negate,
     Complement,
 }
 
@@ -97,7 +97,7 @@ impl Expression {
             Expression::Trunc(_, ty, ..) => Operator::Trunc(ty.clone()),
             Expression::Cast(_, ty, ..) => Operator::Cast(ty.clone()),
             Expression::BytesCast(..) => Operator::BytesCast,
-            Expression::UnaryMinus(..) => Operator::UnaryMinus,
+            Expression::Negate(..) => Operator::Negate,
             Expression::SignedMore(..) => Operator::SignedMore,
             Expression::UnsignedMore(..) => Operator::UnsignedMore,
             Expression::SignedLess(..) => Operator::SignedLess,

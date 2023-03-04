@@ -2,9 +2,11 @@
 
 use crate::emit::binary::Binary;
 use crate::emit::{BinaryOp, TargetRuntime};
+use crate::sema::ast::Namespace;
 use inkwell::types::IntType;
 use inkwell::values::{FunctionValue, IntValue, PointerValue};
 use inkwell::{AddressSpace, IntPredicate};
+use solang_parser::pt::Loc;
 
 /// Signed overflow detection is handled by the following steps:
 /// 1- Do an unsigned multiplication first, This step will check if the generated value will fit in N bits. (unsigned overflow)
@@ -19,6 +21,8 @@ fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
     right: IntValue<'a>,
     bits: u32,
     function: FunctionValue<'a>,
+    ns: &Namespace,
+    loc: Loc,
 ) -> IntValue<'b> {
     // We check for signed overflow based on the facts:
     //  - * - = +
@@ -71,27 +75,9 @@ fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
     let return_val = bin.builder.build_call(
         bin.module.get_function("__mul32_with_builtin_ovf").unwrap(),
         &[
-            bin.builder
-                .build_pointer_cast(
-                    l,
-                    bin.context.i32_type().ptr_type(AddressSpace::default()),
-                    "left",
-                )
-                .into(),
-            bin.builder
-                .build_pointer_cast(
-                    r,
-                    bin.context.i32_type().ptr_type(AddressSpace::default()),
-                    "right",
-                )
-                .into(),
-            bin.builder
-                .build_pointer_cast(
-                    o,
-                    bin.context.i32_type().ptr_type(AddressSpace::default()),
-                    "output",
-                )
-                .into(),
+            l.into(),
+            r.into(),
+            o.into(),
             bin.context
                 .i32_type()
                 .const_int(mul_bits as u64 / 32, false)
@@ -100,7 +86,7 @@ fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
         "",
     );
 
-    let res = bin.builder.build_load(o, "mul");
+    let res = bin.builder.build_load(mul_ty, o, "mul");
     let ovf_any_type = if mul_bits != bits {
         // If there are any set bits, then there is an overflow.
         let check_ovf = bin.builder.build_right_shift(
@@ -194,6 +180,7 @@ fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
 
     bin.builder.position_at_end(error_block);
 
+    target.log_runtime_error(bin, "multiplication overflow".to_string(), Some(loc), ns);
     target.assert_failure(
         bin,
         bin.context
@@ -217,31 +204,14 @@ fn call_mul32_without_ovf<'a>(
     o: PointerValue<'a>,
     mul_bits: u32,
     mul_type: IntType<'a>,
+    res_type: IntType<'a>,
 ) -> IntValue<'a> {
     bin.builder.build_call(
         bin.module.get_function("__mul32").unwrap(),
         &[
-            bin.builder
-                .build_pointer_cast(
-                    l,
-                    bin.context.i32_type().ptr_type(AddressSpace::default()),
-                    "left",
-                )
-                .into(),
-            bin.builder
-                .build_pointer_cast(
-                    r,
-                    bin.context.i32_type().ptr_type(AddressSpace::default()),
-                    "right",
-                )
-                .into(),
-            bin.builder
-                .build_pointer_cast(
-                    o,
-                    bin.context.i32_type().ptr_type(AddressSpace::default()),
-                    "output",
-                )
-                .into(),
+            l.into(),
+            r.into(),
+            o.into(),
             bin.context
                 .i32_type()
                 .const_int(mul_bits as u64 / 32, false)
@@ -250,10 +220,10 @@ fn call_mul32_without_ovf<'a>(
         "",
     );
 
-    let res = bin.builder.build_load(o, "mul");
+    let res = bin.builder.build_load(mul_type, o, "mul");
 
     bin.builder
-        .build_int_truncate(res.into_int_value(), mul_type, "")
+        .build_int_truncate(res.into_int_value(), res_type, "")
 }
 
 /// Utility function to extract the sign bit of an IntValue
@@ -280,6 +250,8 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
     left: IntValue<'a>,
     right: IntValue<'a>,
     signed: bool,
+    ns: &Namespace,
+    loc: Loc,
 ) -> IntValue<'a> {
     let bits = left.get_type().get_bit_width();
 
@@ -314,7 +286,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
         if bin.options.math_overflow_check && !unchecked {
             if signed {
                 return signed_ovf_detect(
-                    target, bin, mul_ty, mul_bits, left, right, bits, function,
+                    target, bin, mul_ty, mul_bits, left, right, bits, function, ns, loc,
                 );
             }
 
@@ -326,27 +298,9 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
             let return_val = bin.builder.build_call(
                 bin.module.get_function("__mul32_with_builtin_ovf").unwrap(),
                 &[
-                    bin.builder
-                        .build_pointer_cast(
-                            l,
-                            bin.context.i32_type().ptr_type(AddressSpace::default()),
-                            "left",
-                        )
-                        .into(),
-                    bin.builder
-                        .build_pointer_cast(
-                            r,
-                            bin.context.i32_type().ptr_type(AddressSpace::default()),
-                            "right",
-                        )
-                        .into(),
-                    bin.builder
-                        .build_pointer_cast(
-                            o,
-                            bin.context.i32_type().ptr_type(AddressSpace::default()),
-                            "output",
-                        )
-                        .into(),
+                    l.into(),
+                    r.into(),
+                    o.into(),
                     bin.context
                         .i32_type()
                         .const_int(mul_bits as u64 / 32, false)
@@ -355,7 +309,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
                 "ovf",
             );
 
-            let res = bin.builder.build_load(o, "mul");
+            let res = bin.builder.build_load(mul_ty, o, "mul");
 
             let error_block = bin.context.append_basic_block(function, "error");
             let return_block = bin.context.append_basic_block(function, "return_block");
@@ -404,6 +358,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(error_block);
 
+            target.log_runtime_error(bin, "multiplication overflow".to_string(), Some(loc), ns);
             target.assert_failure(
                 bin,
                 bin.context
@@ -418,7 +373,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder
                 .build_int_truncate(res.into_int_value(), left.get_type(), "")
         } else {
-            return call_mul32_without_ovf(bin, l, r, o, mul_bits, left.get_type());
+            return call_mul32_without_ovf(bin, l, r, o, mul_bits, mul_ty, left.get_type());
         }
     } else if bin.options.math_overflow_check && !unchecked {
         build_binary_op_with_overflow_check(
@@ -429,6 +384,8 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
             right,
             BinaryOp::Multiply,
             signed,
+            ns,
+            loc,
         )
     } else {
         bin.builder.build_int_mul(left, right, "")
@@ -442,6 +399,8 @@ pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
     bits: u32,
     signed: bool,
     o: PointerValue<'a>,
+    ns: &Namespace,
+    loc: Loc,
 ) -> FunctionValue<'a> {
     /*
         int ipow(int base, int exp)
@@ -522,6 +481,8 @@ pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
         result.as_basic_value().into_int_value(),
         base.as_basic_value().into_int_value(),
         signed,
+        ns,
+        loc,
     );
 
     let multiply_block = bin.builder.get_insert_block().unwrap();
@@ -566,6 +527,8 @@ pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
         base.as_basic_value().into_int_value(),
         base.as_basic_value().into_int_value(),
         signed,
+        ns,
+        loc,
     );
 
     let notdone = bin.builder.get_insert_block().unwrap();
@@ -590,6 +553,8 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
     right: IntValue<'a>,
     op: BinaryOp,
     signed: bool,
+    ns: &Namespace,
+    loc: Loc,
 ) -> IntValue<'a> {
     let ret_ty = bin.context.struct_type(
         &[
@@ -621,6 +586,8 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
         .build_conditional_branch(overflow, error_block, success_block);
 
     bin.builder.position_at_end(error_block);
+
+    target.log_runtime_error(bin, "math overflow".to_string(), Some(loc), ns);
 
     target.assert_failure(
         bin,
