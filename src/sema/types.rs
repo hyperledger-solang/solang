@@ -221,10 +221,14 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
         }
 
         if structs_visited.contains(&field_struct_no) {
-            ns.structs[struct_no].fields[field_no].recursive = true;
-            //match &field.ty {
-            //    Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
-            //        (Type::Struct(StructType::UserDefined(_)), Some(ArrayLength::Fixed(_))) => {
+            match &field.ty {
+                Type::Struct(StructType::UserDefined(_)) => {}
+                Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
+                    (Type::Struct(StructType::UserDefined(_)), Some(ArrayLength::Fixed(_))) => {}
+                    _ => continue,
+                },
+                _ => continue,
+            }
             ns.diagnostics.push(Diagnostic::error_with_note(
                 def.loc,
                 format!("struct '{}' has infinite size", def.name),
@@ -232,11 +236,6 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
                 format!("recursive field '{}'", field.name_as_str()),
             ));
             ns.structs[struct_no].fields[field_no].unsizeable = true;
-            //        }
-            //        _ => continue,
-            //    },
-            //    _ => continue,
-            //}
         } else {
             structs_visited.push(field_struct_no);
             find_struct_recursion(field_struct_no, structs_visited, ns);
@@ -806,7 +805,10 @@ fn struct_offsets(ns: &mut Namespace) {
             let mut largest_alignment = 0;
 
             for field in &ns.structs[struct_no].fields {
-                let alignment = field.ty.align_of(ns, &mut HashSet::new());
+                let mut alignment = field.ty.align_of(ns, &mut HashSet::new());
+                if alignment == 0 {
+                    alignment = 1
+                }
                 largest_alignment = std::cmp::max(alignment, largest_alignment);
                 let remainder = offset.clone() % alignment;
 
@@ -886,7 +888,7 @@ impl Type {
     }
 
     fn to_string_internal(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> String {
-        let f = |structs_visited: &mut HashSet<usize>| match self {
+        self.recurse(structs_visited, "".into(), |structs_visited| match self {
             Type::Bool => "bool".to_string(),
             Type::Address(false) => "address".to_string(),
             Type::Address(true) => "address payable".to_string(),
@@ -982,8 +984,7 @@ impl Type {
             Type::Unresolved => "unresolved".into(),
             Type::BufferPointer => "buffer_pointer".into(),
             Type::FunctionSelector => "function_selector".into(),
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// Is this a primitive, i.e. bool, address, int, uint, bytes
@@ -1009,7 +1010,7 @@ impl Type {
         ns: &Namespace,
         structs_visited: &mut HashSet<usize>,
     ) -> String {
-        let f = |structs_visited: &mut HashSet<usize>| match self {
+        self.recurse(structs_visited, "".into(), |structs_visited| match self {
             Type::Bool => "bool".to_string(),
             Type::Contract(_) | Type::Address(_) if ns.target == Target::Solana => {
                 format!("bytes{}", ns.address_length)
@@ -1059,8 +1060,7 @@ impl Type {
             Type::Unresolved => "unresolved".to_owned(),
             Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
             _ => unreachable!(),
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// Give the type of a memory array after dereference
@@ -1159,7 +1159,7 @@ impl Type {
 
     /// Returns the size a type occupies in memory
     pub fn memory_size_of(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> BigInt {
-        let f = |structs_visited: &mut HashSet<usize>| match self {
+        self.recurse(structs_visited, 0.into(), |structs_visited| match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
             Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
@@ -1199,8 +1199,7 @@ impl Type {
             Type::UserType(no) => ns.user_types[*no].ty.memory_size_of(ns, structs_visited),
             Type::FunctionSelector => BigInt::from(ns.target.selector_length()),
             _ => unimplemented!("sizeof on {:?}", self),
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// Retrieve the alignment for each type, if it is a struct member.
@@ -1211,7 +1210,7 @@ impl Type {
         ns: &Namespace,
         structs_visited: &mut HashSet<usize>,
     ) -> BigInt {
-        let f = |structs_visited: &mut HashSet<usize>| match self {
+        self.recurse(structs_visited, 0.into(),|structs_visited| match self {
             Type::Bool
             // Contract and address are arrays of u8, so they align with one.
             | Type::Contract(_)
@@ -1255,8 +1254,7 @@ impl Type {
 
             _ => unreachable!("Type should not appear on a struct"),
 
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// Calculate how much memory this type occupies in Solana's storage.
@@ -1267,7 +1265,7 @@ impl Type {
         ns: &Namespace,
         structs_visited: &mut HashSet<usize>,
     ) -> BigInt {
-        let f = |structs_visited: &mut HashSet<usize>| match self {
+        self.recurse(structs_visited, 0.into(), |structs_visited| match self {
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
                 ty.solana_storage_size(ns, structs_visited).mul(
@@ -1293,20 +1291,20 @@ impl Type {
                 .solana_storage_size(ns, structs_visited),
             // Other types have the same size both in storage and in memory
             _ => self.memory_size_of(ns, structs_visited),
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// Does this type fit into memory
     pub fn fits_in_memory(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> bool {
-        self.recurse(structs_visited, |structs_visited| {
-            self.memory_size_of(ns, structs_visited) < BigInt::from(u16::MAX)
-        })
+        //self.recurse(structs_visited, |structs_visited| {
+        //    self.memory_size_of(ns, structs_visited) < BigInt::from(u16::MAX)
+        //})
+        self.memory_size_of(ns, structs_visited) < BigInt::from(u16::MAX)
     }
 
     /// Calculate the alignment
     pub fn align_of(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> usize {
-        let f = |structs_visited: &mut HashSet<usize>| match self {
+        self.recurse(structs_visited, 1, |structs_visited| match self {
             Type::Uint(8) | Type::Int(8) => 1,
             Type::Uint(n) | Type::Int(n) if *n <= 16 => 2,
             Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
@@ -1320,8 +1318,7 @@ impl Type {
                 .unwrap(),
             Type::InternalFunction { .. } => ns.target.ptr_size().into(),
             _ => 1,
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     pub fn bytes(&self, ns: &Namespace) -> u8 {
@@ -1390,7 +1387,7 @@ impl Type {
     /// Calculate how many storage slots a type occupies. Note that storage arrays can
     /// be very large
     pub fn storage_slots(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> BigInt {
-        let f = |structs_visited: &mut HashSet<usize>| {
+        self.recurse(structs_visited, 1.into(), |structs_visited| {
             if ns.target == Target::Solana {
                 match self {
                     Type::Enum(_) => BigInt::one(),
@@ -1468,13 +1465,12 @@ impl Type {
                     _ => BigInt::one(),
                 }
             }
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// Alignment of elements in storage
     pub fn storage_align(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> BigInt {
-        let f = |structs_visited: &mut HashSet<usize>| {
+        self.recurse(structs_visited, 1.into(), |structs_visited| {
             if ns.target == Target::Solana {
                 let length = match self {
                     Type::Enum(_) => BigInt::one(),
@@ -1498,13 +1494,7 @@ impl Type {
                         .definition(ns)
                         .fields
                         .iter()
-                        .map(|field| {
-                            if field.unsizeable {
-                                BigInt::one()
-                            } else {
-                                field.ty.storage_align(ns, structs_visited)
-                            }
-                        })
+                        .map(|field| field.ty.storage_align(ns, structs_visited))
                         .max()
                         .unwrap(),
                     Type::String | Type::DynamicBytes => BigInt::from(4),
@@ -1526,8 +1516,7 @@ impl Type {
             } else {
                 BigInt::one()
             }
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// Is this type an reference type in the solidity language? (struct, array, mapping)
@@ -1559,7 +1548,7 @@ impl Type {
 
     /// Does this type contain any types which are variable-length
     pub fn is_dynamic(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> bool {
-        self.recurse(structs_visited, |structs_visited| match self {
+        self.recurse(structs_visited, false, |structs_visited| match self {
             Type::String | Type::DynamicBytes => true,
             Type::Ref(r) => r.is_dynamic(ns, structs_visited),
             Type::Array(ty, dim) => {
@@ -1635,18 +1624,17 @@ impl Type {
 
     /// Does the type contain any mapping type
     pub fn contains_mapping(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> bool {
-        let f = |structs_visited: &mut HashSet<usize>| match self {
+        self.recurse(structs_visited, false, |structs_visited| match self {
             Type::Mapping(..) => true,
             Type::Array(ty, _) => ty.contains_mapping(ns, structs_visited),
             Type::Struct(str_ty) => str_ty
                 .definition(ns)
                 .fields
                 .iter()
-                .any(|f| !f.unsizeable && f.ty.contains_mapping(ns, structs_visited)),
+                .any(|f| f.ty.contains_mapping(ns, structs_visited)),
             Type::StorageRef(_, r) | Type::Ref(r) => r.contains_mapping(ns, structs_visited),
             _ => false,
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// Does the type contain any internal function type
@@ -1655,20 +1643,19 @@ impl Type {
         ns: &Namespace,
         structs_visited: &mut HashSet<usize>,
     ) -> bool {
-        let f = |structs_visited: &mut HashSet<usize>| match self {
+        self.recurse(structs_visited, false, |structs_visited| match self {
             Type::InternalFunction { .. } => true,
             Type::Array(ty, _) => ty.contains_internal_function(ns, structs_visited),
             Type::Struct(str_ty) => str_ty
                 .definition(ns)
                 .fields
                 .iter()
-                .any(|f| !f.unsizeable && f.ty.contains_internal_function(ns, structs_visited)),
+                .any(|f| f.ty.contains_internal_function(ns, structs_visited)),
             Type::StorageRef(_, r) | Type::Ref(r) => {
                 r.contains_internal_function(ns, structs_visited)
             }
             _ => false,
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// Is this structure a builtin
@@ -1693,25 +1680,22 @@ impl Type {
         builtin: &StructType,
         structs_visited: &mut HashSet<usize>,
     ) -> Option<&'a Type> {
-        let f = |structs_visited: &mut HashSet<usize>| match self {
+        self.recurse(structs_visited, None, |structs_visited| match self {
             Type::Array(ty, _) => ty.contains_builtins(ns, builtin, structs_visited),
             Type::Mapping(Mapping { key, value, .. }) => key
                 .contains_builtins(ns, builtin, structs_visited)
                 .or_else(|| value.contains_builtins(ns, builtin, structs_visited)),
             Type::Struct(str_ty) if str_ty == builtin => Some(self),
-            Type::Struct(str_ty) => str_ty.definition(ns).fields.iter().find_map(|f| {
-                if f.unsizeable {
-                    None
-                } else {
-                    f.ty.contains_builtins(ns, builtin, structs_visited)
-                }
-            }),
+            Type::Struct(str_ty) => str_ty
+                .definition(ns)
+                .fields
+                .iter()
+                .find_map(|f| f.ty.contains_builtins(ns, builtin, structs_visited)),
             Type::StorageRef(_, r) | Type::Ref(r) => {
                 r.contains_builtins(ns, builtin, structs_visited)
             }
             _ => None,
-        };
-        self.recurse(structs_visited, f)
+        })
     }
 
     /// If the type is Ref or StorageRef, get the underlying type
@@ -1803,27 +1787,18 @@ impl Type {
         }
     }
 
-    /// Recursively walk over a type.
-    /// This function protects against overflows on infinitively recursive types.
-    fn recurse<F, O>(&self, structs_visited: &mut HashSet<usize>, f: F) -> O
+    /// Recursively walk over a type, protected against overflows on infinite recursive types.
+    /// `structs_visited` is the set of already visited structs.
+    /// `bail` is the value that should be returned in case an infinite recursion occured.
+    /// `f` is the closure applied on each iteration. `f` can be recursive.
+    fn recurse<F, O>(&self, structs_visited: &mut HashSet<usize>, bail: O, f: F) -> O
     where
         F: FnOnce(&mut HashSet<usize>) -> O,
-        O: Default,
     {
-        let field_struct_no = match self {
-            Type::Mapping(m) => match m.value.as_ref() {
-                Type::Struct(StructType::UserDefined(n)) => *n,
-                _ => return f(structs_visited),
-            },
-            Type::Struct(StructType::UserDefined(n)) => *n,
-            Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
-                (Type::Struct(StructType::UserDefined(n)), Some(_)) => *n,
-                _ => return f(structs_visited),
-            },
-            _ => return f(structs_visited),
-        };
-        if !structs_visited.insert(field_struct_no) {
-            return O::default();
+        if let Type::Struct(StructType::UserDefined(n)) = self {
+            if !structs_visited.insert(*n) {
+                return bail;
+            }
         }
         f(structs_visited)
     }

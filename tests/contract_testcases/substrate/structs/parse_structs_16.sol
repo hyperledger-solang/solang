@@ -1,4 +1,4 @@
-contract AddressTree {
+abstract contract AddressTree {
     struct MapTree {
         mapping(uint256 => MapTree) Items; // OK
     }

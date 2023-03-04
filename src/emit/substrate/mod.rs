@@ -1792,10 +1792,7 @@ impl SubstrateTarget {
                 binary,
                 ns,
             ),
-            _ => {
-                dbg!(&ty);
-                unreachable!()
-            }
+            _ => unreachable!(),
         }
     }
 
