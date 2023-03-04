@@ -11,7 +11,6 @@ use super::{
 };
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
-use crate::codegen::encoding::create_encoder;
 use crate::codegen::error_msg_with_loc;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
