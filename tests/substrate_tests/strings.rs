@@ -267,7 +267,7 @@ fn string_abi_decode() {
         r##"contract foo {
             function test() public {
                 string dec = abi.decode(hex"0c414141", (string));
-                //assert(dec == "AAA");
+                assert(dec == "AAA");
             }
         }"##,
     );
