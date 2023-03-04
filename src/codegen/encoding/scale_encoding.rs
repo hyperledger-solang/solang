@@ -5,8 +5,8 @@ use crate::codegen::encoding::{increment_by, AbiEncoding};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::StructType;
-use crate::sema::ast::{Namespace, Parameter, Type, Type::Uint};
-use solang_parser::pt::{Loc, Loc::Codegen};
+use crate::sema::ast::{Namespace, Type, Type::Uint};
+use solang_parser::pt::Loc::Codegen;
 use std::collections::HashMap;
 
 pub(super) struct ScaleEncoding {
@@ -371,7 +371,7 @@ impl AbiEncoding for ScaleEncoding {
         );
         let new_offset = increment_by(
             offset.clone(),
-            Expression::NumberLiteral(Codegen, Uint(32), ns.address_length.into()).into(),
+            Expression::NumberLiteral(Codegen, Uint(32), ns.address_length.into()),
         );
         let selector = Expression::Builtin(
             Codegen,
@@ -427,47 +427,4 @@ impl AbiEncoding for ScaleEncoding {
     fn is_packed(&self) -> bool {
         self.packed_encoder
     }
-}
-
-pub fn abi_decode(
-    loc: &Loc,
-    buffer: &Expression,
-    types: &[Type],
-    _ns: &Namespace,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-    buffer_size: Option<Expression>,
-) -> Vec<Expression> {
-    let mut returns: Vec<Expression> = Vec::with_capacity(types.len());
-    let mut var_nos: Vec<usize> = Vec::with_capacity(types.len());
-    let mut decode_params: Vec<Parameter> = Vec::with_capacity(types.len());
-
-    for item in types {
-        let var_no = vartab.temp_anonymous(item);
-        var_nos.push(var_no);
-        returns.push(Expression::Variable(*loc, item.clone(), var_no));
-        decode_params.push(Parameter {
-            loc: Loc::Codegen,
-            id: None,
-            ty: item.clone(),
-            ty_loc: None,
-            indexed: false,
-            readonly: false,
-            recursive: false,
-        });
-    }
-
-    cfg.add(
-        vartab,
-        Instr::AbiDecode {
-            res: var_nos,
-            selector: None,
-            exception_block: None,
-            tys: decode_params,
-            data: buffer.clone(),
-            data_len: buffer_size,
-        },
-    );
-
-    returns
 }

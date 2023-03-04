@@ -71,9 +71,6 @@ pub(super) fn abi_decode(
     cfg: &mut ControlFlowGraph,
     buffer_size_expr: Option<Expression>,
 ) -> Vec<Expression> {
-    if ns.target.is_substrate() {
-        //return scale_encoding::abi_decode(loc, buffer, types, ns, vartab, cfg, buffer_size_expr);
-    }
     let buffer_size = vartab.temp_anonymous(&Uint(32));
     if let Some(length_expression) = buffer_size_expr {
         cfg.add(
