@@ -103,7 +103,7 @@ pub fn expression(
             left,
             right,
         } => {
-            if ty.is_rational(ns) {
+            if ty.is_rational() {
                 let (_, r) = eval_const_rational(expr, ns).unwrap();
 
                 Expression::NumberLiteral(*loc, ty.clone(), r.to_integer())

@@ -153,7 +153,7 @@ pub fn expression(
                 right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
             };
 
-            if ty.is_rational(ns) {
+            if ty.is_rational() {
                 if let Err(diag) = eval_const_rational(&expr, ns) {
                     diagnostics.push(diag);
                 }
@@ -184,7 +184,7 @@ pub fn expression(
                 right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
             };
 
-            if ty.is_rational(ns) {
+            if ty.is_rational() {
                 if let Err(diag) = eval_const_rational(&expr, ns) {
                     diagnostics.push(diag);
                 }
@@ -214,7 +214,7 @@ pub fn expression(
                 right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
             };
 
-            if ty.is_rational(ns) {
+            if ty.is_rational() {
                 if let Err(diag) = eval_const_rational(&expr, ns) {
                     diagnostics.push(diag);
                 }
@@ -244,7 +244,7 @@ pub fn expression(
                 right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
             };
 
-            if ty.is_rational(ns) {
+            if ty.is_rational() {
                 if let Err(diag) = eval_const_rational(&expr, ns) {
                     diagnostics.push(diag);
                 }

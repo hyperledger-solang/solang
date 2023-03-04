@@ -1375,11 +1375,11 @@ impl Type {
         }
     }
 
-    pub fn is_rational(&self, ns: &Namespace) -> bool {
+    pub fn is_rational(&self) -> bool {
         match self {
             Type::Rational => true,
-            Type::Ref(r) => r.is_rational(ns),
-            Type::StorageRef(_, r) => r.is_rational(ns),
+            Type::Ref(r) => r.is_rational(),
+            Type::StorageRef(_, r) => r.is_rational(),
             _ => false,
         }
     }

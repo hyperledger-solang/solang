@@ -91,7 +91,7 @@ impl Loc {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct Identifier {
     pub loc: Loc,
