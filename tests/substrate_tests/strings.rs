@@ -610,7 +610,10 @@ fn string_escape() {
 
     runtime.function("カラス$", Vec::new());
 
-    assert_eq!(runtime.printbuf, " € A \u{c}\u{8}\r\n\u{b}\\'\"\t");
+    assert_eq!(
+        runtime.printbuf,
+        "print:  € A \u{c}\u{8}\r\n\u{b}\\'\"\t,\n"
+    );
 }
 
 #[test]

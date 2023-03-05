@@ -10,6 +10,7 @@ mod arrays;
 mod builtins;
 mod calls;
 mod contracts;
+mod debug_buffer_format;
 mod errors;
 mod events;
 mod first;

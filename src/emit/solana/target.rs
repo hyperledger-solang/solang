@@ -2378,7 +2378,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         }
 
         let error_with_loc = error_msg_with_loc(ns, &reason_string, reason_loc);
-        let custom_error = string_to_basic_value(bin, ns, error_with_loc);
+        let custom_error = string_to_basic_value(bin, ns, error_with_loc + ",\n");
         self.print(
             bin,
             bin.vector_bytes(custom_error),

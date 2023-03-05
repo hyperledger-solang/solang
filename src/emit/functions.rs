@@ -108,7 +108,7 @@ pub(super) fn abort_if_value_transfer<'a, T: TargetRuntime<'a> + ?Sized>(
 
     target.log_runtime_error(
         binary,
-        format!("non payable function {function_name} received value"),
+        format!("runtime_error: non payable function {function_name} received value"),
         None,
         ns,
     );

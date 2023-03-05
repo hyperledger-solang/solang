@@ -812,7 +812,13 @@ pub fn expression(
         } => {
             let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
-            cfg.add(vartab, Instr::Print { expr });
+            let to_print = if ns.target.is_substrate() {
+                add_prefix_and_delimiter_to_print(expr)
+            } else {
+                expr
+            };
+
+            cfg.add(vartab, Instr::Print { expr: to_print });
 
             Expression::Poison
         }
@@ -1369,11 +1375,22 @@ fn require(
         Target::Solana | Target::Substrate { .. } => {
             if opt.log_runtime_errors {
                 if let Some(expr) = expr {
-                    let error_string =
-                        error_msg_with_loc(ns, " require condition failed", Some(expr.loc()));
+                    let prefix = "runtime_error: ".as_bytes();
+                    let error_string = format!(
+                        " require condition failed in {},\n",
+                        ns.loc_to_string(false, &expr.loc())
+                    );
                     let print_expr = Expression::FormatString(
                         Loc::Codegen,
                         vec![
+                            (
+                                FormatArg::StringLiteral,
+                                Expression::BytesLiteral(
+                                    Loc::Codegen,
+                                    Type::Bytes(prefix.len() as u8),
+                                    prefix.to_vec(),
+                                ),
+                            ),
                             (FormatArg::Default, expr),
                             (
                                 FormatArg::StringLiteral,
@@ -1421,10 +1438,22 @@ fn revert(
 
     if opt.log_runtime_errors {
         if expr.is_some() {
-            let error_string = error_msg_with_loc(ns, " revert encountered", Some(loc));
+            let prefix = "runtime_error: ".as_bytes();
+            let error_string = format!(
+                " revert encountered in {},\n",
+                ns.loc_to_string(false, &loc)
+            );
             let print_expr = Expression::FormatString(
                 Loc::Codegen,
                 vec![
+                    (
+                        FormatArg::StringLiteral,
+                        Expression::BytesLiteral(
+                            Loc::Codegen,
+                            Type::Bytes(prefix.len() as u8),
+                            prefix.to_vec(),
+                        ),
+                    ),
                     (FormatArg::Default, expr.clone().unwrap()),
                     (
                         FormatArg::StringLiteral,
@@ -3224,7 +3253,58 @@ pub(crate) fn log_runtime_error(
 ) {
     if report_error {
         let error_with_loc = error_msg_with_loc(ns, reason, Some(reason_loc));
-        let expr = string_to_expr(error_with_loc);
+        let expr = string_to_expr(error_with_loc + ",\n");
         cfg.add(vartab, Instr::Print { expr });
+    }
+}
+
+fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
+    let prefix = "print: ".as_bytes();
+    let delimiter = ",\n".as_bytes();
+
+    if let Expression::FormatString(loc, args) = &mut expr {
+        let mut new_vec = Vec::new();
+        new_vec.push((
+            FormatArg::StringLiteral,
+            Expression::BytesLiteral(
+                Loc::Codegen,
+                Type::Bytes(prefix.len() as u8),
+                prefix.to_vec(),
+            ),
+        ));
+        new_vec.append(args);
+        new_vec.push((
+            FormatArg::StringLiteral,
+            Expression::BytesLiteral(
+                Loc::Codegen,
+                Type::Bytes(delimiter.len() as u8),
+                delimiter.to_vec(),
+            ),
+        ));
+
+        Expression::FormatString(*loc, new_vec)
+    } else {
+        Expression::FormatString(
+            Loc::Codegen,
+            vec![
+                (
+                    FormatArg::StringLiteral,
+                    Expression::BytesLiteral(
+                        Loc::Codegen,
+                        Type::Bytes(prefix.len() as u8),
+                        prefix.to_vec(),
+                    ),
+                ),
+                (FormatArg::Default, expr),
+                (
+                    FormatArg::StringLiteral,
+                    Expression::BytesLiteral(
+                        Loc::Codegen,
+                        Type::Bytes(delimiter.len() as u8),
+                        delimiter.to_vec(),
+                    ),
+                ),
+            ],
+        )
     }
 }

@@ -174,8 +174,7 @@ pub(crate) fn using_decl(
                                 diagnostics.push(Diagnostic::error_with_note(
                                     using_function.loc,
                                     format!(
-                                        "user defined operator function for '{}' must have one bool return type",
-                                        oper,
+                                        "user defined operator function for '{oper}' must have one bool return type",
                                     ),
                                     loc,
                                     format!("definition of '{function_name}'"),
@@ -199,8 +198,7 @@ pub(crate) fn using_decl(
                             diagnostics.push(Diagnostic::error_with_note(
                                 using_function.loc,
                                 format!(
-                                    "user defined operator function for '{}' must have pure mutability",
-                                    oper,
+                                    "user defined operator function for '{oper}' must have pure mutability",
                                 ),
                                 loc,
                                 format!("definition of '{function_name}'"),
