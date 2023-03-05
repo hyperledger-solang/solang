@@ -81,7 +81,14 @@ impl File {
     }
 
     pub fn file_name(&self) -> String {
-        format!("{self}").split('\\').last().unwrap().to_string()
+        //format!("{self}").split('/').last().unwrap().to_string()
+        #[cfg(not(windows))]
+        let res = format!("{self}").split('/').last().unwrap().to_string();
+
+        #[cfg(windows)]
+        let res = format!("{self}").split('\\').last().unwrap().to_string();
+
+        res
     }
 }
 
