@@ -26,16 +26,17 @@ impl File {
         let (from_line, from_column) = self.offset_to_line_column(start);
         let (to_line, to_column) = self.offset_to_line_column(end);
 
+        let path = if full_path {
+            format!("{self}")
+        } else {
+            self.file_name()
+        };
         if from_line == to_line && from_column == to_column {
-            format!("{}:{}:{}", self, from_line + 1, from_column + 1)
+            format!("{}:{}:{}", path, from_line + 1, from_column + 1)
         } else if from_line == to_line {
             format!(
                 "{}:{}:{}-{}",
-                if full_path {
-                    format!("{self}")
-                } else {
-                    self.file_name()
-                },
+                path,
                 from_line + 1,
                 from_column + 1,
                 to_column + 1
@@ -43,11 +44,7 @@ impl File {
         } else {
             format!(
                 "{}:{}:{}-{}:{}",
-                if full_path {
-                    format!("{self}")
-                } else {
-                    self.file_name()
-                },
+                path,
                 from_line + 1,
                 from_column + 1,
                 to_line + 1,
@@ -81,13 +78,7 @@ impl File {
     }
 
     pub fn file_name(&self) -> String {
-        #[cfg(not(windows))]
-        let res = format!("{self}").split('/').last().unwrap().to_string();
-
-        #[cfg(windows)]
-        let res = format!("{self}").split('\\').last().unwrap().to_string();
-
-        res
+        self.path.file_name().unwrap().to_string_lossy().into()
     }
 }
 
