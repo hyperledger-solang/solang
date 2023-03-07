@@ -235,7 +235,7 @@ fn errors() {
 
     assert_eq!(
         runtime.printbuf,
-        "runtime_error: revert encountered in test.sol:84:13-19,\n"
+        "runtime_error: revert encountered in test.sol:84:13-21,\n"
     );
 
     runtime.printbuf.clear();

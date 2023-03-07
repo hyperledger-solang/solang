@@ -42,6 +42,7 @@ impl Namespace {
             enums: Vec::new(),
             structs: Vec::new(),
             events: Vec::new(),
+            errors: Vec::new(),
             using: Vec::new(),
             contracts: Vec::new(),
             user_types: Vec::new(),
@@ -142,6 +143,14 @@ impl Namespace {
                         "location of previous definition".to_string(),
                     ));
                 }
+                Symbol::Error(c, _) => {
+                    self.diagnostics.push(Diagnostic::error_with_note(
+                        id.loc,
+                        format!("{} is already defined as an error", id.name),
+                        *c,
+                        "location of previous definition".to_string(),
+                    ));
+                }
                 Symbol::Variable(c, _, _) => {
                     self.diagnostics.push(Diagnostic::error_with_note(
                         id.loc,
@@ -228,6 +237,14 @@ impl Namespace {
                             id.loc,
                             format!("{} is already defined as an event", id.name),
                             e[0].0,
+                            "location of previous definition".to_string(),
+                        ));
+                    }
+                    Symbol::Error(c, _) => {
+                        self.diagnostics.push(Diagnostic::warning_with_note(
+                            id.loc,
+                            format!("{} is already defined as an error", id.name),
+                            *c,
                             "location of previous definition".to_string(),
                         ));
                     }
@@ -490,6 +507,106 @@ impl Namespace {
         }
     }
 
+    pub(super) fn resolve_error(
+        &mut self,
+        file_no: usize,
+        contract_no: Option<usize>,
+        path: &pt::IdentifierPath,
+        diagnostics: &mut Diagnostics,
+    ) -> Result<usize, ()> {
+        // if we are resolving an event name without namespace (so no explicit contract name
+        // or import symbol), then we should look both in the current contract and global scope
+        if path.identifiers.len() == 1 {
+            let id = &path.identifiers[0];
+
+            // If we're in a contract, then error can be defined in current contract or its bases
+            if let Some(contract_no) = contract_no {
+                for contract_no in self.contract_bases(contract_no).into_iter().rev() {
+                    let file_no = self.contracts[contract_no].loc.file_no();
+
+                    match self.variable_symbols.get(&(
+                        file_no,
+                        Some(contract_no),
+                        id.name.to_owned(),
+                    )) {
+                        None => (),
+                        Some(Symbol::Error(_, error_no)) => {
+                            return Ok(*error_no);
+                        }
+                        sym => {
+                            let error = Namespace::wrong_symbol(sym, id);
+
+                            diagnostics.push(error);
+
+                            return Err(());
+                        }
+                    }
+
+                    if let Some(sym) =
+                        self.function_symbols
+                            .get(&(file_no, Some(contract_no), id.name.to_owned()))
+                    {
+                        let error = Namespace::wrong_symbol(Some(sym), id);
+
+                        diagnostics.push(error);
+
+                        return Err(());
+                    }
+                }
+            }
+
+            if let Some(sym) = self
+                .function_symbols
+                .get(&(file_no, None, id.name.to_owned()))
+            {
+                let error = Namespace::wrong_symbol(Some(sym), id);
+
+                diagnostics.push(error);
+
+                return Err(());
+            }
+
+            return match self
+                .variable_symbols
+                .get(&(file_no, None, id.name.to_owned()))
+            {
+                None => {
+                    diagnostics.push(Diagnostic::decl_error(
+                        id.loc,
+                        format!("error '{}' not found", id.name),
+                    ));
+                    Err(())
+                }
+                Some(Symbol::Error(_, error_no)) => Ok(*error_no),
+                sym => {
+                    let error = Namespace::wrong_symbol(sym, id);
+
+                    diagnostics.push(error);
+
+                    Err(())
+                }
+            };
+        }
+
+        let (id, namespace) = path
+            .identifiers
+            .split_last()
+            .map(|(id, namespace)| (id, namespace.iter().collect()))
+            .unwrap();
+
+        let s = self.resolve_namespace(namespace, file_no, contract_no, id, diagnostics)?;
+
+        if let Some(Symbol::Error(_, error_no)) = s {
+            Ok(*error_no)
+        } else {
+            let error = Namespace::wrong_symbol(s, id);
+
+            diagnostics.push(error);
+
+            Err(())
+        }
+    }
+
     pub fn wrong_symbol(sym: Option<&Symbol>, id: &pt::Identifier) -> Diagnostic {
         match sym {
             None => Diagnostic::decl_error(id.loc, format!("'{}' not found", id.name)),
@@ -501,6 +618,9 @@ impl Namespace {
             }
             Some(Symbol::Event(_)) => {
                 Diagnostic::decl_error(id.loc, format!("'{}' is an event", id.name))
+            }
+            Some(Symbol::Error(..)) => {
+                Diagnostic::decl_error(id.loc, format!("'{}' is an error", id.name))
             }
             Some(Symbol::Function(_)) => {
                 Diagnostic::decl_error(id.loc, format!("'{}' is a function", id.name))
@@ -697,6 +817,15 @@ impl Namespace {
                     id.loc,
                     format!("declaration of '{}' shadows event definition", id.name),
                     notes,
+                ));
+            }
+            Some(Symbol::Error(loc, _)) => {
+                let loc = *loc;
+                self.diagnostics.push(Diagnostic::warning_with_note(
+                    id.loc,
+                    format!("declaration of '{}' shadows error definition", id.name),
+                    loc,
+                    "previous definition of error".to_string(),
                 ));
             }
             Some(Symbol::Function(v)) => {
@@ -1090,6 +1219,13 @@ impl Namespace {
                 ));
                 Err(())
             }
+            Some(Symbol::Error(..)) => {
+                diagnostics.push(Diagnostic::decl_error(
+                    id.loc,
+                    format!("'{}' is an error", id.name),
+                ));
+                Err(())
+            }
             Some(Symbol::Function(_)) => {
                 diagnostics.push(Diagnostic::decl_error(
                     id.loc,
@@ -1183,6 +1319,13 @@ impl Namespace {
                     diagnostics.push(Diagnostic::decl_error(
                         contract_name.loc,
                         format!("'{}' is an event", contract_name.name),
+                    ));
+                    return Err(());
+                }
+                Some(Symbol::Error(..)) => {
+                    diagnostics.push(Diagnostic::decl_error(
+                        contract_name.loc,
+                        format!("'{}' is an error", contract_name.name),
                     ));
                     return Err(());
                 }

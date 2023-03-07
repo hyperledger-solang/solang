@@ -9,7 +9,6 @@ use super::expression::{
     ExprContext, ResolveTo,
 };
 use super::symtable::{LoopScopes, Symtable};
-use crate::sema::builtin;
 use crate::sema::expression::constructor::{
     constructor_named_args, match_constructor_to_args, new,
 };
@@ -878,45 +877,289 @@ fn statement(
             res.push(Statement::Assembly(resolved_asm.0, resolved_asm.1));
             Ok(resolved_asm.1)
         }
-        pt::Statement::Revert(loc, error, args) => {
-            if let Some(error) = error {
-                ns.diagnostics.push(Diagnostic::error(
-                    error.loc,
-                    format!("revert with custom error '{error}' not supported yet"),
-                ));
-                return Err(());
+        pt::Statement::Revert(loc, path, args) => {
+            if let Ok(stmt) = revert_pos_arg(loc, path, args, context, symtable, diagnostics, ns) {
+                res.push(stmt);
             }
 
-            let id = pt::Identifier {
-                loc: pt::Loc::File(loc.file_no(), loc.start(), loc.start() + 6),
-                name: "revert".to_string(),
+            Ok(false)
+        }
+        pt::Statement::RevertNamedArgs(loc, path, args) => {
+            if let Ok(stmt) = revert_named_arg(loc, path, args, context, symtable, diagnostics, ns)
+            {
+                res.push(stmt);
+            }
+            Ok(false)
+        }
+        pt::Statement::Error(_) => unimplemented!(),
+    }
+}
+
+fn revert_pos_arg(
+    loc: &pt::Loc,
+    path: &Option<pt::IdentifierPath>,
+    args: &[pt::Expression],
+    context: &ExprContext,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    ns: &mut Namespace,
+) -> Result<Statement, ()> {
+    if let Some(path) = path {
+        let error_no = ns.resolve_error(context.file_no, context.contract_no, path, diagnostics)?;
+
+        let mut arguments = Vec::new();
+
+        for (pos, arg) in args.iter().enumerate() {
+            let error = &ns.errors[error_no];
+
+            let ty = if let Some(field) = error.fields.get(pos) {
+                field.ty.clone()
+            } else {
+                let _ = expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown);
+
+                continue;
             };
 
-            let expr = builtin::resolve_call(
-                &id.loc,
-                None,
-                &id.name,
-                args,
+            let arg = match expression(
+                arg,
                 context,
                 ns,
                 symtable,
                 diagnostics,
-            )?;
+                ResolveTo::Type(&ty),
+            ) {
+                Ok(e) => e,
+                Err(()) => {
+                    continue;
+                }
+            };
 
-            let reachable = expr.ty() != Type::Unreachable;
-
-            res.push(Statement::Expression(*loc, reachable, expr));
-
-            Ok(reachable)
+            match arg.cast(&arg.loc(), &ty, true, ns, diagnostics) {
+                Ok(expr) => {
+                    arguments.push(expr);
+                }
+                Err(()) => {
+                    continue;
+                }
+            }
         }
-        pt::Statement::RevertNamedArgs(loc, _, _) => {
+
+        let error = &ns.errors[error_no];
+
+        if args.len() != error.fields.len() {
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                path.loc,
+                format!(
+                    "error '{}' has {} fields, {} provided",
+                    error.name,
+                    error.fields.len(),
+                    args.len()
+                ),
+                error.loc,
+                format!("definition of '{}'", error.name),
+            ));
+        }
+
+        if ns.target != Target::EVM {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
-                "revert with custom errors or named arguments not supported yet".to_string(),
+                format!("revert with custom errors not supported on {}", ns.target),
             ));
-            Err(())
         }
-        pt::Statement::Error(_) => unimplemented!(),
+
+        Ok(Statement::Revert {
+            loc: *loc,
+            error_no: Some(error_no),
+            args: arguments,
+        })
+    } else {
+        let mut arguments = Vec::new();
+
+        match args.len() {
+            0 => (),
+            1 => {
+                if let Ok(arg) = expression(
+                    &args[0],
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Type(&Type::String),
+                ) {
+                    if let Ok(expr) = arg.cast(&arg.loc(), &Type::String, true, ns, diagnostics) {
+                        arguments.push(expr);
+                    }
+                }
+            }
+            count => {
+                let loc = pt::Loc::File(loc.file_no(), loc.start(), loc.start() + 6);
+
+                ns.diagnostics.push(Diagnostic::error(
+                    loc,
+                    format!(
+                        "revert takes either no argument or a single reason string argument, {} provided",
+                        count
+                    ),
+                ));
+
+                for arg in args {
+                    let _ = expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown);
+                }
+            }
+        }
+
+        Ok(Statement::Revert {
+            loc: *loc,
+            error_no: None,
+            args: arguments,
+        })
+    }
+}
+
+fn revert_named_arg(
+    loc: &pt::Loc,
+    path: &Option<pt::IdentifierPath>,
+    args: &[pt::NamedArgument],
+    context: &ExprContext,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    ns: &mut Namespace,
+) -> Result<Statement, ()> {
+    if let Some(path) = path {
+        let error_no = ns.resolve_error(context.file_no, context.contract_no, path, diagnostics)?;
+
+        let error = &ns.errors[error_no];
+
+        let unnamed_fields = error
+            .fields
+            .iter()
+            .filter(|param| param.id.is_none())
+            .count();
+
+        if unnamed_fields > 0 {
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                path.loc,
+                format!(
+                    "error '{}' has {} unnamed fields",
+                    error.name, unnamed_fields
+                ),
+                error.loc,
+                format!("definition of '{}'", error.name),
+            ));
+        }
+
+        let fields: HashMap<String, (usize, Type)> = error
+            .fields
+            .iter()
+            .enumerate()
+            .filter_map(|(i, p)| {
+                p.id.as_ref()
+                    .map(|id| (id.name.to_owned(), (i, p.ty.clone())))
+            })
+            .collect();
+
+        let mut arguments = HashMap::new();
+
+        for arg in args {
+            let error = &ns.errors[error_no];
+
+            let name = arg.name.name.as_str();
+
+            if let Some((pos, ty)) = fields.get(name) {
+                if arguments.contains_key(pos) {
+                    diagnostics.push(Diagnostic::error(
+                        arg.name.loc,
+                        format!("duplicate argument with name '{}'", arg.name.name),
+                    ));
+
+                    let _ = expression(
+                        &arg.expr,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        ResolveTo::Unknown,
+                    );
+
+                    continue;
+                }
+
+                let arg = match expression(
+                    &arg.expr,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Type(ty),
+                ) {
+                    Ok(e) => e,
+                    Err(()) => {
+                        continue;
+                    }
+                };
+
+                match arg.cast(&arg.loc(), ty, true, ns, diagnostics) {
+                    Ok(expr) => {
+                        arguments.insert(*pos, expr);
+                    }
+                    Err(()) => {
+                        continue;
+                    }
+                }
+            } else {
+                ns.diagnostics.push(Diagnostic::error_with_note(
+                    arg.name.loc,
+                    format!("error '{}' has no field called '{}'", error.name, name),
+                    error.loc,
+                    format!("definition of '{}'", error.name),
+                ));
+
+                let _ = expression(
+                    &arg.expr,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Unknown,
+                );
+            }
+        }
+
+        if ns.target != Target::EVM {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("revert with custom errors not supported on {}", ns.target),
+            ));
+        }
+
+        let mut args = Vec::new();
+        let error = &ns.errors[error_no];
+
+        for pos in 0..error.fields.len() {
+            if let Some(arg) = arguments.remove(&pos) {
+                args.push(arg);
+            } else if let Some(id) = &error.fields[pos].id {
+                ns.diagnostics.push(Diagnostic::error_with_note(
+                    path.loc,
+                    format!("missing field '{}'", id.name),
+                    error.loc,
+                    format!("definition of '{}'", error.name),
+                ));
+            }
+        }
+
+        Ok(Statement::Revert {
+            loc: *loc,
+            error_no: Some(error_no),
+            args,
+        })
+    } else {
+        ns.diagnostics.push(Diagnostic::error(
+            *loc,
+            "revert with named arguments requires error type".to_string(),
+        ));
+
+        Err(())
     }
 }
 

@@ -218,6 +218,11 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
                 recurse_statements(&try_catch.catch_stmt, ns, state);
             }
             Statement::Emit { loc, .. } => state.write(loc),
+            Statement::Revert { args, .. } => {
+                for arg in args {
+                    arg.recurse(state, read_expression);
+                }
+            }
             Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),
             Statement::Assembly(inline_assembly, _) => {
                 for function_no in inline_assembly.functions.start..inline_assembly.functions.end {

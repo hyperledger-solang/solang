@@ -146,7 +146,7 @@ fn check_statement(stmt: &Statement, call_list: &mut CallList) -> bool {
         Statement::TryCatch(_, _, try_catch) => {
             try_catch.expr.recurse(call_list, check_expression);
         }
-        Statement::Emit { args, .. } => {
+        Statement::Revert { args, .. } | Statement::Emit { args, .. } => {
             for e in args {
                 e.recurse(call_list, check_expression);
             }

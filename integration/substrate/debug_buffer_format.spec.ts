@@ -37,7 +37,7 @@ call: seal_debug_message=0,
 call: seal_debug_message=0,
 print: I call seal_debug_message under the hood!,
 call: seal_debug_message=0,
-runtime_error: sesa!!! revert encountered in debug_buffer_format.sol:10:9-15,
+runtime_error: sesa!!! revert encountered in debug_buffer_format.sol:10:9-26,
 call: seal_debug_message=0,
 `)
 

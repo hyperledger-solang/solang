@@ -68,7 +68,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.iWillRevert().accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: revert encountered in runtime_errors.sol:76:9-15,
+            expect(logs).toContain(`Program log: runtime_error: revert encountered in runtime_errors.sol:76:9-17,
 `)
         }
 

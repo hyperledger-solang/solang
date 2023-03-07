@@ -1,5 +1,6 @@
 contract A {}
 library L {}
+error E(int foo);
 struct S {
 	int64 f1;
 	bool f2;

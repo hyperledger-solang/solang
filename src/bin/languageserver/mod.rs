@@ -300,6 +300,11 @@ impl<'a> Builder<'a> {
             ast::Statement::Return(_, Some(expr)) => {
                 self.expression(expr, symtab);
             }
+            ast::Statement::Revert { args, .. } => {
+                for arg in args {
+                    self.expression(arg, symtab);
+                }
+            }
             ast::Statement::Emit {
                 event_no,
                 event_loc,
