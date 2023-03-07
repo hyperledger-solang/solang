@@ -27,14 +27,10 @@ pub(super) fn expression_values(
         Expression::Add(_, ty, _, left, right) => add_values(ty, left, right, vars, ns),
         Expression::Subtract(_, ty, _, left, right) => subtract_values(ty, left, right, vars, ns),
         Expression::Multiply(_, ty, _, left, right) => multiply_values(ty, left, right, vars, ns),
-        Expression::SignedMore(_, left, right) | Expression::UnsignedMore(_, left, right) => {
-            more_values(left, right, vars, ns)
-        }
-        Expression::MoreEqual(_, left, right) => more_equal_values(left, right, vars, ns),
-        Expression::SignedLess(_, left, right) | Expression::UnsignedLess(_, left, right) => {
-            less_values(left, right, vars, ns)
-        }
-        Expression::LessEqual(_, left, right) => less_equal_values(left, right, vars, ns),
+        Expression::More { left, right, .. } => more_values(left, right, vars, ns),
+        Expression::MoreEqual { left, right, .. } => more_equal_values(left, right, vars, ns),
+        Expression::Less { left, right, .. } => less_values(left, right, vars, ns),
+        Expression::LessEqual { left, right, .. } => less_equal_values(left, right, vars, ns),
         Expression::Equal(_, left_expr, right_expr) => {
             equal_values(left_expr, right_expr, vars, ns)
         }

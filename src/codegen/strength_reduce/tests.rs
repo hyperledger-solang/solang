@@ -584,11 +584,12 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should always be true
-    let expr = Expression::UnsignedMore(
+    let expr = Expression::More {
         loc,
-        Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
-    );
+        signed: false,
+        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
+        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -636,11 +637,12 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should always be true
-    let expr = Expression::UnsignedMore(
+    let expr = Expression::More {
         loc,
-        Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
-    );
+        signed: false,
+        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
+        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -692,11 +694,12 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should always be true
-    let expr = Expression::UnsignedLess(
+    let expr = Expression::Less {
         loc,
-        Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
-    );
+        signed: false,
+        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
+        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -738,11 +741,12 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should always be true
-    let expr = Expression::LessEqual(
+    let expr = Expression::LessEqual {
         loc,
-        Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
-    );
+        signed: false,
+        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
+        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 

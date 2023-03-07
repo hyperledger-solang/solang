@@ -9,7 +9,7 @@ contract Testing {
         (address a, Other b) = abi.decode(buffer, (address, Other));
 	    // CHECK: ty:bytes %buffer = (arg #0)
 	    // CHECK: ty:uint32 %temp.64 = (builtin ArrayLength ((arg #0)))
-	    // CHECK: branchcond (uint32 64 <= %temp.64), block1, block2
+	    // CHECK: branchcond (unsigned uint32 64 <= %temp.64), block1, block2
         // CHECK: block1: # inbounds
         // CHECK: ty:address %temp.65 = (builtin ReadFromBuffer ((arg #0), uint32 0))
         // CHECK: ty:contract Other %temp.66 = (builtin ReadFromBuffer ((arg #0), uint32 32))
@@ -34,7 +34,7 @@ contract Testing {
 
 	    // CHECK: ty:bytes %buffer = (arg #0)
 	    // CHECK: ty:uint32 %temp.67 = (builtin ArrayLength ((arg #0)))
-	    // CHECK: branchcond (uint32 63 <= %temp.67), block1, block2
+	    // CHECK: branchcond (unsigned uint32 63 <= %temp.67), block1, block2
 
         // CHECK: block1: # inbounds
 	    // CHECK: ty:uint8 %temp.68 = (builtin ReadFromBuffer ((arg #0), uint32 0))
@@ -69,7 +69,7 @@ contract Testing {
         abi.decode(buffer, (int8, int16, int32, int64, int128, int256));
 
         // CHECK: ty:uint32 %temp.74 = (builtin ArrayLength ((arg #0)))
-	    // CHECK: branchcond (uint32 63 <= %temp.74), block1, block2
+	    // CHECK: branchcond (unsigned uint32 63 <= %temp.74), block1, block2
 
         // CHECK: block1: # inbounds
 	    // CHECK: ty:int8 %temp.75 = (builtin ReadFromBuffer ((arg #0), uint32 0))
@@ -102,7 +102,7 @@ contract Testing {
         (bytes1 a, bytes5 b, bytes20 c, bytes32 d) = abi.decode(buffer, (bytes1, bytes5, bytes20, bytes32));
 
         // CHECK: ty:uint32 %temp.81 = (builtin ArrayLength ((arg #0)))
-	    // CHECK: branchcond (uint32 58 <= %temp.81), block1, block2
+	    // CHECK: branchcond (unsigned uint32 58 <= %temp.81), block1, block2
 
         // CHECK: block1: # inbounds
 	    // CHECK: ty:bytes1 %temp.82 = (builtin ReadFromBuffer ((arg #0), uint32 0))
@@ -132,12 +132,12 @@ contract Testing {
 
         // CHECK: ty:bytes %buffer = (arg #0)
 	    // CHECK: ty:uint32 %temp.86 = (builtin ArrayLength ((arg #0)))
-	    // CHECK: branchcond (uint32 4 <= %temp.86), block1, block2
+	    // CHECK: branchcond (unsigned uint32 4 <= %temp.86), block1, block2
 
         // CHECK: block1: # inbounds
 	    // CHECK: ty:uint32 %temp.87 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	    // CHECK: ty:uint32 %1.cse_temp = ((%temp.87 + uint32 4) + uint32 0)
-	    // CHECK: branchcond (%1.cse_temp <= %temp.86), block3, block4
+	    // CHECK: branchcond (unsigned %1.cse_temp <= %temp.86), block3, block4
 
         // CHECK: block2: # out_of_bounds
 	    // CHECK: assert-failure
@@ -146,7 +146,7 @@ contract Testing {
 	    // CHECK: ty:bytes %temp.88 = (alloc bytes len %temp.87)
 	    // CHECK: memcpy src: (advance ptr: %buffer, by: uint32 4), dest: %temp.88, bytes_len: %temp.87
 	    // CHECK: ty:uint32 %2.cse_temp = (%1.cse_temp + uint32 4)
-	    // CHECK: branchcond (%2.cse_temp <= %temp.86), block5, block6
+	    // CHECK: branchcond (unsigned %2.cse_temp <= %temp.86), block5, block6
 
         // CHECK: block4: # out_of_bounds
 	    // CHECK: assert-failure
@@ -154,7 +154,7 @@ contract Testing {
         // CHECK: block5: # inbounds
 	    // CHECK: ty:uint32 %temp.89 = (builtin ReadFromBuffer ((arg #0), (uint32 0 + (%temp.87 + uint32 4))))
 	    // CHECK: ty:uint32 %3.cse_temp = ((%temp.89 + uint32 4) + %1.cse_temp)
-	    // CHECK: branchcond (%3.cse_temp <= %temp.86), block7, block8
+	    // CHECK: branchcond (unsigned %3.cse_temp <= %temp.86), block7, block8
 
         // CHECK: block6: # out_of_bounds
     	// CHECK: assert-failure
@@ -185,7 +185,7 @@ contract Testing {
     function decodeEnum(bytes memory buffer) public pure returns (WeekDays) {
         WeekDays a = abi.decode(buffer, (WeekDays));
 	    // CHECK: ty:uint32 %temp.94 = (builtin ArrayLength ((arg #0)))
-	    // CHECK: branchcond (uint32 1 <= %temp.94), block1, block2
+	    // CHECK: branchcond (unsigned uint32 1 <= %temp.94), block1, block2
 
         // CHECK: block1: # inbounds
 	    // CHECK: ty:enum Testing.WeekDays %temp.95 = (builtin ReadFromBuffer ((arg #0), uint32 0))
@@ -218,7 +218,7 @@ contract Testing {
         (noPadStruct memory a, PaddedStruct memory b) = abi.decode(buffer, (noPadStruct, PaddedStruct));
 
         // CHECK: ty:uint32 %temp.96 = (builtin ArrayLength ((arg #0)))
-	    // CHECK: branchcond (uint32 57 <= %temp.96), block1, block2
+	    // CHECK: branchcond (unsigned uint32 57 <= %temp.96), block1, block2
 
         // CHECK: block1: # inbounds
 	    // CHECK: ty:struct Testing.noPadStruct %temp.97 = struct {  }
@@ -247,14 +247,14 @@ contract Testing {
         abi.decode(buffer, (uint32[4], noPadStruct[2], noPadStruct[]));
 
         // CHECK: ty:uint32 %temp.102 = (builtin ArrayLength ((arg #0)))
-	    // CHECK: branchcond (uint32 32 <= %temp.102), block1, block2
+	    // CHECK: branchcond (unsigned uint32 32 <= %temp.102), block1, block2
 
         // CHECK: block1: # inbounds
 	    // CHECK: ty:uint32[4] %temp.103 =  [  ]
 	    // CHECK: memcpy src: %buffer, dest: %temp.103, bytes_len: uint32 16
 	    // CHECK: ty:struct Testing.noPadStruct[2] %temp.104 =  [  ]
 	    // CHECK: memcpy src: (advance ptr: %buffer, by: uint32 16), dest: %temp.104, bytes_len: uint32 16
-	    // CHECK: branchcond (uint32 36 <= %temp.102), block3, block4
+	    // CHECK: branchcond (unsigned uint32 36 <= %temp.102), block3, block4
 
         // CHECK: block2: # out_of_bounds
 	    // CHECK: assert-failure
@@ -263,7 +263,7 @@ contract Testing {
 	    // CHECK: ty:uint32 %temp.105 = (builtin ReadFromBuffer ((arg #0), uint32 32))
 	    // CHECK: ty:struct Testing.noPadStruct[] %temp.106 = (alloc struct Testing.noPadStruct[] len %temp.105)
 	    // CHECK: ty:uint32 %1.cse_temp = (%temp.105 * uint32 8)
-	    // CHECK: branchcond ((uint32 36 + %1.cse_temp) <= %temp.102), block5, block6
+	    // CHECK: branchcond (unsigned (uint32 36 + %1.cse_temp) <= %temp.102), block5, block6
 
         // CHECK: block4: # out_of_bounds
 	    // CHECK: assert-failure
