@@ -16,7 +16,7 @@ use inkwell::values::{
 use inkwell::{AddressSpace, IntPredicate};
 use num_traits::ToPrimitive;
 use solang_parser::pt::Loc;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 impl<'a> TargetRuntime<'a> for SolanaTarget {
     /// Solana does not use slot based-storage so override
@@ -343,10 +343,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .unwrap()
             .into_int_value();
 
-        let member_size = binary.context.i32_type().const_int(
-            ty.storage_slots(ns, &mut HashSet::new()).to_u64().unwrap(),
-            false,
-        );
+        let member_size = binary
+            .context
+            .i32_type()
+            .const_int(ty.storage_slots(ns).to_u64().unwrap(), false);
         let new_length = binary
             .builder
             .build_int_add(length, member_size, "new_length");
@@ -483,10 +483,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         binary.builder.position_at_end(retrieve_block);
 
-        let member_size = binary.context.i32_type().const_int(
-            ty.storage_slots(ns, &mut HashSet::new()).to_u64().unwrap(),
-            false,
-        );
+        let member_size = binary
+            .context
+            .i32_type()
+            .const_int(ty.storage_slots(ns).to_u64().unwrap(), false);
 
         let new_length = binary
             .builder
@@ -540,13 +540,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_load(binary.context.i32_type(), member, "offset")
             .into_int_value();
 
-        let member_size = binary.context.i32_type().const_int(
-            elem_ty
-                .storage_slots(ns, &mut HashSet::new())
-                .to_u64()
-                .unwrap(),
-            false,
-        );
+        let member_size = binary
+            .context
+            .i32_type()
+            .const_int(elem_ty.storage_slots(ns).to_u64().unwrap(), false);
 
         let length_bytes = binary
             .builder
@@ -1090,7 +1087,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 if elem_ty.deref_memory().is_fixed_reference_type(ns) {
                     elem.into()
                 } else {
-                    let load_ty = if elem_ty.is_dynamic(ns, &mut HashSet::new()) {
+                    let load_ty = if elem_ty.is_dynamic(ns) {
                         binary
                             .llvm_type(elem_ty.deref_memory(), ns)
                             .ptr_type(AddressSpace::default())
@@ -1153,7 +1150,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     if field.ty.is_fixed_reference_type(ns) {
                         elem.into()
                     } else {
-                        let load_ty = if field.ty.is_dynamic(ns, &mut HashSet::new()) {
+                        let load_ty = if field.ty.is_dynamic(ns) {
                             binary
                                 .llvm_type(&field.ty, ns)
                                 .ptr_type(AddressSpace::default())

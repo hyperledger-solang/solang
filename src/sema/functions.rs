@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
-
 use super::{
     ast::{Diagnostic, Function, Mutability, Namespace, Parameter, StructType, Symbol, Type},
     contracts::is_base,
@@ -848,7 +846,7 @@ pub fn resolve_params(
         match ns.resolve_type(file_no, contract_no, false, &p.ty, diagnostics) {
             Ok(ty) => {
                 if !is_internal {
-                    if ty.contains_internal_function(ns, &mut HashSet::new()) {
+                    if ty.contains_internal_function(ns) {
                         diagnostics.push(Diagnostic::error(
                         p.ty.loc(),
                         "parameter of type 'function internal' not allowed public or external functions".to_string(),
@@ -856,9 +854,7 @@ pub fn resolve_params(
                         success = false;
                     }
 
-                    if let Some(ty) =
-                        ty.contains_builtins(ns, &StructType::AccountInfo, &mut HashSet::new())
-                    {
+                    if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountInfo) {
                         let message = format!(
                             "parameter of type '{}' not alowed in public or external functions",
                             ty.to_string(ns)
@@ -893,7 +889,7 @@ pub fn resolve_params(
 
                     Type::StorageRef(false, Box::new(ty))
                 } else {
-                    if ty.contains_mapping(ns, &mut HashSet::new()) {
+                    if ty.contains_mapping(ns) {
                         diagnostics.push(Diagnostic::error(
                             p.ty.loc(),
                             "parameter with mapping type must be of type 'storage'".to_string(),
@@ -957,7 +953,7 @@ pub fn resolve_returns(
         match ns.resolve_type(file_no, contract_no, false, &r.ty, diagnostics) {
             Ok(ty) => {
                 if !is_internal {
-                    if ty.contains_internal_function(ns, &mut HashSet::new()) {
+                    if ty.contains_internal_function(ns) {
                         diagnostics.push(Diagnostic::error(
                         r.ty.loc(),
                         "return type 'function internal' not allowed in public or external functions"
@@ -966,9 +962,7 @@ pub fn resolve_returns(
                         success = false;
                     }
 
-                    if let Some(ty) =
-                        ty.contains_builtins(ns, &StructType::AccountInfo, &mut HashSet::new())
-                    {
+                    if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountInfo) {
                         let message = format!(
                             "return type '{}' not allowed in public or external functions",
                             ty.to_string(ns)
@@ -1005,7 +999,7 @@ pub fn resolve_returns(
                             Type::StorageRef(false, Box::new(ty))
                         }
                         _ => {
-                            if ty.contains_mapping(ns, &mut HashSet::new()) {
+                            if ty.contains_mapping(ns) {
                                 diagnostics.push(Diagnostic::error(
                                     r.ty.loc(),
                                     "return type containing mapping must be of type 'storage'"

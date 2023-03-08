@@ -24,7 +24,6 @@ use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Zero};
 use solang_parser::pt::{Loc, Loc::Codegen};
-use std::collections::HashSet;
 use std::ops::{AddAssign, MulAssign, Sub};
 
 /// Insert encoding instructions into the `cfg` for any `Expression` in `args`.
@@ -1130,8 +1129,7 @@ fn allow_direct_copy(
         if let Some(no_padded_size) = ns.calculate_struct_non_padded_size(struct_ty) {
             let padded_size = struct_ty.struct_padded_size(ns);
             // This remainder tells us if padding is needed between the elements of an array
-            let remainder =
-                padded_size.mod_floor(&elem_ty.struct_elem_alignment(ns, &mut HashSet::new()));
+            let remainder = padded_size.mod_floor(&elem_ty.struct_elem_alignment(ns));
 
             no_padded_size.eq(&padded_size) && ns.target == Target::Solana && remainder.is_zero()
         } else {
@@ -1144,7 +1142,7 @@ fn allow_direct_copy(
         elem_ty.is_primitive()
     };
 
-    if array_ty.is_dynamic(ns, &mut HashSet::new()) {
+    if array_ty.is_dynamic(ns) {
         // If this is a dynamic array, we can only MemCpy if its elements are of
         // any primitive type and we don't need to index it.
         dims.len() == 1 && type_direct_copy
@@ -1228,7 +1226,7 @@ impl StructType {
     fn struct_padded_size(&self, ns: &Namespace) -> BigInt {
         let mut total = BigInt::zero();
         for item in &self.definition(ns).fields {
-            let ty_align = item.ty.struct_elem_alignment(ns, &mut HashSet::new());
+            let ty_align = item.ty.struct_elem_alignment(ns);
             let remainder = total.mod_floor(&ty_align);
             if !remainder.is_zero() {
                 let padding = ty_align.sub(remainder);

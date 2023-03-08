@@ -4,7 +4,6 @@ pub(super) mod target;
 
 use crate::sema::ast;
 use crate::Target;
-use std::collections::HashSet;
 use std::str;
 
 use crate::codegen::{cfg::ReturnCode, Options};
@@ -293,7 +292,7 @@ impl SolanaTarget {
         zero: bool,
         ns: &ast::Namespace,
     ) {
-        if !zero && !ty.is_dynamic(ns, &mut HashSet::new()) {
+        if !zero && !ty.is_dynamic(ns) {
             // nothing to do
             return;
         }
@@ -326,7 +325,7 @@ impl SolanaTarget {
             let mut elem_slot = slot;
             let mut free_array = None;
 
-            if elem_ty.is_dynamic(ns, &mut HashSet::new()) || zero {
+            if elem_ty.is_dynamic(ns) || zero {
                 let length = if let Some(ast::ArrayLength::Fixed(length)) = dim.last() {
                     binary
                         .context

@@ -13,7 +13,7 @@ use crate::sema::ast::{ArrayLength, Namespace, RetrieveType, StructType, Type, T
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
 use solang_parser::pt::{Loc, Loc::Codegen};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::ops::{Add, AddAssign, MulAssign};
 
 use super::index_array;
@@ -525,7 +525,7 @@ impl BorshEncoding {
             && !dims[0..(dimension + 1)]
                 .iter()
                 .any(|d| *d == ArrayLength::Dynamic)
-            && !elem_ty.is_dynamic(ns, &mut HashSet::new())
+            && !elem_ty.is_dynamic(ns)
         {
             let mut elems = BigInt::one();
             for item in &dims[0..(dimension + 1)] {

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
-
 use super::{
     annotions_not_allowed,
     ast::{
@@ -284,7 +282,7 @@ pub fn variable_decl<'a>(
             ));
             return None;
         }
-        if ty.contains_internal_function(ns, &mut HashSet::new()) {
+        if ty.contains_internal_function(ns) {
             ns.diagnostics.push(Diagnostic::error(
                 def.ty.loc(),
                 "global variable cannot be of type internal function".to_string(),
@@ -293,7 +291,7 @@ pub fn variable_decl<'a>(
         }
     }
 
-    if ty.contains_internal_function(ns, &mut HashSet::new())
+    if ty.contains_internal_function(ns)
         && matches!(
             visibility,
             pt::Visibility::Public(_) | pt::Visibility::External(_)
@@ -304,14 +302,12 @@ pub fn variable_decl<'a>(
             format!("variable of type internal function cannot be '{visibility}'"),
         ));
         return None;
-    } else if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountInfo, &mut HashSet::new())
-    {
+    } else if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountInfo) {
         let message = format!("variable cannot be of builtin type '{}'", ty.to_string(ns));
         ns.diagnostics
             .push(Diagnostic::error(def.ty.loc(), message));
         return None;
-    } else if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountMeta, &mut HashSet::new())
-    {
+    } else if let Some(ty) = ty.contains_builtins(ns, &StructType::AccountMeta) {
         let message = format!("variable cannot be of builtin type '{}'", ty.to_string(ns));
         ns.diagnostics
             .push(Diagnostic::error(def.ty.loc(), message));
@@ -464,7 +460,7 @@ pub fn variable_decl<'a>(
                 collect_parameters(&ty, &def.name, &mut symtable, &mut params, &mut expr, ns);
             let ty = param.ty.clone();
 
-            if ty.contains_mapping(ns, &mut HashSet::new()) {
+            if ty.contains_mapping(ns) {
                 // we can't return a mapping
                 ns.diagnostics.push(Diagnostic::decl_error(
                     def.loc,

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
-
 use crate::codegen::Expression;
 use crate::sema::ast;
 use num_bigint::BigInt;
@@ -29,7 +27,7 @@ pub fn array_offset(
     elem_ty: Type,
     ns: &Namespace,
 ) -> Expression {
-    let elem_size = elem_ty.storage_slots(ns, &mut HashSet::new());
+    let elem_size = elem_ty.storage_slots(ns);
     let slot_ty = ns.storage_type();
 
     // the index needs to be cast to i256 and multiplied by the number
