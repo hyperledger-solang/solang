@@ -816,7 +816,7 @@ fn struct_offsets(ns: &mut Namespace) {
 
                 offsets.push(offset.clone());
 
-                if !field.infinite_size {
+                if !field.infinite_size && ns.target == Target::Solana {
                     offset += field.ty.solana_storage_size(ns, &mut HashSet::new());
                 }
             }
@@ -1157,7 +1157,7 @@ impl Type {
 
     /// Returns the size a type occupies in memory
     pub fn memory_size_of(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> BigInt {
-        self.recurse(structs_visited, 0.into(), |structs_visited| match self {
+        self.recurse(structs_visited, 1.into(), |structs_visited| match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
             Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
@@ -1263,7 +1263,7 @@ impl Type {
         ns: &Namespace,
         structs_visited: &mut HashSet<usize>,
     ) -> BigInt {
-        self.recurse(structs_visited, 0.into(), |structs_visited| match self {
+        self.recurse(structs_visited, 1.into(), |structs_visited| match self {
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
                 ty.solana_storage_size(ns, structs_visited).mul(
@@ -1446,8 +1446,7 @@ impl Type {
                         .map(|f| f.ty.storage_slots(ns, structs_visited))
                         .sum(),
                     Type::Array(ty, dims) => {
-                        let one = BigInt::one();
-
+                        let one = 1.into();
                         ty.storage_slots(ns, structs_visited)
                             * dims
                                 .iter()
