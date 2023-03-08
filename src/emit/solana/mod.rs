@@ -343,10 +343,7 @@ impl SolanaTarget {
                     self.storage_array_length(binary, function, slot, elem_ty, ns)
                 };
 
-                let elem_size = elem_ty
-                    .solana_storage_size(ns, &mut HashSet::new())
-                    .to_u64()
-                    .unwrap();
+                let elem_size = elem_ty.solana_storage_size(ns).to_u64().unwrap();
 
                 // loop over the array
                 let mut builder = LoopBuilder::new(binary, function);

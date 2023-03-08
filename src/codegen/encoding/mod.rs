@@ -567,11 +567,7 @@ pub(super) trait AbiEncoding {
                 BigInt::from(n.next_power_of_two() / 8),
             ),
             Type::Enum(_) | Type::Contract(_) | Type::Bool | Type::Address(_) | Type::Bytes(_) => {
-                Expression::NumberLiteral(
-                    Codegen,
-                    Uint(32),
-                    ty.memory_size_of(ns, &mut HashSet::new()),
-                )
+                Expression::NumberLiteral(Codegen, Uint(32), ty.memory_size_of(ns))
             }
             Type::FunctionSelector => Expression::NumberLiteral(
                 Codegen,
@@ -590,7 +586,7 @@ pub(super) trait AbiEncoding {
             }
             Type::ExternalFunction { .. } => {
                 let selector_len: BigInt = ns.target.selector_length().into();
-                let mut address_size = Type::Address(false).memory_size_of(ns, &mut HashSet::new());
+                let mut address_size = Type::Address(false).memory_size_of(ns);
                 address_size.add_assign(selector_len);
                 Expression::NumberLiteral(Codegen, Uint(32), address_size)
             }
@@ -641,7 +637,7 @@ pub(super) trait AbiEncoding {
 
         // Check if the array contains only fixed sized elements
         let primitive_size = if elem_ty.is_primitive() && direct_assessment {
-            Some(elem_ty.memory_size_of(ns, &mut HashSet::new()))
+            Some(elem_ty.memory_size_of(ns))
         } else if let Type::Struct(struct_ty) = elem_ty {
             if direct_assessment {
                 ns.calculate_struct_non_padded_size(struct_ty)
@@ -1169,7 +1165,7 @@ fn calculate_direct_copy_bytes_size(
         debug_assert!(matches!(item, &ArrayLength::Fixed(_)));
         elem_no.mul_assign(item.array_length().unwrap());
     }
-    let bytes = elem_ty.memory_size_of(ns, &mut HashSet::new());
+    let bytes = elem_ty.memory_size_of(ns);
     elem_no.mul_assign(bytes);
     elem_no
 }
@@ -1178,11 +1174,7 @@ fn calculate_direct_copy_bytes_size(
 /// It needs the variable saving the array's length.
 fn calculate_array_bytes_size(length_var: usize, elem_ty: &Type, ns: &Namespace) -> Expression {
     let var = Expression::Variable(Codegen, Uint(32), length_var);
-    let size = Expression::NumberLiteral(
-        Codegen,
-        Uint(32),
-        elem_ty.memory_size_of(ns, &mut HashSet::new()),
-    );
+    let size = Expression::NumberLiteral(Codegen, Uint(32), elem_ty.memory_size_of(ns));
     Expression::Multiply(Codegen, Uint(32), false, var.into(), size.into())
 }
 
@@ -1242,7 +1234,7 @@ impl StructType {
                 let padding = ty_align.sub(remainder);
                 total.add_assign(padding);
             }
-            total.add_assign(item.ty.memory_size_of(ns, &mut HashSet::new()));
+            total.add_assign(item.ty.memory_size_of(ns));
         }
         total
     }

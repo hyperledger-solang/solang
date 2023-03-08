@@ -293,13 +293,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             let elem_ty = ty.storage_array_elem().deref_into();
 
-            let elem_size = binary.context.i32_type().const_int(
-                elem_ty
-                    .solana_storage_size(ns, &mut HashSet::new())
-                    .to_u64()
-                    .unwrap(),
-                false,
-            );
+            let elem_size = binary
+                .context
+                .i32_type()
+                .const_int(elem_ty.solana_storage_size(ns).to_u64().unwrap(), false);
 
             binary.builder.build_int_add(
                 offset,
@@ -754,10 +751,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     dest = binary.vector_new(length, elem_size, None);
                 };
 
-                let elem_size = elem_ty
-                    .solana_storage_size(ns, &mut HashSet::new())
-                    .to_u64()
-                    .unwrap();
+                let elem_size = elem_ty.solana_storage_size(ns).to_u64().unwrap();
 
                 // loop over the array
                 let mut builder = LoopBuilder::new(binary, function);
@@ -1013,13 +1007,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
             if Some(&ast::ArrayLength::Dynamic) == dim.last() {
                 // reallocate to the right size
-                let member_size = binary.context.i32_type().const_int(
-                    elem_ty
-                        .solana_storage_size(ns, &mut HashSet::new())
-                        .to_u64()
-                        .unwrap(),
-                    false,
-                );
+                let member_size = binary
+                    .context
+                    .i32_type()
+                    .const_int(elem_ty.solana_storage_size(ns).to_u64().unwrap(), false);
                 let new_length = binary
                     .builder
                     .build_int_mul(length, member_size, "new_length");
@@ -1074,10 +1065,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .into_int_value();
             }
 
-            let elem_size = elem_ty
-                .solana_storage_size(ns, &mut HashSet::new())
-                .to_u64()
-                .unwrap();
+            let elem_size = elem_ty.solana_storage_size(ns).to_u64().unwrap();
 
             // loop over the array
             let mut builder = LoopBuilder::new(binary, function);

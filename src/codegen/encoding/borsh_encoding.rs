@@ -63,7 +63,7 @@ impl AbiEncoding for BorshEncoding {
                 value: expr.external_function_selector(),
             },
         );
-        let mut size = Type::FunctionSelector.memory_size_of(ns, &mut HashSet::new());
+        let mut size = Type::FunctionSelector.memory_size_of(ns);
         let offset = Expression::Add(
             Codegen,
             Uint(32),
@@ -212,7 +212,7 @@ impl BorshEncoding {
             | Type::Enum(_)
             | Type::Value
             | Type::Bytes(_) => {
-                let read_bytes = ty.memory_size_of(ns, &mut HashSet::new());
+                let read_bytes = ty.memory_size_of(ns);
 
                 let size = Expression::NumberLiteral(Codegen, Uint(32), read_bytes);
                 validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
@@ -283,7 +283,7 @@ impl BorshEncoding {
             }
 
             Type::ExternalFunction { .. } => {
-                let selector_size = Type::FunctionSelector.memory_size_of(ns, &mut HashSet::new());
+                let selector_size = Type::FunctionSelector.memory_size_of(ns);
                 // Extneral function has selector + address
                 let size = Expression::NumberLiteral(
                     Codegen,
@@ -531,7 +531,7 @@ impl BorshEncoding {
             for item in &dims[0..(dimension + 1)] {
                 elems.mul_assign(item.array_length().unwrap());
             }
-            elems.mul_assign(elem_ty.memory_size_of(ns, &mut HashSet::new()));
+            elems.mul_assign(elem_ty.memory_size_of(ns));
             let elems_size = Expression::NumberLiteral(Codegen, Uint(32), elems);
             validator.validate_offset_plus_size(offset_expr, &elems_size, ns, vartab, cfg);
             validator.validate_array();

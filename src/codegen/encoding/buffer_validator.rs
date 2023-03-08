@@ -170,7 +170,7 @@ impl BufferValidator<'_> {
         // Create validation check
         let mut advance = BigInt::zero();
         for i in self.current_arg..=maximum_verifiable {
-            advance.add_assign(self.types[i].memory_size_of(ns, &mut HashSet::new()));
+            advance.add_assign(self.types[i].memory_size_of(ns));
         }
 
         let reach = Expression::Add(

@@ -901,7 +901,7 @@ pub fn resolve_params(
                         success = false;
                     }
 
-                    if !ty.fits_in_memory(ns, &mut HashSet::new()) {
+                    if !ty.fits_in_memory(ns) {
                         diagnostics.push(Diagnostic::error(
                             p.ty.loc(),
                             String::from("type is too large to fit into memory"),
@@ -1014,7 +1014,7 @@ pub fn resolve_returns(
                                 success = false;
                             }
 
-                            if !ty.fits_in_memory(ns, &mut HashSet::new()) {
+                            if !ty.fits_in_memory(ns) {
                                 diagnostics.push(Diagnostic::error(
                                     r.ty.loc(),
                                     String::from("type is too large to fit into memory"),
