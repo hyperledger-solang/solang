@@ -1251,19 +1251,16 @@ impl Type {
         ns: &Namespace,
         structs_visited: &mut HashSet<usize>,
     ) -> BigInt {
-        self.recurse(structs_visited, 1.into(), |structs_visited| match self {
-            Type::Array(ty, dims) => {
-                let pointer_size = BigInt::from(4);
-                ty.solana_storage_size(ns, structs_visited).mul(
-                    dims.iter()
-                        .map(|d| match d {
-                            ArrayLength::Dynamic => &pointer_size,
-                            ArrayLength::Fixed(d) => d,
-                            ArrayLength::AnyFixed => panic!("unknown length"),
-                        })
-                        .product::<BigInt>(),
-                )
-            }
+        match self {
+            Type::Array(_, dims) if matches!(dims.last(), Some(ArrayLength::Dynamic)) => 4.into(),
+            Type::Array(ty, dims) => ty.solana_storage_size(ns, structs_visited).mul(
+                dims.iter()
+                    .map(|d| match d {
+                        ArrayLength::Fixed(d) => d,
+                        _ => panic!("unknown length"),
+                    })
+                    .product::<BigInt>(),
+            ),
             Type::Struct(str_ty) => str_ty
                 .definition(ns)
                 .offsets
@@ -1277,14 +1274,11 @@ impl Type {
                 .solana_storage_size(ns, structs_visited),
             // Other types have the same size both in storage and in memory
             _ => self.memory_size_of(ns, structs_visited),
-        })
+        }
     }
 
     /// Does this type fit into memory
     pub fn fits_in_memory(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> bool {
-        //self.recurse(structs_visited, |structs_visited| {
-        //    self.memory_size_of(ns, structs_visited) < BigInt::from(u16::MAX)
-        //})
         self.memory_size_of(ns, structs_visited) < BigInt::from(u16::MAX)
     }
 
