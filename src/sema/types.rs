@@ -1153,13 +1153,16 @@ impl Type {
             Type::Value => BigInt::from(ns.value_length),
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Rational => unreachable!(),
+            Type::Array(_, dims) if matches!(dims.last(), Some(ArrayLength::Dynamic)) => {
+                (ns.target.ptr_size() / 8).into()
+            }
             Type::Array(ty, dims) => {
-                let pointer_size = BigInt::from(ns.target.ptr_size() / 8);
+                let pointer_size = (ns.target.ptr_size() / 8).into();
                 ty.memory_size_of(ns, structs_visited).mul(
                     dims.iter()
                         .map(|d| match d {
-                            ArrayLength::Dynamic => &pointer_size,
                             ArrayLength::Fixed(n) => n,
+                            ArrayLength::Dynamic => &pointer_size,
                             ArrayLength::AnyFixed => unreachable!(),
                         })
                         .product::<BigInt>(),
