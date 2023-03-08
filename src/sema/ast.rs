@@ -228,9 +228,10 @@ pub struct Parameter {
     pub indexed: bool,
     /// Some builtin structs have readonly fields
     pub readonly: bool,
-    /// A struct may contain itself which make the struct infinite size in
-    /// memory. This boolean specifies which field introduces the recursion.
+    /// A recursive struct may contain itself which make the struct infinite size in memory.
     pub infinite_size: bool,
+    /// Is this struct field recursive. Recursive does not mean infinite size in all cases.
+    pub recursive: bool,
 }
 
 impl Parameter {
@@ -356,11 +357,31 @@ impl Function {
         visibility: pt::Visibility,
         params: Vec<Parameter>,
         returns: Vec<Parameter>,
-        ns: &Namespace,
+        ns: &mut Namespace,
     ) -> Self {
+        let recursive_parameter = params.iter().any(|p| {
+            if let Type::Struct(StructType::UserDefined(n)) = p.ty {
+                ns.structs[n].fields.iter().any(|p| p.recursive)
+            } else {
+                false
+            }
+        });
+
+        if matches!(
+            visibility,
+            pt::Visibility::External(_) | pt::Visibility::Public(_)
+        ) && recursive_parameter
+        {
+            ns.diagnostics.push(Diagnostic::error(
+                loc,
+                "Recursive parameter not allowed for public or external functions.".into(),
+            ))
+        }
+
         let signature = match ty {
             pt::FunctionTy::Fallback => String::from("@fallback"),
             pt::FunctionTy::Receive => String::from("@receive"),
+            _ if recursive_parameter => "".into(),
             _ => ns.signature(&name, &params),
         };
 

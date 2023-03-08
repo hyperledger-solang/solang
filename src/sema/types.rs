@@ -221,6 +221,7 @@ fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns:
         }
 
         if structs_visited.contains(&field_struct_no) {
+            ns.structs[struct_no].fields[field_no].recursive = true;
             match &field.ty {
                 Type::Struct(StructType::UserDefined(_)) => {}
                 Type::Array(ty, dim) => match (ty.as_ref(), dim.last()) {
@@ -558,6 +559,7 @@ pub fn struct_decl(
             indexed: false,
             readonly: false,
             infinite_size: false,
+            recursive: false,
         });
     }
 
@@ -664,6 +666,7 @@ fn event_decl(
             indexed: field.indexed,
             readonly: false,
             infinite_size: false,
+            recursive: false,
         });
     }
 

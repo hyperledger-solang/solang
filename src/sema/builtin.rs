@@ -1499,6 +1499,7 @@ impl Namespace {
                     readonly: false,
                     indexed: false,
                     infinite_size: false,
+                    recursive: false,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -1508,6 +1509,7 @@ impl Namespace {
                     readonly: false,
                     indexed: false,
                     infinite_size: false,
+                    recursive: false,
                 },
             ],
             vec![Parameter {
@@ -1518,6 +1520,7 @@ impl Namespace {
                 readonly: false,
                 indexed: false,
                 infinite_size: false,
+                recursive: false,
             }],
             self,
         );
@@ -1559,6 +1562,7 @@ impl Namespace {
                     readonly: false,
                     indexed: false,
                     infinite_size: false,
+                    recursive: false,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -1568,6 +1572,7 @@ impl Namespace {
                     readonly: false,
                     indexed: false,
                     infinite_size: false,
+                    recursive: false,
                 },
             ],
             vec![
@@ -1579,6 +1584,7 @@ impl Namespace {
                     readonly: false,
                     indexed: false,
                     infinite_size: false,
+                    recursive: false,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -1588,6 +1594,7 @@ impl Namespace {
                     readonly: false,
                     indexed: false,
                     infinite_size: false,
+                    recursive: false,
                 },
             ],
             self,

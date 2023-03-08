@@ -382,6 +382,7 @@ fn statement(
                         indexed: false,
                         readonly: false,
                         infinite_size: false,
+                        recursive: false,
                     },
                     initializer,
                 ));
@@ -1332,6 +1333,7 @@ fn destructure(
                             indexed: false,
                             readonly: false,
                             infinite_size: false,
+                            recursive: false,
                         },
                     ));
                 }
@@ -2063,6 +2065,7 @@ fn try_catch(
                                 indexed: false,
                                 readonly: false,
                                 infinite_size: false,
+                                recursive: false,
                             },
                         ));
                     }
@@ -2077,6 +2080,7 @@ fn try_catch(
                             id: None,
                             readonly: false,
                             infinite_size: false,
+                            recursive: false,
                         },
                     ));
                 }
@@ -2159,6 +2163,7 @@ fn try_catch(
                         indexed: false,
                         readonly: false,
                         infinite_size: false,
+                        recursive: false,
                     };
 
                     if let Some(name) = &param.name {
@@ -2241,6 +2246,7 @@ fn try_catch(
                     indexed: false,
                     readonly: false,
                     infinite_size: false,
+                    recursive: false,
                 };
 
                 if let Some(name) = &param.name {

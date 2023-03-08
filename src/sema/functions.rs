@@ -920,6 +920,7 @@ pub fn resolve_params(
                     indexed: false,
                     readonly: false,
                     infinite_size: false,
+                    recursive: false,
                 });
             }
             Err(()) => success = false,
@@ -1034,6 +1035,7 @@ pub fn resolve_returns(
                     indexed: false,
                     readonly: false,
                     infinite_size: false,
+                    recursive: false,
                 });
             }
             Err(()) => success = false,
@@ -1073,6 +1075,7 @@ fn signatures() {
                 indexed: false,
                 readonly: false,
                 infinite_size: false,
+                recursive: false,
             },
             Parameter {
                 loc: pt::Loc::Implicit,
@@ -1082,10 +1085,11 @@ fn signatures() {
                 indexed: false,
                 readonly: false,
                 infinite_size: false,
+                recursive: false,
             },
         ],
         Vec::new(),
-        &ns,
+        &mut ns,
     );
 
     assert_eq!(fdecl.signature, "foo(uint8,address)");

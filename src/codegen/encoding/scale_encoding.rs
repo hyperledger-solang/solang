@@ -225,6 +225,7 @@ impl AbiEncoding for ScaleEncoding {
                 indexed: false,
                 readonly: false,
                 infinite_size: false,
+                recursive: false,
             });
         }
 

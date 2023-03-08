@@ -1308,7 +1308,7 @@ impl ControlFlowGraph {
 
 /// Checks whether there is a virtual fallback or receive function
 fn is_there_virtual_function(
-    ns: &Namespace,
+    ns: &mut Namespace,
     contract_no: usize,
     function_no: Option<usize>,
 ) -> bool {

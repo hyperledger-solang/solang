@@ -1106,6 +1106,7 @@ fn try_catch(
                             indexed: false,
                             readonly: false,
                             infinite_size: false,
+                            recursive: false,
                         })
                         .collect();
 
@@ -1422,7 +1423,7 @@ impl Type {
 
 impl Namespace {
     /// Phoney default constructor
-    pub fn default_constructor(&self, contract_no: usize) -> Function {
+    pub fn default_constructor(&mut self, contract_no: usize) -> Function {
         let mut func = Function::new(
             pt::Loc::Codegen,
             "".to_owned(),

@@ -156,6 +156,7 @@ fn process_parameters(parameters: &[pt::YulTypedIdentifier], ns: &mut Namespace)
             id: Some(item.id.clone()),
             readonly: false,
             infinite_size: false,
+            recursive: false,
         });
     }
 
