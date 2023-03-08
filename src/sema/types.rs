@@ -1672,7 +1672,14 @@ impl Type {
 
     /// Is this structure a builtin
     pub fn is_builtin_struct(&self) -> Option<StructType> {
-        match self {
+        self.is_builtin_struct_internal(&mut HashSet::new())
+    }
+
+    fn is_builtin_struct_internal(
+        &self,
+        structs_visited: &mut HashSet<usize>,
+    ) -> Option<StructType> {
+        self.recurse(structs_visited, None, |structs_visited| match self {
             Type::Struct(str_ty) => {
                 if matches!(str_ty, StructType::UserDefined(_)) {
                     None
@@ -1680,9 +1687,9 @@ impl Type {
                     Some(*str_ty)
                 }
             }
-            Type::StorageRef(_, r) | Type::Ref(r) => r.is_builtin_struct(),
+            Type::StorageRef(_, r) | Type::Ref(r) => r.is_builtin_struct_internal(structs_visited),
             _ => None,
-        }
+        })
     }
 
     /// Does the type contain any builtin type
