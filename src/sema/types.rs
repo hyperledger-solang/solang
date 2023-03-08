@@ -1153,7 +1153,7 @@ impl Type {
             Type::Value => BigInt::from(ns.value_length),
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Rational => unreachable!(),
-            Type::Array(_, dims) if matches!(dims.last(), Some(ArrayLength::Dynamic)) => {
+            Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
                 (ns.target.ptr_size() / 8).into()
             }
             Type::Array(ty, dims) => {
@@ -1250,7 +1250,7 @@ impl Type {
     /// which is not accounted for.
     pub fn solana_storage_size(&self, ns: &Namespace) -> BigInt {
         match self {
-            Type::Array(_, dims) if matches!(dims.last(), Some(ArrayLength::Dynamic)) => 4.into(),
+            Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => 4.into(),
             Type::Array(ty, dims) => ty.solana_storage_size(ns).mul(
                 dims.iter()
                     .map(|d| match d {
@@ -1423,6 +1423,7 @@ impl Type {
                         .iter()
                         .map(|f| f.ty.storage_slots(ns, structs_visited))
                         .sum(),
+                    Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => 1.into(),
                     Type::Array(ty, dims) => {
                         let one = 1.into();
                         ty.storage_slots(ns, structs_visited)
