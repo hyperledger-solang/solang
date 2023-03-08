@@ -22,7 +22,7 @@ use solang_parser::{
     pt,
     pt::{CodeLocation, OptionalCodeLocation},
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 impl Namespace {
     /// Create a namespace and populate with the parameters for the target
@@ -1389,7 +1389,7 @@ impl Namespace {
             name,
             params
                 .iter()
-                .map(|p| p.ty.to_signature_string(false, self, &mut HashSet::new()))
+                .map(|p| p.ty.to_signature_string(false, self))
                 .collect::<Vec<String>>()
                 .join(",")
         )

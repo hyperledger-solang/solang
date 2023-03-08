@@ -882,11 +882,7 @@ fn struct_offsets(ns: &mut Namespace) {
 
 impl Type {
     pub fn to_string(&self, ns: &Namespace) -> String {
-        self.to_string_internal(ns, &mut HashSet::new())
-    }
-
-    fn to_string_internal(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> String {
-        self.recurse(structs_visited, "".into(), |structs_visited| match self {
+        match self {
             Type::Bool => "bool".to_string(),
             Type::Address(false) => "address".to_string(),
             Type::Address(true) => "address payable".to_string(),
@@ -901,7 +897,7 @@ impl Type {
             Type::Struct(str_ty) => format!("struct {}", str_ty.definition(ns)),
             Type::Array(ty, len) => format!(
                 "{}{}",
-                ty.to_string_internal(ns, structs_visited),
+                ty.to_string(ns),
                 len.iter()
                     .map(|len| match len {
                         ArrayLength::Fixed(len) => format!("[{len}]"),
@@ -917,10 +913,10 @@ impl Type {
             }) => {
                 format!(
                     "mapping({}{}{} => {}{}{})",
-                    key.to_string_internal(ns, structs_visited),
+                    key.to_string(ns),
                     if key_name.is_some() { " " } else { "" },
                     key_name.as_ref().map(|id| id.name.as_str()).unwrap_or(""),
-                    value.to_string_internal(ns, structs_visited),
+                    value.to_string(ns),
                     if value_name.is_some() { " " } else { "" },
                     value_name.as_ref().map(|id| id.name.as_str()).unwrap_or(""),
                 )
@@ -939,7 +935,7 @@ impl Type {
                     "function({}) {}",
                     params
                         .iter()
-                        .map(|ty| ty.to_string_internal(ns, structs_visited))
+                        .map(|ty| ty.to_string(ns))
                         .collect::<Vec<String>>()
                         .join(","),
                     if matches!(self, Type::InternalFunction { .. }) {
@@ -959,7 +955,7 @@ impl Type {
                         " returns ({})",
                         returns
                             .iter()
-                            .map(|ty| ty.to_string_internal(ns, structs_visited))
+                            .map(|ty| ty.to_string(ns))
                             .collect::<Vec<String>>()
                             .join(",")
                     )
@@ -970,19 +966,19 @@ impl Type {
             }
             Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
             Type::UserType(n) => format!("usertype {}", ns.user_types[*n]),
-            Type::Ref(r) => r.to_string_internal(ns, structs_visited),
+            Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(_, ty) => {
-                format!("{} storage", ty.to_string_internal(ns, structs_visited))
+                format!("{} storage", ty.to_string(ns))
             }
             Type::Void => "void".into(),
             Type::Unreachable => "unreachable".into(),
             // A slice of bytes1 is like bytes
             Type::Slice(ty) if **ty == Type::Bytes(1) => "bytes".into(),
-            Type::Slice(ty) => format!("{} slice", ty.to_string_internal(ns, structs_visited)),
+            Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
             Type::Unresolved => "unresolved".into(),
             Type::BufferPointer => "buffer_pointer".into(),
             Type::FunctionSelector => "function_selector".into(),
-        })
+        }
     }
 
     /// Is this a primitive, i.e. bool, address, int, uint, bytes
@@ -1002,13 +998,8 @@ impl Type {
     }
 
     /// The eth abi file wants to hear "tuple" rather than "(ty, ty)"
-    pub fn to_signature_string(
-        &self,
-        say_tuple: bool,
-        ns: &Namespace,
-        structs_visited: &mut HashSet<usize>,
-    ) -> String {
-        self.recurse(structs_visited, "".into(), |structs_visited| match self {
+    pub fn to_signature_string(&self, say_tuple: bool, ns: &Namespace) -> String {
+        match self {
             Type::Bool => "bool".to_string(),
             Type::Contract(_) | Type::Address(_) if ns.target == Target::Solana => {
                 format!("bytes{}", ns.address_length)
@@ -1020,12 +1011,10 @@ impl Type {
             Type::Bytes(n) => format!("bytes{n}"),
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
-            Type::Enum(n) => ns.enums[*n]
-                .ty
-                .to_signature_string(say_tuple, ns, structs_visited),
+            Type::Enum(n) => ns.enums[*n].ty.to_signature_string(say_tuple, ns),
             Type::Array(ty, len) => format!(
                 "{}{}",
-                ty.to_signature_string(say_tuple, ns, structs_visited),
+                ty.to_signature_string(say_tuple, ns),
                 len.iter()
                     .map(|len| match len {
                         ArrayLength::Fixed(len) => format!("[{len}]"),
@@ -1043,22 +1032,18 @@ impl Type {
                         .definition(ns)
                         .fields
                         .iter()
-                        .map(|f| f.ty.to_signature_string(say_tuple, ns, structs_visited))
+                        .map(|f| f.ty.to_signature_string(say_tuple, ns))
                         .collect::<Vec<String>>()
                         .join(",")
                 )
             }
             Type::InternalFunction { .. } | Type::ExternalFunction { .. } => "function".to_owned(),
-            Type::UserType(n) => {
-                ns.user_types[*n]
-                    .ty
-                    .to_signature_string(say_tuple, ns, structs_visited)
-            }
+            Type::UserType(n) => ns.user_types[*n].ty.to_signature_string(say_tuple, ns),
             // TODO: should an unresolved type not match another unresolved type?
             Type::Unresolved => "unresolved".to_owned(),
             Type::Slice(ty) => format!("{} slice", ty.to_string(ns)),
             _ => unreachable!(),
-        })
+        }
     }
 
     /// Give the type of a memory array after dereference

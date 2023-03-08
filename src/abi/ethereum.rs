@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashSet;
-
 // ethereum style ABIs
 use crate::sema::ast::{Namespace, Parameter, StructType, Type};
 use serde::Serialize;
@@ -69,7 +67,7 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
 
         ABIParam {
             name: param.name_as_str().to_owned(),
-            ty: param.ty.to_signature_string(true, ns, &mut HashSet::new()),
+            ty: param.ty.to_signature_string(true, ns),
             internal_ty: param.ty.to_string(ns),
             components,
             indexed: param.indexed,
