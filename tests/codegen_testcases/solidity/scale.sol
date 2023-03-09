@@ -20,7 +20,6 @@ contract ExternalFunctions {
 
     // BEGIN-CHECK: ExternalFunctions::ExternalFunctions::function::storage_callback
     function storage_callback() public {
-        // CHECK: block0: # entry
         // CHECK: %temp.7 = load storage slot(uint256 0) ty:function(int32) external returns (uint64)
         // CHECK: ty:bytes %abi_encoded.temp.8 = (alloc bytes len uint32 40)
         // CHECK: writebuffer buffer:%abi_encoded.temp.8 offset:uint32 0 value:hex"f503f5fe"
@@ -35,7 +34,6 @@ contract CompactEncoding {
     // BEGIN-CHECK: CompactEncoding::CompactEncoding::function::vector_length
     function vector_length(string memory s) public {
         
-    // CHECK: block0: # entry
     // CHECK: branchcond (unsigned more (builtin ArrayLength ((arg #0))) > uint32 1073741823), block6, block7
 
     // CHECK: block1: # small

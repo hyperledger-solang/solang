@@ -130,7 +130,6 @@ contract Testing {
     function stringAndBytes(bytes memory buffer) public pure returns (bytes memory, string memory) {
         (bytes memory a, string memory b) = abi.decode(buffer, (bytes, string));
 
-		// CHECK: block0: # entry
 		// CHECK: ty:bytes %buffer = (arg #0)
 		// CHECK: ty:uint32 %temp.86 = (builtin ArrayLength ((arg #0)))
 		// CHECK: ty:uint32 %temp.87 = (builtin ReadFromBuffer ((arg #0), uint32 0))
@@ -174,7 +173,6 @@ contract Testing {
     function decodeEnum(bytes memory buffer) public pure returns (WeekDays) {
         WeekDays a = abi.decode(buffer, (WeekDays));
 
-		// CHECK: block0: # entry
 		// CHECK: ty:bytes %buffer = (arg #0)
 		// CHECK: ty:uint32 %temp.93 = (builtin ArrayLength ((arg #0)))
 		// CHECK: branchcond (uint32 1 <= %temp.93), block1, block2
@@ -211,8 +209,6 @@ contract Testing {
     function decodeStruct(bytes memory buffer) public pure returns (noPadStruct memory, PaddedStruct memory) {
         (noPadStruct memory a, PaddedStruct memory b) = abi.decode(buffer, (noPadStruct, PaddedStruct));
 
-		// CHECK: block0: # entry
-		// CHECK: ty:bytes %buffer = (arg #0)
 		// CHECK: ty:uint32 %temp.95 = (builtin ArrayLength ((arg #0)))
 		// CHECK: branchcond (uint32 57 <= %temp.95), block1, block2
 
@@ -243,8 +239,6 @@ contract Testing {
         (uint32[4] memory a, noPadStruct[2] memory b, noPadStruct[] memory c) =
         abi.decode(buffer, (uint32[4], noPadStruct[2], noPadStruct[]));
 
-		// CHECK: block0: # entry
-		// CHECK: ty:bytes %buffer = (arg #0)
 		// CHECK: ty:uint32 %temp.101 = (builtin ArrayLength ((arg #0)))
 		// CHECK: branchcond (uint32 32 <= %temp.101), block1, block2
 

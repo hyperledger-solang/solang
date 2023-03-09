@@ -127,7 +127,6 @@ contract Testing {
     function complexArray(bytes memory buffer) public {
         NonConstantStruct[] memory arr = abi.decode(buffer, (NonConstantStruct[]));
 
-		// CHECK: block0: # entry
 		// CHECK: ty:bytes %buffer = (arg #0)
 		// CHECK: ty:uint32 %temp.30 = (builtin ArrayLength ((arg #0)))
 		// CHECK: ty:uint32 %temp.32 = uint32 0

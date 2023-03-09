@@ -11,6 +11,7 @@ use solang_parser::pt::Loc::Codegen;
 use std::collections::HashMap;
 use std::ops::AddAssign;
 
+use super::buffer_validator::BufferValidator;
 use super::increment_by;
 
 /// This struct implements the trait AbiEncoding for Borsh encoding
@@ -110,7 +111,7 @@ impl AbiEncoding for BorshEncoding {
         buffer: &Expression,
         offset: &Expression,
         ty: &Type,
-        validator: &mut super::buffer_validator::BufferValidator,
+        validator: &mut BufferValidator,
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
