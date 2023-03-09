@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::cfg::{BasicBlock, ControlFlowGraph, Instr};
-use crate::codegen::reaching_definitions::block_edges;
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, RetrieveType, Type};
 use solang_parser::pt::Loc;
@@ -141,7 +140,7 @@ fn reaching_definitions(cfg: &mut ControlFlowGraph) -> (Vec<Vec<Vec<Transfer>>>,
             &mut block_vars,
         );
 
-        for edge in block_edges(&cfg.blocks[block_no]) {
+        for edge in cfg.blocks[block_no].edges() {
             if !block_vars.contains_key(&edge) {
                 blocks_todo.insert(edge);
                 block_vars.insert(edge, vec![vars.clone()]);
