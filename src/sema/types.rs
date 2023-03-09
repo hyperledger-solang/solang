@@ -1363,97 +1363,82 @@ impl Type {
     /// Calculate how many storage slots a type occupies. Note that storage arrays can
     /// be very large
     pub fn storage_slots(&self, ns: &Namespace) -> BigInt {
-        self.storage_slots_internal(ns, &mut HashSet::new())
-    }
-
-    fn storage_slots_internal(
-        &self,
-        ns: &Namespace,
-        structs_visited: &mut HashSet<usize>,
-    ) -> BigInt {
-        self.recurse(structs_visited, 1.into(), |structs_visited| {
-            if ns.target == Target::Solana {
-                match self {
-                    Type::Enum(_) => BigInt::one(),
-                    Type::Bool => BigInt::one(),
-                    Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
-                    Type::Bytes(n) => BigInt::from(*n),
-                    Type::Value => BigInt::from(ns.value_length),
-                    Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
-                    Type::Rational => unreachable!(),
-                    Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
-                        BigInt::from(4)
-                    }
-                    Type::Array(ty, dims) => {
-                        let pointer_size = BigInt::from(4);
-                        if self.is_sparse_solana(ns) {
-                            BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4)
-                        } else {
-                            ty.storage_slots_internal(ns, structs_visited).mul(
-                                dims.iter()
-                                    .map(|d| match d {
-                                        ArrayLength::Dynamic => &pointer_size,
-                                        ArrayLength::Fixed(d) => d,
-                                        ArrayLength::AnyFixed => {
-                                            panic!("unknown length");
-                                        }
-                                    })
-                                    .product::<BigInt>(),
-                            )
-                        }
-                    }
-                    Type::Struct(str_ty) => str_ty
-                        .definition(ns)
-                        .storage_offsets
-                        .last()
-                        .cloned()
-                        .unwrap_or_else(BigInt::zero),
-                    Type::String | Type::DynamicBytes => BigInt::from(4),
-                    Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
-                    Type::ExternalFunction { .. } => {
-                        // Address and selector
-                        BigInt::from(ns.address_length + 4)
-                    }
-                    Type::Mapping(..) => BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4),
-                    Type::Ref(ty) | Type::StorageRef(_, ty) => {
-                        ty.storage_slots_internal(ns, structs_visited)
-                    }
-                    Type::Unresolved => BigInt::one(),
-                    Type::UserType(no) => ns.user_types[*no]
-                        .ty
-                        .storage_slots_internal(ns, structs_visited),
-                    _ => unimplemented!(),
+        if ns.target == Target::Solana {
+            match self {
+                Type::Enum(_) => BigInt::one(),
+                Type::Bool => BigInt::one(),
+                Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
+                Type::Bytes(n) => BigInt::from(*n),
+                Type::Value => BigInt::from(ns.value_length),
+                Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
+                Type::Rational => unreachable!(),
+                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                    BigInt::from(4)
                 }
-            } else {
-                match self {
-                    Type::StorageRef(_, r) | Type::Ref(r) => {
-                        r.storage_slots_internal(ns, structs_visited)
-                    }
-                    Type::Struct(str_ty) => str_ty
-                        .definition(ns)
-                        .fields
-                        .iter()
-                        .map(|f| f.ty.storage_slots_internal(ns, structs_visited))
-                        .sum(),
-                    Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => 1.into(),
-                    Type::Array(ty, dims) => {
-                        let one = 1.into();
-                        ty.storage_slots_internal(ns, structs_visited)
-                            * dims
-                                .iter()
-                                .map(|len| match len {
-                                    ArrayLength::Dynamic => &one,
-                                    ArrayLength::Fixed(len) => len,
+                Type::Array(ty, dims) => {
+                    let pointer_size = BigInt::from(4);
+                    if self.is_sparse_solana(ns) {
+                        BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4)
+                    } else {
+                        ty.storage_slots(ns).mul(
+                            dims.iter()
+                                .map(|d| match d {
+                                    ArrayLength::Dynamic => &pointer_size,
+                                    ArrayLength::Fixed(d) => d,
                                     ArrayLength::AnyFixed => {
-                                        unreachable!("unknown length")
+                                        panic!("unknown length");
                                     }
                                 })
-                                .product::<BigInt>()
+                                .product::<BigInt>(),
+                        )
                     }
-                    _ => BigInt::one(),
                 }
+                Type::Struct(str_ty) => str_ty
+                    .definition(ns)
+                    .storage_offsets
+                    .last()
+                    .cloned()
+                    .unwrap_or_else(BigInt::zero),
+                Type::String | Type::DynamicBytes => BigInt::from(4),
+                Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
+                Type::ExternalFunction { .. } => {
+                    // Address and selector
+                    BigInt::from(ns.address_length + 4)
+                }
+                Type::Mapping(..) => BigInt::from(SOLANA_BUCKET_SIZE) * BigInt::from(4),
+                Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_slots(ns),
+                Type::Unresolved => BigInt::one(),
+                Type::UserType(no) => ns.user_types[*no].ty.storage_slots(ns),
+                _ => unimplemented!(),
             }
-        })
+        } else {
+            match self {
+                Type::StorageRef(_, r) | Type::Ref(r) => r.storage_slots(ns),
+                Type::Struct(str_ty) => str_ty
+                    .definition(ns)
+                    .fields
+                    .iter()
+                    .filter(|f| !f.infinite_size)
+                    .map(|f| f.ty.storage_slots(ns))
+                    .sum(),
+                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => 1.into(),
+                Type::Array(ty, dims) => {
+                    let one = 1.into();
+                    ty.storage_slots(ns)
+                        * dims
+                            .iter()
+                            .map(|len| match len {
+                                ArrayLength::Dynamic => &one,
+                                ArrayLength::Fixed(len) => len,
+                                ArrayLength::AnyFixed => {
+                                    unreachable!("unknown length")
+                                }
+                            })
+                            .product::<BigInt>()
+                }
+                _ => BigInt::one(),
+            }
+        }
     }
 
     /// Alignment of elements in storage
