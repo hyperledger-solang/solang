@@ -787,7 +787,7 @@ pub(super) trait AbiEncoding {
         // Checks if we can memcpy the elements from the buffer directly to the allocated array
         if allow_direct_copy(array_ty, elem_ty, dims, ns) {
             // Calculate number of elements
-            let (array_length, size_length, offset, var_no) =
+            let (array_size, size_width, offset, var_no) =
                 if matches!(dims.last(), Some(&ArrayLength::Fixed(_))) {
                     let elem_no = calculate_direct_copy_bytes_size(dims, elem_ty, ns);
                     let allocated_vector = vartab.temp_anonymous(array_ty);
@@ -823,7 +823,7 @@ pub(super) trait AbiEncoding {
                     )
                 };
 
-            validator.validate_offset_plus_size(&offset, &array_length, ns, vartab, cfg);
+            validator.validate_offset_plus_size(&offset, &array_size, ns, vartab, cfg);
 
             let source_address = Expression::AdvancePointer {
                 pointer: Box::new(buffer.clone()),
@@ -836,14 +836,14 @@ pub(super) trait AbiEncoding {
                 Instr::MemCopy {
                     source: source_address,
                     destination: array_expr.clone(),
-                    bytes: array_length.clone(),
+                    bytes: array_size.clone(),
                 },
             );
 
             let bytes_size = if matches!(dims.last(), Some(ArrayLength::Dynamic)) {
-                increment_by(array_length, size_length)
+                increment_by(array_size, size_width)
             } else {
-                array_length
+                array_size
             };
 
             (array_expr, bytes_size)
