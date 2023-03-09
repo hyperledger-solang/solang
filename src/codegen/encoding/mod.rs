@@ -807,18 +807,18 @@ pub(super) trait AbiEncoding {
                         allocated_vector,
                     )
                 } else {
-                    let (array_length, size_length) =
+                    let (array_length, size_width) =
                         self.retrieve_array_length(buffer, offset, vartab, cfg);
                     validator.validate_offset(
-                        increment_by(offset.clone(), size_length.clone()),
+                        increment_by(offset.clone(), size_width.clone()),
                         ns,
                         vartab,
                         cfg,
                     );
                     (
                         calculate_array_bytes_size(array_length, elem_ty, ns),
-                        size_length.clone(),
-                        increment_by(offset.clone(), size_length),
+                        size_width.clone(),
+                        increment_by(offset.clone(), size_width),
                         allocate_array(array_ty, array_length, vartab, cfg),
                     )
                 };
