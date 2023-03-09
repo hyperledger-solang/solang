@@ -61,7 +61,7 @@ pub(super) fn abi_encode(
 }
 
 /// Insert decoding routines into the `cfg` for the `Expression`s in `args`.
-/// Returns a list containing the encoded data.
+/// Returns a vector containing the encoded data.
 pub(super) fn abi_decode(
     loc: &Loc,
     buffer: &Expression,
