@@ -1,6 +1,6 @@
 strict digraph "tests/contract_testcases/substrate/function_types/recursive_02.sol" {
 	S [label="name:S\ntests/contract_testcases/substrate/function_types/recursive_02.sol:1:8-9\nfield name:f1 ty:int256\nfield name:f2 ty:struct S[]"]
-	foo [label="function foo\ntests/contract_testcases/substrate/function_types/recursive_02.sol:6:1-30\nsignature foo(#recursive)\nvisibility internal\nmutability pure"]
+	foo [label="function foo\ntests/contract_testcases/substrate/function_types/recursive_02.sol:6:1-30\nsignature foo((int256,#recursive))\nvisibility internal\nmutability pure"]
 	parameters [label="parameters\nstruct S s"]
 	structs -> S
 	free_functions -> foo [label="function"]

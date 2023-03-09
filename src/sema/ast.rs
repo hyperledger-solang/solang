@@ -359,25 +359,6 @@ impl Function {
         returns: Vec<Parameter>,
         ns: &mut Namespace,
     ) -> Self {
-        let recursive_parameter = params.iter().any(|p| {
-            if let Type::Struct(StructType::UserDefined(n)) = p.ty {
-                ns.structs[n].fields.iter().any(|p| p.recursive)
-            } else {
-                false
-            }
-        });
-
-        if matches!(
-            visibility,
-            pt::Visibility::External(_) | pt::Visibility::Public(_)
-        ) && recursive_parameter
-        {
-            ns.diagnostics.push(Diagnostic::error(
-                loc,
-                "Recursive parameter not allowed for public or external functions.".into(),
-            ))
-        }
-
         let signature = match ty {
             pt::FunctionTy::Fallback => String::from("@fallback"),
             pt::FunctionTy::Receive => String::from("@receive"),

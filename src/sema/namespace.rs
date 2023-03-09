@@ -3,7 +3,7 @@
 use super::{
     ast::{
         ArrayLength, Diagnostic, Mapping, Mutability, Namespace, Note, Parameter, RetrieveType,
-        StructType, Symbol, Type,
+        Symbol, Type,
     },
     builtin,
     diagnostics::Diagnostics,
@@ -1381,22 +1381,16 @@ impl Namespace {
         }
     }
 
-    /// Generate the signature for the given name and parameters. Can be used
-    /// for both events and functions
+    /// Generate the signature for the given name and parameters; can be used for events and functions.
+    ///
+    /// Recursive arguments are invalid and default to a signature of `#recursive` to avoid stack overflows.
     pub fn signature(&self, name: &str, params: &[Parameter]) -> String {
         format!(
             "{}({})",
             name,
             params
                 .iter()
-                .map(|p| match p.ty {
-                    Type::Struct(StructType::UserDefined(n))
-                        if self.structs[n].fields.iter().any(|p| p.recursive) =>
-                    {
-                        "#recursive".into()
-                    }
-                    _ => p.ty.to_signature_string(false, self),
-                })
+                .map(|p| p.ty.to_signature_string(false, self))
                 .collect::<Vec<String>>()
                 .join(",")
         )

@@ -1035,7 +1035,11 @@ impl Type {
                         .definition(ns)
                         .fields
                         .iter()
-                        .map(|f| f.ty.to_signature_string(say_tuple, ns))
+                        .map(|f| if f.recursive {
+                            "#recursive".into() // recursive types in public interfaces are not allowed
+                        } else {
+                            f.ty.to_signature_string(say_tuple, ns)
+                        })
                         .collect::<Vec<String>>()
                         .join(",")
                 )
