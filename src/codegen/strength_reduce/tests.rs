@@ -562,7 +562,7 @@ fn expresson_known_bits() {
     );
 
     var1.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(512)),
+        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(u64::MAX)),
         &vars,
         &ns,
     ));
@@ -570,7 +570,7 @@ fn expresson_known_bits() {
     vars.insert(0, var1);
 
     let mut var2 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(3)),
+        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(1)),
         &vars,
         &ns,
     );
@@ -599,6 +599,25 @@ fn expresson_known_bits() {
     assert!(v.known_bits[0]);
     assert!(v.value[0]);
 
+    // could be either true for false
+    let expr = Expression::More {
+        loc,
+        signed: true,
+        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
+        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+    };
+
+    let res = expression_values(&expr, &vars, &ns);
+
+    assert_eq!(res.len(), 2);
+    let mut iter = res.iter();
+    let v1 = iter.next().unwrap();
+    let v2 = iter.next().unwrap();
+
+    assert!(v1.known_bits[0]);
+    assert!(v2.known_bits[0]);
+    assert!(v1.value[0] ^ v2.value[0]);
+
     /////////////
     // test: moreequal
     /////////////
@@ -615,7 +634,7 @@ fn expresson_known_bits() {
     );
 
     var1.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(512)),
+        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(u64::MAX)),
         &vars,
         &ns,
     ));
@@ -637,7 +656,7 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should always be true
-    let expr = Expression::More {
+    let expr = Expression::MoreEqual {
         loc,
         signed: false,
         left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
@@ -651,6 +670,25 @@ fn expresson_known_bits() {
 
     assert!(v.known_bits[0]);
     assert!(v.value[0]);
+
+    // true or false
+    let expr = Expression::MoreEqual {
+        loc,
+        signed: true,
+        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
+        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+    };
+
+    let res = expression_values(&expr, &vars, &ns);
+
+    assert_eq!(res.len(), 2);
+    let mut iter = res.iter();
+    let v1 = iter.next().unwrap();
+    let v2 = iter.next().unwrap();
+
+    assert!(v1.known_bits[0]);
+    assert!(v2.known_bits[0]);
+    assert!(v1.value[0] ^ v2.value[0]);
 
     /////////////
     // test: less
@@ -709,6 +747,22 @@ fn expresson_known_bits() {
     assert!(!v.known_bits[0]);
     assert!(!v.value[0]);
 
+    // should always be false
+    let expr = Expression::Less {
+        loc,
+        signed: true,
+        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
+        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+    };
+
+    let res = expression_values(&expr, &vars, &ns);
+
+    assert_eq!(res.len(), 1);
+    let v = res.iter().next().unwrap();
+
+    assert!(v.known_bits[0]);
+    assert!(!v.value[0]);
+
     /////////////
     // test: lessequal
     /////////////
@@ -740,7 +794,18 @@ fn expresson_known_bits() {
 
     vars.insert(1, var2);
 
-    // should always be true
+    // true or false
+    let expr = Expression::LessEqual {
+        loc,
+        signed: true,
+        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
+        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+    };
+
+    let res = expression_values(&expr, &vars, &ns);
+
+    assert_eq!(res.len(), 2);
+
     let expr = Expression::LessEqual {
         loc,
         signed: false,
