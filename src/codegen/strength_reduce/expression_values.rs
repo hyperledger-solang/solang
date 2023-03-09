@@ -27,14 +27,30 @@ pub(super) fn expression_values(
         Expression::Add(_, ty, _, left, right) => add_values(ty, left, right, vars, ns),
         Expression::Subtract(_, ty, _, left, right) => subtract_values(ty, left, right, vars, ns),
         Expression::Multiply(_, ty, _, left, right) => multiply_values(ty, left, right, vars, ns),
-        Expression::SignedMore(_, left, right) | Expression::UnsignedMore(_, left, right) => {
-            more_values(left, right, vars, ns)
-        }
-        Expression::MoreEqual(_, left, right) => more_equal_values(left, right, vars, ns),
-        Expression::SignedLess(_, left, right) | Expression::UnsignedLess(_, left, right) => {
-            less_values(left, right, vars, ns)
-        }
-        Expression::LessEqual(_, left, right) => less_equal_values(left, right, vars, ns),
+        Expression::More {
+            left,
+            right,
+            signed,
+            ..
+        } => more_values(left, right, *signed, vars, ns),
+        Expression::MoreEqual {
+            left,
+            right,
+            signed,
+            ..
+        } => more_equal_values(left, right, *signed, vars, ns),
+        Expression::Less {
+            left,
+            right,
+            signed,
+            ..
+        } => less_values(left, right, *signed, vars, ns),
+        Expression::LessEqual {
+            left,
+            right,
+            signed,
+            ..
+        } => less_equal_values(left, right, *signed, vars, ns),
         Expression::Equal(_, left_expr, right_expr) => {
             equal_values(left_expr, right_expr, vars, ns)
         }
@@ -450,11 +466,10 @@ fn multiply_values(
 fn more_values(
     left: &Expression,
     right: &Expression,
+    signed: bool,
     vars: &Variables,
     ns: &Namespace,
 ) -> HashSet<Value> {
-    let ty = left.ty();
-
     let left = expression_values(left, vars, ns);
     let right = expression_values(right, vars, ns);
 
@@ -465,7 +480,7 @@ fn more_values(
             let mut known_bits = BitArray::new([0u8; 32]);
             let mut value = BitArray::new([0u8; 32]);
 
-            let is_true = if ty.is_signed_int() {
+            let is_true = if signed {
                 BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
                     > BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
             } else {
@@ -479,7 +494,7 @@ fn more_values(
                 value.set(0, true);
             } else {
                 // maybe the comparison is always false
-                let is_false = if ty.is_signed_int() {
+                let is_false = if signed {
                     BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
                         <= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                 } else {
@@ -508,11 +523,10 @@ fn more_values(
 fn more_equal_values(
     left: &Expression,
     right: &Expression,
+    signed: bool,
     vars: &Variables,
     ns: &Namespace,
 ) -> HashSet<Value> {
-    let ty = left.ty();
-
     let left = expression_values(left, vars, ns);
     let right = expression_values(right, vars, ns);
 
@@ -523,7 +537,7 @@ fn more_equal_values(
             let mut known_bits = BitArray::new([0u8; 32]);
             let mut value = BitArray::new([0u8; 32]);
 
-            let is_true = if ty.is_signed_int() {
+            let is_true = if signed {
                 BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
                     >= BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
             } else {
@@ -537,7 +551,7 @@ fn more_equal_values(
                 value.set(0, true);
             } else {
                 // maybe the comparison is always false
-                let is_false = if ty.is_signed_int() {
+                let is_false = if signed {
                     BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
                         < BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                 } else {
@@ -566,11 +580,10 @@ fn more_equal_values(
 fn less_values(
     left: &Expression,
     right: &Expression,
+    signed: bool,
     vars: &Variables,
     ns: &Namespace,
 ) -> HashSet<Value> {
-    let ty = left.ty();
-
     let left = expression_values(left, vars, ns);
     let right = expression_values(right, vars, ns);
 
@@ -581,7 +594,7 @@ fn less_values(
             let mut known_bits = BitArray::new([0u8; 32]);
             let mut value = BitArray::new([0u8; 32]);
 
-            let is_true = if ty.is_signed_int() {
+            let is_true = if signed {
                 BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
                     < BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
             } else {
@@ -595,7 +608,7 @@ fn less_values(
                 value.set(0, true);
             } else {
                 // maybe the comparison is always false
-                let is_false = if ty.is_signed_int() {
+                let is_false = if signed {
                     BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
                         >= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                 } else {
@@ -624,11 +637,10 @@ fn less_values(
 fn less_equal_values(
     left: &Expression,
     right: &Expression,
+    signed: bool,
     vars: &Variables,
     ns: &Namespace,
 ) -> HashSet<Value> {
-    let ty = left.ty();
-
     let left = expression_values(left, vars, ns);
     let right = expression_values(right, vars, ns);
 
@@ -639,7 +651,7 @@ fn less_equal_values(
             let mut known_bits = BitArray::new([0u8; 32]);
             let mut value = BitArray::new([0u8; 32]);
 
-            let is_true = if ty.is_signed_int() {
+            let is_true = if signed {
                 BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
                     <= BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
             } else {
@@ -653,7 +665,7 @@ fn less_equal_values(
                 value.set(0, true);
             } else {
                 // maybe the comparison is always false
-                let is_false = if ty.is_signed_int() {
+                let is_false = if signed {
                     BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
                         > BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                 } else {

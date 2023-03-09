@@ -364,15 +364,33 @@ pub enum Expression {
     InternalFunctionCfg(usize),
     Keccak256(pt::Loc, Type, Vec<Expression>),
     List(pt::Loc, Vec<Expression>),
-    SignedLess(pt::Loc, Box<Expression>, Box<Expression>),
-    UnsignedLess(pt::Loc, Box<Expression>, Box<Expression>),
-    LessEqual(pt::Loc, Box<Expression>, Box<Expression>),
+    Less {
+        loc: pt::Loc,
+        signed: bool,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    LessEqual {
+        loc: pt::Loc,
+        signed: bool,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
     Load(pt::Loc, Type, Box<Expression>),
     UnsignedModulo(pt::Loc, Type, Box<Expression>, Box<Expression>),
     SignedModulo(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    SignedMore(pt::Loc, Box<Expression>, Box<Expression>),
-    UnsignedMore(pt::Loc, Box<Expression>, Box<Expression>),
-    MoreEqual(pt::Loc, Box<Expression>, Box<Expression>),
+    More {
+        loc: pt::Loc,
+        signed: bool,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
+    MoreEqual {
+        loc: pt::Loc,
+        signed: bool,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
     Multiply(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
     Not(pt::Loc, Box<Expression>),
     NotEqual(pt::Loc, Box<Expression>, Box<Expression>),
@@ -425,7 +443,7 @@ impl CodeLocation for Expression {
             | Expression::Cast(loc, ..)
             | Expression::NumberLiteral(loc, ..)
             | Expression::Keccak256(loc, ..)
-            | Expression::MoreEqual(loc, ..)
+            | Expression::MoreEqual { loc, .. }
             | Expression::ReturnData(loc, ..)
             | Expression::Subscript(loc, ..)
             | Expression::Trunc(loc, ..)
@@ -438,7 +456,7 @@ impl CodeLocation for Expression {
             | Expression::Multiply(loc, ..)
             | Expression::Subtract(loc, ..)
             | Expression::FormatString(loc, ..)
-            | Expression::LessEqual(loc, ..)
+            | Expression::LessEqual { loc, .. }
             | Expression::BoolLiteral(loc, ..)
             | Expression::UnsignedDivide(loc, ..)
             | Expression::SignedDivide(loc, ..)
@@ -452,8 +470,7 @@ impl CodeLocation for Expression {
             | Expression::NotEqual(loc, ..)
             | Expression::Complement(loc, ..)
             | Expression::Negate(loc, ..)
-            | Expression::UnsignedLess(loc, ..)
-            | Expression::SignedLess(loc, ..)
+            | Expression::Less { loc, .. }
             | Expression::Not(loc, ..)
             | Expression::StructLiteral(loc, ..)
             | Expression::ArrayLiteral(loc, ..)
@@ -468,8 +485,7 @@ impl CodeLocation for Expression {
             | Expression::RationalNumberLiteral(loc, ..)
             | Expression::AllocDynamicBytes(loc, ..)
             | Expression::BytesCast(loc, ..)
-            | Expression::SignedMore(loc, ..)
-            | Expression::UnsignedMore(loc, ..)
+            | Expression::More { loc, .. }
             | Expression::ZeroExt(loc, ..) => *loc,
 
             Expression::InternalFunctionCfg(_)
@@ -502,13 +518,11 @@ impl Recurse for Expression {
             | Expression::UnsignedDivide(_, _, left, right)
             | Expression::SignedDivide(_, _, left, right)
             | Expression::Equal(_, left, right)
-            | Expression::UnsignedLess(_, left, right)
-            | Expression::SignedLess(_, left, right)
-            | Expression::LessEqual(_, left, right)
+            | Expression::Less { left, right, .. }
+            | Expression::LessEqual { left, right, .. }
             | Expression::BitwiseXor(_, _, left, right)
-            | Expression::SignedMore(_, left, right)
-            | Expression::UnsignedMore(_, left, right)
-            | Expression::MoreEqual(_, left, right)
+            | Expression::More { left, right, .. }
+            | Expression::MoreEqual { left, right, .. }
             | Expression::Multiply(_, _, _, left, right)
             | Expression::NotEqual(_, left, right)
             | Expression::ShiftLeft(_, _, left, right)
@@ -621,16 +635,14 @@ impl RetrieveType for Expression {
             | Expression::Subscript(_, ty, ..) => ty.clone(),
 
             Expression::BoolLiteral(..)
-            | Expression::MoreEqual(..)
-            | Expression::SignedMore(..)
-            | Expression::UnsignedMore(..)
+            | Expression::MoreEqual { .. }
+            | Expression::More { .. }
             | Expression::Not(..)
             | Expression::NotEqual(..)
-            | Expression::UnsignedLess(..)
-            | Expression::SignedLess(..)
+            | Expression::Less { .. }
             | Expression::Equal(..)
             | Expression::StringCompare(..)
-            | Expression::LessEqual(..) => Type::Bool,
+            | Expression::LessEqual { .. } => Type::Bool,
 
             Expression::List(_, list) => {
                 assert_eq!(list.len(), 1);
@@ -1074,36 +1086,50 @@ impl Expression {
                     from.clone(),
                     Box::new(filter(expr, ctx)),
                 ),
-                Expression::SignedMore(loc, left, right) => Expression::SignedMore(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::UnsignedMore(loc, left, right) => Expression::UnsignedMore(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::UnsignedLess(loc, left, right) => Expression::UnsignedLess(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::SignedLess(loc, left, right) => Expression::SignedLess(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::MoreEqual(loc, left, right) => Expression::MoreEqual(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
-                Expression::LessEqual(loc, left, right) => Expression::LessEqual(
-                    *loc,
-                    Box::new(filter(left, ctx)),
-                    Box::new(filter(right, ctx)),
-                ),
+                Expression::More {
+                    loc,
+                    signed,
+                    left,
+                    right,
+                } => Expression::More {
+                    loc: *loc,
+                    signed: *signed,
+                    left: Box::new(filter(left, ctx)),
+                    right: Box::new(filter(right, ctx)),
+                },
+                Expression::Less {
+                    loc,
+                    signed,
+                    left,
+                    right,
+                } => Expression::Less {
+                    loc: *loc,
+                    signed: *signed,
+                    left: Box::new(filter(left, ctx)),
+                    right: Box::new(filter(right, ctx)),
+                },
+                Expression::MoreEqual {
+                    loc,
+                    signed,
+                    left,
+                    right,
+                } => Expression::MoreEqual {
+                    loc: *loc,
+                    signed: *signed,
+                    left: Box::new(filter(left, ctx)),
+                    right: Box::new(filter(right, ctx)),
+                },
+                Expression::LessEqual {
+                    loc,
+                    signed,
+                    left,
+                    right,
+                } => Expression::LessEqual {
+                    loc: *loc,
+                    signed: *signed,
+                    left: Box::new(filter(left, ctx)),
+                    right: Box::new(filter(right, ctx)),
+                },
                 Expression::Equal(loc, left, right) => Expression::Equal(
                     *loc,
                     Box::new(filter(left, ctx)),

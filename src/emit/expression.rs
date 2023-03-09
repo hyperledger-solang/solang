@@ -749,16 +749,31 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_int_compare(IntPredicate::NE, left, right, "")
                 .into()
         }
-        Expression::SignedMore(_, l, r) | Expression::UnsignedMore(_, l, r) => {
-            if l.ty().is_address() {
-                compare_address(target, bin, l, r, IntPredicate::SGT, vartab, function, ns).into()
+        Expression::More {
+            signed,
+            left,
+            right,
+            ..
+        } => {
+            if left.ty().is_address() {
+                compare_address(
+                    target,
+                    bin,
+                    left,
+                    right,
+                    IntPredicate::SGT,
+                    vartab,
+                    function,
+                    ns,
+                )
+                .into()
             } else {
-                let left = expression(target, bin, l, vartab, function, ns).into_int_value();
-                let right = expression(target, bin, r, vartab, function, ns).into_int_value();
+                let left = expression(target, bin, left, vartab, function, ns).into_int_value();
+                let right = expression(target, bin, right, vartab, function, ns).into_int_value();
 
                 bin.builder
                     .build_int_compare(
-                        if matches!(e, Expression::SignedMore(..)) {
+                        if *signed {
                             IntPredicate::SGT
                         } else {
                             IntPredicate::UGT
@@ -770,16 +785,31 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .into()
             }
         }
-        Expression::MoreEqual(_, l, r) => {
-            if l.ty().is_address() {
-                compare_address(target, bin, l, r, IntPredicate::SGE, vartab, function, ns).into()
+        Expression::MoreEqual {
+            signed,
+            left,
+            right,
+            ..
+        } => {
+            if left.ty().is_address() {
+                compare_address(
+                    target,
+                    bin,
+                    left,
+                    right,
+                    IntPredicate::SGE,
+                    vartab,
+                    function,
+                    ns,
+                )
+                .into()
             } else {
-                let left = expression(target, bin, l, vartab, function, ns).into_int_value();
-                let right = expression(target, bin, r, vartab, function, ns).into_int_value();
+                let left = expression(target, bin, left, vartab, function, ns).into_int_value();
+                let right = expression(target, bin, right, vartab, function, ns).into_int_value();
 
                 bin.builder
                     .build_int_compare(
-                        if l.ty().is_signed_int() {
+                        if *signed {
                             IntPredicate::SGE
                         } else {
                             IntPredicate::UGE
@@ -791,16 +821,31 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .into()
             }
         }
-        Expression::SignedLess(_, l, r) | Expression::UnsignedLess(_, l, r) => {
-            if l.ty().is_address() {
-                compare_address(target, bin, l, r, IntPredicate::SLT, vartab, function, ns).into()
+        Expression::Less {
+            signed,
+            left,
+            right,
+            ..
+        } => {
+            if left.ty().is_address() {
+                compare_address(
+                    target,
+                    bin,
+                    left,
+                    right,
+                    IntPredicate::SLT,
+                    vartab,
+                    function,
+                    ns,
+                )
+                .into()
             } else {
-                let left = expression(target, bin, l, vartab, function, ns).into_int_value();
-                let right = expression(target, bin, r, vartab, function, ns).into_int_value();
+                let left = expression(target, bin, left, vartab, function, ns).into_int_value();
+                let right = expression(target, bin, right, vartab, function, ns).into_int_value();
 
                 bin.builder
                     .build_int_compare(
-                        if matches!(e, Expression::SignedLess(..)) {
+                        if *signed {
                             IntPredicate::SLT
                         } else {
                             IntPredicate::ULT
@@ -812,16 +857,31 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .into()
             }
         }
-        Expression::LessEqual(_, l, r) => {
-            if l.ty().is_address() {
-                compare_address(target, bin, l, r, IntPredicate::SLE, vartab, function, ns).into()
+        Expression::LessEqual {
+            signed,
+            left,
+            right,
+            ..
+        } => {
+            if left.ty().is_address() {
+                compare_address(
+                    target,
+                    bin,
+                    left,
+                    right,
+                    IntPredicate::SLE,
+                    vartab,
+                    function,
+                    ns,
+                )
+                .into()
             } else {
-                let left = expression(target, bin, l, vartab, function, ns).into_int_value();
-                let right = expression(target, bin, r, vartab, function, ns).into_int_value();
+                let left = expression(target, bin, left, vartab, function, ns).into_int_value();
+                let right = expression(target, bin, right, vartab, function, ns).into_int_value();
 
                 bin.builder
                     .build_int_compare(
-                        if l.ty().is_signed_int() {
+                        if *signed {
                             IntPredicate::SLE
                         } else {
                             IntPredicate::ULE

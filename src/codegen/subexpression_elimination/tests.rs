@@ -970,7 +970,12 @@ fn ancestor_found() {
             Instr::Branch { block: 1 },
         ],
         vec![Instr::BranchCond {
-            cond: Expression::LessEqual(Loc::Implicit, Box::new(var1), Box::new(var2)),
+            cond: Expression::LessEqual {
+                loc: Loc::Implicit,
+                signed: false,
+                left: Box::new(var1),
+                right: Box::new(var2),
+            },
             true_block: 2,
             false_block: 3,
         }],
@@ -1031,7 +1036,12 @@ fn ancestor_not_found() {
                 expr: Expression::NumberLiteral(Loc::Implicit, Type::Int(32), 7.into()),
             },
             Instr::BranchCond {
-                cond: Expression::MoreEqual(Loc::Implicit, Box::new(var1), Box::new(var2)),
+                cond: Expression::MoreEqual {
+                    loc: Loc::Implicit,
+                    signed: false,
+                    left: Box::new(var1),
+                    right: Box::new(var2),
+                },
                 true_block: 1,
                 false_block: 2,
             },

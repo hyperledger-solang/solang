@@ -271,10 +271,30 @@ fn process_arithmetic(
         YulBuiltInFunction::Exp => {
             Expression::Power(*loc, left.ty(), true, Box::new(left), Box::new(right))
         }
-        YulBuiltInFunction::Lt => Expression::UnsignedLess(*loc, Box::new(left), Box::new(right)),
-        YulBuiltInFunction::Gt => Expression::UnsignedMore(*loc, Box::new(left), Box::new(right)),
-        YulBuiltInFunction::Slt => Expression::SignedLess(*loc, Box::new(left), Box::new(right)),
-        YulBuiltInFunction::Sgt => Expression::SignedMore(*loc, Box::new(left), Box::new(right)),
+        YulBuiltInFunction::Lt => Expression::Less {
+            loc: *loc,
+            signed: false,
+            left: Box::new(left),
+            right: Box::new(right),
+        },
+        YulBuiltInFunction::Gt => Expression::More {
+            loc: *loc,
+            signed: false,
+            left: Box::new(left),
+            right: Box::new(right),
+        },
+        YulBuiltInFunction::Slt => Expression::Less {
+            loc: *loc,
+            signed: true,
+            left: Box::new(left),
+            right: Box::new(right),
+        },
+        YulBuiltInFunction::Sgt => Expression::More {
+            loc: *loc,
+            signed: true,
+            left: Box::new(left),
+            right: Box::new(right),
+        },
         YulBuiltInFunction::Eq => Expression::Equal(*loc, Box::new(left), Box::new(right)),
         YulBuiltInFunction::And => {
             Expression::BitwiseAnd(*loc, left.ty(), Box::new(left), Box::new(right))
@@ -452,15 +472,16 @@ fn byte_builtin(
     opt: &Options,
 ) -> Expression {
     let offset = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Uint(256), ns);
-    let cond = Expression::MoreEqual(
-        *loc,
-        Box::new(offset.clone()),
-        Box::new(Expression::NumberLiteral(
+    let cond = Expression::MoreEqual {
+        loc: *loc,
+        signed: false,
+        left: Box::new(offset.clone()),
+        right: Box::new(Expression::NumberLiteral(
             *loc,
             Type::Uint(256),
             BigInt::from(32),
         )),
-    );
+    };
 
     let temp = vartab.temp_anonymous(&Type::Uint(256));
 
