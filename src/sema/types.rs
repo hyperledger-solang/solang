@@ -1274,13 +1274,8 @@ impl Type {
         self.memory_size_of(ns) < BigInt::from(u16::MAX)
     }
 
-    /// Calculate the alignment
     pub fn align_of(&self, ns: &Namespace) -> usize {
-        self.align_of_internal(ns, &mut HashSet::new())
-    }
-
-    fn align_of_internal(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> usize {
-        self.recurse(structs_visited, 1, |structs_visited| match self {
+        match self {
             Type::Uint(8) | Type::Int(8) => 1,
             Type::Uint(n) | Type::Int(n) if *n <= 16 => 2,
             Type::Uint(n) | Type::Int(n) if *n <= 32 => 4,
@@ -1289,12 +1284,13 @@ impl Type {
                 .definition(ns)
                 .fields
                 .iter()
-                .map(|f| f.ty.align_of_internal(ns, structs_visited))
+                .filter(|f| !f.infinite_size) // Can't calculate alignment for structs with infinite recursion
+                .map(|f| f.ty.align_of(ns))
                 .max()
-                .unwrap(),
+                .unwrap_or(1), // All fields were of infinite size, so we just pretend this
             Type::InternalFunction { .. } => ns.target.ptr_size().into(),
             _ => 1,
-        })
+        }
     }
 
     pub fn bytes(&self, ns: &Namespace) -> u8 {
