@@ -1441,63 +1441,51 @@ impl Type {
         }
     }
 
-    /// Alignment of elements in storage
     pub fn storage_align(&self, ns: &Namespace) -> BigInt {
-        self.storage_align_internal(ns, &mut HashSet::new())
-    }
-
-    fn storage_align_internal(
-        &self,
-        ns: &Namespace,
-        structs_visited: &mut HashSet<usize>,
-    ) -> BigInt {
-        self.recurse(structs_visited, 1.into(), |structs_visited| {
-            if ns.target == Target::Solana {
-                let length = match self {
-                    Type::Enum(_) => BigInt::one(),
-                    Type::Bool => BigInt::one(),
-                    Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
-                    Type::Bytes(n) => BigInt::from(*n),
-                    Type::Value => BigInt::from(ns.value_length),
-                    Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
-                    Type::Rational => unreachable!(),
-                    Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
-                        BigInt::from(4)
-                    }
-                    Type::Array(ty, _) => {
-                        if self.is_sparse_solana(ns) {
-                            BigInt::from(4)
-                        } else {
-                            ty.storage_align_internal(ns, structs_visited)
-                        }
-                    }
-                    Type::Struct(str_ty) => str_ty
-                        .definition(ns)
-                        .fields
-                        .iter()
-                        .map(|field| field.ty.storage_align_internal(ns, structs_visited))
-                        .max()
-                        .unwrap(),
-                    Type::String | Type::DynamicBytes => BigInt::from(4),
-                    Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
-                    Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
-                    Type::Mapping(..) => BigInt::from(4),
-                    Type::Ref(ty) | Type::StorageRef(_, ty) => {
-                        ty.storage_align_internal(ns, structs_visited)
-                    }
-                    Type::Unresolved => BigInt::one(),
-                    _ => unimplemented!(),
-                };
-
-                if length > BigInt::from(8) {
-                    BigInt::from(8)
-                } else {
-                    length
+        if ns.target == Target::Solana {
+            let length = match self {
+                Type::Enum(_) => BigInt::one(),
+                Type::Bool => BigInt::one(),
+                Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
+                Type::Bytes(n) => BigInt::from(*n),
+                Type::Value => BigInt::from(ns.value_length),
+                Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
+                Type::Rational => unreachable!(),
+                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                    BigInt::from(4)
                 }
+                Type::Array(ty, _) => {
+                    if self.is_sparse_solana(ns) {
+                        BigInt::from(4)
+                    } else {
+                        ty.storage_align(ns)
+                    }
+                }
+                Type::Struct(str_ty) => str_ty
+                    .definition(ns)
+                    .fields
+                    .iter()
+                    .filter(|field| !field.infinite_size)
+                    .map(|field| field.ty.storage_align(ns))
+                    .max()
+                    .unwrap_or(1.into()), // All fields were of infinite size, so just preteend one storage slot.
+                Type::String | Type::DynamicBytes => BigInt::from(4),
+                Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
+                Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
+                Type::Mapping(..) => BigInt::from(4),
+                Type::Ref(ty) | Type::StorageRef(_, ty) => ty.storage_align(ns),
+                Type::Unresolved => BigInt::one(),
+                _ => unimplemented!(),
+            };
+
+            if length > BigInt::from(8) {
+                BigInt::from(8)
             } else {
-                BigInt::one()
+                length
             }
-        })
+        } else {
+            BigInt::one()
+        }
     }
 
     /// Is this type an reference type in the solidity language? (struct, array, mapping)
