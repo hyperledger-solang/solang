@@ -3,7 +3,7 @@
 /// Any supported encoding scheme should be implemented here.
 /// The module is organized as follows:
 ///
-/// - `fn abi_encode()` and `fn abi_decode()` are entry points for whereever there is
+/// - `fn abi_encode()` and `fn abi_decode()` are entry points for wherever there is
 ///   something to be encoded or decoded.
 /// - `AbiEncoding` defines the encoding and decoding API and must be implemented by all schemes.
 /// - There are some helper functions to work with more complex types.
