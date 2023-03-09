@@ -1521,7 +1521,7 @@ impl Type {
     }
 
     fn is_dynamic_internal(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> bool {
-        self.recurse(structs_visited, false, |structs_visited| match self {
+        self.guarded_recursion(structs_visited, false, |structs_visited| match self {
             Type::String | Type::DynamicBytes => true,
             Type::Ref(r) => r.is_dynamic_internal(ns, structs_visited),
             Type::Array(ty, dim) => {
@@ -1605,7 +1605,7 @@ impl Type {
         ns: &Namespace,
         structs_visited: &mut HashSet<usize>,
     ) -> bool {
-        self.recurse(structs_visited, false, |structs_visited| match self {
+        self.guarded_recursion(structs_visited, false, |structs_visited| match self {
             Type::Mapping(..) => true,
             Type::Array(ty, _) => ty.contains_mapping_internal(ns, structs_visited),
             Type::Struct(str_ty) => str_ty
@@ -1630,7 +1630,7 @@ impl Type {
         ns: &Namespace,
         structs_visited: &mut HashSet<usize>,
     ) -> bool {
-        self.recurse(structs_visited, false, |structs_visited| match self {
+        self.guarded_recursion(structs_visited, false, |structs_visited| match self {
             Type::InternalFunction { .. } => true,
             Type::Array(ty, _) => ty.contains_internal_function_internal(ns, structs_visited),
             Type::Struct(str_ty) => str_ty.definition(ns).fields.iter().any(|f| {
@@ -1673,7 +1673,7 @@ impl Type {
         builtin: &StructType,
         structs_visited: &mut HashSet<usize>,
     ) -> Option<&'a Type> {
-        self.recurse(structs_visited, None, |structs_visited| match self {
+        self.guarded_recursion(structs_visited, None, |structs_visited| match self {
             Type::Array(ty, _) => ty.contains_builtins_internal(ns, builtin, structs_visited),
             Type::Mapping(Mapping { key, value, .. }) => key
                 .contains_builtins_internal(ns, builtin, structs_visited)
@@ -1784,7 +1784,7 @@ impl Type {
     }
 
     fn is_recursive_internal(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> bool {
-        self.recurse(structs_visited, true, |structs_visited| match self {
+        self.guarded_recursion(structs_visited, true, |structs_visited| match self {
             Type::Struct(StructType::UserDefined(n)) => {
                 ns.structs[*n].fields.iter().any(|f| f.recursive)
             }
@@ -1811,11 +1811,35 @@ impl Type {
         })
     }
 
-    /// Recursively walk over a type, protected against overflows on infinite recursive types.
-    /// `structs_visited` is the set of already visited structs.
+    /// Helper function to savely recurse over a `Type`, preventing stack overflows.
+    ///
+    /// `F` is expected to be a closure that recursively walks the `Type`.
+    /// `O` is the output type of the closure.
+    ///
+    /// `structs_visited` is the set of already visited structs. It is automatically updated for each struct already seen.
     /// `bail` is the value that should be returned in case an infinite recursion occured.
-    /// `f` is the closure applied on each iteration. `f` can be recursive.
-    fn recurse<F, O>(&self, structs_visited: &mut HashSet<usize>, bail: O, f: F) -> O
+    /// `f` is the closure being called by this function.
+    ///
+    /// This function is useful in the various scenarios.
+    ///
+    /// Naturally, it can be used to detect recursive types (see `fn Type::is_recrsive()`).
+    ///
+    /// Moreover,functions like `fn Type::contains_mapping()` need to recursively check the type to contain mappings.
+    /// Consider the following valid type:
+    ///
+    /// ```solidity
+    /// struct A { B b; }
+    /// struct B { A[] a; }
+    /// ```
+    ///
+    /// Looking at nested or referential types individually does not work here, this can only be done recursively.
+    /// However, naive recursion will lead to infinity here.
+    /// Now, thanks to the `Type::guarded_recursion()` wrapper, instead of overflowing the stack,
+    /// `fn Type::contains_mapping()` safely bails out using a value of `false`.
+    /// This makes sense because:
+    /// - In `Type::contains_mapping`, the mapping type is the only type to return true
+    /// - Mappings do not recursively call `contains_mapping`
+    fn guarded_recursion<F, O>(&self, structs_visited: &mut HashSet<usize>, bail: O, f: F) -> O
     where
         F: FnOnce(&mut HashSet<usize>) -> O,
     {
