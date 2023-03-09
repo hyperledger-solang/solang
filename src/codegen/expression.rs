@@ -227,31 +227,35 @@ pub fn expression(
         ast::Expression::More { loc, left, right } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
-            if l.ty().is_signed_int() {
-                Expression::SignedMore(*loc, Box::new(l), Box::new(r))
-            } else {
-                Expression::UnsignedMore(*loc, Box::new(l), Box::new(r))
+            Expression::More {
+                loc: *loc,
+                signed: l.ty().is_signed_int(),
+                left: Box::new(l),
+                right: Box::new(r),
             }
         }
-        ast::Expression::MoreEqual { loc, left, right } => Expression::MoreEqual(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        ast::Expression::MoreEqual { loc, left, right } => Expression::MoreEqual {
+            loc: *loc,
+            signed: left.ty().is_signed_int(),
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::Less { loc, left, right } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
-            if l.ty().is_signed_int() {
-                Expression::SignedLess(*loc, Box::new(l), Box::new(r))
-            } else {
-                Expression::UnsignedLess(*loc, Box::new(l), Box::new(r))
+            Expression::Less {
+                loc: *loc,
+                signed: l.ty().is_signed_int(),
+                left: Box::new(l),
+                right: Box::new(r),
             }
         }
-        ast::Expression::LessEqual { loc, left, right } => Expression::LessEqual(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        ast::Expression::LessEqual { loc, left, right } => Expression::LessEqual {
+            loc: *loc,
+            signed: left.ty().is_signed_int(),
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::ConstantVariable {
             contract_no: Some(var_contract_no),
             var_no,
@@ -1785,9 +1789,10 @@ fn expr_builtin(
             let offset = expression(&args[2], cfg, contract_no, func, ns, vartab, opt);
 
             // range check
-            let cond = Expression::LessEqual(
-                *loc,
-                Box::new(Expression::Add(
+            let cond = Expression::LessEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Add(
                     *loc,
                     Type::Uint(32),
                     false,
@@ -1798,13 +1803,13 @@ fn expr_builtin(
                         BigInt::from(args[1].ty().bits(ns) / 8),
                     )),
                 )),
-                Box::new(Expression::Builtin(
+                right: Box::new(Expression::Builtin(
                     *loc,
                     vec![Type::Uint(32)],
                     Builtin::ArrayLength,
                     vec![buf.clone()],
                 )),
-            );
+            };
 
             let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
             let in_bounds = cfg.new_basic_block("in_bounds".to_string());
@@ -1848,22 +1853,23 @@ fn expr_builtin(
                 vec![data.clone()],
             );
 
-            let cond = Expression::LessEqual(
-                *loc,
-                Box::new(Expression::Add(
+            let cond = Expression::LessEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Add(
                     *loc,
                     Type::Uint(32),
                     false,
                     Box::new(offset.clone()),
                     Box::new(size.clone()),
                 )),
-                Box::new(Expression::Builtin(
+                right: Box::new(Expression::Builtin(
                     *loc,
                     vec![Type::Uint(32)],
                     Builtin::ArrayLength,
                     vec![buffer.clone()],
                 )),
-            );
+            };
 
             let in_bounds = cfg.new_basic_block("in_bounds".to_string());
             let out_ouf_bounds = cfg.new_basic_block("out_of_bounds".to_string());
@@ -1920,9 +1926,10 @@ fn expr_builtin(
             let offset = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
 
             // range check
-            let cond = Expression::LessEqual(
-                *loc,
-                Box::new(Expression::Add(
+            let cond = Expression::LessEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Add(
                     *loc,
                     Type::Uint(32),
                     false,
@@ -1933,13 +1940,13 @@ fn expr_builtin(
                         BigInt::from(tys[0].bits(ns) / 8),
                     )),
                 )),
-                Box::new(Expression::Builtin(
+                right: Box::new(Expression::Builtin(
                     *loc,
                     vec![Type::Uint(32)],
                     Builtin::ArrayLength,
                     vec![buf.clone()],
                 )),
-            );
+            };
 
             let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
             let in_bounds = cfg.new_basic_block("in_bounds".to_string());
@@ -2148,11 +2155,12 @@ fn checking_trunc(
     cfg.add(
         vartab,
         Instr::BranchCond {
-            cond: Expression::MoreEqual(
-                *loc,
-                Box::new(Expression::Variable(*loc, source_ty.clone(), pos)),
-                Box::new(overflow),
-            ),
+            cond: Expression::MoreEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Variable(*loc, source_ty.clone(), pos)),
+                right: Box::new(overflow),
+            },
             true_block: out_of_bounds,
             false_block: in_bounds,
         },
@@ -2905,11 +2913,12 @@ fn array_subscript(
     cfg.add(
         vartab,
         Instr::BranchCond {
-            cond: Expression::MoreEqual(
-                *loc,
-                Box::new(Expression::Variable(index_loc, coerced_ty.clone(), pos)),
-                Box::new(array_length.cast(&coerced_ty, ns)),
-            ),
+            cond: Expression::MoreEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Variable(index_loc, coerced_ty.clone(), pos)),
+                right: Box::new(array_length.cast(&coerced_ty, ns)),
+            },
             true_block: out_of_bounds,
             false_block: in_bounds,
         },

@@ -157,16 +157,17 @@ pub(super) fn solana_deploy(
 
     cfg.set_basic_block(account_exists);
 
-    let is_enough = Expression::MoreEqual(
-        Loc::Codegen,
-        account_length.into(),
-        Expression::NumberLiteral(
+    let is_enough = Expression::MoreEqual {
+        loc: Loc::Codegen,
+        signed: false,
+        left: account_length.into(),
+        right: Expression::NumberLiteral(
             Loc::Codegen,
             Type::Uint(32),
             contract.fixed_layout_size.clone(),
         )
         .into(),
-    );
+    };
 
     let account_ok = cfg.new_basic_block("account_ok".into());
     let not_enough = cfg.new_basic_block("not_enough".into());

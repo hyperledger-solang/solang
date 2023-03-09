@@ -111,29 +111,33 @@ impl Expression {
                 *check,
             ),
 
-            Expression::SignedMore(loc, ..) => {
-                Expression::SignedMore(*loc, Box::new(left.clone()), Box::new(right.clone()))
-            }
+            Expression::More { loc, signed, .. } => Expression::More {
+                loc: *loc,
+                signed: *signed,
+                left: Box::new(left.clone()),
+                right: Box::new(right.clone()),
+            },
 
-            Expression::UnsignedMore(loc, ..) => {
-                Expression::UnsignedMore(*loc, Box::new(left.clone()), Box::new(right.clone()))
-            }
+            Expression::Less { loc, signed, .. } => Expression::Less {
+                loc: *loc,
+                signed: *signed,
+                left: Box::new(left.clone()),
+                right: Box::new(right.clone()),
+            },
 
-            Expression::UnsignedLess(loc, ..) => {
-                Expression::UnsignedLess(*loc, Box::new(left.clone()), Box::new(right.clone()))
-            }
+            Expression::MoreEqual { loc, signed, .. } => Expression::MoreEqual {
+                loc: *loc,
+                signed: *signed,
+                left: Box::new(left.clone()),
+                right: Box::new(right.clone()),
+            },
 
-            Expression::SignedLess(loc, ..) => {
-                Expression::SignedLess(*loc, Box::new(left.clone()), Box::new(right.clone()))
-            }
-
-            Expression::MoreEqual(loc, ..) => {
-                Expression::MoreEqual(*loc, Box::new(left.clone()), Box::new(right.clone()))
-            }
-
-            Expression::LessEqual(loc, ..) => {
-                Expression::LessEqual(*loc, Box::new(left.clone()), Box::new(right.clone()))
-            }
+            Expression::LessEqual { loc, signed, .. } => Expression::LessEqual {
+                loc: *loc,
+                signed: *signed,
+                left: Box::new(left.clone()),
+                right: Box::new(right.clone()),
+            },
 
             Expression::AdvancePointer { .. } => Expression::AdvancePointer {
                 pointer: Box::new(left.clone()),
@@ -242,16 +246,14 @@ impl Expression {
             | Expression::Power(_, _, _, left, right)
             | Expression::ShiftLeft(_, _, left, right)
             | Expression::ShiftRight(_, _, left, right, _)
-            | Expression::SignedMore(_, left, right)
-            | Expression::UnsignedMore(_, left, right)
-            | Expression::SignedLess(_, left, right)
-            | Expression::UnsignedLess(_, left, right)
-            | Expression::MoreEqual(_, left, right)
+            | Expression::More { left, right, .. }
+            | Expression::Less { left, right, .. }
+            | Expression::MoreEqual { left, right, .. }
             | Expression::AdvancePointer {
                 pointer: left,
                 bytes_offset: right,
             }
-            | Expression::LessEqual(_, left, right) => Some((left, right)),
+            | Expression::LessEqual { left, right, .. } => Some((left, right)),
 
             _ => None,
         }
