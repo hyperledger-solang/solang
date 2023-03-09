@@ -22,16 +22,21 @@ impl File {
     }
 
     /// Give a position as a human readable position
-    pub fn loc_to_string(&self, start: usize, end: usize) -> String {
+    pub fn loc_to_string(&self, full_path: bool, start: usize, end: usize) -> String {
         let (from_line, from_column) = self.offset_to_line_column(start);
         let (to_line, to_column) = self.offset_to_line_column(end);
 
+        let path = if full_path {
+            format!("{self}")
+        } else {
+            self.file_name()
+        };
         if from_line == to_line && from_column == to_column {
-            format!("{}:{}:{}", self, from_line + 1, from_column + 1)
+            format!("{}:{}:{}", path, from_line + 1, from_column + 1)
         } else if from_line == to_line {
             format!(
                 "{}:{}:{}-{}",
-                self,
+                path,
                 from_line + 1,
                 from_column + 1,
                 to_column + 1
@@ -39,7 +44,7 @@ impl File {
         } else {
             format!(
                 "{}:{}:{}-{}:{}",
-                self,
+                path,
                 from_line + 1,
                 from_column + 1,
                 to_line + 1,
@@ -71,6 +76,10 @@ impl File {
             self.line_starts[line_no - 1] + column_no
         }
     }
+
+    pub fn file_name(&self) -> String {
+        self.path.file_name().unwrap().to_string_lossy().into()
+    }
 }
 
 impl fmt::Display for File {
@@ -87,9 +96,11 @@ impl fmt::Display for File {
 
 impl Namespace {
     /// Give a position as a human readable position
-    pub fn loc_to_string(&self, loc: &Loc) -> String {
+    pub fn loc_to_string(&self, full_path: bool, loc: &Loc) -> String {
         match loc {
-            Loc::File(file_no, start, end) => self.files[*file_no].loc_to_string(*start, *end),
+            Loc::File(file_no, start, end) => {
+                self.files[*file_no].loc_to_string(full_path, *start, *end)
+            }
             Loc::Builtin => String::from("builtin"),
             Loc::Codegen => String::from("codegen"),
             Loc::Implicit => String::from("implicit"),

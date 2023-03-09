@@ -1375,16 +1375,8 @@ pub(super) fn error_msg_with_loc(ns: &Namespace, error: &str, loc: Option<Loc>) 
     if let Some(loc) = loc {
         match loc {
             Loc::File(..) => {
-                let file_no = loc.file_no();
-                let curr_file = &ns.files[file_no];
-                let (line_no, offset) = curr_file.offset_to_line_column(loc.start());
-                format!(
-                    "{} in {}:{}:{}",
-                    error,
-                    curr_file.path.file_name().unwrap().to_str().unwrap(),
-                    line_no + 1,
-                    offset
-                )
+                let loc_from_file = ns.loc_to_string(false, &loc);
+                format!("runtime_error: {error} in {loc_from_file}")
             }
             _ => error.to_string(),
         }
