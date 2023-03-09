@@ -366,13 +366,13 @@ fn encode_decode_ext_func() {
     );
 
     runtime.function("it", vec![]);
-    let mut a = runtime.vm.output.clone();
+    let mut address_of_a = runtime.vm.output.clone();
 
     runtime.set_program(1);
-    runtime.function("encode_decode_call", a.clone());
+    runtime.function("encode_decode_call", address_of_a.clone());
     assert_eq!(runtime.vm.output, 127u8.encode());
 
-    a.extend([0, 0, 0, 0].iter());
-    runtime.function("decode_call", a);
+    address_of_a.extend([0, 0, 0, 0].iter());
+    runtime.function("decode_call", address_of_a);
     assert_eq!(runtime.vm.output, 127u8.encode());
 }
