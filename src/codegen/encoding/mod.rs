@@ -770,7 +770,7 @@ pub(super) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> (usize, Expression);
 
-    /// Given the buffer and the offers, decode an array.
+    /// Given the buffer and the offset, decode an array.
     /// The function returns an expression containing the array and the number of bytes read.
     fn decode_array(
         &self,
