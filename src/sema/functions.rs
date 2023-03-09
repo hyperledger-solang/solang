@@ -452,18 +452,9 @@ pub fn contract_function(
         ns,
     );
 
-    let recursive_parameter = params.iter().any(|p| {
-        if let Type::Struct(StructType::UserDefined(n)) = p.ty {
-            ns.structs[n].fields.iter().any(|p| p.recursive)
-        } else {
-            false
-        }
-    });
-
     if matches!(
         visibility,
-        pt::Visibility::External(_) | pt::Visibility::Public(_)
-    ) && recursive_parameter
+        pt::Visibility::External(_) | pt::Visibility::Public(_) if params.iter().any(|p| p.ty.is_recursive(ns)))
     {
         ns.diagnostics.push(Diagnostic::error(
             func.loc,

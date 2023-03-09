@@ -1778,6 +1778,39 @@ impl Type {
         }
     }
 
+    // Does this type contain itself
+    pub fn is_recursive(&self, ns: &Namespace) -> bool {
+        self.is_recursive_internal(ns, &mut HashSet::new())
+    }
+
+    fn is_recursive_internal(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> bool {
+        self.recurse(structs_visited, true, |structs_visited| match self {
+            Type::Struct(StructType::UserDefined(n)) => {
+                ns.structs[*n].fields.iter().any(|f| f.recursive)
+            }
+            Type::Mapping(Mapping { key, value, .. }) => {
+                key.is_recursive_internal(ns, structs_visited)
+                    || value.is_recursive_internal(ns, structs_visited)
+            }
+            Type::Array(ty, _) | Type::Ref(ty) | Type::Slice(ty) | Type::StorageRef(_, ty) => {
+                ty.is_recursive_internal(ns, structs_visited)
+            }
+            Type::UserType(no) => ns.user_types[*no]
+                .ty
+                .is_recursive_internal(ns, structs_visited),
+            Type::InternalFunction {
+                params, returns, ..
+            }
+            | Type::ExternalFunction {
+                params, returns, ..
+            } => params
+                .iter()
+                .chain(returns)
+                .any(|ty| ty.is_recursive_internal(ns, structs_visited)),
+            _ => false,
+        })
+    }
+
     /// Recursively walk over a type, protected against overflows on infinite recursive types.
     /// `structs_visited` is the set of already visited structs.
     /// `bail` is the value that should be returned in case an infinite recursion occured.
