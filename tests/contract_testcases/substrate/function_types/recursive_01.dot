@@ -1,7 +1,7 @@
 strict digraph "tests/contract_testcases/substrate/function_types/recursive_01.sol" {
 	S [label="name:S\ncontract: C\ntests/contract_testcases/substrate/function_types/recursive_01.sol:2:9-10\nfield name:f1 ty:int256\nfield name:f2 ty:struct C.S[]"]
 	contract [label="contract C\ntests/contract_testcases/substrate/function_types/recursive_01.sol:1:1-8:2"]
-	foo [label="function foo\ncontract: C\ntests/contract_testcases/substrate/function_types/recursive_01.sol:7:2-26\nsignature \nvisibility public\nmutability nonpayable"]
+	foo [label="function foo\ncontract: C\ntests/contract_testcases/substrate/function_types/recursive_01.sol:7:2-26\nsignature foo(#recursive)\nvisibility public\nmutability nonpayable"]
 	parameters [label="parameters\nstruct C.S s"]
 	diagnostic [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/substrate/function_types/recursive_01.sol:1:1-8:2"]
 	diagnostic_8 [label="Recursive parameter not allowed for public or external functions.\nlevel Error\ntests/contract_testcases/substrate/function_types/recursive_01.sol:7:2-26"]

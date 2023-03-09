@@ -381,7 +381,6 @@ impl Function {
         let signature = match ty {
             pt::FunctionTy::Fallback => String::from("@fallback"),
             pt::FunctionTy::Receive => String::from("@receive"),
-            _ if recursive_parameter => "".into(),
             _ => ns.signature(&name, &params),
         };
 

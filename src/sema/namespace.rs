@@ -3,7 +3,7 @@
 use super::{
     ast::{
         ArrayLength, Diagnostic, Mapping, Mutability, Namespace, Note, Parameter, RetrieveType,
-        Symbol, Type,
+        StructType, Symbol, Type,
     },
     builtin,
     diagnostics::Diagnostics,
@@ -1389,7 +1389,14 @@ impl Namespace {
             name,
             params
                 .iter()
-                .map(|p| p.ty.to_signature_string(false, self))
+                .map(|p| match p.ty {
+                    Type::Struct(StructType::UserDefined(n))
+                        if self.structs[n].fields.iter().any(|p| p.recursive) =>
+                    {
+                        "#recursive".into()
+                    }
+                    _ => p.ty.to_signature_string(false, self),
+                })
                 .collect::<Vec<String>>()
                 .join(",")
         )
