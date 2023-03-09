@@ -240,35 +240,42 @@ contract Testing {
         abi.decode(buffer, (uint32[4], noPadStruct[2], noPadStruct[]));
 
 		// CHECK: ty:uint32 %temp.101 = (builtin ArrayLength ((arg #0)))
-		// CHECK: branchcond (uint32 32 <= %temp.101), block1, block2
+        // CHECK: branchcond (uint32 32 <= %temp.101), block1, block2
 
 		// CHECK: block1: # inbounds
-		// CHECK: ty:uint32[4] %temp.102 =  [  ]
-		// CHECK: memcpy src: %buffer, dest: %temp.102, bytes_len: uint32 16
-		// CHECK: ty:struct Testing.noPadStruct[2] %temp.103 =  [  ]
-		// CHECK: memcpy src: (advance ptr: %buffer, by: uint32 16), dest: %temp.103, bytes_len: uint32 16
-		// CHECK: ty:uint32 %temp.104 = (builtin ReadFromBuffer ((arg #0), uint32 32))
-		// CHECK: ty:struct Testing.noPadStruct[] %temp.105 = (alloc struct Testing.noPadStruct[] len %temp.104)
-		// CHECK: ty:uint32 %1.cse_temp = (%temp.104 * uint32 8)
-		// CHECK: branchcond ((uint32 36 + %1.cse_temp) <= %temp.101), block3, block4
-
+        // CHECK: ty:uint32[4] %temp.102 =  [  ]
+        // CHECK: memcpy src: %buffer, dest: %temp.102, bytes_len: uint32 16
+        // CHECK: ty:struct Testing.noPadStruct[2] %temp.103 =  [  ]
+        // CHECK: memcpy src: (advance ptr: %buffer, by: uint32 16), dest: %temp.103, bytes_len: uint32 16
+        // CHECK: ty:uint32 %temp.104 = (builtin ReadFromBuffer ((arg #0), uint32 32))
+        // CHECK: branchcond (uint32 36 <= %temp.101), block3, block4
+		
 		// CHECK: block2: # out_of_bounds
-		// CHECK: assert-failure
+        // CHECK: # reaching: buffer:[0:0],  temp.101:[0:1]
+        // CHECK: assert-failure
 
 		// CHECK: block3: # inbounds
-		// CHECK: memcpy src: (advance ptr: %buffer, by: uint32 36), dest: %temp.105, bytes_len: %1.cse_temp
-		// CHECK: branchcond (unsigned less (uint32 32 + (%1.cse_temp + uint32 4)) < %temp.101), block5, block6
+        // CHECK: ty:struct Testing.noPadStruct[] %temp.105 = (alloc struct Testing.noPadStruct[] len %temp.104)
+        // CHECK: ty:uint32 %1.cse_temp = (%temp.104 * uint32 8)
+        // CHECK: branchcond ((uint32 36 + %1.cse_temp) <= %temp.101), block5, block6
 
 		// CHECK: block4: # out_of_bounds
-		// CHECK: assert-failure
+        // CHECK: assert-failure
 
-		// CHECK: block5: # not_all_bytes_read
-		// CHECK: assert-failure
+		// CHECK: block5: # inbounds
+        // CHECK: memcpy src: (advance ptr: %buffer, by: uint32 36), dest: %temp.105, bytes_len: %1.cse_temp
+        // CHECK: branchcond (unsigned less (uint32 32 + (%1.cse_temp + uint32 4)) < %temp.101), block7, block8
 
-		// CHECK: block6: # buffer_read
-		// CHECK: ty:uint32[4] %a = %temp.102
-		// CHECK: ty:struct Testing.noPadStruct[2] %b = %temp.103
-		// CHECK: ty:struct Testing.noPadStruct[] %c = %temp.105
+		// CHECK: block6: # out_of_bounds
+        // CHECK: assert-failure
+
+		// CHECK: block7: # not_all_bytes_read
+        // CHECK: assert-failure
+
+		// CHECK: block8: # buffer_read
+        // CHECK: ty:uint32[4] %a = %temp.102
+        // CHECK: ty:struct Testing.noPadStruct[2] %b = %temp.103
+        // CHECK: ty:struct Testing.noPadStruct[] %c = %temp.105
 
         return (a, b, c);
     }

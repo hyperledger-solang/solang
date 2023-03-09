@@ -809,6 +809,12 @@ pub(super) trait AbiEncoding {
                 } else {
                     let (array_length, size_length) =
                         self.retrieve_array_length(buffer, offset, vartab, cfg);
+                    validator.validate_offset(
+                        increment_by(offset.clone(), size_length.clone()),
+                        ns,
+                        vartab,
+                        cfg,
+                    );
                     (
                         calculate_array_bytes_size(array_length, elem_ty, ns),
                         size_length.clone(),
