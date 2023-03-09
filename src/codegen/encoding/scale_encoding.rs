@@ -78,7 +78,8 @@ fn decode_compact(
     );
 
     let done = cfg.new_basic_block("done".into());
-    // sizes of 2**30 (1GB) or larger are not allowed
+    // We will land in the default block for sizes of 2**30 (1GB) or larger.
+    // Such big sizes are invalid for smart contracts and should never occur anyways.
     cfg.set_basic_block(default);
     cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
 
