@@ -1802,7 +1802,7 @@ fn log_return_code(binary: &Binary, api: &'static str, code: IntValue) {
 
     let fmt = format!("call: {api}=");
     let msg = fmt.as_bytes();
-    let delimiter = ",\n".as_bytes();
+    let delimiter = b",\n";
     let delimiter_length = delimiter.len();
     let length = i32_const!(msg.len() as u64 + 16 + delimiter_length as u64);
     let out_buf =

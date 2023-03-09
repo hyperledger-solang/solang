@@ -1375,7 +1375,7 @@ fn require(
         Target::Solana | Target::Substrate { .. } => {
             if opt.log_runtime_errors {
                 if let Some(expr) = expr {
-                    let prefix = "runtime_error: ".as_bytes();
+                    let prefix = b"runtime_error: ";
                     let error_string = format!(
                         " require condition failed in {},\n",
                         ns.loc_to_string(false, &expr.loc())
@@ -1438,7 +1438,7 @@ fn revert(
 
     if opt.log_runtime_errors {
         if expr.is_some() {
-            let prefix = "runtime_error: ".as_bytes();
+            let prefix = b"runtime_error: ";
             let error_string = format!(
                 " revert encountered in {},\n",
                 ns.loc_to_string(false, &loc)
@@ -3259,8 +3259,8 @@ pub(crate) fn log_runtime_error(
 }
 
 fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
-    let prefix = "print: ".as_bytes();
-    let delimiter = ",\n".as_bytes();
+    let prefix = b"print: ";
+    let delimiter = b",\n";
 
     if let Expression::FormatString(loc, args) = &mut expr {
         let mut new_vec = Vec::new();
