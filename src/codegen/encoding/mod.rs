@@ -807,7 +807,7 @@ pub(super) trait AbiEncoding {
                     validator.validate_offset(array_start.clone(), ns, vartab, cfg);
                     (
                         calculate_array_bytes_size(array_length, elem_ty, ns),
-                        size_width.clone(),
+                        size_width,
                         array_start,
                         allocate_array(array_ty, array_length, vartab, cfg),
                     )
