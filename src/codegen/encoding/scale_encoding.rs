@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::encoding::{increment_by, AbiEncoding};
+use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::StructType;
@@ -369,10 +369,11 @@ impl AbiEncoding for ScaleEncoding {
             Builtin::ReadFromBuffer,
             vec![buffer.clone(), offset.clone()],
         );
-        let new_offset = increment_by(
-            offset.clone(),
-            Expression::NumberLiteral(Codegen, Uint(32), ns.address_length.into()),
-        );
+        let new_offset = offset.add_u32(&Expression::NumberLiteral(
+            Codegen,
+            Uint(32),
+            ns.address_length.into(),
+        ));
         let selector = Expression::Builtin(
             Codegen,
             vec![Type::FunctionSelector],
@@ -420,7 +421,7 @@ impl AbiEncoding for ScaleEncoding {
         if self.is_packed() {
             length
         } else {
-            increment_by(encode_compact(&length, None, None, vartab, cfg), length)
+            encode_compact(&length, None, None, vartab, cfg).add_u32(&length)
         }
     }
 

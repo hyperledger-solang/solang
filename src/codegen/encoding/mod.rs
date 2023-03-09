@@ -314,7 +314,7 @@ pub(super) trait AbiEncoding {
             (offset.clone(), None)
         } else {
             let size = self.encode_size(&len, buffer, offset, vartab, cfg);
-            (increment_by(offset.clone(), size.clone()), Some(size))
+            (offset.add_u32(&size), Some(size))
         };
         // ptr + offset + size_of_integer
         let dest_address = Expression::AdvancePointer {
@@ -330,7 +330,7 @@ pub(super) trait AbiEncoding {
             },
         );
         if let Some(size) = size {
-            increment_by(len, size)
+            len.add_u32(&size)
         } else {
             len
         }
@@ -441,8 +441,7 @@ pub(super) trait AbiEncoding {
                         (offset.clone(), None)
                     } else {
                         let encoded_size = self.encode_size(&value, buffer, offset, vartab, cfg);
-                        let new_offset = increment_by(offset.clone(), encoded_size.clone());
-                        (new_offset, Some(encoded_size))
+                        (offset.add_u32(&encoded_size), Some(encoded_size))
                     };
 
                     if let Expression::Variable(_, _, size_temp) = value {
@@ -553,7 +552,7 @@ pub(super) trait AbiEncoding {
                 Instr::Set {
                     loc: Codegen,
                     res: offset_var,
-                    expr: increment_by(offset_expr, encoded_size),
+                    expr: offset_expr.add_u32(&encoded_size),
                 },
             );
         }
@@ -689,18 +688,13 @@ pub(super) trait AbiEncoding {
                 let (array_length_var, size_length) =
                     self.retrieve_array_length(buffer, offset, vartab, cfg);
                 let array_length = Expression::Variable(Codegen, Uint(32), array_length_var);
-                let size = increment_by(array_length.clone(), size_length.clone());
-                validator.validate_offset(
-                    increment_by(offset.clone(), size.clone()),
-                    ns,
-                    vartab,
-                    cfg,
-                );
+                let size = array_length.add_u32(&size_length);
+                validator.validate_offset(offset.add_u32(&size), ns, vartab, cfg);
 
                 let allocated_array = allocate_array(ty, array_length_var, vartab, cfg);
                 let advanced_pointer = Expression::AdvancePointer {
                     pointer: buffer.clone().into(),
-                    bytes_offset: increment_by(offset.clone(), size_length).into(),
+                    bytes_offset: offset.add_u32(&size_length).into(),
                 };
                 cfg.add(
                     vartab,
@@ -809,16 +803,12 @@ pub(super) trait AbiEncoding {
                 } else {
                     let (array_length, size_width) =
                         self.retrieve_array_length(buffer, offset, vartab, cfg);
-                    validator.validate_offset(
-                        increment_by(offset.clone(), size_width.clone()),
-                        ns,
-                        vartab,
-                        cfg,
-                    );
+                    let array_start = offset.add_u32(&size_width);
+                    validator.validate_offset(array_start.clone(), ns, vartab, cfg);
                     (
                         calculate_array_bytes_size(array_length, elem_ty, ns),
                         size_width.clone(),
-                        increment_by(offset.clone(), size_width),
+                        array_start,
                         allocate_array(array_ty, array_length, vartab, cfg),
                     )
                 };
@@ -841,7 +831,7 @@ pub(super) trait AbiEncoding {
             );
 
             let bytes_size = if matches!(dims.last(), Some(ArrayLength::Dynamic)) {
-                increment_by(array_size, size_width)
+                array_size.add_u32(&size_width)
             } else {
                 array_size
             };
@@ -951,14 +941,13 @@ pub(super) trait AbiEncoding {
         if dims[dimension] == ArrayLength::Dynamic {
             let (array_length, size_length) =
                 self.retrieve_array_length(buffer, offset_expr, vartab, cfg);
-            let offset_to_validate = increment_by(offset_expr.clone(), size_length.clone());
-            validator.validate_offset(offset_to_validate, ns, vartab, cfg);
+            validator.validate_offset(offset_expr.add_u32(&size_length), ns, vartab, cfg);
             cfg.add(
                 vartab,
                 Instr::Set {
                     loc: Codegen,
                     res: offset_var,
-                    expr: increment_by(offset_expr.clone(), size_length),
+                    expr: offset_expr.add_u32(&size_length),
                 },
             );
             let new_ty = Type::Array(Box::new(elem_ty.clone()), dims[0..(dimension + 1)].to_vec());
@@ -1715,11 +1704,6 @@ fn array_outer_length(
         },
     );
     Expression::Variable(Codegen, Uint(32), array_length)
-}
-
-/// Increment an expression by some value.
-fn increment_by(expr: Expression, value: Expression) -> Expression {
-    Expression::Add(Codegen, Uint(32), false, expr.into(), value.into())
 }
 
 /// Check if we can MemCpy elements of an array to/from a buffer

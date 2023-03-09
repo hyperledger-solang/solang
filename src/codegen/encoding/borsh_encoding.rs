@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use std::ops::AddAssign;
 
 use super::buffer_validator::BufferValidator;
-use super::increment_by;
 
 /// This struct implements the trait AbiEncoding for Borsh encoding
 pub(super) struct BorshEncoding {
@@ -132,10 +131,8 @@ impl AbiEncoding for BorshEncoding {
             vec![buffer.clone(), offset.clone()],
         );
 
-        let new_offset = increment_by(
-            offset.clone(),
-            Expression::NumberLiteral(Codegen, Uint(32), selector_size),
-        );
+        let new_offset =
+            offset.add_u32(&Expression::NumberLiteral(Codegen, Uint(32), selector_size));
 
         let address = Expression::Builtin(
             Codegen,
@@ -174,7 +171,7 @@ impl AbiEncoding for BorshEncoding {
         if self.is_packed() {
             length
         } else {
-            increment_four(length)
+            length.add_u32(&Expression::NumberLiteral(Codegen, Uint(32), 4.into()))
         }
     }
 
@@ -198,10 +195,4 @@ impl BorshEncoding {
             packed_encoder: packed,
         }
     }
-}
-
-/// Increment an expression by four. This is useful because we save array sizes as uint32, so we
-/// need to increment the offset by four constantly.
-fn increment_four(expr: Expression) -> Expression {
-    increment_by(expr, Expression::NumberLiteral(Codegen, Uint(32), 4.into()))
 }
