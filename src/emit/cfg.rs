@@ -184,19 +184,19 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
             if bin.options.generate_debug_information {
                 let debug_loc = ins.loc();
 
-                let (line, col) =  if let pt::Loc::File(file_offset, offset, _) = debug_loc {
-                    ns.files[file_offset].offset_to_line_column(offset)}
-                    else {
-                        (0,0)
-                    };
-                    let debug_loc = dibuilder.create_debug_location(
-                        bin.context,
-                        line as u32,
-                        col as u32,
-                        di_func_scope.unwrap().as_debug_info_scope(),
-                        None,
-                    );
-                    bin.builder.set_current_debug_location(debug_loc);
+                let (line, col) = if let pt::Loc::File(file_offset, offset, _) = debug_loc {
+                    ns.files[file_offset].offset_to_line_column(offset)
+                } else {
+                    (0, 0)
+                };
+                let debug_loc = dibuilder.create_debug_location(
+                    bin.context,
+                    line as u32,
+                    col as u32,
+                    di_func_scope.unwrap().as_debug_info_scope(),
+                    None,
+                );
+                bin.builder.set_current_debug_location(debug_loc);
             }
 
             process_instruction(
