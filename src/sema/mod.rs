@@ -375,6 +375,14 @@ fn resolve_import(
     }
 }
 
+fn ignored_pragma(loc: &pt::Loc, name: &str, value: Option<&str>, ns: &mut ast::Namespace) {
+    let message = match value {
+        None => format!("pragma '{}' is ignored", name),
+        Some(v) => format!("pragma '{}' with value '{}' is ignored", name, v),
+    };
+    ns.diagnostics.push(ast::Diagnostic::debug(*loc, message));
+}
+
 /// Resolve pragma. We don't do anything with pragmas for now
 fn resolve_pragma(
     loc: &pt::Loc,
@@ -382,29 +390,19 @@ fn resolve_pragma(
     value: &pt::StringLiteral,
     ns: &mut ast::Namespace,
 ) {
-    if name.name == "solidity" {
-        ns.diagnostics.push(ast::Diagnostic::debug(
-            *loc,
-            "pragma 'solidity' is ignored".to_string(),
-        ));
-    } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
-        ns.diagnostics.push(ast::Diagnostic::debug(
-            *loc,
-            "pragma 'experimental' with value 'ABIEncoderV2' is ignored".to_string(),
-        ));
-    } else if name.name == "abicoder" && value.string == "v2" {
-        ns.diagnostics.push(ast::Diagnostic::debug(
-            *loc,
-            "pragma 'abicoder' with value 'v2' is ignored".to_string(),
-        ));
-    } else {
-        ns.diagnostics.push(ast::Diagnostic::warning(
+    match (name.name.as_str(), value.string.as_str()) {
+        ("solidity", _) => ignored_pragma(loc, "solidity", None, ns),
+        ("experimental", "ABIEncoderV2") => {
+            ignored_pragma(loc, "experimental", Some("ABIEncoderV2"), ns)
+        }
+        ("abicoder", "v2") => ignored_pragma(loc, "abicoder", Some("v2"), ns),
+        _ => ns.diagnostics.push(ast::Diagnostic::warning(
             *loc,
             format!(
                 "unknown pragma '{}' with value '{}' ignored",
                 name.name, value.string
             ),
-        ));
+        )),
     }
 }
 
