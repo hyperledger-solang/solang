@@ -15,6 +15,8 @@ use base58::{FromBase58, FromBase58Error};
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
+use petgraph::algo::{all_simple_paths, tarjan_scc, TarjanScc};
+use petgraph::Graph;
 use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
 use std::collections::HashSet;
 use std::{fmt::Write, ops::Mul};
@@ -197,8 +199,47 @@ fn type_decl(
     });
 }
 
+/// Build a graph containing the relationsships between structs
+pub(crate) fn struct_graph(ns: &Namespace) -> Graph<(), Type> {
+    let mut edges = HashSet::new();
+    for (n, _) in ns.structs.iter().enumerate() {
+        struct_edges(n as u32, &mut edges, ns);
+    }
+    Graph::from_edges(edges)
+}
+
+/// Find all other structs a given user struct number may reach.
+pub(crate) fn struct_edges(no: u32, edges: &mut HashSet<(u32, u32, Type)>, ns: &Namespace) {
+    for field in &ns.structs[no as usize].fields {
+        for reaching in field.ty.user_struct_no(ns) {
+            if edges.insert((no, reaching as u32, field.ty.clone())) {
+                struct_edges(reaching as u32, edges, ns)
+            }
+        }
+    }
+}
+
+fn _find_struct_recursion(struct_no: usize, ns: &mut Namespace) {
+    let graph = struct_graph(ns);
+    //let mut tarjan = TarjanScc::new();
+    //tarjan.run(&graph, |n| {
+    //    //dbg!(n);
+    //});
+    for scc in tarjan_scc(&graph) {
+        for idx in &scc {
+            dbg!(idx);
+            for edge in all_simple_paths::<Vec<_>, &Graph<(), Type>>(&graph, *idx, *idx, 0, None) {
+                dbg!(edge);
+            }
+        }
+    }
+}
+
 /// Check if a struct contains itself. This function calls itself recursively.
 fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns: &mut Namespace) {
+    println!("looking at: {}", ns.structs[struct_no].name);
+    _find_struct_recursion(struct_no.try_into().unwrap(), ns);
+
     let def = ns.structs[struct_no].clone();
     let mut types_seen: HashSet<usize> = HashSet::new();
 
@@ -884,6 +925,34 @@ fn struct_offsets(ns: &mut Namespace) {
 }
 
 impl Type {
+    /// Return the set of user defined structs this type encapsulates.
+    pub fn user_struct_no(&self, ns: &Namespace) -> HashSet<usize> {
+        match self {
+            Type::Struct(StructType::UserDefined(n)) => HashSet::from([*n]),
+            Type::Mapping(Mapping { key, value, .. }) => {
+                let mut result = key.user_struct_no(ns);
+                result.extend(value.user_struct_no(ns));
+                result
+            }
+            Type::Array(ty, _) | Type::Ref(ty) | Type::Slice(ty) | Type::StorageRef(_, ty) => {
+                ty.user_struct_no(ns)
+            }
+            Type::UserType(no) => ns.user_types[*no].ty.user_struct_no(ns),
+            Type::InternalFunction {
+                params, returns, ..
+            }
+            | Type::ExternalFunction {
+                params, returns, ..
+            } => params
+                .iter()
+                .chain(returns)
+                .map(|ty| ty.user_struct_no(ns))
+                .flatten()
+                .collect(),
+            _ => HashSet::new(),
+        }
+    }
+
     pub fn to_string(&self, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),

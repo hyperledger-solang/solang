@@ -57,6 +57,7 @@ parse-display = "0.8.0"
 parity-scale-codec = "3.3"
 ink = "4.0.0-beta.1"
 scale-info = "2.3"
+petgraph = "0.6.3"
 
 [dev-dependencies]
 num-derive = "0.3"
