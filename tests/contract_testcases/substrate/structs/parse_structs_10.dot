@@ -12,6 +12,12 @@ strict digraph "tests/contract_testcases/substrate/structs/parse_structs_10.sol"
 	note_13 [label="recursive field 'c'\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:9:17-20"]
 	diagnostic_14 [label="struct 'B' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:12:20-21"]
 	note_15 [label="recursive field 'd'\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:13:17-20"]
+	diagnostic_16 [label="struct 'A' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:16:20-21"]
+	note_17 [label="recursive field 'd'\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:17:17-20"]
+	diagnostic_18 [label="struct 'A' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:16:20-21"]
+	note_19 [label="recursive field 'b'\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:18:17-20"]
+	diagnostic_20 [label="struct 'A' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:16:20-21"]
+	note_21 [label="recursive field 'c'\ntests/contract_testcases/substrate/structs/parse_structs_10.sol:19:17-20"]
 	structs -> C
 	structs -> D
 	structs -> B
@@ -25,4 +31,10 @@ strict digraph "tests/contract_testcases/substrate/structs/parse_structs_10.sol"
 	diagnostic_12 -> note_13 [label="note"]
 	diagnostics -> diagnostic_14 [label="Error"]
 	diagnostic_14 -> note_15 [label="note"]
+	diagnostics -> diagnostic_16 [label="Error"]
+	diagnostic_16 -> note_17 [label="note"]
+	diagnostics -> diagnostic_18 [label="Error"]
+	diagnostic_18 -> note_19 [label="note"]
+	diagnostics -> diagnostic_20 [label="Error"]
+	diagnostic_20 -> note_21 [label="note"]
 }
