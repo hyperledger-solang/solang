@@ -295,15 +295,15 @@ fn set_recursive(scc: usize, graph: &Graph, ns: &mut Namespace) {
 }
 
 /// Check for
-///   - Structs contains any recursive (cycling) fields.
-///   - Cycling struct fields for infinite size.
+///   - Structs contains any recursive (cycling) fields
+///   - Cycling struct fields for infinite size
 ///
-/// The algorithm works as follows:
-///   1. The structs in the namespace are parsed into a graph.
+/// The algorithm consists of these steps:
+///   1. All structs in the namespace are parsed into a graph.
 ///      Nodes in the graph represent the structs.
-///      Edges develop when a struct encapsulates another struct.
-///      Edges have the struct field, where the connection originates, as their weight.
-///      This way we known later on from which struct field the connection originated.
+///      Edges develop when a struct encapsulates another struct somehow.
+///      Edges have the originating struct field as their weight.
+///      So we known from which struct field the connection originated later on.
 ///   2. Find all Strongly Connected Components (SCC) in the graph.
 ///   3. For each node in each SCC, if there is a path from the node to itself, we detected a cycle.
 ///   4. For every cycle, check if it is of infinite size and flag involved struct fields accordingly.
@@ -318,29 +318,17 @@ fn find_struct_recursion(ns: &mut Namespace) {
 
     TarjanScc::new().run(&graph, |scc| {
         for n in scc {
-            let mut cycle = false;
-            // Don't use `None`. It will default to `node_count()` - 1, which won't find paths for `A <-> B`.
+            // Don't use `None`. It will default to `node_count()` - 1 which fails to find paths
+            // for graphs like this:  `A <-> B`.
             let max_len = Some(graph.node_count());
-            for node in all_simple_paths::<Vec<_>, &Graph>(&graph, *n, *n, 0, max_len) {
-                cycle = true;
-                set_infinite(&graph, node.iter().map(|p| p.index()).collect(), ns)
-            }
-            if cycle {
+            if let Some(cycle) =
+                all_simple_paths::<Vec<_>, &Graph>(&graph, *n, *n, 0, max_len).next()
+            {
+                set_infinite(&graph, cycle.iter().map(|p| p.index()).collect(), ns);
                 set_recursive(n.index(), &graph, ns);
             }
         }
     });
-    for s in ns.structs.iter() {
-        for f in s.fields.iter() {
-            println!(
-                "{}.{} recursive={} infinite={}",
-                s.name,
-                f.name_as_str(),
-                f.recursive,
-                f.infinite_size
-            )
-        }
-    }
 }
 
 pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
