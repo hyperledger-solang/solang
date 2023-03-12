@@ -245,18 +245,22 @@ fn set_infinite(graph: &Graph, path: Vec<usize>, ns: &mut Namespace) {
     if !infinite_size {
         return;
     }
-    for (s, f) in offenders {
-        ns.structs[s].fields[f].infinite_size = infinite_size;
-        ns.diagnostics.push(Diagnostic::error_with_note(
-            ns.structs[s].loc,
-            format!("struct '{}' has infinite size", ns.structs[s].name),
-            ns.structs[s].fields[f].loc,
-            format!(
-                "recursive field '{}'",
-                ns.structs[s].fields[f].name_as_str()
-            ),
-        ));
+    for (struct_no, field_no) in offenders {
+        flag_as_infinite(struct_no, field_no, ns);
     }
+}
+
+fn flag_as_infinite(struct_no: usize, field_no: usize, ns: &mut Namespace) {
+    ns.structs[struct_no].fields[field_no].infinite_size = true;
+    ns.diagnostics.push(Diagnostic::error_with_note(
+        ns.structs[struct_no].loc,
+        format!("struct '{}' has infinite size", ns.structs[struct_no].name),
+        ns.structs[struct_no].fields[field_no].loc,
+        format!(
+            "recursive field '{}'",
+            ns.structs[struct_no].fields[field_no].name_as_str()
+        ),
+    ));
 }
 
 /// A struct field is recursive, if it reaches any struct that is a Strongly Connected Component (SCC).
@@ -274,19 +278,7 @@ fn set_recursive(scc: usize, graph: &Graph, ns: &mut Namespace) {
                         .iter()
                         .any(|f| f.infinite_size)
                     {
-                        ns.structs[nodes[0].index()].fields[*edge.weight()].infinite_size = true;
-                        ns.diagnostics.push(Diagnostic::error_with_note(
-                            ns.structs[nodes[0].index()].loc,
-                            format!(
-                                "struct '{}' has infinite size",
-                                ns.structs[nodes[0].index()].name
-                            ),
-                            ns.structs[nodes[0].index()].fields[*edge.weight()].loc,
-                            format!(
-                                "recursive field '{}'",
-                                ns.structs[nodes[0].index()].fields[*edge.weight()].name_as_str()
-                            ),
-                        ));
+                        flag_as_infinite(nodes[0].index(), *edge.weight(), ns);
                     }
                 }
             }
