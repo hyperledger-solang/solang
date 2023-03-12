@@ -285,15 +285,18 @@ fn find_struct_recursion(ns: &mut Namespace) {
 
     TarjanScc::new().run(&graph, |scc| {
         for n in scc {
-            set_recursive(n.index(), &graph, ns);
+            let mut had_cycle = false;
             for cycle in
                 all_simple_paths::<Vec<_>, &Graph>(&graph, *n, *n, 0, Some(graph.node_count()))
             {
+                had_cycle = true;
                 set_infinite(&graph, cycle.iter().map(|p| p.index()).collect(), ns)
+            }
+            if had_cycle {
+                set_recursive(n.index(), &graph, ns);
             }
         }
     });
-
     for s in ns.structs.iter() {
         for f in s.fields.iter() {
             println!(
