@@ -242,7 +242,7 @@ fn set_infinite(graph: &Graph, path: Vec<usize>, ns: &mut Namespace) {
         }
         infinite_size &= infinite_edge;
     }
-    if infinite_size {
+    if !infinite_size {
         return;
     }
     for (s, f) in offenders {
