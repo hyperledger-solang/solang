@@ -1093,7 +1093,7 @@ fn signatures() {
             },
         ],
         Vec::new(),
-        &mut ns,
+        &ns,
     );
 
     assert_eq!(fdecl.signature, "foo(uint8,address)");

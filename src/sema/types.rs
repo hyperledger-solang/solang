@@ -220,7 +220,7 @@ fn struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, ns: &Name
 /// `path` is assumed to be a set of strongly connected nodes from within the `graph`.
 ///
 /// Any node (struct) can have one or more edges (types) to some other node (struct).
-/// A field of a struct is not of infinite size, if there are any 2 neighboring nodes in the path,
+/// A struct field is not of infinite size, if there are any 2 neighboring nodes in the path,
 /// where all connecting edges between any two nodes in the `path` are mappings or dynamic arrays.
 fn set_infinite(graph: &Graph, path: Vec<usize>, ns: &mut Namespace) {
     let mut infinite_size = true;
@@ -269,13 +269,46 @@ fn set_recursive(scc: usize, graph: &Graph, ns: &mut Namespace) {
             for nodes in path.windows(2) {
                 for edge in graph.edges_connecting(nodes[0], nodes[1]) {
                     ns.structs[nodes[0].index()].fields[*edge.weight()].recursive = true;
+                    if ns.structs[nodes[1].index()]
+                        .fields
+                        .iter()
+                        .any(|f| f.infinite_size)
+                    {
+                        ns.structs[nodes[0].index()].fields[*edge.weight()].infinite_size = true;
+                        ns.diagnostics.push(Diagnostic::error_with_note(
+                            ns.structs[nodes[0].index()].loc,
+                            format!(
+                                "struct '{}' has infinite size",
+                                ns.structs[nodes[0].index()].name
+                            ),
+                            ns.structs[nodes[0].index()].fields[*edge.weight()].loc,
+                            format!(
+                                "recursive field '{}'",
+                                ns.structs[nodes[0].index()].fields[*edge.weight()].name_as_str()
+                            ),
+                        ));
+                    }
                 }
             }
         }
     }
 }
 
-/// Check if a struct contains itself.
+/// Check for
+///   - Structs contains any recursive (cycling) fields.
+///   - Cycling struct fields for infinite size.
+///
+/// The algorithm works as follows:
+///   1. The structs in the namespace are parsed into a graph.
+///      Nodes in the graph represent the structs.
+///      Edges develop when a struct encapsulates another struct.
+///      Edges have the struct field, where the connection originates, as their weight.
+///      This way we known later on from which struct field the connection originated.
+///   2. Find all Strongly Connected Components (SCC) in the graph.
+///   3. For each node in each SCC, if there is a path from the node to itself, we detected a cycle.
+///   4. For every cycle, check if it is of infinite size and flag involved struct fields accordingly.
+///   5. For any struct in the namespace, check if there are any path leading into a cycle.
+///      If there is, flag the corresponding struct field as `recursive`.
 fn find_struct_recursion(ns: &mut Namespace) {
     let mut edges = HashSet::new();
     for n in 0..ns.structs.len() {
@@ -285,14 +318,14 @@ fn find_struct_recursion(ns: &mut Namespace) {
 
     TarjanScc::new().run(&graph, |scc| {
         for n in scc {
-            let mut had_cycle = false;
-            for cycle in
-                all_simple_paths::<Vec<_>, &Graph>(&graph, *n, *n, 0, Some(graph.node_count()))
-            {
-                had_cycle = true;
-                set_infinite(&graph, cycle.iter().map(|p| p.index()).collect(), ns)
+            let mut cycle = false;
+            // Don't use `None`. It will default to `node_count()` - 1, which won't find paths for `A <-> B`.
+            let max_len = Some(graph.node_count());
+            for node in all_simple_paths::<Vec<_>, &Graph>(&graph, *n, *n, 0, max_len) {
+                cycle = true;
+                set_infinite(&graph, node.iter().map(|p| p.index()).collect(), ns)
             }
-            if had_cycle {
+            if cycle {
                 set_recursive(n.index(), &graph, ns);
             }
         }
@@ -1558,7 +1591,7 @@ impl Type {
                     .filter(|field| !field.infinite_size)
                     .map(|field| field.ty.storage_align(ns))
                     .max()
-                    .unwrap_or(1.into()), // All fields were of infinite size, so just preteend one storage slot.
+                    .unwrap_or_else(|| 1.into()), // All fields were infinite size, we pretend one storage slot.
                 Type::String | Type::DynamicBytes => BigInt::from(4),
                 Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
                 Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
