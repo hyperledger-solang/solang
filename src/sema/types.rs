@@ -219,7 +219,7 @@ fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, n
 
 /// A struct field is considered to be of infinite size, if it contains itself infinite times.
 ///
-/// This functions set the `infinitie_size` flag accordingly for all struct fields found in `path`.
+/// This function sets the `infinitie_size` flag accordingly for all struct fields found in `path`.
 ///
 /// `path` is assumed to be a set of strongly connected nodes from within the `graph`.
 ///
@@ -279,21 +279,21 @@ fn check_recursive_struct_field(scc: usize, graph: &Graph, ns: &mut Namespace) {
     }
 }
 
-/// Check for
-///   - Structs contains any recursive (cycling) fields
-///   - Cycling struct fields for infinite size
+/// Checks for
+///   - Structs containing recursive (cycling) fields
+///   - Cycling struct fields of infinite size
 ///
 /// The algorithm consists of these steps:
 ///   1. All structs in the namespace are parsed into a graph.
 ///      Nodes in the graph represent the structs.
-///      Edges develop when a struct encapsulates another struct somehow.
+///      Edges develop when a struct encapsulates another struct.
 ///      Edges have the originating struct field as their weight.
 ///      So we known from which struct field the connection originated later on.
 ///   2. Find all Strongly Connected Components (SCC) in the graph.
 ///   3. For any node inside in any SCC, if there is a path from the node to itself, we detected a cycle.
 ///   4. For every cycle, check if it is of infinite size and flag involved struct fields accordingly.
-///   5. For any struct in the namespace, check if there are any path leading into a cycle.
-///      If there is, flag the corresponding struct field as `recursive`.
+///   5. For any struct in the namespace, check if there are any paths leading into a cycle.
+///      If there are, flag the corresponding struct field as `recursive`.
 fn find_struct_recursion(ns: &mut Namespace) {
     let mut edges = HashSet::new();
     for n in 0..ns.structs.len() {
@@ -1901,7 +1901,7 @@ impl Type {
         })
     }
 
-    /// Helper function to savely recurse over a `Type`, preventing stack overflows.
+    /// Helper function to safely recurse over a `Type`, preventing stack overflows.
     ///
     /// `F` is expected to be a closure that recursively walks the `Type`.
     /// `O` is the output type of the closure.
