@@ -8,11 +8,10 @@ strict digraph "tests/contract_testcases/substrate/structs/parse_structs_18.sol"
 	note [label="recursive field 'b'\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:1:12-15"]
 	diagnostic_10 [label="struct 'B' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:2:8-9"]
 	note_11 [label="recursive field 'a'\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:2:12-15"]
-	diagnostic_12 [label="struct 'B' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:2:8-9"]
-	note_13 [label="recursive field 'm'\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:2:17-35"]
-	diagnostic_14 [label="struct 'C' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:3:8-9"]
-	note_15 [label="recursive field 'b'\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:3:12-15"]
-	diagnostic_16 [label="found abstract contract 'Foo'\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:5:1-25"]
+	note_12 [label="recursive field 'm'\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:2:17-35"]
+	diagnostic_13 [label="struct 'C' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:3:8-9"]
+	note_14 [label="recursive field 'b'\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:3:12-15"]
+	diagnostic_15 [label="found abstract contract 'Foo'\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_18.sol:5:1-25"]
 	structs -> A
 	structs -> B
 	structs -> C
@@ -22,9 +21,8 @@ strict digraph "tests/contract_testcases/substrate/structs/parse_structs_18.sol"
 	diagnostic -> note [label="note"]
 	diagnostics -> diagnostic_10 [label="Error"]
 	diagnostic_10 -> note_11 [label="note"]
-	diagnostics -> diagnostic_12 [label="Error"]
-	diagnostic_12 -> note_13 [label="note"]
-	diagnostics -> diagnostic_14 [label="Error"]
-	diagnostic_14 -> note_15 [label="note"]
-	diagnostics -> diagnostic_16 [label="Debug"]
+	diagnostic_10 -> note_12 [label="note"]
+	diagnostics -> diagnostic_13 [label="Error"]
+	diagnostic_13 -> note_14 [label="note"]
+	diagnostics -> diagnostic_15 [label="Debug"]
 }

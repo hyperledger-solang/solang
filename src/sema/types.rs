@@ -19,6 +19,7 @@ use num_traits::{One, Zero};
 use petgraph::algo::{all_simple_paths, tarjan_scc};
 use petgraph::stable_graph::IndexType;
 use petgraph::Directed;
+use solang_parser::diagnostics::Note;
 use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
 use std::collections::HashSet;
 use std::{fmt::Write, ops::Mul};
@@ -229,7 +230,7 @@ fn check_infinite_struct_size(graph: &Graph, nodes: Vec<usize>, ns: &mut Namespa
     }
     if infinite_size {
         for (struct_no, field_no) in offenders {
-            flag_as_infinite(struct_no, field_no, ns);
+            ns.structs[struct_no].fields[field_no].infinite_size = true;
         }
     }
 }
@@ -246,7 +247,7 @@ fn check_recursive_struct_field(node: usize, graph: &Graph, ns: &mut Namespace) 
                 for edge in graph.edges_connecting(a, b) {
                     ns.structs[a.index()].fields[*edge.weight()].recursive = true;
                     if ns.structs[b.index()].fields.iter().any(|f| f.infinite_size) {
-                        flag_as_infinite(a.index(), *edge.weight(), ns);
+                        ns.structs[a.index()].fields[*edge.weight()].infinite_size = true;
                     }
                 }
             }
@@ -297,17 +298,21 @@ fn find_struct_recursion(ns: &mut Namespace) {
             check_recursive_struct_field(n.index(), &graph, ns);
         }
     }
-}
-
-fn flag_as_infinite(struct_no: usize, field_no: usize, ns: &mut Namespace) {
-    ns.structs[struct_no].fields[field_no].infinite_size = true;
-    let field = &ns.structs[struct_no].fields[field_no];
-    ns.diagnostics.push(Diagnostic::error_with_note(
-        ns.structs[struct_no].loc,
-        format!("struct '{}' has infinite size", ns.structs[struct_no].name),
-        field.loc,
-        format!("recursive field '{}'", field.name_as_str()),
-    ));
+    for n in 0..ns.structs.len() {
+        let mut notes = vec![];
+        for field in ns.structs[n].fields.iter().filter(|f| f.infinite_size) {
+            let loc = field.loc;
+            let message = format!("recursive field '{}'", field.name_as_str());
+            notes.push(Note { loc, message });
+        }
+        if !notes.is_empty() {
+            ns.diagnostics.push(Diagnostic::error_with_notes(
+                ns.structs[n].loc,
+                format!("struct '{}' has infinite size", ns.structs[n].name),
+                notes,
+            ));
+        }
+    }
 }
 
 pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
