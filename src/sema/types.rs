@@ -13,9 +13,10 @@ use super::{
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use indexmap::IndexMap;
+use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
-use petgraph::algo::{all_simple_paths, TarjanScc};
+use petgraph::algo::{all_simple_paths, tarjan_scc};
 use petgraph::stable_graph::IndexType;
 use petgraph::Directed;
 use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
@@ -203,11 +204,14 @@ fn type_decl(
 type Graph = petgraph::Graph<(), usize, Directed, usize>;
 
 /// Find all other structs a given user struct may reach.
-fn struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, ns: &Namespace) {
+///
+/// `edges` is a set with tuples of 3 dimensions. First two are the connecting nodes (struct numbers).
+/// The last dimension is the field number of the first struct where the connection originates.
+fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, ns: &Namespace) {
     for (field_no, field) in ns.structs[no].fields.iter().enumerate() {
         for reaching in field.ty.user_struct_no(ns) {
             if edges.insert((no, reaching, field_no)) {
-                struct_edges(reaching, edges, ns)
+                collect_struct_edges(reaching, edges, ns)
             }
         }
     }
@@ -222,44 +226,37 @@ fn struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, ns: &Name
 /// Any node (struct) can have one or more edges (types) to some other node (struct).
 /// A struct field is not of infinite size, if there are any 2 neighboring nodes in the path,
 /// where all connecting edges between any two nodes in the `path` are mappings or dynamic arrays.
-fn set_infinite(graph: &Graph, path: Vec<usize>, ns: &mut Namespace) {
+fn check_infinite_struct_size(graph: &Graph, path: Vec<usize>, ns: &mut Namespace) {
     let mut infinite_size = true;
     let mut offenders = HashSet::new();
     for (a, b) in path.windows(2).map(|w| (w[0], w[1])) {
         let mut infinite_edge = false;
         for edge in graph.edges_connecting(a.into(), b.into()) {
             match &ns.structs[a].fields[*edge.weight()].ty {
-                Type::Array(_, dim) if dim.last() != Some(&ArrayLength::Dynamic) => {
-                    infinite_edge = true;
-                    offenders.insert((a, *edge.weight()));
-                }
-                Type::Struct(StructType::UserDefined(_)) => {
-                    infinite_edge = true;
-                    offenders.insert((a, *edge.weight()));
-                }
-                _ => {}
+                Type::Array(_, dim) if dim.last() != Some(&ArrayLength::Dynamic) => {}
+                Type::Struct(StructType::UserDefined(_)) => {}
+                _ => continue,
             }
+            infinite_edge = true;
+            offenders.insert((a, *edge.weight()));
         }
         infinite_size &= infinite_edge;
     }
-    if !infinite_size {
-        return;
-    }
-    for (struct_no, field_no) in offenders {
-        flag_as_infinite(struct_no, field_no, ns);
+    if infinite_size {
+        for (struct_no, field_no) in offenders {
+            flag_as_infinite(struct_no, field_no, ns);
+        }
     }
 }
 
 fn flag_as_infinite(struct_no: usize, field_no: usize, ns: &mut Namespace) {
     ns.structs[struct_no].fields[field_no].infinite_size = true;
+    let field = &ns.structs[struct_no].fields[field_no];
     ns.diagnostics.push(Diagnostic::error_with_note(
         ns.structs[struct_no].loc,
         format!("struct '{}' has infinite size", ns.structs[struct_no].name),
-        ns.structs[struct_no].fields[field_no].loc,
-        format!(
-            "recursive field '{}'",
-            ns.structs[struct_no].fields[field_no].name_as_str()
-        ),
+        field.loc,
+        format!("recursive field '{}'", field.name_as_str()),
     ));
 }
 
@@ -267,18 +264,14 @@ fn flag_as_infinite(struct_no: usize, field_no: usize, ns: &mut Namespace) {
 ///
 /// This function checks all structs in the `ns` for any paths leading into the given `scc`.
 /// For any path found, the according struct field will be flagged as recursive.
-fn set_recursive(scc: usize, graph: &Graph, ns: &mut Namespace) {
+fn check_recursive_struct_field(scc: usize, graph: &Graph, ns: &mut Namespace) {
     for n in 0..ns.structs.len() {
         for path in all_simple_paths::<Vec<_>, &Graph>(graph, n.into(), scc.into(), 0, None) {
-            for nodes in path.windows(2) {
-                for edge in graph.edges_connecting(nodes[0], nodes[1]) {
-                    ns.structs[nodes[0].index()].fields[*edge.weight()].recursive = true;
-                    if ns.structs[nodes[1].index()]
-                        .fields
-                        .iter()
-                        .any(|f| f.infinite_size)
-                    {
-                        flag_as_infinite(nodes[0].index(), *edge.weight(), ns);
+            for (a, b) in path.windows(2).map(|a_b| (a_b[0], a_b[1])) {
+                for edge in graph.edges_connecting(a, b) {
+                    ns.structs[a.index()].fields[*edge.weight()].recursive = true;
+                    if ns.structs[b.index()].fields.iter().any(|f| f.infinite_size) {
+                        flag_as_infinite(a.index(), *edge.weight(), ns);
                     }
                 }
             }
@@ -297,30 +290,24 @@ fn set_recursive(scc: usize, graph: &Graph, ns: &mut Namespace) {
 ///      Edges have the originating struct field as their weight.
 ///      So we known from which struct field the connection originated later on.
 ///   2. Find all Strongly Connected Components (SCC) in the graph.
-///   3. For each node in each SCC, if there is a path from the node to itself, we detected a cycle.
+///   3. For any node inside in any SCC, if there is a path from the node to itself, we detected a cycle.
 ///   4. For every cycle, check if it is of infinite size and flag involved struct fields accordingly.
 ///   5. For any struct in the namespace, check if there are any path leading into a cycle.
 ///      If there is, flag the corresponding struct field as `recursive`.
 fn find_struct_recursion(ns: &mut Namespace) {
     let mut edges = HashSet::new();
     for n in 0..ns.structs.len() {
-        struct_edges(n, &mut edges, ns);
+        collect_struct_edges(n, &mut edges, ns);
     }
     let graph = Graph::from_edges(edges);
-
-    TarjanScc::new().run(&graph, |scc| {
-        for n in scc {
-            // Don't use `None`. It will default to `node_count()` - 1 which fails to find paths
-            // for graphs like this:  `A <-> B`.
-            let max_len = Some(graph.node_count());
-            if let Some(cycle) =
-                all_simple_paths::<Vec<_>, &Graph>(&graph, *n, *n, 0, max_len).next()
-            {
-                set_infinite(&graph, cycle.iter().map(|p| p.index()).collect(), ns);
-                set_recursive(n.index(), &graph, ns);
-            }
+    for n in tarjan_scc(&graph).iter().flatten().dedup() {
+        // Don't use None. It'll default to `node_count() - 1` and fail to find path for graphs like this: `A <-> B`
+        let max_len = Some(graph.node_count());
+        if let Some(cycle) = all_simple_paths::<Vec<_>, &Graph>(&graph, *n, *n, 0, max_len).next() {
+            check_infinite_struct_size(&graph, cycle.iter().map(|p| p.index()).collect(), ns);
+            check_recursive_struct_field(n.index(), &graph, ns);
         }
-    });
+    }
 }
 
 pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
