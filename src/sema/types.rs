@@ -279,7 +279,7 @@ fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, n
 ///      Edges have the originating struct field number as their weight.
 ///      So we known from which struct field the connection originated later on.
 ///   2. Find all Strongly Connected Components (SCC) in the graph.
-///   3. For any node inside in any SCC, if there is a path from the node to itself, we detected a cycle.
+///   3. For any node inside in any SCC, if there is a path from the node to itself, we've detected a cycle.
 ///   4. For every cycle, check if it is of infinite size and flag involved struct fields accordingly.
 ///   5. For any struct in the namespace, check if there are any paths leading into a cycle.
 ///      If there are, flag the corresponding struct field as `recursive`.
