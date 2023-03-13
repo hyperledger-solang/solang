@@ -23,7 +23,7 @@ contract foo {
                     y := 10
                     x := 80
                 }
-        
+
             // CHECK: block1: # end_switch
 	        // CHECK: ty:uint256 %1.cse_temp = (unchecked %x + %y)
 	        // CHECK: branchcond (%1.cse_temp == uint256 90), block5, block6

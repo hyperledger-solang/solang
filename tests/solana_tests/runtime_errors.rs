@@ -154,7 +154,10 @@ contract calle_contract {
             value: BigInt::from(10u8),
         }],
     );
-    assert_eq!(vm.logs, "math overflow in test.sol:22:19");
+    assert_eq!(
+        vm.logs,
+        "runtime_error: math overflow in test.sol:22:20-29,\n"
+    );
     vm.logs.clear();
 
     _res = vm.function_must_fail(
@@ -164,18 +167,29 @@ contract calle_contract {
             value: BigInt::from(9u8),
         }],
     );
-    assert_eq!(vm.logs, "sesa require condition failed in test.sol:28:26");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: sesa require condition failed in test.sol:28:27-33,\n"
+    );
+
     vm.logs.clear();
 
     _res = vm.function_must_fail("get_storage_bytes", &[]);
+
     assert_eq!(
         vm.logs,
-        "storage array index out of bounds in test.sol:48:18"
+        "runtime_error: storage array index out of bounds in test.sol:48:19-23,\n"
     );
+
     vm.logs.clear();
 
     _res = vm.function_must_fail("set_storage_bytes", &[]);
-    assert_eq!(vm.logs, "storage index out of bounds in test.sol:41:10");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: storage index out of bounds in test.sol:41:11-12,\n"
+    );
     vm.logs.clear();
 
     _res = vm.function_must_fail(
@@ -185,7 +199,11 @@ contract calle_contract {
             value: BigInt::from(2u8),
         }],
     );
-    assert_eq!(vm.logs, "read integer out of bounds in test.sol:86:17");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: read integer out of bounds in test.sol:86:18-30,\n"
+    );
     vm.logs.clear();
 
     _res = vm.function_must_fail(
@@ -195,15 +213,29 @@ contract calle_contract {
             value: BigInt::from(u128::MAX),
         }],
     );
-    assert_eq!(vm.logs, "truncated type overflows in test.sol:91:36");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: truncated type overflows in test.sol:91:37-42,\n"
+    );
     vm.logs.clear();
 
     _res = vm.function_must_fail("invalid_instruction", &[]);
-    assert_eq!(vm.logs, "reached invalid instruction in test.sol:102:12");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: reached invalid instruction in test.sol:102:13-22,\n"
+    );
+
     vm.logs.clear();
 
     _res = vm.function_must_fail("pop_empty_storage", &[]);
-    assert_eq!(vm.logs, "pop from empty storage array in test.sol:54:8");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: pop from empty storage array in test.sol:54:9-12,\n"
+    );
+
     vm.logs.clear();
 
     _res = vm.function_must_fail(
@@ -213,7 +245,12 @@ contract calle_contract {
             value: BigInt::from(9u8),
         }],
     );
-    assert_eq!(vm.logs, "data does not fit into buffer in test.sol:81:17");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: data does not fit into buffer in test.sol:81:18-28,\n"
+    );
+
     vm.logs.clear();
 
     _res = vm.function_must_fail(
@@ -223,7 +260,11 @@ contract calle_contract {
             value: BigInt::from(9u8),
         }],
     );
-    assert_eq!(vm.logs, "assert failure in test.sol:34:15");
+    println!("{}", vm.logs);
+    assert_eq!(
+        vm.logs,
+        "runtime_error: assert failure in test.sol:34:16-24,\n"
+    );
     vm.logs.clear();
 
     _res = vm.function_must_fail(
@@ -233,7 +274,12 @@ contract calle_contract {
             value: BigInt::from(19u8),
         }],
     );
-    assert_eq!(vm.logs, "array index out of bounds in test.sol:97:15");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: array index out of bounds in test.sol:97:16-21,\n"
+    );
+
     vm.logs.clear();
 
     _res = vm.function_must_fail(
@@ -246,8 +292,9 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "integer too large to write in buffer in test.sol:75:17"
+        "runtime_error: integer too large to write in buffer in test.sol:75:18-31,\n"
     );
+
     vm.logs.clear();
 
     _res = vm.function_must_fail(
@@ -257,14 +304,28 @@ contract calle_contract {
             value: BigInt::from(33u8),
         }],
     );
-    assert_eq!(vm.logs, "bytes cast error in test.sol:110:22");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: bytes cast error in test.sol:110:23-40,\n"
+    );
+
     vm.logs.clear();
 
     _res = vm.function_must_fail("i_will_revert", &[]);
-    assert_eq!(vm.logs, "revert encountered in test.sol:70:8");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: revert encountered in test.sol:70:9-15,\n"
+    );
+
     vm.logs.clear();
 
     _res = vm.function_must_fail("create_child", &[]);
-    assert_eq!(vm.logs, "contract creation failed in test.sol:61:12");
+
+    assert_eq!(
+        vm.logs,
+        "runtime_error: contract creation failed in test.sol:61:13-36,\n"
+    );
     vm.logs.clear();
 }

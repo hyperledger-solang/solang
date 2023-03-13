@@ -24,7 +24,8 @@ describe('Runtime Errors', function () {
         }
         catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: storage index out of bounds in runtime_errors.sol:42:10");
+            expect(logs).toContain(`Program log: runtime_error: storage index out of bounds in runtime_errors.sol:42:11-12,
+`);
         }
 
         try {
@@ -32,14 +33,16 @@ describe('Runtime Errors', function () {
         }
         catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: storage array index out of bounds in runtime_errors.sol:49:18");
+            expect(logs).toContain(`Program log: runtime_error: storage array index out of bounds in runtime_errors.sol:49:19-23,
+`);
         }
 
         try {
             let res = await program.methods.popEmptyStorage().accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: pop from empty storage array in runtime_errors.sol:61:8")
+            expect(logs).toContain(`Program log: runtime_error: pop from empty storage array in runtime_errors.sol:61:9-12,
+`)
 
         }
 
@@ -47,7 +50,8 @@ describe('Runtime Errors', function () {
             let res = await program.methods.invalidInstruction().accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: reached invalid instruction in runtime_errors.sol:108:12")
+            expect(logs).toContain(`Program log: runtime_error: reached invalid instruction in runtime_errors.sol:108:13-22,
+`)
 
         }
 
@@ -55,7 +59,8 @@ describe('Runtime Errors', function () {
             let res = await program.methods.byteCastFailure(new BN(33)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: bytes cast error in runtime_errors.sol:114:22")
+            expect(logs).toContain(`Program log: runtime_error: bytes cast error in runtime_errors.sol:114:23-40,
+`)
 
         }
 
@@ -63,28 +68,32 @@ describe('Runtime Errors', function () {
             let res = await program.methods.iWillRevert().accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: revert encountered in runtime_errors.sol:76:8")
+            expect(logs).toContain(`Program log: runtime_error: revert encountered in runtime_errors.sol:76:9-15,
+`)
         }
 
         try {
             let res = await program.methods.assertTest(new BN(9)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: assert failure in runtime_errors.sol:35:15")
+            expect(logs).toContain(`Program log: runtime_error: assert failure in runtime_errors.sol:35:16-24,
+`)
         }
 
         try {
             let res = await program.methods.writeIntegerFailure(new BN(1)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: integer too large to write in buffer in runtime_errors.sol:81:17")
+            expect(logs).toContain(`Program log: runtime_error: integer too large to write in buffer in runtime_errors.sol:81:18-31,
+`)
         }
 
         try {
             let res = await program.methods.writeBytesFailure(new BN(9)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: data does not fit into buffer in runtime_errors.sol:87:17")
+            expect(logs).toContain(`Program log: runtime_error: data does not fit into buffer in runtime_errors.sol:87:18-28,
+`)
         }
 
 
@@ -92,7 +101,8 @@ describe('Runtime Errors', function () {
             let res = await program.methods.readIntegerFailure(new BN(2)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: read integer out of bounds in runtime_errors.sol:92:17")
+            expect(logs).toContain(`Program log: runtime_error: read integer out of bounds in runtime_errors.sol:92:18-30,
+`)
         }
 
 
@@ -100,7 +110,8 @@ describe('Runtime Errors', function () {
             let res = await program.methods.outOfBounds(new BN(19)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: array index out of bounds in runtime_errors.sol:103:15")
+            expect(logs).toContain(`Program log: runtime_error: array index out of bounds in runtime_errors.sol:103:16-21,
+`)
         }
 
 
@@ -108,7 +119,8 @@ describe('Runtime Errors', function () {
             let res = await program.methods.truncFailure(new BN(99999999999999)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain("Program log: truncated type overflows in runtime_errors.sol:97:36")
+            expect(logs).toContain(`Program log: runtime_error: truncated type overflows in runtime_errors.sol:97:37-42,
+`)
         }
 
         let child_program = new PublicKey("Cre7AzxtwSxXwU2jekYtCAQ57DkBhY9SjGDLdcrwhAo6");
@@ -137,7 +149,8 @@ describe('Runtime Errors', function () {
                 .signers([payer]).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs
-            expect(logs).toContain("Program log: contract creation failed in runtime_errors.sol:71:12")
+            expect(logs).toContain(`Program log: runtime_error: contract creation failed in runtime_errors.sol:71:13-62,
+`)
         }
 
     });

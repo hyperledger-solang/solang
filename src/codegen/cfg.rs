@@ -688,35 +688,49 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
-            Expression::UnsignedMore(_, l, r) => format!(
-                "(unsigned more {} > {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+            Expression::More {
+                loc: _,
+                signed,
+                left,
+                right,
+            } => format!(
+                "({} more {} > {})",
+                if *signed { "signed" } else { "unsigned" },
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::SignedMore(_, l, r) => format!(
-                "(signed more {} > {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+            Expression::Less {
+                loc: _,
+                signed,
+                left,
+                right,
+            } => format!(
+                "({} less {} < {})",
+                if *signed { "signed" } else { "unsigned" },
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::UnsignedLess(_, l, r) => format!(
-                "(unsigned less {} < {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+            Expression::MoreEqual {
+                loc: _,
+                signed,
+                left,
+                right,
+            } => format!(
+                "({} {} >= {})",
+                if *signed { "signed" } else { "unsigned" },
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::SignedLess(_, l, r) => format!(
-                "(signed less {} < {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::MoreEqual(_, l, r) => format!(
-                "({} >= {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::LessEqual(_, l, r) => format!(
-                "({} <= {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+            Expression::LessEqual {
+                loc: _,
+                signed,
+                left,
+                right,
+            } => format!(
+                "({} {} <= {})",
+                if *signed { "signed" } else { "unsigned" },
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
             Expression::Equal(_, l, r) => format!(
                 "({} == {})",

@@ -18,13 +18,13 @@ fn output() {
 
     runtime.function("foo", true.encode());
 
-    assert_eq!(runtime.printbuf, "val:true");
+    assert_eq!(runtime.printbuf, "print: val:true,\n");
 
     runtime.printbuf.truncate(0);
 
     runtime.function("foo", false.encode());
 
-    assert_eq!(runtime.printbuf, "val:false");
+    assert_eq!(runtime.printbuf, "print: val:false,\n");
 
     let mut runtime = build_solidity(
         r##"
@@ -39,7 +39,7 @@ fn output() {
 
     runtime.function("foo", b"ABCD".to_vec().encode());
 
-    assert_eq!(runtime.printbuf, "bar:41424344");
+    assert_eq!(runtime.printbuf, "print: bar:41424344,\n");
 
     let mut runtime = build_solidity(
         r##"
@@ -54,7 +54,7 @@ fn output() {
 
     runtime.function("foo", b"\x01\x03\xfe\x07\x09".encode());
 
-    assert_eq!(runtime.printbuf, "bar:0103fe0709");
+    assert_eq!(runtime.printbuf, "print: bar:0103fe0709,\n");
 
     let mut runtime = build_solidity(
         r##"
@@ -71,7 +71,10 @@ fn output() {
 
     assert_eq!(
         runtime.printbuf,
-        format!("bar:ladida address:{}", hex::encode(runtime.vm.account))
+        format!(
+            "print: bar:ladida address:{},\n",
+            hex::encode(runtime.vm.account)
+        )
     );
 
     let mut runtime = build_solidity(
@@ -87,19 +90,19 @@ fn output() {
 
     runtime.function("foo", 0xcafedu64.encode());
 
-    assert_eq!(runtime.printbuf, "bar:0xcafed");
+    assert_eq!(runtime.printbuf, "print: bar:0xcafed,\n");
 
     runtime.printbuf.truncate(0);
 
     runtime.function("foo", 0x1u64.encode());
 
-    assert_eq!(runtime.printbuf, "bar:0x1");
+    assert_eq!(runtime.printbuf, "print: bar:0x1,\n");
 
     runtime.printbuf.truncate(0);
 
     runtime.function("foo", 0x0u64.encode());
 
-    assert_eq!(runtime.printbuf, "bar:0x0");
+    assert_eq!(runtime.printbuf, "print: bar:0x0,\n");
 
     let mut runtime = build_solidity(
         r##"
@@ -114,7 +117,7 @@ fn output() {
 
     runtime.function("foo", (-0xca5cadab1efeeb1eeffab1ei128).encode());
 
-    assert_eq!(runtime.printbuf, "bar:-0xca5cadab1efeeb1eeffab1e");
+    assert_eq!(runtime.printbuf, "print: bar:-0xca5cadab1efeeb1eeffab1e,\n");
 
     let mut runtime = build_solidity(
         r##"
@@ -132,7 +135,9 @@ fn output() {
 
     assert_eq!(
         runtime.printbuf,
-        "there is an old android joke which goes 0b111111 there is an old android joke which goes -0b111111 "
+        r##"print: there is an old android joke which goes 0b111111 ,
+print: there is an old android joke which goes -0b111111 ,
+"##
     );
 
     let mut runtime = build_solidity(
@@ -149,7 +154,12 @@ fn output() {
     runtime.function("foo", (102i64).encode());
     runtime.function("foo", (-102i64).encode());
 
-    assert_eq!(runtime.printbuf, "number:102 number:-102 ");
+    assert_eq!(
+        runtime.printbuf,
+        r##"print: number:102 ,
+print: number:-102 ,
+"##
+    );
 
     let mut runtime = build_solidity(
         r##"
@@ -164,20 +174,25 @@ fn output() {
 
     runtime.function("foo", (8462643383279502884i128).encode());
 
-    assert_eq!(runtime.printbuf, "number:8462643383279502884 ");
+    assert_eq!(runtime.printbuf, "print: number:8462643383279502884 ,\n");
 
     runtime.printbuf.truncate(0);
 
     runtime.function("foo", (18462643383279502884i128).encode());
 
-    assert_eq!(runtime.printbuf, "number:18462643383279502884 ");
+    assert_eq!(runtime.printbuf, "print: number:18462643383279502884 ,\n");
 
     runtime.printbuf.truncate(0);
 
     runtime.function("foo", (3141592653589793238462643383279502884i128).encode());
     runtime.function("foo", (-3141592653589793238462643383279502884i128).encode());
 
-    assert_eq!(runtime.printbuf, "number:3141592653589793238462643383279502884 number:-3141592653589793238462643383279502884 ");
+    assert_eq!(
+        runtime.printbuf,
+        r##"print: number:3141592653589793238462643383279502884 ,
+print: number:-3141592653589793238462643383279502884 ,
+"##
+    );
 
     runtime.printbuf.truncate(0);
 
@@ -207,7 +222,9 @@ fn output() {
 
     assert_eq!(
         runtime.printbuf,
-        "number:34708801425935723273264209958040357568512 number:-34708801425935723273264209958040357568512 "
+        r##"print: number:34708801425935723273264209958040357568512 ,
+print: number:-34708801425935723273264209958040357568512 ,
+"##
     );
 
     runtime.printbuf.truncate(0);
@@ -217,7 +234,9 @@ fn output() {
 
     assert_eq!(
         runtime.printbuf,
-        "number:0x10200000000000000000000000000000000 number:34708801425935723273264209958040357568512 "
+        r##"print: number:0x10200000000000000000000000000000000 ,
+print: number:34708801425935723273264209958040357568512 ,
+"##
     );
 
     runtime.function("e", Vec::new());

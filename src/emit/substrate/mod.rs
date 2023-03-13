@@ -1800,9 +1800,11 @@ fn log_return_code(binary: &Binary, api: &'static str, code: IntValue) {
 
     emit_context!(binary);
 
-    let fmt = format!("{api}=");
+    let fmt = format!("call: {api}=");
     let msg = fmt.as_bytes();
-    let length = i32_const!(msg.len() as u64 + 16);
+    let delimiter = b",\n";
+    let delimiter_length = delimiter.len();
+    let length = i32_const!(msg.len() as u64 + 16 + delimiter_length as u64);
     let out_buf =
         binary
             .builder
@@ -1829,6 +1831,25 @@ fn log_return_code(binary: &Binary, api: &'static str, code: IntValue) {
         .left()
         .unwrap()
         .into_pointer_value();
+
+    let delimiter_string = binary.emit_global_string("delimiter", delimiter, true);
+    let lim_len = binary
+        .context
+        .i32_type()
+        .const_int(delimiter_length as u64, false);
+    call!(
+        "__memcpy",
+        &[
+            out_buf_offset.into(),
+            delimiter_string.into(),
+            lim_len.into()
+        ]
+    );
+    out_buf_offset = unsafe {
+        binary
+            .builder
+            .build_gep(binary.context.i8_type(), out_buf_offset, &[lim_len], "")
+    };
 
     let msg_len = binary.builder.build_int_sub(
         binary
