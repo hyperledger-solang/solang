@@ -871,7 +871,7 @@ fn struct_offsets(ns: &mut Namespace) {
             for field in &ns.structs[struct_no].fields {
                 let mut alignment = field.ty.align_of(ns);
                 if alignment == 0 {
-                    alignment = 1
+                    alignment = 1;
                 }
                 largest_alignment = std::cmp::max(alignment, largest_alignment);
                 let remainder = offset.clone() % alignment;
