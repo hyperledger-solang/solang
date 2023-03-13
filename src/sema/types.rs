@@ -234,13 +234,14 @@ fn check_infinite_struct_size(graph: &Graph, nodes: Vec<usize>, ns: &mut Namespa
     }
 }
 
-/// A struct field is recursive, if there is a path into a cyclic Strongly Connected Component (SCC).
+/// A struct field is recursive, if it is connected to a cyclic path.
 ///
-/// This function checks all structs in the `ns` for any paths leading into the given `scc`.
-/// For any path found, the according struct field will be flagged as recursive.
-fn check_recursive_struct_field(scc: usize, graph: &Graph, ns: &mut Namespace) {
+/// This function checks all structs in the `ns` for any paths leading into the given `node`.
+/// `node` is supposed to be inside a cycle.
+/// All affected struct fields will be flagged as recursive (and infinite size as well, if they are).
+fn check_recursive_struct_field(node: usize, graph: &Graph, ns: &mut Namespace) {
     for n in 0..ns.structs.len() {
-        for path in all_simple_paths::<Vec<_>, &Graph>(graph, n.into(), scc.into(), 0, None) {
+        for path in all_simple_paths::<Vec<_>, &Graph>(graph, n.into(), node.into(), 0, None) {
             for (a, b) in path.windows(2).map(|a_b| (a_b[0], a_b[1])) {
                 for edge in graph.edges_connecting(a, b) {
                     ns.structs[a.index()].fields[*edge.weight()].recursive = true;
