@@ -1559,7 +1559,7 @@ impl Type {
                     .filter(|field| !field.infinite_size)
                     .map(|field| field.ty.storage_align(ns))
                     .max()
-                    .unwrap_or_else(|| 1.into()), // All fields were infinite size, we pretend one storage slot.
+                    .unwrap_or_else(|| 1.into()), // All fields have infinite size, so we pretend one storage slot.
                 Type::String | Type::DynamicBytes => BigInt::from(4),
                 Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
                 Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
