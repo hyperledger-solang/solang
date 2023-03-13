@@ -1870,35 +1870,25 @@ impl Type {
 
     // Does this type contain itself
     pub fn is_recursive(&self, ns: &Namespace) -> bool {
-        self.is_recursive_internal(ns, &mut HashSet::new())
-    }
-
-    fn is_recursive_internal(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> bool {
-        self.guarded_recursion(structs_visited, true, |structs_visited| match self {
+        match self {
             Type::Struct(StructType::UserDefined(n)) => {
                 ns.structs[*n].fields.iter().any(|f| f.recursive)
             }
             Type::Mapping(Mapping { key, value, .. }) => {
-                key.is_recursive_internal(ns, structs_visited)
-                    || value.is_recursive_internal(ns, structs_visited)
+                key.is_recursive(ns) || value.is_recursive(ns)
             }
             Type::Array(ty, _) | Type::Ref(ty) | Type::Slice(ty) | Type::StorageRef(_, ty) => {
-                ty.is_recursive_internal(ns, structs_visited)
+                ty.is_recursive(ns)
             }
-            Type::UserType(no) => ns.user_types[*no]
-                .ty
-                .is_recursive_internal(ns, structs_visited),
+            Type::UserType(no) => ns.user_types[*no].ty.is_recursive(ns),
             Type::InternalFunction {
                 params, returns, ..
             }
             | Type::ExternalFunction {
                 params, returns, ..
-            } => params
-                .iter()
-                .chain(returns)
-                .any(|ty| ty.is_recursive_internal(ns, structs_visited)),
+            } => params.iter().chain(returns).any(|ty| ty.is_recursive(ns)),
             _ => false,
-        })
+        }
     }
 
     /// Helper function to safely recurse over a `Type`, preventing stack overflows.
