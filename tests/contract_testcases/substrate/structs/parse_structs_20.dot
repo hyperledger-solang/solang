@@ -1,0 +1,6 @@
+strict digraph "tests/contract_testcases/substrate/structs/parse_structs_20.sol" {
+	A [label="name:A\ntests/contract_testcases/substrate/structs/parse_structs_20.sol:1:8-9\nfield name:b ty:struct B"]
+	B [label="name:B\ntests/contract_testcases/substrate/structs/parse_structs_20.sol:2:8-9\nfield name:a ty:struct A[]"]
+	structs -> A
+	structs -> B
+}

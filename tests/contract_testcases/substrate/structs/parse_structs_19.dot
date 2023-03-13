@@ -1,0 +1,14 @@
+strict digraph "tests/contract_testcases/substrate/structs/parse_structs_19.sol" {
+	A [label="name:A\ntests/contract_testcases/substrate/structs/parse_structs_19.sol:1:8-9\nfield name:b ty:struct B"]
+	B [label="name:B\ntests/contract_testcases/substrate/structs/parse_structs_19.sol:2:8-9\nfield name:a ty:struct A"]
+	diagnostic [label="struct 'A' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_19.sol:1:8-9"]
+	note [label="recursive field 'b'\ntests/contract_testcases/substrate/structs/parse_structs_19.sol:1:12-15"]
+	diagnostic_7 [label="struct 'B' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_19.sol:2:8-9"]
+	note_8 [label="recursive field 'a'\ntests/contract_testcases/substrate/structs/parse_structs_19.sol:2:12-15"]
+	structs -> A
+	structs -> B
+	diagnostics -> diagnostic [label="Error"]
+	diagnostic -> note [label="note"]
+	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostic_7 -> note_8 [label="note"]
+}

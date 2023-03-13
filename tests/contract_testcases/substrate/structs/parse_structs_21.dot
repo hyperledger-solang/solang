@@ -1,0 +1,48 @@
+strict digraph "tests/contract_testcases/substrate/structs/parse_structs_21.sol" {
+	A [label="name:A\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:1:8-9\nfield name:b ty:struct B\nfield name:f ty:struct F"]
+	B [label="name:B\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:2:8-9\nfield name:c ty:struct C"]
+	C [label="name:C\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:3:8-9\nfield name:d ty:struct D"]
+	D [label="name:D\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:4:8-9\nfield name:a ty:struct A"]
+	F [label="name:F\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:5:8-9\nfield name:g ty:struct G"]
+	G [label="name:G\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:6:8-9\nfield name:h ty:struct H"]
+	H [label="name:H\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:7:8-9\nfield name:a ty:struct A"]
+	diagnostic [label="struct 'A' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:1:8-9"]
+	note [label="recursive field 'b'\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:1:12-15"]
+	diagnostic_12 [label="struct 'A' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:1:8-9"]
+	note_13 [label="recursive field 'f'\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:1:17-20"]
+	diagnostic_14 [label="struct 'B' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:2:8-9"]
+	note_15 [label="recursive field 'c'\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:2:12-15"]
+	diagnostic_16 [label="struct 'C' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:3:8-9"]
+	note_17 [label="recursive field 'd'\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:3:12-15"]
+	diagnostic_18 [label="struct 'D' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:4:8-9"]
+	note_19 [label="recursive field 'a'\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:4:12-15"]
+	diagnostic_20 [label="struct 'F' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:5:8-9"]
+	note_21 [label="recursive field 'g'\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:5:12-15"]
+	diagnostic_22 [label="struct 'G' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:6:8-9"]
+	note_23 [label="recursive field 'h'\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:6:12-15"]
+	diagnostic_24 [label="struct 'H' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:7:8-9"]
+	note_25 [label="recursive field 'a'\ntests/contract_testcases/substrate/structs/parse_structs_21.sol:7:12-15"]
+	structs -> A
+	structs -> B
+	structs -> C
+	structs -> D
+	structs -> F
+	structs -> G
+	structs -> H
+	diagnostics -> diagnostic [label="Error"]
+	diagnostic -> note [label="note"]
+	diagnostics -> diagnostic_12 [label="Error"]
+	diagnostic_12 -> note_13 [label="note"]
+	diagnostics -> diagnostic_14 [label="Error"]
+	diagnostic_14 -> note_15 [label="note"]
+	diagnostics -> diagnostic_16 [label="Error"]
+	diagnostic_16 -> note_17 [label="note"]
+	diagnostics -> diagnostic_18 [label="Error"]
+	diagnostic_18 -> note_19 [label="note"]
+	diagnostics -> diagnostic_20 [label="Error"]
+	diagnostic_20 -> note_21 [label="note"]
+	diagnostics -> diagnostic_22 [label="Error"]
+	diagnostic_22 -> note_23 [label="note"]
+	diagnostics -> diagnostic_24 [label="Error"]
+	diagnostic_24 -> note_25 [label="note"]
+}
