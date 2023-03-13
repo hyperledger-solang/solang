@@ -1,0 +1,24 @@
+strict digraph "tests/contract_testcases/substrate/structs/parse_structs_22.sol" {
+	S [label="name:S\ncontract: Test\ntests/contract_testcases/substrate/structs/parse_structs_22.sol:2:9-10\nfield name:foo ty:int256\nfield name:s ty:struct Test.S[][2]"]
+	contract [label="contract Test\ntests/contract_testcases/substrate/structs/parse_structs_22.sol:1:1-10:2"]
+	test [label="function test\ncontract: Test\ntests/contract_testcases/substrate/structs/parse_structs_22.sol:7:2-52\nsignature test(int256,(int256,#recursive)[][2])\nvisibility public\nmutability nonpayable"]
+	parameters [label="parameters\nint256 f\nstruct Test.S[][2] ss"]
+	returns [label="returns\nstruct Test.S "]
+	return [label="return\ntests/contract_testcases/substrate/structs/parse_structs_22.sol:8:3-18"]
+	struct_literal [label="struct literal: struct Test.S\ntests/contract_testcases/substrate/structs/parse_structs_22.sol:8:10-18"]
+	variable [label="variable: f\nint256\ntests/contract_testcases/substrate/structs/parse_structs_22.sol:8:12-13"]
+	variable_10 [label="variable: ss\nstruct Test.S[][2]\ntests/contract_testcases/substrate/structs/parse_structs_22.sol:8:15-17"]
+	diagnostic [label="found contract 'Test'\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_22.sol:1:1-10:2"]
+	diagnostic_13 [label="Recursive parameter not allowed for public or external functions.\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_22.sol:7:2-52"]
+	structs -> S
+	contracts -> contract
+	contract -> test [label="function"]
+	test -> parameters [label="parameters"]
+	test -> returns [label="returns"]
+	test -> return [label="body"]
+	return -> struct_literal [label="expr"]
+	struct_literal -> variable [label="arg #0"]
+	struct_literal -> variable_10 [label="arg #1"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_13 [label="Error"]
+}

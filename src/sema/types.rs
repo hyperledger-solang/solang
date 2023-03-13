@@ -205,21 +205,20 @@ fn type_decl(
 
 /// A struct field is considered to be of infinite size, if it contains itself infinite times.
 ///
-/// This function sets the `infinitie_size` flag accordingly for all struct fields found in `path`.
-///
-/// `path` is assumed to be a set of strongly connected nodes from within the `graph`.
+/// This function sets the `infinitie_size` flag accordingly for all connection between `nodes`.
+/// `nodes` is assumed to be a set of strongly connected nodes from within the `graph`.
 ///
 /// Any node (struct) can have one or more edges (types) to some other node (struct).
 /// A struct field is not of infinite size, if there are any 2 neighboring nodes in the path,
 /// where all connecting edges between any two nodes in the `path` are mappings or dynamic arrays.
-fn check_infinite_struct_size(graph: &Graph, path: Vec<usize>, ns: &mut Namespace) {
+fn check_infinite_struct_size(graph: &Graph, nodes: Vec<usize>, ns: &mut Namespace) {
     let mut infinite_size = true;
     let mut offenders = HashSet::new();
-    for (a, b) in path.windows(2).map(|w| (w[0], w[1])) {
+    for (a, b) in nodes.windows(2).map(|w| (w[0], w[1])) {
         let mut infinite_edge = false;
         for edge in graph.edges_connecting(a.into(), b.into()) {
             match &ns.structs[a].fields[*edge.weight()].ty {
-                Type::Array(_, dim) if dim.last() != Some(&ArrayLength::Dynamic) => {}
+                Type::Array(_, dims) if dims.first() != Some(&ArrayLength::Dynamic) => {}
                 Type::Struct(StructType::UserDefined(_)) => {}
                 _ => continue,
             }
@@ -235,7 +234,7 @@ fn check_infinite_struct_size(graph: &Graph, path: Vec<usize>, ns: &mut Namespac
     }
 }
 
-/// A struct field is recursive, if it reaches any struct that is a Strongly Connected Component (SCC).
+/// A struct field is recursive, if there is a path leading into a Strongly Connected Component (SCC).
 ///
 /// This function checks all structs in the `ns` for any paths leading into the given `scc`.
 /// For any path found, the according struct field will be flagged as recursive.
@@ -1178,7 +1177,7 @@ impl Type {
             Type::Bytes(_) => false,
             Type::Enum(_) => false,
             Type::Struct(_) => true,
-            Type::Array(_, dims) => matches!(dims.last(), Some(ArrayLength::Fixed(_))),
+            Type::Array(_, dims) => matches!(dims.first(), Some(ArrayLength::Fixed(_))),
             Type::DynamicBytes => false,
             Type::String => false,
             Type::Mapping(..) => false,
@@ -1247,7 +1246,7 @@ impl Type {
             Type::Value => BigInt::from(ns.value_length),
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Rational => unreachable!(),
-            Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+            Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => {
                 (ns.target.ptr_size() / 8).into()
             }
             Type::Array(ty, dims) => {
@@ -1340,7 +1339,7 @@ impl Type {
     /// which is not accounted for.
     pub fn solana_storage_size(&self, ns: &Namespace) -> BigInt {
         match self {
-            Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => 4.into(),
+            Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => 4.into(),
             Type::Array(ty, dims) => ty.solana_storage_size(ns).mul(
                 dims.iter()
                     .map(|d| match d {
@@ -1462,7 +1461,7 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => {
                     BigInt::from(4)
                 }
                 Type::Array(ty, dims) => {
@@ -1511,7 +1510,7 @@ impl Type {
                     .filter(|f| !f.infinite_size)
                     .map(|f| f.ty.storage_slots(ns))
                     .sum(),
-                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => 1.into(),
+                Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => 1.into(),
                 Type::Array(ty, dims) => {
                     let one = 1.into();
                     ty.storage_slots(ns)
@@ -1531,6 +1530,7 @@ impl Type {
         }
     }
 
+    /// Alignment of elements in storage
     pub fn storage_align(&self, ns: &Namespace) -> BigInt {
         if ns.target == Target::Solana {
             let length = match self {
@@ -1541,7 +1541,7 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => {
                     BigInt::from(4)
                 }
                 Type::Array(ty, _) => {
@@ -1850,7 +1850,7 @@ impl Type {
     pub fn is_sparse_solana(&self, ns: &Namespace) -> bool {
         match self.deref_any() {
             Type::Mapping(..) => true,
-            Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => false,
+            Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => false,
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
                 let len = ty.storage_slots(ns).mul(
