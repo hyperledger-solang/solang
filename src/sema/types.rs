@@ -1381,7 +1381,7 @@ impl Type {
                 .filter(|f| !f.infinite_size) // Can't calculate alignment for structs with infinite recursion
                 .map(|f| f.ty.align_of(ns))
                 .max()
-                .unwrap_or(1), // All fields were of infinite size, so we just pretend this
+                .unwrap_or(1), // All fields had infinite size, so we just pretend the alignment is one
             Type::InternalFunction { .. } => ns.target.ptr_size().into(),
             _ => 1,
         }
