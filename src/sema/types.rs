@@ -23,6 +23,8 @@ use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
 use std::collections::HashSet;
 use std::{fmt::Write, ops::Mul};
 
+type Graph = petgraph::Graph<(), usize, Directed, usize>;
+
 /// List the types which should be resolved later
 pub struct ResolveFields<'a> {
     structs: Vec<ResolveStructFields<'a>>,
@@ -201,22 +203,6 @@ fn type_decl(
     });
 }
 
-type Graph = petgraph::Graph<(), usize, Directed, usize>;
-
-/// Find all other structs a given user struct may reach.
-///
-/// `edges` is a set with tuples of 3 dimensions. First two are the connecting nodes (struct numbers).
-/// The last dimension is the field number of the first struct where the connection originates.
-fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, ns: &Namespace) {
-    for (field_no, field) in ns.structs[no].fields.iter().enumerate() {
-        for reaching in field.ty.user_struct_no(ns) {
-            if edges.insert((no, reaching, field_no)) {
-                collect_struct_edges(reaching, edges, ns)
-            }
-        }
-    }
-}
-
 /// A struct field is considered to be of infinite size, if it contains itself infinite times.
 ///
 /// This function sets the `infinitie_size` flag accordingly for all struct fields found in `path`.
@@ -249,17 +235,6 @@ fn check_infinite_struct_size(graph: &Graph, path: Vec<usize>, ns: &mut Namespac
     }
 }
 
-fn flag_as_infinite(struct_no: usize, field_no: usize, ns: &mut Namespace) {
-    ns.structs[struct_no].fields[field_no].infinite_size = true;
-    let field = &ns.structs[struct_no].fields[field_no];
-    ns.diagnostics.push(Diagnostic::error_with_note(
-        ns.structs[struct_no].loc,
-        format!("struct '{}' has infinite size", ns.structs[struct_no].name),
-        field.loc,
-        format!("recursive field '{}'", field.name_as_str()),
-    ));
-}
-
 /// A struct field is recursive, if it reaches any struct that is a Strongly Connected Component (SCC).
 ///
 /// This function checks all structs in the `ns` for any paths leading into the given `scc`.
@@ -274,6 +249,20 @@ fn check_recursive_struct_field(scc: usize, graph: &Graph, ns: &mut Namespace) {
                         flag_as_infinite(a.index(), *edge.weight(), ns);
                     }
                 }
+            }
+        }
+    }
+}
+
+/// Find all other structs a given user struct may reach.
+///
+/// `edges` is a set with tuples of 3 dimensions. First two are the connecting nodes (struct numbers).
+/// The last dimension is the field number of the first struct where the connection originates.
+fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, ns: &Namespace) {
+    for (field_no, field) in ns.structs[no].fields.iter().enumerate() {
+        for reaching in field.ty.user_struct_no(ns) {
+            if edges.insert((no, reaching, field_no)) {
+                collect_struct_edges(reaching, edges, ns)
             }
         }
     }
@@ -308,6 +297,17 @@ fn find_struct_recursion(ns: &mut Namespace) {
             check_recursive_struct_field(n.index(), &graph, ns);
         }
     }
+}
+
+fn flag_as_infinite(struct_no: usize, field_no: usize, ns: &mut Namespace) {
+    ns.structs[struct_no].fields[field_no].infinite_size = true;
+    let field = &ns.structs[struct_no].fields[field_no];
+    ns.diagnostics.push(Diagnostic::error_with_note(
+        ns.structs[struct_no].loc,
+        format!("struct '{}' has infinite size", ns.structs[struct_no].name),
+        field.loc,
+        format!("recursive field '{}'", field.name_as_str()),
+    ));
 }
 
 pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
