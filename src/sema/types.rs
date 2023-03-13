@@ -1902,7 +1902,7 @@ impl Type {
     ///
     /// This function is useful in the various scenarios.
     ///
-    /// Naturally, it can be used to detect recursive types (see `fn Type::is_recrsive()`).
+    /// Naturally, it can be used to detect recursive types (see `fn Type::is_recursive()`).
     ///
     /// Moreover,functions like `fn Type::contains_mapping()` need to recursively check the type to contain mappings.
     /// Consider the following valid type:
