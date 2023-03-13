@@ -1326,11 +1326,11 @@ fn is_there_virtual_function(
     contract_no: usize,
     function_no: Option<usize>,
 ) -> bool {
-    let default_constructor = ns.default_constructor(contract_no);
+    let default_constructor = &ns.default_constructor(contract_no);
 
     let func = match function_no {
         Some(function_no) => &ns.functions[function_no],
-        None => &default_constructor,
+        None => default_constructor,
     };
 
     // if the function is a fallback or receive, then don't bother with the overriden functions; they cannot be used
