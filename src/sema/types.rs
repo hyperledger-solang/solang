@@ -234,7 +234,7 @@ fn check_infinite_struct_size(graph: &Graph, nodes: Vec<usize>, ns: &mut Namespa
     }
 }
 
-/// A struct field is recursive, if there is a path leading into a Strongly Connected Component (SCC).
+/// A struct field is recursive, if there is a path into a cyclic Strongly Connected Component (SCC).
 ///
 /// This function checks all structs in the `ns` for any paths leading into the given `scc`.
 /// For any path found, the according struct field will be flagged as recursive.
