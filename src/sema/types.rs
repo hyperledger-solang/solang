@@ -275,7 +275,7 @@ fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, n
 ///   1. All structs in the namespace are parsed into a graph.
 ///      Nodes in the graph represent the structs.
 ///      Edges develop when a struct encapsulates another struct.
-///      Edges have the originating struct field as their weight.
+///      Edges have the originating struct field number as their weight.
 ///      So we known from which struct field the connection originated later on.
 ///   2. Find all Strongly Connected Components (SCC) in the graph.
 ///   3. For any node inside in any SCC, if there is a path from the node to itself, we detected a cycle.
