@@ -226,31 +226,35 @@ pub fn expression(
         ast::Expression::More { loc, left, right } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
-            if l.ty().is_signed_int() {
-                Expression::SignedMore(*loc, Box::new(l), Box::new(r))
-            } else {
-                Expression::UnsignedMore(*loc, Box::new(l), Box::new(r))
+            Expression::More {
+                loc: *loc,
+                signed: l.ty().is_signed_int(),
+                left: Box::new(l),
+                right: Box::new(r),
             }
         }
-        ast::Expression::MoreEqual { loc, left, right } => Expression::MoreEqual(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        ast::Expression::MoreEqual { loc, left, right } => Expression::MoreEqual {
+            loc: *loc,
+            signed: left.ty().is_signed_int(),
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::Less { loc, left, right } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
-            if l.ty().is_signed_int() {
-                Expression::SignedLess(*loc, Box::new(l), Box::new(r))
-            } else {
-                Expression::UnsignedLess(*loc, Box::new(l), Box::new(r))
+            Expression::Less {
+                loc: *loc,
+                signed: l.ty().is_signed_int(),
+                left: Box::new(l),
+                right: Box::new(r),
             }
         }
-        ast::Expression::LessEqual { loc, left, right } => Expression::LessEqual(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        ast::Expression::LessEqual { loc, left, right } => Expression::LessEqual {
+            loc: *loc,
+            signed: left.ty().is_signed_int(),
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::ConstantVariable {
             contract_no: Some(var_contract_no),
             var_no,
@@ -811,7 +815,13 @@ pub fn expression(
         } => {
             let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
-            cfg.add(vartab, Instr::Print { expr });
+            let to_print = if ns.target.is_substrate() {
+                add_prefix_and_delimiter_to_print(expr)
+            } else {
+                expr
+            };
+
+            cfg.add(vartab, Instr::Print { expr: to_print });
 
             Expression::Poison
         }
@@ -1368,11 +1378,22 @@ fn require(
         Target::Solana | Target::Substrate { .. } => {
             if opt.log_runtime_errors {
                 if let Some(expr) = expr {
-                    let error_string =
-                        error_msg_with_loc(ns, " require condition failed", Some(expr.loc()));
+                    let prefix = b"runtime_error: ";
+                    let error_string = format!(
+                        " require condition failed in {},\n",
+                        ns.loc_to_string(false, &expr.loc())
+                    );
                     let print_expr = Expression::FormatString(
                         Loc::Codegen,
                         vec![
+                            (
+                                FormatArg::StringLiteral,
+                                Expression::BytesLiteral(
+                                    Loc::Codegen,
+                                    Type::Bytes(prefix.len() as u8),
+                                    prefix.to_vec(),
+                                ),
+                            ),
                             (FormatArg::Default, expr),
                             (
                                 FormatArg::StringLiteral,
@@ -1420,10 +1441,22 @@ fn revert(
 
     if opt.log_runtime_errors {
         if expr.is_some() {
-            let error_string = error_msg_with_loc(ns, " revert encountered", Some(loc));
+            let prefix = b"runtime_error: ";
+            let error_string = format!(
+                " revert encountered in {},\n",
+                ns.loc_to_string(false, &loc)
+            );
             let print_expr = Expression::FormatString(
                 Loc::Codegen,
                 vec![
+                    (
+                        FormatArg::StringLiteral,
+                        Expression::BytesLiteral(
+                            Loc::Codegen,
+                            Type::Bytes(prefix.len() as u8),
+                            prefix.to_vec(),
+                        ),
+                    ),
                     (FormatArg::Default, expr.clone().unwrap()),
                     (
                         FormatArg::StringLiteral,
@@ -1755,9 +1788,10 @@ fn expr_builtin(
             let offset = expression(&args[2], cfg, contract_no, func, ns, vartab, opt);
 
             // range check
-            let cond = Expression::LessEqual(
-                *loc,
-                Box::new(Expression::Add(
+            let cond = Expression::LessEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Add(
                     *loc,
                     Type::Uint(32),
                     false,
@@ -1768,13 +1802,13 @@ fn expr_builtin(
                         BigInt::from(args[1].ty().bits(ns) / 8),
                     )),
                 )),
-                Box::new(Expression::Builtin(
+                right: Box::new(Expression::Builtin(
                     *loc,
                     vec![Type::Uint(32)],
                     Builtin::ArrayLength,
                     vec![buf.clone()],
                 )),
-            );
+            };
 
             let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
             let in_bounds = cfg.new_basic_block("in_bounds".to_string());
@@ -1818,22 +1852,23 @@ fn expr_builtin(
                 vec![data.clone()],
             );
 
-            let cond = Expression::LessEqual(
-                *loc,
-                Box::new(Expression::Add(
+            let cond = Expression::LessEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Add(
                     *loc,
                     Type::Uint(32),
                     false,
                     Box::new(offset.clone()),
                     Box::new(size.clone()),
                 )),
-                Box::new(Expression::Builtin(
+                right: Box::new(Expression::Builtin(
                     *loc,
                     vec![Type::Uint(32)],
                     Builtin::ArrayLength,
                     vec![buffer.clone()],
                 )),
-            );
+            };
 
             let in_bounds = cfg.new_basic_block("in_bounds".to_string());
             let out_ouf_bounds = cfg.new_basic_block("out_of_bounds".to_string());
@@ -1890,9 +1925,10 @@ fn expr_builtin(
             let offset = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
 
             // range check
-            let cond = Expression::LessEqual(
-                *loc,
-                Box::new(Expression::Add(
+            let cond = Expression::LessEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Add(
                     *loc,
                     Type::Uint(32),
                     false,
@@ -1903,13 +1939,13 @@ fn expr_builtin(
                         BigInt::from(tys[0].bits(ns) / 8),
                     )),
                 )),
-                Box::new(Expression::Builtin(
+                right: Box::new(Expression::Builtin(
                     *loc,
                     vec![Type::Uint(32)],
                     Builtin::ArrayLength,
                     vec![buf.clone()],
                 )),
-            );
+            };
 
             let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
             let in_bounds = cfg.new_basic_block("in_bounds".to_string());
@@ -2118,11 +2154,12 @@ fn checking_trunc(
     cfg.add(
         vartab,
         Instr::BranchCond {
-            cond: Expression::MoreEqual(
-                *loc,
-                Box::new(Expression::Variable(*loc, source_ty.clone(), pos)),
-                Box::new(overflow),
-            ),
+            cond: Expression::MoreEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Variable(*loc, source_ty.clone(), pos)),
+                right: Box::new(overflow),
+            },
             true_block: out_of_bounds,
             false_block: in_bounds,
         },
@@ -2872,11 +2909,12 @@ fn array_subscript(
     cfg.add(
         vartab,
         Instr::BranchCond {
-            cond: Expression::MoreEqual(
-                *loc,
-                Box::new(Expression::Variable(index_loc, coerced_ty.clone(), pos)),
-                Box::new(array_length.cast(&coerced_ty, ns)),
-            ),
+            cond: Expression::MoreEqual {
+                loc: *loc,
+                signed: false,
+                left: Box::new(Expression::Variable(index_loc, coerced_ty.clone(), pos)),
+                right: Box::new(array_length.cast(&coerced_ty, ns)),
+            },
             true_block: out_of_bounds,
             false_block: in_bounds,
         },
@@ -3220,7 +3258,58 @@ pub(crate) fn log_runtime_error(
 ) {
     if report_error {
         let error_with_loc = error_msg_with_loc(ns, reason, Some(reason_loc));
-        let expr = string_to_expr(error_with_loc);
+        let expr = string_to_expr(error_with_loc + ",\n");
         cfg.add(vartab, Instr::Print { expr });
+    }
+}
+
+fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
+    let prefix = b"print: ";
+    let delimiter = b",\n";
+
+    if let Expression::FormatString(loc, args) = &mut expr {
+        let mut new_vec = Vec::new();
+        new_vec.push((
+            FormatArg::StringLiteral,
+            Expression::BytesLiteral(
+                Loc::Codegen,
+                Type::Bytes(prefix.len() as u8),
+                prefix.to_vec(),
+            ),
+        ));
+        new_vec.append(args);
+        new_vec.push((
+            FormatArg::StringLiteral,
+            Expression::BytesLiteral(
+                Loc::Codegen,
+                Type::Bytes(delimiter.len() as u8),
+                delimiter.to_vec(),
+            ),
+        ));
+
+        Expression::FormatString(*loc, new_vec)
+    } else {
+        Expression::FormatString(
+            Loc::Codegen,
+            vec![
+                (
+                    FormatArg::StringLiteral,
+                    Expression::BytesLiteral(
+                        Loc::Codegen,
+                        Type::Bytes(prefix.len() as u8),
+                        prefix.to_vec(),
+                    ),
+                ),
+                (FormatArg::Default, expr),
+                (
+                    FormatArg::StringLiteral,
+                    Expression::BytesLiteral(
+                        Loc::Codegen,
+                        Type::Bytes(delimiter.len() as u8),
+                        delimiter.to_vec(),
+                    ),
+                ),
+            ],
+        )
     }
 }

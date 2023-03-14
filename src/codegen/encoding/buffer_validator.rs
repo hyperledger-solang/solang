@@ -118,11 +118,12 @@ impl BufferValidator<'_> {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) {
-        let cond = Expression::UnsignedLess(
-            Loc::Codegen,
-            Box::new(end_offset),
-            Box::new(self.buffer_length.clone()),
-        );
+        let cond = Expression::Less {
+            loc: Loc::Codegen,
+            signed: false,
+            left: Box::new(end_offset),
+            right: Box::new(self.buffer_length.clone()),
+        };
 
         let invalid = cfg.new_basic_block("not_all_bytes_read".to_string());
         let valid = cfg.new_basic_block("buffer_read".to_string());
@@ -196,11 +197,12 @@ impl BufferValidator<'_> {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) {
-        let cond = Expression::LessEqual(
-            Loc::Codegen,
-            Box::new(offset),
-            Box::new(self.buffer_length.clone()),
-        );
+        let cond = Expression::LessEqual {
+            loc: Loc::Codegen,
+            signed: false,
+            left: Box::new(offset),
+            right: Box::new(self.buffer_length.clone()),
+        };
 
         let inbounds_block = cfg.new_basic_block("inbounds".to_string());
         let out_of_bounds_block = cfg.new_basic_block("out_of_bounds".to_string());

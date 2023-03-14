@@ -1619,11 +1619,12 @@ fn set_array_loop(
             vec![sub_array],
         )
     };
-    let cond_expr = Expression::UnsignedLess(
-        Codegen,
-        Expression::Variable(Codegen, Uint(32), index_temp).into(),
-        bound.into(),
-    );
+    let cond_expr = Expression::Less {
+        loc: Codegen,
+        signed: false,
+        left: Expression::Variable(Codegen, Uint(32), index_temp).into(),
+        right: bound.into(),
+    };
     cfg.add(
         vartab,
         Instr::BranchCond {

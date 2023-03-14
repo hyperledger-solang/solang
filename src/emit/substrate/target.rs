@@ -1835,7 +1835,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         }
         emit_context!(bin);
         let error_with_loc = error_msg_with_loc(ns, &reason_string, reason_loc);
-        let custom_error = string_to_basic_value(bin, ns, error_with_loc);
+        let custom_error = string_to_basic_value(bin, ns, error_with_loc + ",\n");
         call!(
             "seal_debug_message",
             &[

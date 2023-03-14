@@ -50,7 +50,7 @@ contract Array_bound_Test {
         uint256 sesa = 0;
 
 
-        // CHECK: branchcond (uint32 20 >= uint32 21), block5, block6
+        // CHECK: branchcond (unsigned uint32 20 >= uint32 21), block5, block6
         // CHECK: branchcond (unsigned less %i < uint256 21), block1, block4
         for (uint256 i = 0; i < a.length; i++) {
             sesa = sesa + a[20];

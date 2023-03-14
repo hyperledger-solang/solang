@@ -128,17 +128,18 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 },
             );
             let buffer = Expression::Variable(loc, Type::DynamicBytes, var_buffer);
-            let compare = Expression::UnsignedMore(
+            let compare = Expression::More {
                 loc,
-                Expression::Builtin(
+                signed: false,
+                left: Expression::Builtin(
                     loc,
                     vec![Type::Uint(32)],
                     Builtin::ArrayLength,
                     vec![buffer.clone()],
                 )
                 .into(),
-                hash_len.clone(),
-            );
+                right: hash_len.clone(),
+            };
 
             let hash_topic_block = cfg.new_basic_block("hash_topic".into());
             let done_block = cfg.new_basic_block("done".into());

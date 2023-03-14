@@ -79,11 +79,12 @@ pub(super) fn function_dispatch(
 
     let argslen = Expression::Variable(Loc::Codegen, Type::Uint(64), argslen_var);
 
-    let not_fallback = Expression::MoreEqual(
-        Loc::Codegen,
-        argslen.clone().into(),
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(8u8)).into(),
-    );
+    let not_fallback = Expression::MoreEqual {
+        loc: Loc::Codegen,
+        signed: false,
+        left: argslen.clone().into(),
+        right: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(8u8)).into(),
+    };
 
     cfg.add(
         &mut vartab,

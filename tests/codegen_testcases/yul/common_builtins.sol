@@ -45,7 +45,7 @@ contract testing {
     function byte_builtin(int64 a, uint256 b) public pure {
         assembly {
             let x := byte(b, a)
-            // CHECK: branchcond ((arg #1) >= uint256 32), block1, block2
+            // CHECK: branchcond (unsigned (arg #1) >= uint256 32), block1, block2
             // CHECK: block1: # then
             // CHECK: ty:uint256 %temp.13 = uint256 0
             // CHECK: branch block3

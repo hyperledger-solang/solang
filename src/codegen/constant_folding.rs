@@ -955,57 +955,79 @@ fn expression(
                 false,
             )
         }
-        Expression::UnsignedMore(loc, left, right) => {
+        Expression::More {
+            loc,
+            signed,
+            left,
+            right,
+        } => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
             (
-                Expression::UnsignedMore(*loc, Box::new(left.0), Box::new(right.0)),
+                Expression::More {
+                    loc: *loc,
+                    signed: *signed,
+                    left: Box::new(left.0),
+                    right: Box::new(right.0),
+                },
                 false,
             )
         }
-        Expression::SignedMore(loc, left, right) => {
+        Expression::Less {
+            loc,
+            signed,
+            left,
+            right,
+        } => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
             (
-                Expression::SignedMore(*loc, Box::new(left.0), Box::new(right.0)),
+                Expression::Less {
+                    loc: *loc,
+                    signed: *signed,
+                    left: Box::new(left.0),
+                    right: Box::new(right.0),
+                },
                 false,
             )
         }
-        Expression::SignedLess(loc, left, right) => {
+        Expression::MoreEqual {
+            loc,
+            signed,
+            left,
+            right,
+        } => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
             (
-                Expression::SignedLess(*loc, Box::new(left.0), Box::new(right.0)),
+                Expression::MoreEqual {
+                    loc: *loc,
+                    signed: *signed,
+                    left: Box::new(left.0),
+                    right: Box::new(right.0),
+                },
                 false,
             )
         }
-        Expression::UnsignedLess(loc, left, right) => {
+        Expression::LessEqual {
+            loc,
+            signed,
+            left,
+            right,
+        } => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
             (
-                Expression::UnsignedLess(*loc, Box::new(left.0), Box::new(right.0)),
-                false,
-            )
-        }
-        Expression::MoreEqual(loc, left, right) => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            (
-                Expression::MoreEqual(*loc, Box::new(left.0), Box::new(right.0)),
-                false,
-            )
-        }
-        Expression::LessEqual(loc, left, right) => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            (
-                Expression::LessEqual(*loc, Box::new(left.0), Box::new(right.0)),
+                Expression::LessEqual {
+                    loc: *loc,
+                    signed: *signed,
+                    left: Box::new(left.0),
+                    right: Box::new(right.0),
+                },
                 false,
             )
         }

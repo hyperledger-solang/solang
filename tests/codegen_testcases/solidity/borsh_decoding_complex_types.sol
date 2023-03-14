@@ -17,7 +17,7 @@ contract Testing {
         // CHECK: ty:uint32 %temp.10 = (builtin ArrayLength ((arg #0)))
         // CHECK: ty:uint32 %temp.12 = uint32 0
         // CHECK: ty:uint32 %temp.13 = (builtin ReadFromBuffer ((arg #0), uint32 0))
-        // CHECK: branchcond (uint32 4 <= %temp.10), block1, block2
+        // CHECK: branchcond (unsigned uint32 4 <= %temp.10), block1, block2
 
         // CHECK: block1: # inbounds
         // CHECK: ty:uint32 %temp.12 = uint32 4
@@ -39,7 +39,7 @@ contract Testing {
         // CHECK: block5: # body
         // CHECK: ty:uint32 %temp.16 = (builtin ReadFromBuffer ((arg #0), %temp.12))
         // CHECK: ty:uint32 %1.cse_temp = (%temp.12 + uint32 4)
-        // CHECK: branchcond (%1.cse_temp <= %temp.10), block7, block8
+        // CHECK: branchcond (unsigned %1.cse_temp <= %temp.10), block7, block8
 
         // CHECK: block6: # end_for
         // CHECK: ty:uint32 %temp.12 = (%temp.12 - uint32 0)
@@ -47,7 +47,7 @@ contract Testing {
         // CHECK: block7: # inbounds
 
         // CHECK: ty:uint32 %2.cse_temp = (%temp.12 + (%temp.16 + uint32 4))
-        // CHECK: branchcond (%2.cse_temp <= %temp.10), block9, block10
+        // CHECK: branchcond (unsigned %2.cse_temp <= %temp.10), block9, block10
 
         // CHECK: block8: # out_of_bounds
         // CHECK: assert-failure
@@ -82,13 +82,13 @@ contract Testing {
         // CHECK: block0: # entry
         // CHECK: ty:bytes %buffer = (arg #0)
         // CHECK: ty:uint32 %temp.20 = (builtin ArrayLength ((arg #0)))
-        // CHECK: branchcond (uint32 8 <= %temp.20), block1, block2
+        // CHECK: branchcond (unsigned uint32 8 <= %temp.20), block1, block2
 
         // CHECK: block1: # inbounds
         // CHECK: ty:uint64 %temp.21 = (builtin ReadFromBuffer ((arg #0), uint32 0))
         // CHECK: ty:uint32 %temp.23 = uint32 8
         // CHECK: ty:uint32 %temp.24 = (builtin ReadFromBuffer ((arg #0), uint32 8))
-        // CHECK: branchcond (uint32 12 <= %temp.20), block3, block4
+        // CHECK: branchcond (unsigned uint32 12 <= %temp.20), block3, block4
 
         // CHECK: block2: # out_of_bounds
         // CHECK: assert-failure
@@ -115,7 +115,7 @@ contract Testing {
         // CHECK: block7: # body
         // CHECK: ty:uint32 %temp.27 = (builtin ReadFromBuffer ((arg #0), %temp.23))
         // CHECK: ty:uint32 %1.cse_temp = (%temp.23 + uint32 4)
-        // CHECK: branchcond (%1.cse_temp <= %temp.20), block9, block10
+        // CHECK: branchcond (unsigned %1.cse_temp <= %temp.20), block9, block10
 
         // CHECK: block8: # end_for
         // CHECK: ty:uint32 %temp.23 = (%temp.23 - uint32 8)
@@ -124,7 +124,7 @@ contract Testing {
 
         // CHECK: block9: # inbounds
         // CHECK: ty:uint32 %2.cse_temp = (%temp.23 + (%temp.27 + uint32 4))
-        // CHECK: branchcond (%2.cse_temp <= %temp.20), block11, block12
+        // CHECK: branchcond (unsigned %2.cse_temp <= %temp.20), block11, block12
         // CHECK: block10: # out_of_bounds
         // CHECK: assert-failure
 
@@ -159,7 +159,7 @@ contract Testing {
         // CHECK: ty:uint32 %temp.32 = (builtin ArrayLength ((arg #0)))
         // CHECK: ty:uint32 %temp.34 = uint32 0
         // CHECK: ty:uint32 %temp.35 = (builtin ReadFromBuffer ((arg #0), uint32 0))
-        // CHECK: branchcond (uint32 4 <= %temp.32), block1, block2
+        // CHECK: branchcond (unsigned uint32 4 <= %temp.32), block1, block2
 
         // CHECK: block1: # inbounds
         // CHECK: ty:uint32 %temp.34 = uint32 4
@@ -180,7 +180,7 @@ contract Testing {
 
         // CHECK: block5: # body
         // CHECK: ty:uint32 %1.cse_temp = (%temp.34 + uint32 8)
-        // CHECK: branchcond (%1.cse_temp <= %temp.32), block7, block8
+        // CHECK: branchcond (unsigned %1.cse_temp <= %temp.32), block7, block8
 
         // CHECK: block6: # end_for
         // CHECK: ty:uint32 %temp.34 = (%temp.34 - uint32 0)
@@ -191,7 +191,7 @@ contract Testing {
         // CHECK: ty:uint32 %temp.40 = %1.cse_temp
         // CHECK: ty:uint32 %temp.41 = (builtin ReadFromBuffer ((arg #0), %temp.40))
         // CHECK: ty:uint32 %2.cse_temp = (%temp.40 + uint32 4)
-        // CHECK: branchcond (%2.cse_temp <= %temp.32), block9, block10
+        // CHECK: branchcond (unsigned %2.cse_temp <= %temp.32), block9, block10
 
         // CHECK: block8: # out_of_bounds
         // CHECK: assert-failure
@@ -216,7 +216,7 @@ contract Testing {
         // CHECK: block13: # body
         // CHECK: ty:uint32 %temp.44 = (builtin ReadFromBuffer ((arg #0), %temp.40))
         // CHECK: ty:uint32 %3.cse_temp = (%temp.40 + uint32 4)
-        // CHECK: branchcond (%3.cse_temp <= %temp.32), block15, block16
+        // CHECK: branchcond (unsigned %3.cse_temp <= %temp.32), block15, block16
 
         // CHECK: block14: # end_for
         // CHECK: ty:uint32 %temp.40 = (%temp.40 - (%temp.34 + uint32 8))
@@ -227,10 +227,9 @@ contract Testing {
 
         // CHECK: block15: # inbounds
         // CHECK: ty:uint32 %4.cse_temp = (%temp.40 + (%temp.44 + uint32 4))
-        // CHECK: branchcond (%4.cse_temp <= %temp.32), block17, block18
+        // CHECK: branchcond (unsigned %4.cse_temp <= %temp.32), block17, block18
 
         // CHECK: block16: # out_of_bounds
-        // CHECK: # reaching: buffer:[0:0],  temp.32:[0:1],  temp.35:[0:3],  temp.34:[1:0, 14:3],  temp.36:[1:1],  temp.33:[1:1],  for_i_0.temp.37:[1:3, 4:0],  temp.38:[7:0],  temp.41:[7:2],  temp.40:[9:0, 17:3],  temp.42:[9:1],  temp.39:[9:1],  for_i_0.temp.43:[9:3, 12:0],  temp.44:[13:0],  temp.45:[17:0],  temp.46:[14:1]
         // CHECK: assert-failure
 
         // CHECK: block17: # inbounds
