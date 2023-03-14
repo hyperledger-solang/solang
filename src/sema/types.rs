@@ -1183,7 +1183,7 @@ impl Type {
             Type::Bytes(_) => false,
             Type::Enum(_) => false,
             Type::Struct(_) => true,
-            Type::Array(_, dims) => matches!(dims.first(), Some(ArrayLength::Fixed(_))),
+            Type::Array(_, dims) => !dims.iter().any(|d| *d == ArrayLength::Dynamic),
             Type::DynamicBytes => false,
             Type::String => false,
             Type::Mapping(..) => false,
