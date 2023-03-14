@@ -687,14 +687,16 @@ pub(super) trait AbiEncoding {
                 // String and Dynamic bytes are encoded as size + elements
                 let (array_length_var, size_length) =
                     self.retrieve_array_length(buffer, offset, vartab, cfg);
+                let array_start = offset.add_u32(&size_length);
+                validator.validate_offset(array_start.clone(), ns, vartab, cfg);
                 let array_length = Expression::Variable(Codegen, Uint(32), array_length_var);
-                let size = array_length.add_u32(&size_length);
-                validator.validate_offset(offset.add_u32(&size), ns, vartab, cfg);
+                let total_size = array_length.add_u32(&size_length);
+                validator.validate_offset(offset.add_u32(&total_size), ns, vartab, cfg);
 
                 let allocated_array = allocate_array(ty, array_length_var, vartab, cfg);
                 let advanced_pointer = Expression::AdvancePointer {
                     pointer: buffer.clone().into(),
-                    bytes_offset: offset.add_u32(&size_length).into(),
+                    bytes_offset: array_start.into(),
                 };
                 cfg.add(
                     vartab,
@@ -706,7 +708,7 @@ pub(super) trait AbiEncoding {
                 );
                 (
                     Expression::Variable(Codegen, ty.clone(), allocated_array),
-                    size,
+                    total_size,
                 )
             }
 
