@@ -9,6 +9,8 @@ use crate::sema::ast::{Namespace, Type, Type::Uint};
 use solang_parser::pt::Loc::Codegen;
 use std::collections::HashMap;
 
+use super::buffer_validator::BufferValidator;
+
 pub(super) struct ScaleEncoding {
     storage_cache: HashMap<usize, Expression>,
     packed_encoder: bool,
@@ -372,7 +374,7 @@ impl AbiEncoding for ScaleEncoding {
         buffer: &Expression,
         offset: &Expression,
         ty: &Type,
-        validator: &mut super::buffer_validator::BufferValidator,
+        validator: &mut BufferValidator,
         ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
@@ -385,7 +387,7 @@ impl AbiEncoding for ScaleEncoding {
             Builtin::ReadFromBuffer,
             vec![buffer.clone(), offset.clone()],
         );
-        let new_offset = offset.add_u32(&Expression::NumberLiteral(
+        let new_offset = offset.clone().add_u32(Expression::NumberLiteral(
             Codegen,
             Uint(32),
             ns.address_length.into(),
@@ -437,7 +439,7 @@ impl AbiEncoding for ScaleEncoding {
         if self.is_packed() {
             length
         } else {
-            encode_compact(&length, None, None, vartab, cfg).add_u32(&length)
+            encode_compact(&length, None, None, vartab, cfg).add_u32(length)
         }
     }
 

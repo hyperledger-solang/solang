@@ -659,16 +659,14 @@ impl RetrieveType for Expression {
 }
 
 /// Increment an expression by some value.
-///
-/// Assumes
 impl Expression {
-    pub(crate) fn add_u32(&self, other: &Expression) -> Self {
+    pub(crate) fn add_u32(self, other: Expression) -> Self {
         Expression::Add(
             pt::Loc::Codegen,
             Type::Uint(32),
             false,
-            self.clone().into(),
-            other.clone().into(),
+            self.into(),
+            other.into(),
         )
     }
 

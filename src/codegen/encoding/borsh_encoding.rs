@@ -132,7 +132,9 @@ impl AbiEncoding for BorshEncoding {
         );
 
         let new_offset =
-            offset.add_u32(&Expression::NumberLiteral(Codegen, Uint(32), selector_size));
+            offset
+                .clone()
+                .add_u32(Expression::NumberLiteral(Codegen, Uint(32), selector_size));
 
         let address = Expression::Builtin(
             Codegen,
@@ -171,7 +173,7 @@ impl AbiEncoding for BorshEncoding {
         if self.is_packed() {
             length
         } else {
-            length.add_u32(&Expression::NumberLiteral(Codegen, Uint(32), 4.into()))
+            length.add_u32(Expression::NumberLiteral(Codegen, Uint(32), 4.into()))
         }
     }
 
