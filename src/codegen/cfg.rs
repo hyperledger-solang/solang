@@ -139,6 +139,7 @@ pub enum Instr {
         value: Expression,
         gas: Expression,
         callty: CallTy,
+        contract_function_no: Option<(usize, usize)>,
     },
     /// Value transfer; either address.send() or address.transfer()
     ValueTransfer {
@@ -416,6 +417,46 @@ pub enum ASTFunction {
     SolidityFunction(usize),
     YulFunction(usize),
     None,
+}
+
+impl BasicBlock {
+    /// Fetch the blocks that can be executed after the block passed as argument
+    pub fn edges(&self) -> Vec<usize> {
+        let mut out = Vec::new();
+
+        // out cfg has edge as the last instruction in a block; EXCEPT
+        // Instr::AbiDecode() which has an edge when decoding fails
+        for instr in &self.instr {
+            match instr {
+                Instr::Branch { block } => {
+                    out.push(*block);
+                }
+                Instr::BranchCond {
+                    true_block,
+                    false_block,
+                    ..
+                } => {
+                    out.push(*true_block);
+                    out.push(*false_block);
+                }
+                Instr::AbiDecode {
+                    exception_block: Some(block),
+                    ..
+                } => {
+                    out.push(*block);
+                }
+                Instr::Switch { default, cases, .. } => {
+                    out.push(*default);
+                    for (_, goto) in cases {
+                        out.push(*goto);
+                    }
+                }
+                _ => (),
+            }
+        }
+
+        out
+    }
 }
 
 impl ControlFlowGraph {
@@ -1064,9 +1105,10 @@ impl ControlFlowGraph {
                 seeds,
                 gas,
                 callty,
+                contract_function_no
             } => {
                 format!(
-                    "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{}",
+                    "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{} contract|function:{}",
                     match success {
                         Some(i) => format!("%{}", self.vars[i].id.name),
                         None => "_".to_string(),
@@ -1090,6 +1132,11 @@ impl ControlFlowGraph {
                     } else {
                         String::new()
                     },
+                    if let Some((contract_no, function_no)) = contract_function_no {
+                        format!("({contract_no}, {function_no})")
+                    } else {
+                        "_".to_string()
+                    }
                 )
             }
             Instr::ValueTransfer {

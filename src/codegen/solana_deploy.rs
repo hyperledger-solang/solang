@@ -474,6 +474,7 @@ pub(super) fn solana_deploy(
                 value: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(0)),
                 gas: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(0)),
                 callty: CallTy::Regular,
+                contract_function_no: None,
             },
         );
 

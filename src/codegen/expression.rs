@@ -672,6 +672,14 @@ pub fn expression(
                 )
             }
         }
+        ast::Expression::Cast { to, expr, .. }
+            if matches!((expr.ty(), to), (Type::Address(_), Type::Contract(_))) =>
+        {
+            // Address and Contract have the same underlying type. CSE will create
+            // a temporary to replace multiple casts from address to Contract, which have no
+            // real purpose.
+            expression(expr, cfg, contract_no, func, ns, vartab, opt)
+        }
         ast::Expression::Cast { loc, to, expr }
             if matches!(to, Type::Array(..))
                 && matches!(**expr, ast::Expression::ArrayLiteral { .. }) =>
@@ -1550,6 +1558,7 @@ fn payable_send(
                 value,
                 gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::from(i64::MAX)),
                 callty: CallTy::Regular,
+                contract_function_no: None,
             },
         );
     }
@@ -1599,6 +1608,7 @@ fn payable_transfer(
                 value,
                 gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::from(i64::MAX)),
                 callty: CallTy::Regular,
+                contract_function_no: None,
             },
         );
     }
@@ -2574,6 +2584,7 @@ pub fn emit_function_call(
                     seeds,
                     gas,
                     callty: ty.clone(),
+                    contract_function_no: None,
                 },
             );
 
@@ -2597,6 +2608,9 @@ pub fn emit_function_call(
             } = function.as_ref()
             {
                 let dest_func = &ns.functions[*function_no];
+                let contract_function_no = dest_func
+                    .contract_no
+                    .map(|contract_no| (contract_no, *function_no));
 
                 let mut tys: Vec<Type> = args.iter().map(|a| a.ty()).collect();
                 let mut args: Vec<Expression> = args
@@ -2646,6 +2660,7 @@ pub fn emit_function_call(
                         value,
                         gas,
                         callty: CallTy::Regular,
+                        contract_function_no,
                     },
                 );
 
@@ -2710,6 +2725,7 @@ pub fn emit_function_call(
                         value,
                         gas,
                         callty: CallTy::Regular,
+                        contract_function_no: None,
                     },
                 );
 

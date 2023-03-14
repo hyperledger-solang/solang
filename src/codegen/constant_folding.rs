@@ -237,6 +237,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     accounts,
                     callty,
                     seeds,
+                    contract_function_no,
                 } => {
                     let value = expression(value, Some(&vars), cfg, ns).0;
                     let gas = expression(gas, Some(&vars), cfg, ns).0;
@@ -260,6 +261,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         value,
                         gas,
                         callty: callty.clone(),
+                        contract_function_no: *contract_function_no,
                     };
                 }
                 Instr::AbiDecode {

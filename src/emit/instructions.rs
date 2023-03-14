@@ -790,6 +790,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             callty,
             accounts,
             seeds,
+            ..
         } => {
             let loc = payload.loc();
             let gas = expression(target, bin, gas, &w.vars, function, ns).into_int_value();

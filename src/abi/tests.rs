@@ -3,7 +3,7 @@
 #![cfg(test)]
 
 use crate::abi::anchor::generate_anchor_idl;
-use crate::codegen::{OptimizationLevel, Options};
+use crate::codegen::{codegen, Options};
 use crate::file_resolver::FileResolver;
 use crate::sema::ast::Namespace;
 use crate::{codegen, parse_and_resolve, Target};
@@ -41,7 +41,8 @@ contract caller {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
     assert_eq!(
         idl.version,
@@ -75,7 +76,8 @@ fn constants_and_types() {
     enum Week {Monday, Tuesday, Wednesday}
 }
     "#;
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert!(idl.constants.is_empty());
@@ -177,7 +179,8 @@ fn instructions_and_types() {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert_eq!(idl.instructions.len(), 7);
@@ -205,26 +208,15 @@ fn instructions_and_types() {
     assert!(idl.instructions[1].docs.is_none());
     assert_eq!(
         idl.instructions[1].accounts,
-        vec![
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "dataAccount".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            }),
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "systemProgram".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            })
-        ]
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: false,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
     );
     assert!(idl.instructions[1].args.is_empty());
     assert_eq!(idl.instructions[1].returns, Some(IdlType::U64));
@@ -234,26 +226,15 @@ fn instructions_and_types() {
     assert!(idl.instructions[2].docs.is_none());
     assert_eq!(
         idl.instructions[2].accounts,
-        vec![
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "dataAccount".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            }),
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "systemProgram".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            })
-        ]
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: false,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
     );
     assert_eq!(
         idl.instructions[2].args,
@@ -268,18 +249,7 @@ fn instructions_and_types() {
     // sum function
     assert_eq!(idl.instructions[3].name, "sum");
     assert!(idl.instructions[3].docs.is_none());
-    assert_eq!(
-        idl.instructions[3].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "systemProgram".into(),
-            is_mut: false,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![]
-        })]
-    );
+    assert_eq!(idl.instructions[3].accounts, vec![]);
     assert_eq!(
         idl.instructions[3].args,
         vec![
@@ -304,26 +274,15 @@ fn instructions_and_types() {
     );
     assert_eq!(
         idl.instructions[4].accounts,
-        vec![
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "dataAccount".to_string(),
-                is_mut: true,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            }),
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "systemProgram".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            })
-        ]
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: true,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
     );
     assert_eq!(
         idl.instructions[4].args,
@@ -342,26 +301,15 @@ fn instructions_and_types() {
     );
     assert_eq!(
         idl.instructions[5].accounts,
-        vec![
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "dataAccount".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            }),
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "systemProgram".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            })
-        ]
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: false,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
     );
     assert!(idl.instructions[5].args.is_empty());
     assert_eq!(idl.instructions[5].returns, Some(IdlType::String));
@@ -370,26 +318,15 @@ fn instructions_and_types() {
     assert!(idl.instructions[6].docs.is_none());
     assert_eq!(
         idl.instructions[6].accounts,
-        vec![
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "dataAccount".to_string(),
-                is_mut: true,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            }),
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "systemProgram".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            })
-        ]
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: true,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
     );
     assert!(idl.instructions[6].args.is_empty());
     assert_eq!(
@@ -450,21 +387,7 @@ contract caller {
 
     let mut ns = generate_namespace(src);
     // We need this to populate Contract.emit_events
-    codegen::codegen(
-        &mut ns,
-        &Options {
-            dead_storage: false,
-            constant_folding: false,
-            strength_reduce: false,
-            vector_to_slice: false,
-            math_overflow_check: false,
-            common_subexpression_elimination: false,
-            generate_debug_information: false,
-            opt_level: OptimizationLevel::None,
-            log_api_return_codes: false,
-            log_runtime_errors: false,
-        },
-    );
+    codegen::codegen(&mut ns, &Options::default());
 
     let idl = generate_anchor_idl(0, &ns);
 
@@ -492,26 +415,15 @@ contract caller {
     assert!(idl.instructions[1].docs.is_none());
     assert_eq!(
         idl.instructions[1].accounts,
-        vec![
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "dataAccount".to_string(),
-                is_mut: true,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            }),
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "systemProgram".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            })
-        ]
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: true,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
     );
     assert_eq!(
         idl.instructions[1].args,
@@ -631,7 +543,8 @@ fn types() {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert_eq!(idl.instructions.len(), 2);
@@ -657,26 +570,15 @@ fn types() {
     assert_eq!(idl.instructions[1].name, "myFunc");
     assert_eq!(
         idl.instructions[1].accounts,
-        vec![
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "dataAccount".to_string(),
-                is_mut: true,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            }),
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "systemProgram".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            })
-        ]
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: true,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
     );
     assert_eq!(
         idl.instructions[1].args,
@@ -707,7 +609,24 @@ fn types() {
     assert!(idl.state.is_none());
     assert!(idl.accounts.is_empty());
     assert!(idl.types.is_empty());
-    assert!(idl.events.is_none());
+    assert_eq!(
+        idl.events.unwrap(),
+        vec![IdlEvent {
+            name: "Event1".to_string(),
+            fields: vec![
+                IdlEventField {
+                    name: "field_0".to_string(),
+                    ty: IdlType::I32,
+                    index: false,
+                },
+                IdlEventField {
+                    name: "field_1".to_string(),
+                    ty: IdlType::U32,
+                    index: false,
+                }
+            ]
+        }]
+    );
     assert!(idl.errors.is_none());
     assert!(idl.metadata.is_none());
 }
@@ -726,7 +645,8 @@ fn constructor() {
     }
 }
     "#;
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert_eq!(idl.name, "caller");
@@ -738,26 +658,15 @@ fn constructor() {
     assert!(idl.instructions[0].docs.is_none());
     assert_eq!(
         idl.instructions[0].accounts,
-        vec![
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "dataAccount".to_string(),
-                is_mut: true,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            }),
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "systemProgram".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            })
-        ]
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: true,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
     );
     assert_eq!(
         idl.instructions[0].args,
@@ -773,26 +682,15 @@ fn constructor() {
     assert!(idl.instructions[1].docs.is_none());
     assert_eq!(
         idl.instructions[1].accounts,
-        vec![
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "dataAccount".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            }),
-            IdlAccountItem::IdlAccount(IdlAccount {
-                name: "systemProgram".to_string(),
-                is_mut: false,
-                is_signer: false,
-                is_optional: Some(false),
-                docs: None,
-                pda: None,
-                relations: vec![],
-            })
-        ]
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: false,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
     );
     assert!(idl.instructions[1].args.is_empty());
     assert_eq!(idl.instructions[1].returns, Some(IdlType::U64));
@@ -815,7 +713,8 @@ contract Testing {
     }
 }    "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert_eq!(idl.instructions.len(), 2);
@@ -899,7 +798,8 @@ contract Testing {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert_eq!(idl.instructions.len(), 3);
@@ -908,18 +808,7 @@ contract Testing {
 
     assert_eq!(idl.instructions[1].name, "getNum_uint64_uint64");
     assert!(idl.instructions[1].docs.is_none());
-    assert_eq!(
-        idl.instructions[1].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "systemProgram".into(),
-            is_mut: false,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![]
-        })]
-    );
+    assert_eq!(idl.instructions[1].accounts, vec![]);
     assert_eq!(idl.instructions[1].args.len(), 2);
     assert_eq!(
         idl.instructions[1].args[0],
@@ -944,18 +833,7 @@ contract Testing {
 
     assert_eq!(idl.instructions[2].name, "getNum_int32_int32");
     assert!(idl.instructions[2].docs.is_none());
-    assert_eq!(
-        idl.instructions[1].accounts,
-        vec![IdlAccountItem::IdlAccount(IdlAccount {
-            name: "systemProgram".into(),
-            is_mut: false,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![]
-        })]
-    );
+    assert_eq!(idl.instructions[1].accounts, vec![]);
 
     assert_eq!(idl.instructions[2].args.len(), 2);
     assert_eq!(
@@ -1050,7 +928,8 @@ fn name_collision() {
 }
     "#;
 
-    let ns = generate_namespace(str);
+    let mut ns = generate_namespace(str);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert_eq!(idl.types.len(), 3);
@@ -1143,7 +1022,8 @@ fn double_name_collision() {
 }
     "#;
 
-    let ns = generate_namespace(str);
+    let mut ns = generate_namespace(str);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert_eq!(idl.types.len(), 4);
@@ -1243,21 +1123,7 @@ fn deduplication() {
 
     let mut ns = generate_namespace(src);
     // We need this to populate Contract.emit_events
-    codegen::codegen(
-        &mut ns,
-        &Options {
-            dead_storage: false,
-            constant_folding: false,
-            strength_reduce: false,
-            vector_to_slice: false,
-            math_overflow_check: false,
-            common_subexpression_elimination: false,
-            generate_debug_information: false,
-            opt_level: OptimizationLevel::None,
-            log_api_return_codes: false,
-            log_runtime_errors: false,
-        },
-    );
+    codegen::codegen(&mut ns, &Options::default());
 
     let idl = generate_anchor_idl(0, &ns);
 
@@ -1361,7 +1227,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 2);
@@ -1379,7 +1246,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 2);
@@ -1399,7 +1267,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
     assert_eq!(idl.types.len(), 2);
     assert_eq!(idl.types[0].name, "Foo");
@@ -1418,7 +1287,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 2);
@@ -1441,7 +1311,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 3);
@@ -1464,7 +1335,8 @@ contract C {
         function f(Foo y,  D.Foo x, D_Foo z) public pure returns (int64) { return x.f1 + z.f2; }
 }
     "#;
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 3);
@@ -1487,7 +1359,8 @@ contract C {
         function f(D_Foo z, Foo y,  D.Foo x) public pure returns (int64) { return x.f1 + z.f2; }
 }
     "#;
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 3);
@@ -1515,7 +1388,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 4);
@@ -1544,7 +1418,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 4);
@@ -1573,7 +1448,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 4);
@@ -1602,7 +1478,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(1, &ns);
 
     assert_eq!(idl.types.len(), 4);
@@ -1629,7 +1506,8 @@ contract C {
 }
     "#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert!(idl.metadata.is_some());
@@ -1648,7 +1526,8 @@ fn data_account_signer() {
         constructor(address wallet) {}
     }"#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert_eq!(idl.instructions.len(), 1);
@@ -1699,7 +1578,8 @@ fn data_account_signer() {
         constructor(address wallet) {}
     }"#;
 
-    let ns = generate_namespace(src);
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
     let idl = generate_anchor_idl(0, &ns);
 
     assert_eq!(idl.instructions.len(), 1);
@@ -1740,4 +1620,635 @@ fn data_account_signer() {
     );
     assert!(idl.instructions[0].args.len() == 1);
     assert!(idl.instructions[0].returns.is_none());
+}
+
+#[test]
+fn accounts_call_chain() {
+    let src = r#"
+    contract Test {
+    function call_1() public view returns (uint64) {
+        return call_2();
+    }
+
+    function call_2() public view returns (uint64) {
+        return call_3();
+    }
+
+    function call_3() public view returns (uint64) {
+        return block.timestamp;
+    }
+}
+    "#;
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl = generate_anchor_idl(0, &ns);
+
+    assert_eq!(idl.instructions[0].name, "new");
+    assert_eq!(
+        idl.instructions[0].accounts,
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: true,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        })]
+    );
+
+    assert_eq!(idl.instructions[1].name, "call_1");
+    assert_eq!(
+        idl.instructions[1].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "clock".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+
+    assert_eq!(idl.instructions[2].name, "call_2");
+    assert_eq!(idl.instructions[2].accounts, idl.instructions[1].accounts);
+
+    assert_eq!(idl.instructions[3].name, "call_3");
+    assert_eq!(idl.instructions[3].accounts, idl.instructions[1].accounts);
+}
+
+#[test]
+fn accounts_on_recursion() {
+    let src = r#"
+        contract Test {
+    address addr;
+    bytes message;
+    bytes signature;
+
+    constructor(address addr_, bytes message_, bytes signature_) {
+        addr = addr_;
+        message = message_;
+        signature = signature_;
+    }
+
+
+    function call_1() public view returns (bool, uint64) {
+        return call_2();
+    }
+
+    function call_2() public view returns (bool, uint64) {
+        (bool a, uint64 b) = call_3();
+        return (signatureVerify(addr, message, signature), b);
+    }
+
+    function call_3() public view returns (bool, uint64) {
+        (bool a, uint64 b) = call_1();
+        return (a, block.timestamp);
+    }
+}
+    "#;
+
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl = generate_anchor_idl(0, &ns);
+
+    assert_eq!(idl.instructions[0].name, "new");
+    assert_eq!(
+        idl.instructions[0].accounts,
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: true,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        })]
+    );
+
+    assert_eq!(idl.instructions[1].name, "call_1");
+    assert_eq!(
+        idl.instructions[1].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "SysvarInstruction".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "clock".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+
+    assert_eq!(idl.instructions[2].name, "call_2");
+    assert_eq!(idl.instructions[2].accounts, idl.instructions[1].accounts);
+
+    assert_eq!(idl.instructions[3].name, "call_3");
+    assert_eq!(
+        idl.instructions[3].accounts[0],
+        idl.instructions[1].accounts[0]
+    );
+    assert_eq!(
+        idl.instructions[3].accounts[1],
+        idl.instructions[1].accounts[2]
+    );
+    assert_eq!(
+        idl.instructions[3].accounts[2],
+        idl.instructions[1].accounts[1]
+    );
+}
+
+#[test]
+fn system_account_for_payer_annotation() {
+    let src = r#"
+    contract Test {
+    address addr;
+    bytes message;
+    bytes signature;
+
+    @payer(addr_)
+    constructor(address addr_, bytes message_, bytes signature_) {
+        addr = addr_;
+        message = message_;
+        signature = signature_;
+    }
+
+    function call_3() public view returns (bool, uint64) {
+        return (true, block.timestamp);
+    }
+}
+    "#;
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl = generate_anchor_idl(0, &ns);
+
+    assert_eq!(idl.instructions[0].name, "new");
+    assert_eq!(
+        idl.instructions[0].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: true,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "wallet".to_string(),
+                is_mut: false,
+                is_signer: true,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+}
+
+#[test]
+fn calling_system_program() {
+    let src = r#"
+        import 'solana';
+
+library SystemInstruction {
+    address constant systemAddress = address"11111111111111111111111111111111";
+    enum Instruction {
+        CreateAccount,
+        Assign
+    }
+
+    function create_account(address from, address to, uint64 lamports, uint64 space, address owner) internal {
+        AccountMeta[2] metas = [
+            AccountMeta({pubkey: from, is_signer: true, is_writable: true}),
+            AccountMeta({pubkey: to, is_signer: true, is_writable: true})
+        ];
+        bytes bincode = abi.encode(uint32(Instruction.CreateAccount), lamports, space, owner);
+        systemAddress.call{accounts: metas}(bincode);
+    }
+}
+
+contract Test {
+
+    function call_1(address from, address to, uint64 lamports, uint64 space, address owner) public {
+        SystemInstruction.create_account(from, to, lamports, space, owner);
+    }
+}
+    "#;
+
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.instructions[0].name, "new");
+
+    assert_eq!(idl.instructions[1].name, "call_1");
+    assert_eq!(
+        idl.instructions[1].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+}
+
+#[test]
+fn call_token_program() {
+    let src = r#"
+    import 'solana';
+
+library TokenProgram {
+    address constant systemAddress = address"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+    enum Instruction {
+        CreateAccount,
+        Assign
+    }
+
+    function create_account(address from, address to, uint64 lamports, uint64 space, address owner) internal {
+        AccountMeta[2] metas = [
+            AccountMeta({pubkey: from, is_signer: true, is_writable: true}),
+            AccountMeta({pubkey: to, is_signer: true, is_writable: true})
+        ];
+        bytes bincode = abi.encode(uint32(Instruction.CreateAccount), lamports, space, owner);
+        systemAddress.call{accounts: metas}(bincode);
+    }
+}
+
+contract Test {
+
+    function call_1(address from, address to, uint64 lamports, uint64 space, address owner) public {
+        TokenProgram.create_account(from, to, lamports, space, owner);
+    }
+}
+    "#;
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl = generate_anchor_idl(1, &ns);
+
+    assert_eq!(idl.instructions[0].name, "new");
+
+    assert_eq!(idl.instructions[1].name, "call_1");
+    assert_eq!(
+        idl.instructions[1].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "tokenProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+}
+
+#[test]
+fn other_collected_public_keys() {
+    let src = r#"
+    import 'solana';
+
+anchor_anchor constant anchor = anchor_anchor(address'SysvarRent111111111111111111111111111111111');
+
+interface anchor_anchor {
+	@selector([0xaf,0xaf,0x6d,0x1f,0x0d,0x98,0x9b,0xed])
+	function initialize(bool data1) view external;
+}
+
+associated constant ass = associated(address'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+
+interface associated {
+	@selector([0xaf,0xaf,0x6d,0x1f,0x0d,0x98,0x9b,0xed])
+	function initialize(bool data1) view external;
+}
+
+
+clock_interface constant my_clock = clock_interface(address'SysvarC1ock11111111111111111111111111111111');
+
+interface clock_interface {
+	@selector([0xaf,0xaf,0x6d,0x1f,0x0d,0x98,0x9b,0xed])
+	function initialize(bool data1) view external;
+}
+
+other_interface constant other_inter = other_interface(address'z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq');
+
+interface other_interface {
+	@selector([0xaf,0xaf,0x6d,0x1f,0x0d,0x98,0x9b,0xed])
+	function initialize(bool data1) view external;
+}
+
+contract Test {
+    function call_1() public {
+        anchor.initialize(true);
+    }
+
+    function call_2() public {
+        ass.initialize(false);
+    }
+
+    function call_3() public {
+        my_clock.initialize(true);
+    }
+
+    function call_4() public {
+        other_inter.initialize(false);
+    }
+}
+    "#;
+
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl = generate_anchor_idl(4, &ns);
+
+    assert_eq!(idl.instructions[0].name, "new");
+    assert_eq!(
+        idl.instructions[0].accounts,
+        vec![IdlAccountItem::IdlAccount(IdlAccount {
+            name: "dataAccount".to_string(),
+            is_mut: true,
+            is_signer: false,
+            is_optional: Some(false),
+            docs: None,
+            pda: None,
+            relations: vec![],
+        }),]
+    );
+
+    assert_eq!(idl.instructions[1].name, "call_1");
+    assert_eq!(
+        idl.instructions[1].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "rent".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+
+    assert_eq!(idl.instructions[2].name, "call_2");
+    assert_eq!(
+        idl.instructions[2].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "associatedTokenProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+
+    assert_eq!(idl.instructions[3].name, "call_3");
+    assert_eq!(
+        idl.instructions[3].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "clock".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+
+    assert_eq!(idl.instructions[4].name, "call_4");
+    assert_eq!(
+        idl.instructions[4].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+}
+
+#[test]
+fn multiple_contracts() {
+    let src = r#"
+    import 'solana';
+
+contract creator {
+    Child public c;
+
+    function create_child(address child, address payer) public returns (uint64) {
+        print("Going to create child");
+        c = new Child{address: child}(payer);
+
+        return c.say_hello();
+    }
+}
+
+@program_id("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT")
+contract Child {
+    @payer(payer)
+    @space(511 + 7)
+    constructor(address payer) {
+        print("In child constructor");
+    }
+
+    function say_hello() public view returns (uint64) {
+        print("Hello there");
+        return block.slot;
+    }
+}
+    "#;
+
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl = generate_anchor_idl(0, &ns);
+
+    assert_eq!(idl.instructions[0].name, "new");
+    assert_eq!(idl.instructions[1].name, "c");
+    assert_eq!(idl.instructions[2].name, "create_child");
+
+    assert_eq!(
+        idl.instructions[2].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "clock".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
 }

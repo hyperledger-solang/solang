@@ -49,7 +49,6 @@ describe('Simple collectible', function () {
             owner_token_account.address)
             .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([
-                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
                 { pubkey: mint, isSigner: false, isWritable: true },
                 { pubkey: owner_token_account.address, isSigner: false, isWritable: true },
                 { pubkey: mint_authority.publicKey, isSigner: true, isWritable: true },
@@ -75,7 +74,6 @@ describe('Simple collectible', function () {
             new_owner_token_account.address)
             .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([
-                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
                 { pubkey: new_owner_token_account.address, isSigner: false, isWritable: true },
                 { pubkey: owner_token_account.address, isSigner: false, isWritable: true },
                 { pubkey: nft_owner.publicKey, isSigner: true, isWritable: true },
