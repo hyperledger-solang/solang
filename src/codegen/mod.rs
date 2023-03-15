@@ -658,8 +658,8 @@ impl RetrieveType for Expression {
     }
 }
 
-/// Increment an expression by some value.
 impl Expression {
+    /// Increment an expression by some value.
     pub(crate) fn add_u32(self, other: Expression) -> Self {
         Expression::Add(
             pt::Loc::Codegen,
