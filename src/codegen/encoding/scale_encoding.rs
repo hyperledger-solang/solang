@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::encoding::{increment_by, AbiEncoding};
+use crate::codegen::encoding::AbiEncoding;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Namespace, Parameter, Type, Type::Uint};
-use solang_parser::pt::{Loc, Loc::Codegen};
+use crate::sema::ast::StructType;
+use crate::sema::ast::{Namespace, Type, Type::Uint};
+use solang_parser::pt::Loc::Codegen;
 use std::collections::HashMap;
+
+use super::buffer_validator::BufferValidator;
 
 pub(super) struct ScaleEncoding {
     storage_cache: HashMap<usize, Expression>,
@@ -20,6 +23,159 @@ impl ScaleEncoding {
             packed_encoder: packed,
         }
     }
+}
+
+/// Decoding the compact integer at current `offset` inside `buffer`.
+/// Returns the variable number of the decoded integer (32bit) and the width in bytes of the encoded version.
+/// More information can found in the /// [SCALE documentation](https://docs.substrate.io/reference/scale-codec/).
+fn decode_compact(
+    buffer: &Expression,
+    offset: &Expression,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+) -> (usize, Expression) {
+    let decoded_var = vartab.temp_anonymous(&Uint(32));
+    let size_width_var = vartab.temp_anonymous(&Uint(32));
+    vartab.new_dirty_tracker();
+    let read_byte = Expression::Builtin(
+        Codegen,
+        vec![Uint(8)],
+        Builtin::ReadFromBuffer,
+        vec![buffer.clone(), offset.clone()],
+    );
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Codegen,
+            res: size_width_var,
+            expr: Expression::ZeroExt(Codegen, Uint(32), read_byte.into()),
+        },
+    );
+    let size_width = Expression::Variable(Codegen, Uint(32), size_width_var);
+    let two = Expression::NumberLiteral(Codegen, Uint(32), 2.into());
+    let three = Expression::NumberLiteral(Codegen, Uint(32), 3.into());
+    let cond = Expression::BitwiseAnd(Codegen, Uint(32), size_width.clone().into(), three.into());
+    let cases = &[
+        (
+            Expression::NumberLiteral(Codegen, Uint(32), 0.into()),
+            cfg.new_basic_block("case_0".into()),
+        ),
+        (
+            Expression::NumberLiteral(Codegen, Uint(32), 1.into()),
+            cfg.new_basic_block("case_1".into()),
+        ),
+        (
+            Expression::NumberLiteral(Codegen, Uint(32), 2.into()),
+            cfg.new_basic_block("case_2".into()),
+        ),
+    ];
+    let default = cfg.new_basic_block("case_default".into());
+    cfg.add(
+        vartab,
+        Instr::Switch {
+            cond,
+            cases: cases.to_vec(),
+            default,
+        },
+    );
+
+    let done = cfg.new_basic_block("done".into());
+    // We will land in the default block for sizes of 2**30 (1GB) or larger.
+    // Such big sizes are invalid for smart contracts and should never occur anyways.
+    cfg.set_basic_block(default);
+    cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
+
+    cfg.set_basic_block(cases[0].1);
+    let expr = Expression::ShiftRight(
+        Codegen,
+        Uint(32),
+        size_width.clone().into(),
+        two.clone().into(),
+        false,
+    );
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Codegen,
+            res: decoded_var,
+            expr,
+        },
+    );
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Codegen,
+            res: size_width_var,
+            expr: Expression::NumberLiteral(Codegen, Uint(32), 1.into()),
+        },
+    );
+    cfg.add(vartab, Instr::Branch { block: done });
+
+    cfg.set_basic_block(cases[1].1);
+    let read_byte = Expression::Builtin(
+        Codegen,
+        vec![Uint(16)],
+        Builtin::ReadFromBuffer,
+        vec![buffer.clone(), offset.clone()],
+    );
+    let expr = Expression::ShiftRight(
+        Codegen,
+        Uint(32),
+        Expression::ZeroExt(Codegen, Uint(32), read_byte.into()).into(),
+        two.clone().into(),
+        false,
+    );
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Codegen,
+            res: decoded_var,
+            expr,
+        },
+    );
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Codegen,
+            res: size_width_var,
+            expr: two.clone(),
+        },
+    );
+    cfg.add(vartab, Instr::Branch { block: done });
+
+    cfg.set_basic_block(cases[2].1);
+    let read_byte = Expression::Builtin(
+        Codegen,
+        vec![Uint(32)],
+        Builtin::ReadFromBuffer,
+        vec![buffer.clone(), offset.clone()],
+    );
+    let expr = Expression::ShiftRight(Codegen, Uint(32), read_byte.into(), two.into(), false);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Codegen,
+            res: decoded_var,
+            expr,
+        },
+    );
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Codegen,
+            res: size_width_var,
+            expr: Expression::NumberLiteral(Codegen, Uint(32), 4.into()),
+        },
+    );
+    cfg.add(vartab, Instr::Branch { block: done });
+
+    vartab.set_dirty(decoded_var);
+    vartab.set_dirty(size_width_var);
+
+    cfg.set_basic_block(done);
+    cfg.set_phis(done, vartab.pop_dirty_tracker());
+
+    (decoded_var, size_width)
 }
 
 /// Encode `expr` into `buffer` as a compact integer. More information can found in the
@@ -213,49 +369,51 @@ impl AbiEncoding for ScaleEncoding {
         encode_compact(expr, Some(buffer), Some(offset), vartab, cfg)
     }
 
-    fn abi_decode(
+    fn decode_external_function(
         &self,
-        loc: &Loc,
         buffer: &Expression,
-        types: &[Type],
-        _ns: &Namespace,
+        offset: &Expression,
+        ty: &Type,
+        validator: &mut BufferValidator,
+        ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
-        buffer_size: Option<Expression>,
-    ) -> Vec<Expression> {
-        assert!(!self.packed_encoder);
-        let mut returns: Vec<Expression> = Vec::with_capacity(types.len());
-        let mut var_nos: Vec<usize> = Vec::with_capacity(types.len());
-        let mut decode_params: Vec<Parameter> = Vec::with_capacity(types.len());
-
-        for item in types {
-            let var_no = vartab.temp_anonymous(item);
-            var_nos.push(var_no);
-            returns.push(Expression::Variable(*loc, item.clone(), var_no));
-            decode_params.push(Parameter {
-                loc: Loc::Codegen,
-                id: None,
-                ty: item.clone(),
-                ty_loc: None,
-                indexed: false,
-                readonly: false,
-                recursive: false,
-            });
-        }
-
-        cfg.add(
-            vartab,
-            Instr::AbiDecode {
-                res: var_nos,
-                selector: None,
-                exception_block: None,
-                tys: decode_params,
-                data: buffer.clone(),
-                data_len: buffer_size,
-            },
+    ) -> (Expression, Expression) {
+        let size = Expression::NumberLiteral(Codegen, Uint(32), (ns.address_length + 4).into());
+        validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
+        let address = Expression::Builtin(
+            Codegen,
+            vec![Type::Address(false)],
+            Builtin::ReadFromBuffer,
+            vec![buffer.clone(), offset.clone()],
         );
+        let new_offset = offset.clone().add_u32(Expression::NumberLiteral(
+            Codegen,
+            Uint(32),
+            ns.address_length.into(),
+        ));
+        let selector = Expression::Builtin(
+            Codegen,
+            vec![Type::FunctionSelector],
+            Builtin::ReadFromBuffer,
+            vec![buffer.clone(), new_offset],
+        );
+        let ext_func = Expression::StructLiteral(
+            Codegen,
+            Type::Struct(StructType::ExternalFunction),
+            vec![selector, address],
+        );
+        (Expression::Cast(Codegen, ty.clone(), ext_func.into()), size)
+    }
 
-        returns
+    fn retrieve_array_length(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (usize, Expression) {
+        decode_compact(buffer, offset, vartab, cfg)
     }
 
     fn storage_cache_insert(&mut self, arg_no: usize, expr: Expression) {
@@ -282,7 +440,7 @@ impl AbiEncoding for ScaleEncoding {
         if self.is_packed() {
             length
         } else {
-            increment_by(encode_compact(&length, None, None, vartab, cfg), length)
+            encode_compact(&length, None, None, vartab, cfg).add_u32(length)
         }
     }
 

@@ -1512,3 +1512,71 @@ fn fixed_bytes() {
         assert_eq!(runtime.vm.output[..], [i]);
     }
 }
+
+#[test]
+fn abi_decode_dynamic_array2() {
+    let mut runtime = build_solidity(
+        r#"
+        contract c {
+            function decode() pure public {
+                bytes enc = hex"2c000000000300000006000000090000000c0000000f0000001200000015000000180000001b0000001e000000";
+                int32[] bar = abi.decode(enc, (int32[]));
+                assert(bar.length == 11);
+
+                for (int32 i = 0; i <11; i++) {
+                    assert(bar[uint32(i)] == i * 3);
+                }
+            }
+
+            function decode_empty() pure public {
+                bytes enc = hex"00";
+                int32[] bar = abi.decode(enc, (int32[]));
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("decode", vec![]);
+    runtime.function("decode_empty", vec![]);
+}
+
+#[test]
+fn abi_decode_dynamic_array3() {
+    let mut runtime = build_solidity(
+        r#"
+        contract Arr {
+            function decode() pure public {
+                bytes enc = hex"14140001020304140102030405140203040506140304050607140405060708";
+                uint8[][] bar = abi.decode(enc, (uint8[][]));
+                assert(bar.length == 5);
+        
+                for (uint8 i = 0; i <5; i++) {
+                        for (uint8 j = 0; j <5; j++) {
+                        assert(bar[uint32(i)][uint32(j)] == i + j);
+                                }
+                }
+            }
+        
+            function decode_empty() pure public {
+                bytes enc = hex"00";
+                uint8[][] bar = abi.decode(enc, (uint8[][]));
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    // The array in the first function was generated like this:
+    // let mut matrix = vec![];
+    // for i in 0..5 {
+    //     matrix.push(vec![]);
+    //     for j in 0..5 {
+    //         matrix[i].push((i + j) as u8);
+    //     }
+    // }
+
+    runtime.function("decode", vec![]);
+
+    runtime.function("decode_empty", vec![]);
+}

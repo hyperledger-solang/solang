@@ -330,3 +330,49 @@ fn ext() {
     runtime.function("test1", Vec::new());
     runtime.function("test2", Vec::new());
 }
+
+/// Test external function decoding
+#[test]
+fn encode_decode_ext_func() {
+    let mut runtime = build_solidity(
+        r##"
+        contract A {
+            @selector([0,0,0,0])
+            function a() public pure returns (uint8) {
+                return 127;
+            }
+
+            function it() public view returns (address) {
+                return address(this);
+            }
+        }
+        
+        contract B {
+            function encode_decode_call(address a) public returns (uint8) {
+                bytes4 selector = hex"00000000";
+    	        bytes enc = abi.encode(a, selector);
+                function() external returns (uint8) dec2 = abi.decode(enc, (function() external returns (uint8)));
+                return dec2();
+            }
+
+            function decode_call(function() external returns(uint8) func) public returns (uint8) {
+                bytes enc = abi.encode(func);
+                print("{}  ".format(enc));
+                function() external returns (uint8) dec2 = abi.decode(enc, (function() external returns (uint8)));
+                return dec2();
+            }
+        }
+        "##,
+    );
+
+    runtime.function("it", vec![]);
+    let mut address_of_a = runtime.vm.output.clone();
+
+    runtime.set_program(1);
+    runtime.function("encode_decode_call", address_of_a.clone());
+    assert_eq!(runtime.vm.output, 127u8.encode());
+
+    address_of_a.extend([0, 0, 0, 0].iter());
+    runtime.function("decode_call", address_of_a);
+    assert_eq!(runtime.vm.output, 127u8.encode());
+}

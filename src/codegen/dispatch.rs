@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::encoding::create_encoder;
 use crate::codegen::{
     cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
     solana_deploy::solana_deploy,
@@ -15,7 +14,7 @@ use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
 use solang_parser::{pt, pt::Loc};
 
-use super::encoding::abi_encode;
+use super::encoding::{abi_decode, abi_encode};
 
 /// Create the dispatch for the Solana target
 pub(super) fn function_dispatch(
@@ -316,8 +315,7 @@ fn add_function_dispatch_case(
         .iter()
         .map(|e| e.ty.clone())
         .collect::<Vec<Type>>();
-    let encoder = create_encoder(ns, false);
-    let decoded = encoder.abi_decode(
+    let decoded = abi_decode(
         &Loc::Codegen,
         argsdata,
         &tys,
@@ -405,9 +403,8 @@ fn add_constructor_dispatch_case(
             .iter()
             .map(|e| e.ty.clone())
             .collect::<Vec<Type>>();
-        let encoder = create_encoder(ns, false);
         let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(argslen));
-        returns = encoder.abi_decode(
+        returns = abi_decode(
             &Loc::Codegen,
             argsdata,
             &tys,
