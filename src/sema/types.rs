@@ -204,9 +204,9 @@ fn type_decl(
     });
 }
 
-/// A struct field is considered to be of infinite size, if it contains itself infinite times.
+/// A struct field is considered to be of infinite size, if it contains itself infinite times (not in a vector).
 ///
-/// This function sets the `infinitie_size` flag accordingly for all connection between `nodes`.
+/// This function sets the `infinitie_size` flag accordingly for all connections between `nodes`.
 /// `nodes` is assumed to be a set of strongly connected nodes from within the `graph`.
 ///
 /// Any node (struct) can have one or more edges (types) to some other node (struct).
@@ -257,7 +257,7 @@ fn check_recursive_struct_field(node: usize, graph: &Graph, ns: &mut Namespace) 
 
 /// Find all other structs a given user struct may reach.
 ///
-/// `edges` is a set with tuples of 3 dimensions. First two are the connecting nodes (struct numbers).
+/// `edges` is a set with tuples of 3 dimensions. The first two are the connecting nodes (struct numbers).
 /// The last dimension is the field number of the first struct where the connection originates.
 fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, ns: &Namespace) {
     for (field_no, field) in ns.structs[no].fields.iter().enumerate() {
@@ -282,7 +282,7 @@ fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, n
 ///   2. Find all Strongly Connected Components (SCC) in the graph.
 ///   3. For any node inside in any SCC, if there is a path from the node to itself, we've detected a cycle.
 ///   4. For every cycle, check if it is of infinite memory size and flag involved struct fields accordingly.
-///   5. For any struct in the namespace, check if there are any paths leading into a cycle.
+///   5. For any struct in the namespace, check if there are any cyclic paths stemming from it.
 ///      If there are, flag the corresponding struct field as `recursive`.
 fn find_struct_recursion(ns: &mut Namespace) {
     let mut edges = HashSet::new();
