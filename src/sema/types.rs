@@ -210,8 +210,8 @@ fn type_decl(
 /// `nodes` is assumed to be a set of strongly connected nodes from within the `graph`.
 ///
 /// Any node (struct) can have one or more edges (types) to some other node (struct).
-/// A struct field is not of infinite size, if there are any 2 neighboring nodes in the path,
-/// where all connecting edges between any two nodes in the `path` are mappings or dynamic arrays.
+/// A struct field is not of infinite size, if there are any 2 connecting nodes,
+/// where all edges between any of two connecting nodes are mappings or dynamic arrays.
 fn check_infinite_struct_size(graph: &Graph, nodes: Vec<usize>, ns: &mut Namespace) {
     let mut infinite_size = true;
     let mut offenders = HashSet::new();
@@ -281,7 +281,7 @@ fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, n
 ///      So we known from which struct field the connection originated later on.
 ///   2. Find all Strongly Connected Components (SCC) in the graph.
 ///   3. For any node inside in any SCC, if there is a path from the node to itself, we've detected a cycle.
-///   4. For every cycle, check if it is of infinite size and flag involved struct fields accordingly.
+///   4. For every cycle, check if it is of infinite memory size and flag involved struct fields accordingly.
 ///   5. For any struct in the namespace, check if there are any paths leading into a cycle.
 ///      If there are, flag the corresponding struct field as `recursive`.
 fn find_struct_recursion(ns: &mut Namespace) {
@@ -874,10 +874,7 @@ fn struct_offsets(ns: &mut Namespace) {
             let mut largest_alignment = 0;
 
             for field in &ns.structs[struct_no].fields {
-                let mut alignment = field.ty.align_of(ns);
-                if alignment == 0 {
-                    alignment = 1;
-                }
+                let alignment = field.ty.align_of(ns);
                 largest_alignment = std::cmp::max(alignment, largest_alignment);
                 let remainder = offset.clone() % alignment;
 
@@ -965,16 +962,6 @@ impl Type {
                 ty.user_struct_no(ns)
             }
             Type::UserType(no) => ns.user_types[*no].ty.user_struct_no(ns),
-            Type::InternalFunction {
-                params, returns, ..
-            }
-            | Type::ExternalFunction {
-                params, returns, ..
-            } => params
-                .iter()
-                .chain(returns)
-                .flat_map(|ty| ty.user_struct_no(ns))
-                .collect(),
             _ => HashSet::new(),
         }
     }
@@ -1373,6 +1360,7 @@ impl Type {
         self.memory_size_of(ns) < BigInt::from(u16::MAX)
     }
 
+    /// Calculate the alignment
     pub fn align_of(&self, ns: &Namespace) -> usize {
         match self {
             Type::Uint(8) | Type::Int(8) => 1,
@@ -1887,12 +1875,6 @@ impl Type {
                 ty.is_recursive(ns)
             }
             Type::UserType(no) => ns.user_types[*no].ty.is_recursive(ns),
-            Type::InternalFunction {
-                params, returns, ..
-            }
-            | Type::ExternalFunction {
-                params, returns, ..
-            } => params.iter().chain(returns).any(|ty| ty.is_recursive(ns)),
             _ => false,
         }
     }
