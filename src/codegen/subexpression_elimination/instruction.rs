@@ -375,6 +375,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 gas,
                 callty,
                 seeds,
+                contract_function_no,
             } => {
                 let new_address = address
                     .as_ref()
@@ -397,6 +398,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     value: self.regenerate_expression(value, ave, cst).1,
                     gas: self.regenerate_expression(gas, ave, cst).1,
                     callty: callty.clone(),
+                    contract_function_no: *contract_function_no,
                 }
             }
 

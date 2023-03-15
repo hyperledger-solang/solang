@@ -1071,6 +1071,7 @@ fn try_catch(
                         value,
                         gas,
                         callty: CallTy::Regular,
+                        contract_function_no: None,
                     },
                 );
 

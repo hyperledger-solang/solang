@@ -30,8 +30,8 @@ describe('Signature Check', function () {
 
         const result = await program.methods.verify(payer.publicKey, message, Buffer.from(signature))
             .preInstructions([instr1])
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([{ pubkey: SYSVAR_INSTRUCTIONS_PUBKEY, isSigner: false, isWritable: false }])
+            .accounts({ dataAccount: storage.publicKey,
+                SysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY})
             .view();
 
         expect(result).toEqual(true);
@@ -54,8 +54,8 @@ describe('Signature Check', function () {
 
         const result = await program.methods.verify(payer.publicKey, message, Buffer.from(broken_signature))
             .preInstructions([instr1])
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([{ pubkey: SYSVAR_INSTRUCTIONS_PUBKEY, isSigner: false, isWritable: false }])
+            .accounts({ dataAccount: storage.publicKey,
+                SysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY})
             .view();
 
         expect(result).toEqual(false);

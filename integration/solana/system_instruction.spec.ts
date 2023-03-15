@@ -24,7 +24,6 @@ describe('Test system instructions', function () {
             new BN(5),
             TOKEN_PROGRAM_ID)
             .remainingAccounts([
-                { pubkey: system_account, isSigner: false, isWritable: false },
                 { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
                 { pubkey: payer.publicKey, isSigner: true, isWritable: false },
                 { pubkey: to_key_pair.publicKey, isSigner: true, isWritable: true },
@@ -47,7 +46,6 @@ describe('Test system instructions', function () {
             new BN(5),
             TOKEN_PROGRAM_ID)
             .remainingAccounts([
-                { pubkey: system_account, isSigner: false, isWritable: false },
                 { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
                 { pubkey: payer.publicKey, isSigner: true, isWritable: false },
                 { pubkey: to_key_pair, isSigner: false, isWritable: true },
@@ -66,7 +64,6 @@ describe('Test system instructions', function () {
             to_key_pair.publicKey,
             assign_account)
             .remainingAccounts([
-                { pubkey: system_account, isSigner: false, isWritable: false },
                 { pubkey: payer.publicKey, isSigner: false, isWritable: false },
                 { pubkey: to_key_pair.publicKey, isSigner: true, isWritable: true },
             ])
@@ -85,7 +82,6 @@ describe('Test system instructions', function () {
             seed,
             assign_account)
             .remainingAccounts([
-                { pubkey: system_account, isSigner: false, isWritable: false },
                 { pubkey: assign_account, isSigner: false, isWritable: false },
                 { pubkey: payer.publicKey, isSigner: false, isWritable: false },
                 { pubkey: to_key_pair, isSigner: false, isWritable: true },
@@ -103,7 +99,6 @@ describe('Test system instructions', function () {
             dest.publicKey,
             new BN(100000000))
             .remainingAccounts([
-                { pubkey: system_account, isSigner: false, isWritable: false },
                 { pubkey: payer.publicKey, isSigner: false, isWritable: true },
                 { pubkey: dest.publicKey, isSigner: false, isWritable: true },
             ])

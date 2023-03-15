@@ -56,7 +56,6 @@ describe('Create spl-token and use from solidity', function () {
             new BN(100000))
             .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([
-                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
                 { pubkey: mint, isSigner: false, isWritable: true },
                 { pubkey: tokenAccount.address, isSigner: false, isWritable: true },
                 { pubkey: mintAuthority.publicKey, isSigner: true, isWritable: true },
@@ -95,7 +94,6 @@ describe('Create spl-token and use from solidity', function () {
             new BN(70000))
             .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([
-                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
                 { pubkey: otherTokenAccount.address, isSigner: false, isWritable: true },
                 { pubkey: tokenAccount.address, isSigner: false, isWritable: true },
                 { pubkey: payer.publicKey, isSigner: true, isWritable: true },
@@ -130,7 +128,6 @@ describe('Create spl-token and use from solidity', function () {
             new BN(20000))
             .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([
-                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
                 { pubkey: otherTokenAccount.address, isSigner: false, isWritable: true },
                 { pubkey: mint, isSigner: false, isWritable: true },
                 { pubkey: theOutsider.publicKey, isSigner: true, isWritable: true },

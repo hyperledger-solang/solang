@@ -63,7 +63,7 @@ pub fn find(cfg: &mut ControlFlowGraph) {
             apply_transfers(transfers, &mut vars);
         }
 
-        for edge in block_edges(&cfg.blocks[block_no]) {
+        for edge in cfg.blocks[block_no].edges() {
             if cfg.blocks[edge].defs != vars {
                 blocks_todo.insert(edge);
                 // merge incoming set
@@ -221,42 +221,4 @@ pub fn apply_transfers(transfers: &[Transfer], vars: &mut IndexMap<usize, IndexM
             }
         }
     }
-}
-
-/// Fetch the blocks that can be executed after the block passed as argument
-pub(super) fn block_edges(block: &BasicBlock) -> Vec<usize> {
-    let mut out = Vec::new();
-
-    // out cfg has edge as the last instruction in a block; EXCEPT
-    // Instr::AbiDecode() which has an edge when decoding fails
-    for instr in &block.instr {
-        match instr {
-            Instr::Branch { block } => {
-                out.push(*block);
-            }
-            Instr::BranchCond {
-                true_block,
-                false_block,
-                ..
-            } => {
-                out.push(*true_block);
-                out.push(*false_block);
-            }
-            Instr::AbiDecode {
-                exception_block: Some(block),
-                ..
-            } => {
-                out.push(*block);
-            }
-            Instr::Switch { default, cases, .. } => {
-                out.push(*default);
-                for (_, goto) in cases {
-                    out.push(*goto);
-                }
-            }
-            _ => (),
-        }
-    }
-
-    out
 }
