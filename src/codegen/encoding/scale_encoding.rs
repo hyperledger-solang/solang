@@ -405,6 +405,7 @@ impl AbiEncoding for ScaleEncoding {
         );
         (Expression::Cast(Codegen, ty.clone(), ext_func.into()), size)
     }
+
     fn retrieve_array_length(
         &self,
         buffer: &Expression,
