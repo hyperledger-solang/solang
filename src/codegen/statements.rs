@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use num_bigint::BigInt;
-use std::collections::LinkedList;
 
 use super::encoding::abi_encode;
 use super::expression::{assign_single, default_gas, emit_function_call, expression};
@@ -1310,30 +1309,30 @@ pub struct LoopScope {
     continue_bb: usize,
 }
 
-pub struct LoopScopes(LinkedList<LoopScope>);
+pub struct LoopScopes(Vec<LoopScope>);
 
 impl LoopScopes {
     pub fn new() -> Self {
-        LoopScopes(LinkedList::new())
+        LoopScopes(Vec::new())
     }
 
     pub(crate) fn new_scope(&mut self, break_bb: usize, continue_bb: usize) {
-        self.0.push_front(LoopScope {
+        self.0.push(LoopScope {
             break_bb,
             continue_bb,
         })
     }
 
     pub(crate) fn leave_scope(&mut self) -> LoopScope {
-        self.0.pop_front().expect("should be in loop scope")
+        self.0.pop().expect("should be in loop scope")
     }
 
     pub(crate) fn do_break(&mut self) -> usize {
-        self.0.front().unwrap().break_bb
+        self.0.last().unwrap().break_bb
     }
 
     pub(crate) fn do_continue(&mut self) -> usize {
-        self.0.front().unwrap().continue_bb
+        self.0.last().unwrap().continue_bb
     }
 }
 
