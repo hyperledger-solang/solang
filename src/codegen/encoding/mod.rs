@@ -3,9 +3,9 @@
 /// Any supported encoding scheme should be implemented here.
 /// The module is organized as follows:
 ///
-/// - `fn abi_encode()` and `fn abi_decode()` are entry point for whereever there is
-/// something to be encoded or decoded.
-/// - The `AbiEncoding` defines the encoding and decoding API and must be implemented by all schemes.
+/// - `fn abi_encode()` and `fn abi_decode()` are entry points for wherever there is
+///   something to be encoded or decoded.
+/// - `AbiEncoding` defines the encoding and decoding API and must be implemented by all schemes.
 /// - There are some helper functions to work with more complex types.
 ///   Any such helper function should work fine regardless of the encoding scheme being used.
 mod borsh_encoding;
@@ -25,6 +25,8 @@ use num_integer::Integer;
 use num_traits::{One, Zero};
 use solang_parser::pt::{Loc, Loc::Codegen};
 use std::ops::{AddAssign, MulAssign, Sub};
+
+use self::buffer_validator::BufferValidator;
 
 /// Insert encoding instructions into the `cfg` for any `Expression` in `args`.
 /// Returns a pointer to the encoded data and the size as a 32bit integer.
@@ -56,6 +58,65 @@ pub(super) fn abi_encode(
         offset = Expression::Add(*loc, Uint(32), false, offset.into(), advance.into());
     }
     (buffer, size)
+}
+
+/// Insert decoding routines into the `cfg` for the `Expression`s in `args`.
+/// Returns a vector containing the encoded data.
+pub(super) fn abi_decode(
+    loc: &Loc,
+    buffer: &Expression,
+    types: &[Type],
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    cfg: &mut ControlFlowGraph,
+    buffer_size_expr: Option<Expression>,
+) -> Vec<Expression> {
+    let buffer_size = vartab.temp_anonymous(&Uint(32));
+    if let Some(length_expression) = buffer_size_expr {
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc: Codegen,
+                res: buffer_size,
+                expr: length_expression,
+            },
+        );
+    } else {
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc: Codegen,
+                res: buffer_size,
+                expr: Expression::Builtin(
+                    Codegen,
+                    vec![Uint(32)],
+                    Builtin::ArrayLength,
+                    vec![buffer.clone()],
+                ),
+            },
+        );
+    }
+
+    let mut validator = BufferValidator::new(buffer_size, types);
+
+    let mut read_items: Vec<Expression> = vec![Expression::Poison; types.len()];
+    let mut offset = Expression::NumberLiteral(*loc, Uint(32), BigInt::zero());
+
+    validator.initialize_validation(&offset, ns, vartab, cfg);
+    let encoder = create_encoder(ns, false);
+
+    for (item_no, item) in types.iter().enumerate() {
+        validator.set_argument_number(item_no);
+        validator.validate_buffer(&offset, ns, vartab, cfg);
+        let (read_item, advance) =
+            encoder.read_from_buffer(buffer, &offset, item, &mut validator, ns, vartab, cfg);
+        read_items[item_no] = read_item;
+        offset = Expression::Add(*loc, Uint(32), false, Box::new(offset), Box::new(advance));
+    }
+
+    validator.validate_all_bytes_read(offset, ns, vartab, cfg);
+
+    read_items
 }
 
 /// Calculate the size of a set of arguments to encoding functions
@@ -253,7 +314,7 @@ pub(super) trait AbiEncoding {
             (offset.clone(), None)
         } else {
             let size = self.encode_size(&len, buffer, offset, vartab, cfg);
-            (increment_by(offset.clone(), size.clone()), Some(size))
+            (offset.clone().add_u32(size.clone()), Some(size))
         };
         // ptr + offset + size_of_integer
         let dest_address = Expression::AdvancePointer {
@@ -269,7 +330,7 @@ pub(super) trait AbiEncoding {
             },
         );
         if let Some(size) = size {
-            increment_by(len, size)
+            len.add_u32(size)
         } else {
             len
         }
@@ -380,8 +441,10 @@ pub(super) trait AbiEncoding {
                         (offset.clone(), None)
                     } else {
                         let encoded_size = self.encode_size(&value, buffer, offset, vartab, cfg);
-                        let new_offset = increment_by(offset.clone(), encoded_size.clone());
-                        (new_offset, Some(encoded_size))
+                        (
+                            offset.clone().add_u32(encoded_size.clone()),
+                            Some(encoded_size),
+                        )
                     };
 
                     if let Expression::Variable(_, _, size_temp) = value {
@@ -492,7 +555,7 @@ pub(super) trait AbiEncoding {
                 Instr::Set {
                     loc: Codegen,
                     res: offset_var,
-                    expr: increment_by(offset_expr, encoded_size),
+                    expr: offset_expr.add_u32(encoded_size),
                 },
             );
         }
@@ -546,6 +609,571 @@ pub(super) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> Expression;
 
+    /// Read a value of type 'ty' from the buffer at a given offset. Returns an expression
+    /// containing the read value and the number of bytes read.
+    fn read_from_buffer(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        ty: &Type,
+        validator: &mut BufferValidator,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (Expression, Expression) {
+        match ty {
+            Type::Uint(width) | Type::Int(width) => {
+                let encoding_size = width.next_power_of_two();
+
+                let size = Expression::NumberLiteral(Codegen, Uint(32), (encoding_size / 8).into());
+                validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
+
+                let read_value = Expression::Builtin(
+                    Codegen,
+                    vec![ty.clone()],
+                    Builtin::ReadFromBuffer,
+                    vec![buffer.clone(), offset.clone()],
+                );
+                let read_var = vartab.temp_anonymous(ty);
+
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: Codegen,
+                        res: read_var,
+                        expr: if encoding_size == *width {
+                            read_value
+                        } else {
+                            Expression::Trunc(Codegen, ty.clone(), Box::new(read_value))
+                        },
+                    },
+                );
+
+                let read_expr = Expression::Variable(Codegen, ty.clone(), read_var);
+                (read_expr, size)
+            }
+
+            Type::Bool
+            | Type::Address(_)
+            | Type::Contract(_)
+            | Type::Enum(_)
+            | Type::Value
+            | Type::Bytes(_) => {
+                let read_bytes = ty.memory_size_of(ns);
+
+                let size = Expression::NumberLiteral(Codegen, Uint(32), read_bytes);
+                validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
+
+                let read_value = Expression::Builtin(
+                    Codegen,
+                    vec![ty.clone()],
+                    Builtin::ReadFromBuffer,
+                    vec![buffer.clone(), offset.clone()],
+                );
+
+                let read_var = vartab.temp_anonymous(ty);
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: Codegen,
+                        res: read_var,
+                        expr: read_value,
+                    },
+                );
+
+                let read_expr = Expression::Variable(Codegen, ty.clone(), read_var);
+
+                (read_expr, size)
+            }
+
+            Type::DynamicBytes | Type::String => {
+                // String and Dynamic bytes are encoded as size + elements
+                let (array_length_var, size_length) =
+                    self.retrieve_array_length(buffer, offset, vartab, cfg);
+                let array_start = offset.clone().add_u32(size_length.clone());
+                validator.validate_offset(array_start.clone(), ns, vartab, cfg);
+                let array_length = Expression::Variable(Codegen, Uint(32), array_length_var);
+                let total_size = array_length.clone().add_u32(size_length);
+                validator.validate_offset(
+                    offset.clone().add_u32(total_size.clone()),
+                    ns,
+                    vartab,
+                    cfg,
+                );
+
+                let allocated_array = allocate_array(ty, array_length_var, vartab, cfg);
+                let advanced_pointer = Expression::AdvancePointer {
+                    pointer: buffer.clone().into(),
+                    bytes_offset: array_start.into(),
+                };
+                cfg.add(
+                    vartab,
+                    Instr::MemCopy {
+                        source: advanced_pointer,
+                        destination: Expression::Variable(Codegen, ty.clone(), allocated_array),
+                        bytes: array_length,
+                    },
+                );
+                (
+                    Expression::Variable(Codegen, ty.clone(), allocated_array),
+                    total_size,
+                )
+            }
+
+            Type::UserType(type_no) => {
+                let usr_type = ns.user_types[*type_no].ty.clone();
+                self.read_from_buffer(buffer, offset, &usr_type, validator, ns, vartab, cfg)
+            }
+
+            Type::ExternalFunction { .. } => {
+                self.decode_external_function(buffer, offset, ty, validator, ns, vartab, cfg)
+            }
+
+            Type::Array(elem_ty, dims) => self.decode_array(
+                buffer, offset, ty, elem_ty, dims, validator, ns, vartab, cfg,
+            ),
+
+            Type::Slice(elem_ty) => {
+                let dims = vec![ArrayLength::Dynamic];
+                self.decode_array(
+                    buffer, offset, ty, elem_ty, &dims, validator, ns, vartab, cfg,
+                )
+            }
+
+            Type::Struct(struct_ty) => self.decode_struct(
+                buffer,
+                offset.clone(),
+                ty,
+                struct_ty,
+                validator,
+                ns,
+                vartab,
+                cfg,
+            ),
+
+            Type::Rational
+            | Type::Ref(_)
+            | Type::StorageRef(..)
+            | Type::BufferPointer
+            | Type::Unresolved
+            | Type::InternalFunction { .. }
+            | Type::Unreachable
+            | Type::Void
+            | Type::FunctionSelector
+            | Type::Mapping(..) => unreachable!("Type should not appear on an encoded buffer"),
+        }
+    }
+
+    /// Retrieve a dynamic array length from the encoded buffer. It returns the variable number in which
+    /// the length has been stored and the size width of the vector length.
+    fn retrieve_array_length(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (usize, Expression);
+
+    /// Given the buffer and the offset, decode an array.
+    /// The function returns an expression containing the array and the number of bytes read.
+    fn decode_array(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        array_ty: &Type,
+        elem_ty: &Type,
+        dims: &[ArrayLength],
+        validator: &mut BufferValidator,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (Expression, Expression) {
+        // Checks if we can memcpy the elements from the buffer directly to the allocated array
+        if allow_direct_copy(array_ty, elem_ty, dims, ns) {
+            // Calculate number of elements
+            let (array_bytes_size, size_width, offset, var_no) =
+                if matches!(dims.last(), Some(&ArrayLength::Fixed(_))) {
+                    let elem_no = calculate_direct_copy_bytes_size(dims, elem_ty, ns);
+                    let allocated_vector = vartab.temp_anonymous(array_ty);
+                    let expr = Expression::ArrayLiteral(Codegen, array_ty.clone(), vec![], vec![]);
+                    cfg.add(
+                        vartab,
+                        Instr::Set {
+                            loc: Codegen,
+                            res: allocated_vector,
+                            expr,
+                        },
+                    );
+                    (
+                        Expression::NumberLiteral(Codegen, Uint(32), elem_no),
+                        Expression::NumberLiteral(Codegen, Uint(32), 0.into()),
+                        offset.clone(),
+                        allocated_vector,
+                    )
+                } else {
+                    let (array_length, size_width) =
+                        self.retrieve_array_length(buffer, offset, vartab, cfg);
+                    let array_start = offset.clone().add_u32(size_width.clone());
+                    validator.validate_offset(array_start.clone(), ns, vartab, cfg);
+                    (
+                        calculate_array_bytes_size(array_length, elem_ty, ns),
+                        size_width,
+                        array_start,
+                        allocate_array(array_ty, array_length, vartab, cfg),
+                    )
+                };
+
+            validator.validate_offset_plus_size(&offset, &array_bytes_size, ns, vartab, cfg);
+
+            let source_address = Expression::AdvancePointer {
+                pointer: Box::new(buffer.clone()),
+                bytes_offset: Box::new(offset),
+            };
+
+            let array_expr = Expression::Variable(Codegen, array_ty.clone(), var_no);
+            cfg.add(
+                vartab,
+                Instr::MemCopy {
+                    source: source_address,
+                    destination: array_expr.clone(),
+                    bytes: array_bytes_size.clone(),
+                },
+            );
+
+            let bytes_size = if matches!(dims.last(), Some(ArrayLength::Dynamic)) {
+                array_bytes_size.add_u32(size_width)
+            } else {
+                array_bytes_size
+            };
+
+            (array_expr, bytes_size)
+        } else {
+            let mut indexes: Vec<usize> = Vec::new();
+            let array_var = vartab.temp_anonymous(array_ty);
+
+            // The function decode_complex_array assumes that, if the dimension is fixed,
+            // there is no need to allocate an array
+            if matches!(dims.last(), Some(ArrayLength::Fixed(_))) {
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: Codegen,
+                        res: array_var,
+                        expr: Expression::ArrayLiteral(Codegen, array_ty.clone(), vec![], vec![]),
+                    },
+                );
+            }
+
+            let offset_var = vartab.temp_anonymous(&Uint(32));
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Codegen,
+                    res: offset_var,
+                    expr: offset.clone(),
+                },
+            );
+            let array_var_expr = Expression::Variable(Codegen, array_ty.clone(), array_var);
+            let offset_expr = Expression::Variable(Codegen, Uint(32), offset_var);
+            self.decode_complex_array(
+                &array_var_expr,
+                buffer,
+                offset_var,
+                &offset_expr,
+                dims.len() - 1,
+                elem_ty,
+                dims,
+                validator,
+                ns,
+                vartab,
+                cfg,
+                &mut indexes,
+            );
+            // Subtract the original offset from
+            // the offset variable to obtain the vector size in bytes
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Codegen,
+                    res: offset_var,
+                    expr: Expression::Subtract(
+                        Codegen,
+                        Uint(32),
+                        false,
+                        Box::new(offset_expr.clone()),
+                        Box::new(offset.clone()),
+                    ),
+                },
+            );
+            (array_var_expr, offset_expr)
+        }
+    }
+
+    /// Decodes a complex array from a borsh encoded buffer
+    /// Complex arrays are either dynamic arrays or arrays of dynamic types, like structs.
+    /// If this is an array of structs, whose representation in memory is padded, the array is
+    /// also complex, because it cannot be memcpy'ed
+    fn decode_complex_array(
+        &self,
+        array_var: &Expression,
+        buffer: &Expression,
+        offset_var: usize,
+        offset_expr: &Expression,
+        dimension: usize,
+        elem_ty: &Type,
+        dims: &[ArrayLength],
+        validator: &mut BufferValidator,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+        indexes: &mut Vec<usize>,
+    ) {
+        // If we have a 'int[3][4][] vec', we can only validate the buffer after we have
+        // allocated the outer dimension, i.e., we are about to read a 'int[3][4]' item.
+        // Arrays whose elements are dynamic cannot be verified.
+        if validator.validation_necessary()
+            && !dims[0..(dimension + 1)]
+                .iter()
+                .any(|d| *d == ArrayLength::Dynamic)
+            && !elem_ty.is_dynamic(ns)
+        {
+            let mut elems = BigInt::one();
+            for item in &dims[0..(dimension + 1)] {
+                elems.mul_assign(item.array_length().unwrap());
+            }
+            elems.mul_assign(elem_ty.memory_size_of(ns));
+            let elems_size = Expression::NumberLiteral(Codegen, Uint(32), elems);
+            validator.validate_offset_plus_size(offset_expr, &elems_size, ns, vartab, cfg);
+            validator.validate_array();
+        }
+
+        // Dynamic dimensions mean that the subarray we are processing must be allocated in memory.
+        if dims[dimension] == ArrayLength::Dynamic {
+            let (array_length, size_length) =
+                self.retrieve_array_length(buffer, offset_expr, vartab, cfg);
+            let array_start = offset_expr.clone().add_u32(size_length);
+            validator.validate_offset(array_start.clone(), ns, vartab, cfg);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Codegen,
+                    res: offset_var,
+                    expr: array_start,
+                },
+            );
+            let new_ty = Type::Array(Box::new(elem_ty.clone()), dims[0..(dimension + 1)].to_vec());
+            let allocated_array = allocate_array(&new_ty, array_length, vartab, cfg);
+
+            if indexes.is_empty() {
+                if let Expression::Variable(_, _, var_no) = array_var {
+                    cfg.add(
+                        vartab,
+                        Instr::Set {
+                            loc: Codegen,
+                            res: *var_no,
+                            expr: Expression::Variable(Codegen, new_ty.clone(), allocated_array),
+                        },
+                    );
+                } else {
+                    unreachable!("array_var must be a variable");
+                }
+            } else {
+                // TODO: This is wired up for multidimensional dynamic arrays, but they do no work yet
+                // Check https://github.com/hyperledger/solang/issues/932 for more information
+                let sub_arr = index_array(array_var.clone(), dims, indexes, true);
+                cfg.add(
+                    vartab,
+                    Instr::Store {
+                        dest: sub_arr,
+                        data: Expression::Variable(Codegen, new_ty.clone(), allocated_array),
+                    },
+                );
+            }
+        }
+
+        let for_loop = set_array_loop(array_var, dims, dimension, indexes, vartab, cfg);
+        cfg.set_basic_block(for_loop.body_block);
+        if 0 == dimension {
+            let (read_expr, advance) =
+                self.read_from_buffer(buffer, offset_expr, elem_ty, validator, ns, vartab, cfg);
+            let ptr = index_array(array_var.clone(), dims, indexes, true);
+
+            cfg.add(
+                vartab,
+                Instr::Store {
+                    dest: ptr,
+                    data: if matches!(read_expr.ty(), Type::Struct(_)) {
+                        // Type::Struct is a pointer to a struct. If we are dealing with a vector
+                        // of structs, we need to dereference the pointer before storing it at a
+                        // given vector index.
+                        Expression::Load(Codegen, read_expr.ty(), Box::new(read_expr))
+                    } else {
+                        read_expr
+                    },
+                },
+            );
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Codegen,
+                    res: offset_var,
+                    expr: Expression::Add(
+                        Codegen,
+                        Uint(32),
+                        false,
+                        Box::new(advance),
+                        Box::new(offset_expr.clone()),
+                    ),
+                },
+            );
+        } else {
+            self.decode_complex_array(
+                array_var,
+                buffer,
+                offset_var,
+                offset_expr,
+                dimension - 1,
+                elem_ty,
+                dims,
+                validator,
+                ns,
+                vartab,
+                cfg,
+                indexes,
+            );
+        }
+
+        finish_array_loop(&for_loop, vartab, cfg);
+    }
+
+    /// Read a struct from the buffer
+    fn decode_struct(
+        &self,
+        buffer: &Expression,
+        mut offset: Expression,
+        expr_ty: &Type,
+        struct_ty: &StructType,
+        validator: &mut BufferValidator,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (Expression, Expression) {
+        let size = if let Some(no_padding_size) = ns.calculate_struct_non_padded_size(struct_ty) {
+            let padded_size = struct_ty.struct_padded_size(ns);
+            // If the size without padding equals the size with padding,
+            // we can memcpy this struct directly.
+            if padded_size.eq(&no_padding_size) {
+                let size = Expression::NumberLiteral(Codegen, Uint(32), no_padding_size);
+                validator.validate_offset_plus_size(&offset, &size, ns, vartab, cfg);
+                let source_address = Expression::AdvancePointer {
+                    pointer: Box::new(buffer.clone()),
+                    bytes_offset: Box::new(offset),
+                };
+                let allocated_struct = vartab.temp_anonymous(expr_ty);
+                cfg.add(
+                    vartab,
+                    Instr::Set {
+                        loc: Codegen,
+                        res: allocated_struct,
+                        expr: Expression::StructLiteral(Codegen, expr_ty.clone(), vec![]),
+                    },
+                );
+                let struct_var = Expression::Variable(Codegen, expr_ty.clone(), allocated_struct);
+                cfg.add(
+                    vartab,
+                    Instr::MemCopy {
+                        source: source_address,
+                        destination: struct_var.clone(),
+                        bytes: size.clone(),
+                    },
+                );
+                return (struct_var, size);
+            } else {
+                // This struct has a fixed size, but we cannot memcpy it due to
+                // its padding in memory
+                Some(Expression::NumberLiteral(
+                    Codegen,
+                    Uint(32),
+                    no_padding_size,
+                ))
+            }
+        } else {
+            None
+        };
+
+        let struct_tys = struct_ty
+            .definition(ns)
+            .fields
+            .iter()
+            .map(|item| item.ty.clone())
+            .collect::<Vec<Type>>();
+
+        // If it was not possible to validate the struct beforehand, we validate each field
+        // during recursive calls to 'read_from_buffer'
+        let mut struct_validator = validator.create_sub_validator(&struct_tys);
+
+        let qty = struct_ty.definition(ns).fields.len();
+
+        if validator.validation_necessary() {
+            struct_validator.initialize_validation(&offset, ns, vartab, cfg);
+        }
+
+        let (mut read_expr, mut advance) = self.read_from_buffer(
+            buffer,
+            &offset,
+            &struct_tys[0],
+            &mut struct_validator,
+            ns,
+            vartab,
+            cfg,
+        );
+        let mut runtime_size = advance.clone();
+
+        let mut read_items = vec![Expression::Poison; qty];
+        read_items[0] = read_expr;
+        for i in 1..qty {
+            struct_validator.set_argument_number(i);
+            struct_validator.validate_buffer(&offset, ns, vartab, cfg);
+            offset = Expression::Add(
+                Codegen,
+                Uint(32),
+                false,
+                Box::new(offset.clone()),
+                Box::new(advance),
+            );
+            (read_expr, advance) = self.read_from_buffer(
+                buffer,
+                &offset,
+                &struct_tys[i],
+                &mut struct_validator,
+                ns,
+                vartab,
+                cfg,
+            );
+            read_items[i] = read_expr;
+            runtime_size = Expression::Add(
+                Codegen,
+                Uint(32),
+                false,
+                Box::new(runtime_size),
+                Box::new(advance.clone()),
+            );
+        }
+
+        let allocated_struct = vartab.temp_anonymous(expr_ty);
+        cfg.add(
+            vartab,
+            Instr::Set {
+                loc: Codegen,
+                res: allocated_struct,
+                expr: Expression::StructLiteral(Codegen, expr_ty.clone(), read_items),
+            },
+        );
+
+        let struct_var = Expression::Variable(Codegen, expr_ty.clone(), allocated_struct);
+        (struct_var, size.unwrap_or(runtime_size))
+    }
+
     /// Calculate the size of a single codegen::Expression
     fn get_expr_size(
         &mut self,
@@ -585,9 +1213,8 @@ pub(super) trait AbiEncoding {
             }
             Type::ExternalFunction { .. } => {
                 let selector_len: BigInt = ns.target.selector_length().into();
-                let mut address_size = Type::Address(false).memory_size_of(ns);
-                address_size.add_assign(selector_len);
-                Expression::NumberLiteral(Codegen, Uint(32), address_size)
+                let address_size = Type::Address(false).memory_size_of(ns);
+                Expression::NumberLiteral(Codegen, Uint(32), address_size + selector_len)
             }
             Type::Ref(r) => {
                 if let Type::Struct(struct_ty) = &**r {
@@ -613,6 +1240,17 @@ pub(super) trait AbiEncoding {
             }
         }
     }
+
+    fn decode_external_function(
+        &self,
+        buffer: &Expression,
+        offset: &Expression,
+        ty: &Type,
+        validator: &mut BufferValidator,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> (Expression, Expression);
 
     /// Calculate the size of an array
     fn calculate_array_size(
@@ -824,34 +1462,7 @@ pub(super) trait AbiEncoding {
         expr: &Expression,
         _vartab: &mut Vartable,
         _cfg: &mut ControlFlowGraph,
-    ) -> Expression {
-        // When encoding a variable length array, the total size is "length (u32)" + elements
-        let length = Expression::Builtin(
-            Codegen,
-            vec![Uint(32)],
-            Builtin::ArrayLength,
-            vec![expr.clone()],
-        );
-
-        if self.is_packed() {
-            length
-        } else {
-            increment_four(length)
-        }
-    }
-
-    /// Insert decoding routines into the `cfg` for the `Expression`s in `args`.
-    /// Returns a list containing the encoded data.
-    fn abi_decode(
-        &self,
-        loc: &Loc,
-        buffer: &Expression,
-        types: &[Type],
-        ns: &Namespace,
-        vartab: &mut Vartable,
-        cfg: &mut ControlFlowGraph,
-        buffer_size: Option<Expression>,
-    ) -> Vec<Expression>;
+    ) -> Expression;
 
     /// Encoding happens in two steps. First, we look at each argument to calculate its size. If an
     /// argument is a storage variable, we load it and save it to a local variable.
@@ -1107,18 +1718,6 @@ fn array_outer_length(
     Expression::Variable(Codegen, Uint(32), array_length)
 }
 
-/// Increment an expression by some value.
-fn increment_by(expr: Expression, value: Expression) -> Expression {
-    Expression::Add(Codegen, Uint(32), false, expr.into(), value.into())
-}
-
-/// Increment an expression by four. This is useful because we save array sizes as uint32, so we
-/// need to increment the offset by four constantly.
-fn increment_four(expr: Expression) -> Expression {
-    let four = Expression::NumberLiteral(Codegen, Uint(32), 4.into());
-    increment_by(expr, four)
-}
-
 /// Check if we can MemCpy elements of an array to/from a buffer
 fn allow_direct_copy(
     array_ty: &Type,
@@ -1175,31 +1774,6 @@ fn calculate_array_bytes_size(length_var: usize, elem_ty: &Type, ns: &Namespace)
     let var = Expression::Variable(Codegen, Uint(32), length_var);
     let size = Expression::NumberLiteral(Codegen, Uint(32), elem_ty.memory_size_of(ns));
     Expression::Multiply(Codegen, Uint(32), false, var.into(), size.into())
-}
-
-/// Retrieve a dynamic array length from the encoded buffer. It returns the variable number in which
-/// the length has been stored
-fn retrieve_array_length(
-    buffer: &Expression,
-    offset: &Expression,
-    vartab: &mut Vartable,
-    cfg: &mut ControlFlowGraph,
-) -> usize {
-    let array_length = vartab.temp_anonymous(&Uint(32));
-    cfg.add(
-        vartab,
-        Instr::Set {
-            loc: Codegen,
-            res: array_length,
-            expr: Expression::Builtin(
-                Codegen,
-                vec![Uint(32)],
-                Builtin::ReadFromBuffer,
-                vec![buffer.clone(), offset.clone()],
-            ),
-        },
-    );
-    array_length
 }
 
 /// Allocate an array in memory and return its variable number.

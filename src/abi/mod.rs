@@ -5,6 +5,7 @@ use crate::Target;
 
 pub mod anchor;
 pub mod ethereum;
+mod solana_accounts;
 pub mod substrate;
 mod tests;
 
