@@ -10,7 +10,7 @@ use crate::sema::yul::types::get_type_from_string;
 use solang_parser::diagnostics::{ErrorType, Level, Note};
 use solang_parser::pt::YulFunctionDefinition;
 use solang_parser::{diagnostics::Diagnostic, pt};
-use std::collections::{HashMap, LinkedList};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Saves resolved function headers, so that we can account for function calls, before
@@ -25,7 +25,7 @@ pub struct FunctionHeader {
 
 /// Keeps track of declared functions and their scope
 pub struct FunctionsTable {
-    scopes: LinkedList<HashMap<String, usize>>,
+    scopes: Vec<HashMap<String, usize>>,
     lookup: Vec<FunctionHeader>,
     counter: usize,
     offset: usize,
@@ -35,7 +35,7 @@ pub struct FunctionsTable {
 impl FunctionsTable {
     pub fn new(offset: usize) -> FunctionsTable {
         FunctionsTable {
-            scopes: LinkedList::new(),
+            scopes: vec![],
             lookup: vec![],
             offset,
             counter: 0,
@@ -44,11 +44,11 @@ impl FunctionsTable {
     }
 
     pub fn new_scope(&mut self) {
-        self.scopes.push_back(HashMap::new());
+        self.scopes.push(HashMap::new());
     }
 
     pub fn leave_scope(&mut self, ns: &mut Namespace) {
-        let scope = self.scopes.pop_back().unwrap();
+        let scope = self.scopes.pop().unwrap();
         for function_no in scope.values() {
             let header = &self.lookup[*function_no - self.offset];
             if header.called {
@@ -63,7 +63,7 @@ impl FunctionsTable {
     }
 
     pub fn find(&self, name: &str) -> Option<&FunctionHeader> {
-        for scope in &self.scopes {
+        for scope in self.scopes.iter().rev() {
             if let Some(func_idx) = scope.get(name) {
                 return Some(self.lookup.get(*func_idx - self.offset).unwrap());
             }
@@ -107,7 +107,7 @@ impl FunctionsTable {
         }
 
         self.scopes
-            .back_mut()
+            .last_mut()
             .unwrap()
             .insert(id.name.clone(), self.counter + self.offset);
 

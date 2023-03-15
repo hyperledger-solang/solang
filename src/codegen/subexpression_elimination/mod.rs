@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{BasicBlock, ControlFlowGraph, Instr};
-use crate::codegen::reaching_definitions::block_edges;
 use crate::codegen::subexpression_elimination::anticipated_expressions::AnticipatedExpressions;
 use crate::codegen::subexpression_elimination::available_variable::AvailableVariable;
 use crate::codegen::subexpression_elimination::common_subexpression_tracker::CommonSubExpressionTracker;
@@ -239,7 +238,7 @@ fn find_visiting_order(cfg: &ControlFlowGraph) -> CfgAsDag {
 
     while let Some(block_no) = queue.pop_front() {
         order.push((block_no, has_cycle[block_no]));
-        for edge in block_edges(&cfg.blocks[block_no]) {
+        for edge in cfg.blocks[block_no].edges() {
             degrees[edge] -= 1;
             if degrees[edge] == 0 {
                 queue.push_back(edge);
@@ -280,7 +279,7 @@ fn cfg_dfs(
 
     stack.insert(block_no);
 
-    for edge in block_edges(&cfg.blocks[block_no]) {
+    for edge in cfg.blocks[block_no].edges() {
         degrees[edge] += 1;
         if cfg_dfs(
             edge,

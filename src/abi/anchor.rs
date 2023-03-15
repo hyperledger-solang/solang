@@ -13,7 +13,9 @@ use num_traits::ToPrimitive;
 use semver::Version;
 use std::collections::{HashMap, HashSet};
 
+use crate::abi::solana_accounts::{collect_accounts_from_contract, SolanaAccount};
 use convert_case::{Boundary, Case, Casing};
+use indexmap::IndexSet;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use solang_parser::pt::FunctionTy;
@@ -125,6 +127,7 @@ fn idl_instructions(
         })
     }
 
+    let mut remaining_accounts = collect_accounts_from_contract(contract_no, ns);
     for func_no in contract.all_functions.keys() {
         if !ns.functions[*func_no].is_public()
             || matches!(
@@ -189,6 +192,8 @@ fn idl_instructions(
             });
         }
 
+        let cfg_no = contract.all_functions[func_no];
+
         let name = if func.is_constructor() {
             if func.has_payer_annotation() {
                 accounts.push(IdlAccountItem::IdlAccount(IdlAccount {
@@ -200,6 +205,14 @@ fn idl_instructions(
                     pda: None,
                     relations: vec![],
                 }));
+
+                // Constructors with the payer annotation need the system account
+                if let Some(set) = remaining_accounts.get_mut(&cfg_no) {
+                    set.insert(SolanaAccount::SystemAccount);
+                } else {
+                    remaining_accounts
+                        .insert(cfg_no, IndexSet::from([SolanaAccount::SystemAccount]));
+                }
             }
 
             "new".to_string()
@@ -209,15 +222,19 @@ fn idl_instructions(
             func.name.clone()
         };
 
-        accounts.push(IdlAccountItem::IdlAccount(IdlAccount {
-            name: "systemProgram".to_string(),
-            is_mut: false,
-            is_signer: false,
-            is_optional: Some(false),
-            docs: None,
-            pda: None,
-            relations: vec![],
-        }));
+        if let Some(other_accounts) = remaining_accounts.get(&cfg_no) {
+            for account in other_accounts {
+                accounts.push(IdlAccountItem::IdlAccount(IdlAccount {
+                    name: account.name().to_string(),
+                    is_mut: false,
+                    is_signer: false,
+                    is_optional: Some(false),
+                    docs: None,
+                    pda: None,
+                    relations: vec![],
+                }));
+            }
+        }
 
         let returns = if func.returns.is_empty() {
             None
