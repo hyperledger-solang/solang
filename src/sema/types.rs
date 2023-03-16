@@ -280,7 +280,7 @@ fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, n
 ///      Edges have the originating struct field number as their weight.
 ///      So we known from which struct field the connection originated later on.
 ///   2. Find all Strongly Connected Components (SCC) in the graph.
-///   3. For any node inside in any SCC, if there is a path from the node to itself, we've detected a cycle.
+///   3. For any node inside in any SCC, if there is a non-trivial path from the node to itself, we've detected a cycle.
 ///   4. For every cycle, check if it is of infinite memory size and flag involved struct fields accordingly.
 ///   5. For any struct in the namespace, check if there are any cyclic paths stemming from it.
 ///      If there are, flag the corresponding struct field as `recursive`.
@@ -1892,7 +1892,7 @@ impl Type {
     ///
     /// Naturally, it can be used to detect recursive types (see `fn Type::is_recursive()`).
     ///
-    /// Moreover,functions like `fn Type::contains_mapping()` need to recursively check the type to contain mappings.
+    /// Moreover, functions like `fn Type::contains_mapping()` need to recursively check if the type contains mappings.
     /// Consider the following valid type:
     ///
     /// ```solidity
@@ -1900,8 +1900,8 @@ impl Type {
     /// struct B { A[] a; }
     /// ```
     ///
-    /// Looking at nested or referential types individually does not work here, this can only be done recursively.
-    /// However, naive recursion will lead to infinity here.
+    /// Looking at nested or referential types individually does not work here. This can only be done recursively;
+    /// however, a naive recursion will run indefinitely.
     /// Now, thanks to the `Type::guarded_recursion()` wrapper, instead of overflowing the stack,
     /// `fn Type::contains_mapping()` safely bails out using a value of `false`.
     /// This makes sense because:
