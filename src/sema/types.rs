@@ -211,7 +211,15 @@ fn type_decl(
 ///
 /// Any node (struct) can have one or more edges (types) to some other node (struct).
 /// A struct field is not of infinite size, if there are any 2 connecting nodes,
-/// where all edges between any of two connecting nodes are mappings or dynamic arrays.
+/// where all edges between the 2 connecting nodes are mappings or dynamic arrays.
+///
+/// ```solidity
+/// struct A { B b; }                           // finite memory size
+/// struct B { A[] a; mapping (uint => A) m; }  // finite memory size
+///
+/// struct C { D d; }                           // infinite memory size
+/// struct D { C[] c1; C c2; }                  // infinite memory size
+/// ```
 fn check_infinite_struct_size(graph: &Graph, nodes: Vec<usize>, ns: &mut Namespace) {
     let mut infinite_size = true;
     let mut offenders = HashSet::new();
