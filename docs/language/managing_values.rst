@@ -23,6 +23,10 @@ is ``address(this).balance``.
     one. If you need to check the balance of another contract, then add a balance
     function to that contract like the one below, and call that function instead.
 
+.. note::
+    On Solana, checking the balance of an account different than the data account
+    requires that it be passed as an AccountMeta during the transaction.
+
 .. code-block:: solidity
 
     function balance() public returns (uint128) {
@@ -89,3 +93,10 @@ Here is an example:
     does not come with gas overhead. This means the ``receive()`` function is not required in the
     receiving contract, and it will not be called if it is present. If you want the ``receive()``
     function to be called, use ``address.call{value: 100}("")`` instead.
+
+.. note::
+    On Solana, these functions manage native token assets from a contract's data account when
+    invoked from a contract variable. Normally, funds are not stored in a contract's account, as
+    one can set a separate payer account to pay for all the transactions. In this case, it is more
+    straightforward to use the :ref:`system instruction library <system_instruction_library>` to transfer
+    native tokens between accounts.

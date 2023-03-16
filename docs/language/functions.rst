@@ -70,6 +70,8 @@ A method call done on a contract type will always be an external call.
 Note that ``this`` returns the current contract, so ``this.foo()`` will do an
 external call, which is much more expensive than ``foo()``.
 
+.. _solana_external_call:
+
 Passing accounts with external calls on Solana
 ______________________________________________
 
@@ -80,7 +82,7 @@ see the section on :ref:`account_meta`.
 .. include:: ../examples/solana/function_call_external_accounts.sol
   :code: solidity
 
-If ``{accounts}`` is not specified, then all account are passed.
+If ``{accounts}`` is not specified, all accounts passed to the current transaction are forwarded to the call.
 
 Passing seeds with external calls on Solana
 ___________________________________________
