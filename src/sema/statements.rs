@@ -381,6 +381,7 @@ fn statement(
                         id: Some(decl.name.clone().unwrap()),
                         indexed: false,
                         readonly: false,
+                        infinite_size: false,
                         recursive: false,
                     },
                     initializer,
@@ -1331,6 +1332,7 @@ fn destructure(
                             ty_loc: Some(ty_loc),
                             indexed: false,
                             readonly: false,
+                            infinite_size: false,
                             recursive: false,
                         },
                     ));
@@ -2062,6 +2064,7 @@ fn try_catch(
                                 id: Some(name.clone()),
                                 indexed: false,
                                 readonly: false,
+                                infinite_size: false,
                                 recursive: false,
                             },
                         ));
@@ -2076,6 +2079,7 @@ fn try_catch(
                             indexed: false,
                             id: None,
                             readonly: false,
+                            infinite_size: false,
                             recursive: false,
                         },
                     ));
@@ -2158,6 +2162,7 @@ fn try_catch(
                         id: None,
                         indexed: false,
                         readonly: false,
+                        infinite_size: false,
                         recursive: false,
                     };
 
@@ -2240,6 +2245,7 @@ fn try_catch(
                     id: None,
                     indexed: false,
                     readonly: false,
+                    infinite_size: false,
                     recursive: false,
                 };
 

@@ -1381,8 +1381,9 @@ impl Namespace {
         }
     }
 
-    /// Generate the signature for the given name and parameters. Can be used
-    /// for both events and functions
+    /// Generate the signature for the given name and parameters; can be used for events and functions.
+    ///
+    /// Recursive arguments are invalid and default to a signature of `#recursive` to avoid stack overflows.
     pub fn signature(&self, name: &str, params: &[Parameter]) -> String {
         format!(
             "{}({})",

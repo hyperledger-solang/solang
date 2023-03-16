@@ -1379,7 +1379,7 @@ fn try_type_method(
                     Type::Bytes(_) => {
                         args_ty = Type::DynamicBytes;
                     }
-                    Type::Array(..) | Type::Struct(..) if !args_ty.is_dynamic(ns) => (),
+                    Type::Array(..) | Type::Struct(..) if !args_ty.is_dynamic(ns) => {}
                     _ => {
                         diagnostics.push(Diagnostic::error(
                             args.loc(),

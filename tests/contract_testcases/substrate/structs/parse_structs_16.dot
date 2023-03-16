@@ -1,0 +1,16 @@
+strict digraph "tests/contract_testcases/substrate/structs/parse_structs_16.sol" {
+	MapTree [label="name:MapTree\ncontract: AddressTree\ntests/contract_testcases/substrate/structs/parse_structs_16.sol:2:12-19\nfield name:Items ty:mapping(uint256 => struct AddressTree.MapTree)"]
+	ArrayTreeDynamic [label="name:ArrayTreeDynamic\ncontract: AddressTree\ntests/contract_testcases/substrate/structs/parse_structs_16.sol:5:12-28\nfield name:Arr ty:struct AddressTree.ArrayTreeDynamic[]"]
+	ArrayTreeFixed [label="name:ArrayTreeFixed\ncontract: AddressTree\ntests/contract_testcases/substrate/structs/parse_structs_16.sol:8:12-26\nfield name:Arr ty:struct AddressTree.ArrayTreeFixed[2]"]
+	contract [label="contract AddressTree\ntests/contract_testcases/substrate/structs/parse_structs_16.sol:1:1-11:2"]
+	diagnostic [label="found abstract contract 'AddressTree'\nlevel Debug\ntests/contract_testcases/substrate/structs/parse_structs_16.sol:1:1-11:2"]
+	diagnostic_8 [label="struct 'ArrayTreeFixed' has infinite size\nlevel Error\ntests/contract_testcases/substrate/structs/parse_structs_16.sol:8:12-26"]
+	note [label="recursive field 'Arr'\ntests/contract_testcases/substrate/structs/parse_structs_16.sol:9:9-30"]
+	structs -> MapTree
+	structs -> ArrayTreeDynamic
+	structs -> ArrayTreeFixed
+	contracts -> contract
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_8 [label="Error"]
+	diagnostic_8 -> note [label="note"]
+}

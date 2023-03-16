@@ -13,11 +13,18 @@ use super::{
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use indexmap::IndexMap;
+use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
+use petgraph::algo::{all_simple_paths, tarjan_scc};
+use petgraph::stable_graph::IndexType;
+use petgraph::Directed;
+use solang_parser::diagnostics::Note;
 use solang_parser::{doccomment::DocComment, pt, pt::CodeLocation};
 use std::collections::HashSet;
 use std::{fmt::Write, ops::Mul};
+
+type Graph = petgraph::Graph<(), usize, Directed, usize>;
 
 /// List the types which should be resolved later
 pub struct ResolveFields<'a> {
@@ -197,33 +204,121 @@ fn type_decl(
     });
 }
 
-/// check if a struct contains itself. This function calls itself recursively
-fn find_struct_recursion(struct_no: usize, structs_visited: &mut Vec<usize>, ns: &mut Namespace) {
-    let def = ns.structs[struct_no].clone();
-    let mut types_seen: HashSet<usize> = HashSet::new();
-
-    for (field_no, field) in def.fields.iter().enumerate() {
-        if let Type::Struct(StructType::UserDefined(field_struct_no)) = field.ty {
-            if types_seen.contains(&field_struct_no) {
-                continue;
+/// A struct field is considered to be of infinite size, if it contains itself infinite times (not in a vector).
+///
+/// This function sets the `infinitie_size` flag accordingly for all connections between `nodes`.
+/// `nodes` is assumed to be a set of strongly connected nodes from within the `graph`.
+///
+/// Any node (struct) can have one or more edges (types) to some other node (struct).
+/// A struct field is not of infinite size, if there are any 2 connecting nodes,
+/// where all edges between the 2 connecting nodes are mappings or dynamic arrays.
+///
+/// ```solidity
+/// struct A { B b; }                           // finite memory size
+/// struct B { A[] a; mapping (uint => A) m; }  // finite memory size
+///
+/// struct C { D d; }                           // infinite memory size
+/// struct D { C[] c1; C c2; }                  // infinite memory size
+/// ```
+fn check_infinite_struct_size(graph: &Graph, nodes: Vec<usize>, ns: &mut Namespace) {
+    let mut infinite_size = true;
+    let mut offenders = HashSet::new();
+    for (a, b) in nodes.windows(2).map(|w| (w[0], w[1])) {
+        let mut infinite_edge = false;
+        for edge in graph.edges_connecting(a.into(), b.into()) {
+            match &ns.structs[a].fields[*edge.weight()].ty {
+                Type::Array(_, dims) if dims.first() != Some(&ArrayLength::Dynamic) => {}
+                Type::Struct(StructType::UserDefined(_)) => {}
+                _ => continue,
             }
+            infinite_edge = true;
+            offenders.insert((a, *edge.weight()));
+        }
+        infinite_size &= infinite_edge;
+    }
+    if infinite_size {
+        for (struct_no, field_no) in offenders {
+            ns.structs[struct_no].fields[field_no].infinite_size = true;
+        }
+    }
+}
 
-            types_seen.insert(field_struct_no);
-
-            if structs_visited.contains(&field_struct_no) {
-                ns.diagnostics.push(Diagnostic::error_with_note(
-                    def.loc,
-                    format!("struct '{}' has infinite size", def.name),
-                    field.loc,
-                    format!("recursive field '{}'", field.name_as_str()),
-                ));
-
-                ns.structs[struct_no].fields[field_no].recursive = true;
-            } else {
-                structs_visited.push(field_struct_no);
-                find_struct_recursion(field_struct_no, structs_visited, ns);
-                structs_visited.pop();
+/// A struct field is recursive, if it is connected to a cyclic path.
+///
+/// This function checks all structs in the `ns` for any paths leading into the given `node`.
+/// `node` is supposed to be inside a cycle.
+/// All affected struct fields will be flagged as recursive (and infinite size as well, if they are).
+fn check_recursive_struct_field(node: usize, graph: &Graph, ns: &mut Namespace) {
+    for n in 0..ns.structs.len() {
+        for path in all_simple_paths::<Vec<_>, &Graph>(graph, n.into(), node.into(), 0, None) {
+            for (a, b) in path.windows(2).map(|a_b| (a_b[0], a_b[1])) {
+                for edge in graph.edges_connecting(a, b) {
+                    ns.structs[a.index()].fields[*edge.weight()].recursive = true;
+                    if ns.structs[b.index()].fields.iter().any(|f| f.infinite_size) {
+                        ns.structs[a.index()].fields[*edge.weight()].infinite_size = true;
+                    }
+                }
             }
+        }
+    }
+}
+
+/// Find all other structs a given user struct may reach.
+///
+/// `edges` is a set with tuples of 3 dimensions. The first two are the connecting nodes (struct numbers).
+/// The last dimension is the field number of the first struct where the connection originates.
+fn collect_struct_edges(no: usize, edges: &mut HashSet<(usize, usize, usize)>, ns: &Namespace) {
+    for (field_no, field) in ns.structs[no].fields.iter().enumerate() {
+        for reaching in field.ty.user_struct_no(ns) {
+            if edges.insert((no, reaching, field_no)) {
+                collect_struct_edges(reaching, edges, ns)
+            }
+        }
+    }
+}
+
+/// Checks for
+///   - Structs containing recursive (cycling) fields
+///   - Cycling struct fields of infinite size
+///
+/// The algorithm consists of these steps:
+///   1. All structs in the namespace are parsed into a graph.
+///      Nodes in the graph represent the structs.
+///      Edges develop when a struct encapsulates another struct.
+///      Edges have the originating struct field number as their weight.
+///      So we known from which struct field the connection originated later on.
+///   2. Find all Strongly Connected Components (SCC) in the graph.
+///   3. For any node inside in any SCC, if there is a non-trivial path from the node to itself, we've detected a cycle.
+///   4. For every cycle, check if it is of infinite memory size and flag involved struct fields accordingly.
+///   5. For any struct in the namespace, check if there are any cyclic paths stemming from it.
+///      If there are, flag the corresponding struct field as `recursive`.
+fn find_struct_recursion(ns: &mut Namespace) {
+    let mut edges = HashSet::new();
+    for n in 0..ns.structs.len() {
+        collect_struct_edges(n, &mut edges, ns);
+    }
+    let graph = Graph::from_edges(edges);
+    for n in tarjan_scc(&graph).iter().flatten().dedup() {
+        // Don't use None. It'll default to `node_count() - 1` and fail to find path for graphs like this: `A <-> B`
+        let max_len = Some(graph.node_count());
+        if let Some(cycle) = all_simple_paths::<Vec<_>, &Graph>(&graph, *n, *n, 0, max_len).next() {
+            check_infinite_struct_size(&graph, cycle.iter().map(|p| p.index()).collect(), ns);
+            check_recursive_struct_field(n.index(), &graph, ns);
+        }
+    }
+    for n in 0..ns.structs.len() {
+        let mut notes = vec![];
+        for field in ns.structs[n].fields.iter().filter(|f| f.infinite_size) {
+            let loc = field.loc;
+            let message = format!("recursive field '{}'", field.name_as_str());
+            notes.push(Note { loc, message });
+        }
+        if !notes.is_empty() {
+            ns.diagnostics.push(Diagnostic::error_with_notes(
+                ns.structs[n].loc,
+                format!("struct '{}' has infinite size", ns.structs[n].name),
+                notes,
+            ));
         }
     }
 }
@@ -238,10 +333,8 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
         ns.structs[resolve.struct_no].fields = fields;
     }
 
-    // struct can contain other structs, and we have to check for recursiveness,
-    // i.e. "struct a { b f1; } struct b { a f1; }"
-    (0..ns.structs.len())
-        .for_each(|struct_no| find_struct_recursion(struct_no, &mut vec![struct_no], ns));
+    // Handle recursive struct fields.
+    find_struct_recursion(ns);
 
     // Calculate the offset of each field in all the struct types
     struct_offsets(ns);
@@ -541,6 +634,7 @@ pub fn struct_decl(
             ty_loc: Some(field.ty.loc()),
             indexed: false,
             readonly: false,
+            infinite_size: false,
             recursive: false,
         });
     }
@@ -647,6 +741,7 @@ fn event_decl(
             ty_loc: Some(field.ty.loc()),
             indexed: field.indexed,
             readonly: false,
+            infinite_size: false,
             recursive: false,
         });
     }
@@ -797,7 +892,7 @@ fn struct_offsets(ns: &mut Namespace) {
 
                 offsets.push(offset.clone());
 
-                if !field.recursive {
+                if !field.infinite_size && ns.target == Target::Solana {
                     offset += field.ty.solana_storage_size(ns);
                 }
             }
@@ -823,7 +918,7 @@ fn struct_offsets(ns: &mut Namespace) {
             let mut largest_alignment = BigInt::zero();
 
             for field in &ns.structs[struct_no].fields {
-                if !field.recursive {
+                if !field.infinite_size {
                     let alignment = field.ty.storage_align(ns);
                     largest_alignment = std::cmp::max(alignment.clone(), largest_alignment.clone());
                     let remainder = offset.clone() % alignment.clone();
@@ -862,6 +957,23 @@ fn struct_offsets(ns: &mut Namespace) {
 }
 
 impl Type {
+    /// Return the set of user defined structs this type encapsulates.
+    pub fn user_struct_no(&self, ns: &Namespace) -> HashSet<usize> {
+        match self {
+            Type::Struct(StructType::UserDefined(n)) => HashSet::from([*n]),
+            Type::Mapping(Mapping { key, value, .. }) => {
+                let mut result = key.user_struct_no(ns);
+                result.extend(value.user_struct_no(ns));
+                result
+            }
+            Type::Array(ty, _) | Type::Ref(ty) | Type::Slice(ty) | Type::StorageRef(_, ty) => {
+                ty.user_struct_no(ns)
+            }
+            Type::UserType(no) => ns.user_types[*no].ty.user_struct_no(ns),
+            _ => HashSet::new(),
+        }
+    }
+
     pub fn to_string(&self, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
@@ -948,7 +1060,9 @@ impl Type {
             Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
             Type::UserType(n) => format!("usertype {}", ns.user_types[*n]),
             Type::Ref(r) => r.to_string(ns),
-            Type::StorageRef(_, ty) => format!("{} storage", ty.to_string(ns)),
+            Type::StorageRef(_, ty) => {
+                format!("{} storage", ty.to_string(ns))
+            }
             Type::Void => "void".into(),
             Type::Unreachable => "unreachable".into(),
             // A slice of bytes1 is like bytes
@@ -1011,7 +1125,11 @@ impl Type {
                         .definition(ns)
                         .fields
                         .iter()
-                        .map(|f| f.ty.to_signature_string(say_tuple, ns))
+                        .map(|f| if f.recursive {
+                            "#recursive".into() // recursive types in public interfaces are not allowed
+                        } else {
+                            f.ty.to_signature_string(say_tuple, ns)
+                        })
                         .collect::<Vec<String>>()
                         .join(",")
                 )
@@ -1060,7 +1178,7 @@ impl Type {
             Type::Bytes(_) => false,
             Type::Enum(_) => false,
             Type::Struct(_) => true,
-            Type::Array(_, dims) => matches!(dims.last(), Some(ArrayLength::Fixed(_))),
+            Type::Array(_, dims) => !dims.iter().any(|d| *d == ArrayLength::Dynamic),
             Type::DynamicBytes => false,
             Type::String => false,
             Type::Mapping(..) => false,
@@ -1129,13 +1247,16 @@ impl Type {
             Type::Value => BigInt::from(ns.value_length),
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Rational => unreachable!(),
+            Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => {
+                (ns.target.ptr_size() / 8).into()
+            }
             Type::Array(ty, dims) => {
-                let pointer_size = BigInt::from(ns.target.ptr_size() / 8);
+                let pointer_size = (ns.target.ptr_size() / 8).into();
                 ty.memory_size_of(ns).mul(
                     dims.iter()
                         .map(|d| match d {
-                            ArrayLength::Dynamic => &pointer_size,
                             ArrayLength::Fixed(n) => n,
+                            ArrayLength::Dynamic => &pointer_size,
                             ArrayLength::AnyFixed => unreachable!(),
                         })
                         .product::<BigInt>(),
@@ -1219,18 +1340,15 @@ impl Type {
     /// which is not accounted for.
     pub fn solana_storage_size(&self, ns: &Namespace) -> BigInt {
         match self {
-            Type::Array(ty, dims) => {
-                let pointer_size = BigInt::from(4);
-                ty.solana_storage_size(ns).mul(
-                    dims.iter()
-                        .map(|d| match d {
-                            ArrayLength::Dynamic => &pointer_size,
-                            ArrayLength::Fixed(d) => d,
-                            ArrayLength::AnyFixed => panic!("unknown length"),
-                        })
-                        .product::<BigInt>(),
-                )
-            }
+            Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => 4.into(),
+            Type::Array(ty, dims) => ty.solana_storage_size(ns).mul(
+                dims.iter()
+                    .map(|d| match d {
+                        ArrayLength::Fixed(d) => d,
+                        _ => panic!("unknown length"),
+                    })
+                    .product::<BigInt>(),
+            ),
             Type::Struct(str_ty) => str_ty
                 .definition(ns)
                 .offsets
@@ -1261,9 +1379,10 @@ impl Type {
                 .definition(ns)
                 .fields
                 .iter()
-                .map(|f| if f.recursive { 1 } else { f.ty.align_of(ns) })
+                .filter(|f| !f.infinite_size) // Can't calculate alignment for structs with infinite recursion
+                .map(|f| f.ty.align_of(ns))
                 .max()
-                .unwrap(),
+                .unwrap_or(1), // All fields had infinite size, so we just pretend the alignment is one
             Type::InternalFunction { .. } => ns.target.ptr_size().into(),
             _ => 1,
         }
@@ -1328,9 +1447,6 @@ impl Type {
             Type::Rational => true,
             Type::Ref(r) => r.is_rational(),
             Type::StorageRef(_, r) => r.is_rational(),
-            Type::Int(_) => false,
-            Type::Uint(_) => false,
-            Type::Value => false,
             _ => false,
         }
     }
@@ -1347,7 +1463,7 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => {
                     BigInt::from(4)
                 }
                 Type::Array(ty, dims) => {
@@ -1393,17 +1509,12 @@ impl Type {
                     .definition(ns)
                     .fields
                     .iter()
-                    .map(|f| {
-                        if f.recursive {
-                            BigInt::one()
-                        } else {
-                            f.ty.storage_slots(ns)
-                        }
-                    })
+                    .filter(|f| !f.infinite_size)
+                    .map(|f| f.ty.storage_slots(ns))
                     .sum(),
+                Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => 1.into(),
                 Type::Array(ty, dims) => {
-                    let one = BigInt::one();
-
+                    let one = 1.into();
                     ty.storage_slots(ns)
                         * dims
                             .iter()
@@ -1432,7 +1543,7 @@ impl Type {
                 Type::Value => BigInt::from(ns.value_length),
                 Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
                 Type::Rational => unreachable!(),
-                Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => {
+                Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => {
                     BigInt::from(4)
                 }
                 Type::Array(ty, _) => {
@@ -1446,15 +1557,10 @@ impl Type {
                     .definition(ns)
                     .fields
                     .iter()
-                    .map(|field| {
-                        if field.recursive {
-                            BigInt::one()
-                        } else {
-                            field.ty.storage_align(ns)
-                        }
-                    })
+                    .filter(|field| !field.infinite_size)
+                    .map(|field| field.ty.storage_align(ns))
                     .max()
-                    .unwrap(),
+                    .unwrap_or_else(|| 1.into()), // All fields have infinite size, so we pretend one storage slot.
                 Type::String | Type::DynamicBytes => BigInt::from(4),
                 Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
                 Type::ExternalFunction { .. } => BigInt::from(ns.address_length),
@@ -1503,25 +1609,28 @@ impl Type {
 
     /// Does this type contain any types which are variable-length
     pub fn is_dynamic(&self, ns: &Namespace) -> bool {
-        match self {
+        self.is_dynamic_internal(ns, &mut HashSet::new())
+    }
+
+    fn is_dynamic_internal(&self, ns: &Namespace, structs_visited: &mut HashSet<usize>) -> bool {
+        self.guarded_recursion(structs_visited, false, |structs_visited| match self {
             Type::String | Type::DynamicBytes => true,
-            Type::Ref(r) => r.is_dynamic(ns),
+            Type::Ref(r) => r.is_dynamic_internal(ns, structs_visited),
             Type::Array(ty, dim) => {
                 if dim.iter().any(|d| d == &ArrayLength::Dynamic) {
                     return true;
                 }
-
-                ty.is_dynamic(ns)
+                ty.is_dynamic_internal(ns, structs_visited)
             }
             Type::Struct(str_ty) => str_ty
                 .definition(ns)
                 .fields
                 .iter()
-                .any(|f| f.ty.is_dynamic(ns)),
-            Type::StorageRef(_, r) => r.is_dynamic(ns),
+                .any(|f| f.ty.is_dynamic_internal(ns, structs_visited)),
+            Type::StorageRef(_, r) => r.is_dynamic_internal(ns, structs_visited),
             Type::Slice(_) => true,
             _ => false,
-        }
+        })
     }
 
     /// Can this type have a calldata, memory, or storage location. This is to be
@@ -1580,32 +1689,50 @@ impl Type {
 
     /// Does the type contain any mapping type
     pub fn contains_mapping(&self, ns: &Namespace) -> bool {
-        match self {
+        self.contains_mapping_internal(ns, &mut HashSet::new())
+    }
+
+    fn contains_mapping_internal(
+        &self,
+        ns: &Namespace,
+        structs_visited: &mut HashSet<usize>,
+    ) -> bool {
+        self.guarded_recursion(structs_visited, false, |structs_visited| match self {
             Type::Mapping(..) => true,
-            Type::Array(ty, _) => ty.contains_mapping(ns),
+            Type::Array(ty, _) => ty.contains_mapping_internal(ns, structs_visited),
             Type::Struct(str_ty) => str_ty
                 .definition(ns)
                 .fields
                 .iter()
-                .any(|f| !f.recursive && f.ty.contains_mapping(ns)),
-            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_mapping(ns),
+                .any(|f| f.ty.contains_mapping_internal(ns, structs_visited)),
+            Type::StorageRef(_, r) | Type::Ref(r) => {
+                r.contains_mapping_internal(ns, structs_visited)
+            }
             _ => false,
-        }
+        })
     }
 
     /// Does the type contain any internal function type
     pub fn contains_internal_function(&self, ns: &Namespace) -> bool {
-        match self {
+        self.contains_internal_function_internal(ns, &mut HashSet::new())
+    }
+
+    fn contains_internal_function_internal(
+        &self,
+        ns: &Namespace,
+        structs_visited: &mut HashSet<usize>,
+    ) -> bool {
+        self.guarded_recursion(structs_visited, false, |structs_visited| match self {
             Type::InternalFunction { .. } => true,
-            Type::Array(ty, _) => ty.contains_internal_function(ns),
-            Type::Struct(str_ty) => str_ty
-                .definition(ns)
-                .fields
-                .iter()
-                .any(|f| !f.recursive && f.ty.contains_internal_function(ns)),
-            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_internal_function(ns),
+            Type::Array(ty, _) => ty.contains_internal_function_internal(ns, structs_visited),
+            Type::Struct(str_ty) => str_ty.definition(ns).fields.iter().any(|f| {
+                f.ty.contains_internal_function_internal(ns, structs_visited)
+            }),
+            Type::StorageRef(_, r) | Type::Ref(r) => {
+                r.contains_internal_function_internal(ns, structs_visited)
+            }
             _ => false,
-        }
+        })
     }
 
     /// Is this structure a builtin
@@ -1629,22 +1756,29 @@ impl Type {
         ns: &'a Namespace,
         builtin: &StructType,
     ) -> Option<&'a Type> {
-        match self {
-            Type::Array(ty, _) => ty.contains_builtins(ns, builtin),
+        self.contains_builtins_internal(ns, builtin, &mut HashSet::new())
+    }
+
+    fn contains_builtins_internal<'a>(
+        &'a self,
+        ns: &'a Namespace,
+        builtin: &StructType,
+        structs_visited: &mut HashSet<usize>,
+    ) -> Option<&'a Type> {
+        self.guarded_recursion(structs_visited, None, |structs_visited| match self {
+            Type::Array(ty, _) => ty.contains_builtins_internal(ns, builtin, structs_visited),
             Type::Mapping(Mapping { key, value, .. }) => key
-                .contains_builtins(ns, builtin)
-                .or_else(|| value.contains_builtins(ns, builtin)),
+                .contains_builtins_internal(ns, builtin, structs_visited)
+                .or_else(|| value.contains_builtins_internal(ns, builtin, structs_visited)),
             Type::Struct(str_ty) if str_ty == builtin => Some(self),
             Type::Struct(str_ty) => str_ty.definition(ns).fields.iter().find_map(|f| {
-                if f.recursive {
-                    None
-                } else {
-                    f.ty.contains_builtins(ns, builtin)
-                }
+                f.ty.contains_builtins_internal(ns, builtin, structs_visited)
             }),
-            Type::StorageRef(_, r) | Type::Ref(r) => r.contains_builtins(ns, builtin),
+            Type::StorageRef(_, r) | Type::Ref(r) => {
+                r.contains_builtins_internal(ns, builtin, structs_visited)
+            }
             _ => None,
-        }
+        })
     }
 
     /// If the type is Ref or StorageRef, get the underlying type
@@ -1718,7 +1852,7 @@ impl Type {
     pub fn is_sparse_solana(&self, ns: &Namespace) -> bool {
         match self.deref_any() {
             Type::Mapping(..) => true,
-            Type::Array(_, dims) if dims.last() == Some(&ArrayLength::Dynamic) => false,
+            Type::Array(_, dims) if dims.first() == Some(&ArrayLength::Dynamic) => false,
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
                 let len = ty.storage_slots(ns).mul(
@@ -1734,6 +1868,63 @@ impl Type {
             }
             _ => false,
         }
+    }
+
+    // Does this type contain itself
+    pub fn is_recursive(&self, ns: &Namespace) -> bool {
+        match self {
+            Type::Struct(StructType::UserDefined(n)) => {
+                ns.structs[*n].fields.iter().any(|f| f.recursive)
+            }
+            Type::Mapping(Mapping { key, value, .. }) => {
+                key.is_recursive(ns) || value.is_recursive(ns)
+            }
+            Type::Array(ty, _) | Type::Ref(ty) | Type::Slice(ty) | Type::StorageRef(_, ty) => {
+                ty.is_recursive(ns)
+            }
+            Type::UserType(no) => ns.user_types[*no].ty.is_recursive(ns),
+            _ => false,
+        }
+    }
+
+    /// Helper function to safely recurse over a `Type`, preventing stack overflows.
+    ///
+    /// `F` is expected to be a closure that recursively walks the `Type`.
+    /// `O` is the output type of the closure.
+    ///
+    /// `structs_visited` is the set of already visited structs. It is automatically updated for each struct already seen.
+    /// `bail` is the value that should be returned in case an infinite recursion occured.
+    /// `f` is the closure being called by this function.
+    ///
+    /// This function is useful in the various scenarios.
+    ///
+    /// Naturally, it can be used to detect recursive types (see `fn Type::is_recursive()`).
+    ///
+    /// Moreover, functions like `fn Type::contains_mapping()` need to recursively check if the type contains mappings.
+    /// Consider the following valid type:
+    ///
+    /// ```solidity
+    /// struct A { B b; }
+    /// struct B { A[] a; }
+    /// ```
+    ///
+    /// Looking at nested or referential types individually does not work here. This can only be done recursively;
+    /// however, a naive recursion will run indefinitely.
+    /// Now, thanks to the `Type::guarded_recursion()` wrapper, instead of overflowing the stack,
+    /// `fn Type::contains_mapping()` safely bails out using a value of `false`.
+    /// This makes sense because:
+    /// - In `Type::contains_mapping`, the mapping type is the only type to return true
+    /// - Mappings do not recursively call `contains_mapping`
+    fn guarded_recursion<F, O>(&self, structs_visited: &mut HashSet<usize>, bail: O, f: F) -> O
+    where
+        F: FnOnce(&mut HashSet<usize>) -> O,
+    {
+        if let Type::Struct(StructType::UserDefined(n)) = self {
+            if !structs_visited.insert(*n) {
+                return bail;
+            }
+        }
+        f(structs_visited)
     }
 }
 

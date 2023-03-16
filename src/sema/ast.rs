@@ -228,8 +228,10 @@ pub struct Parameter {
     pub indexed: bool,
     /// Some builtin structs have readonly fields
     pub readonly: bool,
-    /// A struct may contain itself which make the struct infinite size in
-    /// memory. This boolean specifies which field introduces the recursion.
+    /// A recursive struct may contain itself which make the struct infinite size in memory.
+    pub infinite_size: bool,
+    /// Is this struct field recursive. Recursive does not mean infinite size in all cases:
+    /// `struct S { S[] s }` is recursive but not of infinite size.
     pub recursive: bool,
 }
 

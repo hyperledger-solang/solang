@@ -594,6 +594,7 @@ pub fn expression(
                 } else {
                     struct_ty.definition(ns).fields[..*field_no]
                         .iter()
+                        .filter(|field| !field.infinite_size)
                         .map(|field| field.ty.storage_slots(ns))
                         .sum()
                 };

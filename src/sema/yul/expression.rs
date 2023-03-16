@@ -423,6 +423,7 @@ pub(crate) fn resolve_function_call(
             ty_loc: None,
             indexed: false,
             readonly: false,
+            infinite_size: false,
             recursive: false,
         };
 

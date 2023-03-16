@@ -35,6 +35,7 @@ fn test_statement_reachable() {
                     ty_loc: None,
                     indexed: false,
                     readonly: false,
+                    infinite_size: false,
                     recursive: false,
                 },
                 None,

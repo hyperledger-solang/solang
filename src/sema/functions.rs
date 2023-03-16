@@ -452,6 +452,16 @@ pub fn contract_function(
         ns,
     );
 
+    if matches!(
+        visibility,
+        pt::Visibility::External(_) | pt::Visibility::Public(_) if params.iter().any(|p| p.ty.is_recursive(ns)))
+    {
+        ns.diagnostics.push(Diagnostic::error(
+            func.loc,
+            "Recursive parameter not allowed for public or external functions.".into(),
+        ))
+    }
+
     let mut fdecl = Function::new(
         func.loc,
         name,
@@ -915,6 +925,7 @@ pub fn resolve_params(
                     ty_loc: Some(ty_loc),
                     indexed: false,
                     readonly: false,
+                    infinite_size: false,
                     recursive: false,
                 });
             }
@@ -1027,6 +1038,7 @@ pub fn resolve_returns(
                     ty_loc: Some(ty_loc),
                     indexed: false,
                     readonly: false,
+                    infinite_size: false,
                     recursive: false,
                 });
             }
@@ -1066,6 +1078,7 @@ fn signatures() {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
+                infinite_size: false,
                 recursive: false,
             },
             Parameter {
@@ -1075,6 +1088,7 @@ fn signatures() {
                 ty_loc: None,
                 indexed: false,
                 readonly: false,
+                infinite_size: false,
                 recursive: false,
             },
         ],
