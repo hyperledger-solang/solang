@@ -868,6 +868,7 @@ fn expression(
                                 let (sign, mut bs) = n.to_bytes_le();
 
                                 match ty {
+                                    Type::Enum(_) => bs.resize(1, 0),
                                     Type::Uint(bits) => bs.resize(*bits as usize / 8, 0),
                                     Type::Int(bits) => {
                                         let v = if sign == Sign::Minus { 0xffu8 } else { 0 };
