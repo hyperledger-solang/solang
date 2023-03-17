@@ -18,6 +18,7 @@ contract Enum {
     }
     mapping(Lender => address) lenders;
 
+    // BEGIN-CHECK: Enum::Enum::constructor::7d622c65
     constructor(
         address usdt,
         address usdc,
