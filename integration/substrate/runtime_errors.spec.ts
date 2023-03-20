@@ -44,7 +44,7 @@ describe('Deploy runtime_errors.sol and test the debug buffer', () => {
 
 
         let res4 = await debug_buffer(conn, contract, `create_child`);
-        expect(res4).toEqual(`runtime_error: contract creation failed in runtime_errors.sol:68:13-24,
+        expect(res4).toEqual(`runtime_error: contract creation failed in runtime_errors.sol:68:13-39,
 `)
 
 

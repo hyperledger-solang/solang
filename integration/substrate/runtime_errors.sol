@@ -1,7 +1,7 @@
 contract RuntimeErrors {
     bytes b = hex"0000_00fa";
     uint256[] arr;
-    child public c;
+    child_runtime_errors public c;
 
     constructor() {}
 
@@ -65,7 +65,7 @@ contract RuntimeErrors {
 
     // contract creation failed (contract was deplyed with no value)
     function create_child() public {
-        c = new child();
+        c = new child_runtime_errors();
     }
 
     // non payable function dont_pay_me received value
@@ -125,10 +125,10 @@ contract callee_error {
     }
 }
 
-contract child {
+contract child_runtime_errors {
     constructor() payable {}
 
     function say_my_name() public pure returns (string memory) {
-        return "child";
+        return "child_runtime_errors";
     }
 }
