@@ -5,8 +5,8 @@ strict digraph "tests/contract_testcases/substrate/builtins/abi_decode_05.sol" {
 	parameters [label="parameters\nbytes b"]
 	encode [label="function encode\ncontract: Foo\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:6:2-31\nsignature encode()\nvisibility public\nmutability pure"]
 	diagnostic [label="found contract 'Foo'\nlevel Debug\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:1:1-9:2"]
-	diagnostic_9 [label="'struct Foo.S' cannot be abi decoded or encoded\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:4:3-21"]
-	diagnostic_10 [label="'struct Foo.S' cannot be abi decoded or encoded\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:7:14-34"]
+	diagnostic_9 [label="Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:4:3-21"]
+	diagnostic_10 [label="Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:7:14-34"]
 	structs -> S
 	contracts -> contract
 	contract -> decode [label="function"]
