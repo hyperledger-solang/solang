@@ -25,6 +25,7 @@ mod yul;
 
 use self::{
     cfg::{optimize_and_check_cfg, ControlFlowGraph, Instr},
+    dispatch::function_dispatch,
     expression::expression,
     vartable::Vartable,
 };
@@ -35,7 +36,6 @@ use crate::{sema::ast, Target};
 use std::cmp::Ordering;
 
 use crate::codegen::cfg::ASTFunction;
-use crate::codegen::dispatch::function_dispatch;
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
