@@ -7,7 +7,8 @@ use crate::{
     },
     sema::ast::{Namespace, Type, Type::Uint},
 };
-use solang_parser::pt::Loc::Codegen;
+use num_bigint::{BigInt, Sign};
+use solang_parser::pt::{FunctionTy, Loc::Codegen};
 
 /// The dispatching algorithm consists of these steps:
 /// 1. If the input is less than 4 bytes, fallback or receive.
@@ -78,7 +79,23 @@ pub(crate) fn function_dispatch(
         ],
     );
     let switch_block = cfg.new_basic_block("switch".into());
-    let mut cases = vec![];
+    let cases = all_cfg
+        .iter()
+        .enumerate()
+        .filter(|(_, msg_cfg)| {
+            msg_cfg.public && matches!(msg_cfg.ty, FunctionTy::Function | FunctionTy::Constructor)
+        })
+        .map(|(msg_no, msg_cfg)| {
+            (
+                Expression::NumberLiteral(
+                    Codegen,
+                    Uint(32),
+                    BigInt::from_bytes_le(Sign::Plus, &msg_cfg.selector),
+                ),
+                dispatch_case(contract_no, all_cfg, msg_no, &mut cfg, ns),
+            )
+        })
+        .collect::<Vec<_>>();
     let switch = Instr::Switch {
         cond,
         cases,
@@ -90,4 +107,17 @@ pub(crate) fn function_dispatch(
     cfg.set_basic_block(default);
 
     todo!()
+}
+
+fn dispatch_case(
+    contract_no: usize,
+    all_cfg: &[ControlFlowGraph],
+    msg_no: usize,
+    cfg: &mut ControlFlowGraph,
+    ns: &mut Namespace,
+) -> usize {
+    let case = cfg.new_basic_block(format!("dispatch_case_{msg_no}"));
+    cfg.set_basic_block(case);
+
+    case
 }
