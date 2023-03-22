@@ -192,7 +192,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn doc_comment_parsing() {
+    fn parse() {
         let src = r#"
 pragma solidity ^0.8.19;
 /// @name Test

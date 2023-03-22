@@ -33,9 +33,9 @@ pub fn parse(
     let mut lex = lexer::Lexer::new(src, file_no, &mut comments, &mut lexer_errors);
 
     let mut parser_errors = Vec::new();
-    let mut diagnostics = Vec::new();
     let res = solidity::SourceUnitParser::new().parse(src, file_no, &mut parser_errors, &mut lex);
 
+    let mut diagnostics = Vec::with_capacity(lex.errors.len() + parser_errors.len());
     for lexical_error in lex.errors {
         diagnostics.push(Diagnostic::parser_error(
             lexical_error.loc(),
