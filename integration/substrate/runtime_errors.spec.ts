@@ -22,7 +22,7 @@ describe('Deploy runtime_errors.sol and test the debug buffer', () => {
             deployed_contract.address
         );
 
-        let child_contract = await deploy(conn, alice, 'child.contract', BigInt(0));
+        let child_contract = await deploy(conn, alice, 'child_runtime_errors.contract', BigInt(0));
 
         let res = await debug_buffer(conn, contract, `get_storage_bytes`, [])
         expect(res).toEqual(`runtime_error: storage array index out of bounds in runtime_errors.sol:46:19-23,
@@ -44,7 +44,7 @@ describe('Deploy runtime_errors.sol and test the debug buffer', () => {
 
 
         let res4 = await debug_buffer(conn, contract, `create_child`);
-        expect(res4).toEqual(`runtime_error: contract creation failed in runtime_errors.sol:68:13-24,
+        expect(res4).toEqual(`runtime_error: contract creation failed in runtime_errors.sol:68:13-39,
 `)
 
 

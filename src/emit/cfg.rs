@@ -193,6 +193,18 @@ pub(super) fn emit_cfg<'a, T: TargetRuntime<'a> + ?Sized>(
                         None,
                     );
                     bin.builder.set_current_debug_location(debug_loc);
+                } else {
+                    // For instructions that do not have a location, insert a debug location pointing to line 0.
+                    // If -g flag is enabled, every instruction should have a debug location. This is necessary
+                    // because llvm's inliner pass requires function call instructions to have a debug location.
+                    let debug_loc = dibuilder.create_debug_location(
+                        bin.context,
+                        0_u32,
+                        0_u32,
+                        di_func_scope.unwrap().as_debug_info_scope(),
+                        None,
+                    );
+                    bin.builder.set_current_debug_location(debug_loc);
                 }
             }
 
