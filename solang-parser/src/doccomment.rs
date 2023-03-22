@@ -2,26 +2,52 @@
 
 use crate::pt::Comment;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+/// A Solidity parsed doc comment.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DocComment {
+    /// A line doc comment.
+    ///
+    /// `/// comment`
     Line { comment: DocCommentTag },
+
+    /// A block doc comment.
+    ///
+    /// ```text
+    /// /**
+    ///  * comment
+    ///  */
+    /// ```
     Block { comments: Vec<DocCommentTag> },
 }
 
 impl DocComment {
+    /// Returns the inner comments.
     pub fn comments(&self) -> Vec<&DocCommentTag> {
         match self {
             DocComment::Line { comment } => vec![comment],
             DocComment::Block { comments } => comments.iter().collect(),
         }
     }
+
+    /// Consumes `self` to return the inner comments.
+    pub fn into_comments(self) -> Vec<DocCommentTag> {
+        match self {
+            DocComment::Line { comment } => vec![comment],
+            DocComment::Block { comments } => comments,
+        }
+    }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+/// A Solidity doc comment's tag, value and respective offsets.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DocCommentTag {
+    /// The tag of the doc comment, like the `notice` in `/// @notice Doc comment value`
     pub tag: String,
+    /// The offset of the comment's tag, relative to the start of the source string.
     pub tag_offset: usize,
+    /// The actual comment string, like `Doc comment value` in `/// @notice Doc comment value`
     pub value: String,
+    /// The offset of the comment's value, relative to the start of the source string.
     pub value_offset: usize,
 }
 
