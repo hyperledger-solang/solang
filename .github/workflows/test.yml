@@ -9,7 +9,7 @@ on:
 jobs:
   repolinter:
     name: Repolinter
-    runs-on: ubuntu-20.04
+    runs-on: cyrill-microvm
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -18,7 +18,7 @@ jobs:
 
   lints:
     name: Lints
-    runs-on: ubuntu-20.04
+    runs-on: cyrill-microvm
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
       - name: Checkout sources
@@ -40,7 +40,7 @@ jobs:
 
   docs:
     name: Docs
-    runs-on: ubuntu-latest
+    runs-on: cyrill-microvm
     container: ubuntu:20.04
     steps:
       - name: Checkout sources
@@ -58,7 +58,7 @@ jobs:
 
   linux-x86-64:
     name: Linux x86-64
-    runs-on: ubuntu-20.04
+    runs-on: cyrill-microvm
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
     - name: Checkout sources
@@ -215,7 +215,7 @@ jobs:
 
   anchor:
     name: Anchor Integration test
-    runs-on: ubuntu-latest
+    runs-on: cyrill-microvm
     container: ghcr.io/hyperledger/solang-llvm:ci
     needs: linux-x86-64
     steps:
@@ -259,7 +259,7 @@ jobs:
 
   solana:
     name: Solana Integration test
-    runs-on: ubuntu-latest
+    runs-on: cyrill-microvm
     container: ghcr.io/hyperledger/solang-llvm:ci
     needs: linux-x86-64
     steps:
@@ -290,7 +290,7 @@ jobs:
 
   substrate:
     name: Substrate Integration test
-    runs-on: ubuntu-20.04
+    runs-on: cyrill-microvm
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -323,7 +323,7 @@ jobs:
 
   vscode:
     name: Visual Code Extension
-    runs-on: ubuntu-20.04
+    runs-on: cyrill-microvm
     needs: linux-x86-64
     steps:
     - name: Checkout
