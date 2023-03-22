@@ -59,13 +59,10 @@ enum CommentType {
 /// From the start to end offset, filter all the doc comments out of the comments and parse
 /// them into tags with values.
 pub fn parse_doccomments(comments: &[Comment], start: usize, end: usize) -> Vec<DocComment> {
-    // first extract the tags
-    let mut tags = Vec::new();
+    let mut tags = Vec::with_capacity(comments.len());
 
-    let lines = filter_comments(comments, start, end);
-
-    for (ty, comment_lines) in lines {
-        let mut single_tags = Vec::new();
+    for (ty, comment_lines) in filter_comments(comments, start, end) {
+        let mut single_tags = Vec::with_capacity(comment_lines.len());
 
         for (start_offset, line) in comment_lines {
             let mut chars = line.char_indices().peekable();
@@ -130,7 +127,7 @@ pub fn parse_doccomments(comments: &[Comment], start: usize, end: usize) -> Vec<
 
         match ty {
             CommentType::Line if !single_tags.is_empty() => tags.push(DocComment::Line {
-                comment: single_tags[0].to_owned(),
+                comment: single_tags.swap_remove(0),
             }),
             CommentType::Block => tags.push(DocComment::Block {
                 comments: single_tags,
@@ -147,38 +144,33 @@ fn filter_comments(
     comments: &[Comment],
     start: usize,
     end: usize,
-) -> Vec<(CommentType, Vec<(usize, &str)>)> {
-    let mut res = Vec::new();
-
-    for comment in comments.iter() {
-        let mut grouped_comments = Vec::new();
-
+) -> impl Iterator<Item = (CommentType, Vec<(usize, &str)>)> {
+    comments.iter().filter_map(move |comment| {
         match comment {
+            // filter out all non-doc comments
+            Comment::Block(..) | Comment::Line(..) => None,
+            // filter out doc comments that are outside the given range
+            Comment::DocLine(loc, _) | Comment::DocBlock(loc, _)
+                if loc.start() >= end || loc.end() < start =>
+            {
+                None
+            }
+
             Comment::DocLine(loc, comment) => {
-                if loc.start() >= end || loc.end() < start {
-                    continue;
-                }
-
-                // remove the leading ///
-                let leading = comment[3..]
-                    .chars()
-                    .take_while(|ch| ch.is_whitespace())
-                    .count();
-
-                grouped_comments.push((loc.start() + leading + 3, comment[3..].trim()));
-
-                res.push((CommentType::Line, grouped_comments));
+                // remove the leading /// and whitespace;
+                // if we don't find a match, default to skipping the 3 `/` bytes,
+                // since they are guaranteed to be in the comment string
+                let leading = comment
+                    .find(|c: char| c != '/' && !c.is_whitespace())
+                    .unwrap_or(3);
+                let comment = (loc.start() + leading, comment[leading..].trim_end());
+                Some((CommentType::Line, vec![comment]))
             }
             Comment::DocBlock(loc, comment) => {
-                if loc.start() >= end || loc.end() < start {
-                    continue;
-                }
-
-                let mut start = loc.start() + 3;
-
-                let len = comment.len();
-
                 // remove the leading /** and tailing */
+                let mut start = loc.start() + 3;
+                let mut grouped_comments = Vec::new();
+                let len = comment.len();
                 for s in comment[3..len - 2].lines() {
                     if let Some((i, _)) = s
                         .char_indices()
@@ -189,12 +181,11 @@ fn filter_comments(
 
                     start += s.len() + 1;
                 }
-
-                res.push((CommentType::Block, grouped_comments));
+                Some((CommentType::Block, grouped_comments))
             }
-            _ => (),
         }
-    }
+    })
+}
 
     res
 }
