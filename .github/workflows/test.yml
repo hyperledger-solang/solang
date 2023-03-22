@@ -9,7 +9,7 @@ on:
 jobs:
   repolinter:
     name: Repolinter
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -18,7 +18,7 @@ jobs:
 
   lints:
     name: Lints
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
       - name: Checkout sources
@@ -58,7 +58,7 @@ jobs:
 
   linux-x86-64:
     name: Linux x86-64
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
     - name: Checkout sources
@@ -236,12 +236,15 @@ jobs:
       run: |
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
+    # Ensure nohup writes output to a file, not the terminal.
+    # If we don't, solana-test-validator might not be able to write its
+    # output and exit
+    - run: nohup solana-test-validator -q > validator.out &
     - name: Build Anchor test program
       run: |
         yarn install
         anchor build
       working-directory: ./integration/anchor
-    - run: nohup solana-test-validator -q &
     - name: Deploy Anchor program
       run: |
         solana -ul airdrop -k id.json 10
@@ -278,7 +281,10 @@ jobs:
       run: |
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
-    - run: nohup solana-test-validator -q &
+    # Ensure nohup writes output to a file, not the terminal.
+    # If we don't, solana-test-validator might not be able to write its
+    # output and exit
+    - run: nohup solana-test-validator -q > validator.out &
     - run: npm install
       working-directory: ./integration/solana
     - name: Build Solang contracts
@@ -290,7 +296,7 @@ jobs:
 
   substrate:
     name: Substrate Integration test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -298,7 +304,8 @@ jobs:
       # We can't run substrate as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
-      run: docker run -d -p 9944:9944 paritytech/contracts-ci-linux@sha256:2eaa0869c562adabcfc011a2f3ad6b2289cdd0b3a8923e24d29efd4452b397de substrate-contracts-node --dev --ws-external
+      run: echo id=$(docker run -d -p 9944:9944 paritytech/contracts-ci-linux@sha256:2eaa0869c562adabcfc011a2f3ad6b2289cdd0b3a8923e24d29efd4452b397de substrate-contracts-node --dev --ws-external) >> $GITHUB_OUTPUT
+      id: substrate
     - uses: actions/setup-node@v3
       with:
         node-version: '14'
@@ -320,10 +327,13 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/substrate
+    - name: cleanup
+      if: always()
+      run: docker kill ${{steps.substrate.outputs.id}}
 
   vscode:
     name: Visual Code Extension
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: linux-x86-64
     steps:
     - name: Checkout
