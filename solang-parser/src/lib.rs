@@ -13,8 +13,9 @@ pub mod diagnostics;
 pub mod doccomment;
 pub mod lexer;
 pub mod pt;
+
 #[cfg(test)]
-mod test;
+mod tests;
 
 #[allow(clippy::all)]
 mod solidity {
