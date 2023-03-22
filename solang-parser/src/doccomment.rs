@@ -187,5 +187,70 @@ fn filter_comments(
     })
 }
 
-    res
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn doc_comment_parsing() {
+        let src = r#"
+pragma solidity ^0.8.19;
+/// @name Test
+///  no tag
+///@notice    Cool contract    
+///   @  dev     This is not a dev tag 
+/**
+ * @dev line one
+ *    line 2
+ */
+contract Test {
+    /*** my function    
+          i like whitespace    
+*/
+    function test() {}
+}
+"#;
+        let (_, comments) = crate::parse(src, 0).unwrap();
+        assert_eq!(comments.len(), 6);
+
+        let actual = parse_doccomments(&comments, 0, usize::MAX);
+        let expected = vec![
+            DocComment::Line {
+                comment: DocCommentTag {
+                    tag: "name".into(),
+                    tag_offset: 31,
+                    value: "Test\nno tag".into(),
+                    value_offset: 36,
+                },
+            },
+            DocComment::Line {
+                comment: DocCommentTag {
+                    tag: "notice".into(),
+                    tag_offset: 57,
+                    value: "Cool contract".into(),
+                    value_offset: 67,
+                },
+            },
+            DocComment::Line {
+                comment: DocCommentTag {
+                    tag: "".into(),
+                    tag_offset: 92,
+                    value: "dev     This is not a dev tag".into(),
+                    value_offset: 94,
+                },
+            },
+            // TODO: Second block is merged into the first
+            DocComment::Block {
+                comments: vec![DocCommentTag {
+                    tag: "dev".into(),
+                    tag_offset: 133,
+                    value: "line one\nline 2\nmy function\ni like whitespace".into(),
+                    value_offset: 137,
+                }],
+            },
+            DocComment::Block { comments: vec![] },
+        ];
+
+        assert_eq!(actual, expected);
+    }
 }
