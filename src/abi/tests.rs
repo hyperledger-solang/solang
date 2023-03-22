@@ -157,7 +157,7 @@ fn instructions_and_types() {
     }
 
     function notInIdl(uint256 c, MetaData dd) private pure returns (int256) {
-        if (dd.a && dd.b) {
+        if (dd.c && dd.b) {
             return 0;
         }
         return int256(c);

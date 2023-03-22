@@ -499,7 +499,7 @@ fn compile(matches: &ArgMatches) {
     }
 
     if !errors {
-        for ns in &namespaces {
+        for ns in namespaces.iter_mut() {
             for contract_no in 0..ns.contracts.len() {
                 contract_results(contract_no, matches, ns, &mut json_contracts, &opt);
             }
@@ -576,7 +576,7 @@ fn process_file(
 fn contract_results(
     contract_no: usize,
     matches: &ArgMatches,
-    ns: &Namespace,
+    ns: &mut Namespace,
     json_contracts: &mut HashMap<String, JsonContract>,
     opt: &Options,
 ) {
