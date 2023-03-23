@@ -41,7 +41,7 @@ pub fn parse(
     let mut diagnostics = Vec::with_capacity(lex.errors.len() + parser_errors.len());
     for lexical_error in lex.errors {
         diagnostics.push(Diagnostic::parser_error(
-            *lexical_error.loc(),
+            lexical_error.loc(),
             lexical_error.to_string(),
         ))
     }
@@ -81,7 +81,7 @@ fn parser_error_to_diagnostic(
                 expected.join(", ")
             ),
         ),
-        ParseError::User { error } => Diagnostic::parser_error(*error.loc(), error.to_string()),
+        ParseError::User { error } => Diagnostic::parser_error(error.loc(), error.to_string()),
         ParseError::ExtraToken { token } => Diagnostic::parser_error(
             Loc::File(file_no, token.0, token.2),
             format!("extra token '{}' encountered", token.0),

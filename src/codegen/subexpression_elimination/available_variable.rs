@@ -41,7 +41,7 @@ impl AvailableVariable {
 }
 
 impl OptionalCodeLocation for AvailableVariable {
-    fn loc(&self) -> Option<Loc> {
+    fn loc_opt(&self) -> Option<Loc> {
         match self {
             AvailableVariable::Available(_, loc) => Some(*loc),
             _ => None,

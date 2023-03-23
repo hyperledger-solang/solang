@@ -33,13 +33,8 @@ pub enum Loc {
 
 impl Default for Loc {
     fn default() -> Self {
-        *Self::DEFAULT
+        Self::File(0, 0, 0)
     }
-}
-
-impl Loc {
-    /// The default location.
-    pub const DEFAULT: &Self = &Loc::File(0, 0, 0);
 }
 
 #[inline(never)]

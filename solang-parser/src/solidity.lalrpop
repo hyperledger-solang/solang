@@ -483,7 +483,7 @@ NoFunctionTyPrecedence0: Expression = {
         if a.len() == 1 {
             if let Some(Parameter{ ty, storage: None, name: None, .. }) = &a[0].1 {
                 // this means "(" Expression ")"
-                return Expression::Parenthesis(*ty.loc(), Box::new(ty.clone()));
+                return Expression::Parenthesis(ty.loc(), Box::new(ty.clone()));
             }
         }
 

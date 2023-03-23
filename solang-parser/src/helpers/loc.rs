@@ -6,47 +6,58 @@ use crate::{
 /// Returns a shared reference to the code location, if it exists.
 pub trait OptionalCodeLocation {
     /// Optionally returns a shared reference to the code location of `self`.
-    fn loc_opt(&self) -> Option<&Loc>;
+    fn loc_opt(&self) -> Option<Loc>;
 }
 
 impl<T: CodeLocation> OptionalCodeLocation for T {
-    fn loc_opt(&self) -> Option<&Loc> {
+    fn loc_opt(&self) -> Option<Loc> {
         Some(self.loc())
     }
 }
 
 impl<T: CodeLocation> OptionalCodeLocation for Option<T> {
-    fn loc_opt(&self) -> Option<&Loc> {
+    fn loc_opt(&self) -> Option<Loc> {
         self.as_ref().map(CodeLocation::loc)
+    }
+}
+
+impl OptionalCodeLocation for pt::Visibility {
+    fn loc_opt(&self) -> Option<Loc> {
+        match self {
+            Self::Internal(l, ..)
+            | Self::External(l, ..)
+            | Self::Private(l, ..)
+            | Self::Public(l, ..) => *l,
+        }
     }
 }
 
 /// Returns a shared reference to the code location.
 pub trait CodeLocation {
     /// Returns a shared reference to the code location of `self`.
-    fn loc(&self) -> &Loc;
+    fn loc(&self) -> Loc;
 }
 
 impl CodeLocation for Loc {
-    fn loc(&self) -> &Loc {
-        self
+    fn loc(&self) -> Loc {
+        *self
     }
 }
 
 impl<T: CodeLocation> CodeLocation for &'_ T {
-    fn loc(&self) -> &Loc {
+    fn loc(&self) -> Loc {
         (*self).loc()
     }
 }
 
 impl<T: CodeLocation> CodeLocation for [T] {
-    fn loc(&self) -> &Loc {
-        self.first().map(CodeLocation::loc).unwrap_or(Loc::DEFAULT)
+    fn loc(&self) -> Loc {
+        self.first().map(CodeLocation::loc).unwrap_or_default()
     }
 }
 
 impl<T: CodeLocation> CodeLocation for Vec<T> {
-    fn loc(&self) -> &Loc {
+    fn loc(&self) -> Loc {
         self.as_slice().loc()
     }
 }
@@ -55,8 +66,8 @@ macro_rules! impl_for_structs {
     ($($t:ty),+ $(,)?) => {
         $(
             impl CodeLocation for $t {
-                fn loc(&self) -> &Loc {
-                    &self.loc
+                fn loc(&self) -> Loc {
+                    self.loc
                 }
             }
         )+
@@ -102,8 +113,8 @@ macro_rules! impl_for_enums {
     )+) => {
         $(
             impl CodeLocation for $t {
-                fn loc(&$s) -> &Loc {
-                    match $s {
+                fn loc(&$s) -> Loc {
+                    match *$s {
                         $($m)*
                     }
                 }
@@ -127,15 +138,15 @@ impl_for_enums! {
     }
 
     pt::ContractPart: match self {
-        Self::StructDefinition(l, ..) => l.loc(),
-        Self::EventDefinition(l, ..) => l.loc(),
-        Self::EnumDefinition(l, ..) => l.loc(),
-        Self::ErrorDefinition(l, ..) => l.loc(),
-        Self::VariableDefinition(l, ..) => l.loc(),
-        Self::FunctionDefinition(l, ..) => l.loc(),
-        Self::TypeDefinition(l, ..) => l.loc(),
-        Self::Annotation(l, ..) => l.loc(),
-        Self::Using(l, ..) => l.loc(),
+        Self::StructDefinition(ref l, ..) => l.loc(),
+        Self::EventDefinition(ref l, ..) => l.loc(),
+        Self::EnumDefinition(ref l, ..) => l.loc(),
+        Self::ErrorDefinition(ref l, ..) => l.loc(),
+        Self::VariableDefinition(ref l, ..) => l.loc(),
+        Self::FunctionDefinition(ref l, ..) => l.loc(),
+        Self::TypeDefinition(ref l, ..) => l.loc(),
+        Self::Annotation(ref l, ..) => l.loc(),
+        Self::Using(ref l, ..) => l.loc(),
         Self::StraySemicolon(l, ..) => l,
     }
 
@@ -147,9 +158,9 @@ impl_for_enums! {
     }
 
     pt::Expression: match self {
-        Self::StringLiteral(l, ..) => l.loc(),
-        Self::HexLiteral(l, ..) => l.loc(),
-        Self::Variable(l, ..) => l.loc(),
+        Self::StringLiteral(ref l, ..) => l.loc(),
+        Self::HexLiteral(ref l, ..) => l.loc(),
+        Self::Variable(ref l, ..) => l.loc(),
         Self::PostIncrement(l, ..)
         | Self::PostDecrement(l, ..)
         | Self::New(l, ..)
@@ -210,8 +221,8 @@ impl_for_enums! {
     }
 
     pt::FunctionAttribute: match self {
-        Self::Mutability(l) => l.loc(),
-        Self::Visibility(l) => l.loc(),
+        Self::Mutability(ref l) => l.loc(),
+        Self::Visibility(ref l) => l.loc_opt().unwrap_or_default(),
         Self::Virtual(l, ..)
         | Self::Immutable(l, ..)
         | Self::Override(l, ..,)
@@ -233,19 +244,19 @@ impl_for_enums! {
     }
 
     pt::SourceUnitPart: match self {
-        Self::PragmaDirective(l, ..) => l,
-        Self::ImportDirective(l, ..) => l.loc(),
-        Self::ContractDefinition(l, ..) => l.loc(),
-        Self::EnumDefinition(l, ..) => l.loc(),
-        Self::StructDefinition(l, ..) => l.loc(),
-        Self::EventDefinition(l, ..) => l.loc(),
-        Self::ErrorDefinition(l, ..) => l.loc(),
-        Self::FunctionDefinition(l, ..) => l.loc(),
-        Self::VariableDefinition(l, ..) => l.loc(),
-        Self::TypeDefinition(l, ..) => l.loc(),
-        Self::Annotation(l, ..) => l.loc(),
-        Self::Using(l, ..) => l.loc(),
-        Self::StraySemicolon(l) => l,
+        Self::ImportDirective(ref l, ..) => l.loc(),
+        Self::ContractDefinition(ref l, ..) => l.loc(),
+        Self::EnumDefinition(ref l, ..) => l.loc(),
+        Self::StructDefinition(ref l, ..) => l.loc(),
+        Self::EventDefinition(ref l, ..) => l.loc(),
+        Self::ErrorDefinition(ref l, ..) => l.loc(),
+        Self::FunctionDefinition(ref l, ..) => l.loc(),
+        Self::VariableDefinition(ref l, ..) => l.loc(),
+        Self::TypeDefinition(ref l, ..) => l.loc(),
+        Self::Annotation(ref l, ..) => l.loc(),
+        Self::Using(ref l, ..) => l.loc(),
+        Self::PragmaDirective(l, ..)
+        | Self::StraySemicolon(l, ..) => l,
     }
 
     pt::Statement: match self {
@@ -275,30 +286,23 @@ impl_for_enums! {
     }
 
     pt::UsingList: match self {
-        Self::Library(l, ..) => l.loc(),
-        Self::Functions(l, ..) => l.loc(),
+        Self::Library(ref l, ..) => l.loc(),
+        Self::Functions(ref l, ..) => l.loc(),
         Self::Error => panic!("an error occurred"),
     }
 
     pt::VariableAttribute: match self {
-        Self::Visibility(l, ..) => l.loc(),
+        Self::Visibility(ref l, ..) => l.loc_opt().unwrap_or_default(),
         Self::Constant(l, ..)
         | Self::Immutable(l, ..)
         | Self::Override(l, ..) => l,
     }
 
-    pt::Visibility: match self {
-        Self::External(l, ..)
-        | Self::Internal(l, ..)
-        | Self::Private(l, ..)
-        | Self::Public(l, ..) => l.as_ref().unwrap_or(Loc::DEFAULT),
-    }
-
     pt::YulExpression: match self {
-        Self::HexStringLiteral(l, ..) => l.loc(),
-        Self::StringLiteral(l, ..) => l.loc(),
-        Self::Variable(l, ..) => l.loc(),
-        Self::FunctionCall(l, ..) => l.loc(),
+        Self::HexStringLiteral(ref l, ..) => l.loc(),
+        Self::StringLiteral(ref l, ..) => l.loc(),
+        Self::Variable(ref l, ..) => l.loc(),
+        Self::FunctionCall(ref l, ..) => l.loc(),
         Self::BoolLiteral(l, ..)
         | Self::NumberLiteral(l, ..)
         | Self::HexNumberLiteral(l, ..)
@@ -306,11 +310,11 @@ impl_for_enums! {
     }
 
     pt::YulStatement: match self {
-        Self::Block(l, ..) => l.loc(),
-        Self::FunctionDefinition(l, ..) => l.loc(),
-        Self::FunctionCall(l, ..) => l.loc(),
-        Self::For(l, ..) => l.loc(),
-        Self::Switch(l, ..) => l.loc(),
+        Self::Block(ref l, ..) => l.loc(),
+        Self::FunctionDefinition(ref l, ..) => l.loc(),
+        Self::FunctionCall(ref l, ..) => l.loc(),
+        Self::For(ref l, ..) => l.loc(),
+        Self::Switch(ref l, ..) => l.loc(),
         Self::Assign(l, ..)
         | Self::VariableDeclaration(l, ..)
         | Self::If(l, ..)

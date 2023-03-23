@@ -1623,7 +1623,7 @@ pub enum DestructureField {
 }
 
 impl OptionalCodeLocation for DestructureField {
-    fn loc(&self) -> Option<pt::Loc> {
+    fn loc_opt(&self) -> Option<pt::Loc> {
         match self {
             DestructureField::None => None,
             DestructureField::Expression(e) => Some(e.loc()),
