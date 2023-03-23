@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//! Solidity parsed doc comments.
+//!
+//! See also the Solidity documentation on [natspec].
+//!
+//! [natspec]: https://docs.soliditylang.org/en/latest/natspec-format.html
+
 use crate::pt::Comment;
 
 /// A Solidity parsed doc comment.
@@ -7,17 +13,23 @@ use crate::pt::Comment;
 pub enum DocComment {
     /// A line doc comment.
     ///
-    /// `/// comment`
-    Line { comment: DocCommentTag },
+    /// `/// doc comment`
+    Line {
+        /// The single comment tag of the line.
+        comment: DocCommentTag,
+    },
 
     /// A block doc comment.
     ///
     /// ```text
     /// /**
-    ///  * comment
+    ///  * block doc comment
     ///  */
     /// ```
-    Block { comments: Vec<DocCommentTag> },
+    Block {
+        /// The list of doc comment tags of the block.
+        comments: Vec<DocCommentTag>,
+    },
 }
 
 impl DocComment {

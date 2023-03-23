@@ -13,6 +13,7 @@ use std::{fmt, str::CharIndices};
 use thiserror::Error;
 use unicode_xid::UnicodeXID;
 
+/// A spanned [Token].
 pub type Spanned<'a> = (usize, Token<'a>, usize);
 
 /// [Lexer]'s Result type.
@@ -20,12 +21,16 @@ pub type Result<'a, T = Spanned<'a>, E = LexicalError> = std::result::Result<T, 
 
 /// A Solidity lexical token. Produced by [Lexer].
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[allow(missing_docs)]
 pub enum Token<'input> {
     Identifier(&'input str),
+    /// `(unicode, literal)`
     StringLiteral(bool, &'input str),
     AddressLiteral(&'input str),
     HexLiteral(&'input str),
+    /// `(number, exponent)`
     Number(&'input str, &'input str),
+    /// `(number, fraction, exponent)`
     RationalNumber(&'input str, &'input str, &'input str),
     HexNumber(&'input str),
     Divide,
@@ -317,31 +322,63 @@ impl<'input> fmt::Display for Token<'input> {
 }
 
 /// Custom Solidity lexer.
+///
+/// # Examples
+///
+/// ```
+/// use solang_parser::lexer::{Lexer, Token};
+///
+/// let source = "uint256 number = 0;";
+/// let mut comments = Vec::new();
+/// let mut errors = Vec::new();
+/// let mut lexer = Lexer::new(source, 0, &mut comments, &mut errors);
+///
+/// let mut next_token = || lexer.next().map(|result| result.map(|(_, token, _)| token));
+/// assert_eq!(next_token(), Some(Ok(Token::Uint(256))));
+/// assert_eq!(next_token(), Some(Ok(Token::Identifier("number"))));
+/// assert_eq!(next_token(), Some(Ok(Token::Assign)));
+/// assert_eq!(next_token(), Some(Ok(Token::Number("0", ""))));
+/// assert_eq!(next_token(), Some(Ok(Token::Semicolon)));
+/// assert_eq!(next_token(), None);
+/// assert!(errors.is_empty());
+/// assert!(comments.is_empty());
+/// ```
+#[derive(Debug)]
 pub struct Lexer<'input> {
     input: &'input str,
     chars: PeekNth<CharIndices<'input>>,
     comments: &'input mut Vec<Comment>,
     file_no: usize,
     last_tokens: [Option<Token<'input>>; 2],
+    /// The mutable reference to the error vector.
     pub errors: &'input mut Vec<LexicalError>,
 }
 
+/// An error thrown by [Lexer].
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[allow(missing_docs)]
 pub enum LexicalError {
     #[error("end of file found in comment")]
     EndOfFileInComment(Loc),
+
     #[error("end of file found in string literal")]
     EndOfFileInString(Loc),
+
     #[error("end of file found in hex literal string")]
     EndofFileInHex(Loc),
+
     #[error("missing number")]
     MissingNumber(Loc),
+
     #[error("invalid character '{1}' in hex literal string")]
     InvalidCharacterInHexLiteral(Loc, char),
+
     #[error("unrecognised token '{1}'")]
     UnrecognisedToken(Loc, String),
+
     #[error("missing exponent")]
     MissingExponent(Loc),
+
     #[error("'{1}' found where 'from' expected")]
     ExpectedFrom(Loc, String),
 }
@@ -534,6 +571,18 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
 };
 
 impl<'input> Lexer<'input> {
+    /// Instantiates a new Lexer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use solang_parser::lexer::Lexer;
+    ///
+    /// let source = "uint256 number = 0;";
+    /// let mut comments = Vec::new();
+    /// let mut errors = Vec::new();
+    /// let mut lexer = Lexer::new(source, 0, &mut comments, &mut errors);
+    /// ```
     pub fn new(
         input: &'input str,
         file_no: usize,

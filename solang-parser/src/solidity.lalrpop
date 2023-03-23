@@ -714,7 +714,7 @@ Using: Box<Using> = {
     }),
     <l:@L> "using" <false_token:!> <r:@R> ";" => {
         parser_errors.push(false_token);
-        let list = UsingList::Error();
+        let list = UsingList::Error;
         let global = None;
         Box::new(Using {
             loc: Loc::File(file_no, l, r),

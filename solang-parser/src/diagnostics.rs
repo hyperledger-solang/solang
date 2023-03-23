@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//! Solidity parser diagnostics.
+
 use crate::pt;
 use crate::pt::Loc;
 use std::fmt;
@@ -7,9 +9,13 @@ use std::fmt;
 /// The level of a diagnostic.
 #[derive(Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Level {
+    /// Debug diagnostic level.
     Debug,
+    /// Info diagnostic level.
     Info,
+    /// Warning diagnostic level.
     Warning,
+    /// Error diagnostic level.
     Error,
 }
 
@@ -34,12 +40,19 @@ impl Level {
 /// The type of a diagnostic.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ErrorType {
+    /// No specific error type.
     None,
+    /// Parser error.
     ParserError,
+    /// Syntax error.
     SyntaxError,
+    /// Declaration error.
     DeclarationError,
+    /// Cast error.
     CastError,
+    /// Type error.
     TypeError,
+    /// Warning.
     Warning,
 }
 

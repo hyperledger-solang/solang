@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![doc = include_str!("../README.md")]
+#![warn(missing_debug_implementations, missing_docs)]
 
 use crate::lexer::LexicalError;
 use crate::lexer::Token;

@@ -1,32 +1,53 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//! Solidity parse tree data structures.
+//!
+//! See also the [Solidity documentation][sol].
+//!
+//! [sol]: https://docs.soliditylang.org/en/latest/grammar.html
+
 #[cfg(feature = "pt-serde")]
 use serde::{Deserialize, Serialize};
 
-use std::fmt::{self, Display};
+use std::fmt::{self, Display, Write};
 
-/// file no, start offset, end offset (in bytes)
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+/// A code location.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Loc {
+    /// Builtin
     Builtin,
+    /// Command line
     CommandLine,
+    /// Implicit
     Implicit,
+    /// Codegen
     Codegen,
+    /// The file number, start offset and end offset in bytes of the source file.
     File(usize, usize, usize),
 }
 
 /// Structs can implement this trait to easily return their loc
 pub trait CodeLocation {
+    /// Returns the code location.
     fn loc(&self) -> Loc;
 }
 
 /// Structs should implement this trait to return an optional location
 pub trait OptionalCodeLocation {
+    /// Optionally returns the code location.
     fn loc(&self) -> Option<Loc>;
 }
 
+#[inline(never)]
+#[cold]
+#[track_caller]
+fn not_a_file() -> ! {
+    panic!("location is not a file")
+}
+
 impl Loc {
+    /// Returns this location's beginning range.
     #[must_use]
     pub fn begin_range(&self) -> Self {
         match self {
@@ -35,6 +56,7 @@ impl Loc {
         }
     }
 
+    /// Returns this location's end range.
     #[must_use]
     pub fn end_range(&self) -> Self {
         match self {
@@ -43,14 +65,20 @@ impl Loc {
         }
     }
 
+    /// Returns this location's file number.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
     pub fn file_no(&self) -> usize {
         match self {
             Loc::File(file_no, _, _) => *file_no,
-            _ => unreachable!(),
+            _ => not_a_file(),
         }
     }
 
-    /// Return the file_no if the location is in a file
+    /// Returns this location's file number if it is a file, otherwise `None`.
     pub fn try_file_no(&self) -> Option<usize> {
         match self {
             Loc::File(file_no, _, _) => Some(*file_no),
@@ -58,43 +86,70 @@ impl Loc {
         }
     }
 
+    /// Returns this location's start.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
     pub fn start(&self) -> usize {
         match self {
             Loc::File(_, start, _) => *start,
-            _ => unreachable!(),
+            _ => not_a_file(),
         }
     }
 
+    /// Returns this location's end.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
     pub fn end(&self) -> usize {
         match self {
             Loc::File(_, _, end) => *end,
-            _ => unreachable!(),
+            _ => not_a_file(),
         }
     }
 
-    pub fn use_end_from(&mut self, other: &Loc) {
-        match (self, other) {
-            (Loc::File(_, _, end), Loc::File(_, _, other_end)) => {
-                *end = *other_end;
-            }
-            _ => unreachable!(),
-        }
-    }
-
+    /// Replaces this location's start with `other`'s.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
     pub fn use_start_from(&mut self, other: &Loc) {
         match (self, other) {
             (Loc::File(_, start, _), Loc::File(_, other_start, _)) => {
                 *start = *other_start;
             }
-            _ => unreachable!(),
+            _ => not_a_file(),
+        }
+    }
+
+    /// Replaces this location's end with `other`'s.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
+    pub fn use_end_from(&mut self, other: &Loc) {
+        match (self, other) {
+            (Loc::File(_, _, end), Loc::File(_, _, other_end)) => {
+                *end = *other_end;
+            }
+            _ => not_a_file(),
         }
     }
 }
 
+/// An identifier.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct Identifier {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier string.
     pub name: String,
 }
 
@@ -104,140 +159,260 @@ impl Display for Identifier {
     }
 }
 
+/// A qualified identifier.
+///
+/// Dot-separated list of identifiers.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct IdentifierPath {
+    /// The code location.
     pub loc: Loc,
+    /// The list of identifiers.
     pub identifiers: Vec<Identifier>,
 }
 
 impl Display for IdentifierPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(ident) = self.identifiers.get(0) {
-            ident.fmt(f)?;
-        } else {
-            return Ok(());
+        match self.identifiers.as_slice() {
+            [] => Ok(()),
+            [ident, rest @ ..] => {
+                ident.fmt(f)?;
+                for ident in rest {
+                    f.write_char('.')?;
+                    ident.fmt(f)?;
+                }
+                Ok(())
+            }
         }
-        for ident in self.identifiers[1..].iter() {
-            f.write_str(".")?;
-            ident.fmt(f)?;
-        }
-        Ok(())
     }
 }
 
+/// A comment or [doc comment][natspec].
+///
+/// [natspec]: https://docs.soliditylang.org/en/latest/natspec-format.html
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Comment {
+    /// A line comment.
+    ///
+    /// `// line comment`
     Line(Loc, String),
+
+    /// A block doc comment.
+    ///
+    /// ` /* block comment */ `
     Block(Loc, String),
+
+    /// A line doc comment.
+    ///
+    /// `/// line doc comment`
     DocLine(Loc, String),
+
+    /// A block doc comment.
+    ///
+    /// ```text
+    /// /**
+    ///  * block doc comment
+    ///  */
+    /// ```
     DocBlock(Loc, String),
 }
 
+/// The source unit of the parse tree.
+///
+/// Contains all of the parse tree's parts in a vector.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct SourceUnit(pub Vec<SourceUnitPart>);
 
+/// A parse tree part.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum SourceUnitPart {
-    ContractDefinition(Box<ContractDefinition>),
+    /// A pragma directive.
     PragmaDirective(Loc, Option<Identifier>, Option<StringLiteral>),
+
+    /// An import directive.
     ImportDirective(Import),
+
+    /// A contract definition.
+    ContractDefinition(Box<ContractDefinition>),
+
+    /// An enum definition.
     EnumDefinition(Box<EnumDefinition>),
+
+    /// A struct definition.
     StructDefinition(Box<StructDefinition>),
+
+    /// An event definition.
     EventDefinition(Box<EventDefinition>),
+
+    /// An error definition.
     ErrorDefinition(Box<ErrorDefinition>),
+
+    /// A function definition.
     FunctionDefinition(Box<FunctionDefinition>),
+
+    /// A variable definition.
     VariableDefinition(Box<VariableDefinition>),
+
+    /// A type definition.
     TypeDefinition(Box<TypeDefinition>),
+
+    /// An annotation.
     Annotation(Box<Annotation>),
+
+    /// A `using` directive.
     Using(Box<Using>),
+
+    /// A stray semicolon.
     StraySemicolon(Loc),
 }
 
-impl SourceUnitPart {
-    pub fn loc(&self) -> &Loc {
+impl CodeLocation for SourceUnitPart {
+    fn loc(&self) -> Loc {
         match self {
-            SourceUnitPart::ContractDefinition(def) => &def.loc,
-            SourceUnitPart::PragmaDirective(loc, _, _) => loc,
-            SourceUnitPart::ImportDirective(import) => import.loc(),
-            SourceUnitPart::EnumDefinition(def) => &def.loc,
-            SourceUnitPart::StructDefinition(def) => &def.loc,
-            SourceUnitPart::EventDefinition(def) => &def.loc,
-            SourceUnitPart::ErrorDefinition(def) => &def.loc,
-            SourceUnitPart::FunctionDefinition(def) => &def.loc,
-            SourceUnitPart::VariableDefinition(def) => &def.loc,
-            SourceUnitPart::TypeDefinition(def) => &def.loc,
-            SourceUnitPart::Using(def) => &def.loc,
-            SourceUnitPart::Annotation(def) => &def.loc,
-            SourceUnitPart::StraySemicolon(loc) => loc,
+            Self::ContractDefinition(def) => def.loc,
+            Self::PragmaDirective(loc, _, _) => *loc,
+            Self::ImportDirective(import) => import.loc(),
+            Self::EnumDefinition(def) => def.loc,
+            Self::StructDefinition(def) => def.loc,
+            Self::EventDefinition(def) => def.loc,
+            Self::ErrorDefinition(def) => def.loc,
+            Self::FunctionDefinition(def) => def.loc,
+            Self::VariableDefinition(def) => def.loc,
+            Self::TypeDefinition(def) => def.loc,
+            Self::Using(def) => def.loc,
+            Self::Annotation(def) => def.loc,
+            Self::StraySemicolon(loc) => *loc,
         }
     }
 }
 
+/// An import statement.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Import {
+    /// A plain import statement.
+    ///
+    /// `import <literal>;`
     Plain(StringLiteral, Loc),
+
+    /// A global symbol import statement.
+    ///
+    /// `import * as <identifier> from <literal>;`
+    ///
+    /// or
+    ///
+    /// `import <literal> as <identifier>;`
     GlobalSymbol(StringLiteral, Identifier, Loc),
+
+    /// A rename import statement.
+    ///
+    /// `import { <identifier> [as <identifier>] } from <literal>;`
     Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>, Loc),
 }
 
-impl Import {
-    pub fn loc(&self) -> &Loc {
+impl CodeLocation for Import {
+    fn loc(&self) -> Loc {
         match self {
-            Import::Plain(_, loc) => loc,
-            Import::GlobalSymbol(_, _, loc) => loc,
-            Import::Rename(_, _, loc) => loc,
+            Self::Plain(_, loc) => *loc,
+            Self::GlobalSymbol(_, _, loc) => *loc,
+            Self::Rename(_, _, loc) => *loc,
         }
     }
 }
 
+/// Type alias for a list of function parameters.
 pub type ParameterList = Vec<(Loc, Option<Parameter>)>;
 
+/// A type.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Type {
+    /// `address`
     Address,
+
+    /// `address payable`
     AddressPayable,
+
+    /// `payable`
+    ///
+    /// Only used as a cast.
     Payable,
+
+    /// `bool`
     Bool,
+
+    /// `string`
     String,
+
+    /// `int<n>`
     Int(u16),
+
+    /// `uint<n>`
     Uint(u16),
+
+    /// `bytes<n>`
     Bytes(u8),
+
+    /// `fixed`
     Rational,
+
+    /// `bytes`
     DynamicBytes,
+
+    /// `mapping(<key> [key_name] => <value> [value_name])`
     Mapping {
+        /// The code location.
         loc: Loc,
+        /// The key expression.
+        ///
+        /// This is only allowed to be an elementary type or a user defined type.
         key: Box<Expression>,
+        /// The optional key identifier.
         key_name: Option<Identifier>,
+        /// The value expression.
         value: Box<Expression>,
+        /// The optional value identifier.
         value_name: Option<Identifier>,
     },
+
+    /// `function(<params>) <attributes> [returns]`
     Function {
-        params: Vec<(Loc, Option<Parameter>)>,
+        /// The list of parameters.
+        params: ParameterList,
+        /// The list of attributes.
         attributes: Vec<FunctionAttribute>,
+        /// The optional list of return parameters.
         returns: Option<(ParameterList, Vec<FunctionAttribute>)>,
     },
 }
 
+/// Dynamic type location.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum StorageLocation {
+    /// Memory dynamic type location.
+    ///
+    /// `string memory`
     Memory(Loc),
+
+    /// Storage dynamic type location.
+    ///
+    /// `uint256[] storage`
     Storage(Loc),
+
+    /// Calldata dynamic type location.
+    ///
+    /// `bytes32[] calldata`
     Calldata(Loc),
 }
 
 impl CodeLocation for StorageLocation {
     fn loc(&self) -> Loc {
         match self {
-            StorageLocation::Memory(l)
-            | StorageLocation::Storage(l)
-            | StorageLocation::Calldata(l) => *l,
+            Self::Memory(l) | Self::Storage(l) | Self::Calldata(l) => *l,
         }
     }
 }
@@ -245,118 +420,217 @@ impl CodeLocation for StorageLocation {
 impl fmt::Display for StorageLocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StorageLocation::Memory(_) => write!(f, "memory"),
-            StorageLocation::Storage(_) => write!(f, "storage"),
-            StorageLocation::Calldata(_) => write!(f, "calldata"),
+            Self::Memory(_) => write!(f, "memory"),
+            Self::Storage(_) => write!(f, "storage"),
+            Self::Calldata(_) => write!(f, "calldata"),
         }
     }
 }
 
+/// A variable declaration.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct VariableDeclaration {
+    /// The code location.
     pub loc: Loc,
+    /// The type.
     pub ty: Expression,
+    /// The optional memory location.
     pub storage: Option<StorageLocation>,
+    /// The identifier.
+    ///
+    /// This field is `None` only if an error occurred during parsing.
     pub name: Option<Identifier>,
 }
 
+/// A struct definition.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
-#[allow(clippy::vec_box)]
 pub struct StructDefinition {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier.
+    ///
+    /// This field is `None` only if an error occurred during parsing.
     pub name: Option<Identifier>,
+    /// The list of fields.
     pub fields: Vec<VariableDeclaration>,
 }
 
+/// A contract part.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum ContractPart {
+    /// A struct definition.
     StructDefinition(Box<StructDefinition>),
+
+    /// An event definition.
     EventDefinition(Box<EventDefinition>),
+
+    /// An enum definition.
     EnumDefinition(Box<EnumDefinition>),
+
+    /// An error definition.
     ErrorDefinition(Box<ErrorDefinition>),
+
+    /// A variable definition.
     VariableDefinition(Box<VariableDefinition>),
+
+    /// A function definition.
     FunctionDefinition(Box<FunctionDefinition>),
+
+    /// A type definition.
     TypeDefinition(Box<TypeDefinition>),
+
+    /// A definition.
     Annotation(Box<Annotation>),
+
+    /// A stray semicolon.
     StraySemicolon(Loc),
+
+    /// A `using` directive.
     Using(Box<Using>),
 }
 
-impl ContractPart {
+impl CodeLocation for ContractPart {
     // Return the location of the part. Note that this excluded the body of the function
-    pub fn loc(&self) -> &Loc {
+    fn loc(&self) -> Loc {
         match self {
-            ContractPart::StructDefinition(def) => &def.loc,
-            ContractPart::EventDefinition(def) => &def.loc,
-            ContractPart::EnumDefinition(def) => &def.loc,
-            ContractPart::ErrorDefinition(def) => &def.loc,
-            ContractPart::VariableDefinition(def) => &def.loc,
-            ContractPart::FunctionDefinition(def) => &def.loc,
-            ContractPart::TypeDefinition(def) => &def.loc,
-            ContractPart::Annotation(def) => &def.loc,
-            ContractPart::StraySemicolon(loc) => loc,
-            ContractPart::Using(def) => &def.loc,
+            Self::StructDefinition(def) => def.loc,
+            Self::EventDefinition(def) => def.loc,
+            Self::EnumDefinition(def) => def.loc,
+            Self::ErrorDefinition(def) => def.loc,
+            Self::VariableDefinition(def) => def.loc,
+            Self::FunctionDefinition(def) => def.loc,
+            Self::TypeDefinition(def) => def.loc,
+            Self::Annotation(def) => def.loc,
+            Self::StraySemicolon(loc) => *loc,
+            Self::Using(def) => def.loc,
         }
     }
 }
 
+/// A `using` list. See [Using].
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum UsingList {
+    /// A single identifier path.
     Library(IdentifierPath),
+
+    /// List of using functions.
+    ///
+    /// `{ <<identifier path> [ as <operator> ]>,* }`
     Functions(Vec<UsingFunction>),
-    Error(),
+
+    /// An error occurred during parsing.
+    Error,
 }
 
+/// A `using` function. See [UsingList].
+///
+/// `<path> [ as <oper> ]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct UsingFunction {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier path.
     pub path: IdentifierPath,
+    /// The optional user-defined operator.
     pub oper: Option<UserDefinedOperator>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+/// A user-defined operator.
+///
+/// See also the [Solidity blog post][ref] on user-defined operators.
+///
+/// [ref]: https://blog.soliditylang.org/2023/02/22/user-defined-operators/
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum UserDefinedOperator {
+    /// `&`
     BitwiseAnd,
+    /// `~`
+    ///
+    /// AKA BitwiseNot
     Complement,
+    /// `-`
+    ///
+    /// Note that this is the same as `Subtract`, and that it is currently not being parsed.
     Negate,
+    /// `|`
     BitwiseOr,
+    /// `^`
     BitwiseXor,
+    /// `+`
     Add,
+    /// `/`
     Divide,
+    /// `%`
     Modulo,
+    /// `*`
     Multiply,
+    /// `-`
     Subtract,
+    /// `==`
     Equal,
+    /// `>`
     More,
+    /// `>=`
     MoreEqual,
+    /// `<`
     Less,
+    /// `<=`
     LessEqual,
+    /// `!=`
     NotEqual,
 }
 
 impl UserDefinedOperator {
-    pub fn args(&self) -> usize {
+    /// Returns the number of arguments needed for this operator's operation.
+    pub const fn args(&self) -> usize {
         match self {
             UserDefinedOperator::Complement | UserDefinedOperator::Negate => 1,
             _ => 2,
         }
     }
 
-    pub fn is_comparison(&self) -> bool {
+    /// Returns whether `self` is a unary operator.
+    pub const fn is_unary(&self) -> bool {
+        matches!(self, Self::Complement | Self::Negate)
+    }
+
+    /// Returns whether `self` is a binary operator.
+    pub const fn is_binary(&self) -> bool {
+        !self.is_unary()
+    }
+
+    /// Returns whether `self` is a bitwise operator.
+    pub const fn is_bitwise(&self) -> bool {
         matches!(
             self,
-            UserDefinedOperator::Equal
-                | UserDefinedOperator::NotEqual
-                | UserDefinedOperator::More
-                | UserDefinedOperator::Less
-                | UserDefinedOperator::MoreEqual
-                | UserDefinedOperator::LessEqual
+            Self::BitwiseAnd | Self::BitwiseOr | Self::BitwiseXor | Self::Complement
+        )
+    }
+
+    /// Returns whether `self` is an arithmetic operator.
+    pub const fn is_arithmetic(&self) -> bool {
+        matches!(
+            self,
+            Self::Add | Self::Subtract | Self::Multiply | Self::Divide | Self::Modulo
+        )
+    }
+
+    /// Returns whether this is a comparison operator.
+    pub const fn is_comparison(&self) -> bool {
+        matches!(
+            self,
+            Self::Equal
+                | Self::NotEqual
+                | Self::Less
+                | Self::LessEqual
+                | Self::More
+                | Self::MoreEqual
         )
     }
 }
@@ -364,41 +638,64 @@ impl UserDefinedOperator {
 impl fmt::Display for UserDefinedOperator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            UserDefinedOperator::BitwiseAnd => write!(f, "&"),
-            UserDefinedOperator::Complement => write!(f, "~"),
-            UserDefinedOperator::Negate => write!(f, "-"),
-            UserDefinedOperator::BitwiseOr => write!(f, "|"),
-            UserDefinedOperator::BitwiseXor => write!(f, "^"),
-            UserDefinedOperator::Add => write!(f, "+"),
-            UserDefinedOperator::Divide => write!(f, "/"),
-            UserDefinedOperator::Modulo => write!(f, "%"),
-            UserDefinedOperator::Multiply => write!(f, "*"),
-            UserDefinedOperator::Subtract => write!(f, "-"),
-            UserDefinedOperator::Equal => write!(f, "=="),
-            UserDefinedOperator::More => write!(f, ">"),
-            UserDefinedOperator::MoreEqual => write!(f, ">="),
-            UserDefinedOperator::Less => write!(f, "<"),
-            UserDefinedOperator::LessEqual => write!(f, "<="),
-            UserDefinedOperator::NotEqual => write!(f, "!="),
+            Self::BitwiseAnd => write!(f, "&"),
+            Self::Complement => write!(f, "~"),
+            Self::Negate => write!(f, "-"),
+            Self::BitwiseOr => write!(f, "|"),
+            Self::BitwiseXor => write!(f, "^"),
+            Self::Add => write!(f, "+"),
+            Self::Divide => write!(f, "/"),
+            Self::Modulo => write!(f, "%"),
+            Self::Multiply => write!(f, "*"),
+            Self::Subtract => write!(f, "-"),
+            Self::Equal => write!(f, "=="),
+            Self::More => write!(f, ">"),
+            Self::MoreEqual => write!(f, ">="),
+            Self::Less => write!(f, "<"),
+            Self::LessEqual => write!(f, "<="),
+            Self::NotEqual => write!(f, "!="),
         }
     }
 }
 
+/// A `using` directive.
+///
+/// Can occur within contracts and libraries and at the file level.
+///
+/// `using { <identifier path> [ as <operator> ] } for *|<type> [global]`
+///
+/// or
+///
+/// `using <identifier path> for *|<type> [global]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct Using {
+    /// The code location.
     pub loc: Loc,
+    /// The list of `using` functions or a single identifier path.
     pub list: UsingList,
+    /// The type.
+    ///
+    /// This field is `None` if an error occurred or the specified type is `*`.
     pub ty: Option<Expression>,
+    /// The optional `global` identifier.
     pub global: Option<Identifier>,
 }
 
+/// The contract type.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum ContractTy {
+    /// `abstract contract`
     Abstract(Loc),
+
+    /// `contract`
     Contract(Loc),
+
+    /// `interface`
     Interface(Loc),
+
+    /// `library`
     Library(Loc),
 }
 
@@ -413,192 +710,372 @@ impl fmt::Display for ContractTy {
     }
 }
 
+/// A function modifier invocation (see [FunctionAttribute])
+/// or a contract inheritance specifier (see [ContractDefinition]).
+///
+/// Both have the same semantics:
+///
+/// `<name>[(<args>,*)]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct Base {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier path.
     pub name: IdentifierPath,
+    /// The optional arguments.
     pub args: Option<Vec<Expression>>,
 }
 
+/// A contract definition.
+///
+/// `<ty> <name> [<base>,*] { <parts>,* }`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct ContractDefinition {
+    /// The code location.
     pub loc: Loc,
+    /// The contract type.
     pub ty: ContractTy,
+    /// The identifier.
+    ///
+    /// This field is `None` only if an error occurred during parsing.
     pub name: Option<Identifier>,
+    /// The list of inheritance specifiers.
     pub base: Vec<Base>,
+    /// The list of contract parts.
     pub parts: Vec<ContractPart>,
 }
 
+/// An event parameter.
+///
+/// `<ty> [name]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct EventParameter {
-    pub ty: Expression,
+    /// The code location.
     pub loc: Loc,
+    /// The type.
+    pub ty: Expression,
+    /// Whether this parameter is indexed.
     pub indexed: bool,
+    /// The optional identifier.
     pub name: Option<Identifier>,
 }
 
+/// An event definition.
+///
+/// `event <name>(<fields>,*) [anonymous];`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct EventDefinition {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier.
+    ///
+    /// This field is `None` only if an error occurred during parsing.
     pub name: Option<Identifier>,
+    /// The list of event parameters.
     pub fields: Vec<EventParameter>,
+    /// Whether this event is anonymous.
     pub anonymous: bool,
 }
 
+/// An error parameter.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct ErrorParameter {
-    pub ty: Expression,
+    /// The code location.
     pub loc: Loc,
+    /// The type.
+    pub ty: Expression,
+    /// The optional identifier.
     pub name: Option<Identifier>,
 }
 
+/// An error definition.
+///
+/// `error <name> (<fields>,*);`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct ErrorDefinition {
+    /// The code location.
     pub loc: Loc,
+    /// The `error` keyword.
     pub keyword: Expression,
+    /// The identifier.
+    ///
+    /// This field is `None` only if an error occurred during parsing.
     pub name: Option<Identifier>,
+    /// The list of error parameters.
     pub fields: Vec<ErrorParameter>,
 }
 
+/// An enum definition.
+///
+/// `enum <name> { <values>,* }`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct EnumDefinition {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier.
+    ///
+    /// This field is `None` only if an error occurred during parsing.
     pub name: Option<Identifier>,
+    /// The list of values.
     pub values: Vec<Option<Identifier>>,
 }
 
+/// A variable attribute.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum VariableAttribute {
+    /// The visibility.
+    ///
+    /// Only used for storage variables.
     Visibility(Visibility),
+
+    /// `constant`
     Constant(Loc),
+
+    /// `immutable`
     Immutable(Loc),
+
+    /// The override specifiers.
     Override(Loc, Vec<IdentifierPath>),
 }
 
+/// A variable definition.
+///
+/// `<attrs>,* <ty> [name] [= <initializer>]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct VariableDefinition {
+    /// The code location.
     pub loc: Loc,
+    /// The type.
     pub ty: Expression,
+    /// The list of variable attributes.
     pub attrs: Vec<VariableAttribute>,
+    /// The identifier.
+    ///
+    /// This field is `None` only if an error occurred during parsing.
     pub name: Option<Identifier>,
+    /// The optional initializer.
     pub initializer: Option<Expression>,
 }
 
+/// A user type definition.
+///
+/// `type <name> is <ty>;`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct TypeDefinition {
+    /// The code location.
     pub loc: Loc,
+    /// The user-defined type name.
     pub name: Identifier,
+    /// The type expression.
     pub ty: Expression,
 }
 
+/// An annotation.
+///
+/// `@<id>(<value>)`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct Annotation {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier.
     pub id: Identifier,
+    /// The value.
     pub value: Expression,
 }
 
+/// A string literal.
+///
+/// `[unicode]"<string>"`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct StringLiteral {
+    /// The code location.
     pub loc: Loc,
+    /// Whether this is a unicode string.
     pub unicode: bool,
+    /// The string literal.
+    ///
+    /// Does not contain the quotes or the `unicode` prefix.
     pub string: String,
 }
 
+/// A hex literal.
+///
+/// `hex"<literal>"`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct HexLiteral {
+    /// The code location.
     pub loc: Loc,
+    /// The hex literal.
+    ///
+    /// Contains the `hex` prefix.
     pub hex: String,
 }
 
+/// A named argument.
+///
+/// `<name>: <expr>`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct NamedArgument {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier.
     pub name: Identifier,
+    /// The value.
     pub expr: Expression,
 }
 
+/// An expression.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Expression {
+    /// `<1>++`
     PostIncrement(Loc, Box<Expression>),
+    /// `<1>--`
     PostDecrement(Loc, Box<Expression>),
+    /// `new <1>`
     New(Loc, Box<Expression>),
+    /// `<1>\[ [2] \]`
     ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
+    /// `<1>\[ [2] : [3] \]`
     ArraySlice(
         Loc,
         Box<Expression>,
         Option<Box<Expression>>,
         Option<Box<Expression>>,
     ),
+    /// `(<1>)`
     Parenthesis(Loc, Box<Expression>),
+    /// `<1>.<2>`
     MemberAccess(Loc, Box<Expression>, Identifier),
+    /// `<1>(<2>,*)`
     FunctionCall(Loc, Box<Expression>, Vec<Expression>),
+    /// `<1><2>` where <2> is a block.
     FunctionCallBlock(Loc, Box<Expression>, Box<Statement>),
+    /// `<1>({ <2>,* })`
     NamedFunctionCall(Loc, Box<Expression>, Vec<NamedArgument>),
+    /// `!<1>`
     Not(Loc, Box<Expression>),
+    /// `~<1>`
     Complement(Loc, Box<Expression>),
+    /// `delete <1>`
     Delete(Loc, Box<Expression>),
+    /// `++<1>`
     PreIncrement(Loc, Box<Expression>),
+    /// `--<1>`
     PreDecrement(Loc, Box<Expression>),
+    /// `+<1>`
+    ///
+    /// Note that this isn't actually supported by Solidity.
     UnaryPlus(Loc, Box<Expression>),
+    /// `-<1>`
     Negate(Loc, Box<Expression>),
+
+    /// `<1> ** <2>`
     Power(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> * <2>`
     Multiply(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> / <2>`
     Divide(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> % <2>`
     Modulo(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> + <2>`
     Add(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> - <2>`
     Subtract(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> << <2>`
     ShiftLeft(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> >> <2>`
     ShiftRight(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> & <2>`
     BitwiseAnd(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> ^ <2>`
     BitwiseXor(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> | <2>`
     BitwiseOr(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> < <2>`
     Less(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> > <2>`
     More(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> <= <2>`
     LessEqual(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> >= <2>`
     MoreEqual(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> == <2>`
     Equal(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> != <2>`
     NotEqual(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> && <2>`
     And(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> || <2>`
     Or(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> ? <2> : <3>`
+    ///
+    /// AKA ternary operator.
     ConditionalOperator(Loc, Box<Expression>, Box<Expression>, Box<Expression>),
+    /// `<1> = <2>`
     Assign(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> |= <2>`
     AssignOr(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> &= <2>`
     AssignAnd(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> ^= <2>`
     AssignXor(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> <<= <2>`
     AssignShiftLeft(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> >>= <2>`
     AssignShiftRight(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> += <2>`
     AssignAdd(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> -= <2>`
     AssignSubtract(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> *= <2>`
     AssignMultiply(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> /= <2>`
     AssignDivide(Loc, Box<Expression>, Box<Expression>),
+    /// `<1> %= <2>`
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
+
+    /// `true` or `false`
     BoolLiteral(Loc, bool),
+    /// ``
     NumberLiteral(Loc, String, String, Option<Identifier>),
+    /// ``
     RationalNumberLiteral(Loc, String, String, String, Option<Identifier>),
+    /// ``
     HexNumberLiteral(Loc, String, Option<Identifier>),
+    /// `<1>+`. See [StringLiteral].
     StringLiteral(Vec<StringLiteral>),
+    /// See [Type].
     Type(Loc, Type),
+    /// `<1>+`. See [HexLiteral].
     HexLiteral(Vec<HexLiteral>),
+    /// `0x[a-fA-F0-9]{40}`
+    ///
+    /// This [should be correctly checksummed][ref], but it currently isn't being enforced in the parser.
+    ///
+    /// [ref]: https://docs.soliditylang.org/en/latest/types.html#address-literals
     AddressLiteral(Loc, String),
+    /// Any valid [Identifier].
     Variable(Identifier),
+    /// `(<1>,*)`
     List(Loc, ParameterList),
+    /// `\[ <1>.* \]`
     ArrayLiteral(Loc, Vec<Expression>),
+    /// The `this` keyword.
     This(Loc),
 }
 
@@ -680,6 +1157,7 @@ impl Display for Expression {
 }
 
 impl Expression {
+    /// Removes one layer of parentheses.
     pub fn remove_parenthesis(&self) -> &Expression {
         if let Expression::Parenthesis(_, expr) = self {
             expr
@@ -687,23 +1165,46 @@ impl Expression {
             self
         }
     }
+
+    /// Strips all parentheses recursively.
+    pub fn strip_parentheses(&self) -> &Expression {
+        match self {
+            Expression::Parenthesis(_, expr) => expr.strip_parentheses(),
+            _ => self,
+        }
+    }
 }
 
+/// A parameter.
+///
+/// `<ty> [storage] <name>`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct Parameter {
+    /// The code location.
     pub loc: Loc,
+    /// The type.
     pub ty: Expression,
+    /// The optional memory location.
     pub storage: Option<StorageLocation>,
+    /// The optional identifier.
     pub name: Option<Identifier>,
 }
 
+/// Function mutability.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Mutability {
+    /// `pure`
     Pure(Loc),
+
+    /// `view`
     View(Loc),
+
+    /// `constant`
     Constant(Loc),
+
+    /// `payable`
     Payable(Loc),
 }
 
@@ -728,12 +1229,22 @@ impl CodeLocation for Mutability {
     }
 }
 
+/// Function visibility.
+///
+/// Deprecated for [FunctionTy] other than `Function`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Visibility {
+    /// `external`
     External(Option<Loc>),
+
+    /// `public`
     Public(Option<Loc>),
+
+    /// `internal`
     Internal(Option<Loc>),
+
+    /// `private`
     Private(Option<Loc>),
 }
 
@@ -759,26 +1270,50 @@ impl OptionalCodeLocation for Visibility {
     }
 }
 
+/// A function attribute.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 
 pub enum FunctionAttribute {
+    /// Mutability attribute.
     Mutability(Mutability),
+
+    /// Visibility attribute.
     Visibility(Visibility),
+
+    /// `virtual`
     Virtual(Loc),
+
+    /// `immutable`
     Immutable(Loc),
+
+    /// `override[(<identifier path>,*)]`
     Override(Loc, Vec<IdentifierPath>),
+
+    /// A modifier or constructor invocation.
     BaseOrModifier(Loc, Base),
+
+    /// An error occurred during parsing.
     Error(Loc),
 }
 
+/// A function's type.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum FunctionTy {
+    /// `constructor`
     Constructor,
+
+    /// `function`
     Function,
+
+    /// `fallback`
     Fallback,
+
+    /// `receive`
     Receive,
+
+    /// `modifier`
     Modifier,
 }
 
@@ -794,40 +1329,78 @@ impl fmt::Display for FunctionTy {
     }
 }
 
+/// A function definition.
+///
+/// `<ty> [name] (<params>,*) [attributes] [returns] [body]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct FunctionDefinition {
+    /// The code location.
     pub loc: Loc,
+    /// The function type.
     pub ty: FunctionTy,
+    /// The optional identifier.
+    ///
+    /// This can be `None` for old style fallback functions.
     pub name: Option<Identifier>,
+    /// The identifier's code location.
     pub name_loc: Loc,
+    /// The parameter list.
     pub params: ParameterList,
+    /// The function attributes.
     pub attributes: Vec<FunctionAttribute>,
+    /// ?
     pub return_not_returns: Option<Loc>,
+    /// The return parameter list.
     pub returns: ParameterList,
+    /// The function body.
+    ///
+    /// If `None`, the declaration ended with a semicolon.
     pub body: Option<Statement>,
 }
 
+/// A statement.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 #[allow(clippy::large_enum_variant, clippy::type_complexity)]
 pub enum Statement {
+    /// `[unchecked] { <statements>* }`
     Block {
+        /// The code location.
         loc: Loc,
+        /// Whether this block is `unchecked`.
         unchecked: bool,
+        /// The statements.
         statements: Vec<Statement>,
     },
+    /// `assembly [dialect] [(<flags>,*)] <block>`
     Assembly {
+        /// The code location.
         loc: Loc,
+        /// The assembly dialect.
         dialect: Option<StringLiteral>,
+        /// The assembly flags.
         flags: Option<Vec<StringLiteral>>,
+        /// The assembly block.
         block: YulBlock,
     },
+    /// `{ <1>,* }`
     Args(Loc, Vec<NamedArgument>),
+    /// `if ({1}) <2> [else <3>]`
+    ///
+    /// Note that the `<1>` expression does not contain the parentheses.
     If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
+    /// `while ({1}) <2>`
+    ///
+    /// Note that the `<1>` expression does not contain the parentheses.
     While(Loc, Expression, Box<Statement>),
+    /// An [Expression].
     Expression(Loc, Expression),
+    /// `<1> [= <2>];`
     VariableDefinition(Loc, VariableDeclaration, Option<Expression>),
+    /// `for ([1]; [2]; [3]) [4]`
+    ///
+    /// The `[4]` block statement is `None` when the `for` statement ends with a semicolon.
     For(
         Loc,
         Option<Box<Statement>>,
@@ -835,115 +1408,201 @@ pub enum Statement {
         Option<Box<Statement>>,
         Option<Box<Statement>>,
     ),
+    /// `do <1> while ({2});`
+    ///
+    /// Note that the `<2>` expression does not contain the parentheses.
     DoWhile(Loc, Box<Statement>, Expression),
+    /// `continue;`
     Continue(Loc),
+    /// `break;`
     Break(Loc),
+    /// `return [1];`
     Return(Loc, Option<Expression>),
+    /// `revert [1] (<2>,*);`
     Revert(Loc, Option<IdentifierPath>, Vec<Expression>),
+    /// `revert [1] ({ <2>,* });`
     RevertNamedArgs(Loc, Option<IdentifierPath>, Vec<NamedArgument>),
+    /// `emit <1> (<2>,*);`
+    ///
+    /// `<1>` is `FunctionCall`.
     Emit(Loc, Expression),
+    /// `try <1> [returns (<2.1>,*) <2.2>] <3>*`
+    ///
+    /// `<1>` is either `New(FunctionCall)` or `FunctionCall`.
     Try(
         Loc,
         Expression,
         Option<(ParameterList, Box<Statement>)>,
         Vec<CatchClause>,
     ),
+    /// An error occurred during parsing.
     Error(Loc),
 }
 
+/// A catch clause. See [Statement].
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum CatchClause {
+    /// `catch [(<1>)] <2>`
     Simple(Loc, Option<Parameter>, Statement),
+
+    /// `catch <1> (<2>) <3>`
     Named(Loc, Identifier, Parameter, Statement),
 }
 
+/// A Yul statement.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum YulStatement {
+    /// `<1>,+ = <2>`
     Assign(Loc, Vec<YulExpression>, YulExpression),
+    /// `let <1> [:= <2>]`
     VariableDeclaration(Loc, Vec<YulTypedIdentifier>, Option<YulExpression>),
+    /// `if <1> <2>`
     If(Loc, YulExpression, YulBlock),
+    /// A [YulFor] statement.
     For(YulFor),
+    /// A [YulSwitch] statement.
     Switch(YulSwitch),
+    /// `leave`
     Leave(Loc),
+    /// `break`
     Break(Loc),
+    /// `continue`
     Continue(Loc),
+    /// A [YulBlock] statement.
     Block(YulBlock),
+    /// A [YulFunctionDefinition] statement.
     FunctionDefinition(Box<YulFunctionDefinition>),
+    /// A [YulFunctionCall] statement.
     FunctionCall(Box<YulFunctionCall>),
+    /// An error occurred during parsing.
     Error(Loc),
 }
 
+/// A Yul switch statement.
+///
+/// `switch <condition> default <default>` or `switch <condition> <cases>,* [default <default>]`
+///
+/// Meaning at least one of `cases` or `default` must be non-empty/`Some` respectively.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct YulSwitch {
+    /// The code location.
     pub loc: Loc,
+    /// The switch condition.
     pub condition: YulExpression,
+    /// The switch cases.
     pub cases: Vec<YulSwitchOptions>,
+    /// The optional default case.
     pub default: Option<YulSwitchOptions>,
 }
 
+/// A Yul for statement.
+///
+/// `for <init_block> <condition> <post_block> <execution_block>`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct YulFor {
+    /// The code location.
     pub loc: Loc,
+    /// The for statement init block.
     pub init_block: YulBlock,
+    /// The for statement condition.
     pub condition: YulExpression,
+    /// The for statement post block.
     pub post_block: YulBlock,
+    /// The for statement execution block.
     pub execution_block: YulBlock,
 }
 
+/// A Yul block statement.
+///
+/// `{ <statements>* }`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct YulBlock {
+    /// The code location.
     pub loc: Loc,
+    /// The block statements.
     pub statements: Vec<YulStatement>,
 }
 
+/// A Yul expression.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum YulExpression {
+    /// `<1> [: <2>]`
     BoolLiteral(Loc, bool, Option<Identifier>),
+    /// `<1>[e<2>] [: <2>]`
     NumberLiteral(Loc, String, String, Option<Identifier>),
+    /// `<1> [: <2>]`
     HexNumberLiteral(Loc, String, Option<Identifier>),
+    /// `<0> [: <1>]`
     HexStringLiteral(HexLiteral, Option<Identifier>),
+    /// `<0> [: <1>]`
     StringLiteral(StringLiteral, Option<Identifier>),
+    /// Any valid [Identifier].
     Variable(Identifier),
+    /// [YulFunctionCall].
     FunctionCall(Box<YulFunctionCall>),
+    /// `<1>.<2>`
     SuffixAccess(Loc, Box<YulExpression>, Identifier),
 }
 
+/// A Yul typed identifier.
+///
+/// `<id> [: <ty>]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct YulTypedIdentifier {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier.
     pub id: Identifier,
+    /// The optional type.
     pub ty: Option<Identifier>,
 }
 
+/// A Yul function definition.
+///
+/// `function <name> (<params>,*) [-> (<returns>,*)] <body>`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct YulFunctionDefinition {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier.
     pub id: Identifier,
+    /// The parameters.
     pub params: Vec<YulTypedIdentifier>,
+    /// The return parameters.
     pub returns: Vec<YulTypedIdentifier>,
+    /// The function body.
     pub body: YulBlock,
 }
 
+/// A Yul function call.
+///
+/// `<id>(<arguments>,*)`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct YulFunctionCall {
+    /// The code location.
     pub loc: Loc,
+    /// The identifier.
     pub id: Identifier,
+    /// The function call arguments.
     pub arguments: Vec<YulExpression>,
 }
 
+/// A Yul switch case or default statement. See [YulSwitch].
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum YulSwitchOptions {
+    /// `case <1> <2>`
     Case(Loc, YulExpression, YulBlock),
+    /// `default <1>`
     Default(Loc, YulBlock),
 }
 
@@ -979,8 +1638,8 @@ impl CodeLocation for Statement {
     }
 }
 
-impl YulStatement {
-    pub fn loc(&self) -> Loc {
+impl CodeLocation for YulStatement {
+    fn loc(&self) -> Loc {
         match self {
             YulStatement::Assign(loc, ..)
             | YulStatement::VariableDeclaration(loc, ..)
