@@ -1,0 +1,18 @@
+strict digraph "tests/contract_testcases/substrate/builtins/abi_decode_05.sol" {
+	S [label="name:S\ncontract: Foo\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:2:9-10\nfield name:s ty:struct Foo.S[]"]
+	contract [label="contract Foo\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:1:1-9:2"]
+	decode [label="function decode\ncontract: Foo\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:3:2-38\nsignature decode(bytes)\nvisibility public\nmutability pure"]
+	parameters [label="parameters\nbytes b"]
+	encode [label="function encode\ncontract: Foo\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:6:2-31\nsignature encode()\nvisibility public\nmutability pure"]
+	diagnostic [label="found contract 'Foo'\nlevel Debug\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:1:1-9:2"]
+	diagnostic_9 [label="Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:4:3-21"]
+	diagnostic_10 [label="Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_decode_05.sol:7:14-34"]
+	structs -> S
+	contracts -> contract
+	contract -> decode [label="function"]
+	decode -> parameters [label="parameters"]
+	contract -> encode [label="function"]
+	diagnostics -> diagnostic [label="Debug"]
+	diagnostics -> diagnostic_9 [label="Error"]
+	diagnostics -> diagnostic_10 [label="Error"]
+}
