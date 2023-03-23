@@ -10,7 +10,7 @@
 #[doc(hidden)]
 pub use crate::helpers::{CodeLocation, OptionalCodeLocation};
 
-use std::fmt::{self, Display, Write};
+use std::fmt::{self, Display};
 
 #[cfg(feature = "pt-serde")]
 use serde::{Deserialize, Serialize};
@@ -151,12 +151,6 @@ pub struct Identifier {
     pub name: String,
 }
 
-impl Display for Identifier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.name)
-    }
-}
-
 /// A qualified identifier.
 ///
 /// Dot-separated list of identifiers.
@@ -167,22 +161,6 @@ pub struct IdentifierPath {
     pub loc: Loc,
     /// The list of identifiers.
     pub identifiers: Vec<Identifier>,
-}
-
-impl Display for IdentifierPath {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.identifiers.as_slice() {
-            [] => Ok(()),
-            [ident, rest @ ..] => {
-                ident.fmt(f)?;
-                for ident in rest {
-                    f.write_char('.')?;
-                    ident.fmt(f)?;
-                }
-                Ok(())
-            }
-        }
-    }
 }
 
 /// A comment or [doc comment][natspec].
@@ -357,23 +335,26 @@ pub enum Type {
     },
 }
 
+impl Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Uint(n) => write!(f, "uint{n}"),
+            _ => unimplemented!(),
+        }
+    }
+}
+
 /// Dynamic type location.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum StorageLocation {
-    /// Memory dynamic type location.
-    ///
-    /// `string memory`
+    /// `memory`
     Memory(Loc),
 
-    /// Storage dynamic type location.
-    ///
-    /// `uint256[] storage`
+    /// `storage`
     Storage(Loc),
 
-    /// Calldata dynamic type location.
-    ///
-    /// `bytes32[] calldata`
+    /// `calldata`
     Calldata(Loc),
 }
 
@@ -388,6 +369,8 @@ impl fmt::Display for StorageLocation {
 }
 
 /// A variable declaration.
+///
+/// `<ty> [storage] <name>`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct VariableDeclaration {
@@ -404,6 +387,8 @@ pub struct VariableDeclaration {
 }
 
 /// A struct definition.
+///
+/// `struct <name> { <fields>,* }`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct StructDefinition {
@@ -604,11 +589,7 @@ impl fmt::Display for UserDefinedOperator {
 ///
 /// Can occur within contracts and libraries and at the file level.
 ///
-/// `using { <identifier path> [ as <operator> ] } for *|<type> [global]`
-///
-/// or
-///
-/// `using <identifier path> for *|<type> [global]`
+/// `using <list> for <type | '*'> [global];`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct Using {
@@ -691,7 +672,7 @@ pub struct ContractDefinition {
 
 /// An event parameter.
 ///
-/// `<ty> [name]`
+/// `<ty> [indexed] [name]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct EventParameter {
@@ -724,6 +705,8 @@ pub struct EventDefinition {
 }
 
 /// An error parameter.
+///
+/// `<ty> [name]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct ErrorParameter {
@@ -766,6 +749,8 @@ pub struct EnumDefinition {
     /// This field is `None` only if an error occurred during parsing.
     pub name: Option<Identifier>,
     /// The list of values.
+    ///
+    /// This field contains `None` only if an error occurred during parsing.
     pub values: Vec<Option<Identifier>>,
 }
 
@@ -790,7 +775,7 @@ pub enum VariableAttribute {
 
 /// A variable definition.
 ///
-/// `<attrs>,* <ty> [name] [= <initializer>]`
+/// `<ty> <attrs>* <name> [= <initializer>]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct VariableDefinition {
@@ -1026,6 +1011,7 @@ impl Display for Expression {
         match self {
             Expression::Variable(id) => write!(f, "{}", id.name),
             Expression::MemberAccess(_, e, id) => write!(f, "{}.{}", e, id.name),
+            Expression::Type(_, t) => write!(f, "{t}"),
             _ => unimplemented!(),
         }
     }
@@ -1335,9 +1321,13 @@ pub enum YulStatement {
 
 /// A Yul switch statement.
 ///
-/// `switch <condition> default <default>` or `switch <condition> <cases>,* [default <default>]`
+/// `switch <condition> <cases>* [default <default>]`
 ///
-/// Meaning at least one of `cases` or `default` must be non-empty/`Some` respectively.
+/// Enforced by the parser:
+///
+/// - `cases` is guaranteed to be a `Vec` of `YulSwitchOptions::Case`.
+/// - `default` is guaranteed to be `YulSwitchOptions::Default`.
+/// - At least one of `cases` or `default` must be non-empty/`Some` respectively.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct YulSwitch {

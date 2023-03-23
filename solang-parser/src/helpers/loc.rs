@@ -3,9 +3,9 @@ use crate::{
     pt::{self, Loc},
 };
 
-/// Returns a shared reference to the code location, if it exists.
+/// Returns the optional code location.
 pub trait OptionalCodeLocation {
-    /// Optionally returns a shared reference to the code location of `self`.
+    /// Returns the optional code location of `self`.
     fn loc_opt(&self) -> Option<Loc>;
 }
 
@@ -32,15 +32,21 @@ impl OptionalCodeLocation for pt::Visibility {
     }
 }
 
-/// Returns a shared reference to the code location.
+/// Returns the code location.
 pub trait CodeLocation {
-    /// Returns a shared reference to the code location of `self`.
+    /// Returns the code location of `self`.
     fn loc(&self) -> Loc;
 }
 
 impl CodeLocation for Loc {
     fn loc(&self) -> Loc {
         *self
+    }
+}
+
+impl CodeLocation for pt::SourceUnit {
+    fn loc(&self) -> Loc {
+        self.0.loc()
     }
 }
 
@@ -51,6 +57,7 @@ impl<T: CodeLocation> CodeLocation for &'_ T {
 }
 
 impl<T: CodeLocation> CodeLocation for [T] {
+    // TODO: Merge first with last span?
     fn loc(&self) -> Loc {
         self.first().map(CodeLocation::loc).unwrap_or_default()
     }
@@ -123,7 +130,7 @@ macro_rules! impl_for_enums {
     };
 }
 
-// all enums except for SourceUnit, Type, UserDefinedOperator and FunctionTy
+// all enums except for Type, UserDefinedOperator and FunctionTy
 impl_for_enums! {
     pt::CatchClause: match self {
         Self::Simple(l, ..)
