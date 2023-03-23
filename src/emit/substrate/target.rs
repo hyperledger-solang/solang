@@ -1098,6 +1098,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .left()
                 .unwrap()
                 .into_int_value();
+            log_return_code(binary, "instantiation_nonce", nonce);
             let i256_t = binary.context.custom_width_int_type(256);
             binary
                 .builder
