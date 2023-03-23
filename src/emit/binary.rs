@@ -61,17 +61,14 @@ impl<'a> Binary<'a> {
         context: &'a Context,
         contract: &'a Contract,
         ns: &'a Namespace,
-        filename: &'a str,
         opt: &'a Options,
     ) -> Self {
         let std_lib = load_stdlib(context, &ns.target);
         match ns.target {
             Target::Substrate { .. } => {
-                substrate::SubstrateTarget::build(context, &std_lib, contract, ns, filename, opt)
+                substrate::SubstrateTarget::build(context, &std_lib, contract, ns, opt)
             }
-            Target::Solana => {
-                solana::SolanaTarget::build(context, &std_lib, contract, ns, filename, opt)
-            }
+            Target::Solana => solana::SolanaTarget::build(context, &std_lib, contract, ns, opt),
             Target::EVM => unimplemented!(),
         }
     }
