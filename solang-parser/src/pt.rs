@@ -6,10 +6,14 @@
 //!
 //! [sol]: https://docs.soliditylang.org/en/latest/grammar.html
 
-#[cfg(feature = "pt-serde")]
-use serde::{Deserialize, Serialize};
+// backwards compatibility re-export
+#[doc(hidden)]
+pub use crate::helpers::{CodeLocation, OptionalCodeLocation};
 
 use std::fmt::{self, Display, Write};
+
+#[cfg(feature = "pt-serde")]
+use serde::{Deserialize, Serialize};
 
 /// A code location.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -27,16 +31,15 @@ pub enum Loc {
     File(usize, usize, usize),
 }
 
-/// Structs can implement this trait to easily return their loc
-pub trait CodeLocation {
-    /// Returns the code location.
-    fn loc(&self) -> Loc;
+impl Default for Loc {
+    fn default() -> Self {
+        *Self::DEFAULT
+    }
 }
 
-/// Structs should implement this trait to return an optional location
-pub trait OptionalCodeLocation {
-    /// Optionally returns the code location.
-    fn loc(&self) -> Option<Loc>;
+impl Loc {
+    /// The default location.
+    pub const DEFAULT: &Self = &Loc::File(0, 0, 0);
 }
 
 #[inline(never)]
@@ -269,26 +272,6 @@ pub enum SourceUnitPart {
     StraySemicolon(Loc),
 }
 
-impl CodeLocation for SourceUnitPart {
-    fn loc(&self) -> Loc {
-        match self {
-            Self::ContractDefinition(def) => def.loc,
-            Self::PragmaDirective(loc, _, _) => *loc,
-            Self::ImportDirective(import) => import.loc(),
-            Self::EnumDefinition(def) => def.loc,
-            Self::StructDefinition(def) => def.loc,
-            Self::EventDefinition(def) => def.loc,
-            Self::ErrorDefinition(def) => def.loc,
-            Self::FunctionDefinition(def) => def.loc,
-            Self::VariableDefinition(def) => def.loc,
-            Self::TypeDefinition(def) => def.loc,
-            Self::Using(def) => def.loc,
-            Self::Annotation(def) => def.loc,
-            Self::StraySemicolon(loc) => *loc,
-        }
-    }
-}
-
 /// An import statement.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
@@ -311,16 +294,6 @@ pub enum Import {
     ///
     /// `import { <identifier> [as <identifier>] } from <literal>;`
     Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>, Loc),
-}
-
-impl CodeLocation for Import {
-    fn loc(&self) -> Loc {
-        match self {
-            Self::Plain(_, loc) => *loc,
-            Self::GlobalSymbol(_, _, loc) => *loc,
-            Self::Rename(_, _, loc) => *loc,
-        }
-    }
 }
 
 /// Type alias for a list of function parameters.
@@ -409,14 +382,6 @@ pub enum StorageLocation {
     Calldata(Loc),
 }
 
-impl CodeLocation for StorageLocation {
-    fn loc(&self) -> Loc {
-        match self {
-            Self::Memory(l) | Self::Storage(l) | Self::Calldata(l) => *l,
-        }
-    }
-}
-
 impl fmt::Display for StorageLocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -490,24 +455,6 @@ pub enum ContractPart {
 
     /// A `using` directive.
     Using(Box<Using>),
-}
-
-impl CodeLocation for ContractPart {
-    // Return the location of the part. Note that this excluded the body of the function
-    fn loc(&self) -> Loc {
-        match self {
-            Self::StructDefinition(def) => def.loc,
-            Self::EventDefinition(def) => def.loc,
-            Self::EnumDefinition(def) => def.loc,
-            Self::ErrorDefinition(def) => def.loc,
-            Self::VariableDefinition(def) => def.loc,
-            Self::FunctionDefinition(def) => def.loc,
-            Self::TypeDefinition(def) => def.loc,
-            Self::Annotation(def) => def.loc,
-            Self::StraySemicolon(loc) => *loc,
-            Self::Using(def) => def.loc,
-        }
-    }
 }
 
 /// A `using` list. See [Using].
@@ -1079,73 +1026,6 @@ pub enum Expression {
     This(Loc),
 }
 
-impl CodeLocation for Expression {
-    fn loc(&self) -> Loc {
-        match self {
-            Expression::PostIncrement(loc, _)
-            | Expression::PostDecrement(loc, _)
-            | Expression::New(loc, _)
-            | Expression::Parenthesis(loc, _)
-            | Expression::ArraySubscript(loc, ..)
-            | Expression::ArraySlice(loc, ..)
-            | Expression::MemberAccess(loc, ..)
-            | Expression::FunctionCall(loc, ..)
-            | Expression::FunctionCallBlock(loc, ..)
-            | Expression::NamedFunctionCall(loc, ..)
-            | Expression::Not(loc, _)
-            | Expression::Complement(loc, _)
-            | Expression::Delete(loc, _)
-            | Expression::PreIncrement(loc, _)
-            | Expression::PreDecrement(loc, _)
-            | Expression::UnaryPlus(loc, _)
-            | Expression::Negate(loc, _)
-            | Expression::Power(loc, ..)
-            | Expression::Multiply(loc, ..)
-            | Expression::Divide(loc, ..)
-            | Expression::Modulo(loc, ..)
-            | Expression::Add(loc, ..)
-            | Expression::Subtract(loc, ..)
-            | Expression::ShiftLeft(loc, ..)
-            | Expression::ShiftRight(loc, ..)
-            | Expression::BitwiseAnd(loc, ..)
-            | Expression::BitwiseXor(loc, ..)
-            | Expression::BitwiseOr(loc, ..)
-            | Expression::Less(loc, ..)
-            | Expression::More(loc, ..)
-            | Expression::LessEqual(loc, ..)
-            | Expression::MoreEqual(loc, ..)
-            | Expression::Equal(loc, ..)
-            | Expression::NotEqual(loc, ..)
-            | Expression::And(loc, ..)
-            | Expression::Or(loc, ..)
-            | Expression::ConditionalOperator(loc, ..)
-            | Expression::Assign(loc, ..)
-            | Expression::AssignOr(loc, ..)
-            | Expression::AssignAnd(loc, ..)
-            | Expression::AssignXor(loc, ..)
-            | Expression::AssignShiftLeft(loc, ..)
-            | Expression::AssignShiftRight(loc, ..)
-            | Expression::AssignAdd(loc, ..)
-            | Expression::AssignSubtract(loc, ..)
-            | Expression::AssignMultiply(loc, ..)
-            | Expression::AssignDivide(loc, ..)
-            | Expression::AssignModulo(loc, ..)
-            | Expression::BoolLiteral(loc, _)
-            | Expression::NumberLiteral(loc, ..)
-            | Expression::RationalNumberLiteral(loc, ..)
-            | Expression::HexNumberLiteral(loc, ..)
-            | Expression::ArrayLiteral(loc, _)
-            | Expression::List(loc, _)
-            | Expression::Type(loc, _)
-            | Expression::This(loc)
-            | Expression::Variable(Identifier { loc, .. })
-            | Expression::AddressLiteral(loc, _) => *loc,
-            Expression::StringLiteral(v) => v[0].loc,
-            Expression::HexLiteral(v) => v[0].loc,
-        }
-    }
-}
-
 impl Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -1218,17 +1098,6 @@ impl fmt::Display for Mutability {
     }
 }
 
-impl CodeLocation for Mutability {
-    fn loc(&self) -> Loc {
-        match self {
-            Mutability::Pure(loc)
-            | Mutability::Constant(loc)
-            | Mutability::View(loc)
-            | Mutability::Payable(loc) => *loc,
-        }
-    }
-}
-
 /// Function visibility.
 ///
 /// Deprecated for [FunctionTy] other than `Function`.
@@ -1255,17 +1124,6 @@ impl fmt::Display for Visibility {
             Visibility::External(_) => write!(f, "external"),
             Visibility::Internal(_) => write!(f, "internal"),
             Visibility::Private(_) => write!(f, "private"),
-        }
-    }
-}
-
-impl OptionalCodeLocation for Visibility {
-    fn loc(&self) -> Option<Loc> {
-        match self {
-            Visibility::Public(loc)
-            | Visibility::External(loc)
-            | Visibility::Internal(loc)
-            | Visibility::Private(loc) => *loc,
         }
     }
 }
@@ -1604,59 +1462,4 @@ pub enum YulSwitchOptions {
     Case(Loc, YulExpression, YulBlock),
     /// `default <1>`
     Default(Loc, YulBlock),
-}
-
-impl CodeLocation for YulSwitchOptions {
-    fn loc(&self) -> Loc {
-        match self {
-            YulSwitchOptions::Case(loc, ..) | YulSwitchOptions::Default(loc, ..) => *loc,
-        }
-    }
-}
-
-impl CodeLocation for Statement {
-    fn loc(&self) -> Loc {
-        match self {
-            Statement::Block { loc, .. }
-            | Statement::Assembly { loc, .. }
-            | Statement::Args(loc, ..)
-            | Statement::If(loc, ..)
-            | Statement::While(loc, ..)
-            | Statement::Expression(loc, ..)
-            | Statement::VariableDefinition(loc, ..)
-            | Statement::For(loc, ..)
-            | Statement::DoWhile(loc, ..)
-            | Statement::Continue(loc)
-            | Statement::Break(loc)
-            | Statement::Return(loc, ..)
-            | Statement::Revert(loc, ..)
-            | Statement::RevertNamedArgs(loc, ..)
-            | Statement::Emit(loc, ..)
-            | Statement::Try(loc, ..)
-            | Statement::Error(loc) => *loc,
-        }
-    }
-}
-
-impl CodeLocation for YulStatement {
-    fn loc(&self) -> Loc {
-        match self {
-            YulStatement::Assign(loc, ..)
-            | YulStatement::VariableDeclaration(loc, ..)
-            | YulStatement::If(loc, ..)
-            | YulStatement::Leave(loc, ..)
-            | YulStatement::Break(loc, ..)
-            | YulStatement::Continue(loc, ..) => *loc,
-
-            YulStatement::Block(block) => block.loc,
-
-            YulStatement::FunctionDefinition(func_def) => func_def.loc,
-
-            YulStatement::FunctionCall(func_call) => func_call.loc,
-
-            YulStatement::For(for_struct) => for_struct.loc,
-            YulStatement::Switch(switch_struct) => switch_struct.loc,
-            YulStatement::Error(loc) => *loc,
-        }
-    }
 }

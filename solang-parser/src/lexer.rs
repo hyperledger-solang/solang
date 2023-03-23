@@ -6,7 +6,7 @@
 //!  - comments and doc comments
 //!  - pragma value is [^;]+
 
-use crate::pt::{CodeLocation, Comment, Loc};
+use crate::pt::{Comment, Loc};
 use itertools::{peek_nth, PeekNth};
 use phf::phf_map;
 use std::{fmt, str::CharIndices};
@@ -381,21 +381,6 @@ pub enum LexicalError {
 
     #[error("'{1}' found where 'from' expected")]
     ExpectedFrom(Loc, String),
-}
-
-impl CodeLocation for LexicalError {
-    fn loc(&self) -> Loc {
-        match self {
-            LexicalError::EndOfFileInComment(loc)
-            | LexicalError::EndOfFileInString(loc)
-            | LexicalError::EndofFileInHex(loc)
-            | LexicalError::MissingNumber(loc)
-            | LexicalError::InvalidCharacterInHexLiteral(loc, _)
-            | LexicalError::UnrecognisedToken(loc, _)
-            | LexicalError::ExpectedFrom(loc, _)
-            | LexicalError::MissingExponent(loc) => *loc,
-        }
-    }
 }
 
 /// Returns whether `word` is a keyword in Solidity.
