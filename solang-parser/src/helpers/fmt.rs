@@ -396,6 +396,17 @@ impl pt::ContractTy {
 impl Display for pt::Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
+            Self::This(_) => f.write_str("this"),
+
+            Self::New(_, expr) => {
+                f.write_str("new ")?;
+                expr.fmt(f)
+            }
+            Self::Delete(_, expr) => {
+                f.write_str("delete ")?;
+                expr.fmt(f)
+            }
+
             Self::Type(_, ty) => ty.fmt(f),
 
             Self::Variable(ident) => ident.fmt(f),
@@ -411,6 +422,14 @@ impl Display for pt::Expression {
                 write_opt!(f, expr2);
                 f.write_char(']')
             }
+            Self::ArraySlice(_, arr, l, r) => {
+                arr.fmt(f)?;
+                f.write_char('[')?;
+                write_opt!(f, l);
+                f.write_char(':')?;
+                write_opt!(f, r);
+                f.write_char(']')
+            }
 
             Self::MemberAccess(_, expr, ident) => {
                 expr.fmt(f)?;
@@ -423,7 +442,13 @@ impl Display for pt::Expression {
                 expr.fmt(f)?;
                 f.write_char(')')
             }
+            Self::List(_, list) => {
+                f.write_char('(')?;
+                fmt_parameter_list(list, f)?;
+                f.write_char(')')
+            }
 
+            Self::AddressLiteral(_, lit) => f.write_str(lit),
             Self::StringLiteral(vals) => write_separated(vals, f, " "),
             Self::HexLiteral(vals) => write_separated(vals, f, " "),
             Self::BoolLiteral(_, bool) => {
@@ -474,6 +499,24 @@ impl Display for pt::Expression {
                 write_separated(exprs, f, ", ")?;
                 f.write_char(')')
             }
+            Self::FunctionCallBlock(_, expr, block) => {
+                expr.fmt(f)?;
+                block.fmt(f)
+            }
+            Self::NamedFunctionCall(_, expr, args) => {
+                expr.fmt(f)?;
+                f.write_str("({")?;
+                write_separated(args, f, ", ")?;
+                f.write_str("})")
+            }
+
+            Self::ConditionalOperator(_, cond, l, r) => {
+                cond.fmt(f)?;
+                f.write_str(" ? ")?;
+                l.fmt(f)?;
+                f.write_str(" : ")?;
+                r.fmt(f)
+            }
 
             Self::PreIncrement(..)
             | Self::PostIncrement(..)
@@ -501,24 +544,112 @@ impl Display for pt::Expression {
             | Self::And(..)
             | Self::Or(..)
             | Self::Equal(..)
-            | Self::NotEqual(..) => {
-                // TODO
-                // let (left, right) = self.components();
-                // if let Some(left) = left {
-                //     left.fmt(f)?;
-                //     if self.has_space_around() {
-                //         f.write_char(' ')?;
-                //     }
-                // }
-                // f.write_str(self.operator().unwrap())?;
-                // spaced!(f, right)
+            | Self::NotEqual(..)
+            | Self::Assign(..)
+            | Self::AssignOr(..)
+            | Self::AssignAnd(..)
+            | Self::AssignXor(..)
+            | Self::AssignShiftLeft(..)
+            | Self::AssignShiftRight(..)
+            | Self::AssignAdd(..)
+            | Self::AssignSubtract(..)
+            | Self::AssignMultiply(..)
+            | Self::AssignDivide(..)
+            | Self::AssignModulo(..) => {
+                let (left, right) = self.components();
+                let has_spaces = self.has_space_around();
+
+                if let Some(left) = left {
+                    left.fmt(f)?;
+                    if has_spaces {
+                        f.write_char(' ')?;
+                    }
+                }
+
+                let operator = self.operator().unwrap();
+                f.write_str(operator)?;
+
+                if let Some(right) = right {
+                    if has_spaces {
+                        f.write_char(' ')?;
+                    }
+                    right.fmt(f)?;
+                }
+
                 Ok(())
             }
-
-            item => {
-                todo!("formatting pt expression {item:?}")
-            }
         }
+    }
+}
+impl pt::Expression {
+    /// Returns the operator string of this expression, if any.
+    #[inline]
+    pub const fn operator(&self) -> Option<&'static str> {
+        use pt::Expression::*;
+        let operator = match self {
+            New(..) => "new",
+            Delete(..) => "delete",
+
+            PreIncrement(..) | PostIncrement(..) => "++",
+            PreDecrement(..) | PostDecrement(..) => "--",
+
+            Not(..) => "!",
+            Complement(..) => "~",
+            UnaryPlus(..) | Add(..) => "+",
+            Negate(..) | Subtract(..) => "-",
+            Power(..) => "**",
+            Multiply(..) => "*",
+            Divide(..) => "/",
+            Modulo(..) => "%",
+            ShiftLeft(..) => "<<",
+            ShiftRight(..) => ">>",
+            BitwiseAnd(..) => "&",
+            BitwiseXor(..) => "^",
+            BitwiseOr(..) => "|",
+
+            Less(..) => "<",
+            More(..) => ">",
+            LessEqual(..) => "<=",
+            MoreEqual(..) => ">=",
+            And(..) => "&&",
+            Or(..) => "||",
+            Equal(..) => "==",
+            NotEqual(..) => "!=",
+
+            Assign(..) => "=",
+            AssignOr(..) => "|=",
+            AssignAnd(..) => "&=",
+            AssignXor(..) => "^=",
+            AssignShiftLeft(..) => "<<=",
+            AssignShiftRight(..) => ">>=",
+            AssignAdd(..) => "+=",
+            AssignSubtract(..) => "-=",
+            AssignMultiply(..) => "*=",
+            AssignDivide(..) => "/=",
+            AssignModulo(..) => "%=",
+
+            MemberAccess(..)
+            | ArraySubscript(..)
+            | ArraySlice(..)
+            | FunctionCall(..)
+            | FunctionCallBlock(..)
+            | NamedFunctionCall(..)
+            | ConditionalOperator(..)
+            | BoolLiteral(..)
+            | NumberLiteral(..)
+            | RationalNumberLiteral(..)
+            | HexNumberLiteral(..)
+            | StringLiteral(..)
+            | Type(..)
+            | HexLiteral(..)
+            | AddressLiteral(..)
+            | Variable(..)
+            | List(..)
+            | ArrayLiteral(..)
+            | This(..)
+            | Parenthesis(..) => return None,
+        };
+        Some(operator)
     }
 }
 
@@ -1289,6 +1420,10 @@ mod tests {
         };
     }
 
+    fn var(s: &str) -> Box<pt::Expression> {
+        Box::new(pt::Expression::Variable(id(s)))
+    }
+
     fn assert_eq_display<T: Display + std::fmt::Debug>(item: T, expected: &str) {
         let actual = item.to_string();
         assert_eq!(actual, expected, "failed to display: {item:?}");
@@ -1622,6 +1757,11 @@ mod tests {
             }
 
             pt::Expression: {
+                pt::Expression::This(loc!()) => "this",
+
+                pt::Expression::New(loc!(), Box::new(expr_ty!(uint256))) => "new uint256",
+                pt::Expression::Delete(loc!(), Box::new(expr_ty!(uint256))) => "delete uint256",
+
                 pt::Expression::Type(loc!(), ty!(uint256)) => "uint256",
                 pt::Expression::Variable(id("myVar")) => "myVar",
 
@@ -1629,11 +1769,24 @@ mod tests {
 
                 pt::Expression::ArraySubscript(loc!(), Box::new(expr!(arr)), None) => "arr[]",
                 pt::Expression::ArraySubscript(loc!(), Box::new(expr!(arr)), Some(Box::new(expr!(0)))) => "arr[0]",
+                pt::Expression::ArraySlice(loc!(), Box::new(expr!(arr)), None, None) => "arr[:]",
+                pt::Expression::ArraySlice(loc!(), Box::new(expr!(arr)), Some(Box::new(expr!(left))), None)
+                    => "arr[left:]",
+                pt::Expression::ArraySlice(loc!(), Box::new(expr!(arr)), None, Some(Box::new(expr!(right))))
+                    => "arr[:right]",
+                pt::Expression::ArraySlice(loc!(), Box::new(expr!(arr)), Some(Box::new(expr!(left))), Some(Box::new(expr!(right))))
+                    => "arr[left:right]",
 
                 pt::Expression::MemberAccess(loc!(), Box::new(expr!(struct)), id("access")) => "struct.access",
 
                 pt::Expression::Parenthesis(loc!(), Box::new(expr!(var))) => "(var)",
+                pt::Expression::List(loc!(), vec![]) => "()",
+                pt::Expression::List(loc!(), vec![(loc!(), Some(param!(address)))])
+                    => "(address)",
+                pt::Expression::List(loc!(), vec![(loc!(), Some(param!(address))), (loc!(), Some(param!(uint256)))])
+                    => "(address, uint256)",
 
+                pt::Expression::AddressLiteral(loc!(), "0x1234".into()) => "0x1234",
                 pt::Expression::StringLiteral(vec![lit!(unicode "¹")]) => "unicode\"¹\"",
                 pt::Expression::HexLiteral(vec![lit!(hex "00112233")]) => "hex\"00112233\"",
                 pt::Expression::BoolLiteral(loc!(), true) => "true",
@@ -1663,8 +1816,68 @@ mod tests {
                     => "func(arg)",
                 pt::Expression::FunctionCall(loc!(), Box::new(expr!(func)), vec![expr!(arg1), expr!(arg2)])
                     => "func(arg1, arg2)",
+                pt::Expression::FunctionCallBlock(loc!(), Box::new(expr!(func)), Box::new(stmt!({})))
+                    => "func{}",
+                pt::Expression::NamedFunctionCall(loc!(), Box::new(expr!(func)), vec![])
+                    => "func({})",
+                pt::Expression::NamedFunctionCall(loc!(), Box::new(expr!(func)), vec![pt::NamedArgument {
+                    loc: loc!(),
+                    name: id("arg"),
+                    expr: expr!(value),
+                }]) => "func({arg: value})",
+                pt::Expression::NamedFunctionCall(loc!(), Box::new(expr!(func)), vec![
+                    pt::NamedArgument {
+                        loc: loc!(),
+                        name: id("arg1"),
+                        expr: expr!(value1),
+                    },
+                    pt::NamedArgument {
+                        loc: loc!(),
+                        name: id("arg2"),
+                        expr: expr!(value2),
+                    }
+                ]) => "func({arg1: value1, arg2: value2})",
 
-                // TODO
+                pt::Expression::PreIncrement(loc!(), var("a")) => "++a",
+                pt::Expression::PostIncrement(loc!(), var("a")) => "a++",
+                pt::Expression::PreDecrement(loc!(), var("a")) => "--a",
+                pt::Expression::PostDecrement(loc!(), var("a")) => "a--",
+                pt::Expression::Not(loc!(), var("a")) => "!a",
+                pt::Expression::Complement(loc!(), var("a")) => "~a",
+                pt::Expression::UnaryPlus(loc!(), var("a")) => "+a",
+                pt::Expression::Negate(loc!(), var("a")) => "-a",
+
+                pt::Expression::Add(loc!(), var("a"), var("b")) => "a + b",
+                pt::Expression::Subtract(loc!(), var("a"), var("b")) => "a - b",
+                pt::Expression::Power(loc!(), var("a"), var("b")) => "a ** b",
+                pt::Expression::Multiply(loc!(), var("a"), var("b")) => "a * b",
+                pt::Expression::Divide(loc!(), var("a"), var("b")) => "a / b",
+                pt::Expression::Modulo(loc!(), var("a"), var("b")) => "a % b",
+                pt::Expression::ShiftLeft(loc!(), var("a"), var("b")) => "a << b",
+                pt::Expression::ShiftRight(loc!(), var("a"), var("b")) => "a >> b",
+                pt::Expression::BitwiseAnd(loc!(), var("a"), var("b")) => "a & b",
+                pt::Expression::BitwiseXor(loc!(), var("a"), var("b")) => "a ^ b",
+                pt::Expression::BitwiseOr(loc!(), var("a"), var("b")) => "a | b",
+                pt::Expression::Less(loc!(), var("a"), var("b")) => "a < b",
+                pt::Expression::More(loc!(), var("a"), var("b")) => "a > b",
+                pt::Expression::LessEqual(loc!(), var("a"), var("b")) => "a <= b",
+                pt::Expression::MoreEqual(loc!(), var("a"), var("b")) => "a >= b",
+                pt::Expression::And(loc!(), var("a"), var("b")) => "a && b",
+                pt::Expression::Or(loc!(), var("a"), var("b")) => "a || b",
+                pt::Expression::Equal(loc!(), var("a"), var("b")) => "a == b",
+                pt::Expression::NotEqual(loc!(), var("a"), var("b")) => "a != b",
+
+                pt::Expression::Assign(loc!(), var("a"), var("b")) => "a = b",
+                pt::Expression::AssignOr(loc!(), var("a"), var("b")) => "a |= b",
+                pt::Expression::AssignAnd(loc!(), var("a"), var("b")) => "a &= b",
+                pt::Expression::AssignXor(loc!(), var("a"), var("b")) => "a ^= b",
+                pt::Expression::AssignShiftLeft(loc!(), var("a"), var("b")) => "a <<= b",
+                pt::Expression::AssignShiftRight(loc!(), var("a"), var("b")) => "a >>= b",
+                pt::Expression::AssignAdd(loc!(), var("a"), var("b")) => "a += b",
+                pt::Expression::AssignSubtract(loc!(), var("a"), var("b")) => "a -= b",
+                pt::Expression::AssignMultiply(loc!(), var("a"), var("b")) => "a *= b",
+                pt::Expression::AssignDivide(loc!(), var("a"), var("b")) => "a /= b",
+                pt::Expression::AssignModulo(loc!(), var("a"), var("b")) => "a %= b",
             }
 
             pt::FunctionAttribute: {
@@ -1791,14 +2004,13 @@ mod tests {
                     => "for (uint256 a;;) {}",
                 pt::Statement::For(loc!(), None, Some(Box::new(expr!(true))), None, Some(Box::new(stmt!({}))))
                     => "for (; true;) {}",
-                // TODO
-                // pt::Statement::For(
-                //     loc!(),
-                //     None,
-                //     Some(Box::new(expr!(true))),
-                //     Some(Box::new(pt::Statement::Expression(loc!(), expr!(++i)))),
-                //     Some(Box::new(stmt!({})))
-                // ) => "for (; true; ++i) {}",
+                pt::Statement::For(
+                    loc!(),
+                    None,
+                    Some(Box::new(expr!(true))),
+                    Some(Box::new(pt::Statement::Expression(loc!(), expr!(++i)))),
+                    Some(Box::new(stmt!({})))
+                ) => "for (; true; ++i) {}",
 
                 pt::Statement::DoWhile(loc!(), Box::new(stmt!({})), expr!(true))
                     => "do {} while (true);",
