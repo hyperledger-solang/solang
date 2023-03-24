@@ -56,6 +56,24 @@ impl<T: CodeLocation> CodeLocation for &'_ T {
     }
 }
 
+impl<T: CodeLocation> CodeLocation for Box<T> {
+    fn loc(&self) -> Loc {
+        (&**self).loc()
+    }
+}
+
+impl<T: CodeLocation> CodeLocation for std::rc::Rc<T> {
+    fn loc(&self) -> Loc {
+        (&**self).loc()
+    }
+}
+
+impl<T: CodeLocation> CodeLocation for std::sync::Arc<T> {
+    fn loc(&self) -> Loc {
+        (&**self).loc()
+    }
+}
+
 impl<T: CodeLocation> CodeLocation for [T] {
     // TODO: Merge first with last span?
     fn loc(&self) -> Loc {
