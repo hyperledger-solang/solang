@@ -791,7 +791,8 @@ fn log_api_call_return_values_works() {
     runtime.function("test", vec![]);
     assert_eq!(
         &runtime.printbuf,
-        r##"call: seal_instantiate=0,
+        r##"call: instantiation_nonce=1,
+call: seal_instantiate=0,
 print: hi!,
 call: seal_debug_message=0,
 call: seal_call=0,
