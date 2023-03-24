@@ -108,14 +108,14 @@ impl SubstrateTarget {
         std_lib: &Module<'a>,
         contract: &'a ast::Contract,
         ns: &'a ast::Namespace,
-        filename: &'a str,
         opt: &'a Options,
     ) -> Binary<'a> {
+        let filename = ns.files[contract.loc.file_no()].file_name();
         let mut binary = Binary::new(
             context,
             ns.target,
             &contract.name,
-            filename,
+            filename.as_str(),
             opt,
             std_lib,
             None,

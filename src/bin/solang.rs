@@ -452,14 +452,14 @@ fn compile(matches: &ArgMatches) {
         // TODO: this could be parallelized using e.g. rayon
         let ns = process_file(filename, &mut resolver, target, matches, &opt);
 
-        namespaces.push((ns, filename));
+        namespaces.push(ns);
     }
 
     let mut json_contracts = HashMap::new();
 
     let std_json = *matches.get_one("STD-JSON").unwrap();
 
-    for (ns, _) in &namespaces {
+    for ns in &namespaces {
         if std_json {
             let mut out = ns.diagnostics_as_json(&resolver);
             json.errors.append(&mut out);
@@ -477,7 +477,7 @@ fn compile(matches: &ArgMatches) {
     }
 
     // Ensure we have at least one contract
-    if !errors && namespaces.iter().all(|(ns, _)| ns.contracts.is_empty()) {
+    if !errors && namespaces.iter().all(|ns| ns.contracts.is_empty()) {
         eprintln!("error: no contacts found");
         errors = true;
     }
@@ -488,7 +488,7 @@ fn compile(matches: &ArgMatches) {
         .filter(|name| {
             !namespaces
                 .iter()
-                .flat_map(|(ns, _)| ns.contracts.iter())
+                .flat_map(|ns| ns.contracts.iter())
                 .any(|contract| **name == contract.name)
         })
         .collect();
@@ -499,16 +499,9 @@ fn compile(matches: &ArgMatches) {
     }
 
     if !errors {
-        for (ns, filename) in &namespaces {
+        for ns in &namespaces {
             for contract_no in 0..ns.contracts.len() {
-                contract_results(
-                    contract_no,
-                    filename,
-                    matches,
-                    ns,
-                    &mut json_contracts,
-                    &opt,
-                );
+                contract_results(contract_no, matches, ns, &mut json_contracts, &opt);
             }
         }
     }
@@ -582,7 +575,6 @@ fn process_file(
 
 fn contract_results(
     contract_no: usize,
-    filename: &OsStr,
     matches: &ArgMatches,
     ns: &Namespace,
     json_contracts: &mut HashMap<String, JsonContract>,
@@ -617,9 +609,8 @@ fn contract_results(
     }
 
     let context = inkwell::context::Context::create();
-    let filename_string = filename.to_string_lossy();
 
-    let binary = resolved_contract.binary(ns, &context, &filename_string, opt);
+    let binary = resolved_contract.binary(ns, &context, opt);
 
     if save_intermediates(&binary, matches) {
         return;

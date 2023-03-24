@@ -559,8 +559,7 @@ impl<'input> Lexer<'input> {
 
     fn parse_number(
         &mut self,
-        start: usize,
-        end: usize,
+        mut start: usize,
         ch: char,
     ) -> Result<(usize, Token<'input>, usize), LexicalError> {
         let mut is_rational = false;
@@ -599,13 +598,12 @@ impl<'input> Lexer<'input> {
             }
         }
 
-        let mut start = start;
         if ch == '.' {
             is_rational = true;
             start -= 1;
         }
 
-        let mut end = end;
+        let mut end = start;
         while let Some((i, ch)) = self.chars.peek() {
             if !ch.is_ascii_digit() && *ch != '_' {
                 break;
@@ -947,7 +945,7 @@ impl<'input> Lexer<'input> {
                     }
                 }
                 Some((start, ch)) if ch.is_ascii_digit() => {
-                    let parse_result = self.parse_number(start, start, ch);
+                    let parse_result = self.parse_number(start, ch);
                     if let Err(lex_err) = parse_result {
                         self.errors.push(lex_err.clone());
                         if let LexicalError::EndofFileInHex(_) = lex_err {
@@ -1112,7 +1110,7 @@ impl<'input> Lexer<'input> {
                 Some((i, '.')) => {
                     if let Some((_, a)) = self.chars.peek() {
                         if a.is_ascii_digit() {
-                            return Some(self.parse_number(i + 1, i + 1, '.'));
+                            return Some(self.parse_number(i + 1, '.'));
                         }
                     }
                     return Some(Ok((i, Token::Member, i + 1)));

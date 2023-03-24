@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { weight, createConnection, deploy, transaction, aliceKeypair, query, } from './index';
+import { weight, createConnection, deploy, transaction, aliceKeypair, query, debug_buffer, dry_run, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 
@@ -23,11 +23,16 @@ describe('Deploy create_contract contract and test', () => {
         let deploy_contract = await deploy(conn, alice, 'creator.contract', BigInt(1e16));
 
         // we need to have upload the child code
-        let _ = await deploy(conn, alice, 'child.contract', BigInt(0));
+        let _ = await deploy(conn, alice, 'child_create_contract.contract', BigInt(0));
 
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
-        let gasLimit = await weight(conn, contract, "createChild");
+        let dry = await dry_run(conn, contract, "createChild");
+        // Expect the instantiation nonce to be present
+        const current_nonce = dry.debugMessage.split('\n')[0].split('=');
+        expect(current_nonce[0]).toEqual("call: instantiation_nonce");
+
+        const gasLimit = dry.gasRequired;
         let tx = contract.tx.createChild({ gasLimit });
 
         await transaction(tx, alice);
@@ -44,5 +49,10 @@ describe('Deploy create_contract contract and test', () => {
         let { data: { free: childBalance } } = await conn.query.system.account(child);
 
         expect(BigInt(1e15) - childBalance.toBigInt()).toBeLessThan(1e11);
+
+        // Expect the instantiation nonce to be present and to increase
+        const next_nonce = (await debug_buffer(conn, contract, "createChild")).split('\n')[0].split('=');
+        expect(next_nonce[0]).toEqual("call: instantiation_nonce");
+        expect(parseInt(current_nonce[1])).toBeLessThan(parseInt(next_nonce[1]));
     });
 });
