@@ -612,10 +612,10 @@ impl<'input> Lexer<'input> {
             self.chars.next();
         }
         let mut rational_end = end;
-        let mut end_before_rational = end;
+        let mut end_before_rational = end + 1;
         let mut rational_start = end;
         if is_rational {
-            end_before_rational = start - 1;
+            end_before_rational = start;
             rational_start = start + 1;
         }
 
@@ -666,7 +666,7 @@ impl<'input> Lexer<'input> {
         }
 
         if is_rational {
-            let integer = &self.input[start..=end_before_rational];
+            let integer = &self.input[start..end_before_rational];
             let fraction = &self.input[rational_start..=rational_end];
             let exp = &self.input[exp_start..=end];
 
@@ -1704,5 +1704,23 @@ fn lexertest() {
             Loc::File(0, 4, 5),
             'g'
         ),)
+    );
+
+    let mut errors = Vec::new();
+    let tokens = Lexer::new(".9", 0, &mut comments, &mut errors)
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(Ok((0, Token::RationalNumber("", "9", ""), 2)),)
+    );
+
+    let mut errors = Vec::new();
+    let tokens = Lexer::new(".9e10", 0, &mut comments, &mut errors)
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(Ok((0, Token::RationalNumber("", "9", "10"), 5)),)
     );
 }
