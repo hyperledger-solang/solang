@@ -42,20 +42,20 @@ macro_rules! write_opt {
     };
 }
 
-/// Similar to `Formatter::debug_struct`
-// fn write_object<T: Display>() {
-// }
-
 // structs
 impl Display for pt::Annotation {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "@{}({})", self.id, self.value)
+        f.write_char('@')?;
+        self.id.fmt(f)?;
+        f.write_char('(')?;
+        self.value.fmt(f)?;
+        f.write_char(')')
     }
 }
 
 impl Display for pt::Base {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "{}", self.name)?;
+        self.name.fmt(f)?;
         if let Some(args) = &self.args {
             f.write_char('(')?;
             write_separated(args, f, ", ")?;
@@ -69,8 +69,11 @@ impl Display for pt::ContractDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.ty.fmt(f)?;
         f.write_char(' ')?;
+
         write_opt!(f, &self.name, ' ');
+
         write_separated(&self.base, f, ", ")?;
+        f.write_char(' ')?;
 
         f.write_char('{')?;
         write_separated(&self.parts, f, " ")?;
@@ -96,7 +99,7 @@ impl Display for pt::ErrorDefinition {
 
         f.write_char('(')?;
         write_separated(&self.fields, f, ", ")?;
-        f.write_char(')')
+        f.write_str(");")
     }
 }
 
@@ -117,8 +120,10 @@ impl Display for pt::EventDefinition {
         write_separated(&self.fields, f, ", ")?;
         f.write_char(')')?;
 
-        write_opt!(f, self.anonymous.then_some(" anonymous"));
-        Ok(())
+        if self.anonymous {
+            f.write_str(" anonymous")?;
+        }
+        f.write_char(';')
     }
 }
 
@@ -151,6 +156,7 @@ impl Display for pt::FunctionDefinition {
         }
 
         if let Some(body) = &self.body {
+            f.write_char(' ')?;
             body.fmt(f)
         } else {
             f.write_char(';')
@@ -178,7 +184,9 @@ impl Display for pt::IdentifierPath {
 
 impl Display for pt::NamedArgument {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "{}: {}", self.name, self.expr)
+        self.name.fmt(f)?;
+        f.write_str(": ")?;
+        self.expr.fmt(f)
     }
 }
 
@@ -224,7 +232,11 @@ impl Display for pt::StructDefinition {
 
 impl Display for pt::TypeDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "type {} is {};", self.name, self.ty)
+        f.write_str("type ")?;
+        self.name.fmt(f)?;
+        f.write_str(" is ")?;
+        self.ty.fmt(f)?;
+        f.write_char(';')
     }
 }
 
@@ -283,11 +295,14 @@ impl Display for pt::YulBlock {
 
 impl Display for pt::YulFor {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(
-            f,
-            "for {} {} {} {}",
-            self.init_block, self.condition, self.post_block, self.execution_block
-        )
+        f.write_str("for ")?;
+        self.init_block.fmt(f)?;
+        f.write_char(' ')?;
+        self.condition.fmt(f)?;
+        f.write_char(' ')?;
+        self.post_block.fmt(f)?;
+        f.write_char(' ')?;
+        self.execution_block.fmt(f)
     }
 }
 
@@ -346,7 +361,11 @@ impl Display for pt::CatchClause {
                 block.fmt(f)
             }
             Self::Named(_, ident, param, block) => {
-                write!(f, "catch {ident}({param}) ")?;
+                f.write_str("catch ")?;
+                ident.fmt(f)?;
+                f.write_char('(')?;
+                param.fmt(f)?;
+                f.write_str(") ")?;
                 block.fmt(f)
             }
         }
@@ -696,8 +715,18 @@ impl pt::FunctionTy {
 impl Display for pt::Import {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::Plain(lit, _) => write!(f, "import {lit};"),
-            Self::GlobalSymbol(lit, ident, _) => write!(f, "import {lit} as {ident};"),
+            Self::Plain(lit, _) => {
+                f.write_str("import ")?;
+                lit.fmt(f)?;
+                f.write_char(';')
+            }
+            Self::GlobalSymbol(lit, ident, _) => {
+                f.write_str("import ")?;
+                lit.fmt(f)?;
+                f.write_str(" as ")?;
+                ident.fmt(f)?;
+                f.write_char(';')
+            }
             Self::Rename(lit, idents, _) => {
                 f.write_str("import {")?;
 
@@ -873,7 +902,11 @@ impl Display for pt::Statement {
                 }
                 f.write_str(");")
             }
-            Self::Emit(_, expr) => write!(f, "emit {expr};"),
+            Self::Emit(_, expr) => {
+                f.write_str("emit ")?;
+                expr.fmt(f)?;
+                f.write_char(';')
+            }
             Self::Try(_, expr, returns, catch) => {
                 f.write_str("try ")?;
                 expr.fmt(f)?;
@@ -922,9 +955,18 @@ impl Display for pt::Type {
             Self::String => f.write_str("string"),
             Self::Rational => f.write_str("fixed"),
             Self::DynamicBytes => f.write_str("bytes"),
-            Self::Bytes(n) => write!(f, "bytes{n}"),
-            Self::Int(n) => write!(f, "int{n}"),
-            Self::Uint(n) => write!(f, "uint{n}"),
+            Self::Bytes(n) => {
+                f.write_str("bytes")?;
+                n.fmt(f)
+            }
+            Self::Int(n) => {
+                f.write_str("int")?;
+                n.fmt(f)
+            }
+            Self::Uint(n) => {
+                f.write_str("uint")?;
+                n.fmt(f)
+            }
             Self::Mapping {
                 key,
                 key_name,
@@ -1090,7 +1132,11 @@ impl Display for pt::YulExpression {
             }
             Self::Variable(ident) => ident.fmt(f),
             Self::FunctionCall(call) => call.fmt(f),
-            Self::SuffixAccess(_, l, r) => write!(f, "{l}.{r}"),
+            Self::SuffixAccess(_, l, r) => {
+                l.fmt(f)?;
+                f.write_char('.')?;
+                r.fmt(f)
+            }
         }
     }
 }
@@ -1119,7 +1165,12 @@ impl Display for pt::YulStatement {
                 Ok(())
             }
 
-            Self::If(_, expr, block) => write!(f, "if {expr} {block}"),
+            Self::If(_, expr, block) => {
+                f.write_str("if ")?;
+                expr.fmt(f)?;
+                f.write_char(' ')?;
+                block.fmt(f)
+            }
 
             Self::Leave(_) => f.write_str("leave"),
             Self::Break(_) => f.write_str("break"),

@@ -212,6 +212,8 @@ impl Loc {
 }
 
 /// An identifier.
+///
+/// `<name>`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct Identifier {
@@ -223,7 +225,6 @@ pub struct Identifier {
 
 impl Identifier {
     /// Creates a new identifier.
-    #[inline]
     pub fn new(s: impl Into<String>) -> Self {
         Self {
             loc: Loc::default(),
@@ -234,7 +235,7 @@ impl Identifier {
 
 /// A qualified identifier.
 ///
-/// Dot-separated list of identifiers.
+/// `<identifiers>.*`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct IdentifierPath {
