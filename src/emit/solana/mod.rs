@@ -4,7 +4,6 @@ pub(super) mod target;
 
 use crate::sema::ast;
 use crate::Target;
-use std::str;
 
 use crate::codegen::{cfg::ReturnCode, Options};
 use crate::sema::ast::Type;
@@ -28,16 +27,15 @@ impl SolanaTarget {
         std_lib: &Module<'a>,
         contract: &'a ast::Contract,
         ns: &'a ast::Namespace,
-        filename: &'a str,
         opt: &'a Options,
     ) -> Binary<'a> {
         let mut target = SolanaTarget();
-
+        let filename = ns.files[contract.loc.file_no()].file_name();
         let mut binary = Binary::new(
             context,
             Target::Solana,
             &contract.name,
-            filename,
+            filename.as_str(),
             opt,
             std_lib,
             None,

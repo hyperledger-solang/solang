@@ -409,10 +409,9 @@ impl ast::Contract {
         &'a self,
         ns: &'a ast::Namespace,
         context: &'a inkwell::context::Context,
-        filename: &'a str,
         opt: &'a Options,
     ) -> binary::Binary {
-        binary::Binary::build(context, self, ns, filename, opt)
+        binary::Binary::build(context, self, ns, opt)
     }
 
     /// Generate the final program code for the contract
@@ -424,8 +423,7 @@ impl ast::Contract {
         self.code
             .get_or_init(move || {
                 let context = inkwell::context::Context::create();
-                let filename = ns.files[self.loc.file_no()].path.to_string_lossy();
-                let binary = self.binary(ns, &context, &filename, opt);
+                let binary = self.binary(ns, &context, opt);
                 binary.code(Generate::Linked).expect("llvm build")
             })
             .to_vec()
