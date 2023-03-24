@@ -44,7 +44,7 @@ fn not_a_file() -> ! {
 
 impl Loc {
     /// Returns this location's beginning range.
-    #[must_use]
+    #[inline]
     pub fn begin_range(&self) -> Self {
         match self {
             Loc::File(file_no, start, _) => Loc::File(*file_no, *start, *start),
@@ -53,7 +53,7 @@ impl Loc {
     }
 
     /// Returns this location's end range.
-    #[must_use]
+    #[inline]
     pub fn end_range(&self) -> Self {
         match self {
             Loc::File(file_no, _, end) => Loc::File(*file_no, *end, *end),
@@ -67,6 +67,7 @@ impl Loc {
     ///
     /// If this location is not a file.
     #[track_caller]
+    #[inline]
     pub fn file_no(&self) -> usize {
         match self {
             Loc::File(file_no, _, _) => *file_no,
@@ -75,6 +76,7 @@ impl Loc {
     }
 
     /// Returns this location's file number if it is a file, otherwise `None`.
+    #[inline]
     pub fn try_file_no(&self) -> Option<usize> {
         match self {
             Loc::File(file_no, _, _) => Some(*file_no),
@@ -88,6 +90,7 @@ impl Loc {
     ///
     /// If this location is not a file.
     #[track_caller]
+    #[inline]
     pub fn start(&self) -> usize {
         match self {
             Loc::File(_, start, _) => *start,
@@ -101,6 +104,7 @@ impl Loc {
     ///
     /// If this location is not a file.
     #[track_caller]
+    #[inline]
     pub fn end(&self) -> usize {
         match self {
             Loc::File(_, _, end) => *end,
@@ -114,6 +118,7 @@ impl Loc {
     ///
     /// If this location is not a file.
     #[track_caller]
+    #[inline]
     pub fn use_start_from(&mut self, other: &Loc) {
         match (self, other) {
             (Loc::File(_, start, _), Loc::File(_, other_start, _)) => {
@@ -129,11 +134,78 @@ impl Loc {
     ///
     /// If this location is not a file.
     #[track_caller]
+    #[inline]
     pub fn use_end_from(&mut self, other: &Loc) {
         match (self, other) {
             (Loc::File(_, _, end), Loc::File(_, _, other_end)) => {
                 *end = *other_end;
             }
+            _ => not_a_file(),
+        }
+    }
+
+    /// See [`Loc::use_start_from`].
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
+    #[inline]
+    pub fn with_start_from(mut self, other: &Self) -> Self {
+        self.use_start_from(other);
+        self
+    }
+
+    /// See [`Loc::use_end_from`].
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
+    #[inline]
+    pub fn with_end_from(mut self, other: &Self) -> Self {
+        self.use_end_from(other);
+        self
+    }
+
+    /// Creates a new `Loc::File` by replacing `start`.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
+    #[inline]
+    pub fn with_start(self, start: usize) -> Self {
+        match self {
+            Self::File(no, _, end) => Self::File(no, start, end),
+            _ => not_a_file(),
+        }
+    }
+
+    /// Creates a new `Loc::File` by replacing `end`.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
+    #[inline]
+    pub fn with_end(self, end: usize) -> Self {
+        match self {
+            Self::File(no, start, _) => Self::File(no, start, end),
+            _ => not_a_file(),
+        }
+    }
+
+    /// Returns this location's range.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
+    #[inline]
+    pub fn range(self) -> std::ops::Range<usize> {
+        match self {
+            Self::File(_, start, end) => start..end,
             _ => not_a_file(),
         }
     }
@@ -147,6 +219,17 @@ pub struct Identifier {
     pub loc: Loc,
     /// The identifier string.
     pub name: String,
+}
+
+impl Identifier {
+    /// Creates a new identifier.
+    #[inline]
+    pub fn new(s: impl Into<String>) -> Self {
+        Self {
+            loc: Loc::default(),
+            name: s.into(),
+        }
+    }
 }
 
 /// A qualified identifier.
@@ -194,6 +277,7 @@ pub enum Comment {
 
 impl Comment {
     /// Returns the comment's value.
+    #[inline]
     pub const fn value(&self) -> &String {
         match self {
             Self::Line(_, s) | Self::Block(_, s) | Self::DocLine(_, s) | Self::DocBlock(_, s) => s,
@@ -201,16 +285,19 @@ impl Comment {
     }
 
     /// Returns whether this is a doc comment.
+    #[inline]
     pub const fn is_doc(&self) -> bool {
         matches!(self, Self::DocLine(..) | Self::DocBlock(..))
     }
 
     /// Returns whether this is a line comment.
+    #[inline]
     pub const fn is_line(&self) -> bool {
         matches!(self, Self::Line(..) | Self::DocLine(..))
     }
 
     /// Returns whether this is a block comment.
+    #[inline]
     pub const fn is_block(&self) -> bool {
         !self.is_line()
     }
@@ -291,6 +378,7 @@ pub enum Import {
 
 impl Import {
     /// Returns the import string.
+    #[inline]
     pub const fn literal(&self) -> &StringLiteral {
         match self {
             Self::Plain(literal, _)
@@ -527,6 +615,7 @@ pub enum UserDefinedOperator {
 
 impl UserDefinedOperator {
     /// Returns the number of arguments needed for this operator's operation.
+    #[inline]
     pub const fn args(&self) -> usize {
         match self {
             UserDefinedOperator::Complement | UserDefinedOperator::Negate => 1,
@@ -535,16 +624,19 @@ impl UserDefinedOperator {
     }
 
     /// Returns whether `self` is a unary operator.
+    #[inline]
     pub const fn is_unary(&self) -> bool {
         matches!(self, Self::Complement | Self::Negate)
     }
 
     /// Returns whether `self` is a binary operator.
+    #[inline]
     pub const fn is_binary(&self) -> bool {
         !self.is_unary()
     }
 
     /// Returns whether `self` is a bitwise operator.
+    #[inline]
     pub const fn is_bitwise(&self) -> bool {
         matches!(
             self,
@@ -553,6 +645,7 @@ impl UserDefinedOperator {
     }
 
     /// Returns whether `self` is an arithmetic operator.
+    #[inline]
     pub const fn is_arithmetic(&self) -> bool {
         matches!(
             self,
@@ -561,6 +654,7 @@ impl UserDefinedOperator {
     }
 
     /// Returns whether this is a comparison operator.
+    #[inline]
     pub const fn is_comparison(&self) -> bool {
         matches!(
             self,
@@ -984,8 +1078,83 @@ pub enum Expression {
     This(Loc),
 }
 
+/// See `Expression::components`.
+macro_rules! expr_components {
+    ($s:ident) => {
+        match $s {
+            // (Some, None)
+            PostDecrement(_, expr) | PostIncrement(_, expr) => (Some(expr), None),
+
+            // (None, Some)
+            Not(_, expr)
+            | Complement(_, expr)
+            | New(_, expr)
+            | Delete(_, expr)
+            | UnaryPlus(_, expr)
+            | Negate(_, expr)
+            | PreDecrement(_, expr)
+            | Parenthesis(_, expr)
+            | PreIncrement(_, expr) => (None, Some(expr)),
+
+            // (Some, Some)
+            Power(_, left, right)
+            | Multiply(_, left, right)
+            | Divide(_, left, right)
+            | Modulo(_, left, right)
+            | Add(_, left, right)
+            | Subtract(_, left, right)
+            | ShiftLeft(_, left, right)
+            | ShiftRight(_, left, right)
+            | BitwiseAnd(_, left, right)
+            | BitwiseXor(_, left, right)
+            | BitwiseOr(_, left, right)
+            | Less(_, left, right)
+            | More(_, left, right)
+            | LessEqual(_, left, right)
+            | MoreEqual(_, left, right)
+            | Equal(_, left, right)
+            | NotEqual(_, left, right)
+            | And(_, left, right)
+            | Or(_, left, right)
+            | Assign(_, left, right)
+            | AssignOr(_, left, right)
+            | AssignAnd(_, left, right)
+            | AssignXor(_, left, right)
+            | AssignShiftLeft(_, left, right)
+            | AssignShiftRight(_, left, right)
+            | AssignAdd(_, left, right)
+            | AssignSubtract(_, left, right)
+            | AssignMultiply(_, left, right)
+            | AssignDivide(_, left, right)
+            | AssignModulo(_, left, right) => (Some(left), Some(right)),
+
+            // (None, None)
+            MemberAccess(..)
+            | ConditionalOperator(..)
+            | ArraySubscript(..)
+            | ArraySlice(..)
+            | FunctionCall(..)
+            | FunctionCallBlock(..)
+            | NamedFunctionCall(..)
+            | BoolLiteral(..)
+            | NumberLiteral(..)
+            | RationalNumberLiteral(..)
+            | HexNumberLiteral(..)
+            | StringLiteral(..)
+            | Type(..)
+            | HexLiteral(..)
+            | AddressLiteral(..)
+            | Variable(..)
+            | List(..)
+            | ArrayLiteral(..)
+            | This(..) => (None, None),
+        }
+    };
+}
+
 impl Expression {
     /// Removes one layer of parentheses.
+    #[inline]
     pub fn remove_parenthesis(&self) -> &Expression {
         if let Expression::Parenthesis(_, expr) = self {
             expr
@@ -1000,6 +1169,81 @@ impl Expression {
             Expression::Parenthesis(_, expr) => expr.strip_parentheses(),
             _ => self,
         }
+    }
+
+    /// Returns shared references to the components of this expression.
+    ///
+    /// `(left_component, right_component)`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use solang_parser::pt::{Expression, Identifier, Loc};
+    ///
+    /// // `a++`
+    /// let var = Expression::Variable(Identifier::new("a"));
+    /// let post_increment = Expression::PostIncrement(Loc::default(), Box::new(var.clone()));
+    /// assert_eq!(post_increment.components(), (Some(&var), None));
+    ///
+    /// // `++a`
+    /// let var = Expression::Variable(Identifier::new("a"));
+    /// let pre_increment = Expression::PreIncrement(Loc::default(), Box::new(var.clone()));
+    /// assert_eq!(pre_increment.components(), (None, Some(&var)));
+    ///
+    /// // `a + b`
+    /// let var_a = Expression::Variable(Identifier::new("a"));
+    /// let var_b = Expression::Variable(Identifier::new("b"));
+    /// let pre_increment = Expression::Add(Loc::default(), Box::new(var_a.clone()), Box::new(var_b.clone()));
+    /// assert_eq!(pre_increment.components(), (Some(&var_a), Some(&var_b)));
+    /// ```
+    #[inline]
+    pub fn components(&self) -> (Option<&Self>, Option<&Self>) {
+        use Expression::*;
+        expr_components!(self)
+    }
+
+    /// Returns mutable references to the components of this expression.
+    ///
+    /// See also [`Expression::components`].
+    #[inline]
+    pub fn components_mut(&mut self) -> (Option<&mut Self>, Option<&mut Self>) {
+        use Expression::*;
+        expr_components!(self)
+    }
+
+    /// Returns whether this expression can be split across multiple lines.
+    #[inline]
+    pub const fn is_unsplittable(&self) -> bool {
+        use Expression::*;
+        matches!(
+            self,
+            BoolLiteral(..)
+                | NumberLiteral(..)
+                | RationalNumberLiteral(..)
+                | HexNumberLiteral(..)
+                | StringLiteral(..)
+                | HexLiteral(..)
+                | AddressLiteral(..)
+                | Variable(..)
+                | This(..)
+        )
+    }
+
+    /// Returns whether this expression has spaces around it.
+    #[inline]
+    pub const fn has_space_around(&self) -> bool {
+        use Expression::*;
+        !matches!(
+            self,
+            PostIncrement(..)
+                | PreIncrement(..)
+                | PostDecrement(..)
+                | PreDecrement(..)
+                | Not(..)
+                | Complement(..)
+                | UnaryPlus(..)
+                | Negate(..)
+        )
     }
 }
 
@@ -1122,7 +1366,7 @@ pub struct FunctionDefinition {
     pub params: ParameterList,
     /// The function attributes.
     pub attributes: Vec<FunctionAttribute>,
-    /// ?
+    /// The `returns` keyword's location. `None` if this was `return`, not `returns`.
     pub return_not_returns: Option<Loc>,
     /// The return parameter list.
     pub returns: ParameterList,
@@ -1130,6 +1374,28 @@ pub struct FunctionDefinition {
     ///
     /// If `None`, the declaration ended with a semicolon.
     pub body: Option<Statement>,
+}
+
+impl FunctionDefinition {
+    /// Returns `true` if the function has no return parameters.
+    #[inline]
+    pub fn is_void(&self) -> bool {
+        self.returns.is_empty()
+    }
+
+    /// Returns `true` if the function body is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.body.as_ref().map_or(true, Statement::is_empty)
+    }
+
+    /// Sorts the function attributes.
+    #[inline]
+    pub fn sort_attributes(&mut self) {
+        // we don't use unstable sort since there may be more that one `BaseOrModifier` attributes
+        // which we want to preserve the order of
+        self.attributes.sort();
+    }
 }
 
 /// A statement.
@@ -1210,6 +1476,19 @@ pub enum Statement {
     ),
     /// An error occurred during parsing.
     Error(Loc),
+}
+
+impl Statement {
+    /// Returns `true` if the block statement contains no elements.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Block { statements, .. } => statements.is_empty(),
+            Self::Assembly { block, .. } => block.is_empty(),
+            Self::Args(_, args) => args.is_empty(),
+            _ => false,
+        }
+    }
 }
 
 /// A catch clause. See [Statement].
@@ -1305,6 +1584,14 @@ pub struct YulBlock {
     pub statements: Vec<YulStatement>,
 }
 
+impl YulBlock {
+    /// Returns `true` if the block contains no elements.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.statements.is_empty()
+    }
+}
+
 /// A Yul expression.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
@@ -1357,6 +1644,20 @@ pub struct YulFunctionDefinition {
     pub returns: Vec<YulTypedIdentifier>,
     /// The function body.
     pub body: YulBlock,
+}
+
+impl YulFunctionDefinition {
+    /// Returns `true` if the function has no return parameters.
+    #[inline]
+    pub fn is_void(&self) -> bool {
+        self.returns.is_empty()
+    }
+
+    /// Returns `true` if the function body is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.body.is_empty()
+    }
 }
 
 /// A Yul function call.
