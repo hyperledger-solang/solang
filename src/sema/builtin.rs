@@ -1103,11 +1103,11 @@ pub(super) fn resolve_namespace_call(
                             broken = true;
                         }
 
-                        if ty.is_mapping() {
+                        if ty.is_mapping() || ty.is_recursive(ns) {
                             diagnostics.push(Diagnostic::error(
                                 *loc,
-                                "mapping cannot be abi decoded or encoded".to_string(),
-                            ));
+                        format!("Invalid type '{}': mappings and recursive types cannot be abi decoded or encoded", ty.to_string(ns)))
+                            );
                             broken = true;
                         }
 
@@ -1128,10 +1128,10 @@ pub(super) fn resolve_namespace_call(
                     diagnostics,
                 )?;
 
-                if ty.is_mapping() {
+                if ty.is_mapping() || ty.is_recursive(ns) {
                     diagnostics.push(Diagnostic::error(
                         *loc,
-                        "mapping cannot be abi decoded or encoded".to_string(),
+                        format!("Invalid type '{}': mappings and recursive types cannot be abi decoded or encoded", ty.to_string(ns))
                     ));
                     broken = true;
                 }
@@ -1301,10 +1301,10 @@ pub(super) fn resolve_namespace_call(
         let mut expr = expression(arg, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
         let ty = expr.ty();
 
-        if ty.is_mapping() {
+        if ty.is_mapping() || ty.is_recursive(ns) {
             diagnostics.push(Diagnostic::error(
                 arg.loc(),
-                "mapping type not permitted".to_string(),
+                format!("Invalid type '{}': mappings and recursive types cannot be abi decoded or encoded", ty.to_string(ns)),
             ));
 
             return Err(());
