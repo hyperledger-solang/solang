@@ -29,10 +29,10 @@ describe('Deploy create_contract contract and test', () => {
 
         let dry = await dry_run(conn, contract, "createChild");
         // Expect the instantiation nonce to be present
-        let current_nonce = dry.debugMessage.split('\n')[0].split('=');
+        const current_nonce = dry.debugMessage.split('\n')[0].split('=');
         expect(current_nonce[0]).toEqual("call: instantiation_nonce");
 
-        let gasLimit = dry.gasRequired;
+        const gasLimit = dry.gasRequired;
         let tx = contract.tx.createChild({ gasLimit });
 
         await transaction(tx, alice);
@@ -51,7 +51,7 @@ describe('Deploy create_contract contract and test', () => {
         expect(BigInt(1e15) - childBalance.toBigInt()).toBeLessThan(1e11);
 
         // Expect the instantiation nonce to be present and to increase
-        let next_nonce = (await debug_buffer(conn, contract, "createChild")).split('\n')[0].split('=');
+        const next_nonce = (await debug_buffer(conn, contract, "createChild")).split('\n')[0].split('=');
         expect(next_nonce[0]).toEqual("call: instantiation_nonce");
         expect(parseInt(current_nonce[1])).toBeLessThan(parseInt(next_nonce[1]));
     });
