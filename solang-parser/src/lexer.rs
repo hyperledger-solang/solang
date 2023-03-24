@@ -1897,5 +1897,21 @@ mod tests {
             tokens,
             vec!(Ok((0, Token::RationalNumber("", "9", "10"), 5)),)
         );
+
+        let mut errors = Vec::new();
+        let tokens = Lexer::new(".9", 0, &mut comments, &mut errors).collect::<Vec<_>>();
+
+        assert_eq!(
+            tokens,
+            vec!(Ok((0, Token::RationalNumber("", "9", ""), 2)),)
+        );
+
+        let mut errors = Vec::new();
+        let tokens = Lexer::new(".9e10", 0, &mut comments, &mut errors).collect::<Vec<_>>();
+
+        assert_eq!(
+            tokens,
+            vec!(Ok((0, Token::RationalNumber("", "9", "10"), 5)),)
+        );
     }
 }
