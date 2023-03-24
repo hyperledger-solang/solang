@@ -10,8 +10,6 @@
 #[doc(hidden)]
 pub use crate::helpers::{CodeLocation, OptionalCodeLocation};
 
-use std::fmt::{self, Display};
-
 #[cfg(feature = "pt-serde")]
 use serde::{Deserialize, Serialize};
 
@@ -194,6 +192,30 @@ pub enum Comment {
     DocBlock(Loc, String),
 }
 
+impl Comment {
+    /// Returns the comment's value.
+    pub const fn value(&self) -> &String {
+        match self {
+            Self::Line(_, s) | Self::Block(_, s) | Self::DocLine(_, s) | Self::DocBlock(_, s) => s,
+        }
+    }
+
+    /// Returns whether this is a doc comment.
+    pub const fn is_doc(&self) -> bool {
+        matches!(self, Self::DocLine(..) | Self::DocBlock(..))
+    }
+
+    /// Returns whether this is a line comment.
+    pub const fn is_line(&self) -> bool {
+        matches!(self, Self::Line(..) | Self::DocLine(..))
+    }
+
+    /// Returns whether this is a block comment.
+    pub const fn is_block(&self) -> bool {
+        !self.is_line()
+    }
+}
+
 /// The source unit of the parse tree.
 ///
 /// Contains all of the parse tree's parts in a vector.
@@ -206,6 +228,10 @@ pub struct SourceUnit(pub Vec<SourceUnitPart>);
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum SourceUnitPart {
     /// A pragma directive.
+    ///
+    /// `pragma <1> <2>;`
+    ///
+    /// `1` and `2` are `None` only if an error occurred during parsing.
     PragmaDirective(Loc, Option<Identifier>, Option<StringLiteral>),
 
     /// An import directive.
@@ -249,24 +275,29 @@ pub enum SourceUnitPart {
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Import {
-    /// A plain import statement.
-    ///
-    /// `import <literal>;`
+    /// `import <0>;`
     Plain(StringLiteral, Loc),
 
-    /// A global symbol import statement.
-    ///
-    /// `import * as <identifier> from <literal>;`
+    /// `import * as <1> from <0>;`
     ///
     /// or
     ///
-    /// `import <literal> as <identifier>;`
+    /// `import <0> as <1>;`
     GlobalSymbol(StringLiteral, Identifier, Loc),
 
-    /// A rename import statement.
-    ///
-    /// `import { <identifier> [as <identifier>] } from <literal>;`
+    /// `import { <<1.0> [as <1.1>]>,* } from <0>;`
     Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>, Loc),
+}
+
+impl Import {
+    /// Returns the import string.
+    pub const fn literal(&self) -> &StringLiteral {
+        match self {
+            Self::Plain(literal, _)
+            | Self::GlobalSymbol(literal, _, _)
+            | Self::Rename(literal, _, _) => literal,
+        }
+    }
 }
 
 /// Type alias for a list of function parameters.
@@ -324,7 +355,7 @@ pub enum Type {
         value_name: Option<Identifier>,
     },
 
-    /// `function(<params>) <attributes> [returns]`
+    /// `function (<params>) <attributes> [returns]`
     Function {
         /// The list of parameters.
         params: ParameterList,
@@ -333,15 +364,6 @@ pub enum Type {
         /// The optional list of return parameters.
         returns: Option<(ParameterList, Vec<FunctionAttribute>)>,
     },
-}
-
-impl Display for Type {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Uint(n) => write!(f, "uint{n}"),
-            _ => unimplemented!(),
-        }
-    }
 }
 
 /// Dynamic type location.
@@ -356,16 +378,6 @@ pub enum StorageLocation {
 
     /// `calldata`
     Calldata(Loc),
-}
-
-impl fmt::Display for StorageLocation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Memory(_) => write!(f, "memory"),
-            Self::Storage(_) => write!(f, "storage"),
-            Self::Calldata(_) => write!(f, "calldata"),
-        }
-    }
 }
 
 /// A variable declaration.
@@ -388,7 +400,7 @@ pub struct VariableDeclaration {
 
 /// A struct definition.
 ///
-/// `struct <name> { <fields>,* }`
+/// `struct <name> { <fields>;* }`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct StructDefinition {
@@ -430,11 +442,11 @@ pub enum ContractPart {
     /// A definition.
     Annotation(Box<Annotation>),
 
-    /// A stray semicolon.
-    StraySemicolon(Loc),
-
     /// A `using` directive.
     Using(Box<Using>),
+
+    /// A stray semicolon.
+    StraySemicolon(Loc),
 }
 
 /// A `using` list. See [Using].
@@ -562,29 +574,6 @@ impl UserDefinedOperator {
     }
 }
 
-impl fmt::Display for UserDefinedOperator {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::BitwiseAnd => write!(f, "&"),
-            Self::Complement => write!(f, "~"),
-            Self::Negate => write!(f, "-"),
-            Self::BitwiseOr => write!(f, "|"),
-            Self::BitwiseXor => write!(f, "^"),
-            Self::Add => write!(f, "+"),
-            Self::Divide => write!(f, "/"),
-            Self::Modulo => write!(f, "%"),
-            Self::Multiply => write!(f, "*"),
-            Self::Subtract => write!(f, "-"),
-            Self::Equal => write!(f, "=="),
-            Self::More => write!(f, ">"),
-            Self::MoreEqual => write!(f, ">="),
-            Self::Less => write!(f, "<"),
-            Self::LessEqual => write!(f, "<="),
-            Self::NotEqual => write!(f, "!="),
-        }
-    }
-}
-
 /// A `using` directive.
 ///
 /// Can occur within contracts and libraries and at the file level.
@@ -620,17 +609,6 @@ pub enum ContractTy {
 
     /// `library`
     Library(Loc),
-}
-
-impl fmt::Display for ContractTy {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ContractTy::Abstract(_) => write!(f, "abstract contract"),
-            ContractTy::Contract(_) => write!(f, "contract"),
-            ContractTy::Interface(_) => write!(f, "interface"),
-            ContractTy::Library(_) => write!(f, "library"),
-        }
-    }
 }
 
 /// A function modifier invocation (see [FunctionAttribute])
@@ -769,7 +747,7 @@ pub enum VariableAttribute {
     /// `immutable`
     Immutable(Loc),
 
-    /// The override specifiers.
+    /// `ovveride(<1>,*)`
     Override(Loc, Vec<IdentifierPath>),
 }
 
@@ -1006,17 +984,6 @@ pub enum Expression {
     This(Loc),
 }
 
-impl Display for Expression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Expression::Variable(id) => write!(f, "{}", id.name),
-            Expression::MemberAccess(_, e, id) => write!(f, "{}.{}", e, id.name),
-            Expression::Type(_, t) => write!(f, "{t}"),
-            _ => unimplemented!(),
-        }
-    }
-}
-
 impl Expression {
     /// Removes one layer of parentheses.
     pub fn remove_parenthesis(&self) -> &Expression {
@@ -1069,16 +1036,6 @@ pub enum Mutability {
     Payable(Loc),
 }
 
-impl fmt::Display for Mutability {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Mutability::Pure(_) => write!(f, "pure"),
-            Mutability::Constant(_) | Mutability::View(_) => write!(f, "view"),
-            Mutability::Payable(_) => write!(f, "payable"),
-        }
-    }
-}
-
 /// Function visibility.
 ///
 /// Deprecated for [FunctionTy] other than `Function`.
@@ -1096,17 +1053,6 @@ pub enum Visibility {
 
     /// `private`
     Private(Option<Loc>),
-}
-
-impl fmt::Display for Visibility {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Visibility::Public(_) => write!(f, "public"),
-            Visibility::External(_) => write!(f, "external"),
-            Visibility::Internal(_) => write!(f, "internal"),
-            Visibility::Private(_) => write!(f, "private"),
-        }
-    }
 }
 
 /// A function attribute.
@@ -1154,18 +1100,6 @@ pub enum FunctionTy {
 
     /// `modifier`
     Modifier,
-}
-
-impl fmt::Display for FunctionTy {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FunctionTy::Constructor => write!(f, "constructor"),
-            FunctionTy::Function => write!(f, "function"),
-            FunctionTy::Fallback => write!(f, "fallback"),
-            FunctionTy::Receive => write!(f, "receive"),
-            FunctionTy::Modifier => write!(f, "modifier"),
-        }
-    }
 }
 
 /// A function definition.
@@ -1261,7 +1195,7 @@ pub enum Statement {
     Revert(Loc, Option<IdentifierPath>, Vec<Expression>),
     /// `revert [1] ({ <2>,* });`
     RevertNamedArgs(Loc, Option<IdentifierPath>, Vec<NamedArgument>),
-    /// `emit <1> (<2>,*);`
+    /// `emit <1>;`
     ///
     /// `<1>` is `FunctionCall`.
     Emit(Loc, Expression),
@@ -1295,7 +1229,7 @@ pub enum CatchClause {
 pub enum YulStatement {
     /// `<1>,+ = <2>`
     Assign(Loc, Vec<YulExpression>, YulExpression),
-    /// `let <1> [:= <2>]`
+    /// `let <1>,+ [:= <2>]`
     VariableDeclaration(Loc, Vec<YulTypedIdentifier>, Option<YulExpression>),
     /// `if <1> <2>`
     If(Loc, YulExpression, YulBlock),
