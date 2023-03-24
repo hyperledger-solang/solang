@@ -12,10 +12,9 @@ use lalrpop_util::ParseError;
 
 pub mod diagnostics;
 pub mod doccomment;
+pub mod helpers;
 pub mod lexer;
 pub mod pt;
-
-mod helpers;
 
 #[cfg(test)]
 mod tests;
