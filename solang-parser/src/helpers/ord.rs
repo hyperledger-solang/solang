@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! Implements `PartialOrd` and `Ord` for some parse tree data types, following the
 //! [Solidity style guide][ref].
 //!

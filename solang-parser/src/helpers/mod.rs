@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! Helper functions and traits for parse tree types.
 
 mod fmt;

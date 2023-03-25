@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! Implements `Display` for all parse tree data types, following the [Solidity style guide][ref].
 //!
 //! [ref]: https://docs.soliditylang.org/en/latest/style-guide.html
