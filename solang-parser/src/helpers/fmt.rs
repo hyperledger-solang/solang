@@ -1296,6 +1296,9 @@ mod tests {
         ($i:ident) => {
             pt::YulExpression::Variable(id(stringify!($i)))
         };
+        ($l:literal) => {
+            pt::YulExpression::Variable(id(stringify!($i)))
+        };
     }
 
     /// Type
@@ -1371,22 +1374,22 @@ mod tests {
             }
         };
 
-        ( assembly ( $( $($l:tt)+ ),+ ) { $($t:tt)* } ) => {
-            pt::Statement::Assembly {
-                loc: loc!(),
-                dialect: None,
-                flags: Some(vec![$(lit!($($l)+)),*]),
-                block: pt::YulBlock,
-            }
-        };
-        ( assembly { $($t:tt)* } ) => {
-            pt::Statement::Assembly {
-                loc: loc!(),
-                dialect: None,
-                flags: None,
-                block: pt::YulBlock,
-            }
-        };
+        // ( assembly ( $( $($l:tt)+ ),+ ) { $($t:tt)* } ) => {
+        //     pt::Statement::Assembly {
+        //         loc: loc!(),
+        //         dialect: None,
+        //         flags: Some(vec![$(lit!($($l)+)),*]),
+        //         block: pt::YulBlock,
+        //     }
+        // };
+        // ( assembly { $($t:tt)* } ) => {
+        //     pt::Statement::Assembly {
+        //         loc: loc!(),
+        //         dialect: None,
+        //         flags: None,
+        //         block: pt::YulBlock,
+        //     }
+        // };
     }
 
     /// IdentifierPath
@@ -1477,9 +1480,17 @@ mod tests {
         Box::new(pt::Expression::Variable(id(s)))
     }
 
+    fn yul_block() -> pt::YulBlock {
+        pt::YulBlock {
+            loc: loc!(),
+            statements: vec![],
+        }
+    }
+
     fn assert_eq_display<T: Display + std::fmt::Debug>(item: T, expected: &str) {
+        let ty = std::any::type_name::<T>();
         let actual = item.to_string();
-        assert_eq!(actual, expected, "failed to display: {item:?}");
+        assert_eq!(actual, expected, "\"{ty}\": {item:?}");
         // TODO: Test parsing back into an item
         // let parsed = ;
         // assert_eq!(parsed, item, "failed to parse display back into an item: {expected}");
@@ -1731,9 +1742,12 @@ mod tests {
                 statements: vec![]
             } => "{}",
 
-            // pt::YulFor {
-
-            // } => "",
+            pt::YulFor {
+                init_block: yul_block(),
+                condition: yexpr!(cond),
+                post_block: yul_block(),
+                execution_block: yul_block(),
+            } => "for {} cond {} {}",
 
             pt::YulFunctionCall {
                 id: id("name"),
@@ -1752,24 +1766,39 @@ mod tests {
                 id: id("name"),
                 params: vec![],
                 returns: vec![],
-                body: pt::YulBlock { loc: loc!(), statements: vec![] },
+                body: yul_block(),
             } => "function name() {}",
             pt::YulFunctionDefinition {
                 id: id("name"),
                 params: vec![yid!(param1: a), yid!(param2: b)],
                 returns: vec![],
-                body: pt::YulBlock { loc: loc!(), statements: vec![] },
+                body: yul_block(),
             } => "function name(param1: a, param2: b) {}",
             pt::YulFunctionDefinition {
                 id: id("name"),
                 params: vec![yid!(param1: a), yid!(param2: b)],
                 returns: vec![yid!(ret1: c), yid!(ret2: d)],
-                body: pt::YulBlock { loc: loc!(), statements: vec![] },
+                body: yul_block(),
             } => "function name(param1: a, param2: b) -> (ret1: c, ret2: d) {}",
 
-            // pt::YulSwitch {
-
-            // } => "",
+            pt::YulSwitch {
+                condition: yexpr!(cond),
+                cases: vec![pt::YulSwitchOptions::Case(loc!(), yexpr!(expr), yul_block())],
+                default: None,
+            } => "switch cond case expr {}",
+            pt::YulSwitch {
+                condition: yexpr!(cond),
+                cases: vec![
+                    pt::YulSwitchOptions::Case(loc!(), yexpr!(0), yul_block()),
+                    pt::YulSwitchOptions::Case(loc!(), yexpr!(1), yul_block()),
+                ],
+                default: None,
+            } => "switch cond case 0 {} case 1 {}",
+            pt::YulSwitch {
+                condition: yexpr!(cond),
+                cases: vec![pt::YulSwitchOptions::Case(loc!(), yexpr!(0), yul_block())],
+                default: Some(pt::YulSwitchOptions::Default(loc!(), yul_block())),
+            } => "switch cond case 0 {} default {}",
         ];
     }
 
@@ -1840,7 +1869,7 @@ mod tests {
                     => "(address, uint256)",
 
                 pt::Expression::AddressLiteral(loc!(), "0x1234".into()) => "0x1234",
-                pt::Expression::StringLiteral(vec![lit!(unicode "¹")]) => "unicode\"¹\"",
+                pt::Expression::StringLiteral(vec![lit!(unicode "¹²³")]) => "unicode\"¹²³\"",
                 pt::Expression::HexLiteral(vec![lit!(hex "00112233")]) => "hex\"00112233\"",
                 pt::Expression::BoolLiteral(loc!(), true) => "true",
                 pt::Expression::BoolLiteral(loc!(), false) => "false",
@@ -1970,13 +1999,15 @@ mod tests {
                 pt::Mutability::Payable(loc!()) => "payable",
             }
 
-            // tested individually
             pt::SourceUnitPart: {
+                // rest tested individually
+
                 pt::SourceUnitPart::PragmaDirective(loc!(), None, None) => "pragma;",
                 pt::SourceUnitPart::PragmaDirective(loc!(), Some(id("solidity")), None)
                     => "pragma solidity;",
                 pt::SourceUnitPart::PragmaDirective(loc!(), Some(id("solidity")), Some(lit!("0.8.0")))
                     => "pragma solidity 0.8.0;",
+
                 pt::SourceUnitPart::StraySemicolon(loc!()) => ";",
             }
 
@@ -1985,19 +2016,19 @@ mod tests {
                     loc: loc!(),
                     dialect: None,
                     flags: None,
-                    block: pt::YulBlock { loc: loc!(), statements: vec![] },
+                    block: yul_block(),
                 } => "assembly {}",
                 pt::Statement::Assembly {
                     loc: loc!(),
                     dialect: None,
                     flags: Some(vec![lit!("memory-safe")]),
-                    block: pt::YulBlock { loc: loc!(), statements: vec![] },
+                    block: yul_block(),
                 } => "assembly (\"memory-safe\") {}",
                 pt::Statement::Assembly {
                     loc: loc!(),
                     dialect: None,
                     flags: Some(vec![lit!("memory-safe"), lit!("second-flag")]),
-                    block: pt::YulBlock { loc: loc!(), statements: vec![] },
+                    block: yul_block(),
                 } => "assembly (\"memory-safe\", \"second-flag\") {}",
 
                 pt::Statement::Args(loc!(), vec![]) => "{}",
@@ -2253,17 +2284,66 @@ mod tests {
                 pt::Visibility::External(Some(loc!())) => "external",
             }
 
-            // pt::YulExpression: {
-            //     pt::YulExpression:: => "",
-            // }
+            pt::YulExpression: {
+                pt::YulExpression::BoolLiteral(loc!(), false, None) => "false",
+                pt::YulExpression::BoolLiteral(loc!(), true, None) => "true",
+                pt::YulExpression::BoolLiteral(loc!(), false, Some(id("name"))) => "false: name",
+                pt::YulExpression::BoolLiteral(loc!(), true, Some(id("name"))) => "true: name",
 
-            // pt::YulStatement: {
-            //     pt::YulStatement:: => "",
-            // }
+                pt::YulExpression::NumberLiteral(loc!(), "1234".into(), "".into(), None) => "1234",
+                pt::YulExpression::NumberLiteral(loc!(), "1234".into(), "9".into(), None) => "1234e9",
+                pt::YulExpression::NumberLiteral(loc!(), "1234".into(), "".into(), Some(id("name"))) => "1234: name",
+                pt::YulExpression::NumberLiteral(loc!(), "1234".into(), "9".into(), Some(id("name"))) => "1234e9: name",
 
-            // pt::YulSwitchOptions: {
-            //     pt::YulSwitchOptions:: => "",
-            // }
+                pt::YulExpression::HexNumberLiteral(loc!(), "0x1234".into(), None) => "0x1234",
+                pt::YulExpression::HexNumberLiteral(loc!(), "0x1234".into(), Some(id("name"))) => "0x1234: name",
+
+                pt::YulExpression::HexStringLiteral(lit!(hex "1234"), None) => "hex\"1234\"",
+                pt::YulExpression::HexStringLiteral(lit!(hex "1234"), Some(id("name"))) => "hex\"1234\": name",
+
+                pt::YulExpression::StringLiteral(lit!("1234"), None) => "\"1234\"",
+                pt::YulExpression::StringLiteral(lit!("1234"), Some(id("name"))) => "\"1234\": name",
+
+                pt::YulExpression::Variable(id("name")) => "name",
+
+                pt::YulExpression::FunctionCall(Box::new(pt::YulFunctionCall {
+                    loc: loc!(),
+                    id: id("name"),
+                    arguments: vec![],
+                })) => "name()",
+
+                pt::YulExpression::SuffixAccess(loc!(), Box::new(yexpr!(struct)), id("access"))
+                    => "struct.access",
+            }
+
+            pt::YulStatement: {
+                // rest tested individually
+
+                pt::YulStatement::Assign(loc!(), vec![yexpr!(var)], yexpr!(eq))
+                    => "var := eq",
+                pt::YulStatement::Assign(loc!(), vec![yexpr!(a), yexpr!(b)], yexpr!(eq))
+                    => "a, b := eq",
+
+                pt::YulStatement::VariableDeclaration(loc!(), vec![yid!(var)], None)
+                    => "let var",
+                pt::YulStatement::VariableDeclaration(loc!(), vec![yid!(a), yid!(b)], None)
+                    => "let a, b",
+                pt::YulStatement::VariableDeclaration(loc!(), vec![yid!(var)], Some(yexpr!(eq)))
+                    => "let var := eq",
+                pt::YulStatement::VariableDeclaration(loc!(), vec![yid!(a), yid!(b)], Some(yexpr!(eq)))
+                    => "let a, b := eq",
+
+                pt::YulStatement::If(loc!(), yexpr!(expr), yul_block()) => "if expr {}",
+
+                pt::YulStatement::Leave(loc!()) => "leave",
+                pt::YulStatement::Break(loc!()) => "break",
+                pt::YulStatement::Continue(loc!()) => "continue",
+            }
+
+            pt::YulSwitchOptions: {
+                pt::YulSwitchOptions::Case(loc!(), yexpr!(expr), yul_block()) => "case expr {}",
+                pt::YulSwitchOptions::Default(loc!(), yul_block()) => "default {}",
+            }
         ];
     }
 }
