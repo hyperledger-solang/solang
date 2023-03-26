@@ -74,8 +74,10 @@ impl Display for pt::ContractDefinition {
 
         write_opt!(f, &self.name, ' ');
 
-        write_separated(&self.base, f, ", ")?;
-        f.write_char(' ')?;
+        if !self.base.is_empty() {
+            write_separated(&self.base, f, " ")?;
+            f.write_char(' ')?;
+        }
 
         f.write_char('{')?;
         write_separated(&self.parts, f, " ")?;
@@ -89,7 +91,7 @@ impl Display for pt::EnumDefinition {
         write_opt!(f, &self.name, ' ');
 
         f.write_char('{')?;
-        write_separated_iter(self.values.iter().flatten(), f, " ")?;
+        write_separated_iter(self.values.iter().flatten(), f, ", ")?;
         f.write_char('}')
     }
 }
@@ -149,7 +151,10 @@ impl Display for pt::FunctionDefinition {
         fmt_parameter_list(&self.params, f)?;
         f.write_char(')')?;
 
-        write_separated(&self.attributes, f, " ")?;
+        if !self.attributes.is_empty() {
+            f.write_char(' ')?;
+            write_separated(&self.attributes, f, " ")?;
+        }
 
         if !self.returns.is_empty() {
             f.write_str(" returns (")?;
@@ -339,8 +344,11 @@ impl Display for pt::YulSwitch {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("switch ")?;
         self.condition.fmt(f)?;
-        write_separated(&self.cases, f, " ")?;
-        write_opt!(f, " default ", &self.default);
+        if !self.cases.is_empty() {
+            f.write_char(' ')?;
+            write_separated(&self.cases, f, " ")?;
+        }
+        write_opt!(f, " ", &self.default);
         Ok(())
     }
 }
@@ -1297,7 +1305,7 @@ mod tests {
             pt::YulExpression::Variable(id(stringify!($i)))
         };
         ($l:literal) => {
-            pt::YulExpression::Variable(id(stringify!($i)))
+            pt::YulExpression::Variable(id(stringify!($l)))
         };
     }
 
@@ -1647,37 +1655,198 @@ mod tests {
     #[test]
     fn display_structs_complex() {
         struct_tests![
-            // pt::ContractDefinition {
+            pt::ContractDefinition {
+                ty: pt::ContractTy::Contract(loc!()),
+                name: Some(id("name")),
+                base: vec![],
+                parts: vec![],
+            } => "contract name {}",
+            pt::ContractDefinition {
+                ty: pt::ContractTy::Contract(loc!()),
+                name: Some(id("name")),
+                base: vec![pt::Base {
+                    loc: loc!(),
+                    name: idp!("base"),
+                    args: None
+                }],
+                parts: vec![],
+            } => "contract name base {}",
+            pt::ContractDefinition {
+                ty: pt::ContractTy::Contract(loc!()),
+                name: Some(id("name")),
+                base: vec![pt::Base {
+                    loc: loc!(),
+                    name: idp!("base"),
+                    args: Some(vec![])
+                }],
+                parts: vec![],
+            } => "contract name base() {}",
+            pt::ContractDefinition {
+                ty: pt::ContractTy::Contract(loc!()),
+                name: Some(id("name")),
+                base: vec![pt::Base {
+                    loc: loc!(),
+                    name: idp!("base"),
+                    args: Some(vec![expr!(expr)])
+                }],
+                parts: vec![],
+            } => "contract name base(expr) {}",
+            pt::ContractDefinition {
+                ty: pt::ContractTy::Contract(loc!()),
+                name: Some(id("name")),
+                base: vec![
+                    pt::Base {
+                        loc: loc!(),
+                        name: idp!("base1"),
+                        args: None
+                    },
+                    pt::Base {
+                        loc: loc!(),
+                        name: idp!("base2"),
+                        args: None
+                    },
+                ],
+                parts: vec![],
+            } => "contract name base1 base2 {}",
 
-            // } => "",
+            pt::EnumDefinition {
+                name: Some(id("name")),
+                values: vec![]
+            } => "enum name {}",
+            pt::EnumDefinition {
+                name: Some(id("name")),
+                values: vec![Some(id("variant"))]
+            } => "enum name {variant}",
+            pt::EnumDefinition {
+                name: Some(id("name")),
+                values: vec![
+                    Some(id("variant1")),
+                    Some(id("variant2")),
+                ]
+            } => "enum name {variant1, variant2}",
 
-            // pt::EnumDefinition {
+            pt::ErrorDefinition {
+                keyword: expr!(error),
+                name: Some(id("name")),
+                fields: vec![],
+            } => "error name();",
+            pt::ErrorDefinition {
+                keyword: expr!(error),
+                name: Some(id("name")),
+                fields: vec![pt::ErrorParameter {
+                    loc: loc!(),
+                    ty: expr_ty!(uint256),
+                    name: None,
+                }],
+            } => "error name(uint256);",
 
-            // } => "",
+            pt::EventDefinition {
+                name: Some(id("name")),
+                fields: vec![],
+                anonymous: false,
+            } => "event name();",
+            pt::EventDefinition {
+                name: Some(id("name")),
+                fields: vec![pt::EventParameter {
+                    loc: loc!(),
+                    ty: expr_ty!(uint256),
+                    indexed: false,
+                    name: None,
+                }],
+                anonymous: false,
+            } => "event name(uint256);",
+            pt::EventDefinition {
+                name: Some(id("name")),
+                fields: vec![pt::EventParameter {
+                    loc: loc!(),
+                    ty: expr_ty!(uint256),
+                    indexed: true,
+                    name: None,
+                }],
+                anonymous: false,
+            } => "event name(uint256 indexed);",
+            pt::EventDefinition {
+                name: Some(id("name")),
+                fields: vec![],
+                anonymous: true,
+            } => "event name() anonymous;",
 
-            // pt::ErrorDefinition {
+            pt::FunctionDefinition {
+                ty: pt::FunctionTy::Function,
+                name: Some(id("name")),
+                name_loc: loc!(),
+                params: vec![],
+                attributes: vec![],
+                return_not_returns: None,
+                returns: vec![],
+                body: None,
+            } => "function name();",
+            pt::FunctionDefinition {
+                ty: pt::FunctionTy::Function,
+                name: Some(id("name")),
+                name_loc: loc!(),
+                params: vec![],
+                attributes: vec![],
+                return_not_returns: None,
+                returns: vec![],
+                body: Some(stmt!({})),
+            } => "function name() {}",
+            pt::FunctionDefinition {
+                ty: pt::FunctionTy::Function,
+                name: Some(id("name")),
+                name_loc: loc!(),
+                params: vec![],
+                attributes: vec![],
+                return_not_returns: None,
+                returns: vec![(loc!(), Some(param!(uint256)))],
+                body: Some(stmt!({})),
+            } => "function name() returns (uint256) {}",
+            pt::FunctionDefinition {
+                ty: pt::FunctionTy::Function,
+                name: Some(id("name")),
+                name_loc: loc!(),
+                params: vec![],
+                attributes: vec![pt::FunctionAttribute::Virtual(loc!())],
+                return_not_returns: None,
+                returns: vec![(loc!(), Some(param!(uint256)))],
+                body: Some(stmt!({})),
+            } => "function name() virtual returns (uint256) {}",
 
-            // } => "",
+            pt::StructDefinition {
+                name: Some(id("name")),
+                fields: vec![],
+            } => "struct name {}",
+            pt::StructDefinition {
+                name: Some(id("name")),
+                fields: vec![pt::VariableDeclaration {
+                    loc: loc!(),
+                    ty: expr_ty!(uint256),
+                    storage: None,
+                    name: Some(id("a")),
+                }],
+            } => "struct name {uint256 a;}",
+            pt::StructDefinition {
+                name: Some(id("name")),
+                fields: vec![
+                    pt::VariableDeclaration {
+                        loc: loc!(),
+                        ty: expr_ty!(uint256),
+                        storage: None,
+                        name: Some(id("a")),
+                    },
+                    pt::VariableDeclaration {
+                        loc: loc!(),
+                        ty: expr_ty!(uint256),
+                        storage: None,
+                        name: Some(id("b")),
+                    }
+                ],
+            } => "struct name {uint256 a; uint256 b;}",
 
-            // pt::EventDefinition {
-
-            // } => "",
-
-            // pt::FunctionDefinition {
-
-            // } => "",
-
-            // pt::SourceUnit {
-
-            // } => "",
-
-            // pt::StructDefinition {
-
-            // } => "",
-
-            // pt::TypeDefinition {
-
-            // } => "",
+            pt::TypeDefinition {
+                name: id("MyType"),
+                ty: expr_ty!(uint256),
+            } => "type MyType is uint256;",
 
             pt::Using {
                 list: pt::UsingList::Library(idp!["id", "path"]),

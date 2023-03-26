@@ -1349,7 +1349,7 @@ pub enum FunctionTy {
 
 /// A function definition.
 ///
-/// `<ty> [name] (<params>,*) [attributes] [returns] [body]`
+/// `<ty> [name](<params>,*) [attributes] [returns] [body]`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub struct FunctionDefinition {
