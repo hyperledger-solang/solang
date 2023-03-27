@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use anchor_syn::idl::{Idl, IdlInstruction, IdlType, IdlTypeDefinitionTy};
+use anchor_syn::idl::{Idl, IdlAccountItem, IdlInstruction, IdlType, IdlTypeDefinitionTy};
 use clap::ArgMatches;
 use itertools::Itertools;
 use serde_json::Value as JsonValue;
@@ -230,22 +230,10 @@ fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
         .map(|instr| (instr.name.to_string(), instr.name.to_string()))
         .collect::<Vec<(String, String)>>();
 
-    if let Some(state) = &idl.state {
-        state.methods.iter().for_each(|instr| {
-            instruction_names.push((instr.name.to_string(), instr.name.to_string()))
-        });
-    }
-
     rename_keywords(&mut instruction_names);
 
-    if let Some(state) = &idl.state {
-        for instr in &state.methods {
-            instruction(&mut f, instr, true, &instruction_names, &ty_names)?;
-        }
-    }
-
     for instr in &idl.instructions {
-        instruction(&mut f, instr, false, &instruction_names, &ty_names)?;
+        instruction(&mut f, instr, &instruction_names, &ty_names)?;
     }
 
     writeln!(f, "}}")?;
@@ -256,7 +244,6 @@ fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
 fn instruction(
     f: &mut File,
     instr: &IdlInstruction,
-    state: bool,
     instruction_names: &[(String, String)],
     ty_names: &[(String, String)],
 ) -> std::io::Result<()> {
@@ -282,7 +269,7 @@ fn instruction(
             .1;
 
         // The anchor discriminator is what Solidity calls a selector
-        let selector = discriminator(if state { "state" } else { "global" }, &instr.name);
+        let selector = discriminator("global", &instr.name);
 
         write!(
             f,
@@ -310,7 +297,8 @@ fn instruction(
             )?;
         }
 
-        write!(f, ") {}external", if state { "" } else { "view " })?;
+        let is_view = instr.returns.is_some() && !mutable_account_exists(&instr.accounts);
+        write!(f, ") {}external", if is_view { "view " } else { "" })?;
 
         if let Some(ty) = &instr.returns {
             writeln!(
@@ -330,6 +318,13 @@ fn instruction(
     }
 
     Ok(())
+}
+
+fn mutable_account_exists(accounts: &[IdlAccountItem]) -> bool {
+    accounts.iter().any(|item| match item {
+        IdlAccountItem::IdlAccount(acc) => acc.is_mut,
+        IdlAccountItem::IdlAccounts(accs) => mutable_account_exists(&accs.accounts),
+    })
 }
 
 fn docs(f: &mut File, indent: usize, docs: &Option<Vec<String>>) -> std::io::Result<()> {

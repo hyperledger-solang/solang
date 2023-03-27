@@ -58,7 +58,6 @@ pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace) -> Idl {
         docs,
         constants: vec![],
         instructions,
-        state: None,
         accounts: vec![],
         types: type_manager.generate_custom_idl_types(),
         events,
