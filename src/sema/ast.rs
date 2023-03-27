@@ -14,6 +14,7 @@ use once_cell::unsync::OnceCell;
 pub use solang_parser::diagnostics::*;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, FunctionTy, OptionalCodeLocation};
+use std::cell::RefCell;
 use std::{
     collections::HashSet,
     collections::{BTreeMap, HashMap},
@@ -305,6 +306,17 @@ pub struct Function {
     pub annotations: Vec<ConstructorAnnotation>,
     /// Which contracts should we use the mangled name in?
     pub mangled_name_contracts: HashSet<usize>,
+    /// This indexmap stores the accounts this functions needs to be called on Solana
+    /// The string is the account's name
+    pub solana_accounts: RefCell<IndexMap<String, SolanaAccount>>,
+}
+
+/// This struct represents a Solana account. There is no name field, because
+/// it is stored in a IndexMap<String, SolanaAccount> (see above)
+#[derive(Clone, Copy, Debug)]
+pub struct SolanaAccount {
+    pub is_signer: bool,
+    pub is_writer: bool,
 }
 
 pub enum ConstructorAnnotation {
@@ -406,6 +418,7 @@ impl Function {
             mangled_name,
             annotations: Vec::new(),
             mangled_name_contracts: HashSet::new(),
+            solana_accounts: IndexMap::new().into(),
         }
     }
 
