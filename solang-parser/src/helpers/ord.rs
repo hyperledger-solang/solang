@@ -8,62 +8,36 @@
 use crate::pt;
 use std::cmp::Ordering;
 
-macro_rules! impl_with_sort_key {
+macro_rules! impl_with_cast {
     ($($t:ty),+) => {
         $(
+            impl $t {
+                #[inline]
+                const fn as_discriminant<'a>(&'a self) -> &'a u8 {
+                    // SAFETY: See <https://doc.rust-lang.org/stable/std/mem/fn.discriminant.html#accessing-the-numeric-value-of-the-discriminant>
+                    // and <https://doc.rust-lang.org/reference/items/enumerations.html#pointer-casting>
+                    //
+                    // `$t` must be `repr(u8)` for this to be safe.
+                    unsafe { &*(self as *const Self as *const u8) }
+                }
+            }
+
             impl PartialOrd for $t {
                 #[inline]
                 fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-                    Some(Ord::cmp(self, other))
+                    PartialOrd::partial_cmp(self.as_discriminant(), other.as_discriminant())
                 }
             }
 
             impl Ord for $t {
+                #[inline]
                 fn cmp(&self, other: &Self) -> Ordering {
-                    Ord::cmp(&self.sort_key(), &other.sort_key())
+                    Ord::cmp(self.as_discriminant(), other.as_discriminant())
                 }
             }
         )+
     };
 }
 
-impl_with_sort_key!(pt::Visibility, pt::VariableAttribute, pt::FunctionAttribute);
-
-impl pt::Visibility {
-    #[inline]
-    fn sort_key(&self) -> u8 {
-        match self {
-            pt::Visibility::External(..) => 0,
-            pt::Visibility::Public(..) => 1,
-            pt::Visibility::Internal(..) => 2,
-            pt::Visibility::Private(..) => 3,
-        }
-    }
-}
-
-impl pt::VariableAttribute {
-    #[inline]
-    fn sort_key(&self) -> u8 {
-        match self {
-            pt::VariableAttribute::Visibility(..) => 0,
-            pt::VariableAttribute::Constant(..) => 1,
-            pt::VariableAttribute::Immutable(..) => 2,
-            pt::VariableAttribute::Override(..) => 3,
-        }
-    }
-}
-
-impl pt::FunctionAttribute {
-    #[inline]
-    fn sort_key(&self) -> u8 {
-        match self {
-            pt::FunctionAttribute::Visibility(..) => 0,
-            pt::FunctionAttribute::Mutability(..) => 1,
-            pt::FunctionAttribute::Virtual(..) => 2,
-            pt::FunctionAttribute::Immutable(..) => 3,
-            pt::FunctionAttribute::Override(..) => 4,
-            pt::FunctionAttribute::BaseOrModifier(..) => 5,
-            pt::FunctionAttribute::Error(..) => 6, // supposed to be omitted even if sorted
-        }
-    }
-}
+// SAFETY: every type must be `repr(u8)` for this to be safe, see comments in macro implementation.
+impl_with_cast!(pt::Visibility, pt::VariableAttribute, pt::FunctionAttribute);

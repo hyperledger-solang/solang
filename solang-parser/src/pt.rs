@@ -830,6 +830,7 @@ pub struct EnumDefinition {
 /// A variable attribute.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
+#[repr(u8)] // for cmp; order of variants is important
 pub enum VariableAttribute {
     /// The visibility.
     ///
@@ -1286,6 +1287,7 @@ pub enum Mutability {
 /// Deprecated for [FunctionTy] other than `Function`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
+#[repr(u8)] // for cmp; order of variants is important
 pub enum Visibility {
     /// `external`
     External(Option<Loc>),
@@ -1303,13 +1305,13 @@ pub enum Visibility {
 /// A function attribute.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
-
+#[repr(u8)] // for cmp; order of variants is important
 pub enum FunctionAttribute {
-    /// Mutability attribute.
-    Mutability(Mutability),
-
     /// Visibility attribute.
     Visibility(Visibility),
+
+    /// Mutability attribute.
+    Mutability(Mutability),
 
     /// `virtual`
     Virtual(Loc),
@@ -1367,7 +1369,7 @@ pub struct FunctionDefinition {
     pub params: ParameterList,
     /// The function attributes.
     pub attributes: Vec<FunctionAttribute>,
-    /// The `returns` keyword's location. `None` if this was `return`, not `returns`.
+    /// The `returns` keyword's location. `Some` if this was `return`, not `returns`.
     pub return_not_returns: Option<Loc>,
     /// The return parameter list.
     pub returns: ParameterList,
