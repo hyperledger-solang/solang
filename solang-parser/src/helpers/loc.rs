@@ -1,20 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    lexer::LexicalError,
-    pt::{self, Loc},
-};
+use crate::lexer::LexicalError;
+use crate::pt::{self, Loc};
+use std::sync::Arc;
+use std::{borrow::Cow, rc::Rc};
 
 /// Returns the optional code location.
 pub trait OptionalCodeLocation {
     /// Returns the optional code location of `self`.
     fn loc_opt(&self) -> Option<Loc>;
-}
-
-impl<T: CodeLocation> OptionalCodeLocation for T {
-    fn loc_opt(&self) -> Option<Loc> {
-        Some(self.loc())
-    }
 }
 
 impl<T: CodeLocation> OptionalCodeLocation for Option<T> {
@@ -34,6 +28,128 @@ impl OptionalCodeLocation for pt::Visibility {
     }
 }
 
+impl OptionalCodeLocation for pt::SourceUnit {
+    #[inline]
+    fn loc_opt(&self) -> Option<Loc> {
+        self.0.loc_opt()
+    }
+}
+
+impl<T: CodeLocation> OptionalCodeLocation for [T] {
+    // TODO: Merge first with last span?
+    fn loc_opt(&self) -> Option<Loc> {
+        self.first().map(CodeLocation::loc)
+    }
+}
+
+impl<T: CodeLocation> OptionalCodeLocation for Vec<T> {
+    fn loc_opt(&self) -> Option<Loc> {
+        (**self).loc_opt()
+    }
+}
+
+impl<'a, T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for &'a T {
+    fn loc_opt(&self) -> Option<Loc> {
+        (**self).loc_opt()
+    }
+}
+
+impl<'a, T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for &'a mut T {
+    fn loc_opt(&self) -> Option<Loc> {
+        (**self).loc_opt()
+    }
+}
+
+impl<'a, T: ?Sized + ToOwned + OptionalCodeLocation> OptionalCodeLocation for Cow<'a, T> {
+    fn loc_opt(&self) -> Option<Loc> {
+        (**self).loc_opt()
+    }
+}
+
+impl<T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for Box<T> {
+    fn loc_opt(&self) -> Option<Loc> {
+        (**self).loc_opt()
+    }
+}
+
+impl<T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for Rc<T> {
+    fn loc_opt(&self) -> Option<Loc> {
+        (**self).loc_opt()
+    }
+}
+
+impl<T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for Arc<T> {
+    fn loc_opt(&self) -> Option<Loc> {
+        (**self).loc_opt()
+    }
+}
+
+// would be: `impl<T: CodeLocation> OptionalCodeLocation for T { ... }`
+// but then we wouldn't have the correct implementation for `Box<T>` and the other smart pointers
+macro_rules! impl_optional_for_pt {
+    ($($t:ty),+ $(,)?) => {
+        $(
+            impl OptionalCodeLocation for $t {
+                #[inline]
+                fn loc_opt(&self) -> Option<Loc> {
+                    Some(<$t as CodeLocation>::loc(self))
+                }
+            }
+        )+
+    };
+}
+
+impl_optional_for_pt!(
+    // structs
+    pt::Annotation,
+    pt::Base,
+    pt::ContractDefinition,
+    pt::EnumDefinition,
+    pt::ErrorDefinition,
+    pt::ErrorParameter,
+    pt::EventDefinition,
+    pt::EventParameter,
+    pt::FunctionDefinition,
+    pt::HexLiteral,
+    pt::Identifier,
+    pt::IdentifierPath,
+    pt::NamedArgument,
+    pt::Parameter,
+    pt::StringLiteral,
+    pt::StructDefinition,
+    pt::TypeDefinition,
+    pt::Using,
+    pt::UsingFunction,
+    pt::VariableDeclaration,
+    pt::VariableDefinition,
+    pt::YulBlock,
+    pt::YulFor,
+    pt::YulFunctionCall,
+    pt::YulFunctionDefinition,
+    pt::YulSwitch,
+    pt::YulTypedIdentifier,
+    // enums
+    pt::CatchClause,
+    pt::Comment,
+    pt::ContractPart,
+    pt::ContractTy,
+    pt::Expression,
+    pt::FunctionAttribute,
+    pt::Import,
+    pt::Loc,
+    pt::Mutability,
+    pt::SourceUnitPart,
+    pt::Statement,
+    pt::StorageLocation,
+    pt::UsingList,
+    pt::VariableAttribute,
+    pt::YulExpression,
+    pt::YulStatement,
+    pt::YulSwitchOptions,
+    // other
+    LexicalError,
+);
+
 /// Returns the code location.
 pub trait CodeLocation {
     /// Returns the code location of `self`.
@@ -41,51 +157,45 @@ pub trait CodeLocation {
 }
 
 impl CodeLocation for Loc {
+    #[inline]
     fn loc(&self) -> Loc {
         *self
     }
 }
 
-impl CodeLocation for pt::SourceUnit {
-    fn loc(&self) -> Loc {
-        self.0.loc()
-    }
-}
-
-impl<T: CodeLocation> CodeLocation for &'_ T {
-    fn loc(&self) -> Loc {
-        (*self).loc()
-    }
-}
-
-impl<T: CodeLocation> CodeLocation for Box<T> {
+impl<'a, T: ?Sized + CodeLocation> CodeLocation for &'a T {
     fn loc(&self) -> Loc {
         (**self).loc()
     }
 }
 
-impl<T: CodeLocation> CodeLocation for std::rc::Rc<T> {
+impl<'a, T: ?Sized + CodeLocation> CodeLocation for &'a mut T {
     fn loc(&self) -> Loc {
         (**self).loc()
     }
 }
 
-impl<T: CodeLocation> CodeLocation for std::sync::Arc<T> {
+impl<'a, T: ?Sized + ToOwned + CodeLocation> CodeLocation for Cow<'a, T> {
     fn loc(&self) -> Loc {
         (**self).loc()
     }
 }
 
-impl<T: CodeLocation> CodeLocation for [T] {
-    // TODO: Merge first with last span?
+impl<T: ?Sized + CodeLocation> CodeLocation for Box<T> {
     fn loc(&self) -> Loc {
-        self.first().map(CodeLocation::loc).unwrap_or_default()
+        (**self).loc()
     }
 }
 
-impl<T: CodeLocation> CodeLocation for Vec<T> {
+impl<T: ?Sized + CodeLocation> CodeLocation for Rc<T> {
     fn loc(&self) -> Loc {
-        self.as_slice().loc()
+        (**self).loc()
+    }
+}
+
+impl<T: ?Sized + CodeLocation> CodeLocation for Arc<T> {
+    fn loc(&self) -> Loc {
+        (**self).loc()
     }
 }
 
@@ -93,6 +203,7 @@ macro_rules! impl_for_structs {
     ($($t:ty),+ $(,)?) => {
         $(
             impl CodeLocation for $t {
+                #[inline]
                 fn loc(&self) -> Loc {
                     self.loc
                 }
@@ -185,8 +296,9 @@ impl_for_enums! {
     }
 
     pt::Expression: match self {
-        Self::StringLiteral(ref l, ..) => l.loc(),
-        Self::HexLiteral(ref l, ..) => l.loc(),
+        // literals have at least one item
+        Self::StringLiteral(ref l, ..) => l.loc_opt().unwrap(),
+        Self::HexLiteral(ref l, ..) => l.loc_opt().unwrap(),
         Self::Variable(ref l, ..) => l.loc(),
         Self::PostIncrement(l, ..)
         | Self::PostDecrement(l, ..)
@@ -314,7 +426,7 @@ impl_for_enums! {
 
     pt::UsingList: match self {
         Self::Library(ref l, ..) => l.loc(),
-        Self::Functions(ref l, ..) => l.loc(),
+        Self::Functions(ref l, ..) => l.loc_opt().unwrap_or_default(),
         Self::Error => panic!("an error occurred"),
     }
 
