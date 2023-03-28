@@ -600,7 +600,7 @@ fn contract_results(
     }
 
     if ns.top_file_no() != resolved_contract.loc.file_no() {
-        // contracts which were imported should not be considered. For example, if we have a file
+        // contracts that were imported should not be considered. For example, if we have a file
         // a.sol which imports b.sol, and b.sol defines contract B, then:
         // solang compile a.sol
         // should not write the results for contract B
