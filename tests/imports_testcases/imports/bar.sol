@@ -1,3 +1,7 @@
-import "relative_import.sol";
+import {rel} from "relative_import.sol";
 
-contract c {}
+contract c is rel {
+    function exceeds() public {
+        emit Doubt(true);
+    }
+}

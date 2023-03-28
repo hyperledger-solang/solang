@@ -148,8 +148,10 @@ fn contract_name_defined_twice() {
     let output = not_ok.get_output();
     let err = String::from_utf8_lossy(&output.stderr);
 
+    println!("{}", err);
+
     // The error contains the absolute paths, so we cannot assert the whole string
     assert!(err.starts_with("error: contract rel defined at "));
-    assert!(err.contains("relative_import.sol:1:1-16 and "));
+    assert!(err.contains("relative_import.sol:1:1-6:2 and "));
     assert!(err.ends_with("rel.sol:2:1-16\n"));
 }
