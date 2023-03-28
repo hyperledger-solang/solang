@@ -29,15 +29,15 @@ tiny-keccak = { version = "2.0", features = ["keccak"] }
 serde_json = "1.0"
 serde = "1.0"
 serde_derive = { version = "1.0" }
-inkwell = { version = "0.1.0", features = ["target-webassembly", "target-bpf", "no-libffi-linking", "llvm15-0"], optional = true }
+inkwell = { version = "0.1.1", features = ["target-webassembly", "target-bpf", "no-libffi-linking", "llvm15-0"], optional = true }
 blake2-rfc = "0.2.18"
 handlebars = "4.3"
 contract-metadata = "2.1"
 semver = { version = "1.0", features = ["serde"] }
-tempfile = "3.3"
+tempfile = "3.4"
 libc = { version = "0.2", optional = true }
 tower-lsp = "0.19"
-tokio = { version = "1.25", features = ["rt", "io-std", "macros"] }
+tokio = { version = "1.27", features = ["rt", "io-std", "macros"] }
 base58 = "0.2.0"
 sha2 = "0.10"
 ripemd = "0.1"
@@ -54,9 +54,9 @@ rust-lapper = "1.1"
 anchor-syn = { version = "0.27.0", features = ["idl"] }
 convert_case = "0.6"
 parse-display = "0.8.0"
-parity-scale-codec = "3.3"
-ink = "4.0.0-beta.1"
-scale-info = "2.3"
+parity-scale-codec = "3.4"
+ink = "4.1.0"
+scale-info = "2.4"
 petgraph = "0.6.3"
 
 [dev-dependencies]
