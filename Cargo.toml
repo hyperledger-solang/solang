@@ -36,7 +36,7 @@ contract-metadata = "1.5.1"
 semver = { version = "1.0", features = ["serde"] }
 tempfile = "3.3"
 libc = { version = "0.2", optional = true }
-tower-lsp = "0.18"
+tower-lsp = "0.19"
 tokio = { version = "1.25", features = ["rt", "io-std", "macros"] }
 base58 = "0.2.0"
 sha2 = "0.10"
