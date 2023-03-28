@@ -11,6 +11,7 @@ mod events;
 mod expression;
 mod external_functions;
 mod reaching_definitions;
+mod solana_accounts;
 mod solana_deploy;
 mod statements;
 mod storage;
@@ -27,6 +28,7 @@ use self::{
     cfg::{optimize_and_check_cfg, ControlFlowGraph, Instr},
     dispatch::function_dispatch,
     expression::expression,
+    solana_accounts::collect_accounts_from_contract,
     vartable::Vartable,
 };
 use crate::sema::ast::{
@@ -148,6 +150,14 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
             }
 
             contracts_done[contract_no] = true;
+        }
+    }
+
+    if ns.target == Target::Solana {
+        for contract_no in 0..ns.contracts.len() {
+            if ns.contracts[contract_no].instantiable {
+                collect_accounts_from_contract(contract_no, ns);
+            }
         }
     }
 }

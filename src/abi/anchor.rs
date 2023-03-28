@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast::{
-    ArrayLength, Contract, Function, Mutability, Namespace, Parameter, StructDecl, StructType, Tag,
-    Type,
+    ArrayLength, Contract, Function, Namespace, Parameter, StructDecl, StructType, Tag, Type,
 };
 use anchor_syn::idl::{
     Idl, IdlAccount, IdlAccountItem, IdlEnumVariant, IdlEvent, IdlEventField, IdlField,
@@ -13,9 +12,7 @@ use num_traits::ToPrimitive;
 use semver::Version;
 use std::collections::{HashMap, HashSet};
 
-use crate::abi::solana_accounts::{collect_accounts_from_contract, SolanaAccount};
 use convert_case::{Boundary, Case, Casing};
-use indexmap::IndexSet;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use solang_parser::pt::FunctionTy;
@@ -58,7 +55,6 @@ pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace) -> Idl {
         docs,
         constants: vec![],
         instructions,
-        state: None,
         accounts: vec![],
         types: type_manager.generate_custom_idl_types(),
         events,
@@ -127,7 +123,6 @@ fn idl_instructions(
         })
     }
 
-    let mut remaining_accounts = collect_accounts_from_contract(contract_no, ns);
     for func_no in contract.all_functions.keys() {
         if !ns.functions[*func_no].is_public()
             || matches!(
@@ -140,41 +135,6 @@ fn idl_instructions(
 
         let func = &ns.functions[*func_no];
         let tags = idl_docs(&func.tags);
-
-        let mut accounts = match &func.mutability {
-            Mutability::Pure(_) => {
-                vec![]
-            }
-            Mutability::View(_) => {
-                vec![IdlAccountItem::IdlAccount(IdlAccount {
-                    name: "dataAccount".to_string(),
-                    is_mut: false,
-                    is_signer: false,
-                    is_optional: Some(false),
-                    docs: None,
-                    pda: None,
-                    relations: vec![],
-                })]
-            }
-            _ => {
-                vec![IdlAccountItem::IdlAccount(IdlAccount {
-                    name: "dataAccount".to_string(),
-                    is_mut: true,
-                    /// With a @payer annotation, the account is created on-chain and needs a signer. The client
-                    /// provides an address that does not exist yet, so SystemProgram.CreateAccount is called
-                    /// on-chain.
-                    ///
-                    /// However, if a @seed is also provided, the program can sign for the account
-                    /// with the seed using program derived address (pda) when SystemProgram.CreateAccount is called,
-                    /// so no signer is required from the client.
-                    is_signer: func.has_payer_annotation() && !func.has_seed_annotation(),
-                    is_optional: Some(false),
-                    docs: None,
-                    pda: None,
-                    relations: vec![],
-                })]
-            }
-        };
 
         let mut args: Vec<IdlField> = Vec::with_capacity(func.params.len());
         let mut dedup = Deduplicate::new("arg".to_owned());
@@ -192,29 +152,7 @@ fn idl_instructions(
             });
         }
 
-        let cfg_no = contract.all_functions[func_no];
-
         let name = if func.is_constructor() {
-            if func.has_payer_annotation() {
-                accounts.push(IdlAccountItem::IdlAccount(IdlAccount {
-                    name: "wallet".to_string(),
-                    is_mut: false,
-                    is_signer: true,
-                    is_optional: Some(false),
-                    docs: None,
-                    pda: None,
-                    relations: vec![],
-                }));
-
-                // Constructors with the payer annotation need the system account
-                if let Some(set) = remaining_accounts.get_mut(&cfg_no) {
-                    set.insert(SolanaAccount::SystemAccount);
-                } else {
-                    remaining_accounts
-                        .insert(cfg_no, IndexSet::from([SolanaAccount::SystemAccount]));
-                }
-            }
-
             "new".to_string()
         } else if func.mangled_name_contracts.contains(&contract_no) {
             func.mangled_name.clone()
@@ -222,19 +160,22 @@ fn idl_instructions(
             func.name.clone()
         };
 
-        if let Some(other_accounts) = remaining_accounts.get(&cfg_no) {
-            for account in other_accounts {
-                accounts.push(IdlAccountItem::IdlAccount(IdlAccount {
-                    name: account.name().to_string(),
-                    is_mut: false,
-                    is_signer: false,
+        let accounts = func
+            .solana_accounts
+            .borrow()
+            .iter()
+            .map(|(account_name, account)| {
+                IdlAccountItem::IdlAccount(IdlAccount {
+                    name: account_name.clone(),
+                    is_mut: account.is_writer,
+                    is_signer: account.is_signer,
                     is_optional: Some(false),
                     docs: None,
                     pda: None,
                     relations: vec![],
-                }));
-            }
-        }
+                })
+            })
+            .collect::<Vec<IdlAccountItem>>();
 
         let returns = if func.returns.is_empty() {
             None

@@ -8,7 +8,7 @@ license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "solana", "substrate" ]
-rust-version = "1.64.0"
+rust-version = "1.65.0"
 edition = "2021"
 exclude = [ "/.*", "/docs",  "/examples", "/solana-library", "/tests", "/integration", "/vscode" ]
 
@@ -51,7 +51,7 @@ solang-parser = { path = "solang-parser", version = "0.2.2" }
 codespan-reporting = "0.11"
 phf = { version = "0.11", features = ["macros"] }
 rust-lapper = "1.1"
-anchor-syn = { version = "0.26", features = ["idl"] }
+anchor-syn = { version = "0.27.0", features = ["idl"] }
 convert_case = "0.6"
 parse-display = "0.8.0"
 parity-scale-codec = "3.3"

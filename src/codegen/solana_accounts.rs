@@ -1,35 +1,37 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{ControlFlowGraph, Instr, InternalCallTy};
+use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::Namespace;
+use crate::sema::ast::{Contract, Function, Mutability, Namespace, SolanaAccount};
 use crate::sema::Recurse;
 use base58::FromBase58;
 use indexmap::IndexSet;
 use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
 use once_cell::sync::Lazy;
-use std::collections::hash_map::Entry;
+use solang_parser::pt::FunctionTy;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 /// These are the accounts that we can collect from a contract and that Anchor will populate
-/// automatically if their name matches the source code description:
+/// automatically if their names match the source code description:
 /// https://github.com/coral-xyz/anchor/blob/06c42327d4241e5f79c35bc5588ec0a6ad2fedeb/ts/packages/anchor/src/program/accounts-resolver.ts#L54-L60
-#[derive(Hash, Eq, PartialEq, Copy, Clone)]
-pub(super) enum SolanaAccount {
-    ClockAccount,
-    InstructionAccount,
-    SystemAccount,
-    AssociatedProgramId,
-    Rent,
-    TokenProgramId,
-}
+static CLOCK_ACCOUNT: &str = "clock";
+static SYSTEM_ACCOUNT: &str = "systemProgram";
+static ASSOCIATED_TOKEN_PROGRAM: &str = "associatedTokenProgram";
+static RENT_ACCOUNT: &str = "rent";
+static TOKEN_PROGRAM_ID: &str = "tokenProgram";
+
+/// We automatically include the following accounts in the IDL, but these are not
+/// automatically populated
+static DATA_ACCOUNT: &str = "dataAccount";
+static WALLET_ACCOUNT: &str = "wallet";
+static INSTRUCTION_ACCOUNT: &str = "SysvarInstruction";
 
 /// If the public keys available in AVAILABLE_ACCOUNTS are hardcoded in a Solidity contract
 /// for external calls, we can detect them and leverage Anchor's public key auto populate feature.
-static AVAILABLE_ACCOUNTS: Lazy<HashMap<BigInt, SolanaAccount>> = Lazy::new(|| {
+static AVAILABLE_ACCOUNTS: Lazy<HashMap<BigInt, &'static str>> = Lazy::new(|| {
     HashMap::from([
-        (BigInt::zero(), SolanaAccount::SystemAccount),
+        (BigInt::zero(), SYSTEM_ACCOUNT),
         (
             BigInt::from_bytes_be(
                 Sign::Plus,
@@ -37,7 +39,7 @@ static AVAILABLE_ACCOUNTS: Lazy<HashMap<BigInt, SolanaAccount>> = Lazy::new(|| {
                     .from_base58()
                     .unwrap(),
             ),
-            SolanaAccount::AssociatedProgramId,
+            ASSOCIATED_TOKEN_PROGRAM,
         ),
         (
             BigInt::from_bytes_be(
@@ -46,7 +48,7 @@ static AVAILABLE_ACCOUNTS: Lazy<HashMap<BigInt, SolanaAccount>> = Lazy::new(|| {
                     .from_base58()
                     .unwrap(),
             ),
-            SolanaAccount::Rent,
+            RENT_ACCOUNT,
         ),
         (
             BigInt::from_bytes_be(
@@ -55,7 +57,7 @@ static AVAILABLE_ACCOUNTS: Lazy<HashMap<BigInt, SolanaAccount>> = Lazy::new(|| {
                     .from_base58()
                     .unwrap(),
             ),
-            SolanaAccount::TokenProgramId,
+            TOKEN_PROGRAM_ID,
         ),
         (
             BigInt::from_bytes_be(
@@ -64,35 +66,19 @@ static AVAILABLE_ACCOUNTS: Lazy<HashMap<BigInt, SolanaAccount>> = Lazy::new(|| {
                     .from_base58()
                     .unwrap(),
             ),
-            SolanaAccount::ClockAccount,
+            CLOCK_ACCOUNT,
         ),
     ])
 });
 
-impl SolanaAccount {
-    /// Retrieve a name from an account, according to Anchor's constant accounts map
-    /// https://github.com/coral-xyz/anchor/blob/06c42327d4241e5f79c35bc5588ec0a6ad2fedeb/ts/packages/anchor/src/program/accounts-resolver.ts#L54-L60
-    pub(super) fn name(&self) -> &'static str {
-        match self {
-            SolanaAccount::AssociatedProgramId => "associatedTokenProgram",
-            SolanaAccount::Rent => "rent",
-            SolanaAccount::SystemAccount => "systemProgram",
-            SolanaAccount::TokenProgramId => "tokenProgram",
-            SolanaAccount::ClockAccount => "clock",
-            SolanaAccount::InstructionAccount => "SysvarInstruction",
-        }
-    }
-
-    fn from_number(num: &BigInt) -> Option<SolanaAccount> {
-        AVAILABLE_ACCOUNTS.get(num).cloned()
-    }
+/// Retrieve a name from an account, according to Anchor's constant accounts map
+/// https://github.com/coral-xyz/anchor/blob/06c42327d4241e5f79c35bc5588ec0a6ad2fedeb/ts/packages/anchor/src/program/accounts-resolver.ts#L54-L60
+fn account_from_number(num: &BigInt) -> Option<&'static str> {
+    AVAILABLE_ACCOUNTS.get(num).cloned()
 }
 
 /// Struct to save the recursion data when traversing all the CFG instructions
 struct RecurseData<'a> {
-    /// Here we collect all accounts. It is a map between the cfg number of a functions and the
-    /// accounts it requires
-    accounts: HashMap<usize, IndexSet<SolanaAccount>>,
     /// next_queue saves the set of functions we must check in the next iteration
     next_queue: IndexSet<(usize, usize)>,
     /// The number of the function we are currently traversing
@@ -101,45 +87,110 @@ struct RecurseData<'a> {
     contract_no: usize,
     /// The quantity of accounts we have added the the hashmap 'accounts'
     accounts_added: usize,
-    ns: &'a Namespace,
+    /// The number of the AST function we are currently traversing
+    ast_no: usize,
+    /// The namespace contracts
+    contracts: &'a [Contract],
+    /// The vector of functions from the contract
+    functions: &'a [Function],
 }
 
 impl RecurseData<'_> {
-    /// Add an account to the hashmap
-    fn add_account(&mut self, account: SolanaAccount) {
-        let inserted = match self.accounts.entry(self.cfg_func_no) {
-            Entry::Occupied(mut val) => val.get_mut().insert(account),
-            Entry::Vacant(val) => {
-                val.insert(IndexSet::from([account]));
-                true
-            }
-        };
-
-        if inserted {
+    /// Add an account to the function's indexmap
+    fn add_account(&mut self, account_name: String, account: SolanaAccount) {
+        if self.functions[self.ast_no]
+            .solana_accounts
+            .borrow_mut()
+            .insert(account_name, account)
+            .is_none()
+        {
             self.accounts_added += 1;
         }
+    }
+
+    /// Add the system account to the function's indexmap
+    fn add_system_account(&mut self) {
+        self.add_account(
+            SYSTEM_ACCOUNT.to_string(),
+            SolanaAccount {
+                is_writer: false,
+                is_signer: false,
+            },
+        );
     }
 }
 
 /// Collect the accounts this contract needs
-pub(super) fn collect_accounts_from_contract(
-    contract_no: usize,
-    ns: &Namespace,
-) -> HashMap<usize, IndexSet<SolanaAccount>> {
-    let mut visiting_queue: IndexSet<(usize, usize)> = IndexSet::from_iter(
-        ns.contracts[contract_no]
-            .functions
-            .iter()
-            .map(|ast_no| (contract_no, ns.contracts[contract_no].all_functions[ast_no])),
-    );
+pub(super) fn collect_accounts_from_contract(contract_no: usize, ns: &Namespace) {
+    let mut visiting_queue: IndexSet<(usize, usize)> = IndexSet::new();
+
+    for func_no in ns.contracts[contract_no].all_functions.keys() {
+        if ns.functions[*func_no].is_public()
+            && !matches!(
+                ns.functions[*func_no].ty,
+                FunctionTy::Fallback | FunctionTy::Receive | FunctionTy::Modifier
+            )
+        {
+            let func = &ns.functions[*func_no];
+            match &func.mutability {
+                Mutability::Pure(_) => (),
+                Mutability::View(_) => {
+                    func.solana_accounts.borrow_mut().insert(
+                        DATA_ACCOUNT.to_string(),
+                        SolanaAccount {
+                            is_writer: false,
+                            is_signer: false,
+                        },
+                    );
+                }
+                _ => {
+                    func.solana_accounts.borrow_mut().insert(
+                        DATA_ACCOUNT.to_string(),
+                        SolanaAccount {
+                            is_writer: true,
+                            /// With a @payer annotation, the account is created on-chain and needs a signer. The client
+                            /// provides an address that does not exist yet, so SystemProgram.CreateAccount is called
+                            /// on-chain.
+                            ///
+                            /// However, if a @seed is also provided, the program can sign for the account
+                            /// with the seed using program derived address (pda) when SystemProgram.CreateAccount is called,
+                            /// so no signer is required from the client.
+                            is_signer: func.has_payer_annotation() && !func.has_seed_annotation(),
+                        },
+                    );
+                }
+            }
+            if func.is_constructor() && func.has_payer_annotation() {
+                func.solana_accounts.borrow_mut().insert(
+                    WALLET_ACCOUNT.to_string(),
+                    SolanaAccount {
+                        is_signer: true,
+                        is_writer: false,
+                    },
+                );
+                func.solana_accounts.borrow_mut().insert(
+                    SYSTEM_ACCOUNT.to_string(),
+                    SolanaAccount {
+                        is_signer: false,
+                        is_writer: false,
+                    },
+                );
+            }
+        }
+        visiting_queue.insert((
+            contract_no,
+            ns.contracts[contract_no].all_functions[func_no],
+        ));
+    }
 
     let mut recurse_data = RecurseData {
-        accounts: HashMap::new(),
         next_queue: IndexSet::new(),
         cfg_func_no: 0,
+        ast_no: 0,
         accounts_added: 0,
         contract_no,
-        ns,
+        functions: &ns.functions,
+        contracts: &ns.contracts,
     };
 
     let mut old_size: usize = 0;
@@ -151,6 +202,12 @@ pub(super) fn collect_accounts_from_contract(
 
             recurse_data.contract_no = *contract_no;
             recurse_data.cfg_func_no = *func_no;
+            match &ns.contracts[*contract_no].cfg[*func_no].function_no {
+                ASTFunction::SolidityFunction(ast_no) | ASTFunction::YulFunction(ast_no) => {
+                    recurse_data.ast_no = *ast_no;
+                }
+                _ => (),
+            }
             check_function(&ns.contracts[*contract_no].cfg[*func_no], &mut recurse_data);
         }
 
@@ -166,8 +223,6 @@ pub(super) fn collect_accounts_from_contract(
         std::mem::swap(&mut visiting_queue, &mut recurse_data.next_queue);
         recurse_data.next_queue.clear();
     }
-
-    recurse_data.accounts
 }
 
 /// Collect the accounts in a function
@@ -215,15 +270,20 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 // recursive function calls
                 data.next_queue.insert((data.contract_no, *cfg_no));
                 data.next_queue.insert((data.contract_no, data.cfg_func_no));
-                if let Some(callee_accounts) = data.accounts.get(cfg_no).cloned() {
-                    for item in callee_accounts {
-                        data.add_account(item);
+                match &data.contracts[data.contract_no].cfg[*cfg_no].function_no {
+                    ASTFunction::SolidityFunction(ast_no) | ASTFunction::YulFunction(ast_no) => {
+                        let accounts_to_add =
+                            data.functions[*ast_no].solana_accounts.borrow().clone();
+                        for (account_name, account) in accounts_to_add {
+                            data.add_account(account_name, account);
+                        }
                     }
+                    _ => (),
                 }
             } else if let InternalCallTy::Builtin { ast_func_no } = call {
-                let name = &data.ns.functions[*ast_func_no].name;
+                let name = &data.functions[*ast_func_no].name;
                 if name == "create_program_address" {
-                    data.add_account(SolanaAccount::SystemAccount);
+                    data.add_system_account();
                 }
             }
 
@@ -337,7 +397,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 seeds.recurse(data, check_expression);
             }
 
-            data.add_account(SolanaAccount::SystemAccount);
+            data.add_system_account();
         }
         Instr::ExternalCall {
             address,
@@ -353,8 +413,14 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 address.recurse(data, check_expression);
                 if let Expression::NumberLiteral(_, _, num) = address {
                     // Check if we can auto populate this account
-                    if let Some(account) = SolanaAccount::from_number(num) {
-                        data.add_account(account);
+                    if let Some(account) = account_from_number(num) {
+                        data.add_account(
+                            account.to_string(),
+                            SolanaAccount {
+                                is_signer: false,
+                                is_writer: false,
+                            },
+                        );
                     }
                 }
             }
@@ -368,13 +434,15 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
             value.recurse(data, check_expression);
             gas.recurse(data, check_expression);
             // External calls always need the system account
-            data.add_account(SolanaAccount::SystemAccount);
+            data.add_system_account();
             if let Some((contract_no, function_no)) = contract_function_no {
-                let cfg_no = data.ns.contracts[*contract_no].all_functions[function_no];
-                if let Some(callee_accounts) = data.accounts.get(&cfg_no).cloned() {
-                    for item in callee_accounts {
-                        data.add_account(item);
-                    }
+                let cfg_no = data.contracts[*contract_no].all_functions[function_no];
+                let accounts_to_add = data.functions[*function_no]
+                    .solana_accounts
+                    .borrow()
+                    .clone();
+                for (account_name, account) in accounts_to_add {
+                    data.add_account(account_name, account);
                 }
                 data.next_queue.insert((*contract_no, cfg_no));
                 data.next_queue.insert((data.contract_no, data.cfg_func_no));
@@ -409,10 +477,22 @@ fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
             Builtin::Timestamp | Builtin::BlockNumber | Builtin::Slot,
             ..,
         ) => {
-            data.add_account(SolanaAccount::ClockAccount);
+            data.add_account(
+                CLOCK_ACCOUNT.to_string(),
+                SolanaAccount {
+                    is_signer: false,
+                    is_writer: false,
+                },
+            );
         }
         Expression::Builtin(_, _, Builtin::SignatureVerify, ..) => {
-            data.add_account(SolanaAccount::InstructionAccount);
+            data.add_account(
+                INSTRUCTION_ACCOUNT.to_string(),
+                SolanaAccount {
+                    is_writer: false,
+                    is_signer: false,
+                },
+            );
         }
         Expression::Builtin(
             _,
@@ -420,7 +500,7 @@ fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
             Builtin::Ripemd160 | Builtin::Keccak256 | Builtin::Sha256,
             ..,
         ) => {
-            data.add_account(SolanaAccount::SystemAccount);
+            data.add_system_account();
         }
 
         _ => (),

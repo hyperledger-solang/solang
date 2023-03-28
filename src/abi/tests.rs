@@ -157,7 +157,7 @@ fn instructions_and_types() {
     }
 
     function notInIdl(uint256 c, MetaData dd) private pure returns (int256) {
-        if (dd.a && dd.b) {
+        if (dd.c && dd.b) {
             return 0;
         }
         return int256(c);
@@ -334,7 +334,6 @@ fn instructions_and_types() {
         Some(IdlType::Defined("multipleReturns_returns".to_string()))
     );
 
-    assert!(idl.state.is_none());
     assert!(idl.accounts.is_empty());
 
     assert_eq!(idl.types.len(), 1);
@@ -452,7 +451,6 @@ contract caller {
     );
     assert!(idl.instructions[1].returns.is_none());
 
-    assert!(idl.state.is_none());
     assert!(idl.accounts.is_empty());
 
     assert_eq!(idl.types.len(), 1);
@@ -606,7 +604,6 @@ fn types() {
         ]
     );
     assert!(idl.instructions[1].returns.is_none());
-    assert!(idl.state.is_none());
     assert!(idl.accounts.is_empty());
     assert!(idl.types.is_empty());
     assert_eq!(
@@ -695,7 +692,6 @@ fn constructor() {
     assert!(idl.instructions[1].args.is_empty());
     assert_eq!(idl.instructions[1].returns, Some(IdlType::U64));
 
-    assert!(idl.state.is_none());
     assert!(idl.accounts.is_empty());
     assert!(idl.types.is_empty());
     assert!(idl.events.is_none());

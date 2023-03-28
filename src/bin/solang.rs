@@ -452,14 +452,14 @@ fn compile(matches: &ArgMatches) {
         // TODO: this could be parallelized using e.g. rayon
         let ns = process_file(filename, &mut resolver, target, matches, &opt);
 
-        namespaces.push((ns, filename));
+        namespaces.push(ns);
     }
 
     let mut json_contracts = HashMap::new();
 
     let std_json = *matches.get_one("STD-JSON").unwrap();
 
-    for (ns, _) in &namespaces {
+    for ns in &namespaces {
         if std_json {
             let mut out = ns.diagnostics_as_json(&resolver);
             json.errors.append(&mut out);
@@ -477,7 +477,7 @@ fn compile(matches: &ArgMatches) {
     }
 
     // Ensure we have at least one contract
-    if !errors && namespaces.iter().all(|(ns, _)| ns.contracts.is_empty()) {
+    if !errors && namespaces.iter().all(|ns| ns.contracts.is_empty()) {
         eprintln!("error: no contacts found");
         errors = true;
     }
@@ -488,7 +488,7 @@ fn compile(matches: &ArgMatches) {
         .filter(|name| {
             !namespaces
                 .iter()
-                .flat_map(|(ns, _)| ns.contracts.iter())
+                .flat_map(|ns| ns.contracts.iter())
                 .any(|contract| **name == contract.name)
         })
         .collect();
@@ -499,14 +499,16 @@ fn compile(matches: &ArgMatches) {
     }
 
     if !errors {
-        for (ns, filename) in &namespaces {
+        let mut seen_contracts = HashMap::new();
+
+        for ns in namespaces.iter_mut() {
             for contract_no in 0..ns.contracts.len() {
                 contract_results(
                     contract_no,
-                    filename,
                     matches,
                     ns,
                     &mut json_contracts,
+                    &mut seen_contracts,
                     &opt,
                 );
             }
@@ -582,10 +584,10 @@ fn process_file(
 
 fn contract_results(
     contract_no: usize,
-    filename: &OsStr,
     matches: &ArgMatches,
-    ns: &Namespace,
+    ns: &mut Namespace,
     json_contracts: &mut HashMap<String, JsonContract>,
+    seen_contracts: &mut HashMap<String, String>,
     opt: &Options,
 ) {
     let verbose = *matches.get_one("VERBOSE").unwrap();
@@ -596,6 +598,26 @@ fn contract_results(
     if !resolved_contract.instantiable {
         return;
     }
+
+    if ns.top_file_no() != resolved_contract.loc.file_no() {
+        // contracts that were imported should not be considered. For example, if we have a file
+        // a.sol which imports b.sol, and b.sol defines contract B, then:
+        // solang compile a.sol
+        // should not write the results for contract B
+        return;
+    }
+
+    let loc = ns.loc_to_string(true, &resolved_contract.loc);
+
+    if let Some(other_loc) = seen_contracts.get(&resolved_contract.name) {
+        eprintln!(
+            "error: contract {} defined at {other_loc} and {}",
+            resolved_contract.name, loc
+        );
+        exit(1);
+    }
+
+    seen_contracts.insert(resolved_contract.name.to_string(), loc);
 
     if let Some("cfg") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         println!("{}", resolved_contract.print_cfg(ns));
@@ -617,9 +639,8 @@ fn contract_results(
     }
 
     let context = inkwell::context::Context::create();
-    let filename_string = filename.to_string_lossy();
 
-    let binary = resolved_contract.binary(ns, &context, &filename_string, opt);
+    let binary = resolved_contract.binary(ns, &context, opt);
 
     if save_intermediates(&binary, matches) {
         return;
