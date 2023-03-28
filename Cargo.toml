@@ -51,7 +51,7 @@ solang-parser = { path = "solang-parser", version = "0.2.2" }
 codespan-reporting = "0.11"
 phf = { version = "0.11", features = ["macros"] }
 rust-lapper = "1.1"
-anchor-syn = { version = "0.26", features = ["idl"] }
+anchor-syn = { version = "0.27.0", features = ["idl"] }
 convert_case = "0.6"
 parse-display = "0.8.0"
 parity-scale-codec = "3.3"

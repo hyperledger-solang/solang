@@ -499,9 +499,18 @@ fn compile(matches: &ArgMatches) {
     }
 
     if !errors {
-        for ns in &namespaces {
+        let mut seen_contracts = HashMap::new();
+
+        for ns in namespaces.iter_mut() {
             for contract_no in 0..ns.contracts.len() {
-                contract_results(contract_no, matches, ns, &mut json_contracts, &opt);
+                contract_results(
+                    contract_no,
+                    matches,
+                    ns,
+                    &mut json_contracts,
+                    &mut seen_contracts,
+                    &opt,
+                );
             }
         }
     }
@@ -576,8 +585,9 @@ fn process_file(
 fn contract_results(
     contract_no: usize,
     matches: &ArgMatches,
-    ns: &Namespace,
+    ns: &mut Namespace,
     json_contracts: &mut HashMap<String, JsonContract>,
+    seen_contracts: &mut HashMap<String, String>,
     opt: &Options,
 ) {
     let verbose = *matches.get_one("VERBOSE").unwrap();
@@ -588,6 +598,26 @@ fn contract_results(
     if !resolved_contract.instantiable {
         return;
     }
+
+    if ns.top_file_no() != resolved_contract.loc.file_no() {
+        // contracts that were imported should not be considered. For example, if we have a file
+        // a.sol which imports b.sol, and b.sol defines contract B, then:
+        // solang compile a.sol
+        // should not write the results for contract B
+        return;
+    }
+
+    let loc = ns.loc_to_string(true, &resolved_contract.loc);
+
+    if let Some(other_loc) = seen_contracts.get(&resolved_contract.name) {
+        eprintln!(
+            "error: contract {} defined at {other_loc} and {}",
+            resolved_contract.name, loc
+        );
+        exit(1);
+    }
+
+    seen_contracts.insert(resolved_contract.name.to_string(), loc);
 
     if let Some("cfg") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         println!("{}", resolved_contract.print_cfg(ns));
