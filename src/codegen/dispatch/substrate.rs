@@ -1,7 +1,7 @@
 use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
-        encoding::abi_decode,
+        encoding::{abi_decode, abi_encode},
         vartable::Vartable,
         Builtin, Expression, Options,
     },
@@ -35,12 +35,14 @@ pub(crate) fn function_dispatch(
 
 struct Dispatch<'a> {
     fail_bb: usize,
-    input: usize,
+    input_len: usize,
+    input_ptr: Expression,
     value: usize,
     vartab: Vartable,
     cfg: ControlFlowGraph,
     all_cfg: &'a [ControlFlowGraph],
     ns: &'a Namespace,
+    selector_len: Box<Expression>,
 }
 
 impl<'a> Dispatch<'a> {
@@ -50,7 +52,7 @@ impl<'a> Dispatch<'a> {
 
         // Read input length from args
         let input_expr = Expression::FunctionArg(Codegen, Type::DynamicBytes, 0);
-        let input = vartab.temp_name("input_len", &Uint(32));
+        let input_len = vartab.temp_name("input_len", &Uint(32));
         let expr = Expression::Builtin(
             Codegen,
             vec![Uint(32)],
@@ -61,20 +63,19 @@ impl<'a> Dispatch<'a> {
             &mut vartab,
             Instr::Set {
                 loc: Codegen,
-                res: input,
+                res: input_len,
                 expr,
             },
         );
 
         // Read transferred value from args
-        let input_epxr = Expression::FunctionArg(Codegen, Type::DynamicBytes, 1);
-        let value = vartab.temp_name("value", &Uint(ns.value_length as u16));
+        let value = vartab.temp_name("value", &Uint(ns.value_length as u16 * 8));
         cfg.add(
             &mut vartab,
             Instr::Set {
                 loc: Codegen,
                 res: value,
-                expr: input_epxr,
+                expr: Expression::FunctionArg(Codegen, Type::DynamicBytes, 1),
             },
         );
 
@@ -82,14 +83,28 @@ impl<'a> Dispatch<'a> {
         cfg.set_basic_block(fail_bb);
         cfg.add(&mut vartab, Instr::AssertFailure { encoded_args: None });
 
+        let input_ptr = Expression::Variable(
+            Codegen,
+            Type::BufferPointer,
+            vartab.temp_name("input_ptr", &Type::BufferPointer),
+        );
+        let selector_len: Box<Expression> =
+            Expression::NumberLiteral(Codegen, Uint(32), ns.target.selector_length().into()).into();
+        let input_ptr = Expression::AdvancePointer {
+            pointer: input_ptr.into(),
+            bytes_offset: selector_len.clone(),
+        };
+
         Self {
             fail_bb,
+            input_len,
+            input_ptr,
             vartab,
             value,
-            input,
             cfg,
             all_cfg,
             ns,
+            selector_len,
         }
     }
 
@@ -97,12 +112,11 @@ impl<'a> Dispatch<'a> {
         // Go to fallback or receive if there is no selector in the call input
         let default = self.cfg.new_basic_block("fb_or_recv".into());
         let start_dispatch_block = self.cfg.new_basic_block("start_dispatch".into());
-        let selector_len = self.ns.target.selector_length().into();
         let cond = Expression::Less {
             loc: Codegen,
             signed: false,
-            left: Expression::NumberLiteral(Codegen, Uint(32), selector_len).into(),
-            right: Expression::Variable(Codegen, Uint(32), self.input).into(),
+            left: self.selector_len.clone().into(),
+            right: Expression::Variable(Codegen, Uint(32), self.input_len).into(),
         };
         self.add(Instr::BranchCond {
             cond,
@@ -135,13 +149,12 @@ impl<'a> Dispatch<'a> {
                 let case = Expression::NumberLiteral(Codegen, selector_ty.clone(), selector);
                 (case, self.dispatch_case(msg_no))
             })
-            .collect::<Vec<_>>();
-        let switch = Instr::Switch {
+            .collect();
+        self.add(Instr::Switch {
             cond,
             cases,
             default,
-        };
-        self.cfg.add(&mut self.vartab, switch);
+        });
 
         // Handle fallback or receive case
         self.cfg.set_basic_block(default);
@@ -155,7 +168,67 @@ impl<'a> Dispatch<'a> {
         self.cfg.set_basic_block(case);
         self.abort_if_value_transfer(msg_no);
 
-        // TODO
+        let cfg = &self.all_cfg[msg_no];
+
+        // Decode input data if necessary
+        let mut args = vec![];
+        if !cfg.params.is_empty() {
+            let buf_len = Expression::Variable(Codegen, Uint(32), self.input_len);
+            let arg_len = Expression::Subtract(
+                Codegen,
+                Uint(32),
+                false,
+                buf_len.into(),
+                self.selector_len.clone().into(),
+            );
+            args = abi_decode(
+                &Codegen,
+                &self.input_ptr,
+                &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
+                &self.ns,
+                &mut self.vartab,
+                &mut self.cfg,
+                Some(Expression::Trunc(Codegen, Uint(32), arg_len.into())),
+            );
+        }
+
+        let mut returns: Vec<usize> = Vec::with_capacity(cfg.returns.len());
+        let mut return_tys: Vec<Type> = Vec::with_capacity(cfg.returns.len());
+        let mut returns_expr: Vec<Expression> = Vec::with_capacity(cfg.returns.len());
+        for item in cfg.returns.iter() {
+            let new_var = self.vartab.temp_anonymous(&item.ty);
+            returns.push(new_var);
+            return_tys.push(item.ty.clone());
+            returns_expr.push(Expression::Variable(Codegen, item.ty.clone(), new_var));
+        }
+
+        self.add(Instr::Call {
+            res: returns,
+            call: InternalCallTy::Static { cfg_no: msg_no },
+            args,
+            return_tys,
+        });
+
+        if cfg.returns.is_empty() {
+            let data_len = Expression::NumberLiteral(Codegen, Uint(32), 0.into());
+            let data = Expression::AllocDynamicBytes(
+                Codegen,
+                Type::DynamicBytes,
+                data_len.clone().into(),
+                None,
+            );
+            self.add(Instr::ReturnData { data, data_len })
+        } else {
+            let (data, data_len) = abi_encode(
+                &Codegen,
+                returns_expr,
+                self.ns,
+                &mut self.vartab,
+                &mut self.cfg,
+                false,
+            );
+            self.add(Instr::ReturnData { data, data_len });
+        }
 
         case
     }
@@ -165,7 +238,7 @@ impl<'a> Dispatch<'a> {
         if !self.all_cfg[msg_no].nonpayable {
             return;
         }
-        let value_ty = Uint(self.ns.value_length as u16);
+        let value_ty = Uint(self.ns.value_length as u16 * 8);
         let false_block = self.cfg.new_basic_block("no_value".into());
         self.add(Instr::BranchCond {
             cond: Expression::More {
@@ -199,7 +272,7 @@ impl<'a> Dispatch<'a> {
             return self.selector_invalid();
         }
 
-        let value_ty = Uint(self.ns.value_length as u16);
+        let value_ty = Uint(self.ns.value_length as u16 * 8);
         let fallback_block = self.cfg.new_basic_block("fallback".into());
         let receive_block = self.cfg.new_basic_block("receive".into());
         self.add(Instr::BranchCond {
