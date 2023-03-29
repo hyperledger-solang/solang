@@ -1381,23 +1381,6 @@ mod tests {
                 statements: vec![stmt!($(t)*)],
             }
         };
-
-        // ( assembly ( $( $($l:tt)+ ),+ ) { $($t:tt)* } ) => {
-        //     pt::Statement::Assembly {
-        //         loc: loc!(),
-        //         dialect: None,
-        //         flags: Some(vec![$(lit!($($l)+)),*]),
-        //         block: pt::YulBlock,
-        //     }
-        // };
-        // ( assembly { $($t:tt)* } ) => {
-        //     pt::Statement::Assembly {
-        //         loc: loc!(),
-        //         dialect: None,
-        //         flags: None,
-        //         block: pt::YulBlock,
-        //     }
-        // };
     }
 
     /// IdentifierPath
