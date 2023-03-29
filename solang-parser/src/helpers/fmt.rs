@@ -1208,6 +1208,10 @@ impl Display for pt::YulSwitchOptions {
     }
 }
 
+// These functions are private so they should be inlined by the compiler.
+// We provided these `#[inline]` hints regardless because we don't expect compile time penalties
+// or other negative impacts from them.
+// See: <https://github.com/hyperledger/solang/pull/1237#discussion_r1151557453>
 #[inline]
 fn fmt_parameter_list(list: &pt::ParameterList, f: &mut Formatter<'_>) -> Result {
     let iter = list.iter().flat_map(|(_, param)| param);
