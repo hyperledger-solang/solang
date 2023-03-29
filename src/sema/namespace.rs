@@ -892,7 +892,7 @@ impl Namespace {
                             }
                             pt::FunctionAttribute::Visibility(v) => {
                                 diagnostics.push(Diagnostic::error(
-                                    v.loc().unwrap(),
+                                    v.loc_opt().unwrap(),
                                     format!("function type cannot have visibility '{v}'"),
                                 ));
                                 success = false;
@@ -912,7 +912,7 @@ impl Namespace {
                         Some(pt::Visibility::External(_)) => true,
                         Some(v) => {
                             diagnostics.push(Diagnostic::error(
-                                v.loc().unwrap(),
+                                v.loc_opt().unwrap(),
                                 format!("function type cannot have visibility attribute '{v}'"),
                             ));
                             success = false;
@@ -963,7 +963,7 @@ impl Namespace {
                             }
                             pt::FunctionAttribute::Visibility(v) => {
                                 diagnostics.push(Diagnostic::error(
-                                    v.loc().unwrap(),
+                                    v.loc_opt().unwrap(),
                                     format!("function type cannot have visibility '{v}'"),
                                 ));
                                 success = false;

@@ -1,27 +1,65 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//! Solidity parsed doc comments.
+//!
+//! See also the Solidity documentation on [natspec].
+//!
+//! [natspec]: https://docs.soliditylang.org/en/latest/natspec-format.html
+
 use crate::pt::Comment;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+/// A Solidity parsed doc comment.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DocComment {
-    Line { comment: DocCommentTag },
-    Block { comments: Vec<DocCommentTag> },
+    /// A line doc comment.
+    ///
+    /// `/// doc comment`
+    Line {
+        /// The single comment tag of the line.
+        comment: DocCommentTag,
+    },
+
+    /// A block doc comment.
+    ///
+    /// ```text
+    /// /**
+    ///  * block doc comment
+    ///  */
+    /// ```
+    Block {
+        /// The list of doc comment tags of the block.
+        comments: Vec<DocCommentTag>,
+    },
 }
 
 impl DocComment {
+    /// Returns the inner comments.
     pub fn comments(&self) -> Vec<&DocCommentTag> {
         match self {
             DocComment::Line { comment } => vec![comment],
             DocComment::Block { comments } => comments.iter().collect(),
         }
     }
+
+    /// Consumes `self` to return the inner comments.
+    pub fn into_comments(self) -> Vec<DocCommentTag> {
+        match self {
+            DocComment::Line { comment } => vec![comment],
+            DocComment::Block { comments } => comments,
+        }
+    }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+/// A Solidity doc comment's tag, value and respective offsets.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DocCommentTag {
+    /// The tag of the doc comment, like the `notice` in `/// @notice Doc comment value`
     pub tag: String,
+    /// The offset of the comment's tag, relative to the start of the source string.
     pub tag_offset: usize,
+    /// The actual comment string, like `Doc comment value` in `/// @notice Doc comment value`
     pub value: String,
+    /// The offset of the comment's value, relative to the start of the source string.
     pub value_offset: usize,
 }
 
@@ -33,13 +71,10 @@ enum CommentType {
 /// From the start to end offset, filter all the doc comments out of the comments and parse
 /// them into tags with values.
 pub fn parse_doccomments(comments: &[Comment], start: usize, end: usize) -> Vec<DocComment> {
-    // first extract the tags
-    let mut tags = Vec::new();
+    let mut tags = Vec::with_capacity(comments.len());
 
-    let lines = filter_comments(comments, start, end);
-
-    for (ty, comment_lines) in lines {
-        let mut single_tags = Vec::new();
+    for (ty, comment_lines) in filter_comments(comments, start, end) {
+        let mut single_tags = Vec::with_capacity(comment_lines.len());
 
         for (start_offset, line) in comment_lines {
             let mut chars = line.char_indices().peekable();
@@ -104,7 +139,7 @@ pub fn parse_doccomments(comments: &[Comment], start: usize, end: usize) -> Vec<
 
         match ty {
             CommentType::Line if !single_tags.is_empty() => tags.push(DocComment::Line {
-                comment: single_tags[0].to_owned(),
+                comment: single_tags.swap_remove(0),
             }),
             CommentType::Block => tags.push(DocComment::Block {
                 comments: single_tags,
@@ -121,38 +156,33 @@ fn filter_comments(
     comments: &[Comment],
     start: usize,
     end: usize,
-) -> Vec<(CommentType, Vec<(usize, &str)>)> {
-    let mut res = Vec::new();
-
-    for comment in comments.iter() {
-        let mut grouped_comments = Vec::new();
-
+) -> impl Iterator<Item = (CommentType, Vec<(usize, &str)>)> {
+    comments.iter().filter_map(move |comment| {
         match comment {
+            // filter out all non-doc comments
+            Comment::Block(..) | Comment::Line(..) => None,
+            // filter out doc comments that are outside the given range
+            Comment::DocLine(loc, _) | Comment::DocBlock(loc, _)
+                if loc.start() >= end || loc.end() < start =>
+            {
+                None
+            }
+
             Comment::DocLine(loc, comment) => {
-                if loc.start() >= end || loc.end() < start {
-                    continue;
-                }
-
-                // remove the leading ///
-                let leading = comment[3..]
-                    .chars()
-                    .take_while(|ch| ch.is_whitespace())
-                    .count();
-
-                grouped_comments.push((loc.start() + leading + 3, comment[3..].trim()));
-
-                res.push((CommentType::Line, grouped_comments));
+                // remove the leading /// and whitespace;
+                // if we don't find a match, default to skipping the 3 `/` bytes,
+                // since they are guaranteed to be in the comment string
+                let leading = comment
+                    .find(|c: char| c != '/' && !c.is_whitespace())
+                    .unwrap_or(3);
+                let comment = (loc.start() + leading, comment[leading..].trim_end());
+                Some((CommentType::Line, vec![comment]))
             }
             Comment::DocBlock(loc, comment) => {
-                if loc.start() >= end || loc.end() < start {
-                    continue;
-                }
-
-                let mut start = loc.start() + 3;
-
-                let len = comment.len();
-
                 // remove the leading /** and tailing */
+                let mut start = loc.start() + 3;
+                let mut grouped_comments = Vec::new();
+                let len = comment.len();
                 for s in comment[3..len - 2].lines() {
                     if let Some((i, _)) = s
                         .char_indices()
@@ -163,12 +193,76 @@ fn filter_comments(
 
                     start += s.len() + 1;
                 }
-
-                res.push((CommentType::Block, grouped_comments));
+                Some((CommentType::Block, grouped_comments))
             }
-            _ => (),
         }
-    }
+    })
+}
 
-    res
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse() {
+        let src = r#"
+pragma solidity ^0.8.19;
+/// @name Test
+///  no tag
+///@notice    Cool contract    
+///   @  dev     This is not a dev tag 
+/**
+ * @dev line one
+ *    line 2
+ */
+contract Test {
+    /*** my function    
+          i like whitespace    
+*/
+    function test() {}
+}
+"#;
+        let (_, comments) = crate::parse(src, 0).unwrap();
+        assert_eq!(comments.len(), 6);
+
+        let actual = parse_doccomments(&comments, 0, usize::MAX);
+        let expected = vec![
+            DocComment::Line {
+                comment: DocCommentTag {
+                    tag: "name".into(),
+                    tag_offset: 31,
+                    value: "Test\nno tag".into(),
+                    value_offset: 36,
+                },
+            },
+            DocComment::Line {
+                comment: DocCommentTag {
+                    tag: "notice".into(),
+                    tag_offset: 57,
+                    value: "Cool contract".into(),
+                    value_offset: 67,
+                },
+            },
+            DocComment::Line {
+                comment: DocCommentTag {
+                    tag: "".into(),
+                    tag_offset: 92,
+                    value: "dev     This is not a dev tag".into(),
+                    value_offset: 94,
+                },
+            },
+            // TODO: Second block is merged into the first
+            DocComment::Block {
+                comments: vec![DocCommentTag {
+                    tag: "dev".into(),
+                    tag_offset: 133,
+                    value: "line one\nline 2\nmy function\ni like whitespace".into(),
+                    value_offset: 137,
+                }],
+            },
+            DocComment::Block { comments: vec![] },
+        ];
+
+        assert_eq!(actual, expected);
+    }
 }

@@ -10,7 +10,8 @@ use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_v
 use num_bigint::BigInt;
 use solang_parser::{
     doccomment::{parse_doccomments, DocComment},
-    parse, pt,
+    parse,
+    pt::{self, CodeLocation},
 };
 use std::ffi::OsStr;
 
