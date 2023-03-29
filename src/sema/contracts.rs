@@ -381,7 +381,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                         ));
                     } else {
                         let override_specified: HashSet<usize> =
-                            override_specified.iter().cloned().collect();
+                            override_specified.iter().copied().collect();
                         let override_needed: HashSet<usize> =
                             entry.iter().map(|(contract_no, _)| *contract_no).collect();
 

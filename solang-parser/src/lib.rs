@@ -19,7 +19,16 @@ pub mod pt;
 #[cfg(test)]
 mod tests;
 
-#[allow(clippy::all)]
+#[allow(
+    clippy::needless_lifetimes,
+    clippy::clone_on_copy,
+    clippy::type_complexity,
+    clippy::too_many_arguments,
+    clippy::ptr_arg,
+    clippy::redundant_clone,
+    clippy::just_underscores_and_digits,
+    clippy::or_fun_call
+)]
 mod solidity {
     include!(concat!(env!("OUT_DIR"), "/solidity.rs"));
 }

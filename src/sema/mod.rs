@@ -212,9 +212,9 @@ fn resolve_import(
     ns: &mut ast::Namespace,
 ) {
     let filename = match import {
-        pt::Import::Plain(f, _) => f,
-        pt::Import::GlobalSymbol(f, _, _) => f,
-        pt::Import::Rename(f, _, _) => f,
+        pt::Import::Plain(f, _)
+        | pt::Import::GlobalSymbol(f, _, _)
+        | pt::Import::Rename(f, _, _) => f,
     };
 
     let os_filename = OsStr::new(&filename.string);

@@ -346,7 +346,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
             let mut base_variables = Vec::new();
             let mut base_functions = Vec::new();
 
-            for base_no in bases.into_iter() {
+            for base_no in bases {
                 if contract_no == base_no {
                     continue;
                 }

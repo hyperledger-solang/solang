@@ -40,7 +40,7 @@ pub(crate) fn resolve_yul_expression(
     ns: &mut Namespace,
 ) -> Result<YulExpression, ()> {
     match expr {
-        pt::YulExpression::BoolLiteral(loc, value, ty) => resolve_bool_literal(loc, value, ty, ns),
+        pt::YulExpression::BoolLiteral(loc, value, ty) => resolve_bool_literal(loc, *value, ty, ns),
 
         pt::YulExpression::NumberLiteral(loc, base, exp, ty) => {
             resolve_number_literal(loc, base, exp, ty, ns)
@@ -97,7 +97,7 @@ fn get_type_from_big_int(big_int: &BigInt) -> Type {
 
 fn resolve_bool_literal(
     loc: &pt::Loc,
-    value: &bool,
+    value: bool,
     ty: &Option<pt::Identifier>,
     ns: &mut Namespace,
 ) -> Result<YulExpression, ()> {
@@ -115,7 +115,7 @@ fn resolve_bool_literal(
         Type::Bool
     };
 
-    Ok(YulExpression::BoolLiteral(*loc, *value, new_type))
+    Ok(YulExpression::BoolLiteral(*loc, value, new_type))
 }
 
 fn resolve_number_literal(
