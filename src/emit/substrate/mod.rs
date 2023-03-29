@@ -402,18 +402,7 @@ impl SubstrateTarget {
         binary
             .builder
             .build_call(dispatcher, &args, "substrate_dispatcher");
-        //self.emit_function_dispatch(
-        //    binary,
-        //    contract,
-        //    ns,
-        //    pt::FunctionTy::Function,
-        //    contract_args,
-        //    contract_args_length,
-        //    function,
-        //    &binary.functions,
-        //    None,
-        //    |func| !binary.function_abort_value_transfers && func.nonpayable,
-        //);
+        binary.builder.build_unreachable();
     }
 
     /// ABI decode a single primitive

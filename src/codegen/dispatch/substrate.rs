@@ -88,11 +88,17 @@ impl<'a> Dispatch<'a> {
             },
         );
 
-        let input_ptr = Expression::Variable(
-            Codegen,
-            Type::BufferPointer,
-            vartab.temp_name("input_ptr", &Type::BufferPointer),
+        // Calculate input pointer offset
+        let input_ptr_var = vartab.temp_name("input_ptr", &Type::BufferPointer);
+        cfg.add(
+            &mut vartab,
+            Instr::Set {
+                loc: Codegen,
+                res: input_ptr_var,
+                expr: Expression::FunctionArg(Codegen, Type::BufferPointer, 0),
+            },
         );
+        let input_ptr = Expression::Variable(Codegen, Type::BufferPointer, input_ptr_var);
         let selector_len: Box<Expression> =
             Expression::NumberLiteral(Codegen, Uint(32), ns.target.selector_length().into()).into();
         let input_ptr = Expression::AdvancePointer {
@@ -118,8 +124,8 @@ impl<'a> Dispatch<'a> {
         let cond = Expression::Less {
             loc: Codegen,
             signed: false,
-            left: self.selector_len.clone(),
-            right: Expression::Variable(Codegen, Uint(32), self.input_len).into(),
+            left: Expression::Variable(Codegen, Uint(32), self.input_len).into(),
+            right: self.selector_len.clone(),
         };
         let default = self.cfg.new_basic_block("fb_or_recv".into());
         self.add(Instr::BranchCond {
@@ -162,7 +168,6 @@ impl<'a> Dispatch<'a> {
 
         // Handle fallback or receive case
         self.cfg.set_basic_block(default);
-        //self.add(Instr::AssertFailure { encoded_args: None });
         self.fallback_or_receive();
 
         self.vartab.finalize(self.ns, &mut self.cfg);
@@ -171,8 +176,10 @@ impl<'a> Dispatch<'a> {
 
     fn dispatch_case(&mut self, msg_no: usize) -> usize {
         let case = self.cfg.new_basic_block(format!("dispatch_case_{msg_no}"));
-        self.abort_if_value_transfer(msg_no, case);
         self.cfg.set_basic_block(case);
+        let no_value = self.cfg.new_basic_block("no_value".into());
+        self.abort_if_value_transfer(msg_no, no_value);
+        self.cfg.set_basic_block(no_value);
 
         let cfg = &self.all_cfg[msg_no];
 
@@ -242,24 +249,26 @@ impl<'a> Dispatch<'a> {
     /// Insert a trap into the cfg, if the message `msg_no` is not payable but received value anyways.
     fn abort_if_value_transfer(&mut self, msg_no: usize, next_bb: usize) {
         if !self.all_cfg[msg_no].nonpayable {
+            self.add(Instr::Branch { block: next_bb });
             return;
         }
         let value_ty = Uint(self.ns.value_length as u16 * 8);
 
         let true_block = self.cfg.new_basic_block("has_value".into());
-        self.cfg.set_basic_block(true_block);
-        self.add(Instr::AssertFailure { encoded_args: None });
 
         self.add(Instr::BranchCond {
             cond: Expression::More {
                 loc: Codegen,
                 signed: false,
-                left: Expression::NumberLiteral(Codegen, value_ty.clone(), 0.into()).into(),
-                right: Expression::Variable(Codegen, value_ty, self.value).into(),
+                left: Expression::Variable(Codegen, value_ty.clone(), self.value).into(),
+                right: Expression::NumberLiteral(Codegen, value_ty, 0.into()).into(),
             },
             true_block,
             false_block: next_bb,
         });
+
+        self.cfg.set_basic_block(true_block);
+        self.add(Instr::AssertFailure { encoded_args: None });
     }
 
     fn fallback_or_receive(&mut self) {
