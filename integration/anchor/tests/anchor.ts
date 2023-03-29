@@ -11,17 +11,14 @@ describe("Anchor", () => {
 
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Anchor as Program<Anchor>;
-
   it("test anchor program with anchor tests", async () => {
     // The Account to create.
     const seed = Buffer.from('ChiaSeeds', 'utf8');
 
-    const program = anchor.workspace.Anchor;
+    const program = anchor.workspace.Anchor as Program<Anchor>;
 
     const [myAccount, bump] = await anchor.web3.PublicKey.findProgramAddress([seed], program.programId);
 
-    const myPubkey = new anchor.web3.PublicKey("AddressLookupTab1e1111111111111111111111111");
 
     const { SystemProgram } = anchor.web3;
 

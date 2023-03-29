@@ -118,3 +118,38 @@ fn import() {
 
     assert!(stderr.contains("file not found 'bar.sol'"));
 }
+
+#[test]
+fn contract_name_defined_twice() {
+    let mut cmd = Command::cargo_bin("solang").unwrap();
+
+    let ok = cmd
+        .args(["compile", "--target", "solana", "bar.sol", "rel.sol"])
+        .current_dir("tests/imports_testcases/imports")
+        .assert();
+
+    let output = ok.get_output();
+
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+
+    let mut cmd = Command::cargo_bin("solang").unwrap();
+
+    let not_ok = cmd
+        .args([
+            "compile",
+            "--target",
+            "solana",
+            "relative_import.sol",
+            "rel.sol",
+        ])
+        .current_dir("tests/imports_testcases/imports")
+        .assert();
+
+    let output = not_ok.get_output();
+    let err = String::from_utf8_lossy(&output.stderr);
+
+    // The error contains the absolute paths, so we cannot assert the whole string
+    assert!(err.starts_with("error: contract rel defined at "));
+    assert!(err.contains("relative_import.sol:1:1-16 and "));
+    assert!(err.ends_with("rel.sol:2:1-16\n"));
+}
