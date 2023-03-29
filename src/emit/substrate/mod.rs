@@ -350,27 +350,18 @@ impl SubstrateTarget {
 
         let fallback_block = binary.context.append_basic_block(function, "fallback");
 
-        let dispatcher = binary.module.get_function("substrate_dispatch").unwrap();
-        let args = vec![
-            BasicMetadataValueEnum::PointerValue(deploy_args),
-            BasicMetadataValueEnum::IntValue(deploy_args_length),
-            BasicMetadataValueEnum::IntValue(self.value_transferred(binary, ns)),
-        ];
-        binary
-            .builder
-            .build_call(dispatcher, &args, "substrate_dispatcher");
-        //self.emit_function_dispatch(
-        //    binary,
-        //    contract,
-        //    ns,
-        //    pt::FunctionTy::Constructor,
-        //    deploy_args,
-        //    deploy_args_length,
-        //    function,
-        //    &binary.functions,
-        //    Some(fallback_block),
-        //    |_| false,
-        //);
+        self.emit_function_dispatch(
+            binary,
+            contract,
+            ns,
+            pt::FunctionTy::Constructor,
+            deploy_args,
+            deploy_args_length,
+            function,
+            &binary.functions,
+            Some(fallback_block),
+            |_| false,
+        );
 
         // emit fallback code
         binary.builder.position_at_end(fallback_block);
@@ -402,18 +393,27 @@ impl SubstrateTarget {
             "call",
         );
 
-        self.emit_function_dispatch(
-            binary,
-            contract,
-            ns,
-            pt::FunctionTy::Function,
-            contract_args,
-            contract_args_length,
-            function,
-            &binary.functions,
-            None,
-            |func| !binary.function_abort_value_transfers && func.nonpayable,
-        );
+        let dispatcher = binary.module.get_function("substrate_dispatch").unwrap();
+        let args = vec![
+            BasicMetadataValueEnum::PointerValue(contract_args),
+            BasicMetadataValueEnum::IntValue(contract_args_length),
+            BasicMetadataValueEnum::IntValue(self.value_transferred(binary, ns)),
+        ];
+        binary
+            .builder
+            .build_call(dispatcher, &args, "substrate_dispatcher");
+        //self.emit_function_dispatch(
+        //    binary,
+        //    contract,
+        //    ns,
+        //    pt::FunctionTy::Function,
+        //    contract_args,
+        //    contract_args_length,
+        //    function,
+        //    &binary.functions,
+        //    None,
+        //    |func| !binary.function_abort_value_transfers && func.nonpayable,
+        //);
     }
 
     /// ABI decode a single primitive

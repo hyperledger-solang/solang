@@ -302,7 +302,15 @@ impl<'a> Dispatch<'a> {
                 return_tys: vec![],
                 call: InternalCallTy::Static { cfg_no },
                 args: vec![],
-            })
+            });
+            let data_len = Expression::NumberLiteral(Codegen, Uint(32), 0.into());
+            let data = Expression::AllocDynamicBytes(
+                Codegen,
+                Type::DynamicBytes,
+                data_len.clone().into(),
+                None,
+            );
+            self.add(Instr::ReturnData { data, data_len })
         } else {
             self.selector_invalid();
         }
@@ -314,7 +322,15 @@ impl<'a> Dispatch<'a> {
                 return_tys: vec![],
                 call: InternalCallTy::Static { cfg_no },
                 args: vec![],
-            })
+            });
+            let data_len = Expression::NumberLiteral(Codegen, Uint(32), 0.into());
+            let data = Expression::AllocDynamicBytes(
+                Codegen,
+                Type::DynamicBytes,
+                data_len.clone().into(),
+                None,
+            );
+            self.add(Instr::ReturnData { data, data_len })
         } else {
             self.selector_invalid()
         }
