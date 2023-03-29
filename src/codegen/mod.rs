@@ -225,13 +225,9 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
-        // TODO: This is a temporary solution. Once Substrate's dispatch moves to codegen,
-        // we can remove this if-condition.
-        if ns.target == Target::Solana {
-            let dispatch_cfg = function_dispatch(contract_no, &all_cfg, ns, opt);
-            ns.contracts[contract_no].dispatch_no = all_cfg.len();
-            all_cfg.push(dispatch_cfg);
-        }
+        let dispatch_cfg = function_dispatch(contract_no, &all_cfg, ns, opt);
+        ns.contracts[contract_no].dispatch_no = all_cfg.len();
+        all_cfg.push(dispatch_cfg);
 
         ns.contracts[contract_no].cfg = all_cfg;
     }

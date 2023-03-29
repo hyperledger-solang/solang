@@ -5,7 +5,7 @@ use crate::{
         vartable::Vartable,
         Builtin, Expression, Options,
     },
-    sema::ast::{Namespace, Type, Type::Uint},
+    sema::ast::{Namespace, Parameter, Type, Type::Uint},
 };
 use num_bigint::{BigInt, Sign};
 use solang_parser::pt::{FunctionTy, Loc::Codegen};
@@ -41,14 +41,25 @@ struct Dispatch<'a> {
     vartab: Vartable,
     cfg: ControlFlowGraph,
     all_cfg: &'a [ControlFlowGraph],
-    ns: &'a Namespace,
+    ns: &'a mut Namespace,
     selector_len: Box<Expression>,
 }
 
 impl<'a> Dispatch<'a> {
-    fn new(all_cfg: &'a [ControlFlowGraph], ns: &'a Namespace) -> Self {
+    fn new(all_cfg: &'a [ControlFlowGraph], ns: &'a mut Namespace) -> Self {
         let mut vartab = Vartable::new(ns.next_id);
-        let mut cfg = ControlFlowGraph::new("solang_dispatch".into(), ASTFunction::None);
+        let mut cfg = ControlFlowGraph::new("substrate_dispatch".into(), ASTFunction::None);
+        let arg = Parameter {
+            loc: Codegen,
+            id: None,
+            ty: Type::DynamicBytes,
+            ty_loc: None,
+            indexed: false,
+            readonly: true,
+            infinite_size: false,
+            recursive: false,
+        };
+        cfg.params = vec![arg.clone(), arg].into();
 
         // Read input length from args
         let input_expr = Expression::FunctionArg(Codegen, Type::DynamicBytes, 0);
@@ -57,7 +68,7 @@ impl<'a> Dispatch<'a> {
             Codegen,
             vec![Uint(32)],
             Builtin::ArrayLength,
-            vec![input_expr.clone()],
+            vec![input_expr],
         );
         cfg.add(
             &mut vartab,
@@ -115,7 +126,7 @@ impl<'a> Dispatch<'a> {
         let cond = Expression::Less {
             loc: Codegen,
             signed: false,
-            left: self.selector_len.clone().into(),
+            left: self.selector_len.clone(),
             right: Expression::Variable(Codegen, Uint(32), self.input_len).into(),
         };
         self.add(Instr::BranchCond {
@@ -160,6 +171,7 @@ impl<'a> Dispatch<'a> {
         self.cfg.set_basic_block(default);
         self.fallback_or_receive();
 
+        self.vartab.finalize(self.ns, &mut self.cfg);
         self.cfg
     }
 
@@ -179,13 +191,13 @@ impl<'a> Dispatch<'a> {
                 Uint(32),
                 false,
                 buf_len.into(),
-                self.selector_len.clone().into(),
+                self.selector_len.clone(),
             );
             args = abi_decode(
                 &Codegen,
                 &self.input_ptr,
                 &cfg.params.iter().map(|p| p.ty.clone()).collect::<Vec<_>>(),
-                &self.ns,
+                self.ns,
                 &mut self.vartab,
                 &mut self.cfg,
                 Some(Expression::Trunc(Codegen, Uint(32), arg_len.into())),
