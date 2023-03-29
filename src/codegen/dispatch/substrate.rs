@@ -2,6 +2,7 @@ use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
         encoding::{abi_decode, abi_encode},
+        expression::log_runtime_error,
         vartable::Vartable,
         Builtin, Expression, Options,
     },
@@ -28,9 +29,9 @@ pub(crate) fn function_dispatch(
     _contract_no: usize,
     all_cfg: &[ControlFlowGraph],
     ns: &mut Namespace,
-    _opt: &Options,
+    opt: &Options,
 ) -> ControlFlowGraph {
-    Dispatch::new(all_cfg, ns).build()
+    Dispatch::new(all_cfg, ns, opt).build()
 }
 
 struct Dispatch<'a> {
@@ -43,10 +44,11 @@ struct Dispatch<'a> {
     all_cfg: &'a [ControlFlowGraph],
     ns: &'a mut Namespace,
     selector_len: Box<Expression>,
+    opt: &'a Options,
 }
 
 impl<'a> Dispatch<'a> {
-    fn new(all_cfg: &'a [ControlFlowGraph], ns: &'a mut Namespace) -> Self {
+    fn new(all_cfg: &'a [ControlFlowGraph], ns: &'a mut Namespace, opt: &'a Options) -> Self {
         let mut vartab = Vartable::new(ns.next_id);
         let mut cfg = ControlFlowGraph::new("substrate_dispatch".into(), ASTFunction::None);
         let arg1 = Parameter {
@@ -116,6 +118,7 @@ impl<'a> Dispatch<'a> {
             all_cfg,
             ns,
             selector_len,
+            opt,
         }
     }
 
@@ -268,6 +271,15 @@ impl<'a> Dispatch<'a> {
         });
 
         self.cfg.set_basic_block(true_block);
+        let function_name = self.all_cfg[msg_no].name.split("::").last().unwrap();
+        log_runtime_error(
+            self.opt.log_runtime_errors,
+            &format!("runtime_error: non payable function {function_name} received value"),
+            Codegen,
+            &mut self.cfg,
+            &mut self.vartab,
+            self.ns,
+        );
         self.add(Instr::AssertFailure { encoded_args: None });
     }
 
