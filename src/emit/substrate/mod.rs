@@ -348,33 +348,16 @@ impl SubstrateTarget {
         // init our storage vars
         binary.builder.build_call(initializer, &[], "");
 
-        let fallback_block = binary.context.append_basic_block(function, "fallback");
-
-        self.emit_function_dispatch(
-            binary,
-            contract,
-            ns,
-            pt::FunctionTy::Constructor,
-            deploy_args,
-            deploy_args_length,
-            function,
-            &binary.functions,
-            Some(fallback_block),
-            |_| false,
-        );
-
-        // emit fallback code
-        binary.builder.position_at_end(fallback_block);
-
-        self.assert_failure(
-            binary,
-            binary
-                .context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null(),
-            binary.context.i32_type().const_zero(),
-        );
+        let dispatcher = binary.module.get_function("substrate_dispatch").unwrap();
+        let args = vec![
+            BasicMetadataValueEnum::PointerValue(deploy_args),
+            BasicMetadataValueEnum::IntValue(deploy_args_length),
+            BasicMetadataValueEnum::IntValue(self.value_transferred(binary, ns)),
+        ];
+        binary
+            .builder
+            .build_call(dispatcher, &args, "substrate_dispatcher");
+        binary.builder.build_unreachable();
     }
 
     fn emit_call(&mut self, binary: &Binary, contract: &ast::Contract, ns: &ast::Namespace) {
