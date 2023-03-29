@@ -403,6 +403,8 @@ impl Namespace {
             // If we're in a contract, then event can be defined in current contract or its bases
             if let Some(contract_no) = contract_no {
                 for contract_no in self.contract_bases(contract_no).into_iter().rev() {
+                    let file_no = self.contracts[contract_no].loc.file_no();
+
                     match self.variable_symbols.get(&(
                         file_no,
                         Some(contract_no),
