@@ -4,7 +4,9 @@ use crate::{codegen::Options, sema::ast};
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::BasicType;
-use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
+use inkwell::values::{
+    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use num_traits::ToPrimitive;
@@ -348,18 +350,27 @@ impl SubstrateTarget {
 
         let fallback_block = binary.context.append_basic_block(function, "fallback");
 
-        self.emit_function_dispatch(
-            binary,
-            contract,
-            ns,
-            pt::FunctionTy::Constructor,
-            deploy_args,
-            deploy_args_length,
-            function,
-            &binary.functions,
-            Some(fallback_block),
-            |_| false,
-        );
+        let dispatcher = binary.module.get_function("substrate_dispatch").unwrap();
+        let args = vec![
+            BasicMetadataValueEnum::PointerValue(deploy_args),
+            BasicMetadataValueEnum::IntValue(deploy_args_length),
+            BasicMetadataValueEnum::IntValue(self.value_transferred(binary, ns)),
+        ];
+        binary
+            .builder
+            .build_call(dispatcher, &args, "substrate_dispatcher");
+        //self.emit_function_dispatch(
+        //    binary,
+        //    contract,
+        //    ns,
+        //    pt::FunctionTy::Constructor,
+        //    deploy_args,
+        //    deploy_args_length,
+        //    function,
+        //    &binary.functions,
+        //    Some(fallback_block),
+        //    |_| false,
+        //);
 
         // emit fallback code
         binary.builder.position_at_end(fallback_block);

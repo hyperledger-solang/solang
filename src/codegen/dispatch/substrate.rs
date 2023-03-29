@@ -34,7 +34,7 @@ pub(crate) fn function_dispatch(
 }
 
 struct Dispatch<'a> {
-    fail_bb: usize,
+    start: usize,
     input_len: usize,
     input_ptr: Expression,
     value: usize,
@@ -49,50 +49,44 @@ impl<'a> Dispatch<'a> {
     fn new(all_cfg: &'a [ControlFlowGraph], ns: &'a mut Namespace) -> Self {
         let mut vartab = Vartable::new(ns.next_id);
         let mut cfg = ControlFlowGraph::new("substrate_dispatch".into(), ASTFunction::None);
-        let arg = Parameter {
+        let arg1 = Parameter {
             loc: Codegen,
             id: None,
-            ty: Type::DynamicBytes,
+            ty: Type::BufferPointer,
             ty_loc: None,
             indexed: false,
             readonly: true,
             infinite_size: false,
             recursive: false,
         };
-        cfg.params = vec![arg.clone(), arg].into();
+        let mut arg2 = arg1.clone();
+        arg2.ty = Type::Uint(32);
+        let mut arg3 = arg1.clone();
+        let value_ty = Uint(ns.value_length as u16 * 8);
+        arg3.ty = value_ty.clone();
+        cfg.params = vec![arg1, arg2, arg3].into();
 
         // Read input length from args
-        let input_expr = Expression::FunctionArg(Codegen, Type::DynamicBytes, 0);
         let input_len = vartab.temp_name("input_len", &Uint(32));
-        let expr = Expression::Builtin(
-            Codegen,
-            vec![Uint(32)],
-            Builtin::ArrayLength,
-            vec![input_expr],
-        );
         cfg.add(
             &mut vartab,
             Instr::Set {
                 loc: Codegen,
                 res: input_len,
-                expr,
+                expr: Expression::FunctionArg(Codegen, Uint(32), 1),
             },
         );
 
         // Read transferred value from args
-        let value = vartab.temp_name("value", &Uint(ns.value_length as u16 * 8));
+        let value = vartab.temp_name("value", &value_ty);
         cfg.add(
             &mut vartab,
             Instr::Set {
                 loc: Codegen,
                 res: value,
-                expr: Expression::FunctionArg(Codegen, Type::DynamicBytes, 1),
+                expr: Expression::FunctionArg(Codegen, value_ty, 2),
             },
         );
-
-        let fail_bb = cfg.new_basic_block("assert_failure".into());
-        cfg.set_basic_block(fail_bb);
-        cfg.add(&mut vartab, Instr::AssertFailure { encoded_args: None });
 
         let input_ptr = Expression::Variable(
             Codegen,
@@ -107,7 +101,7 @@ impl<'a> Dispatch<'a> {
         };
 
         Self {
-            fail_bb,
+            start: cfg.new_basic_block("start_dispatch".into()),
             input_len,
             input_ptr,
             vartab,
@@ -121,29 +115,27 @@ impl<'a> Dispatch<'a> {
 
     fn build(mut self) -> ControlFlowGraph {
         // Go to fallback or receive if there is no selector in the call input
-        let default = self.cfg.new_basic_block("fb_or_recv".into());
-        let start_dispatch_block = self.cfg.new_basic_block("start_dispatch".into());
         let cond = Expression::Less {
             loc: Codegen,
             signed: false,
             left: self.selector_len.clone(),
             right: Expression::Variable(Codegen, Uint(32), self.input_len).into(),
         };
+        let default = self.cfg.new_basic_block("fb_or_recv".into());
         self.add(Instr::BranchCond {
             cond,
             true_block: default,
-            false_block: start_dispatch_block,
+            false_block: self.start,
         });
 
         // Read selector
-        self.cfg.set_basic_block(start_dispatch_block);
         let selector_ty = Uint(8 * self.ns.target.selector_length() as u16);
         let cond = Expression::Builtin(
             Codegen,
             vec![selector_ty.clone()],
             Builtin::ReadFromBuffer,
             vec![
-                Expression::FunctionArg(Codegen, Type::DynamicBytes, 0),
+                Expression::FunctionArg(Codegen, Type::BufferPointer, 0),
                 Expression::NumberLiteral(Codegen, selector_ty.clone(), 0.into()),
             ],
         );
@@ -161,6 +153,7 @@ impl<'a> Dispatch<'a> {
                 (case, self.dispatch_case(msg_no))
             })
             .collect();
+        self.cfg.set_basic_block(self.start);
         self.add(Instr::Switch {
             cond,
             cases,
@@ -169,6 +162,7 @@ impl<'a> Dispatch<'a> {
 
         // Handle fallback or receive case
         self.cfg.set_basic_block(default);
+        //self.add(Instr::AssertFailure { encoded_args: None });
         self.fallback_or_receive();
 
         self.vartab.finalize(self.ns, &mut self.cfg);
@@ -177,8 +171,8 @@ impl<'a> Dispatch<'a> {
 
     fn dispatch_case(&mut self, msg_no: usize) -> usize {
         let case = self.cfg.new_basic_block(format!("dispatch_case_{msg_no}"));
+        self.abort_if_value_transfer(msg_no, case);
         self.cfg.set_basic_block(case);
-        self.abort_if_value_transfer(msg_no);
 
         let cfg = &self.all_cfg[msg_no];
 
@@ -246,12 +240,16 @@ impl<'a> Dispatch<'a> {
     }
 
     /// Insert a trap into the cfg, if the message `msg_no` is not payable but received value anyways.
-    fn abort_if_value_transfer(&mut self, msg_no: usize) {
+    fn abort_if_value_transfer(&mut self, msg_no: usize, next_bb: usize) {
         if !self.all_cfg[msg_no].nonpayable {
             return;
         }
         let value_ty = Uint(self.ns.value_length as u16 * 8);
-        let false_block = self.cfg.new_basic_block("no_value".into());
+
+        let true_block = self.cfg.new_basic_block("has_value".into());
+        self.cfg.set_basic_block(true_block);
+        self.add(Instr::AssertFailure { encoded_args: None });
+
         self.add(Instr::BranchCond {
             cond: Expression::More {
                 loc: Codegen,
@@ -259,10 +257,9 @@ impl<'a> Dispatch<'a> {
                 left: Expression::NumberLiteral(Codegen, value_ty.clone(), 0.into()).into(),
                 right: Expression::Variable(Codegen, value_ty, self.value).into(),
             },
-            true_block: self.fail_bb,
-            false_block,
+            true_block,
+            false_block: next_bb,
         });
-        self.cfg.set_basic_block(false_block);
     }
 
     fn fallback_or_receive(&mut self) {
