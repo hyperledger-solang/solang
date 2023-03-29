@@ -1508,7 +1508,7 @@ fn destructure_values(
     // Check that the values can be cast
     for (i, field) in fields.iter().enumerate() {
         if let Some(left_ty) = &left_tys[i] {
-            let loc = field.loc().unwrap();
+            let loc = field.loc_opt().unwrap();
             let _ = Expression::Variable {
                 loc,
                 ty: right_tys[i].clone(),

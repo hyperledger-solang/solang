@@ -148,9 +148,9 @@ pub fn contract_function(
             pt::FunctionAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
-                        v.loc().unwrap(),
+                        v.loc_opt().unwrap(),
                         format!("function redeclared '{v}'"),
-                        e.loc().unwrap(),
+                        e.loc_opt().unwrap(),
                         format!("location of previous declaration of '{e}'"),
                     ));
                     success = false;
@@ -237,18 +237,18 @@ pub fn contract_function(
         Some(v) => {
             if func.ty == pt::FunctionTy::Modifier {
                 ns.diagnostics.push(Diagnostic::error(
-                    v.loc().unwrap(),
+                    v.loc_opt().unwrap(),
                     format!("'{v}': modifiers can not have visibility"),
                 ));
 
-                pt::Visibility::Internal(v.loc())
+                pt::Visibility::Internal(v.loc_opt())
             } else if func.ty == pt::FunctionTy::Constructor {
                 ns.diagnostics.push(Diagnostic::warning(
-                    v.loc().unwrap(),
+                    v.loc_opt().unwrap(),
                     format!("'{v}': visibility for constructors is ignored"),
                 ));
 
-                pt::Visibility::Public(v.loc())
+                pt::Visibility::Public(v.loc_opt())
             } else {
                 v
             }
@@ -705,7 +705,7 @@ pub fn function(
             }
             pt::FunctionAttribute::Visibility(v) => {
                 ns.diagnostics.push(Diagnostic::error(
-                    v.loc().unwrap(),
+                    v.loc_opt().unwrap(),
                     format!("'{v}': only functions in contracts can have a visibility specifier"),
                 ));
                 success = false;

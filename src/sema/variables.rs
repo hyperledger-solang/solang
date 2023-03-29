@@ -203,7 +203,7 @@ pub fn variable_decl<'a>(
             }
             pt::VariableAttribute::Visibility(v) if contract_no.is_none() => {
                 ns.diagnostics.push(Diagnostic::error(
-                    v.loc().unwrap(),
+                    v.loc_opt().unwrap(),
                     format!("'{v}': global variable cannot have visibility specifier"),
                 ));
                 return None;
@@ -218,9 +218,9 @@ pub fn variable_decl<'a>(
             pt::VariableAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
                     ns.diagnostics.push(Diagnostic::error_with_note(
-                        v.loc().unwrap(),
+                        v.loc_opt().unwrap(),
                         format!("variable visibility redeclared '{v}'"),
-                        e.loc().unwrap(),
+                        e.loc_opt().unwrap(),
                         format!("location of previous declaration of '{e}'"),
                     ));
                     return None;
