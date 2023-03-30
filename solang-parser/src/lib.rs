@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![doc = include_str!("../README.md")]
+#![warn(missing_debug_implementations, missing_docs)]
 
 use crate::lexer::LexicalError;
 use crate::lexer::Token;
@@ -11,17 +12,28 @@ use lalrpop_util::ParseError;
 
 pub mod diagnostics;
 pub mod doccomment;
+pub mod helpers;
 pub mod lexer;
 pub mod pt;
-#[cfg(test)]
-mod test;
 
-#[allow(clippy::all)]
+#[cfg(test)]
+mod tests;
+
+#[allow(
+    clippy::needless_lifetimes,
+    clippy::clone_on_copy,
+    clippy::type_complexity,
+    clippy::too_many_arguments,
+    clippy::ptr_arg,
+    clippy::redundant_clone,
+    clippy::just_underscores_and_digits,
+    clippy::or_fun_call
+)]
 mod solidity {
     include!(concat!(env!("OUT_DIR"), "/solidity.rs"));
 }
 
-/// Parse solidity file
+/// Parses a Solidity file.
 pub fn parse(
     src: &str,
     file_no: usize,
@@ -31,11 +43,10 @@ pub fn parse(
     let mut lexer_errors = Vec::new();
     let mut lex = lexer::Lexer::new(src, file_no, &mut comments, &mut lexer_errors);
 
-    let parser_errors = &mut Vec::new();
-    let diagnostics = &mut Vec::new();
+    let mut parser_errors = Vec::new();
+    let res = solidity::SourceUnitParser::new().parse(src, file_no, &mut parser_errors, &mut lex);
 
-    let s = solidity::SourceUnitParser::new().parse(src, file_no, parser_errors, &mut lex);
-
+    let mut diagnostics = Vec::with_capacity(lex.errors.len() + parser_errors.len());
     for lexical_error in lex.errors {
         diagnostics.push(Diagnostic::parser_error(
             lexical_error.loc(),
@@ -47,15 +58,13 @@ pub fn parse(
         diagnostics.push(parser_error_to_diagnostic(&e.error, file_no));
     }
 
-    if let Err(e) = s {
-        diagnostics.push(parser_error_to_diagnostic(&e, file_no));
-        return Err(diagnostics.to_vec());
-    }
-
-    if !diagnostics.is_empty() {
-        Err(diagnostics.to_vec())
-    } else {
-        Ok((s.unwrap(), comments))
+    match res {
+        Err(e) => {
+            diagnostics.push(parser_error_to_diagnostic(&e, file_no));
+            Err(diagnostics)
+        }
+        _ if !diagnostics.is_empty() => Err(diagnostics),
+        Ok(res) => Ok((res, comments)),
     }
 }
 
@@ -64,7 +73,7 @@ fn parser_error_to_diagnostic(
     error: &ParseError<usize, Token, LexicalError>,
     file_no: usize,
 ) -> Diagnostic {
-    match &error {
+    match error {
         ParseError::InvalidToken { location } => Diagnostic::parser_error(
             Loc::File(file_no, *location, *location),
             "invalid token".to_string(),

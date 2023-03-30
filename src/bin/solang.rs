@@ -443,7 +443,7 @@ fn compile(matches: &ArgMatches) {
     // Build a map of requested contract names, and a flag specifying whether it was found or not
     let contract_names: HashSet<&str> = if let Some(values) = matches.get_many::<String>("CONTRACT")
     {
-        values.map(|v| v.as_str()).collect()
+        values.map(String::as_str).collect()
     } else {
         HashSet::new()
     };
@@ -472,7 +472,7 @@ fn compile(matches: &ArgMatches) {
         }
     }
 
-    if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
+    if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(String::as_str) {
         exit(0);
     }
 
@@ -499,9 +499,18 @@ fn compile(matches: &ArgMatches) {
     }
 
     if !errors {
-        for ns in &namespaces {
+        let mut seen_contracts = HashMap::new();
+
+        for ns in namespaces.iter_mut() {
             for contract_no in 0..ns.contracts.len() {
-                contract_results(contract_no, matches, ns, &mut json_contracts, &opt);
+                contract_results(
+                    contract_no,
+                    matches,
+                    ns,
+                    &mut json_contracts,
+                    &mut seen_contracts,
+                    &opt,
+                );
             }
         }
     }
@@ -551,7 +560,7 @@ fn process_file(
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, opt);
 
-    if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
+    if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(String::as_str) {
         let filepath = PathBuf::from(filename);
         let stem = filepath.file_stem().unwrap().to_string_lossy();
         let dot_filename = output_file(matches, &stem, "dot", false);
@@ -576,8 +585,9 @@ fn process_file(
 fn contract_results(
     contract_no: usize,
     matches: &ArgMatches,
-    ns: &Namespace,
+    ns: &mut Namespace,
     json_contracts: &mut HashMap<String, JsonContract>,
+    seen_contracts: &mut HashMap<String, String>,
     opt: &Options,
 ) {
     let verbose = *matches.get_one("VERBOSE").unwrap();
@@ -589,7 +599,27 @@ fn contract_results(
         return;
     }
 
-    if let Some("cfg") = matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
+    if ns.top_file_no() != resolved_contract.loc.file_no() {
+        // contracts that were imported should not be considered. For example, if we have a file
+        // a.sol which imports b.sol, and b.sol defines contract B, then:
+        // solang compile a.sol
+        // should not write the results for contract B
+        return;
+    }
+
+    let loc = ns.loc_to_string(true, &resolved_contract.loc);
+
+    if let Some(other_loc) = seen_contracts.get(&resolved_contract.name) {
+        eprintln!(
+            "error: contract {} defined at {other_loc} and {}",
+            resolved_contract.name, loc
+        );
+        exit(1);
+    }
+
+    seen_contracts.insert(resolved_contract.name.to_string(), loc);
+
+    if let Some("cfg") = matches.get_one::<String>("EMIT").map(String::as_str) {
         println!("{}", resolved_contract.print_cfg(ns));
         return;
     }
@@ -663,7 +693,7 @@ fn contract_results(
 fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatches) -> bool {
     let verbose = *matches.get_one("VERBOSE").unwrap();
 
-    match matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
+    match matches.get_one::<String>("EMIT").map(String::as_str) {
         Some("llvm-ir") => {
             let llvm_filename = output_file(matches, &binary.name, "ll", false);
 
