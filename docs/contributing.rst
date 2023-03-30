@@ -4,6 +4,12 @@ Contributing
 Solang is in active development, so there are many ways in which you can
 contribute.
 
+* Consider that users who will read the docs are from different background and cultures and that they have different preferences.
+* Avoid potential offensive terms and, for instance, prefer "allow list and deny list" to "white list and black list".
+* We believe that we all have a role to play to improve our world, and even if writing inclusive doc might not look like a huge improvement, it's a first step in the right direction.
+* We suggest to refer to `Microsoft bias free writing guidelines <https://docs.microsoft.com/en-us/style-guide/bias-free-communication>`_
+  and `Google inclusive doc writing guide <https://developers.google.com/style/inclusive-documentation>`_ as starting points.
+
 Target Specific
 ---------------
 
