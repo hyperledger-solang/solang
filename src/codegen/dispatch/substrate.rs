@@ -328,8 +328,8 @@ impl<'a> Dispatch<'a> {
             cond: Expression::More {
                 loc: Codegen,
                 signed: false,
-                left: Expression::NumberLiteral(Codegen, value_ty.clone(), 0.into()).into(),
-                right: Expression::Variable(Codegen, value_ty, self.value).into(),
+                left: Expression::Variable(Codegen, value_ty.clone(), self.value).into(),
+                right: Expression::NumberLiteral(Codegen, value_ty, 0.into()).into(),
             },
             true_block: receive_block,
             false_block: fallback_block,
