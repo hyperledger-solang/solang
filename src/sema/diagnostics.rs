@@ -253,8 +253,8 @@ impl Namespace {
                 sourceLocation: location,
                 ty: format!("{:?}", msg.ty),
                 component: "general".to_owned(),
-                severity: msg.level.to_string().to_owned(),
-                message: msg.message.to_owned(),
+                severity: msg.level.to_string(),
+                message: msg.message.clone(),
                 formattedMessage: buffer.into_string(),
             });
         }

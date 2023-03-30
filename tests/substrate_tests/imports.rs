@@ -704,3 +704,47 @@ fn import_base_dir() {
 
     assert!(!ns.diagnostics.any_errors());
 }
+
+#[test]
+fn event_resolve() {
+    let mut cache = FileResolver::new();
+
+    cache.set_file_contents(
+        "IThing.sol",
+        r#"
+        // SPDX-License-Identifier: MIT
+        pragma solidity ^0.8.13;
+
+        interface IThing {
+            event Executed();
+
+            function run() external;
+        }
+        "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "Test.sol",
+        r#"
+        // SPDX-License-Identifier: MIT
+        pragma solidity ^0.8.13;
+
+        import {IThing} from "IThing.sol";
+
+        contract Thing is IThing {
+            function run() external {
+                emit Executed();
+            }
+        }"#
+        .to_string(),
+    );
+
+    let ns = solang::parse_and_resolve(
+        OsStr::new("Test.sol"),
+        &mut cache,
+        Target::default_substrate(),
+    );
+
+    assert!(!ns.diagnostics.any_errors());
+}
