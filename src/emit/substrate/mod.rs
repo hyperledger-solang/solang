@@ -353,6 +353,7 @@ impl SubstrateTarget {
             BasicMetadataValueEnum::PointerValue(deploy_args),
             BasicMetadataValueEnum::IntValue(deploy_args_length),
             BasicMetadataValueEnum::IntValue(self.value_transferred(binary, ns)),
+            BasicMetadataValueEnum::PointerValue(binary.selector.as_pointer_value()),
         ];
         binary
             .builder
@@ -381,6 +382,7 @@ impl SubstrateTarget {
             BasicMetadataValueEnum::PointerValue(contract_args),
             BasicMetadataValueEnum::IntValue(contract_args_length),
             BasicMetadataValueEnum::IntValue(self.value_transferred(binary, ns)),
+            BasicMetadataValueEnum::PointerValue(binary.selector.as_pointer_value()),
         ];
         binary
             .builder

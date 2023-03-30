@@ -47,26 +47,32 @@ struct Dispatch<'a> {
     opt: &'a Options,
 }
 
+fn new_cfg(ns: &Namespace) -> ControlFlowGraph {
+    let mut cfg = ControlFlowGraph::new("substrate_dispatch".into(), ASTFunction::None);
+    let arg1 = Parameter {
+        loc: Codegen,
+        id: None,
+        ty: Type::BufferPointer,
+        ty_loc: None,
+        indexed: false,
+        readonly: true,
+        infinite_size: false,
+        recursive: false,
+    };
+    let mut arg2 = arg1.clone();
+    arg2.ty = Uint(32);
+    let mut arg3 = arg1.clone();
+    arg3.ty = Uint(8 * ns.value_length as u16);
+    let mut arg4 = arg1.clone();
+    arg4.ty = Type::Ref(Uint(8 * ns.target.selector_length() as u16).into());
+    cfg.params = vec![arg1, arg2, arg3, arg4].into();
+    cfg
+}
+
 impl<'a> Dispatch<'a> {
     fn new(all_cfg: &'a [ControlFlowGraph], ns: &'a mut Namespace, opt: &'a Options) -> Self {
         let mut vartab = Vartable::new(ns.next_id);
-        let mut cfg = ControlFlowGraph::new("substrate_dispatch".into(), ASTFunction::None);
-        let arg1 = Parameter {
-            loc: Codegen,
-            id: None,
-            ty: Type::BufferPointer,
-            ty_loc: None,
-            indexed: false,
-            readonly: true,
-            infinite_size: false,
-            recursive: false,
-        };
-        let mut arg2 = arg1.clone();
-        arg2.ty = Type::Uint(32);
-        let mut arg3 = arg1.clone();
-        let value_ty = Uint(ns.value_length as u16 * 8);
-        arg3.ty = value_ty.clone();
-        cfg.params = vec![arg1, arg2, arg3].into();
+        let mut cfg = new_cfg(ns);
 
         // Read input length from args
         let input_len = vartab.temp_name("input_len", &Uint(32));
@@ -80,6 +86,7 @@ impl<'a> Dispatch<'a> {
         );
 
         // Read transferred value from args
+        let value_ty = Uint(8 * ns.value_length as u16);
         let value = vartab.temp_name("value", &value_ty);
         cfg.add(
             &mut vartab,
@@ -137,17 +144,8 @@ impl<'a> Dispatch<'a> {
             false_block: self.start,
         });
 
-        // Read selector
+        // Build all cases
         let selector_ty = Uint(8 * self.ns.target.selector_length() as u16);
-        let cond = Expression::Builtin(
-            Codegen,
-            vec![selector_ty.clone()],
-            Builtin::ReadFromBuffer,
-            vec![
-                Expression::FunctionArg(Codegen, Type::BufferPointer, 0),
-                Expression::NumberLiteral(Codegen, selector_ty.clone(), 0.into()),
-            ],
-        );
         let cases = self
             .all_cfg
             .iter()
@@ -162,9 +160,30 @@ impl<'a> Dispatch<'a> {
                 (case, self.dispatch_case(msg_no))
             })
             .collect();
+
+        // Read selector
         self.cfg.set_basic_block(self.start);
+        let selector_var = self.vartab.temp_name("selector", &selector_ty);
+        self.add(Instr::Set {
+            loc: Codegen,
+            res: selector_var,
+            expr: Expression::Builtin(
+                Codegen,
+                vec![selector_ty.clone()],
+                Builtin::ReadFromBuffer,
+                vec![
+                    Expression::FunctionArg(Codegen, Type::BufferPointer, 0),
+                    Expression::NumberLiteral(Codegen, selector_ty.clone(), 0.into()),
+                ],
+            ),
+        });
+        let selector = Expression::Variable(Codegen, selector_ty.clone(), selector_var);
+        self.add(Instr::Store {
+            dest: Expression::FunctionArg(Codegen, selector_ty.clone(), 3),
+            data: selector.clone(),
+        });
         self.add(Instr::Switch {
-            cond,
+            cond: selector,
             cases,
             default,
         });
