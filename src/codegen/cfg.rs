@@ -2067,7 +2067,8 @@ impl Namespace {
     pub fn calculate_struct_non_padded_size(&self, struct_type: &StructType) -> Option<BigInt> {
         let mut size = BigInt::from(0u8);
         for field in &struct_type.definition(self).fields {
-            if !field.ty.is_primitive() {
+            let ty = field.ty.clone().unwrap_user_type(&self);
+            if !ty.is_primitive() || matches!(ty, Type::Bytes(_)) {
                 // If a struct contains a non-primitive type, we cannot calculate its
                 // size during compile time
                 if let Type::Struct(struct_ty) = &field.ty {
@@ -2078,7 +2079,7 @@ impl Namespace {
                 }
                 return None;
             } else {
-                size.add_assign(field.ty.memory_size_of(self));
+                size.add_assign(ty.memory_size_of(self));
             }
         }
 
