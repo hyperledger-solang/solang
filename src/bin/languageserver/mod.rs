@@ -38,7 +38,7 @@ pub async fn start_server(target: Target, matches: &ArgMatches) -> ! {
 
     if let Some(paths) = matches.get_many::<PathBuf>("IMPORTPATH") {
         for path in paths {
-            importpaths.push(path.to_path_buf());
+            importpaths.push(path.clone());
         }
     }
 
