@@ -348,12 +348,11 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        let size = ns
-            .calculate_struct_non_padded_size(struct_ty)
-            .filter(|_| allow_memcpy(&expr.ty(), ns))
-            .map(|no_padding_size| (no_padding_size, struct_ty.struct_padded_size(ns)));
+        let size = ns.calculate_struct_non_padded_size(struct_ty);
         // If the size without padding equals the size with padding, memcpy this struct directly.
-        if let Some((no_padding_size, _)) = size.as_ref().filter(|(no_pad, pad)| no_pad == pad) {
+        if let Some(no_padding_size) = size.as_ref().filter(|no_pad| {
+            *no_pad == &struct_ty.struct_padded_size(ns) && allow_memcpy(&expr.ty(), ns)
+        }) {
             let size = Expression::NumberLiteral(Codegen, Uint(32), no_padding_size.clone());
             let dest_address = Expression::AdvancePointer {
                 pointer: buffer.clone().into(),
@@ -369,7 +368,7 @@ pub(super) trait AbiEncoding {
             );
             return size;
         }
-        let size = size.map(|(no_pad, _)| Expression::NumberLiteral(Codegen, Uint(32), no_pad));
+        let size = size.map(|no_pad| Expression::NumberLiteral(Codegen, Uint(32), no_pad));
 
         let qty = struct_ty.definition(ns).fields.len();
         let first_ty = struct_ty.definition(ns).fields[0].ty.clone();
@@ -1051,12 +1050,11 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> (Expression, Expression) {
-        let size = ns
-            .calculate_struct_non_padded_size(struct_ty)
-            .filter(|_| allow_memcpy(expr_ty, ns))
-            .map(|no_padding_size| (no_padding_size, struct_ty.struct_padded_size(ns)));
+        let size = ns.calculate_struct_non_padded_size(struct_ty);
         // If the size without padding equals the size with padding, memcpy this struct directly.
-        if let Some((no_padding_size, _)) = size.as_ref().filter(|(no_pad, pad)| no_pad == pad) {
+        if let Some(no_padding_size) = size.as_ref().filter(|no_pad| {
+            *no_pad == &struct_ty.struct_padded_size(ns) && allow_memcpy(expr_ty, ns)
+        }) {
             let size = Expression::NumberLiteral(Codegen, Uint(32), no_padding_size.clone());
             validator.validate_offset_plus_size(&offset, &size, ns, vartab, cfg);
             let source_address = Expression::AdvancePointer {
@@ -1083,7 +1081,7 @@ pub(super) trait AbiEncoding {
             );
             return (struct_var, size);
         };
-        let size = size.map(|(no_pad, _)| Expression::NumberLiteral(Codegen, Uint(32), no_pad));
+        let size = size.map(|no_pad| Expression::NumberLiteral(Codegen, Uint(32), no_pad));
 
         let struct_tys = struct_ty
             .definition(ns)
@@ -1719,8 +1717,10 @@ fn allow_memcpy(ty: &Type, ns: &Namespace) -> bool {
             }
             false
         }
-        Type::Bytes(n) => *n < 2,
+        Type::Bytes(n) => *n < 2, // When n >= 2, the bytes must be reversed
+        // If this is a dynamic array, we mempcy if its elements allow it and we don't need to index it.
         Type::Array(t, dims) if ty.is_dynamic(ns) => dims.len() == 1 && allow_memcpy(t, ns),
+        // If the array is not dynamic, we mempcy if its elements allow it
         Type::Array(t, _) => allow_memcpy(t, ns),
         Type::UserType(t) => allow_memcpy(&ns.user_types[*t].ty, ns),
         _ => ty.is_primitive(),
