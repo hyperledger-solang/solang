@@ -1084,7 +1084,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     .build_gep(bin.context.i8_type(), data, &[offset], "start")
             };
 
-            let is_bytes = if let Type::Bytes(n) = value.ty() {
+            let is_bytes = if let Type::Bytes(n) = value.ty().unwrap_user_type(ns) {
                 n
             } else if value.ty() == Type::FunctionSelector {
                 ns.target.selector_length()
