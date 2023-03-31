@@ -2068,7 +2068,7 @@ impl Namespace {
         let mut size = BigInt::from(0u8);
         for field in &struct_type.definition(self).fields {
             let ty = field.ty.clone().unwrap_user_type(self);
-            if !ty.is_primitive() || matches!(ty, Type::Bytes(_)) {
+            if !ty.is_primitive() {
                 // If a struct contains a non-primitive type, we cannot calculate its
                 // size during compile time
                 if let Type::Struct(struct_ty) = &field.ty {
