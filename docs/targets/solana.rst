@@ -1,34 +1,99 @@
 Solana
 ======
 
-The Solana target requires `Solana <https://www.solana.com/>`_ v1.8.1.
+Solana Overview
+_______________
 
-Solana has the following differences to Ethereum Solidity:
+As the underlying Solana environment is different than that of Ethereum, Solidity inner workings
+have been modified to function properly. For example, A Solidity contract on Solana utilizes two accounts: a
+data account and a program account. The program account stores the contract's executable binary and owns
+the data account, which holds all the storage variables. On Ethereum a single account can store executable
+code and data.
 
-- The address type is 32 bytes, not 20 bytes. This is what Solana calls an "account"
-- An address literal has to be specified using the ``address"36VtvSbE6jVGGQytYWSaDPG7uZphaxEjpJHUUpuUbq4D"`` syntax
-- There is no ``ecrecover()`` builtin function, but there is a ``signatureVerify()`` function which can check ed25519
-  signatures.
-- There is no concept of gas, so there is no gas functions
-- Solana balance is stored in a ``uint64``, so *address* ``.balance``, ``.transfer()`` and ``.send()``
-  all use ``uint64`` rather than ``uint256``.
-- Solana uses different accounts for the program code, and the contract data.
-- Programs are upgradable. There is no need to implement upgrades in Solidity.
+Contract upgrades
++++++++++++++++++
+
+Provided that the data layout from a new contract is compatible with that of an old one, it is possible
+to update the binary in the program account and retain the same data, rendering
+contract upgrades implemented in Solidity unnecessary. Solana's CLI tool provides a command to both do
+an initial deploy of a program, and redeploy it later.:
+
+.. code-block:: bash
+
+    solana program deploy --program-id <KEYPAIR_FILEPATH> <PROGRAM_FILEPATH>
+
+where ``<KEYPAIR_FILEPATH>`` is the program's keypair json file and ``<PROGRAM_FILEPATH>``
+is the program binary ``.so`` file. For more information about redeploying a program,
+check `Solana's documentation <https://docs.solana.com/cli/deploy-a-program#redeploy-a-program>`_.
+
+Data types
+++++++++++
+
+- An account address consists of a 32-bytes key, which is represented by the ``address`` type. This data model
+  differs from Ethereum 20-bytes addresses.
+- Solana's virtual machine registers are 64-bit wide, so 64-bit integers ``uint64`` and ``int64`` are preferable over
+  ``uint256`` and ``int256``. An operation with types wider than 64-bits is split into multiple operations, making
+  it slower and consuming more compute units. This is the case, for instance, with multiplication, division and modulo
+  using `uint256`.
+- Likewise, all balances and values on Solana are 64-bit wide, so the builtin functions for
+  *address* ``.balance``, ``.transfer()`` and ``.send()`` use 64-bit integers.
+- An address literal has to be specified using the ``address"36VtvSbE6jVGGQytYWSaDPG7uZphaxEjpJHUUpuUbq4D"`` syntax.
+- Ethereum syntax for addresses ``0xE0f5206BBD039e7b0592d8918820024e2a7437b9`` is not supported.
+
+Runtime
++++++++
+
+- The Solana target requires `Solana <https://www.solana.com/>`_ v1.8.1.
+- Function selectors are eight bytes wide and known as *discriminators*.
 - Solana provides different builtins, e.g. ``tx.program_id`` and ``tx.accounts``.
-- Function selectors are eight bytes and known as *discriminators*.
 
-This is how to build your Solidity for Solana:
+Compute budget
+++++++++++++++
+
+On Ethereum, when calling a smart contract function, one needs to specify the amount of gas the operation is allowed
+to use. Gas serves to pay for a contract execution on chain and can be a way for giving a contract priority execution
+when extra gas is offered in a transaction. Each EVM instruction has an associated gas value, which translates to real
+ETH cost. Provided that one can afford all the gas expenses, there is no upper boundary for the amount of gas limit
+one can provide in a transaction, so Solidity for Ethereum has gas builtins, like ``gasleft``, ``block.gaslimit``,
+``tx.gasprice`` or the Yul ``gas()`` builtin, which returns the amount of gas left for execution.
+
+On the other hand, Solana is optimized for low latency and high transaction throughput and has an equivalent concept to
+gas: compute unit. Every smart contract function is allowed the same quantity of compute units (currently that
+value is 200k), and every instruction of a contract consumes exactly one compute unit. There is no need to provide
+an amount of compute units for a transaction and they are not charged, except when one wants priority execution on
+chain, in which case one would pay per compute unit consumed. Therefore, functions for gas are not available on
+Solidity for Solana.
+
+
+Solidity for Solana incompatibilities with Solidity for Ethereum
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+- ``msg.sender`` is :ref:`not available on Solana <msg_sender_solana>`.
+- There is no ``ecrecover()`` builtin function because Solana does not use the ECDSA algorithm, but there
+  is a ``signatureVerify()`` function, which can check ed25519 signatures. As a consequence, it is not possible to
+  recover a signer from a signature.
+- Try-catch statements do not work on Solana. If any external call or contract creation fails, the runtime will
+  halt execution and revert the entire transaction.
+- Error definitions and reverts with error messages are not yet working for Solana.
+- Value transfer with function call :ref:`does not work <value_transfer>`.
+- Many Yul builtins are not available, as specified in the :ref:`availability table <yul_builtins>`.
+- External calls on Solana require that accounts be specified, as in :ref:`this example <solana_external_call>`.
+- The ERC-20 interface is not compatible with Solana at the moment.
+
+Build your Solidity for Solana
+______________________________
+
 
 .. code-block:: bash
 
   solang compile --target solana flipper.sol -v
 
-This will produce two files called `flipper.json` and `flipper.so`. The former is an Anchor style IDL file and the latter is
+This will produce two files called ``flipper.json`` and ``flipper.so``. The former is an Anchor style IDL file and the latter is
 the ELF BPF shared object containing the program. For each contract in the source code, Solang will create both an IDL file
 and a binary file.
 
 Each program will need to be deployed to a program_id. Usually, the program_id is a well-known account which is specified
-in the Solidity source code using the `@program_id("F1ipperKF9EfD821ZbbYjS319LXYiBmjhzkkf5a26rC")` annotation on the contract.
+in the Solidity source code using the ``@program_id("F1ipperKF9EfD821ZbbYjS319LXYiBmjhzkkf5a26rC")`` annotation on the contract.
 A private key for the account is needed to deploy. You can generate your own private key using the command line tool
 ``solana-keygen``.
 
@@ -43,7 +108,7 @@ After deploying the program, you can start on the client side, which needs the a
 
     npm install @project-serum/anchor
 
-Write the following javascript to a file called `flipper.js`.
+Write the following javascript to a file called ``flipper.js``.
 
 .. code-block:: javascript
 
@@ -85,7 +150,7 @@ Write the following javascript to a file called `flipper.js`.
         console.log(`state: ${val2}`);
     })();
 
-Now you'll have to set the `ANCHOR_WALLET` and `ANCHOR_PROVIDER_URL` environment variables to the correct values in order to run the example.
+Now you'll have to set the ``ANCHOR_WALLET`` and ``ANCHOR_PROVIDER_URL`` environment variables to the correct values in order to run the example.
 
 .. code-block:: bash
 
@@ -120,8 +185,8 @@ _____________________________________
 It is possible to call `Anchor Programs <https://github.com/coral-xyz/anchor>`_
 from Solidity. You first have to generate a Solidity interface file from the IDL file using
 the :ref:`idl_command`. Then, import the Solidity file in your Solidity using the
-``import "...";`` syntax. Say you have an anchor program called `bobcat` with a
-function `pounce`, you can call it like so:
+``import "...";`` syntax. Say you have an anchor program called ``bobcat`` with a
+function ``pounce``, you can call it like so:
 
 .. include:: ../examples/solana/call_anchor.sol
   :code: solidity
@@ -139,7 +204,7 @@ known account. The account can be specified in the source code using an annotati
 
 .. note::
 
-    The program_id `Foo5mMfYo5RhRcWa4NZ2bwFn4Kdhe8rNK5jchxsKrivA` was generated using
+    The program_id ``Foo5mMfYo5RhRcWa4NZ2bwFn4Kdhe8rNK5jchxsKrivA`` was generated using
     the command line:
 
     .. code-block:: bash
@@ -196,7 +261,7 @@ ______________________________________________
 
 The Solidity language on Ethereum allows value transfers with an external call
 or constructor, using the ``auction.bid{value: 501}()`` syntax.
-Solana Cross Program Invocation (CPI) does not support this. This means that:
+Solana Cross Program Invocation (CPI) does not support this, which means that:
 
  - Specifying ``value:`` on an external call or constructor is not permitted
  - The ``payable`` keyword has no effect
@@ -360,6 +425,9 @@ comments explaining how it should be used.
 There is an example in our integration tests of how this should be used. See
 `token.sol <https://github.com/hyperledger/solang/blob/main/integration/solana/token.sol>`_ and
 `token.spec.ts <https://github.com/hyperledger/solang/blob/main/integration/solana/token.spec.ts>`_.
+
+
+.. _system_instruction_library:
 
 System Instructions
 +++++++++++++++++++
