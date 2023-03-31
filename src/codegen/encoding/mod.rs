@@ -348,35 +348,27 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        let size = if let Some(no_padding_size) = ns.calculate_struct_non_padded_size(struct_ty) {
-            let padded_size = struct_ty.struct_padded_size(ns);
-            // If the size without padding equals the size with padding, memcpy this struct directly.
-            if padded_size.eq(&no_padding_size) {
-                let size = Expression::NumberLiteral(Codegen, Uint(32), no_padding_size);
-                let dest_address = Expression::AdvancePointer {
-                    pointer: buffer.clone().into(),
-                    bytes_offset: offset.into(),
-                };
-                cfg.add(
-                    vartab,
-                    Instr::MemCopy {
-                        source: expr.clone(),
-                        destination: dest_address,
-                        bytes: size.clone(),
-                    },
-                );
-                return size;
-            } else {
-                // This struct has a fixed size, but we can't memcpy it due to its padding in memory.
-                Some(Expression::NumberLiteral(
-                    Codegen,
-                    Uint(32),
-                    no_padding_size,
-                ))
-            }
-        } else {
-            None
-        };
+        let size = ns.calculate_struct_non_padded_size(struct_ty);
+        // If the size without padding equals the size with padding, memcpy this struct directly.
+        if let Some(no_padding_size) = size.as_ref().filter(|no_pad| {
+            *no_pad == &struct_ty.struct_padded_size(ns) && allow_memcpy(&expr.ty(), ns)
+        }) {
+            let size = Expression::NumberLiteral(Codegen, Uint(32), no_padding_size.clone());
+            let dest_address = Expression::AdvancePointer {
+                pointer: buffer.clone().into(),
+                bytes_offset: offset.into(),
+            };
+            cfg.add(
+                vartab,
+                Instr::MemCopy {
+                    source: expr.clone(),
+                    destination: dest_address,
+                    bytes: size.clone(),
+                },
+            );
+            return size;
+        }
+        let size = size.map(|no_pad| Expression::NumberLiteral(Codegen, Uint(32), no_pad));
 
         let qty = struct_ty.definition(ns).fields.len();
         let first_ty = struct_ty.definition(ns).fields[0].ty.clone();
@@ -424,7 +416,7 @@ pub(super) trait AbiEncoding {
     ) -> Expression {
         assert!(!dims.is_empty());
 
-        if allow_direct_copy(array_ty, elem_ty, dims, ns) {
+        if allow_memcpy(array_ty, ns) {
             // Calculate number of elements
             let (bytes_size, offset, size_length) =
                 if matches!(dims.last(), Some(&ArrayLength::Fixed(_))) {
@@ -789,7 +781,7 @@ pub(super) trait AbiEncoding {
         cfg: &mut ControlFlowGraph,
     ) -> (Expression, Expression) {
         // Checks if we can memcpy the elements from the buffer directly to the allocated array
-        if allow_direct_copy(array_ty, elem_ty, dims, ns) {
+        if allow_memcpy(array_ty, ns) {
             // Calculate number of elements
             let (array_bytes_size, size_width, offset, var_no) =
                 if matches!(dims.last(), Some(&ArrayLength::Fixed(_))) {
@@ -1058,48 +1050,38 @@ pub(super) trait AbiEncoding {
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> (Expression, Expression) {
-        let size = if let Some(no_padding_size) = ns.calculate_struct_non_padded_size(struct_ty) {
-            let padded_size = struct_ty.struct_padded_size(ns);
-            // If the size without padding equals the size with padding,
-            // we can memcpy this struct directly.
-            if padded_size.eq(&no_padding_size) {
-                let size = Expression::NumberLiteral(Codegen, Uint(32), no_padding_size);
-                validator.validate_offset_plus_size(&offset, &size, ns, vartab, cfg);
-                let source_address = Expression::AdvancePointer {
-                    pointer: Box::new(buffer.clone()),
-                    bytes_offset: Box::new(offset),
-                };
-                let allocated_struct = vartab.temp_anonymous(expr_ty);
-                cfg.add(
-                    vartab,
-                    Instr::Set {
-                        loc: Codegen,
-                        res: allocated_struct,
-                        expr: Expression::StructLiteral(Codegen, expr_ty.clone(), vec![]),
-                    },
-                );
-                let struct_var = Expression::Variable(Codegen, expr_ty.clone(), allocated_struct);
-                cfg.add(
-                    vartab,
-                    Instr::MemCopy {
-                        source: source_address,
-                        destination: struct_var.clone(),
-                        bytes: size.clone(),
-                    },
-                );
-                return (struct_var, size);
-            } else {
-                // This struct has a fixed size, but we cannot memcpy it due to
-                // its padding in memory
-                Some(Expression::NumberLiteral(
-                    Codegen,
-                    Uint(32),
-                    no_padding_size,
-                ))
-            }
-        } else {
-            None
+        let size = ns.calculate_struct_non_padded_size(struct_ty);
+        // If the size without padding equals the size with padding, memcpy this struct directly.
+        if let Some(no_padding_size) = size.as_ref().filter(|no_pad| {
+            *no_pad == &struct_ty.struct_padded_size(ns) && allow_memcpy(expr_ty, ns)
+        }) {
+            let size = Expression::NumberLiteral(Codegen, Uint(32), no_padding_size.clone());
+            validator.validate_offset_plus_size(&offset, &size, ns, vartab, cfg);
+            let source_address = Expression::AdvancePointer {
+                pointer: Box::new(buffer.clone()),
+                bytes_offset: Box::new(offset),
+            };
+            let allocated_struct = vartab.temp_anonymous(expr_ty);
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    loc: Codegen,
+                    res: allocated_struct,
+                    expr: Expression::StructLiteral(Codegen, expr_ty.clone(), vec![]),
+                },
+            );
+            let struct_var = Expression::Variable(Codegen, expr_ty.clone(), allocated_struct);
+            cfg.add(
+                vartab,
+                Instr::MemCopy {
+                    source: source_address,
+                    destination: struct_var.clone(),
+                    bytes: size.clone(),
+                },
+            );
+            return (struct_var, size);
         };
+        let size = size.map(|no_pad| Expression::NumberLiteral(Codegen, Uint(32), no_pad));
 
         let struct_tys = struct_ty
             .definition(ns)
@@ -1718,37 +1700,30 @@ fn array_outer_length(
     Expression::Variable(Codegen, Uint(32), array_length)
 }
 
-/// Check if we can MemCpy elements of an array to/from a buffer
-fn allow_direct_copy(
-    array_ty: &Type,
-    elem_ty: &Type,
-    dims: &[ArrayLength],
-    ns: &Namespace,
-) -> bool {
-    let type_direct_copy: bool = if let Type::Struct(struct_ty) = elem_ty {
-        if let Some(no_padded_size) = ns.calculate_struct_non_padded_size(struct_ty) {
-            let padded_size = struct_ty.struct_padded_size(ns);
-            // This remainder tells us if padding is needed between the elements of an array
-            let remainder = padded_size.mod_floor(&elem_ty.struct_elem_alignment(ns));
-
-            no_padded_size.eq(&padded_size) && ns.target == Target::Solana && remainder.is_zero()
-        } else {
+/// Check if we can MemCpy a type to/from a buffer
+fn allow_memcpy(ty: &Type, ns: &Namespace) -> bool {
+    match ty {
+        Type::Struct(struct_ty) => {
+            if let Some(no_padded_size) = ns.calculate_struct_non_padded_size(struct_ty) {
+                let padded_size = struct_ty.struct_padded_size(ns);
+                // This remainder tells us if padding is needed between the elements of an array
+                let remainder = padded_size.mod_floor(&ty.struct_elem_alignment(ns));
+                let ty_allowed = struct_ty
+                    .definition(ns)
+                    .fields
+                    .iter()
+                    .all(|f| allow_memcpy(&f.ty, ns));
+                return no_padded_size == padded_size && remainder.is_zero() && ty_allowed;
+            }
             false
         }
-    } else if let Type::Bytes(n) = elem_ty {
-        // When n >=2, the bytes must be reversed
-        *n < 2
-    } else {
-        elem_ty.is_primitive()
-    };
-
-    if array_ty.is_dynamic(ns) {
-        // If this is a dynamic array, we can only MemCpy if its elements are of
-        // any primitive type and we don't need to index it.
-        dims.len() == 1 && type_direct_copy
-    } else {
-        // If the array is not dynamic, we can MemCpy elements if their are primitive.
-        type_direct_copy
+        Type::Bytes(n) => *n < 2, // When n >= 2, the bytes must be reversed
+        // If this is a dynamic array, we mempcy if its elements allow it and we don't need to index it.
+        Type::Array(t, dims) if ty.is_dynamic(ns) => dims.len() == 1 && allow_memcpy(t, ns),
+        // If the array is not dynamic, we mempcy if its elements allow it
+        Type::Array(t, _) => allow_memcpy(t, ns),
+        Type::UserType(t) => allow_memcpy(&ns.user_types[*t].ty, ns),
+        _ => ty.is_primitive(),
     }
 }
 

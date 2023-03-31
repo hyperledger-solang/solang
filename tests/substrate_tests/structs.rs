@@ -593,3 +593,24 @@ fn struct_struct_in_init_and_return() {
 
     runtime.function("test", Vec::new());
 }
+
+#[test]
+fn encode_decode_bytes_in_field() {
+    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
+    struct Foo([u8; 4]);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract encode_decode_bytes_in_field {
+            struct foo { bytes4 f1; }
+            function test() public pure returns(foo) {
+                foo f = abi.decode(hex"41424344", (foo));
+                assert(abi.encode(f) == hex"41424344");
+                return f;
+            }
+        }"##,
+    );
+
+    runtime.function("test", vec![]);
+    assert_eq!(runtime.vm.output, Foo([0x41, 0x42, 0x43, 0x44]).encode())
+}
