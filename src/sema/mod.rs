@@ -10,7 +10,8 @@ use crate::sema::unused_variable::{check_unused_events, check_unused_namespace_v
 use num_bigint::BigInt;
 use solang_parser::{
     doccomment::{parse_doccomments, DocComment},
-    parse, pt,
+    parse,
+    pt::{self, CodeLocation},
 };
 use std::ffi::OsStr;
 
@@ -211,9 +212,9 @@ fn resolve_import(
     ns: &mut ast::Namespace,
 ) {
     let filename = match import {
-        pt::Import::Plain(f, _) => f,
-        pt::Import::GlobalSymbol(f, _, _) => f,
-        pt::Import::Rename(f, _, _) => f,
+        pt::Import::Plain(f, _)
+        | pt::Import::GlobalSymbol(f, _, _)
+        | pt::Import::Rename(f, _, _) => f,
     };
 
     let os_filename = OsStr::new(&filename.string);

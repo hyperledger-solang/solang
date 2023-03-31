@@ -83,7 +83,7 @@ impl<'a> CommonSubExpressionTracker<'a> {
         self.common_subexpressions.push(CommonSubexpression {
             in_cfg: node.available_variable.is_available(),
             var_no: node.available_variable.get_var_number(),
-            var_loc: node.available_variable.loc(),
+            var_loc: node.available_variable.loc_opt(),
             instantiated: false,
             var_type: exp.ty(),
             block: node.block,

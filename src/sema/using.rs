@@ -259,7 +259,7 @@ pub(crate) fn using_decl(
             UsingList::Functions(res)
         }
 
-        pt::UsingList::Error() => unimplemented!(),
+        pt::UsingList::Error => unimplemented!(),
     };
 
     let mut file_no = Some(file_no);

@@ -240,13 +240,13 @@ fn type_to_storage_layout(
     registry: &PortableRegistryBuilder,
 ) -> Layout<PortableForm> {
     let ty = registry.get(key).unwrap();
-    match ty.type_def() {
+    match &ty.type_def {
         TypeDef::Composite(inner) => Layout::Struct(StructLayout::new(
-            ty.path().ident().unwrap_or_default(),
-            inner.fields().iter().map(|field| {
+            ty.path.ident().unwrap_or_default(),
+            inner.fields.iter().map(|field| {
                 FieldLayout::new(
-                    field.name().map(ToString::to_string).unwrap_or_default(),
-                    type_to_storage_layout(field.ty().id(), root, registry),
+                    field.name.clone().unwrap_or_default(),
+                    type_to_storage_layout(field.ty.id, root, registry),
                 )
             }),
         )),
@@ -290,7 +290,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .map(|p| {
                 let ty = resolve_ast(&p.ty, ns, &mut registry);
 
-                let path = registry.get(ty).unwrap().path().clone();
+                let path = registry.get(ty).unwrap().path.clone();
                 let spec = TypeSpec::new(ty.into(), path);
 
                 MessageParamSpec::new(p.name_as_str().to_string())
@@ -340,7 +340,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             0 => None,
             1 => {
                 let ty = resolve_ast(&f.returns[0].ty, ns, &mut registry);
-                let path = registry.get(ty).unwrap().path().clone();
+                let path = registry.get(ty).unwrap().path.clone();
                 Some(TypeSpec::new(ty.into(), path))
             }
             _ => {
@@ -364,7 +364,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                     TypeDef::Tuple(t),
                     Default::default(),
                 ));
-                let path = registry.get(ty).unwrap().path().clone();
+                let path = registry.get(ty).unwrap().path.clone();
                 Some(TypeSpec::new(ty.into(), path))
             }
         };
@@ -374,7 +374,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .iter()
             .map(|p| {
                 let ty = resolve_ast(&p.ty, ns, &mut registry);
-                let path = registry.get(ty).unwrap().path().clone();
+                let path = registry.get(ty).unwrap().path.clone();
                 let spec = TypeSpec::new(ty.into(), path);
 
                 MessageParamSpec::new(p.name_as_str().to_string())
@@ -426,7 +426,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .iter()
             .map(|p| {
                 let ty = resolve_ast(&p.ty, ns, &mut registry);
-                let path = registry.get(ty).unwrap().path().clone();
+                let path = registry.get(ty).unwrap().path.clone();
                 let spec = TypeSpec::new(ty.into(), path);
                 EventParamSpec::new(p.name_as_str().into())
                     .of_type(spec)
@@ -482,7 +482,13 @@ pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
     let compiler = SourceCompiler::new(Compiler::Solang, version);
     let code_hash: [u8; 32] = hash.as_bytes().try_into().unwrap();
     let source_wasm = SourceWasm::new(code.to_vec());
-    let source = Source::new(Some(source_wasm), CodeHash(code_hash), language, compiler);
+    let source = Source::new(
+        Some(source_wasm),
+        CodeHash(code_hash),
+        language,
+        compiler,
+        None,
+    );
 
     let mut builder = Contract::builder();
     builder.name(&ns.contracts[contract_no].name);

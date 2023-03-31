@@ -38,7 +38,7 @@ pub async fn start_server(target: Target, matches: &ArgMatches) -> ! {
 
     if let Some(paths) = matches.get_many::<PathBuf>("IMPORTPATH") {
         for path in paths {
-            importpaths.push(path.to_path_buf());
+            importpaths.push(path.clone());
         }
     }
 
@@ -1054,6 +1054,7 @@ impl LanguageServer for SolangServer {
                     trigger_characters: Some(vec![".".to_string()]),
                     all_commit_characters: None,
                     work_done_progress_options: Default::default(),
+                    completion_item: None,
                 }),
                 signature_help_provider: Some(SignatureHelpOptions {
                     trigger_characters: None,
@@ -1063,7 +1064,7 @@ impl LanguageServer for SolangServer {
                 document_highlight_provider: None,
                 workspace_symbol_provider: Some(OneOf::Left(true)),
                 execute_command_provider: Some(ExecuteCommandOptions {
-                    commands: vec!["dummy.do_something".to_string()],
+                    commands: vec![],
                     work_done_progress_options: Default::default(),
                 }),
                 workspace: Some(WorkspaceServerCapabilities {
