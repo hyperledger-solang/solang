@@ -101,7 +101,7 @@ pub fn find_undefined_variables_in_expression(
                             && !*modified
                             && !matches!(var.ty, Type::Array(..))
                         {
-                            add_diagnostic(var, pos, &exp.loc(), ctx.diagnostics);
+                            add_diagnostic(var, *pos, &exp.loc(), ctx.diagnostics);
                         }
                     }
                 }
@@ -120,7 +120,7 @@ pub fn find_undefined_variables_in_expression(
 /// error messages in Diagnotics
 fn add_diagnostic(
     var: &symtable::Variable,
-    var_no: &usize,
+    var_no: usize,
     expr_loc: &Loc,
     diagnostics: &mut HashMap<usize, Diagnostic>,
 ) {
@@ -130,20 +130,15 @@ fn add_diagnostic(
         return;
     }
 
-    if !diagnostics.contains_key(var_no) {
-        diagnostics.insert(
-            *var_no,
-            Diagnostic {
-                level: Level::Error,
-                ty: ErrorType::TypeError,
-                loc: var.id.loc,
-                message: format!("Variable '{}' is undefined", var.id.name),
-                notes: vec![],
-            },
-        );
-    }
+    diagnostics.entry(var_no).or_insert(Diagnostic {
+        level: Level::Error,
+        ty: ErrorType::TypeError,
+        loc: var.id.loc,
+        message: format!("Variable '{}' is undefined", var.id.name),
+        notes: vec![],
+    });
 
-    let diag = diagnostics.get_mut(var_no).unwrap();
+    let diag = diagnostics.get_mut(&var_no).unwrap();
     diag.notes.push(Note {
         loc: *expr_loc,
         message: "Variable read before being defined".to_string(),

@@ -37,7 +37,7 @@ pub(crate) fn statement(
         }
 
         YulStatement::BuiltInCall(loc, _, builtin_ty, args) => {
-            let expr = process_builtin(loc, builtin_ty, args, contract_no, ns, vartab, cfg, opt);
+            let expr = process_builtin(loc, *builtin_ty, args, contract_no, ns, vartab, cfg, opt);
             assert_eq!(expr, Expression::Poison);
         }
 

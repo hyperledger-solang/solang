@@ -16,7 +16,7 @@ pub(crate) fn handle_array_assign(
     right: Expression,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
-    pos: &usize,
+    pos: usize,
 ) -> Expression {
     if let Expression::AllocDynamicBytes(loc, ty @ Type::Array(..), size, option) = right {
         // If we re-allocate the pointer, create a new temp variable to hold the new array length
@@ -31,7 +31,7 @@ pub(crate) fn handle_array_assign(
             },
         );
 
-        cfg.array_lengths_temps.insert(*pos, temp_res);
+        cfg.array_lengths_temps.insert(pos, temp_res);
 
         Expression::AllocDynamicBytes(
             loc,
@@ -45,10 +45,10 @@ pub(crate) fn handle_array_assign(
             if cfg.array_lengths_temps.contains_key(right_res) {
                 let to_update = cfg.array_lengths_temps[right_res];
 
-                cfg.array_lengths_temps.insert(*pos, to_update);
+                cfg.array_lengths_temps.insert(pos, to_update);
             } else {
                 // If the right hand side doesn't have a temp, it must be a function parameter or a struct member.
-                cfg.array_lengths_temps.remove(pos);
+                cfg.array_lengths_temps.remove(&pos);
             }
         }
 
