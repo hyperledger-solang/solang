@@ -10,12 +10,10 @@ use inkwell::values::{
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use num_traits::ToPrimitive;
-use solang_parser::pt;
 
 use crate::emit::functions::{abort_if_value_transfer, emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};
 
-mod dispatch;
 mod storage;
 pub(super) mod target;
 
@@ -151,7 +149,7 @@ impl SubstrateTarget {
         emit_functions(&mut target, &mut binary, contract, ns);
 
         target.emit_deploy(&mut binary, contract, ns);
-        target.emit_call(&binary, contract, ns);
+        target.emit_call(&binary, ns);
 
         binary.internalize(&[
             "deploy",
@@ -361,7 +359,7 @@ impl SubstrateTarget {
         binary.builder.build_unreachable();
     }
 
-    fn emit_call(&mut self, binary: &Binary, contract: &ast::Contract, ns: &ast::Namespace) {
+    fn emit_call(&mut self, binary: &Binary, ns: &ast::Namespace) {
         // create call function
         let function = binary.module.add_function(
             "call",
