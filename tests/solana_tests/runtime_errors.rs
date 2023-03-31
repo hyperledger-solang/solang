@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{build_solidity_with_options, BorshToken};
+use crate::{build_solidity, BorshToken};
 use num_bigint::BigInt;
 
 #[test]
 fn runtime_errors() {
-    let mut vm = build_solidity_with_options(
+    let mut vm = build_solidity(
         r#"
 contract RuntimeErrors {
     bytes b = hex"0000_00fa";
@@ -71,7 +71,7 @@ contract RuntimeErrors {
         uint128 x = address(this).balance;
         //print("sesa");
         print("x = {}".format(x));
-        
+
     }
 
     function i_will_revert() public {
@@ -140,8 +140,6 @@ contract calle_contract {
 }
 
  "#,
-        true,
-        true,
     );
 
     vm.set_program(0);

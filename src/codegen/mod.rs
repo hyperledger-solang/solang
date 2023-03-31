@@ -86,7 +86,6 @@ pub struct Options {
     pub constant_folding: bool,
     pub strength_reduce: bool,
     pub vector_to_slice: bool,
-    pub math_overflow_check: bool,
     pub common_subexpression_elimination: bool,
     pub generate_debug_information: bool,
     pub opt_level: OptimizationLevel,
@@ -101,7 +100,6 @@ impl Default for Options {
             constant_folding: true,
             strength_reduce: true,
             vector_to_slice: true,
-            math_overflow_check: false,
             common_subexpression_elimination: true,
             generate_debug_information: false,
             opt_level: OptimizationLevel::Default,
@@ -804,7 +802,7 @@ impl Expression {
             },
 
             (Type::Uint(from_len), Type::Address(_)) | (Type::Int(from_len), Type::Address(_)) => {
-                let address_to_int = if from.is_signed_int() {
+                let address_to_int = if from.is_signed_int(ns) {
                     Type::Int(address_bits)
                 } else {
                     Type::Uint(address_bits)
@@ -814,7 +812,7 @@ impl Expression {
                     Ordering::Greater => {
                         Expression::Trunc(self.loc(), address_to_int, Box::new(self.clone()))
                     }
-                    Ordering::Less if from.is_signed_int() => {
+                    Ordering::Less if from.is_signed_int(ns) => {
                         Expression::ZeroExt(self.loc(), to.clone(), Box::new(self.clone()))
                     }
                     Ordering::Less => {
@@ -826,7 +824,7 @@ impl Expression {
                 Expression::Cast(self.loc(), to.clone(), Box::new(expr))
             }
             (Type::Address(_), Type::Uint(to_len)) | (Type::Address(_), Type::Int(to_len)) => {
-                let address_to_int = if to.is_signed_int() {
+                let address_to_int = if to.is_signed_int(ns) {
                     Type::Int(address_bits)
                 } else {
                     Type::Uint(address_bits)
@@ -837,7 +835,7 @@ impl Expression {
                 // now resize int to request size with sign extension etc
                 match to_len.cmp(&address_bits) {
                     Ordering::Less => Expression::Trunc(self.loc(), to.clone(), Box::new(expr)),
-                    Ordering::Greater if to.is_signed_int() => {
+                    Ordering::Greater if to.is_signed_int(ns) => {
                         Expression::ZeroExt(self.loc(), to.clone(), Box::new(expr))
                     }
                     Ordering::Greater => {

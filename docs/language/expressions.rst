@@ -34,8 +34,7 @@ x :superscript:`y`. This can only be done for unsigned types.
   uint64 thousand = 1000;
   uint64 billion = thousand ** 3;
 
-Overflow checking is limited to types of 64 bits and smaller, if the `--math-overflow` command
-line argument is specified. No overflow checking is generated in `unchecked` blocks, like so:
+No overflow checking is generated in `unchecked` blocks, like so:
 
 .. include:: ../examples/expression_unchecked.sol
   :code: solidity

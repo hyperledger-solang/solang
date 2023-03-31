@@ -1421,23 +1421,25 @@ impl Type {
         }
     }
 
-    pub fn is_signed_int(&self) -> bool {
+    pub fn is_signed_int(&self, ns: &Namespace) -> bool {
         match self {
             Type::Int(_) => true,
-            Type::Ref(r) => r.is_signed_int(),
-            Type::StorageRef(_, r) => r.is_signed_int(),
+            Type::Ref(r) => r.is_signed_int(ns),
+            Type::StorageRef(_, r) => r.is_signed_int(ns),
+            Type::UserType(user) => ns.user_types[*user].ty.is_signed_int(ns),
             _ => false,
         }
     }
 
-    pub fn is_integer(&self) -> bool {
+    pub fn is_integer(&self, ns: &Namespace) -> bool {
         match self {
             Type::Int(_) => true,
             Type::Uint(_) => true,
             Type::Value => true,
             Type::Bytes(1) => true,
-            Type::Ref(r) => r.is_integer(),
-            Type::StorageRef(_, r) => r.is_integer(),
+            Type::Ref(r) => r.is_integer(ns),
+            Type::StorageRef(_, r) => r.is_integer(ns),
+            Type::UserType(user) => ns.user_types[*user].ty.is_integer(ns),
             _ => false,
         }
     }

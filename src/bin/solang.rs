@@ -180,13 +180,6 @@ fn main() {
                             .display_order(5),
                     )
                     .arg(
-                        Arg::new("MATHOVERFLOW")
-                            .help("Enable math overflow checking")
-                            .long("math-overflow")
-                            .action(ArgAction::SetTrue)
-                            .display_order(6),
-                    )
-                    .arg(
                         Arg::new("LOGAPIRETURNS")
                             .help("Log the return codes of runtime API calls in the environment")
                             .long("log-api-return-codes")
@@ -403,8 +396,6 @@ fn compile(matches: &ArgMatches) {
         eprintln!("info: Solang version {}", env!("SOLANG_VERSION"));
     }
 
-    let math_overflow_check = *matches.get_one("MATHOVERFLOW").unwrap();
-
     let generate_debug_info = *matches.get_one("GENERATEDEBUGINFORMATION").unwrap();
 
     let log_api_return_codes = *matches.get_one("LOGAPIRETURNS").unwrap();
@@ -426,7 +417,6 @@ fn compile(matches: &ArgMatches) {
         constant_folding: *matches.get_one("CONSTANTFOLDING").unwrap(),
         strength_reduce: *matches.get_one("STRENGTHREDUCE").unwrap(),
         vector_to_slice: *matches.get_one("VECTORTOSLICE").unwrap(),
-        math_overflow_check,
         generate_debug_information: generate_debug_info,
         common_subexpression_elimination: *matches
             .get_one("COMMONSUBEXPRESSIONELIMINATION")

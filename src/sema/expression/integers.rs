@@ -185,7 +185,7 @@ pub fn bigint_to_expression(
 
     if let ResolveTo::Type(resolve_to) = resolve_to {
         if *resolve_to != Type::Unresolved {
-            if !resolve_to.is_integer() {
+            if !resolve_to.is_integer(ns) {
                 diagnostics.push(Diagnostic::cast_error(
                     *loc,
                     format!("expected '{}', found integer", resolve_to.to_string(ns)),

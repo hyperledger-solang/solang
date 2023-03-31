@@ -377,7 +377,7 @@ fn multiply_values(
         .map(|(l, r)| {
             let mut known_bits = BitArray::new([0u8; 32]);
 
-            if ty.is_signed_int() {
+            if ty.is_signed_int(ns) {
                 match (l.sign(), r.sign()) {
                     ((true, left_sign), (true, right_sign)) => {
                         let left = if left_sign {
@@ -706,7 +706,7 @@ fn equal_values(
             let mut known_bits = BitArray::new([0u8; 32]);
             let mut value = BitArray::new([0u8; 32]);
 
-            let could_be_equal = if left_expr.ty().is_signed_int() {
+            let could_be_equal = if left_expr.ty().is_signed_int(ns) {
                 BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
                     >= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                     && BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
@@ -747,7 +747,7 @@ fn not_equal_values(
             let mut known_bits = BitArray::new([0u8; 32]);
             let mut value = BitArray::new([0u8; 32]);
 
-            let could_be_equal = if left_expr.ty().is_signed_int() {
+            let could_be_equal = if left_expr.ty().is_signed_int(ns) {
                 BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
                     >= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
                     && BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())

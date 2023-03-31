@@ -123,7 +123,7 @@ pub fn expression(
         } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
-            if ty.is_signed_int() {
+            if ty.is_signed_int(ns) {
                 Expression::SignedDivide(*loc, ty.clone(), Box::new(l), Box::new(r))
             } else {
                 Expression::UnsignedDivide(*loc, ty.clone(), Box::new(l), Box::new(r))
@@ -137,7 +137,7 @@ pub fn expression(
         } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
-            if ty.is_signed_int() {
+            if ty.is_signed_int(ns) {
                 Expression::SignedModulo(*loc, ty.clone(), Box::new(l), Box::new(r))
             } else {
                 Expression::UnsignedModulo(*loc, ty.clone(), Box::new(l), Box::new(r))
@@ -226,16 +226,17 @@ pub fn expression(
         ast::Expression::More { loc, left, right } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
+
             Expression::More {
                 loc: *loc,
-                signed: l.ty().is_signed_int(),
+                signed: l.ty().is_signed_int(ns),
                 left: Box::new(l),
                 right: Box::new(r),
             }
         }
         ast::Expression::MoreEqual { loc, left, right } => Expression::MoreEqual {
             loc: *loc,
-            signed: left.ty().is_signed_int(),
+            signed: left.ty().is_signed_int(ns),
             left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
             right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
         },
@@ -244,14 +245,14 @@ pub fn expression(
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
             Expression::Less {
                 loc: *loc,
-                signed: l.ty().is_signed_int(),
+                signed: l.ty().is_signed_int(ns),
                 left: Box::new(l),
                 right: Box::new(r),
             }
         }
         ast::Expression::LessEqual { loc, left, right } => Expression::LessEqual {
             loc: *loc,
-            signed: left.ty().is_signed_int(),
+            signed: left.ty().is_signed_int(ns),
             left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
             right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
         },

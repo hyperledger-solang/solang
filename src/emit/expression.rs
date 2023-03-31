@@ -121,8 +121,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
-            if bin.options.math_overflow_check && !*unchecked {
-                let signed = l.ty().is_signed_int();
+            if !unchecked {
+                let signed = l.ty().is_signed_int(ns);
                 build_binary_op_with_overflow_check(
                     target,
                     bin,
@@ -143,8 +143,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let left = expression(target, bin, l, vartab, function, ns).into_int_value();
             let right = expression(target, bin, r, vartab, function, ns).into_int_value();
 
-            if bin.options.math_overflow_check && !*unchecked {
-                let signed = l.ty().is_signed_int();
+            if !unchecked {
+                let signed = l.ty().is_signed_int(ns);
                 build_binary_op_with_overflow_check(
                     target,
                     bin,
@@ -172,7 +172,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 *unchecked,
                 left,
                 right,
-                res_ty.is_signed_int(),
+                res_ty.is_signed_int(ns),
                 ns,
                 *loc,
             )
@@ -653,7 +653,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin,
                 *unchecked,
                 bits,
-                res_ty.is_signed_int(),
+                res_ty.is_signed_int(ns),
                 o,
                 ns,
                 *loc,
@@ -670,7 +670,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             // Load the result pointer
             let res = bin.builder.build_load(left.get_type(), o, "");
 
-            if !bin.options.math_overflow_check || *unchecked || ns.target != Target::Solana {
+            if *unchecked || ns.target.is_substrate() {
                 // In Substrate, overflow case will hit an unreachable expression, so no additional checks are needed.
                 res
             } else {

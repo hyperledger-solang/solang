@@ -67,7 +67,6 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
         codegen::codegen(
             &mut ns,
             &codegen::Options {
-                math_overflow_check: false,
                 opt_level: codegen::OptimizationLevel::Default,
                 ..Default::default()
             },
