@@ -11,7 +11,7 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use num_traits::ToPrimitive;
 
-use crate::emit::functions::{abort_if_value_transfer, emit_functions, emit_initializer};
+use crate::emit::functions::{emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};
 
 mod storage;
@@ -189,18 +189,10 @@ impl SubstrateTarget {
         &self,
         binary: &Binary<'a>,
         function: FunctionValue,
-        abort_value_transfers: bool,
-        ns: &ast::Namespace,
-        function_name: &str,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = binary.context.append_basic_block(function, "entry");
 
         binary.builder.position_at_end(entry);
-
-        // after copying stratch, first thing to do is abort value transfers if constructors not payable
-        if abort_value_transfers {
-            abort_if_value_transfer(self, binary, function, ns, function_name);
-        }
 
         // init our heap
         binary
@@ -340,8 +332,7 @@ impl SubstrateTarget {
         );
 
         // deploy always receives an endowment so no value check here
-        let (deploy_args, deploy_args_length) =
-            self.public_function_prelude(binary, function, false, ns, "deploy");
+        let (deploy_args, deploy_args_length) = self.public_function_prelude(binary, function);
 
         // init our storage vars
         binary.builder.build_call(initializer, &[], "");
@@ -367,13 +358,7 @@ impl SubstrateTarget {
             None,
         );
 
-        let (contract_args, contract_args_length) = self.public_function_prelude(
-            binary,
-            function,
-            binary.function_abort_value_transfers,
-            ns,
-            "call",
-        );
+        let (contract_args, contract_args_length) = self.public_function_prelude(binary, function);
 
         let dispatcher = binary.module.get_function("substrate_dispatch").unwrap();
         let args = vec![

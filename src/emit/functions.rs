@@ -4,11 +4,7 @@ use crate::{
     emit::{binary::Binary, cfg::emit_cfg, TargetRuntime},
     sema::ast::{Contract, Namespace, Type},
 };
-use inkwell::{
-    module::Linkage,
-    values::FunctionValue,
-    {AddressSpace, IntPredicate},
-};
+use inkwell::{module::Linkage, values::FunctionValue};
 
 /// Emit all functions, constructors, fallback and receiver
 pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(
@@ -74,53 +70,4 @@ pub(super) fn emit_initializer<'a, T: TargetRuntime<'a>>(
     emit_cfg(target, bin, contract, cfg, function, ns);
 
     function
-}
-
-/// If we receive a value transfer, and we are not "payable", abort with revert
-pub(super) fn abort_if_value_transfer<'a, T: TargetRuntime<'a> + ?Sized>(
-    target: &T,
-    binary: &Binary,
-    function: FunctionValue,
-    ns: &Namespace,
-    function_name: &str,
-) {
-    let value = target.value_transferred(binary, ns);
-
-    let got_value = binary.builder.build_int_compare(
-        IntPredicate::NE,
-        value,
-        binary.value_type(ns).const_zero(),
-        "is_value_transfer",
-    );
-
-    let not_value_transfer = binary
-        .context
-        .append_basic_block(function, "not_value_transfer");
-    let abort_value_transfer = binary
-        .context
-        .append_basic_block(function, "abort_value_transfer");
-
-    binary
-        .builder
-        .build_conditional_branch(got_value, abort_value_transfer, not_value_transfer);
-
-    binary.builder.position_at_end(abort_value_transfer);
-
-    target.log_runtime_error(
-        binary,
-        format!("runtime_error: non payable function {function_name} received value"),
-        None,
-        ns,
-    );
-    target.assert_failure(
-        binary,
-        binary
-            .context
-            .i8_type()
-            .ptr_type(AddressSpace::default())
-            .const_null(),
-        binary.context.i32_type().const_zero(),
-    );
-
-    binary.builder.position_at_end(not_value_transfer);
 }
