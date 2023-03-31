@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
@@ -49,7 +51,7 @@ struct Dispatch<'a> {
 
 fn new_cfg(ns: &Namespace) -> ControlFlowGraph {
     let mut cfg = ControlFlowGraph::new("substrate_dispatch".into(), ASTFunction::None);
-    let arg1 = Parameter {
+    let input_ptr = Parameter {
         loc: Codegen,
         id: None,
         ty: Type::BufferPointer,
@@ -59,17 +61,18 @@ fn new_cfg(ns: &Namespace) -> ControlFlowGraph {
         infinite_size: false,
         recursive: false,
     };
-    let mut arg2 = arg1.clone();
-    arg2.ty = Uint(32);
-    let mut arg3 = arg1.clone();
-    arg3.ty = Uint(8 * ns.value_length as u16);
-    let mut arg4 = arg1.clone();
-    arg4.ty = Type::Ref(Uint(8 * ns.target.selector_length() as u16).into());
-    cfg.params = vec![arg1, arg2, arg3, arg4].into();
+    let mut input_len = input_ptr.clone();
+    input_len.ty = Uint(32);
+    let mut value = input_ptr.clone();
+    value.ty = Uint(8 * ns.value_length as u16);
+    let mut selector_ptr = input_ptr.clone();
+    selector_ptr.ty = Type::Ref(Uint(8 * ns.target.selector_length() as u16).into());
+    cfg.params = vec![input_ptr, input_len, value, selector_ptr].into();
     cfg
 }
 
 impl<'a> Dispatch<'a> {
+    /// Create a new `Dispatch` struct that has all the data needed for building the dispatch logic.
     fn new(all_cfg: &'a [ControlFlowGraph], ns: &'a mut Namespace, opt: &'a Options) -> Self {
         let mut vartab = Vartable::new(ns.next_id);
         let mut cfg = new_cfg(ns);
@@ -129,6 +132,7 @@ impl<'a> Dispatch<'a> {
         }
     }
 
+    /// Build the dispatch logic into the returned control flow graph.
     fn build(mut self) -> ControlFlowGraph {
         // Go to fallback or receive if there is no selector in the call input
         let cond = Expression::Less {
@@ -150,14 +154,13 @@ impl<'a> Dispatch<'a> {
             .all_cfg
             .iter()
             .enumerate()
-            .filter(|(_, msg_cfg)| {
-                msg_cfg.public
-                    && matches!(msg_cfg.ty, FunctionTy::Function | FunctionTy::Constructor)
-            })
-            .map(|(msg_no, msg_cfg)| {
-                let selector = BigInt::from_bytes_le(Sign::Plus, &msg_cfg.selector);
-                let case = Expression::NumberLiteral(Codegen, selector_ty.clone(), selector);
-                (case, self.dispatch_case(msg_no))
+            .filter_map(|(msg_no, msg_cfg)| match msg_cfg.ty {
+                FunctionTy::Function | FunctionTy::Constructor if msg_cfg.public => {
+                    let selector = BigInt::from_bytes_le(Sign::Plus, &msg_cfg.selector);
+                    let case = Expression::NumberLiteral(Codegen, selector_ty.clone(), selector);
+                    Some((case, self.dispatch_case(msg_no)))
+                }
+                _ => None,
             })
             .collect();
 
@@ -196,16 +199,15 @@ impl<'a> Dispatch<'a> {
         self.cfg
     }
 
+    /// Insert the dispatch logic for `msg_no`. `msg_no` may be a message or constructor.
+    /// Returns the basic block number where the dispatch logic was inserted.
     fn dispatch_case(&mut self, msg_no: usize) -> usize {
-        let case = self.cfg.new_basic_block(format!("dispatch_case_{msg_no}"));
-        self.cfg.set_basic_block(case);
-        let no_value = self.cfg.new_basic_block("no_value".into());
-        self.abort_if_value_transfer(msg_no, no_value);
-        self.cfg.set_basic_block(no_value);
-
-        let cfg = &self.all_cfg[msg_no];
+        let case_bb = self.cfg.new_basic_block(format!("msg_{msg_no}_dispatch"));
+        self.cfg.set_basic_block(case_bb);
+        self.abort_if_value_transfer(msg_no);
 
         // Decode input data if necessary
+        let cfg = &self.all_cfg[msg_no];
         let mut args = vec![];
         if !cfg.params.is_empty() {
             let buf_len = Expression::Variable(Codegen, Uint(32), self.input_len);
@@ -265,19 +267,19 @@ impl<'a> Dispatch<'a> {
             self.add(Instr::ReturnData { data, data_len });
         }
 
-        case
+        case_bb
     }
 
     /// Insert a trap into the cfg, if the message `msg_no` is not payable but received value anyways.
-    fn abort_if_value_transfer(&mut self, msg_no: usize, next_bb: usize) {
-        if !self.all_cfg[msg_no].nonpayable {
-            self.add(Instr::Branch { block: next_bb });
+    /// Constructors always receive endowment.
+    fn abort_if_value_transfer(&mut self, msg_no: usize) {
+        if !self.all_cfg[msg_no].nonpayable || self.all_cfg[msg_no].ty == FunctionTy::Constructor {
             return;
         }
+
         let value_ty = Uint(self.ns.value_length as u16 * 8);
-
-        let true_block = self.cfg.new_basic_block("has_value".into());
-
+        let true_block = self.cfg.new_basic_block(format!("msg_{msg_no}_has_value"));
+        let false_block = self.cfg.new_basic_block(format!("msg_{msg_no}_no_value"));
         self.add(Instr::BranchCond {
             cond: Expression::More {
                 loc: Codegen,
@@ -286,7 +288,7 @@ impl<'a> Dispatch<'a> {
                 right: Expression::NumberLiteral(Codegen, value_ty, 0.into()).into(),
             },
             true_block,
-            false_block: next_bb,
+            false_block,
         });
 
         self.cfg.set_basic_block(true_block);
@@ -300,8 +302,11 @@ impl<'a> Dispatch<'a> {
             self.ns,
         );
         self.add(Instr::AssertFailure { encoded_args: None });
+
+        self.cfg.set_basic_block(false_block);
     }
 
+    /// Build calls to fallback or receive functions (if they are present in the contract).
     fn fallback_or_receive(&mut self) {
         let fb_recv = self
             .all_cfg
