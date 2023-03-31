@@ -15,7 +15,8 @@ use solana_rbpf::{
     memory_region::{AccessType, MemoryMapping, MemoryRegion},
     verifier::RequisiteVerifier,
     vm::{
-        Config, EbpfVm, ProgramResult, SyscallRegistry, TestInstructionMeter, VerifiedExecutable,
+        BuiltInProgram, Config, ContextObject, EbpfVm, ProgramResult, StableResult,
+        VerifiedExecutable,
     },
 };
 use solang::{
@@ -32,6 +33,7 @@ use std::{
     io::Write,
     mem::size_of,
     rc::Rc,
+    sync::Arc,
 };
 use tiny_keccak::{Hasher, Keccak};
 
@@ -405,6 +407,20 @@ struct SyscallContext<'a> {
     input_len: usize,
     refs: Rc<RefCell<&'a mut Vec<AccountRef>>>,
     heap: *const u8,
+    pub remaining: u64,
+}
+
+impl<'a> ContextObject for SyscallContext<'a> {
+    fn trace(&mut self, _state: [u64; 12]) {}
+
+    fn consume(&mut self, amount: u64) {
+        debug_assert!(amount <= self.remaining, "Execution count exceeded");
+        self.remaining = self.remaining.saturating_sub(amount);
+    }
+
+    fn get_remaining(&self) -> u64 {
+        self.remaining
+    }
 }
 
 impl<'a> SyscallContext<'a> {
@@ -490,448 +506,394 @@ impl<'a> SyscallContext<'a> {
     }
 }
 
-struct SolPanic();
-
-impl SolPanic {
-    fn call(
-        &mut self,
-        _src: u64,
-        _len: u64,
-        _dest: u64,
-        _arg4: u64,
-        _arg5: u64,
-        _memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        println!("sol_panic_()");
-        *result = ProgramResult::Err(EbpfError::ExecutionOverrun(0));
-    }
+fn sol_panic_(
+    _context: &mut SyscallContext,
+    _src: u64,
+    _len: u64,
+    _dest: u64,
+    _arg4: u64,
+    _arg5: u64,
+    _memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    println!("sol_panic_()");
+    *result = ProgramResult::Err(EbpfError::ExecutionOverrun(0));
 }
 
-struct SolLog<'a> {
-    context: SyscallContext<'a>,
-}
+fn sol_log(
+    context: &mut SyscallContext,
+    vm_addr: u64,
+    len: u64,
+    _arg3: u64,
+    _arg4: u64,
+    _arg5: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    context.heap_verify();
 
-impl<'a> SolLog<'a> {
-    fn call(
-        &mut self,
-        vm_addr: u64,
-        len: u64,
-        _arg3: u64,
-        _arg4: u64,
-        _arg5: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        self.context.heap_verify();
-
-        let host_addr = memory_mapping.map(AccessType::Load, vm_addr, len).unwrap();
-        let c_buf: *const c_char = host_addr as *const c_char;
-        unsafe {
-            for i in 0..len {
-                let c = std::ptr::read(c_buf.offset(i as isize));
-                if c == 0 {
-                    break;
-                }
+    let host_addr = memory_mapping
+        .map(AccessType::Load, vm_addr, len, 0)
+        .unwrap();
+    let c_buf: *const c_char = host_addr as *const c_char;
+    unsafe {
+        for i in 0..len {
+            let c = std::ptr::read(c_buf.offset(i as isize));
+            if c == 0 {
+                break;
             }
-            let message = std::str::from_utf8(std::slice::from_raw_parts(
-                host_addr as *const u8,
-                len as usize,
-            ))
-            .unwrap();
-            println!("log: {message}");
-            if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
-                vm.logs.push_str(message);
-            }
-            *result = ProgramResult::Ok(0)
         }
-    }
-}
-
-struct SolLogPubKey<'a> {
-    context: SyscallContext<'a>,
-}
-impl<'a> SolLogPubKey<'a> {
-    fn call(
-        &mut self,
-        pubkey_addr: u64,
-        _arg2: u64,
-        _arg3: u64,
-        _arg4: u64,
-        _arg5: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        self.context.heap_verify();
-
-        let account = question_mark!(
-            translate_slice::<Account>(memory_mapping, pubkey_addr, 1),
-            result
-        );
-        let message = account[0].to_base58();
-        println!("log pubkey: {message}");
-        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
-            vm.logs.push_str(&message);
+        let message = std::str::from_utf8(std::slice::from_raw_parts(
+            host_addr as *const u8,
+            len as usize,
+        ))
+        .unwrap();
+        println!("log: {message}");
+        if let Ok(mut vm) = context.vm.try_borrow_mut() {
+            vm.logs.push_str(message);
         }
         *result = ProgramResult::Ok(0)
     }
 }
 
-struct SolLogU64<'a> {
-    context: SyscallContext<'a>,
-}
-impl<'a> SolLogU64<'a> {
-    fn call(
-        &mut self,
-        arg1: u64,
-        arg2: u64,
-        arg3: u64,
-        arg4: u64,
-        arg5: u64,
-        _memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        let message = format!("{arg1:#x}, {arg2:#x}, {arg3:#x}, {arg4:#x}, {arg5:#x}");
+fn sol_log_pubkey(
+    context: &mut SyscallContext,
+    pubkey_addr: u64,
+    _arg2: u64,
+    _arg3: u64,
+    _arg4: u64,
+    _arg5: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    context.heap_verify();
 
-        println!("log64: {message}");
-
-        self.context.heap_verify();
-
-        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
-            vm.logs.push_str(&message);
-        }
-        *result = ProgramResult::Ok(0)
+    let account = translate_slice::<Account>(memory_mapping, pubkey_addr, 1).unwrap();
+    let message = account[0].to_base58();
+    println!("log pubkey: {message}");
+    if let Ok(mut vm) = context.vm.try_borrow_mut() {
+        vm.logs.push_str(&message);
     }
+    *result = ProgramResult::Ok(0)
 }
 
-struct SolSha256<'a> {
-    context: SyscallContext<'a>,
-}
-impl<'a> SolSha256<'a> {
-    fn call(
-        &mut self,
-        src: u64,
-        len: u64,
-        dest: u64,
-        _arg4: u64,
-        _arg5: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        self.context.heap_verify();
+fn sol_log_u64(
+    context: &mut SyscallContext,
+    arg1: u64,
+    arg2: u64,
+    arg3: u64,
+    arg4: u64,
+    arg5: u64,
+    _memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    let message = format!("{arg1:#x}, {arg2:#x}, {arg3:#x}, {arg4:#x}, {arg5:#x}");
 
-        let arrays = question_mark!(
-            translate_slice::<(u64, u64)>(memory_mapping, src, len),
-            result
-        );
+    println!("log64: {message}");
 
-        let mut hasher = Sha256::new();
-        for (addr, len) in arrays {
-            let buf = question_mark!(translate_slice::<u8>(memory_mapping, *addr, *len), result);
-            println!("hashing: {}", hex::encode(buf));
-            hasher.update(buf);
-        }
+    context.heap_verify();
 
-        let hash = hasher.finalize();
-
-        let hash_result = question_mark!(
-            translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64),
-            result
-        );
-
-        hash_result.copy_from_slice(&hash);
-
-        println!("sol_sha256: {}", hex::encode(hash));
-
-        *result = ProgramResult::Ok(0)
+    if let Ok(mut vm) = context.vm.try_borrow_mut() {
+        vm.logs.push_str(&message);
     }
+    *result = ProgramResult::Ok(0)
 }
 
-struct SolKeccak256<'a> {
-    context: SyscallContext<'a>,
-}
-impl<'a> SolKeccak256<'a> {
-    fn call(
-        &mut self,
-        src: u64,
-        len: u64,
-        dest: u64,
-        _arg4: u64,
-        _arg5: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        self.context.heap_verify();
+fn sol_sha256(
+    context: &mut SyscallContext,
+    src: u64,
+    len: u64,
+    dest: u64,
+    _arg4: u64,
+    _arg5: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    context.heap_verify();
 
-        let arrays = question_mark!(
-            translate_slice::<(u64, u64)>(memory_mapping, src, len),
-            result
-        );
+    let arrays = question_mark!(
+        translate_slice::<(u64, u64)>(memory_mapping, src, len),
+        result
+    );
 
-        let mut hasher = Keccak::v256();
-        let mut hash = [0u8; 32];
-        for (addr, len) in arrays {
-            let buf = question_mark!(translate_slice::<u8>(memory_mapping, *addr, *len), result);
-            println!("hashing: {}", hex::encode(buf));
-            hasher.update(buf);
-        }
-        hasher.finalize(&mut hash);
-
-        let hash_result = question_mark!(
-            translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64),
-            result
-        );
-
-        hash_result.copy_from_slice(&hash);
-
-        println!("sol_keccak256: {}", hex::encode(hash));
-
-        *result = ProgramResult::Ok(0)
+    let mut hasher = Sha256::new();
+    for (addr, len) in arrays {
+        let buf = question_mark!(translate_slice::<u8>(memory_mapping, *addr, *len), result);
+        println!("hashing: {}", hex::encode(buf));
+        hasher.update(buf);
     }
+
+    let hash = hasher.finalize();
+
+    let hash_result = question_mark!(
+        translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64),
+        result
+    );
+
+    hash_result.copy_from_slice(&hash);
+
+    println!("sol_sha256: {}", hex::encode(hash));
+
+    *result = ProgramResult::Ok(0)
 }
-struct SolCreateProgramAddress();
-impl SolCreateProgramAddress {
-    fn call(
-        &mut self,
-        seed_ptr: u64,
-        seed_len: u64,
-        program_id: u64,
-        dest: u64,
-        _arg5: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        assert!(seed_len <= 16);
 
-        let arrays = question_mark!(
-            translate_slice::<(u64, u64)>(memory_mapping, seed_ptr, seed_len),
-            result
-        );
+fn sol_keccak256(
+    context: &mut SyscallContext,
+    src: u64,
+    len: u64,
+    dest: u64,
+    _arg4: u64,
+    _arg5: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    context.heap_verify();
 
-        let mut seeds = Vec::new();
+    let arrays = question_mark!(
+        translate_slice::<(u64, u64)>(memory_mapping, src, len),
+        result
+    );
 
-        for (addr, len) in arrays {
-            assert!(*len < 32);
-
-            let buf = question_mark!(translate_slice::<u8>(memory_mapping, *addr, *len), result);
-
-            println!("seed:{}", hex::encode(buf));
-
-            seeds.push(buf);
-        }
-
-        let program_id = question_mark!(
-            translate_type::<Account>(memory_mapping, program_id),
-            result
-        );
-
-        println!("program_id:{}", program_id.to_base58());
-
-        let pda = create_program_address(program_id, &seeds);
-
-        let hash_result =
-            question_mark!(translate_slice_mut::<u8>(memory_mapping, dest, 32), result);
-
-        hash_result.copy_from_slice(&pda.0);
-
-        println!("sol_create_program_address: {}", pda.0.to_base58());
-
-        *result = ProgramResult::Ok(0)
+    let mut hasher = Keccak::v256();
+    let mut hash = [0u8; 32];
+    for (addr, len) in arrays {
+        let buf = question_mark!(translate_slice::<u8>(memory_mapping, *addr, *len), result);
+        println!("hashing: {}", hex::encode(buf));
+        hasher.update(buf);
     }
+    hasher.finalize(&mut hash);
+
+    let hash_result = question_mark!(
+        translate_slice_mut::<u8>(memory_mapping, dest, hash.len() as u64),
+        result
+    );
+
+    hash_result.copy_from_slice(&hash);
+
+    println!("sol_keccak256: {}", hex::encode(hash));
+
+    *result = ProgramResult::Ok(0)
 }
 
-struct SolTryFindProgramAddress();
-impl SolTryFindProgramAddress {
-    fn call(
-        &mut self,
-        seed_ptr: u64,
-        seed_len: u64,
-        program_id: u64,
-        dest: u64,
-        bump: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        assert!(seed_len <= 16);
+fn sol_create_program_address(
+    _context: &mut SyscallContext,
+    seed_ptr: u64,
+    seed_len: u64,
+    program_id: u64,
+    dest: u64,
+    _arg5: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    assert!(seed_len <= 16);
 
-        let arrays = question_mark!(
-            translate_slice::<(u64, u64)>(memory_mapping, seed_ptr, seed_len),
-            result
-        );
+    let arrays = question_mark!(
+        translate_slice::<(u64, u64)>(memory_mapping, seed_ptr, seed_len),
+        result
+    );
 
-        let mut seeds = Vec::new();
+    let mut seeds = Vec::new();
 
-        for (addr, len) in arrays {
-            assert!(*len < 32);
+    for (addr, len) in arrays {
+        assert!(*len < 32);
 
-            let buf = translate_slice::<u8>(memory_mapping, *addr, *len).unwrap();
+        let buf = question_mark!(translate_slice::<u8>(memory_mapping, *addr, *len), result);
 
-            println!("seed:{}", hex::encode(buf));
+        println!("seed:{}", hex::encode(buf));
 
-            seeds.push(buf);
-        }
-
-        let program_id = question_mark!(
-            translate_type::<Account>(memory_mapping, program_id),
-            result
-        );
-
-        println!("program_id:{}", program_id.to_base58());
-
-        let bump_seed = [std::u8::MAX];
-        let mut seeds_with_bump = seeds.to_vec();
-        seeds_with_bump.push(&bump_seed);
-
-        let pda = create_program_address(program_id, &seeds_with_bump);
-
-        let hash_result =
-            question_mark!(translate_slice_mut::<u8>(memory_mapping, dest, 32), result);
-
-        hash_result.copy_from_slice(&pda.0);
-
-        let bump_result =
-            question_mark!(translate_slice_mut::<u8>(memory_mapping, bump, 1), result);
-
-        bump_result.copy_from_slice(&bump_seed);
-
-        println!(
-            "sol_try_find_program_address: {} {:x}",
-            pda.0.to_base58(),
-            bump_seed[0]
-        );
-
-        *result = ProgramResult::Ok(0)
+        seeds.push(buf);
     }
+
+    let program_id = question_mark!(
+        translate_type::<Account>(memory_mapping, program_id),
+        result
+    );
+
+    println!("program_id:{}", program_id.to_base58());
+
+    let pda = create_program_address(program_id, &seeds);
+
+    let hash_result = question_mark!(translate_slice_mut::<u8>(memory_mapping, dest, 32), result);
+
+    hash_result.copy_from_slice(&pda.0);
+
+    println!("sol_create_program_address: {}", pda.0.to_base58());
+
+    *result = ProgramResult::Ok(0)
 }
 
-struct SyscallSetReturnData<'a> {
-    context: SyscallContext<'a>,
+fn sol_try_find_program_address(
+    _context: &mut SyscallContext,
+    seed_ptr: u64,
+    seed_len: u64,
+    program_id: u64,
+    dest: u64,
+    bump: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    assert!(seed_len <= 16);
+
+    let arrays = question_mark!(
+        translate_slice::<(u64, u64)>(memory_mapping, seed_ptr, seed_len),
+        result
+    );
+
+    let mut seeds = Vec::new();
+
+    for (addr, len) in arrays {
+        assert!(*len < 32);
+
+        let buf = translate_slice::<u8>(memory_mapping, *addr, *len).unwrap();
+
+        println!("seed:{}", hex::encode(buf));
+
+        seeds.push(buf);
+    }
+
+    let program_id = question_mark!(
+        translate_type::<Account>(memory_mapping, program_id),
+        result
+    );
+
+    println!("program_id:{}", program_id.to_base58());
+
+    let bump_seed = [std::u8::MAX];
+    let mut seeds_with_bump = seeds.to_vec();
+    seeds_with_bump.push(&bump_seed);
+
+    let pda = create_program_address(program_id, &seeds_with_bump);
+
+    let hash_result = question_mark!(translate_slice_mut::<u8>(memory_mapping, dest, 32), result);
+
+    hash_result.copy_from_slice(&pda.0);
+
+    let bump_result = question_mark!(translate_slice_mut::<u8>(memory_mapping, bump, 1), result);
+
+    bump_result.copy_from_slice(&bump_seed);
+
+    println!(
+        "sol_try_find_program_address: {} {:x}",
+        pda.0.to_base58(),
+        bump_seed[0]
+    );
+
+    *result = ProgramResult::Ok(0)
 }
-impl<'a> SyscallSetReturnData<'a> {
-    fn call(
-        &mut self,
-        addr: u64,
-        len: u64,
-        _arg3: u64,
-        _arg4: u64,
-        _arg5: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        self.context.heap_verify();
 
-        assert!(len <= 1024, "sol_set_return_data: length is {len}");
+fn sol_set_return_data(
+    context: &mut SyscallContext,
+    addr: u64,
+    len: u64,
+    _arg3: u64,
+    _arg4: u64,
+    _arg5: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    context.heap_verify();
 
-        let buf = question_mark!(translate_slice::<u8>(memory_mapping, addr, len), result);
+    assert!(len <= 1024, "sol_set_return_data: length is {len}");
 
-        println!("sol_set_return_data: {}", hex::encode(buf));
+    let buf = question_mark!(translate_slice::<u8>(memory_mapping, addr, len), result);
 
-        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
-            if len == 0 {
-                vm.return_data = None;
-            } else {
-                vm.return_data = Some((vm.stack[0].program, buf.to_vec()));
-            }
+    println!("sol_set_return_data: {}", hex::encode(buf));
 
-            *result = ProgramResult::Ok(0);
+    if let Ok(mut vm) = context.vm.try_borrow_mut() {
+        if len == 0 {
+            vm.return_data = None;
         } else {
-            panic!();
+            vm.return_data = Some((vm.stack[0].program, buf.to_vec()));
         }
+
+        *result = ProgramResult::Ok(0);
+    } else {
+        panic!();
     }
 }
 
-struct SyscallGetReturnData<'a> {
-    context: SyscallContext<'a>,
-}
-impl<'a> SyscallGetReturnData<'a> {
-    fn call(
-        &mut self,
-        addr: u64,
-        len: u64,
-        program_id_addr: u64,
-        _arg4: u64,
-        _arg5: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        self.context.heap_verify();
+fn sol_get_return_data(
+    context: &mut SyscallContext,
+    addr: u64,
+    len: u64,
+    program_id_addr: u64,
+    _arg4: u64,
+    _arg5: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    context.heap_verify();
 
-        if let Ok(vm) = self.context.vm.try_borrow() {
-            if let Some((program_id, return_data)) = &vm.return_data {
-                let length = std::cmp::min(len, return_data.len() as u64);
+    if let Ok(vm) = context.vm.try_borrow() {
+        if let Some((program_id, return_data)) = &vm.return_data {
+            let length = std::cmp::min(len, return_data.len() as u64);
 
-                if len > 0 {
-                    let set_result = question_mark!(
-                        translate_slice_mut::<u8>(memory_mapping, addr, length),
-                        result
-                    );
-
-                    set_result.copy_from_slice(&return_data[..length as usize]);
-
-                    let program_id_result = question_mark!(
-                        translate_slice_mut::<u8>(memory_mapping, program_id_addr, 32),
-                        result
-                    );
-
-                    program_id_result.copy_from_slice(program_id);
-                }
-
-                *result = ProgramResult::Ok(return_data.len() as u64);
-            } else {
-                *result = ProgramResult::Ok(0);
-            }
-        } else {
-            panic!();
-        }
-    }
-}
-
-struct SyscallLogData<'a> {
-    context: SyscallContext<'a>,
-}
-impl<'a> SyscallLogData<'a> {
-    fn call(
-        &mut self,
-        addr: u64,
-        len: u64,
-        _arg3: u64,
-        _arg4: u64,
-        _arg5: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        self.context.heap_verify();
-
-        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
-            print!("sol_log_data");
-            let untranslated_events =
-                question_mark!(translate_slice::<&[u8]>(memory_mapping, addr, len), result);
-
-            let mut events = Vec::with_capacity(untranslated_events.len());
-
-            for untranslated_event in untranslated_events {
-                let event = question_mark!(
-                    translate_slice_mut::<u8>(
-                        memory_mapping,
-                        untranslated_event.as_ptr() as u64,
-                        untranslated_event.len() as u64,
-                    ),
+            if len > 0 {
+                let set_result = question_mark!(
+                    translate_slice_mut::<u8>(memory_mapping, addr, length),
                     result
                 );
 
-                print!(" {}", hex::encode(&event));
+                set_result.copy_from_slice(&return_data[..length as usize]);
 
-                events.push(event.to_vec());
+                let program_id_result = question_mark!(
+                    translate_slice_mut::<u8>(memory_mapping, program_id_addr, 32),
+                    result
+                );
+
+                program_id_result.copy_from_slice(program_id);
             }
 
-            println!();
-
-            vm.events.push(events.to_vec());
-
-            *result = ProgramResult::Ok(0);
+            *result = ProgramResult::Ok(return_data.len() as u64);
         } else {
-            panic!();
+            *result = ProgramResult::Ok(0);
         }
+    } else {
+        panic!();
+    }
+}
+
+fn sol_log_data(
+    context: &mut SyscallContext,
+    addr: u64,
+    len: u64,
+    _arg3: u64,
+    _arg4: u64,
+    _arg5: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    context.heap_verify();
+
+    if let Ok(mut vm) = context.vm.try_borrow_mut() {
+        print!("sol_log_data");
+        let untranslated_events =
+            question_mark!(translate_slice::<&[u8]>(memory_mapping, addr, len), result);
+
+        let mut events = Vec::with_capacity(untranslated_events.len());
+
+        for untranslated_event in untranslated_events {
+            let event = question_mark!(
+                translate_slice_mut::<u8>(
+                    memory_mapping,
+                    untranslated_event.as_ptr() as u64,
+                    untranslated_event.len() as u64,
+                ),
+                result
+            );
+
+            print!(" {}", hex::encode(&event));
+
+            events.push(event.to_vec());
+        }
+
+        println!();
+
+        vm.events.push(events.to_vec());
+
+        *result = ProgramResult::Ok(0);
+    } else {
+        panic!();
     }
 }
 
@@ -1032,7 +994,7 @@ fn translate(
     vm_addr: u64,
     len: u64,
 ) -> ProgramResult {
-    memory_mapping.map(access_type, vm_addr, len)
+    memory_mapping.map(access_type, vm_addr, len, 0)
 }
 
 fn translate_type_inner<'a, T>(
@@ -1091,43 +1053,37 @@ fn translate_slice_inner<'a, T>(
     }
 }
 
-struct SyscallInvokeSignedC<'a> {
-    context: SyscallContext<'a>,
-}
-impl<'a> SyscallInvokeSignedC<'a> {
-    fn translate_instruction(
-        &self,
-        addr: u64,
-        memory_mapping: &MemoryMapping,
-    ) -> Result<Instruction, EbpfError> {
-        let ix_c = translate_type::<SolInstruction>(memory_mapping, addr)?;
+fn translate_instruction(
+    addr: u64,
+    memory_mapping: &MemoryMapping,
+) -> Result<Instruction, EbpfError> {
+    let ix_c = translate_type::<SolInstruction>(memory_mapping, addr)?;
 
-        let program_id = translate_type::<Pubkey>(memory_mapping, ix_c.program_id_addr)?;
-        let meta_cs = translate_slice::<SolAccountMeta>(
-            memory_mapping,
-            ix_c.accounts_addr,
-            ix_c.accounts_len as u64,
-        )?;
-        let data =
-            translate_slice::<u8>(memory_mapping, ix_c.data_addr, ix_c.data_len as u64)?.to_vec();
-        let accounts = meta_cs
-            .iter()
-            .map(|meta_c| {
-                let pubkey = translate_type::<Pubkey>(memory_mapping, meta_c.pubkey_addr)?;
-                Ok(AccountMeta {
-                    pubkey: pubkey.clone(),
-                    is_signer: meta_c.is_signer,
-                    is_writable: meta_c.is_writable,
-                })
+    let program_id = translate_type::<Pubkey>(memory_mapping, ix_c.program_id_addr)?;
+    let meta_cs = translate_slice::<SolAccountMeta>(
+        memory_mapping,
+        ix_c.accounts_addr,
+        ix_c.accounts_len as u64,
+    )?;
+    let data =
+        translate_slice::<u8>(memory_mapping, ix_c.data_addr, ix_c.data_len as u64)?.to_vec();
+    let accounts = meta_cs
+        .iter()
+        .map(|meta_c| {
+            let pubkey = translate_type::<Pubkey>(memory_mapping, meta_c.pubkey_addr)?;
+            Ok(AccountMeta {
+                pubkey: pubkey.clone(),
+                is_signer: meta_c.is_signer,
+                is_writable: meta_c.is_writable,
             })
-            .collect::<Result<Vec<AccountMeta>, EbpfError>>()?;
-
-        Ok(Instruction {
-            program_id: program_id.clone(),
-            accounts,
-            data,
         })
-    }
+        .collect::<Result<Vec<AccountMeta>, EbpfError>>()?;
+
+    Ok(Instruction {
+        program_id: program_id.clone(),
+        accounts,
+        data,
+    })
 }
 
 fn create_program_address(program_id: &Account, seeds: &[&[u8]]) -> Pubkey {
@@ -1149,249 +1105,242 @@ fn create_program_address(program_id: &Account, seeds: &[&[u8]]) -> Pubkey {
     Pubkey(new_address)
 }
 
-impl<'a> SyscallInvokeSignedC<'a> {
-    fn call(
-        &mut self,
-        instruction_addr: u64,
-        _account_infos_addr: u64,
-        _account_infos_len: u64,
-        signers_seeds_addr: u64,
-        signers_seeds_len: u64,
-        memory_mapping: &mut MemoryMapping,
-        result: &mut ProgramResult,
-    ) {
-        let instruction = self
-            .translate_instruction(instruction_addr, memory_mapping)
-            .expect("instruction not valid");
+fn sol_invoke_signed_c(
+    context: &mut SyscallContext,
+    instruction_addr: u64,
+    _account_infos_addr: u64,
+    _account_infos_len: u64,
+    signers_seeds_addr: u64,
+    signers_seeds_len: u64,
+    memory_mapping: &mut MemoryMapping,
+    result: &mut ProgramResult,
+) {
+    let instruction =
+        translate_instruction(instruction_addr, memory_mapping).expect("instruction not valid");
 
-        println!(
-            "sol_invoke_signed_c input:{}",
-            hex::encode(&instruction.data)
-        );
+    println!(
+        "sol_invoke_signed_c input:{}",
+        hex::encode(&instruction.data)
+    );
 
-        let seeds = question_mark!(
-            translate_slice::<SolSignerSeedsC>(
-                memory_mapping,
-                signers_seeds_addr,
-                signers_seeds_len
-            ),
-            result
-        );
+    let seeds = question_mark!(
+        translate_slice::<SolSignerSeedsC>(memory_mapping, signers_seeds_addr, signers_seeds_len),
+        result
+    );
 
-        if let Ok(mut vm) = self.context.vm.try_borrow_mut() {
-            let signers: Vec<Pubkey> = seeds
-                .iter()
-                .map(|seed| {
-                    let seeds: Vec<&[u8]> =
-                        translate_slice::<SolSignerSeedC>(memory_mapping, seed.addr, seed.len)
-                            .unwrap()
-                            .iter()
-                            .map(|seed| {
-                                translate_slice::<u8>(memory_mapping, seed.addr, seed.len).unwrap()
-                            })
-                            .collect();
+    if let Ok(mut vm) = context.vm.try_borrow_mut() {
+        let signers: Vec<Pubkey> = seeds
+            .iter()
+            .map(|seed| {
+                let seeds: Vec<&[u8]> =
+                    translate_slice::<SolSignerSeedC>(memory_mapping, seed.addr, seed.len)
+                        .unwrap()
+                        .iter()
+                        .map(|seed| {
+                            translate_slice::<u8>(memory_mapping, seed.addr, seed.len).unwrap()
+                        })
+                        .collect();
 
-                    let pda = create_program_address(&vm.stack[0].program, &seeds);
-
-                    println!(
-                        "pda: {} seeds {}",
-                        pda.0.to_base58(),
-                        seeds
-                            .iter()
-                            .map(hex::encode)
-                            .collect::<Vec<String>>()
-                            .join(" ")
-                    );
-
-                    pda
-                })
-                .collect();
-
-            vm.return_data = None;
-
-            if let Some(handle) = vm.call_params_check.get(&instruction.program_id) {
-                handle(&vm, &instruction, &signers);
-            } else if instruction.program_id.is_system_instruction() {
-                match bincode::deserialize::<u32>(&instruction.data).unwrap() {
-                    0 => {
-                        let create_account: CreateAccount =
-                            bincode::deserialize(&instruction.data).unwrap();
-
-                        let address = &instruction.accounts[1].pubkey;
-
-                        assert!(instruction.accounts[1].is_signer);
-
-                        println!("new address: {}", address.0.to_base58());
-                        for s in &signers {
-                            println!("signer: {}", s.0.to_base58());
-                        }
-
-                        if !signers.is_empty() {
-                            assert!(signers.contains(address));
-                        }
-
-                        assert_eq!(create_account.instruction, 0);
-
-                        println!(
-                            "creating account {} with space {} owner {}",
-                            address.0.to_base58(),
-                            create_account.space,
-                            create_account.program_id.to_base58()
-                        );
-
-                        assert_eq!(vm.account_data[&address.0].data.len(), 0);
-
-                        if let Some(entry) = vm.account_data.get_mut(&address.0) {
-                            entry.data = vec![0; create_account.space as usize];
-                            entry.owner = Some(create_account.program_id);
-                        }
-
-                        let mut refs = self.context.refs.try_borrow_mut().unwrap();
-
-                        for r in refs.iter_mut() {
-                            if r.account == address.0 {
-                                r.length = create_account.space as usize;
-                            }
-                        }
-                    }
-                    1 => {
-                        let assign: Assign = bincode::deserialize(&instruction.data).unwrap();
-
-                        let address = &instruction.accounts[0].pubkey;
-
-                        println!("assign address: {}", address.0.to_base58());
-                        for s in &signers {
-                            println!("signer: {}", s.0.to_base58());
-                        }
-
-                        assert!(signers.contains(address));
-
-                        assert_eq!(assign.instruction, 1);
-
-                        println!(
-                            "assign account {} owner {}",
-                            address.0.to_base58(),
-                            assign.owner.to_base58(),
-                        );
-
-                        if let Some(entry) = vm.account_data.get_mut(&address.0) {
-                            entry.owner = Some(assign.owner);
-                        }
-                    }
-                    3 => {
-                        let create_account: CreateAccountWithSeed =
-                            bincode::deserialize(&instruction.data).unwrap();
-
-                        assert_eq!(create_account.instruction, 3);
-
-                        let mut hasher = Sha256::new();
-                        hasher.update(create_account.base);
-                        hasher.update(create_account.seed);
-                        hasher.update(create_account.program_id);
-
-                        let hash = hasher.finalize();
-
-                        let new_address: [u8; 32] = hash.try_into().unwrap();
-
-                        println!(
-                            "creating account {} with space {} owner {}",
-                            hex::encode(new_address),
-                            create_account.space,
-                            hex::encode(create_account.program_id)
-                        );
-
-                        vm.account_data.insert(
-                            new_address,
-                            AccountState {
-                                data: vec![0; create_account.space as usize],
-                                owner: Some(create_account.program_id),
-                                lamports: 0,
-                            },
-                        );
-
-                        vm.programs.push(Contract {
-                            program: create_account.program_id,
-                            idl: None,
-                            data: new_address,
-                        });
-                    }
-                    8 => {
-                        let allocate: Allocate = bincode::deserialize(&instruction.data).unwrap();
-
-                        let address = &instruction.accounts[0].pubkey;
-
-                        println!("new address: {}", address.0.to_base58());
-                        for s in &signers {
-                            println!("signer: {}", s.0.to_base58());
-                        }
-                        assert!(signers.contains(address));
-
-                        assert_eq!(allocate.instruction, 8);
-
-                        println!(
-                            "allocate account {} with space {}",
-                            address.0.to_base58(),
-                            allocate.space,
-                        );
-
-                        assert_eq!(vm.account_data[&address.0].data.len(), 0);
-
-                        if let Some(entry) = vm.account_data.get_mut(&address.0) {
-                            entry.data = vec![0; allocate.space as usize];
-                        }
-
-                        let mut refs = self.context.refs.try_borrow_mut().unwrap();
-
-                        for r in refs.iter_mut() {
-                            if r.account == address.0 {
-                                r.length = allocate.space as usize;
-                            }
-                        }
-                    }
-                    instruction => panic!("instruction {instruction} not supported"),
-                }
-            } else {
-                let data_id: Account = instruction.accounts[0].pubkey.0;
+                let pda = create_program_address(&vm.stack[0].program, &seeds);
 
                 println!(
-                    "calling {} program_id {}",
-                    data_id.to_base58(),
-                    instruction.program_id.0.to_base58()
+                    "pda: {} seeds {}",
+                    pda.0.to_base58(),
+                    seeds
+                        .iter()
+                        .map(hex::encode)
+                        .collect::<Vec<String>>()
+                        .join(" ")
                 );
 
-                assert_eq!(data_id, instruction.accounts[0].pubkey.0);
+                pda
+            })
+            .collect();
 
-                let mut p = vm
-                    .programs
-                    .iter()
-                    .find(|p| p.program == instruction.program_id.0)
-                    .unwrap()
-                    .clone();
+        vm.return_data = None;
 
-                p.data = data_id;
+        if let Some(handle) = vm.call_params_check.get(&instruction.program_id) {
+            handle(&vm, &instruction, &signers);
+        } else if instruction.program_id.is_system_instruction() {
+            match bincode::deserialize::<u32>(&instruction.data).unwrap() {
+                0 => {
+                    let create_account: CreateAccount =
+                        bincode::deserialize(&instruction.data).unwrap();
 
-                vm.stack.insert(0, p);
+                    let address = &instruction.accounts[1].pubkey;
 
-                let res = vm.execute(&instruction.accounts, &instruction.data);
-                assert_eq!(res.unwrap(), 0);
+                    assert!(instruction.accounts[1].is_signer);
 
-                let refs = self.context.refs.try_borrow_mut().unwrap();
+                    println!("new address: {}", address.0.to_base58());
+                    for s in &signers {
+                        println!("signer: {}", s.0.to_base58());
+                    }
 
-                let input = translate_slice_mut::<u8>(
-                    memory_mapping,
-                    ebpf::MM_INPUT_START,
-                    self.context.input_len as u64,
-                )
-                .unwrap();
+                    if !signers.is_empty() {
+                        assert!(signers.contains(address));
+                    }
 
-                update_parameters(input, refs, &vm.account_data);
+                    assert_eq!(create_account.instruction, 0);
 
-                vm.stack.remove(0);
+                    println!(
+                        "creating account {} with space {} owner {}",
+                        address.0.to_base58(),
+                        create_account.space,
+                        create_account.program_id.to_base58()
+                    );
+
+                    assert_eq!(vm.account_data[&address.0].data.len(), 0);
+
+                    if let Some(entry) = vm.account_data.get_mut(&address.0) {
+                        entry.data = vec![0; create_account.space as usize];
+                        entry.owner = Some(create_account.program_id);
+                    }
+
+                    let mut refs = context.refs.try_borrow_mut().unwrap();
+
+                    for r in refs.iter_mut() {
+                        if r.account == address.0 {
+                            r.length = create_account.space as usize;
+                        }
+                    }
+                }
+                1 => {
+                    let assign: Assign = bincode::deserialize(&instruction.data).unwrap();
+
+                    let address = &instruction.accounts[0].pubkey;
+
+                    println!("assign address: {}", address.0.to_base58());
+                    for s in &signers {
+                        println!("signer: {}", s.0.to_base58());
+                    }
+
+                    assert!(signers.contains(address));
+
+                    assert_eq!(assign.instruction, 1);
+
+                    println!(
+                        "assign account {} owner {}",
+                        address.0.to_base58(),
+                        assign.owner.to_base58(),
+                    );
+
+                    if let Some(entry) = vm.account_data.get_mut(&address.0) {
+                        entry.owner = Some(assign.owner);
+                    }
+                }
+                3 => {
+                    let create_account: CreateAccountWithSeed =
+                        bincode::deserialize(&instruction.data).unwrap();
+
+                    assert_eq!(create_account.instruction, 3);
+
+                    let mut hasher = Sha256::new();
+                    hasher.update(create_account.base);
+                    hasher.update(create_account.seed);
+                    hasher.update(create_account.program_id);
+
+                    let hash = hasher.finalize();
+
+                    let new_address: [u8; 32] = hash.try_into().unwrap();
+
+                    println!(
+                        "creating account {} with space {} owner {}",
+                        hex::encode(new_address),
+                        create_account.space,
+                        hex::encode(create_account.program_id)
+                    );
+
+                    vm.account_data.insert(
+                        new_address,
+                        AccountState {
+                            data: vec![0; create_account.space as usize],
+                            owner: Some(create_account.program_id),
+                            lamports: 0,
+                        },
+                    );
+
+                    vm.programs.push(Contract {
+                        program: create_account.program_id,
+                        idl: None,
+                        data: new_address,
+                    });
+                }
+                8 => {
+                    let allocate: Allocate = bincode::deserialize(&instruction.data).unwrap();
+
+                    let address = &instruction.accounts[0].pubkey;
+
+                    println!("new address: {}", address.0.to_base58());
+                    for s in &signers {
+                        println!("signer: {}", s.0.to_base58());
+                    }
+                    assert!(signers.contains(address));
+
+                    assert_eq!(allocate.instruction, 8);
+
+                    println!(
+                        "allocate account {} with space {}",
+                        address.0.to_base58(),
+                        allocate.space,
+                    );
+
+                    assert_eq!(vm.account_data[&address.0].data.len(), 0);
+
+                    if let Some(entry) = vm.account_data.get_mut(&address.0) {
+                        entry.data = vec![0; allocate.space as usize];
+                    }
+
+                    let mut refs = context.refs.try_borrow_mut().unwrap();
+
+                    for r in refs.iter_mut() {
+                        if r.account == address.0 {
+                            r.length = allocate.space as usize;
+                        }
+                    }
+                }
+                instruction => panic!("instruction {instruction} not supported"),
             }
-        }
+        } else {
+            let data_id: Account = instruction.accounts[0].pubkey.0;
 
-        *result = ProgramResult::Ok(0)
+            println!(
+                "calling {} program_id {}",
+                data_id.to_base58(),
+                instruction.program_id.0.to_base58()
+            );
+
+            assert_eq!(data_id, instruction.accounts[0].pubkey.0);
+
+            let mut p = vm
+                .programs
+                .iter()
+                .find(|p| p.program == instruction.program_id.0)
+                .unwrap()
+                .clone();
+
+            p.data = data_id;
+
+            vm.stack.insert(0, p);
+
+            let res = vm.execute(&instruction.accounts, &instruction.data);
+            assert!(matches!(res, StableResult::Ok(0)));
+
+            let refs = context.refs.try_borrow_mut().unwrap();
+
+            let input = translate_slice_mut::<u8>(
+                memory_mapping,
+                ebpf::MM_INPUT_START,
+                context.input_len as u64,
+            )
+            .unwrap();
+
+            update_parameters(input, refs, &vm.account_data);
+
+            vm.stack.remove(0);
+        }
     }
+
+    *result = ProgramResult::Ok(0)
 }
 
 impl VirtualMachine {
@@ -1403,79 +1352,80 @@ impl VirtualMachine {
 
         let program = &self.stack[0];
 
-        let mut syscall_registry = SyscallRegistry::default();
-        syscall_registry
-            .register_syscall_by_name(b"sol_panic_", SolPanic::call)
+        let mut loader: BuiltInProgram<SyscallContext> = BuiltInProgram::new_loader(Config {
+            static_syscalls: false,
+            enable_symbol_and_section_labels: true,
+            dynamic_stack_frames: false,
+            ..Config::default()
+        });
+
+        loader
+            .register_function_by_name("sol_panic_", sol_panic_)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_log_", SolLog::call)
+        loader
+            .register_function_by_name("sol_log_", sol_log)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_log_pubkey", SolLogPubKey::call)
+        loader
+            .register_function_by_name("sol_log_pubkey", sol_log_pubkey)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_log_64_", SolLogU64::call)
+        loader
+            .register_function_by_name("sol_log_64_", sol_log_u64)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_sha256", SolSha256::call)
+        loader
+            .register_function_by_name("sol_sha256", sol_sha256)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_keccak256", SolKeccak256::call)
+        loader
+            .register_function_by_name("sol_keccak256", sol_keccak256)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_create_program_address", SolCreateProgramAddress::call)
+        loader
+            .register_function_by_name("sol_create_program_address", sol_create_program_address)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(
-                b"sol_try_find_program_address",
-                SolTryFindProgramAddress::call,
-            )
+        loader
+            .register_function_by_name("sol_try_find_program_address", sol_try_find_program_address)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_invoke_signed_c", SyscallInvokeSignedC::call)
+        loader
+            .register_function_by_name("sol_invoke_signed_c", sol_invoke_signed_c)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_set_return_data", SyscallSetReturnData::call)
+        loader
+            .register_function_by_name("sol_set_return_data", sol_set_return_data)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_get_return_data", SyscallGetReturnData::call)
+        loader
+            .register_function_by_name("sol_get_return_data", sol_get_return_data)
             .unwrap();
 
-        syscall_registry
-            .register_syscall_by_name(b"sol_log_data", SyscallLogData::call)
+        loader
+            .register_function_by_name("sol_log_data", sol_log_data)
             .unwrap();
 
         // program.program
         println!("program: {}", program.program.to_base58());
 
-        let executable = Executable::<TestInstructionMeter>::from_elf(
+        let executable = Executable::<SyscallContext>::from_elf(
             &self.account_data[&program.program].data,
-            Config::default(),
-            syscall_registry,
+            Arc::new(loader),
         )
         .expect("should work");
 
         let verified_executable =
-            VerifiedExecutable::<RequisiteVerifier, TestInstructionMeter>::from_executable(
-                executable,
-            )
-            .unwrap();
+            VerifiedExecutable::<RequisiteVerifier, SyscallContext>::from_executable(executable)
+                .unwrap();
 
         let mut context = SyscallContext {
             vm: Rc::new(RefCell::new(self)),
             input_len: parameter_bytes.len(),
             refs: Rc::new(RefCell::new(&mut refs)),
             heap: heap.as_ptr(),
+            remaining: 1000000,
         };
 
         let parameter_region =
@@ -1488,7 +1438,7 @@ impl VirtualMachine {
         )
         .unwrap();
 
-        let res = vm.execute_program_interpreted(&mut TestInstructionMeter { remaining: 1000000 });
+        let (_, res) = vm.execute_program(true);
 
         deserialize_parameters(&parameter_bytes, &refs, &mut self.account_data);
 
