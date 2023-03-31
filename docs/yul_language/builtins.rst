@@ -1,3 +1,6 @@
+
+.. _yul_builtins:
+
 Builtins
 ========
 

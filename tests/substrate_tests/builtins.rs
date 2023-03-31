@@ -725,6 +725,11 @@ fn hash() {
             function get() public view returns (Hash) {
                 return Hash.wrap(current2);
             }
+
+            function test_encoding() public view {
+                Hash h = Hash.wrap(current2);
+                assert(abi.encode(current2) == abi.encode(h));
+            }
         }
         "##,
     );
@@ -743,4 +748,6 @@ fn hash() {
 
     runtime.function("get", vec![]);
     assert_eq!(&runtime.vm.output[..], &h.0[..]);
+
+    runtime.function("test_encoding", vec![]);
 }
