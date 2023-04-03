@@ -38,7 +38,7 @@ pub fn should_remove_assignment(
             !var.read
         }
 
-        Expression::Variable { var_no, .. } => should_remove_variable(var_no, func, opt),
+        Expression::Variable { var_no, .. } => should_remove_variable(*var_no, func, opt),
 
         Expression::StructMember { expr, .. } => should_remove_assignment(ns, expr, func, opt),
 
@@ -55,12 +55,12 @@ pub fn should_remove_assignment(
 }
 
 /// Checks if we should remove a variable
-pub fn should_remove_variable(pos: &usize, func: &Function, opt: &Options) -> bool {
+pub fn should_remove_variable(pos: usize, func: &Function, opt: &Options) -> bool {
     if opt.opt_level == OptimizationLevel::None {
         return false;
     }
 
-    let var = &func.symtable.vars[pos];
+    let var = &func.symtable.vars[&pos];
 
     //If the variable has never been read nor assigned, we can remove it right away.
     if !var.read && !var.assigned {

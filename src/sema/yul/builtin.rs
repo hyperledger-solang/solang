@@ -208,7 +208,7 @@ impl YulBuiltInFunction {
         &YUL_BUILTIN[index]
     }
 
-    pub(crate) fn modify_state(&self) -> bool {
+    pub(crate) fn modify_state(self) -> bool {
         matches!(
             self,
             YulBuiltInFunction::SStore
@@ -226,7 +226,7 @@ impl YulBuiltInFunction {
         )
     }
 
-    pub(crate) fn read_state(&self) -> bool {
+    pub(crate) fn read_state(self) -> bool {
         matches!(
             self,
             YulBuiltInFunction::Address

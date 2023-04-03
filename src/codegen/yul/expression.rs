@@ -86,7 +86,7 @@ pub(crate) fn expression(
         }
 
         ast::YulExpression::BuiltInCall(loc, builtin_ty, args) => {
-            process_builtin(loc, builtin_ty, args, contract_no, ns, vartab, cfg, opt)
+            process_builtin(loc, *builtin_ty, args, contract_no, ns, vartab, cfg, opt)
         }
     }
 }

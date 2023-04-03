@@ -36,7 +36,7 @@ impl Expression {
 /// Transfrom YUL builtin functions into CFG instructions
 pub(crate) fn process_builtin(
     loc: &pt::Loc,
-    builtin_ty: &YulBuiltInFunction,
+    builtin_ty: YulBuiltInFunction,
     args: &[ast::YulExpression],
     contract_no: usize,
     ns: &Namespace,
@@ -214,7 +214,7 @@ pub(crate) fn process_builtin(
 /// Process arithmetic operations
 fn process_arithmetic(
     loc: &pt::Loc,
-    builtin_ty: &YulBuiltInFunction,
+    builtin_ty: YulBuiltInFunction,
     args: &[ast::YulExpression],
     contract_no: usize,
     ns: &Namespace,
@@ -319,7 +319,7 @@ fn process_arithmetic(
         YulBuiltInFunction::AddMod | YulBuiltInFunction::MulMod => {
             let modulo_operand = expression(&args[2], contract_no, ns, vartab, cfg, opt);
             let (_, equalized_modulo) = equalize_types(left.clone(), modulo_operand.clone(), ns);
-            let builtin = if builtin_ty == &YulBuiltInFunction::AddMod {
+            let builtin = if builtin_ty == YulBuiltInFunction::AddMod {
                 Builtin::AddMod
             } else {
                 Builtin::MulMod

@@ -16,7 +16,7 @@ use super::encoding::abi_encode;
 /// call the constructor of a contract.
 pub(super) fn call_constructor(
     loc: &Loc,
-    contract_no: &usize,
+    contract_no: usize,
     callee_contract_no: usize,
     constructor_no: &Option<usize>,
     constructor_args: &[ast::Expression],
@@ -59,13 +59,13 @@ pub(super) fn call_constructor(
         .collect::<Vec<Expression>>();
 
     let selector = match constructor_no {
-        Some(func_no) => ns.functions[*func_no].selector(ns, contract_no),
-        None => ns.contracts[*contract_no]
+        Some(func_no) => ns.functions[*func_no].selector(ns, &contract_no),
+        None => ns.contracts[contract_no]
             .default_constructor
             .as_ref()
             .unwrap()
             .0
-            .selector(ns, contract_no),
+            .selector(ns, &contract_no),
     };
 
     let mut args = vec![Expression::BytesLiteral(
@@ -83,7 +83,7 @@ pub(super) fn call_constructor(
         Instr::Constructor {
             success,
             res: address_res,
-            contract_no: *contract_no,
+            contract_no,
             encoded_args,
             encoded_args_len,
             value,

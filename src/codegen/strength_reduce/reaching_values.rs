@@ -25,7 +25,7 @@ pub(super) fn reaching_values(
         let mut changes = false;
 
         for (var_no, set) in vars.iter() {
-            changes |= update_map(var_no, set, map);
+            changes |= update_map(*var_no, set, map);
         }
 
         if !changes {
@@ -97,8 +97,8 @@ pub(super) fn reaching_values(
 /// Update the Variable's map based on the incoming set of values. Returns true if there was any
 /// changes in the set.
 /// There is a discussion to improve this function: https://github.com/hyperledger/solang/issues/934
-fn update_map(var_no: &usize, set: &HashSet<Value>, map: &mut Variables) -> bool {
-    return if let Some(existing) = map.get_mut(var_no) {
+fn update_map(var_no: usize, set: &HashSet<Value>, map: &mut Variables) -> bool {
+    return if let Some(existing) = map.get_mut(&var_no) {
         if existing.iter().next().map_or(false, |v| v.all_unknown()) {
             // If we already think it is unknown, nothing can improve on that
             false
@@ -108,7 +108,7 @@ fn update_map(var_no: &usize, set: &HashSet<Value>, map: &mut Variables) -> bool
 
             set.insert(v.clone());
 
-            map.insert(*var_no, set);
+            map.insert(var_no, set);
             true
         } else {
             let mut changes = false;
@@ -127,7 +127,7 @@ fn update_map(var_no: &usize, set: &HashSet<Value>, map: &mut Variables) -> bool
                 set.insert(Value::unknown(bits));
 
                 changes = true;
-                map.insert(*var_no, set);
+                map.insert(var_no, set);
             }
             changes
         }
@@ -141,9 +141,9 @@ fn update_map(var_no: &usize, set: &HashSet<Value>, map: &mut Variables) -> bool
 
             set.insert(Value::unknown(bits));
 
-            map.insert(*var_no, set);
+            map.insert(var_no, set);
         } else {
-            map.insert(*var_no, set.clone());
+            map.insert(var_no, set.clone());
         }
 
         true
