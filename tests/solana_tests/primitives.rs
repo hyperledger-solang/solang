@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::build_solidity_with_options;
 use crate::{build_solidity, BorshToken};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt};
 use num_traits::{One, ToPrimitive, Zero};
@@ -359,30 +358,38 @@ fn uint() {
             }
 
             function add(uintN a, uintN b) public returns (uintN) {
-                return a + b;
+                unchecked {
+                    return a + b;
+                }
             }
 
             function sub(uintN a, uintN b) public returns (uintN) {
-                return a - b;
+                unchecked {
+                    return a - b;
+                }
             }
 
             function mul(uintN a, uintN b) public returns (uintN) {
                 unchecked {
-                return a * b;
+                    return a * b;
                 }
             }
 
             function div(uintN a, uintN b) public returns (uintN) {
-                return a / b;
+                unchecked {
+                    return a / b;
+                }
             }
 
             function mod(uintN a, uintN b) public returns (uintN) {
-                return a % b;
+                unchecked {
+                    return a % b;
+                }
             }
 
             function pow(uintN a, uintN b) public returns (uintN) {
                 unchecked {
-                return a ** b;
+                    return a ** b;
                 }
             }
 
@@ -770,7 +777,7 @@ fn test_power_overflow_boundaries() {
         }"#
         .replace("intN", &format!("int{width}"));
 
-        let mut contract = build_solidity_with_options(&src, true, false);
+        let mut contract = build_solidity(&src);
         contract.constructor(&[]);
 
         let return_value = contract
@@ -827,7 +834,7 @@ fn test_overflow_boundaries() {
             }
         }"#
         .replace("intN", &format!("int{width}"));
-        let mut contract = build_solidity_with_options(&src, true, false);
+        let mut contract = build_solidity(&src);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. We generate these boundaries:
         let mut upper_boundary: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1043,7 +1050,7 @@ fn test_mul_within_range() {
         }"#
         .replace("intN", &format!("int{width}"));
 
-        let mut contract = build_solidity_with_options(&src, true, false);
+        let mut contract = build_solidity(&src);
         contract.constructor(&[]);
         for _ in 0..10 {
             // Max number to fit unsigned N bits is (2^N)-1
@@ -1095,7 +1102,7 @@ fn test_overflow_detect_signed() {
             }
         }"#
         .replace("intN", &format!("int{width}"));
-        let mut contract = build_solidity_with_options(&src, true, false);
+        let mut contract = build_solidity(&src);
 
         contract.constructor(&[]);
 
@@ -1164,7 +1171,7 @@ fn test_overflow_detect_unsigned() {
             }
         }"#
         .replace("intN", &format!("int{width}"));
-        let mut contract = build_solidity_with_options(&src, true, false);
+        let mut contract = build_solidity(&src);
 
         contract.constructor(&[]);
 
@@ -1206,21 +1213,27 @@ fn int() {
         let src = r#"
         contract test {
             function add(intN a, intN b) public returns (intN) {
-                return a + b;
+                unchecked {
+                    return a + b;
+                }
             }
 
             function sub(intN a, intN b) public returns (intN) {
-                return a - b;
+                unchecked {
+                    return a - b;
+                }
             }
 
             function mul(intN a, intN b) public returns (intN) {
                 unchecked {
-                return a * b;
+                    return a * b;
                 }
             }
 
             function div(intN a, intN b) public returns (intN) {
-                 return a / b;
+                unchecked {
+                    return a / b;
+                }
             }
 
             function mod(intN a, intN b) public returns (intN) {

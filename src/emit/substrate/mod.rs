@@ -899,7 +899,7 @@ impl SubstrateTarget {
 
                 let arg = if len == power_of_two_len {
                     arg.into_int_value()
-                } else if ty.is_signed_int() {
+                } else if ty.is_signed_int(ns) {
                     binary.builder.build_int_s_extend(
                         arg.into_int_value(),
                         binary

@@ -134,14 +134,6 @@ struct Assign {
 }
 
 fn build_solidity(src: &str) -> VirtualMachine {
-    build_solidity_with_options(src, false, false)
-}
-
-fn build_solidity_with_options(
-    src: &str,
-    math_overflow_flag: bool,
-    log_runtime_errors: bool,
-) -> VirtualMachine {
     let mut cache = FileResolver::new();
 
     cache.set_file_contents("test.sol", src.to_string());
@@ -151,9 +143,8 @@ fn build_solidity_with_options(
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Solana,
-        math_overflow_flag,
         false,
-        log_runtime_errors,
+        true,
     );
 
     ns.print_diagnostics_in_plain(&cache, false);

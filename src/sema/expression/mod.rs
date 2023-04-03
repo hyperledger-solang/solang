@@ -731,7 +731,7 @@ impl Expression {
                     Err(())
                 } else {
                     // cast integer it to integer of the same size of address with sign ext etc
-                    let address_to_int = if from.is_signed_int() {
+                    let address_to_int = if from.is_signed_int(ns) {
                         Type::Int(address_bits)
                     } else {
                         Type::Uint(address_bits)
@@ -743,7 +743,7 @@ impl Expression {
                             to: address_to_int,
                             expr: Box::new(self.clone()),
                         },
-                        Ordering::Less if from.is_signed_int() => Expression::ZeroExt {
+                        Ordering::Less if from.is_signed_int(ns) => Expression::ZeroExt {
                             loc: *loc,
                             to: address_to_int,
                             expr: Box::new(self.clone()),
@@ -779,7 +779,7 @@ impl Expression {
                     Err(())
                 } else {
                     // first convert address to int/uint
-                    let address_to_int = if to.is_signed_int() {
+                    let address_to_int = if to.is_signed_int(ns) {
                         Type::Int(address_bits)
                     } else {
                         Type::Uint(address_bits)
@@ -797,7 +797,7 @@ impl Expression {
                             to: to.clone(),
                             expr: Box::new(expr),
                         }),
-                        Ordering::Greater if to.is_signed_int() => Ok(Expression::ZeroExt {
+                        Ordering::Greater if to.is_signed_int(ns) => Ok(Expression::ZeroExt {
                             loc: *loc,
                             to: to.clone(),
                             expr: Box::new(expr),

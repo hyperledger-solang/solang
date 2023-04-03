@@ -363,6 +363,7 @@ impl AbiEncoding for ScaleEncoding {
         expr: &Expression,
         buffer: &Expression,
         offset: &Expression,
+        _ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {

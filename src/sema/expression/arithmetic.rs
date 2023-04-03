@@ -262,7 +262,7 @@ pub(super) fn shift_right(
         ty: left_type.clone(),
         left: Box::new(left.cast(loc, &left_type, true, ns, diagnostics)?),
         right: Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
-        sign: left_type.is_signed_int(),
+        sign: left_type.is_signed_int(ns),
     })
 }
 
@@ -324,7 +324,7 @@ pub(super) fn multiply(
     if resolve_to == ResolveTo::Unknown {
         let bits = std::cmp::min(256, ty.bits(ns) * 2);
 
-        if ty.is_signed_int() {
+        if ty.is_signed_int(ns) {
             multiply(
                 loc,
                 l,
@@ -461,7 +461,7 @@ pub(super) fn power(
     // If we don't know what type the result is going to be, assume
     // the result is 256 bits
     if resolve_to == ResolveTo::Unknown {
-        if base.ty().is_signed_int() {
+        if base.ty().is_signed_int(ns) {
             base = expression(
                 b,
                 context,
@@ -490,7 +490,7 @@ pub(super) fn power(
     let exp_type = exp.ty();
 
     // solc-0.5.13 does not allow either base or exp to be signed
-    if base_type.is_signed_int() || exp_type.is_signed_int() {
+    if base_type.is_signed_int(ns) || exp_type.is_signed_int(ns) {
         diagnostics.push(Diagnostic::error(
             *loc,
             "exponation (**) is not allowed with signed types".to_string(),
@@ -740,7 +740,7 @@ pub(super) fn addition(
     // If we don't know what type the result is going to be
     if resolve_to == ResolveTo::Unknown {
         let bits = std::cmp::min(256, ty.bits(ns) * 2);
-        let resolve_to = if ty.is_signed_int() {
+        let resolve_to = if ty.is_signed_int(ns) {
             Type::Int(bits)
         } else {
             Type::Uint(bits)
@@ -924,13 +924,13 @@ pub fn cast_shift_arg(
 
     if from_width == to_width {
         expr
-    } else if from_width < to_width && ty.is_signed_int() {
+    } else if from_width < to_width && ty.is_signed_int(ns) {
         Expression::SignExt {
             loc: *loc,
             to: ty.clone(),
             expr: Box::new(expr),
         }
-    } else if from_width < to_width && !ty.is_signed_int() {
+    } else if from_width < to_width && !ty.is_signed_int(ns) {
         Expression::ZeroExt {
             loc: *loc,
             to: ty.clone(),

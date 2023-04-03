@@ -204,13 +204,13 @@ pub(super) fn assign_expr(
                 // TODO: does shifting by negative value need compiletime/runtime check?
                 if left_length == right_length {
                     set
-                } else if right_length < left_length && set_type.is_signed_int() {
+                } else if right_length < left_length && set_type.is_signed_int(ns) {
                     Expression::SignExt {
                         loc: *loc,
                         to: ty.clone(),
                         expr: Box::new(set),
                     }
-                } else if right_length < left_length && !set_type.is_signed_int() {
+                } else if right_length < left_length && !set_type.is_signed_int(ns) {
                     Expression::ZeroExt {
                         loc: *loc,
                         to: ty.clone(),
@@ -278,7 +278,7 @@ pub(super) fn assign_expr(
                 ty: ty.clone(),
                 left: Box::new(assign),
                 right: Box::new(set),
-                sign: ty.is_signed_int(),
+                sign: ty.is_signed_int(ns),
             },
             pt::Expression::AssignDivide(..) => Expression::Divide {
                 loc: *loc,
