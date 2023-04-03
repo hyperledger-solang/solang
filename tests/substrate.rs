@@ -1180,12 +1180,11 @@ impl MockSubstrate {
 }
 
 pub fn build_solidity(src: &str) -> MockSubstrate {
-    build_solidity_with_options(src, false, false, false)
+    build_solidity_with_options(src, false, true)
 }
 
 pub fn build_solidity_with_options(
     src: &str,
-    math_overflow_flag: bool,
     log_api_return_codes: bool,
     log_runtime_errors: bool,
 ) -> MockSubstrate {
@@ -1198,7 +1197,6 @@ pub fn build_solidity_with_options(
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
-        math_overflow_flag,
         log_api_return_codes,
         log_runtime_errors,
     );

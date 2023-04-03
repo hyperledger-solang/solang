@@ -35,10 +35,11 @@ impl AbiEncoding for BorshEncoding {
         expr: &Expression,
         buffer: &Expression,
         offset: &Expression,
+        ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        self.encode_int(expr, buffer, offset, vartab, cfg, 32)
+        self.encode_int(expr, buffer, offset, ns, vartab, cfg, 32)
     }
 
     fn encode_external_function(

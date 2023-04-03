@@ -769,11 +769,11 @@ fn log_api_call_return_values_works() {
         r##"
         contract Test {
             constructor () payable {}
-        
+
             function test() public {
                 try new Other() returns (Other o) {
                     o.foo();
-                } 
+                }
                 catch {}
             }
         }
@@ -783,7 +783,6 @@ fn log_api_call_return_values_works() {
             }
         }
         "##,
-        false,
         true,
         false,
     );

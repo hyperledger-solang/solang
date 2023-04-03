@@ -252,7 +252,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                         }
                     }
 
-                    if ty.is_signed_int() {
+                    if ty.is_signed_int(ns) {
                         if let (Some(left_max), Some(right_max)) =
                             (set_max_signed(&left_values), set_max_signed(&right_values))
                         {
@@ -340,7 +340,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     ty.clone(),
                                     left.clone(),
                                     Box::new(Expression::NumberLiteral(*loc, ty.clone(), shift)),
-                                    ty.is_signed_int(),
+                                    ty.is_signed_int(ns),
                                 );
                             }
 
@@ -349,7 +349,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                         }
                     }
 
-                    if ty.is_signed_int() {
+                    if ty.is_signed_int(ns) {
                         if let (Some(left_max), Some(right_max)) =
                             (set_max_signed(&left_values), set_max_signed(&right_values))
                         {
@@ -438,7 +438,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                         }
                     }
 
-                    if ty.is_signed_int() {
+                    if ty.is_signed_int(ns) {
                         if let (Some(left_max), Some(right_max)) =
                             (set_max_signed(&left_values), set_max_signed(&right_values))
                         {

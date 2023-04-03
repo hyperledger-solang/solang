@@ -173,7 +173,7 @@ pub(super) trait AbiEncoding {
             }
             Type::Bool => self.encode_directly(expr, buffer, offset, vartab, cfg, 1.into()),
             Type::Uint(width) | Type::Int(width) => {
-                self.encode_int(expr, buffer, offset, vartab, cfg, *width)
+                self.encode_int(expr, buffer, offset, ns, vartab, cfg, *width)
             }
             Type::Value => {
                 self.encode_directly(expr, buffer, offset, vartab, cfg, ns.value_length.into())
@@ -182,7 +182,7 @@ pub(super) trait AbiEncoding {
                 self.encode_directly(expr, buffer, offset, vartab, cfg, (*length).into())
             }
             Type::String | Type::DynamicBytes => {
-                self.encode_bytes(expr, buffer, offset, vartab, cfg)
+                self.encode_bytes(expr, buffer, offset, ns, vartab, cfg)
             }
             Type::Enum(_) => self.encode_directly(expr, buffer, offset, vartab, cfg, 1.into()),
             Type::Struct(ty) => {
@@ -262,13 +262,14 @@ pub(super) trait AbiEncoding {
         expr: &Expression,
         buffer: &Expression,
         offset: &Expression,
+        ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
         width: u16,
     ) -> Expression {
         let encoding_size = width.next_power_of_two();
         let expr = if encoding_size != width {
-            if expr.ty().is_signed_int() {
+            if expr.ty().is_signed_int(ns) {
                 Expression::SignExt(Codegen, Type::Int(encoding_size), expr.clone().into())
             } else {
                 Expression::ZeroExt(Codegen, Type::Uint(encoding_size), expr.clone().into())
@@ -295,6 +296,7 @@ pub(super) trait AbiEncoding {
         expr: &Expression,
         buffer: &Expression,
         offset: &Expression,
+        ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression;
@@ -305,6 +307,7 @@ pub(super) trait AbiEncoding {
         expr: &Expression,
         buffer: &Expression,
         offset: &Expression,
+        ns: &Namespace,
         vartab: &mut Vartable,
         cfg: &mut ControlFlowGraph,
     ) -> Expression {
@@ -312,7 +315,7 @@ pub(super) trait AbiEncoding {
         let (data_offset, size) = if self.is_packed() {
             (offset.clone(), None)
         } else {
-            let size = self.encode_size(&len, buffer, offset, vartab, cfg);
+            let size = self.encode_size(&len, buffer, offset, ns, vartab, cfg);
             (offset.clone().add_u32(size.clone()), Some(size))
         };
         // ptr + offset + size_of_integer
@@ -431,7 +434,8 @@ pub(super) trait AbiEncoding {
                     let (new_offset, size_length) = if self.is_packed() {
                         (offset.clone(), None)
                     } else {
-                        let encoded_size = self.encode_size(&value, buffer, offset, vartab, cfg);
+                        let encoded_size =
+                            self.encode_size(&value, buffer, offset, ns, vartab, cfg);
                         (
                             offset.clone().add_u32(encoded_size.clone()),
                             Some(encoded_size),
@@ -540,7 +544,7 @@ pub(super) trait AbiEncoding {
             );
 
             let offset_expr = Expression::Variable(Codegen, Uint(32), offset_var);
-            let encoded_size = self.encode_size(&size, buffer, &offset_expr, vartab, cfg);
+            let encoded_size = self.encode_size(&size, buffer, &offset_expr, ns, vartab, cfg);
             cfg.add(
                 vartab,
                 Instr::Set {

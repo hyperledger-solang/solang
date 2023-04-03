@@ -381,19 +381,21 @@ contract test3 {
 	}
 
 	function bar(uint32 b, bool x) public returns (uint32) {
-		uint32 i = 1;
-		if (x) {
-			do {
-				i += 10;
-			}
-			while (b-- > 0);
-		} else {
-			uint32 j;
-			for (j=2; j<10; j++) {
-				i *= 3;
-			}
-		}
-		return i;
+        unchecked {
+            uint32 i = 1;
+            if (x) {
+                do {
+                    i += 10;
+                }
+                while (b-- > 0);
+            } else {
+                uint32 j;
+                for (j=2; j<10; j++) {
+                    i *= 3;
+                }
+            }
+            return i;
+        }
 	}
 
 	function baz(uint32 x) public returns (uint32) {
