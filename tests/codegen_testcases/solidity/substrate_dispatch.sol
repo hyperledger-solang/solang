@@ -15,7 +15,7 @@ contract has_fallback_and_receive {
 	// CHECK:                 default: goto block #2
 	// CHECK: block2: # fb_or_recv
 	// CHECK:         branchcond (unsigned more %value.temp.2 > uint128 0), block5, block4
-	// CHECK: block3: # msg_3_dispatch
+	// CHECK: block3: # func_3_dispatch
 	// CHECK:          = call has_fallback_and_receive::has_fallback_and_receive::constructor::861731d5 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
 	// CHECK: block4: # fallback
@@ -43,7 +43,7 @@ contract has_fallback {
 	// CHECK:                 default: goto block #2
 	// CHECK: block2: # fb_or_recv
 	// CHECK:         branchcond (unsigned more %value.temp.6 > uint128 0), block5, block4
-	// CHECK: block3: # msg_2_dispatch
+	// CHECK: block3: # func_2_dispatch
 	// CHECK:          = call has_fallback::has_fallback::constructor::861731d5 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
 	// CHECK: block4: # fallback
@@ -69,7 +69,7 @@ contract has_receive {
 	// CHECK:                 default: goto block #2
 	// CHECK: block2: # fb_or_recv
 	// CHECK:         branchcond (unsigned more %value.temp.10 > uint128 0), block5, block4
-	// CHECK: block3: # msg_2_dispatch
+	// CHECK: block3: # func_2_dispatch
 	// CHECK:          = call has_receive::has_receive::constructor::861731d5 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
 	// CHECK: block4: # fallback
@@ -98,17 +98,17 @@ contract is_payable {
 	// CHECK:                 default: goto block #2
 	// CHECK: block2: # fb_or_recv
 	// CHECK:         return code: function selector invalid
-	// CHECK: block3: # msg_0_dispatch
+	// CHECK: block3: # func_0_dispatch
 	// CHECK:         branchcond (unsigned more %value.temp.14 > uint128 0), block4, block5
-	// CHECK: block4: # msg_0_has_value
+	// CHECK: block4: # func_0_got_value
 	// CHECK:         assert-failure
-	// CHECK: block5: # msg_0_no_value
+	// CHECK: block5: # func_0_no_value
 	// CHECK:          = call is_payable::is_payable::function::foo 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
-	// CHECK: block6: # msg_1_dispatch
+	// CHECK: block6: # func_1_dispatch
 	// CHECK:          = call is_payable::is_payable::function::bar 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
-	// CHECK: block7: # msg_3_dispatch
+	// CHECK: block7: # func_3_dispatch
 	// CHECK:          = call is_payable::is_payable::constructor::861731d5 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
 	function foo() public pure {}
@@ -133,20 +133,20 @@ contract overloaded {
 	// CHECK:                 default: goto block #2
 	// CHECK: block2: # fb_or_recv
 	// CHECK:         branchcond (unsigned more %value.temp.18 > uint128 0), block14, block13
-	// CHECK: block3: # msg_0_dispatch
+	// CHECK: block3: # func_0_dispatch
 	// CHECK:          = call overloaded::overloaded::constructor::c2985578 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
-	// CHECK: block4: # msg_1_dispatch
+	// CHECK: block4: # func_1_dispatch
 	// CHECK:          = call overloaded::overloaded::constructor::febb0f7e 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
-	// CHECK: block5: # msg_2_dispatch
+	// CHECK: block5: # func_2_dispatch
 	// CHECK:          = call overloaded::overloaded::function::f 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
-	// CHECK: block6: # msg_3_dispatch
+	// CHECK: block6: # func_3_dispatch
 	// CHECK:         branchcond (unsigned more %value.temp.18 > uint128 0), block7, block8
-	// CHECK: block7: # msg_3_has_value
+	// CHECK: block7: # func_3_got_value
 	// CHECK:         assert-failure
-	// CHECK: block8: # msg_3_no_value
+	// CHECK: block8: # func_3_no_value
 	// CHECK:         ty:uint32 %temp.20 = (trunc uint32 (%input_len.temp.17 - uint32 4))
 	// CHECK:         branchcond (unsigned (uint32 0 + uint32 32) <= %temp.20), block9, block10
 	// CHECK: block9: # inbounds
@@ -189,14 +189,14 @@ contract simple {
 	// CHECK:                 default: goto block #2
 	// CHECK: block2: # fb_or_recv
 	// CHECK:         return code: function selector invalid
-	// CHECK: block3: # msg_0_dispatch
+	// CHECK: block3: # func_0_dispatch
 	// CHECK:         branchcond (unsigned more %value.temp.24 > uint128 0), block4, block5
-	// CHECK: block4: # msg_0_has_value
+	// CHECK: block4: # func_0_got_value
 	// CHECK:         assert-failure
-	// CHECK: block5: # msg_0_no_value
+	// CHECK: block5: # func_0_no_value
 	// CHECK:          = call simple::simple::function::foo 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
-	// CHECK: block6: # msg_2_dispatch
+	// CHECK: block6: # func_2_dispatch
 	// CHECK:          = call simple::simple::constructor::861731d5 
 	// CHECK:         return data (alloc bytes len uint32 0), data length: uint32 0
 	function foo() public pure {}

@@ -149,11 +149,11 @@ impl<'a> Dispatch<'a> {
             .all_cfg
             .iter()
             .enumerate()
-            .filter_map(|(msg_no, msg_cfg)| match msg_cfg.ty {
-                FunctionTy::Function | FunctionTy::Constructor if msg_cfg.public => {
-                    let selector = BigInt::from_bytes_le(Sign::Plus, &msg_cfg.selector);
+            .filter_map(|(func_no, func_cfg)| match func_cfg.ty {
+                FunctionTy::Function | FunctionTy::Constructor if func_cfg.public => {
+                    let selector = BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector);
                     let case = Expression::NumberLiteral(Codegen, selector_ty.clone(), selector);
-                    Some((case, self.dispatch_case(msg_no)))
+                    Some((case, self.dispatch_case(func_no)))
                 }
                 _ => None,
             })
@@ -194,15 +194,15 @@ impl<'a> Dispatch<'a> {
         self.cfg
     }
 
-    /// Insert the dispatch logic for `msg_no`. `msg_no` may be a message or constructor.
+    /// Insert the dispatch logic for `func_no`. `func_no` may be a message or constructor.
     /// Returns the basic block number in which the dispatch logic was inserted.
-    fn dispatch_case(&mut self, msg_no: usize) -> usize {
-        let case_bb = self.cfg.new_basic_block(format!("msg_{msg_no}_dispatch"));
+    fn dispatch_case(&mut self, func_no: usize) -> usize {
+        let case_bb = self.cfg.new_basic_block(format!("func_{func_no}_dispatch"));
         self.cfg.set_basic_block(case_bb);
-        self.abort_if_value_transfer(msg_no);
+        self.abort_if_value_transfer(func_no);
 
         // Decode input data if necessary
-        let cfg = &self.all_cfg[msg_no];
+        let cfg = &self.all_cfg[func_no];
         let mut args = vec![];
         if !cfg.params.is_empty() {
             let buf_len = Expression::Variable(Codegen, Uint(32), self.input_len);
@@ -236,7 +236,7 @@ impl<'a> Dispatch<'a> {
 
         self.add(Instr::Call {
             res: returns,
-            call: InternalCallTy::Static { cfg_no: msg_no },
+            call: InternalCallTy::Static { cfg_no: func_no },
             args,
             return_tys,
         });
@@ -265,15 +265,18 @@ impl<'a> Dispatch<'a> {
         case_bb
     }
 
-    /// Insert a trap into the cfg, if the message `msg_no` is not payable but received value anyways.
+    /// Insert a trap into the cfg, if the message `func_no` is not payable but received value anyways.
     /// Constructors always receive endowment.
-    fn abort_if_value_transfer(&mut self, msg_no: usize) {
-        if !self.all_cfg[msg_no].nonpayable || self.all_cfg[msg_no].ty == FunctionTy::Constructor {
+    fn abort_if_value_transfer(&mut self, func_no: usize) {
+        if !self.all_cfg[func_no].nonpayable || self.all_cfg[func_no].ty == FunctionTy::Constructor
+        {
             return;
         }
 
-        let true_block = self.cfg.new_basic_block(format!("msg_{msg_no}_has_value"));
-        let false_block = self.cfg.new_basic_block(format!("msg_{msg_no}_no_value"));
+        let true_block = self
+            .cfg
+            .new_basic_block(format!("func_{func_no}_got_value"));
+        let false_block = self.cfg.new_basic_block(format!("func_{func_no}_no_value"));
         self.add(Instr::BranchCond {
             cond: Expression::More {
                 loc: Codegen,
@@ -286,7 +289,7 @@ impl<'a> Dispatch<'a> {
         });
 
         self.cfg.set_basic_block(true_block);
-        let function_name = self.all_cfg[msg_no].name.split("::").last().unwrap();
+        let function_name = self.all_cfg[func_no].name.split("::").last().unwrap();
         log_runtime_error(
             self.opt.log_runtime_errors,
             &format!("runtime_error: non payable function {function_name} received value"),
