@@ -2,7 +2,7 @@
 
 use num_bigint::BigInt;
 
-use super::encoding::abi_encode;
+use super::encoding::{abi_decode, abi_encode};
 use super::expression::{assign_single, default_gas, emit_function_call, expression};
 use super::Options;
 use super::{
@@ -16,16 +16,13 @@ use crate::codegen::unused_variable::{
 };
 use crate::codegen::yul::inline_assembly_cfg;
 use crate::codegen::Expression;
-use crate::sema::ast;
-use crate::sema::ast::RetrieveType;
 use crate::sema::ast::{
-    ArrayLength, CallTy, DestructureField, Function, Namespace, Parameter, Statement, TryCatch,
-    Type,
+    self, ArrayLength, CallTy, DestructureField, Function, Namespace, RetrieveType, Statement,
+    TryCatch, Type, Type::Uint,
 };
 use crate::sema::Recurse;
 use num_traits::Zero;
-use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{self, CodeLocation, Loc::Codegen};
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 pub(crate) fn statement(
@@ -82,7 +79,7 @@ pub(crate) fn statement(
                 opt,
             ) = expression
             {
-                let temp_res = vartab.temp_name("array_length", &Type::Uint(32));
+                let temp_res = vartab.temp_name("array_length", &Uint(32));
 
                 cfg.add(
                     vartab,
@@ -96,7 +93,7 @@ pub(crate) fn statement(
                 expression = Expression::AllocDynamicBytes(
                     loc_dyn_arr,
                     ty_dyn_arr,
-                    Box::new(Expression::Variable(*loc, Type::Uint(32), temp_res)),
+                    Box::new(Expression::Variable(*loc, Uint(32), temp_res)),
                     opt,
                 );
                 cfg.array_lengths_temps.insert(*pos, temp_res);
@@ -135,9 +132,8 @@ pub(crate) fn statement(
             // Handling arrays without size, defaulting the initial size with zero
 
             if matches!(param.ty, Type::Array(..)) {
-                let num =
-                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Uint(32), BigInt::zero());
-                let temp_res = vartab.temp_name("array_length", &Type::Uint(32));
+                let num = Expression::NumberLiteral(Codegen, Uint(32), BigInt::zero());
+                let temp_res = vartab.temp_name("array_length", &Uint(32));
                 cfg.add(
                     vartab,
                     Instr::Set {
@@ -1031,7 +1027,7 @@ fn try_catch(
                 let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt)
                 } else {
-                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
+                    Expression::NumberLiteral(Codegen, Type::Value, BigInt::zero())
                 };
                 let gas = if let Some(gas) = &call_args.gas {
                     expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
@@ -1096,31 +1092,15 @@ fn try_catch(
                         });
                     }
 
-                    let tys = func_returns
-                        .iter()
-                        .map(|ty| Parameter {
-                            ty: ty.clone(),
-                            id: None,
-                            ty_loc: Some(pt::Loc::Codegen),
-                            loc: pt::Loc::Codegen,
-                            indexed: false,
-                            readonly: false,
-                            infinite_size: false,
-                            recursive: false,
-                        })
-                        .collect();
-
-                    cfg.add(
-                        vartab,
-                        Instr::AbiDecode {
-                            res,
-                            selector: None,
-                            exception_block: None,
-                            tys,
-                            data: Expression::ReturnData(pt::Loc::Codegen),
-                            data_len: None,
-                        },
-                    );
+                    let buf = &Expression::ReturnData(Codegen);
+                    let decoded = abi_decode(&Codegen, buf, &func_returns, ns, vartab, cfg, None);
+                    for instruction in res.iter().zip(decoded).map(|(var, expr)| Instr::Set {
+                        loc: Codegen,
+                        res: *var,
+                        expr,
+                    }) {
+                        cfg.add(vartab, instruction)
+                    }
                 }
             } else {
                 // dynamic dispatch
@@ -1210,17 +1190,31 @@ fn try_catch(
             _ => vartab.temp_anonymous(&Type::String),
         };
 
-        cfg.add(
-            vartab,
-            Instr::AbiDecode {
-                selector: Some(0x08c3_79a0),
-                exception_block: Some(no_reason_block),
-                res: vec![error_var],
-                tys: vec![error_param.clone()],
-                data: Expression::ReturnData(pt::Loc::Codegen),
-                data_len: None,
-            },
-        );
+        // Expect the returned data to match the 4 bytes function selector for "Error(string)"
+        let buf = &Expression::ReturnData(Codegen);
+        let tys = &[Uint(32), error_param.ty.clone()];
+        let decoded = abi_decode(&Codegen, buf, tys, ns, vartab, cfg, None);
+        let err_id = Expression::NumberLiteral(Codegen, Uint(32), 0x08c3_79a0.into()).into();
+        let cond = Expression::Equal(Codegen, decoded[0].clone().into(), err_id);
+        let match_err_id = cfg.new_basic_block("match_err_id".into());
+        let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
+        let instruction = Instr::BranchCond {
+            cond,
+            true_block: match_err_id,
+            false_block: no_match_err_id,
+        };
+
+        cfg.add(vartab, instruction);
+        cfg.set_basic_block(no_match_err_id);
+
+        cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
+        cfg.set_basic_block(match_err_id);
+        let instruction = Instr::Set {
+            loc: Codegen,
+            res: error_var,
+            expr: decoded[1].clone(),
+        };
+        cfg.add(vartab, instruction);
 
         let mut reachable = true;
 
@@ -1253,14 +1247,12 @@ fn try_catch(
     }
 
     if let Some(res) = try_stmt.catch_param_pos {
-        cfg.add(
-            vartab,
-            Instr::Set {
-                loc: pt::Loc::Codegen,
-                res,
-                expr: Expression::ReturnData(pt::Loc::Codegen),
-            },
-        );
+        let instruction = Instr::Set {
+            loc: Codegen,
+            res,
+            expr: Expression::ReturnData(Codegen),
+        };
+        cfg.add(vartab, instruction);
     }
 
     let mut reachable = true;
@@ -1342,16 +1334,16 @@ impl Type {
     /// for example a reference to a variable in storage.
     pub fn default(&self, ns: &Namespace) -> Option<Expression> {
         match self {
-            Type::Address(_) | Type::Uint(_) | Type::Int(_) => Some(Expression::NumberLiteral(
-                pt::Loc::Codegen,
+            Type::Address(_) | Uint(_) | Type::Int(_) => Some(Expression::NumberLiteral(
+                Codegen,
                 self.clone(),
                 BigInt::from(0),
             )),
-            Type::Bool => Some(Expression::BoolLiteral(pt::Loc::Codegen, false)),
+            Type::Bool => Some(Expression::BoolLiteral(Codegen, false)),
             Type::Bytes(n) => {
                 let mut l = Vec::new();
                 l.resize(*n as usize, 0);
-                Some(Expression::BytesLiteral(pt::Loc::Codegen, self.clone(), l))
+                Some(Expression::BytesLiteral(Codegen, self.clone(), l))
             }
             Type::Enum(e) => ns.enums[*e].ty.default(ns),
             Type::Struct(struct_ty) => {
@@ -1360,20 +1352,16 @@ impl Type {
                     field.ty.default(ns)?;
                 }
 
-                Some(Expression::StructLiteral(
-                    pt::Loc::Codegen,
-                    self.clone(),
-                    Vec::new(),
-                ))
+                Some(Expression::StructLiteral(Codegen, self.clone(), Vec::new()))
             }
             Type::Ref(ty) => {
                 assert!(matches!(ty.as_ref(), Type::Address(_)));
 
                 Some(Expression::GetRef(
-                    pt::Loc::Codegen,
+                    Codegen,
                     Type::Ref(Box::new(ty.as_ref().clone())),
                     Box::new(Expression::NumberLiteral(
-                        pt::Loc::Codegen,
+                        Codegen,
                         ty.as_ref().clone(),
                         BigInt::from(0),
                     )),
@@ -1381,13 +1369,9 @@ impl Type {
             }
             Type::StorageRef(..) => None,
             Type::String | Type::DynamicBytes => Some(Expression::AllocDynamicBytes(
-                pt::Loc::Codegen,
+                Codegen,
                 self.clone(),
-                Box::new(Expression::NumberLiteral(
-                    pt::Loc::Codegen,
-                    Type::Uint(32),
-                    BigInt::zero(),
-                )),
+                Box::new(Expression::NumberLiteral(Codegen, Uint(32), BigInt::zero())),
                 None,
             )),
             Type::InternalFunction { .. } | Type::Contract(_) | Type::ExternalFunction { .. } => {
@@ -1398,18 +1382,14 @@ impl Type {
 
                 if dims.last() == Some(&ArrayLength::Dynamic) {
                     Some(Expression::AllocDynamicBytes(
-                        pt::Loc::Codegen,
+                        Codegen,
                         self.clone(),
-                        Box::new(Expression::NumberLiteral(
-                            pt::Loc::Codegen,
-                            Type::Uint(32),
-                            BigInt::zero(),
-                        )),
+                        Box::new(Expression::NumberLiteral(Codegen, Uint(32), BigInt::zero())),
                         None,
                     ))
                 } else {
                     Some(Expression::ArrayLiteral(
-                        pt::Loc::Codegen,
+                        Codegen,
                         self.clone(),
                         Vec::new(),
                         Vec::new(),
@@ -1425,7 +1405,7 @@ impl Namespace {
     /// Phoney default constructor
     pub fn default_constructor(&self, contract_no: usize) -> Function {
         let mut func = Function::new(
-            pt::Loc::Codegen,
+            Codegen,
             "".to_owned(),
             Some(contract_no),
             vec![],
@@ -1437,7 +1417,7 @@ impl Namespace {
             self,
         );
 
-        func.body = vec![Statement::Return(pt::Loc::Codegen, None)];
+        func.body = vec![Statement::Return(Codegen, None)];
         func.has_body = true;
 
         func

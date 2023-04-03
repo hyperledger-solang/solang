@@ -702,20 +702,6 @@ impl<'a> Binary<'a> {
         }
     }
 
-    /// Default empty value
-    pub(crate) fn default_value(&self, ty: &Type, ns: &Namespace) -> BasicValueEnum<'a> {
-        let llvm_ty = self.llvm_var_ty(ty, ns);
-
-        // const_zero() on BasicTypeEnum yet. Should be coming to inkwell soon
-        if llvm_ty.is_pointer_type() {
-            llvm_ty.into_pointer_type().const_null().into()
-        } else if llvm_ty.is_array_type() {
-            self.address_type(ns).const_zero().into()
-        } else {
-            llvm_ty.into_int_type().const_zero().into()
-        }
-    }
-
     /// Return the llvm type for field in struct or array
     pub(crate) fn llvm_field_ty(&self, ty: &Type, ns: &Namespace) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty, ns);

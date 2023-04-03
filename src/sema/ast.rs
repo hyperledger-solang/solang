@@ -1434,7 +1434,6 @@ impl CodeLocation for Instr {
             Instr::PushMemory { value, .. } => value.loc(),
             Instr::Constructor { gas, .. } => gas.loc(),
             Instr::ValueTransfer { address, .. } => address.loc(),
-            Instr::AbiDecode { data, .. } => data.loc(),
             Instr::SelfDestruct { recipient } => recipient.loc(),
             Instr::WriteBuffer { buf, .. } => buf.loc(),
             Instr::Print { expr } => expr.loc(),

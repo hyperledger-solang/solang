@@ -112,7 +112,6 @@ fn find_writable_vectors(
             | Instr::PopStorage { .. }
             | Instr::SelfDestruct { .. }
             | Instr::EmitEvent { .. }
-            | Instr::AbiDecode { .. }
             | Instr::ExternalCall { .. }
             | Instr::Constructor { .. }
             | Instr::Unreachable

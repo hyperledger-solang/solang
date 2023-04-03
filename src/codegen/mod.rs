@@ -342,12 +342,6 @@ impl LLVMName for Function {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
-    AbiEncode {
-        loc: pt::Loc,
-        tys: Vec<Type>,
-        packed: Vec<Expression>,
-        args: Vec<Expression>,
-    },
     Add(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
     AllocDynamicBytes(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
     ArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
@@ -443,8 +437,7 @@ pub enum Expression {
 impl CodeLocation for Expression {
     fn loc(&self) -> pt::Loc {
         match self {
-            Expression::AbiEncode { loc, .. }
-            | Expression::StorageArrayLength { loc, .. }
+            Expression::StorageArrayLength { loc, .. }
             | Expression::Builtin(loc, ..)
             | Expression::Cast(loc, ..)
             | Expression::NumberLiteral(loc, ..)
@@ -509,16 +502,6 @@ impl Recurse for Expression {
             return;
         }
         match self {
-            Expression::AbiEncode { packed, args, .. } => {
-                for item in packed {
-                    item.recurse(cx, f);
-                }
-
-                for arg in args {
-                    arg.recurse(cx, f);
-                }
-            }
-
             Expression::BitwiseAnd(_, _, left, right)
             | Expression::BitwiseOr(_, _, left, right)
             | Expression::UnsignedDivide(_, _, left, right)
@@ -597,7 +580,7 @@ impl Recurse for Expression {
 impl RetrieveType for Expression {
     fn ty(&self) -> Type {
         match self {
-            Expression::AbiEncode { .. } | Expression::ReturnData(_) => Type::DynamicBytes,
+            Expression::ReturnData(_) => Type::DynamicBytes,
             Expression::Builtin(_, returns, ..) => {
                 assert_eq!(returns.len(), 1);
                 returns[0].clone()

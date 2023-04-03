@@ -229,7 +229,6 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
 
                 v
             }
-            Instr::AbiDecode { res, .. } => set_var(res),
             Instr::LoadStorage { res, .. } => set_var(&[*res]),
             Instr::PushMemory { array, res, .. } => {
                 let mut v = set_var(&[*res]);
@@ -592,10 +591,7 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
             {
                 // Function calls should never be eliminated from the CFG, as they might have side effects
                 // In addition, AbiDecode might fail and halt the execution.
-                if !matches!(
-                    cfg.blocks[*block_no].instr[*instr_no],
-                    Instr::Call { .. } | Instr::AbiDecode { .. }
-                ) {
+                if !matches!(cfg.blocks[*block_no].instr[*instr_no], Instr::Call { .. }) {
                     cfg.blocks[*block_no].instr[*instr_no] = Instr::Nop;
                 }
             }
