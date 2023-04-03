@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{codegen::Options, sema::ast};
+use crate::codegen::Options;
+use crate::sema::ast::{Contract, Namespace};
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
 use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
+use parity_wasm::elements::Func;
 
 use crate::emit::functions::{emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};
@@ -101,8 +103,8 @@ impl SubstrateTarget {
     pub fn build<'a>(
         context: &'a Context,
         std_lib: &Module<'a>,
-        contract: &'a ast::Contract,
-        ns: &'a ast::Namespace,
+        contract: &'a Contract,
+        ns: &'a Namespace,
         opt: &'a Options,
     ) -> Binary<'a> {
         let filename = ns.files[contract.loc.file_no()].file_name();
@@ -143,8 +145,9 @@ impl SubstrateTarget {
 
         emit_functions(&mut target, &mut binary, contract, ns);
 
-        target.emit_deploy(&mut binary, contract, ns);
-        target.emit_call(&binary, ns);
+        let storage_initializer = emit_initializer(&mut target, &mut binary, contract, ns);
+        target.emit_dispatch(Some(storage_initializer), &mut binary, ns);
+        target.emit_dispatch(None, &mut binary, ns);
 
         binary.internalize(&[
             "deploy",
@@ -316,56 +319,24 @@ impl SubstrateTarget {
         );
     }
 
-    fn emit_deploy(&mut self, binary: &mut Binary, contract: &ast::Contract, ns: &ast::Namespace) {
-        let initializer = emit_initializer(self, binary, contract, ns);
-
-        // create deploy function
-        let function = binary.module.add_function(
-            "deploy",
-            binary.context.void_type().fn_type(&[], false),
-            None,
-        );
-
-        // deploy always receives an endowment so no value check here
-        let (deploy_args, deploy_args_length) = self.public_function_prelude(binary, function);
-
-        // init our storage vars
-        binary.builder.build_call(initializer, &[], "");
-
-        let dispatcher = binary.module.get_function("substrate_dispatch").unwrap();
+    /// Emits the "deploy" function if `init` is `Some`, otherwise emits the "call" function.
+    fn emit_dispatch(&mut self, init: Option<FunctionValue>, bin: &mut Binary, ns: &Namespace) {
+        let ty = bin.context.void_type().fn_type(&[], false);
+        let name = if init.is_some() { "deploy" } else { "call" };
+        let func = bin.module.add_function(name, ty, None);
+        let (input, input_length) = self.public_function_prelude(bin, func);
+        if let Some(initializer) = init {
+            bin.builder.build_call(initializer, &[], "");
+        }
+        let func = bin.module.get_function("substrate_dispatch").unwrap();
         let args = vec![
-            BasicMetadataValueEnum::PointerValue(deploy_args),
-            BasicMetadataValueEnum::IntValue(deploy_args_length),
-            BasicMetadataValueEnum::IntValue(self.value_transferred(binary, ns)),
-            BasicMetadataValueEnum::PointerValue(binary.selector.as_pointer_value()),
+            BasicMetadataValueEnum::PointerValue(input),
+            BasicMetadataValueEnum::IntValue(input_length),
+            BasicMetadataValueEnum::IntValue(self.value_transferred(bin, ns)),
+            BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
         ];
-        binary
-            .builder
-            .build_call(dispatcher, &args, "substrate_dispatcher");
-        binary.builder.build_unreachable();
-    }
-
-    fn emit_call(&mut self, binary: &Binary, ns: &ast::Namespace) {
-        // create call function
-        let function = binary.module.add_function(
-            "call",
-            binary.context.void_type().fn_type(&[], false),
-            None,
-        );
-
-        let (contract_args, contract_args_length) = self.public_function_prelude(binary, function);
-
-        let dispatcher = binary.module.get_function("substrate_dispatch").unwrap();
-        let args = vec![
-            BasicMetadataValueEnum::PointerValue(contract_args),
-            BasicMetadataValueEnum::IntValue(contract_args_length),
-            BasicMetadataValueEnum::IntValue(self.value_transferred(binary, ns)),
-            BasicMetadataValueEnum::PointerValue(binary.selector.as_pointer_value()),
-        ];
-        binary
-            .builder
-            .build_call(dispatcher, &args, "substrate_dispatcher");
-        binary.builder.build_unreachable();
+        bin.builder.build_call(func, &args, "substrate_dispatch");
+        bin.builder.build_unreachable();
     }
 }
 
