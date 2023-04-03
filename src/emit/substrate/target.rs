@@ -1111,13 +1111,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn return_data<'b>(&self, binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {
         emit_context!(binary);
 
+        // The `seal_call` syscall leaves the return data in the scratch buffer
         let (scratch_buf, scratch_len) = scratch_buf!();
-
-        let length =
-            binary
-                .builder
-                .build_load(binary.context.i32_type(), scratch_len, "string_len");
-
+        let ty = binary.context.i32_type();
+        let length = binary.builder.build_load(ty, scratch_len, "scratch_len");
         call!(
             "vector_new",
             &[length.into(), i32_const!(1).into(), scratch_buf.into(),]
