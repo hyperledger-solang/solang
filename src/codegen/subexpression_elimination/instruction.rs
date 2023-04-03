@@ -55,7 +55,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     // x = x + y -> make x+y available, than make kill x, which also kills x+y
                     // -- x + y is not available here, because x has a new definition
                     self.kill(*res);
-                    tracker.invalidate_mapped_variable(res);
+                    tracker.invalidate_mapped_variable(*res);
                 }
             }
 

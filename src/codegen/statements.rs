@@ -55,7 +55,7 @@ pub(crate) fn statement(
             }
         }
         Statement::VariableDecl(loc, pos, _, Some(init)) => {
-            if should_remove_variable(pos, func, opt) {
+            if should_remove_variable(*pos, func, opt) {
                 let mut params = SideEffectsCheckParameters {
                     cfg,
                     contract_no,
@@ -116,7 +116,7 @@ pub(crate) fn statement(
             );
         }
         Statement::VariableDecl(loc, pos, param, None) => {
-            if should_remove_variable(pos, func, opt) {
+            if should_remove_variable(*pos, func, opt) {
                 return;
             }
 
@@ -916,7 +916,7 @@ fn destructure(
             DestructureField::VariableDecl(res, param) => {
                 let expr = try_load_and_cast(&param.loc, &right, &param.ty, ns, cfg, vartab);
 
-                if should_remove_variable(res, func, opt) {
+                if should_remove_variable(*res, func, opt) {
                     continue;
                 }
 
@@ -1122,7 +1122,7 @@ fn try_catch(
 
             call_constructor(
                 loc,
-                contract_no,
+                *contract_no,
                 callee_contract_no,
                 constructor_no,
                 args,

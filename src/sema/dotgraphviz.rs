@@ -612,7 +612,7 @@ impl Dot {
                 contract_no,
                 var_no,
             } => {
-                self.add_constant_variable(loc, ty, contract_no, var_no, parent, parent_rel, ns);
+                self.add_constant_variable(loc, ty, contract_no, *var_no, parent, parent_rel, ns);
             }
             Expression::Variable { loc, ty, var_no } => {
                 let labels = vec![
@@ -633,7 +633,7 @@ impl Dot {
                 contract_no,
                 var_no,
             } => {
-                self.add_storage_variable(loc, ty, contract_no, var_no, parent, parent_rel, ns);
+                self.add_storage_variable(loc, ty, *contract_no, *var_no, parent, parent_rel, ns);
             }
             Expression::Load { loc, ty, expr } => {
                 let node = self.add_node(
@@ -1904,16 +1904,16 @@ impl Dot {
                 );
             }
             YulExpression::ConstantVariable(loc, ty, contract, var_no) => {
-                self.add_constant_variable(loc, ty, contract, var_no, parent, parent_rel, ns);
+                self.add_constant_variable(loc, ty, contract, *var_no, parent, parent_rel, ns);
             }
             YulExpression::StorageVariable(loc, ty, contract, var_no) => {
-                self.add_storage_variable(loc, ty, contract, var_no, parent, parent_rel, ns);
+                self.add_storage_variable(loc, ty, *contract, *var_no, parent, parent_rel, ns);
             }
             YulExpression::BuiltInCall(loc, builtin_ty, args) => {
-                self.add_yul_builtin_call(loc, builtin_ty, args, parent, parent_rel, symtable, ns);
+                self.add_yul_builtin_call(loc, *builtin_ty, args, parent, parent_rel, symtable, ns);
             }
             YulExpression::FunctionCall(loc, func_no, args, _) => {
-                self.add_yul_function_call(loc, func_no, args, parent, parent_rel, symtable, ns);
+                self.add_yul_function_call(loc, *func_no, args, parent, parent_rel, symtable, ns);
             }
             YulExpression::SuffixAccess(loc, member, suffix) => {
                 let labels = vec![
@@ -1937,7 +1937,7 @@ impl Dot {
         loc: &Loc,
         ty: &Type,
         contract: &Option<usize>,
-        var_no: &usize,
+        var_no: usize,
         parent: usize,
         parent_rel: String,
         ns: &Namespace,
@@ -1953,11 +1953,11 @@ impl Dot {
                 1,
                 format!(
                     "{}.{}",
-                    ns.contracts[*contract].name, ns.contracts[*contract].variables[*var_no].name
+                    ns.contracts[*contract].name, ns.contracts[*contract].variables[var_no].name
                 ),
             );
         } else {
-            labels.insert(1, ns.constants[*var_no].name.to_string());
+            labels.insert(1, ns.constants[var_no].name.to_string());
         }
 
         self.add_node(
@@ -1971,8 +1971,8 @@ impl Dot {
         &mut self,
         loc: &Loc,
         ty: &Type,
-        contract: &usize,
-        var_no: &usize,
+        contract: usize,
+        var_no: usize,
         parent: usize,
         parent_rel: String,
         ns: &Namespace,
@@ -1981,7 +1981,7 @@ impl Dot {
             String::from("storage variable"),
             format!(
                 "{}.{}",
-                ns.contracts[*contract].name, ns.contracts[*contract].variables[*var_no].name
+                ns.contracts[contract].name, ns.contracts[contract].variables[var_no].name
             ),
             ty.to_string(ns),
             ns.loc_to_string(true, loc),
@@ -2004,10 +2004,10 @@ impl Dot {
     ) -> usize {
         match statement {
             YulStatement::FunctionCall(loc, _, func_no, args) => {
-                self.add_yul_function_call(loc, func_no, args, parent, parent_rel, symtable, ns)
+                self.add_yul_function_call(loc, *func_no, args, parent, parent_rel, symtable, ns)
             }
             YulStatement::BuiltInCall(loc, _, builtin_ty, args) => {
-                self.add_yul_builtin_call(loc, builtin_ty, args, parent, parent_rel, symtable, ns)
+                self.add_yul_builtin_call(loc, *builtin_ty, args, parent, parent_rel, symtable, ns)
             }
             YulStatement::Block(block) => {
                 self.add_yul_block(block, parent, parent_rel, symtable, ns)
@@ -2217,7 +2217,7 @@ impl Dot {
     fn add_yul_function_call(
         &mut self,
         loc: &Loc,
-        func_no: &usize,
+        func_no: usize,
         args: &[YulExpression],
         parent: usize,
         parent_rel: String,
@@ -2225,7 +2225,7 @@ impl Dot {
         ns: &Namespace,
     ) -> usize {
         let labels = vec![
-            format!("yul function call '{}'", ns.yul_functions[*func_no].name),
+            format!("yul function call '{}'", ns.yul_functions[func_no].name),
             ns.loc_to_string(true, loc),
         ];
 
@@ -2245,7 +2245,7 @@ impl Dot {
     fn add_yul_builtin_call(
         &mut self,
         loc: &Loc,
-        builtin_ty: &YulBuiltInFunction,
+        builtin_ty: YulBuiltInFunction,
         args: &[YulExpression],
         parent: usize,
         parent_rel: String,

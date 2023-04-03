@@ -236,7 +236,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
 /// Recursively build the storage layout after all types are registered
 fn type_to_storage_layout(
     key: u32,
-    root: &LayoutKey,
+    root: LayoutKey,
     registry: &PortableRegistryBuilder,
 ) -> Layout<PortableForm> {
     let ty = registry.get(key).unwrap();
@@ -250,7 +250,7 @@ fn type_to_storage_layout(
                 )
             }),
         )),
-        _ => Layout::Leaf(LeafLayout::new(*root, key.into())),
+        _ => Layout::Leaf(LeafLayout::new(root, key.into())),
     }
 }
 
@@ -271,7 +271,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                 let layout_key = LayoutKey::new(slot);
                 let root = RootLayout::new(
                     layout_key,
-                    type_to_storage_layout(ty, &layout_key, &registry),
+                    type_to_storage_layout(ty, layout_key, &registry),
                 );
                 Some(FieldLayout::new(var.name.clone(), root))
             } else {

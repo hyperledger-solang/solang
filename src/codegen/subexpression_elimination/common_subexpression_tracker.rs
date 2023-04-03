@@ -92,8 +92,8 @@ impl<'a> CommonSubExpressionTracker<'a> {
     }
 
     /// Invalidate a mapped variable
-    pub fn invalidate_mapped_variable(&mut self, var_no: &usize) {
-        if let Some(expr_id) = self.mapped_variables.remove(var_no) {
+    pub fn invalidate_mapped_variable(&mut self, var_no: usize) {
+        if let Some(expr_id) = self.mapped_variables.remove(&var_no) {
             self.common_subexpressions[expr_id].var_loc = None;
             self.common_subexpressions[expr_id].in_cfg = false;
             self.common_subexpressions[expr_id].var_no = None;
