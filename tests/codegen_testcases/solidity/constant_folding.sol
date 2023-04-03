@@ -28,12 +28,12 @@ contract Enum {
         lenders[Lender.USDC] = usdc;
         lenders[Lender.DAI] = dai;
 
-        // CHECK: ty:address storage %temp.7 = (arg #0)
-        // CHECK: store storage slot(hex"f31349e4056d5e5c8ce6d8359404f2ca89b2a6884691bff0f55ce7629f869af3") ty:address = %temp.7
-        // CHECK: ty:address storage %temp.8 = (arg #1)
-        // CHECK: store storage slot(hex"e062efc721ea447b5e3918617d57f26130f3d8bc01b883eed1efcb4864d73ac1") ty:address = %temp.8
-        // CHECK: ty:address storage %temp.9 = (arg #2)
-        // CHECK: store storage slot(hex"b2573af2738ebd4810a3198e92bab190f29b8718f1d5ed1b83e468f2bb322d10") ty:address = %temp.9
+        // CHECK: ty:address storage %temp.13 = (arg #0)
+        // CHECK: store storage slot(hex"f31349e4056d5e5c8ce6d8359404f2ca89b2a6884691bff0f55ce7629f869af3") ty:address = %temp.13
+        // CHECK: ty:address storage %temp.14 = (arg #1)
+        // CHECK: store storage slot(hex"e062efc721ea447b5e3918617d57f26130f3d8bc01b883eed1efcb4864d73ac1") ty:address = %temp.14
+        // CHECK: ty:address storage %temp.15 = (arg #2)
+        // CHECK: store storage slot(hex"b2573af2738ebd4810a3198e92bab190f29b8718f1d5ed1b83e468f2bb322d10") ty:address = %temp.15
     }
 
     function foo(Lender lender) public view returns (address) {
