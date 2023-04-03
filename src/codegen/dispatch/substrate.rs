@@ -194,7 +194,7 @@ impl<'a> Dispatch<'a> {
         self.cfg
     }
 
-    /// Insert the dispatch logic for `func_no`. `func_no` may be a message or constructor.
+    /// Insert the dispatch logic for `func_no`. `func_no` may be a function or constructor.
     /// Returns the basic block number in which the dispatch logic was inserted.
     fn dispatch_case(&mut self, func_no: usize) -> usize {
         let case_bb = self.cfg.new_basic_block(format!("func_{func_no}_dispatch"));
@@ -265,7 +265,7 @@ impl<'a> Dispatch<'a> {
         case_bb
     }
 
-    /// Insert a trap into the cfg, if the message `func_no` is not payable but received value anyways.
+    /// Insert a trap into the cfg, if the function `func_no` is not payable but received value anyways.
     /// Constructors always receive endowment.
     fn abort_if_value_transfer(&mut self, func_no: usize) {
         if !self.all_cfg[func_no].nonpayable || self.all_cfg[func_no].ty == FunctionTy::Constructor
