@@ -13,7 +13,7 @@ use crate::{
 use num_bigint::{BigInt, Sign};
 use solang_parser::pt::{FunctionTy, Loc::Codegen};
 
-/// The dispatching algorithm consists of these steps:
+/// The dispatch algorithm consists of these steps:
 /// 1. If the input is less than the expected selector length (default 4 bytes), fallback or receive.
 /// 2. Match the function selector
 ///     - If no selector matches, fallback or receive.
@@ -195,7 +195,7 @@ impl<'a> Dispatch<'a> {
     }
 
     /// Insert the dispatch logic for `msg_no`. `msg_no` may be a message or constructor.
-    /// Returns the basic block number where the dispatch logic was inserted.
+    /// Returns the basic block number in which the dispatch logic was inserted.
     fn dispatch_case(&mut self, msg_no: usize) -> usize {
         let case_bb = self.cfg.new_basic_block(format!("msg_{msg_no}_dispatch"));
         self.cfg.set_basic_block(case_bb);
