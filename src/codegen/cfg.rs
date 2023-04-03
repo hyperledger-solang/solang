@@ -1996,6 +1996,11 @@ impl Namespace {
         }
     }
 
+    /// Return the value type
+    pub fn value_type(&self) -> Type {
+        Type::Uint(8 * self.value_length as u16)
+    }
+
     /// Checks if struct contains only primitive types and returns its memory non-padded size
     pub fn calculate_struct_non_padded_size(&self, struct_type: &StructType) -> Option<BigInt> {
         let mut size = BigInt::from(0u8);

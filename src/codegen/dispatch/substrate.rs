@@ -60,7 +60,7 @@ fn new_cfg(ns: &Namespace) -> ControlFlowGraph {
     let mut input_len = input_ptr.clone();
     input_len.ty = Uint(32);
     let mut value = input_ptr.clone();
-    value.ty = Uint(8 * ns.value_length as u16);
+    value.ty = ns.value_type();
     let mut selector_ptr = input_ptr.clone();
     selector_ptr.ty = Type::Ref(Uint(8 * ns.target.selector_length() as u16).into());
     cfg.params = vec![input_ptr, input_len, value, selector_ptr].into();
@@ -85,14 +85,13 @@ impl<'a> Dispatch<'a> {
         );
 
         // Read transferred value from args
-        let value_ty = Uint(8 * ns.value_length as u16);
-        let value = vartab.temp_name("value", &value_ty);
+        let value = vartab.temp_name("value", &ns.value_type());
         cfg.add(
             &mut vartab,
             Instr::Set {
                 loc: Codegen,
                 res: value,
-                expr: Expression::FunctionArg(Codegen, value_ty, 2),
+                expr: Expression::FunctionArg(Codegen, ns.value_type(), 2),
             },
         );
 
@@ -273,15 +272,14 @@ impl<'a> Dispatch<'a> {
             return;
         }
 
-        let value_ty = Uint(self.ns.value_length as u16 * 8);
         let true_block = self.cfg.new_basic_block(format!("msg_{msg_no}_has_value"));
         let false_block = self.cfg.new_basic_block(format!("msg_{msg_no}_no_value"));
         self.add(Instr::BranchCond {
             cond: Expression::More {
                 loc: Codegen,
                 signed: false,
-                left: Expression::Variable(Codegen, value_ty.clone(), self.value).into(),
-                right: Expression::NumberLiteral(Codegen, value_ty, 0.into()).into(),
+                left: Expression::Variable(Codegen, self.ns.value_type(), self.value).into(),
+                right: Expression::NumberLiteral(Codegen, self.ns.value_type(), 0.into()).into(),
             },
             true_block,
             false_block,
@@ -321,15 +319,14 @@ impl<'a> Dispatch<'a> {
             return self.selector_invalid();
         }
 
-        let value_ty = Uint(self.ns.value_length as u16 * 8);
         let fallback_block = self.cfg.new_basic_block("fallback".into());
         let receive_block = self.cfg.new_basic_block("receive".into());
         self.add(Instr::BranchCond {
             cond: Expression::More {
                 loc: Codegen,
                 signed: false,
-                left: Expression::Variable(Codegen, value_ty.clone(), self.value).into(),
-                right: Expression::NumberLiteral(Codegen, value_ty, 0.into()).into(),
+                left: Expression::Variable(Codegen, self.ns.value_type(), self.value).into(),
+                right: Expression::NumberLiteral(Codegen, self.ns.value_type(), 0.into()).into(),
             },
             true_block: receive_block,
             false_block: fallback_block,
