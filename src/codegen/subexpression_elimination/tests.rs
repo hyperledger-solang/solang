@@ -198,30 +198,6 @@ fn not_tracked() {
 }
 
 #[test]
-fn invalid() {
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(1), 1);
-    let exp = Expression::List(Loc::Codegen, vec![arg.clone()]);
-
-    let instr = Instr::AbiDecode {
-        res: vec![],
-        selector: None,
-        exception_block: None,
-        tys: vec![],
-        data: exp.clone(),
-        data_len: None,
-    };
-
-    let mut ave = AvailableExpression::default();
-    let mut set = AvailableExpressionSet::default();
-    let mut cst = CommonSubExpressionTracker::default();
-
-    set.process_instruction(&instr, &mut ave, &mut Some(&mut cst));
-
-    assert!(set.find_expression(&arg).is_none());
-    assert!(set.find_expression(&exp).is_none());
-}
-
-#[test]
 fn complex_expression() {
     let var = Expression::Variable(Loc::Codegen, Type::Int(8), 2);
     let cte = Expression::NumberLiteral(Loc::Codegen, Type::Int(8), BigInt::from(3));

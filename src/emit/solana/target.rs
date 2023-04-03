@@ -1229,45 +1229,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ));
     }
 
-    /// ABI encode into a vector for abi.encode* style builtin functions
-    fn abi_encode_to_vector<'b>(
-        &self,
-        _binary: &Binary<'b>,
-        _function: FunctionValue<'b>,
-        _packed: &[BasicValueEnum<'b>],
-        _args: &[BasicValueEnum<'b>],
-        _tys: &[ast::Type],
-        _ns: &ast::Namespace,
-    ) -> PointerValue<'b> {
-        unreachable!("ABI encoding is implemented in code generation for Solana")
-    }
-
-    fn abi_encode(
-        &self,
-        _binary: &Binary<'a>,
-        _selector: Option<IntValue<'a>>,
-        _load: bool,
-        _function: FunctionValue<'a>,
-        _args: &[BasicValueEnum<'a>],
-        _tys: &[ast::Type],
-        _ns: &ast::Namespace,
-    ) -> (PointerValue<'a>, IntValue<'a>) {
-        unreachable!("ABI encoding is implemented in code generation for Solana")
-    }
-
-    fn abi_decode<'b>(
-        &self,
-        _binary: &Binary<'b>,
-        _function: FunctionValue<'b>,
-        _args: &mut Vec<BasicValueEnum<'b>>,
-        _data: PointerValue<'b>,
-        _length: IntValue<'b>,
-        _spec: &[ast::Parameter],
-        _ns: &ast::Namespace,
-    ) {
-        unreachable!("ABI encoding is implemented in code generation for Solana.")
-    }
-
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
         let string_len64 =
             binary

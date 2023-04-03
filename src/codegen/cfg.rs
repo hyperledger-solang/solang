@@ -147,16 +147,6 @@ pub enum Instr {
         address: Expression,
         value: Expression,
     },
-    /// ABI decoder encoded data. If decoding fails, either jump to exception
-    /// or abort if this is None.
-    AbiDecode {
-        res: Vec<usize>,
-        selector: Option<u32>,
-        exception_block: Option<usize>,
-        tys: Vec<Parameter>,
-        data: Expression,
-        data_len: Option<Expression>,
-    },
     /// Insert unreachable instruction after e.g. self-destruct
     Unreachable,
     /// Self destruct
@@ -223,7 +213,6 @@ impl Instr {
                 encoded_args: Some(expr),
             }
             | Instr::PopStorage { storage: expr, .. }
-            | Instr::AbiDecode { data: expr, .. }
             | Instr::SelfDestruct { recipient: expr }
             | Instr::Set { expr, .. } => {
                 expr.recurse(cx, f);
@@ -438,12 +427,6 @@ impl BasicBlock {
                 } => {
                     out.push(*true_block);
                     out.push(*false_block);
-                }
-                Instr::AbiDecode {
-                    exception_block: Some(block),
-                    ..
-                } => {
-                    out.push(*block);
                 }
                 Instr::Switch { default, cases, .. } => {
                     out.push(*default);
@@ -881,18 +864,6 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::AbiEncode { packed, args, .. } => format!(
-                "(abiencode packed:{} non-packed:{})",
-                packed
-                    .iter()
-                    .map(|expr| self.expr_to_string(contract, ns, expr))
-                    .collect::<Vec<String>>()
-                    .join(", "),
-                args.iter()
-                    .map(|expr| self.expr_to_string(contract, ns, expr))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            ),
             Expression::Undefined(_) => "undef".to_string(),
             Expression::AdvancePointer {
                 pointer,
@@ -1154,44 +1125,6 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, value),
                 )
             }
-            Instr::AbiDecode {
-                res,
-                tys,
-                selector,
-                exception_block: exception,
-                data,
-                data_len,
-            } => {
-                let mut val = format!(
-                    "{} = (abidecode:(%{}, {} {} ({}))",
-                    res.iter()
-                        .map(|local| format!("%{}", self.vars[local].id.name))
-                        .collect::<Vec<String>>()
-                        .join(", "),
-                    self.expr_to_string(contract, ns, data),
-                    selector
-                        .iter()
-                        .map(|s| format!("selector:0x{s:08x} "))
-                        .collect::<String>(),
-                    exception
-                        .iter()
-                        .map(|block| format!("exception: block{block} "))
-                        .collect::<String>(),
-                    tys.iter()
-                        .map(|ty| ty.ty.to_string(ns))
-                        .collect::<Vec<String>>()
-                        .join(", "),
-                );
-
-                if let Some(len) = data_len {
-                    val.push_str(
-                        format!(" data len: {}", self.expr_to_string(contract, ns, len)).as_str(),
-                    );
-                }
-
-                val
-            }
-
             Instr::Store { dest, data } => format!(
                 "store {}, {}",
                 self.expr_to_string(contract, ns, dest),
@@ -2061,6 +1994,11 @@ impl Namespace {
         } else {
             Type::Uint(256)
         }
+    }
+
+    /// Return the value type
+    pub fn value_type(&self) -> Type {
+        Type::Uint(8 * self.value_length as u16)
     }
 
     /// Checks if struct contains only primitive types and returns its memory non-padded size

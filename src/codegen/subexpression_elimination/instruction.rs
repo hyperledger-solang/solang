@@ -23,7 +23,6 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 encoded_args: Some(expr),
             }
             | Instr::PopStorage { storage: expr, .. }
-            | Instr::AbiDecode { data: expr, .. }
             | Instr::SelfDestruct { recipient: expr } => {
                 let _ = self.gen_expression(expr, ave, cst);
             }
@@ -411,25 +410,6 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 address: self.regenerate_expression(address, ave, cst).1,
                 value: self.regenerate_expression(value, ave, cst).1,
             },
-
-            Instr::AbiDecode {
-                res,
-                selector,
-                exception_block,
-                tys,
-                data,
-                data_len,
-            } => Instr::AbiDecode {
-                res: res.clone(),
-                selector: *selector,
-                exception_block: *exception_block,
-                tys: tys.clone(),
-                data: self.regenerate_expression(data, ave, cst).1,
-                data_len: data_len
-                    .as_ref()
-                    .map(|e| self.regenerate_expression(e, ave, cst).1),
-            },
-
             Instr::SelfDestruct { recipient } => Instr::SelfDestruct {
                 recipient: self.regenerate_expression(recipient, ave, cst).1,
             },

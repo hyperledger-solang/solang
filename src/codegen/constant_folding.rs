@@ -264,28 +264,6 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         contract_function_no: *contract_function_no,
                     };
                 }
-                Instr::AbiDecode {
-                    res,
-                    selector,
-                    exception_block,
-                    tys,
-                    data,
-                    data_len,
-                } => {
-                    let (data, _) = expression(data, Some(&vars), cfg, ns);
-                    let data_len = data_len
-                        .as_ref()
-                        .map(|e| expression(e, Some(&vars), cfg, ns).0);
-
-                    cfg.blocks[block_no].instr[instr_no] = Instr::AbiDecode {
-                        res: res.clone(),
-                        selector: *selector,
-                        exception_block: *exception_block,
-                        tys: tys.clone(),
-                        data,
-                        data_len,
-                    }
-                }
                 Instr::SelfDestruct { recipient } => {
                     let (recipient, _) = expression(recipient, Some(&vars), cfg, ns);
 
@@ -1160,32 +1138,6 @@ fn expression(
                 false,
             )
         }
-        Expression::AbiEncode {
-            loc,
-            tys,
-            packed,
-            args,
-        } => {
-            let packed = packed
-                .iter()
-                .map(|expr| expression(expr, vars, cfg, ns).0)
-                .collect();
-            let args = args
-                .iter()
-                .map(|expr| expression(expr, vars, cfg, ns).0)
-                .collect();
-
-            (
-                Expression::AbiEncode {
-                    loc: *loc,
-                    tys: tys.clone(),
-                    packed,
-                    args,
-                },
-                false,
-            )
-        }
-
         Expression::AllocDynamicBytes(loc, ty, len, init) => (
             Expression::AllocDynamicBytes(
                 *loc,

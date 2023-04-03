@@ -163,9 +163,9 @@ contract foo {
         S[] storage ptrArr = arr;
         ptrArr.push(S({f1: 1}));
         ptrArr.push(S({f1: 2}));
-// CHECK: %.temp.76, %.temp.77 = call foo::foo::function::g
-// CHECK: %temp.78 = load storage slot(%.temp.76) ty:struct foo.S
-// CHECK: %temp.79 = load storage slot(%.temp.77) ty:struct foo.S
+// CHECK: %.temp.115, %.temp.116 = call foo::foo::function::g
+// CHECK: %temp.117 = load storage slot(%.temp.115) ty:struct foo.S
+// CHECK: %temp.118 = load storage slot(%.temp.116) ty:struct foo.S
         return g();
     }
 }

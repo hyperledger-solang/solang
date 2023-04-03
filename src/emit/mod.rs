@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::Expression;
-use crate::sema::ast::{CallTy, Function, Namespace, Parameter, Type};
+use crate::sema::ast::{CallTy, Function, Namespace, Type};
 use std::collections::HashMap;
 use std::fmt;
 use std::str;
@@ -65,41 +65,6 @@ impl fmt::Display for BinaryOp {
 }
 
 pub trait TargetRuntime<'a> {
-    fn abi_decode<'b>(
-        &self,
-        bin: &Binary<'b>,
-        function: FunctionValue<'b>,
-        args: &mut Vec<BasicValueEnum<'b>>,
-        data: PointerValue<'b>,
-        length: IntValue<'b>,
-        spec: &[Parameter],
-        ns: &Namespace,
-    );
-
-    /// Abi encode with optional four bytes selector. The load parameter should be set if the args are
-    /// pointers to data, not the actual data  itself.
-    fn abi_encode(
-        &self,
-        bin: &Binary<'a>,
-        selector: Option<IntValue<'a>>,
-        load: bool,
-        function: FunctionValue<'a>,
-        args: &[BasicValueEnum<'a>],
-        tys: &[Type],
-        ns: &Namespace,
-    ) -> (PointerValue<'a>, IntValue<'a>);
-
-    /// ABI encode into a vector for abi.encode* style builtin functions
-    fn abi_encode_to_vector<'b>(
-        &self,
-        binary: &Binary<'b>,
-        function: FunctionValue<'b>,
-        packed: &[BasicValueEnum<'b>],
-        args: &[BasicValueEnum<'b>],
-        tys: &[Type],
-        ns: &Namespace,
-    ) -> PointerValue<'b>;
-
     fn get_storage_int(
         &self,
         bin: &Binary<'a>,

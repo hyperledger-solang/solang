@@ -352,13 +352,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
             expr_2.recurse(data, check_expression);
             expr_3.recurse(data, check_expression);
         }
-
-        Instr::AbiDecode {
-            data: expr,
-            data_len: opt_expr,
-            ..
-        }
-        | Instr::PushStorage {
+        Instr::PushStorage {
             value: opt_expr,
             storage: expr,
             ..

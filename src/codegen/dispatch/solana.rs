@@ -14,10 +14,10 @@ use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
 use solang_parser::{pt, pt::Loc};
 
-use super::encoding::{abi_decode, abi_encode};
+use crate::codegen::encoding::{abi_decode, abi_encode};
 
 /// Create the dispatch for the Solana target
-pub(super) fn function_dispatch(
+pub(crate) fn function_dispatch(
     contract_no: usize,
     all_cfg: &[ControlFlowGraph],
     ns: &mut Namespace,

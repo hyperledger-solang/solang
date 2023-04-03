@@ -104,18 +104,10 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 continue;
             }
 
-            let encoded = Expression::AbiEncode {
-                loc,
-                tys: vec![value.ty()],
-                packed: vec![],
-                args: vec![value],
-            };
-            let concatenated = Expression::StringConcat(
-                loc,
-                Type::DynamicBytes,
-                StringLocation::CompileTime(topic_prefixes.pop_front().unwrap()),
-                StringLocation::RunTime(encoded.into()),
-            );
+            let encoded = abi_encode(&loc, vec![value], self.ns, vartab, cfg, false).0;
+            let prefix = StringLocation::CompileTime(topic_prefixes.pop_front().unwrap());
+            let value = StringLocation::RunTime(encoded.into());
+            let concatenated = Expression::StringConcat(loc, Type::DynamicBytes, prefix, value);
 
             vartab.new_dirty_tracker();
             let var_buffer = vartab.temp_anonymous(&Type::DynamicBytes);

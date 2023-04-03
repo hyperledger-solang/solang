@@ -195,9 +195,6 @@ fn block_reduce(
                 *address = expression_reduce(address, &vars, ns);
                 *value = expression_reduce(value, &vars, ns);
             }
-            Instr::AbiDecode { data, .. } => {
-                *data = expression_reduce(data, &vars, ns);
-            }
             Instr::EmitEvent { topics, data, .. } => {
                 *topics = topics
                     .iter()

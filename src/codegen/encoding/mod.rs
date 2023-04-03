@@ -176,8 +176,7 @@ pub(super) trait AbiEncoding {
                 self.encode_int(expr, buffer, offset, ns, vartab, cfg, *width)
             }
             Type::Value => {
-                let size = ns.value_length.into();
-                self.encode_directly(expr, buffer, offset, vartab, cfg, size)
+                self.encode_directly(expr, buffer, offset, vartab, cfg, ns.value_length.into())
             }
             Type::Bytes(length) => {
                 self.encode_directly(expr, buffer, offset, vartab, cfg, (*length).into())

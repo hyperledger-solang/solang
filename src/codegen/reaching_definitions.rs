@@ -134,7 +134,6 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
             }
             Instr::Set { res, .. } => set_var(&[*res]),
             Instr::Call { res, .. } => set_var(res),
-            Instr::AbiDecode { res, .. } => set_var(res),
             Instr::LoadStorage { res, .. } | Instr::PopStorage { res: Some(res), .. } => {
                 set_var(&[*res])
             }

@@ -1473,24 +1473,6 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .storage_array_length(bin, function, slot, elem_ty, ns)
                 .into()
         }
-        Expression::AbiEncode {
-            tys, packed, args, ..
-        } => target
-            .abi_encode_to_vector(
-                bin,
-                function,
-                &packed
-                    .iter()
-                    .map(|a| expression(target, bin, a, vartab, function, ns))
-                    .collect::<Vec<BasicValueEnum>>(),
-                &args
-                    .iter()
-                    .map(|a| expression(target, bin, a, vartab, function, ns))
-                    .collect::<Vec<BasicValueEnum>>(),
-                tys,
-                ns,
-            )
-            .into(),
         Expression::Builtin(_, _, Builtin::Signature, _) if ns.target != Target::Solana => {
             // need to byte-reverse selector
             let selector_type = bin.context.i32_type();

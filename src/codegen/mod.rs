@@ -26,7 +26,9 @@ mod yul;
 
 use self::{
     cfg::{optimize_and_check_cfg, ControlFlowGraph, Instr},
+    dispatch::function_dispatch,
     expression::expression,
+    solana_accounts::collect_accounts_from_contract,
     vartable::Vartable,
 };
 use crate::sema::ast::{
@@ -36,8 +38,6 @@ use crate::{sema::ast, Target};
 use std::cmp::Ordering;
 
 use crate::codegen::cfg::ASTFunction;
-use crate::codegen::dispatch::function_dispatch;
-use crate::codegen::solana_accounts::collect_accounts_from_contract;
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
@@ -223,13 +223,9 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
-        // TODO: This is a temporary solution. Once Substrate's dispatch moves to codegen,
-        // we can remove this if-condition.
-        if ns.target == Target::Solana {
-            let dispatch_cfg = function_dispatch(contract_no, &all_cfg, ns, opt);
-            ns.contracts[contract_no].dispatch_no = all_cfg.len();
-            all_cfg.push(dispatch_cfg);
-        }
+        let dispatch_cfg = function_dispatch(contract_no, &all_cfg, ns, opt);
+        ns.contracts[contract_no].dispatch_no = all_cfg.len();
+        all_cfg.push(dispatch_cfg);
 
         ns.contracts[contract_no].cfg = all_cfg;
     }
@@ -344,12 +340,6 @@ impl LLVMName for Function {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
-    AbiEncode {
-        loc: pt::Loc,
-        tys: Vec<Type>,
-        packed: Vec<Expression>,
-        args: Vec<Expression>,
-    },
     Add(pt::Loc, Type, bool, Box<Expression>, Box<Expression>),
     AllocDynamicBytes(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
     ArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
@@ -445,8 +435,7 @@ pub enum Expression {
 impl CodeLocation for Expression {
     fn loc(&self) -> pt::Loc {
         match self {
-            Expression::AbiEncode { loc, .. }
-            | Expression::StorageArrayLength { loc, .. }
+            Expression::StorageArrayLength { loc, .. }
             | Expression::Builtin(loc, ..)
             | Expression::Cast(loc, ..)
             | Expression::NumberLiteral(loc, ..)
@@ -511,16 +500,6 @@ impl Recurse for Expression {
             return;
         }
         match self {
-            Expression::AbiEncode { packed, args, .. } => {
-                for item in packed {
-                    item.recurse(cx, f);
-                }
-
-                for arg in args {
-                    arg.recurse(cx, f);
-                }
-            }
-
             Expression::BitwiseAnd(_, _, left, right)
             | Expression::BitwiseOr(_, _, left, right)
             | Expression::UnsignedDivide(_, _, left, right)
@@ -599,7 +578,7 @@ impl Recurse for Expression {
 impl RetrieveType for Expression {
     fn ty(&self) -> Type {
         match self {
-            Expression::AbiEncode { .. } | Expression::ReturnData(_) => Type::DynamicBytes,
+            Expression::ReturnData(_) => Type::DynamicBytes,
             Expression::Builtin(_, returns, ..) => {
                 assert_eq!(returns.len(), 1);
                 returns[0].clone()

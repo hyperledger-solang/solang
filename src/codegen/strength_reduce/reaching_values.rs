@@ -80,15 +80,6 @@ pub(super) fn reaching_values(
 
                 reaching_values(*false_block, cfg, vars, block_vars, ns);
             }
-            Instr::AbiDecode {
-                exception_block: Some(block),
-                ..
-            } => {
-                let mut vars = vars.clone();
-
-                reaching_values(*block, cfg, &mut vars, block_vars, ns);
-            }
-
             _ => (),
         }
     }
@@ -157,21 +148,6 @@ pub(super) fn transfer(instr: &Instr, vars: &mut Variables, ns: &Namespace) {
             let v = expression_values(expr, vars, ns);
 
             vars.insert(*res, v);
-        }
-        Instr::AbiDecode { res, tys, .. } => {
-            for (i, var_no) in res.iter().enumerate() {
-                let ty = &tys[i].ty;
-
-                if track(ty) {
-                    let mut set = HashSet::new();
-
-                    let bits = ty.bits(ns) as usize;
-
-                    set.insert(Value::unknown(bits));
-
-                    vars.insert(*var_no, set);
-                }
-            }
         }
         Instr::Call {
             res, return_tys, ..
