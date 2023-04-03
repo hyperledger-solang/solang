@@ -304,21 +304,20 @@ impl<'a> Dispatch<'a> {
 
     /// Build calls to fallback or receive functions (if they are present in the contract).
     fn fallback_or_receive(&mut self) {
-        let fb_recv = self
-            .all_cfg
-            .iter()
-            .enumerate()
-            .fold([None, None], |mut acc, (no, cfg)| {
+        let (fallback_cfg, receive_cfg) = self.all_cfg.iter().enumerate().fold(
+            (None, None),
+            |(mut fallback_cfg, mut receive_cfg), (no, cfg)| {
                 match cfg.ty {
-                    FunctionTy::Fallback if cfg.public => acc[0] = Some(no),
-                    FunctionTy::Receive if cfg.public => acc[1] = Some(no),
+                    FunctionTy::Fallback if cfg.public => fallback_cfg = Some(no),
+                    FunctionTy::Receive if cfg.public => receive_cfg = Some(no),
                     _ => {}
                 }
-                acc
-            });
+                (fallback_cfg, receive_cfg)
+            },
+        );
 
         // No need to check value transferred; we will abort either way
-        if fb_recv[0].is_none() && fb_recv[1].is_none() {
+        if fallback_cfg.is_none() && receive_cfg.is_none() {
             return self.selector_invalid();
         }
 
@@ -337,7 +336,7 @@ impl<'a> Dispatch<'a> {
         });
 
         self.cfg.set_basic_block(fallback_block);
-        if let Some(cfg_no) = fb_recv[0] {
+        if let Some(cfg_no) = fallback_cfg {
             self.add(Instr::Call {
                 res: vec![],
                 return_tys: vec![],
@@ -357,7 +356,7 @@ impl<'a> Dispatch<'a> {
         }
 
         self.cfg.set_basic_block(receive_block);
-        if let Some(cfg_no) = fb_recv[1] {
+        if let Some(cfg_no) = receive_cfg {
             self.add(Instr::Call {
                 res: vec![],
                 return_tys: vec![],

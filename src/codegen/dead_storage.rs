@@ -590,7 +590,6 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
             } = def
             {
                 // Function calls should never be eliminated from the CFG, as they might have side effects
-                // In addition, AbiDecode might fail and halt the execution.
                 if !matches!(cfg.blocks[*block_no].instr[*instr_no], Instr::Call { .. }) {
                     cfg.blocks[*block_no].instr[*instr_no] = Instr::Nop;
                 }
