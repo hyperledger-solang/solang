@@ -6,7 +6,6 @@ use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
 use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
-use parity_wasm::elements::Func;
 
 use crate::emit::functions::{emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};

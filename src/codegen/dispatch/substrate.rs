@@ -23,10 +23,6 @@ use solang_parser::pt::{FunctionTy, Loc::Codegen};
 /// 5. Return the result:
 ///     - On success, ABI encode the result (if any) and return.
 ///     - On failure, trap the contract.
-///
-/// We distinguish between fallback and receive:
-/// - If there is no endowment, dispatch to fallback
-/// - If there is endowment, dispatch to receive
 pub(crate) fn function_dispatch(
     _contract_no: usize,
     all_cfg: &[ControlFlowGraph],
