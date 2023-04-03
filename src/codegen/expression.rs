@@ -65,7 +65,7 @@ pub fn expression(
         } => add(
             loc,
             ty,
-            unchecked,
+            *unchecked,
             left,
             cfg,
             contract_no,
@@ -84,7 +84,7 @@ pub fn expression(
         } => subtract(
             loc,
             ty,
-            unchecked,
+            *unchecked,
             left,
             cfg,
             contract_no,
@@ -354,7 +354,7 @@ pub fn expression(
             } = &**left
             {
                 // If cfg_right is an AllocDynamicArray(_,_,size,_), update it such that it becomes AllocDynamicArray(_,_,temp_var,_) to avoid repetitive expressions in the cfg.
-                cfg_right = handle_array_assign(cfg_right, cfg, vartab, var_no);
+                cfg_right = handle_array_assign(cfg_right, cfg, vartab, *var_no);
             }
 
             assign_single(left, cfg_right, cfg, contract_no, func, ns, vartab, opt)
@@ -380,7 +380,7 @@ pub fn expression(
             ns,
             loc,
             expr,
-            unchecked,
+            *unchecked,
             opt,
         ),
         ast::Expression::PostDecrement {
@@ -404,7 +404,7 @@ pub fn expression(
             ns,
             loc,
             expr,
-            unchecked,
+            *unchecked,
             opt,
         ),
         ast::Expression::Constructor {
@@ -418,7 +418,7 @@ pub fn expression(
 
             call_constructor(
                 loc,
-                constructor_contract,
+                *constructor_contract,
                 contract_no,
                 constructor_no,
                 args,
@@ -904,7 +904,7 @@ pub fn expression(
         ast::Expression::Builtin {
             loc,
             tys,
-            kind: builtin,
+            kind,
             args,
         } => expr_builtin(
             args,
@@ -915,7 +915,7 @@ pub fn expression(
             vartab,
             loc,
             tys,
-            builtin,
+            *kind,
             opt,
         ),
         ast::Expression::FormatString { loc, format: args } => {
@@ -946,7 +946,7 @@ pub fn expression(
             right,
             opt,
         ),
-        ast::Expression::InterfaceId { loc, contract_no } => interfaceid(ns, contract_no, loc),
+        ast::Expression::InterfaceId { loc, contract_no } => interfaceid(ns, *contract_no, loc),
         ast::Expression::BoolLiteral { loc, value } => Expression::BoolLiteral(*loc, *value),
         ast::Expression::BytesLiteral { loc, ty, value } => {
             Expression::BytesLiteral(*loc, ty.clone(), value.clone())
@@ -1051,7 +1051,7 @@ fn post_incdec(
     ns: &Namespace,
     loc: &pt::Loc,
     expr: &ast::Expression,
-    unchecked: &bool,
+    unchecked: bool,
     opt: &Options,
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
@@ -1074,14 +1074,14 @@ fn post_incdec(
         ast::Expression::PostDecrement { .. } => Expression::Subtract(
             *loc,
             ty.clone(),
-            *unchecked,
+            unchecked,
             Box::new(Expression::Variable(*loc, ty.clone(), res)),
             one,
         ),
         ast::Expression::PostIncrement { .. } => Expression::Add(
             *loc,
             ty.clone(),
-            *unchecked,
+            unchecked,
             Box::new(Expression::Variable(*loc, ty.clone(), res)),
             one,
         ),
@@ -1147,7 +1147,7 @@ fn pre_incdec(
     ns: &Namespace,
     loc: &pt::Loc,
     expr: &ast::Expression,
-    unchecked: &bool,
+    unchecked: bool,
     opt: &Options,
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
@@ -1160,10 +1160,10 @@ fn pre_incdec(
     let one = Box::new(Expression::NumberLiteral(*loc, ty.clone(), BigInt::one()));
     let expr = match expr {
         ast::Expression::PreDecrement { .. } => {
-            Expression::Subtract(*loc, ty.clone(), *unchecked, Box::new(v), one)
+            Expression::Subtract(*loc, ty.clone(), unchecked, Box::new(v), one)
         }
         ast::Expression::PreIncrement { .. } => {
-            Expression::Add(*loc, ty.clone(), *unchecked, Box::new(v), one)
+            Expression::Add(*loc, ty.clone(), unchecked, Box::new(v), one)
         }
         _ => unreachable!(),
     };
@@ -1780,7 +1780,7 @@ fn expr_builtin(
     vartab: &mut Vartable,
     loc: &pt::Loc,
     tys: &[Type],
-    builtin: &ast::Builtin,
+    builtin: ast::Builtin,
     opt: &Options,
 ) -> Expression {
     match builtin {
@@ -1984,7 +1984,7 @@ fn expr_builtin(
 
             cfg.set_basic_block(in_bounds);
 
-            Expression::Builtin(*loc, tys.to_vec(), builtin.into(), vec![buf, offset])
+            Expression::Builtin(*loc, tys.to_vec(), (&builtin).into(), vec![buf, offset])
         }
         ast::Builtin::AddMod | ast::Builtin::MulMod => {
             let arguments: Vec<Expression> = args
@@ -2018,7 +2018,7 @@ fn expr_builtin(
                 Instr::Set {
                     loc: *loc,
                     res: temp,
-                    expr: Expression::Builtin(*loc, tys.to_vec(), builtin.into(), arguments),
+                    expr: Expression::Builtin(*loc, tys.to_vec(), (&builtin).into(), arguments),
                 },
             );
             cfg.add(vartab, Instr::Branch { block: end_if });
@@ -2044,7 +2044,7 @@ fn expr_builtin(
                 .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
                 .collect();
 
-            if !arguments.is_empty() && builtin == &ast::Builtin::ArrayLength {
+            if !arguments.is_empty() && builtin == ast::Builtin::ArrayLength {
                 // If an array length instruction is called
                 // Get the variable it is assigned with
                 if let Expression::Variable(_, _, num) = &arguments[0] {
@@ -2055,7 +2055,7 @@ fn expr_builtin(
                     }
                 }
             }
-            Expression::Builtin(*loc, tys.to_vec(), builtin.into(), arguments)
+            Expression::Builtin(*loc, tys.to_vec(), (&builtin).into(), arguments)
         }
     }
 }
@@ -2079,7 +2079,7 @@ fn alloc_dynamic_array(
 fn add(
     loc: &pt::Loc,
     ty: &Type,
-    unchecked: &bool,
+    unchecked: bool,
     left: &ast::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -2092,7 +2092,7 @@ fn add(
     Expression::Add(
         *loc,
         ty.clone(),
-        *unchecked,
+        unchecked,
         Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
         Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
     )
@@ -2101,7 +2101,7 @@ fn add(
 fn subtract(
     loc: &pt::Loc,
     ty: &Type,
-    unchecked: &bool,
+    unchecked: bool,
     left: &ast::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -2114,7 +2114,7 @@ fn subtract(
     Expression::Subtract(
         *loc,
         ty.clone(),
-        *unchecked,
+        unchecked,
         Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
         Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
     )
@@ -2294,14 +2294,14 @@ fn conditional_operator(
     Expression::Variable(*loc, ty.clone(), pos)
 }
 
-fn interfaceid(ns: &Namespace, contract_no: &usize, loc: &pt::Loc) -> Expression {
+fn interfaceid(ns: &Namespace, contract_no: usize, loc: &pt::Loc) -> Expression {
     let selector_len = ns.target.selector_length();
     let mut id = vec![0u8; selector_len as usize];
-    for func_no in &ns.contracts[*contract_no].functions {
+    for func_no in &ns.contracts[contract_no].functions {
         let func = &ns.functions[*func_no];
 
         if func.ty == pt::FunctionTy::Function {
-            let selector = func.selector(ns, contract_no);
+            let selector = func.selector(ns, &contract_no);
             debug_assert_eq!(id.len(), selector.len());
 
             for (i, e) in id.iter_mut().enumerate() {

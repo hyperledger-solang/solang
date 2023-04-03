@@ -17,7 +17,7 @@ pub(super) fn expression_values(
 ) -> HashSet<Value> {
     match expr {
         Expression::NumberLiteral(_, ty, v) => number_literal_values(ty, v, ns),
-        Expression::BoolLiteral(_, v) => bool_literal_values(v),
+        Expression::BoolLiteral(_, v) => bool_literal_values(*v),
         Expression::ZeroExt(_, ty, expr) => zero_ext_values(ty, expr, vars, ns),
         Expression::SignExt(_, ty, expr) => sign_ext_values(ty, expr, vars, ns),
         Expression::Trunc(_, ty, expr) => trunc_values(ty, expr, vars, ns),
@@ -59,7 +59,7 @@ pub(super) fn expression_values(
         }
         Expression::Not(_, expr) => not_values(expr, vars, ns),
         Expression::Complement(_, _, expr) => complement_values(expr, vars, ns),
-        Expression::Variable(_, _, var_no) => variable_values(var_no, vars),
+        Expression::Variable(_, _, var_no) => variable_values(*var_no, vars),
         Expression::InternalFunctionCfg(_) => {
             // reference to a function; ignore
             HashSet::new()
@@ -110,11 +110,11 @@ fn number_literal_values(ty: &Type, v: &BigInt, ns: &Namespace) -> HashSet<Value
     set
 }
 
-fn bool_literal_values(v: &bool) -> HashSet<Value> {
+fn bool_literal_values(v: bool) -> HashSet<Value> {
     let mut set = HashSet::new();
 
     let mut value = BitArray::new([0u8; 32]);
-    value.set(0, *v);
+    value.set(0, v);
     let mut known_bits = BitArray::new([0u8; 32]);
     known_bits.set(0, true);
 
@@ -802,8 +802,8 @@ fn complement_values(expr: &Expression, vars: &Variables, ns: &Namespace) -> Has
         .collect()
 }
 
-fn variable_values(var_no: &usize, vars: &Variables) -> HashSet<Value> {
-    if let Some(v) = vars.get(var_no) {
+fn variable_values(var_no: usize, vars: &Variables) -> HashSet<Value> {
+    if let Some(v) = vars.get(&var_no) {
         v.clone()
     } else {
         HashSet::new()

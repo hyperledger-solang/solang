@@ -52,7 +52,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     /// Checks if an expression is available on both sets
     fn check_intersection(
         key: &ExpressionType,
-        value: &NodeId,
+        value: NodeId,
         set_2: &AvailableExpressionSet,
     ) -> bool {
         // Basic case: the expression is available only available on one set
@@ -62,7 +62,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
 
         // If the expression is a variable, we must ensure that it points to the same node
         if matches!(key, ExpressionType::Variable(_)) {
-            return *value == set_2.expr_map[key];
+            return value == set_2.expr_map[key];
         }
 
         true
@@ -75,7 +75,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
         cst: &CommonSubExpressionTracker,
     ) {
         self.expr_map
-            .retain(|key, value| AvailableExpressionSet::check_intersection(key, value, set_2));
+            .retain(|key, value| AvailableExpressionSet::check_intersection(key, *value, set_2));
 
         let mut to_maintain: HashSet<usize> = HashSet::new();
 
@@ -191,8 +191,8 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     }
 
     /// Add expressions to the common subexpression tracker.
-    fn add_to_cst(&self, exp: &Expression, id: &NodeId, cst: &mut CommonSubExpressionTracker) {
-        let node = &*self.expression_memory.get(id).unwrap().borrow();
+    fn add_to_cst(&self, exp: &Expression, id: NodeId, cst: &mut CommonSubExpressionTracker) {
+        let node = &*self.expression_memory.get(&id).unwrap().borrow();
         cst.add_expression(exp, &node.expr_type, node);
     }
 
@@ -249,7 +249,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     ) -> Option<NodeId> {
         if let Some(id) = self.find_expression(exp) {
             if let Some(tracker) = cst.as_mut() {
-                self.add_to_cst(exp, &id, tracker);
+                self.add_to_cst(exp, id, tracker);
             }
             return Some(id);
         }
@@ -312,20 +312,20 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     }
 
     /// Remove from the set all children from a node
-    fn kill_child(&mut self, child_node: &Rc<RefCell<BasicExpression>>, parent_id: &NodeId) {
+    fn kill_child(&mut self, child_node: &Rc<RefCell<BasicExpression>>, parent_id: NodeId) {
         self.kill_recursive(&child_node.borrow(), parent_id);
         child_node.borrow_mut().children.clear();
     }
 
     /// Recursively remove from the set all the children of a node
-    fn kill_recursive(&mut self, basic_exp: &BasicExpression, parent_id: &NodeId) {
+    fn kill_recursive(&mut self, basic_exp: &BasicExpression, parent_id: NodeId) {
         for (child_id, node) in &basic_exp.children {
-            self.kill_child(node, &basic_exp.expression_id);
+            self.kill_child(node, basic_exp.expression_id);
             self.expression_memory.remove(child_id);
         }
 
         if let ExpressionType::BinaryOperation(left, right, _) = &basic_exp.expr_type {
-            let other_parent = if *left == *parent_id { right } else { left };
+            let other_parent = if *left == parent_id { right } else { left };
             // If the graph has a cycle, we may have already borrowed or deleted a parent.
             if let Some(parent_ref) = self.expression_memory.get_mut(other_parent) {
                 if let Ok(mut parent) = parent_ref.try_borrow_mut() {
@@ -366,7 +366,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
         let var_id = self.expr_map[&key];
         let var_node = self.expression_memory[&var_id].clone();
         for (child_id, node) in &var_node.borrow_mut().children {
-            self.kill_child(node, &var_id);
+            self.kill_child(node, var_id);
             self.expression_memory.remove(child_id);
         }
         self.expression_memory.remove(&var_id);
