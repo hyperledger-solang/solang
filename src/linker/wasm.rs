@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use parity_wasm::builder;
-use parity_wasm::elements::{InitExpr, Instruction, Module};
 use std::ffi::CString;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use tempfile::tempdir;
+use wasm_encoder::{
+    ConstExpr, DataSection, DataSegment, DataSegmentMode, GlobalSection, GlobalType, ImportSection,
+    MemoryType, Module, ValType, {EntityType, RawSection},
+};
+use wasmparser::{Data, DataKind, Global, Import, Parser, Payload::*, SectionLimited, TypeRef};
 
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
@@ -60,55 +63,92 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
         .read_to_end(&mut output)
         .expect("failed to read output file");
 
-    let mut module: Module =
-        parity_wasm::deserialize_buffer(&output).expect("cannot deserialize llvm wasm");
+    generate_module(&output)
+}
 
+fn generate_module(input: &[u8]) -> Vec<u8> {
+    let mut module = Module::new();
+    for payload in Parser::new(0).parse_all(input).map(|s| s.unwrap()) {
+        match payload {
+            DataSection(s) => generate_data_section(s, &mut module),
+            ImportSection(s) => generate_import_section(s, &mut module),
+            GlobalSection(s) => generate_global_section(s, &mut module),
+            ModuleSection { .. } | ComponentSection { .. } => panic!("nested WASM module"),
+            _ => {
+                if let Some((id, range)) = payload.as_section() {
+                    module.section(&RawSection {
+                        id,
+                        data: &input[range],
+                    });
+                }
+            }
+        }
+    }
+    module.finish()
+}
+
+/// Resolve all pallet contracts runtime imports
+fn generate_import_section(section: SectionLimited<Import>, module: &mut Module) {
+    let mut imports = ImportSection::new();
+    for import in section.into_iter().map(|import| import.unwrap()) {
+        let import_type = match import.ty {
+            TypeRef::Func(n) => EntityType::Function(n),
+            TypeRef::Memory(m) => EntityType::Memory(MemoryType {
+                maximum: m.maximum,
+                minimum: m.initial,
+                memory64: m.memory64,
+                shared: m.shared,
+            }),
+            _ => panic!("unexpected WASM import section {:?}", import),
+        };
+        let module_name = match import.name {
+            "seal_set_storage" => "seal2",
+            "seal_clear_storage"
+            | "seal_contains_storage"
+            | "seal_get_storage"
+            | "seal_instantiate"
+            | "seal_terminate"
+            | "seal_call" => "seal1",
+            "memory" => import.module,
+            _ => "seal0",
+        };
+        imports.import(module_name, import.name, import_type);
+    }
+    module.section(&imports);
+}
+
+/// Generate the the data segment and remove any empty segments.
+fn generate_data_section(section: SectionLimited<Data>, module: &mut Module) {
+    let mut segments = DataSection::new();
+    for segment in section
+        .into_iter()
+        .map(|segment| segment.unwrap())
+        .filter(|segment| segment.data.iter().any(|b| *b != 0))
     {
-        let imports = module.import_section_mut().unwrap().entries_mut();
-        let mut ind = 0;
-
-        while ind < imports.len() {
-            if imports[ind].field().starts_with("seal") {
-                let module_name = match imports[ind].field() {
-                    "seal_set_storage" => "seal2",
-                    "seal_clear_storage"
-                    | "seal_contains_storage"
-                    | "seal_get_storage"
-                    | "seal_instantiate"
-                    | "seal_terminate"
-                    | "seal_call" => "seal1",
-                    _ => "seal0",
-                };
-                *imports[ind].module_mut() = module_name.to_owned();
-            } else if imports[ind].field() == "instantiation_nonce" {
-                *imports[ind].module_mut() = "seal0".to_owned();
-            }
-
-            ind += 1;
+        match segment.kind {
+            DataKind::Active {
+                memory_index: 0, ..
+            } => assert!(segments.is_empty(), "expected only a single data segment"),
+            _ => panic!("expected an active data segment"),
         }
+        segments.segment(DataSegment {
+            mode: DataSegmentMode::Active {
+                memory_index: 0, // Currently, the WASM spec allows only one memory per module
+                offset: &wasm_encoder::ConstExpr::i32_const(0),
+            },
+            data: segment.data.iter().cloned(),
+        });
     }
+    module.section(&segments);
+}
 
-    // remove empty initializers
-    if let Some(data_section) = module.data_section_mut() {
-        let entries = data_section.entries_mut();
-        let mut index = 0;
-
-        while index < entries.len() {
-            if entries[index].value().iter().all(|b| *b == 0) {
-                entries.remove(index);
-            } else {
-                index += 1;
-            }
-        }
-    }
-
-    // set stack pointer to 64k (there is only one global)
-    for global in module.global_section_mut().unwrap().entries_mut() {
-        let init_expr = global.init_expr_mut();
-        *init_expr = InitExpr::new(vec![Instruction::I32Const(0x10000), Instruction::End]);
-    }
-
-    let linked = builder::module().with_module(module);
-
-    parity_wasm::serialize(linked.build()).expect("cannot serialize linked wasm")
+/// Set the stack pointer to 64k (this is the only global)
+fn generate_global_section(_section: SectionLimited<Global>, module: &mut Module) {
+    let mut globals = GlobalSection::new();
+    let global_type = GlobalType {
+        val_type: ValType::I32,
+        mutable: true,
+    };
+    globals.global(global_type, &ConstExpr::i32_const(0x10000));
+    module.section(&globals);
 }
