@@ -616,9 +616,11 @@ pub(super) fn equal(
     };
 
     if ty.is_rational() {
-        if let Err(diag) = eval_const_rational(&expr, ns) {
-            diagnostics.push(diag);
-        }
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot use rational numbers with '!=' or '==' operator".into(),
+        ));
+        return Err(());
     }
 
     Ok(expr)
