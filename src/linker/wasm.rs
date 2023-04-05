@@ -6,8 +6,8 @@ use std::io::Read;
 use std::io::Write;
 use tempfile::tempdir;
 use wasm_encoder::{
-    ConstExpr, DataSection, DataSegment, DataSegmentMode, GlobalSection, GlobalType, ImportSection,
-    MemoryType, Module, ValType, {EntityType, RawSection},
+    ConstExpr, DataSection, DataSegment, DataSegmentMode, EntityType, GlobalSection, GlobalType,
+    ImportSection, MemoryType, Module, RawSection, ValType,
 };
 use wasmparser::{Data, DataKind, Global, Import, Parser, Payload::*, SectionLimited, TypeRef};
 
@@ -102,6 +102,7 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
             _ => panic!("unexpected WASM import section {:?}", import),
         };
         let module_name = match import.name {
+            "memory" => import.module,
             "seal_set_storage" => "seal2",
             "seal_clear_storage"
             | "seal_contains_storage"
@@ -109,7 +110,6 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
             | "seal_instantiate"
             | "seal_terminate"
             | "seal_call" => "seal1",
-            "memory" => import.module,
             _ => "seal0",
         };
         imports.import(module_name, import.name, import_type);
