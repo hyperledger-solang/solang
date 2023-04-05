@@ -285,7 +285,10 @@ impl Display for pt::VariableDeclaration {
 impl Display for pt::VariableDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.ty.fmt(f)?;
-        write_separated(&self.attrs, f, " ")?;
+        if !self.attrs.is_empty() {
+            f.write_char(' ')?;
+            write_separated(&self.attrs, f, " ")?;
+        }
         write_opt!(f, ' ', &self.name);
         write_opt!(f, " = ", &self.initializer);
         f.write_char(';')
@@ -1627,6 +1630,40 @@ mod tests {
                 storage: Some(pt::StorageLocation::Calldata(Default::default())),
                 name: None,
             } => "uint256 calldata",
+
+            pt::VariableDefinition {
+                ty: expr_ty!(uint256),
+                attrs: vec![],
+                name: None,
+                initializer: None,
+            } => "uint256;",
+            pt::VariableDefinition {
+                ty: expr_ty!(uint256),
+                attrs: vec![],
+                name: Some(id("name")),
+                initializer: None,
+            } => "uint256 name;",
+            pt::VariableDefinition {
+                ty: expr_ty!(uint256),
+                attrs: vec![],
+                name: Some(id("name")),
+                initializer: Some(expr!(value)),
+            } => "uint256 name = value;",
+            pt::VariableDefinition {
+                ty: expr_ty!(uint256),
+                attrs: vec![pt::VariableAttribute::Constant(loc!())],
+                name: Some(id("name")),
+                initializer: Some(expr!(value)),
+            } => "uint256 constant name = value;",
+            pt::VariableDefinition {
+                ty: expr_ty!(uint256),
+                attrs: vec![
+                    pt::VariableAttribute::Visibility(pt::Visibility::Public(None)),
+                    pt::VariableAttribute::Constant(loc!())
+                ],
+                name: Some(id("name")),
+                initializer: Some(expr!(value)),
+            } => "uint256 public constant name = value;",
 
             pt::YulTypedIdentifier {
                 id: id("name"),
