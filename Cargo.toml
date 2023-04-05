@@ -21,7 +21,6 @@ rand = "0.8"
 num-bigint = { version = "0.4", features = ["rand"]}
 num-traits = "0.2"
 num-integer = "0.1"
-parity-wasm = "0.45"
 clap = "4.1"
 clap_complete = "4.1"
 hex = "0.4"
@@ -58,6 +57,8 @@ parity-scale-codec = "3.4"
 ink = "4.1.0"
 scale-info = "2.4"
 petgraph = "0.6.3"
+wasmparser = "0.102.0"
+wasm-encoder = "0.25"
 
 [dev-dependencies]
 num-derive = "0.3"
