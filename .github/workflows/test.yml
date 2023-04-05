@@ -71,7 +71,7 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-linux-x86-64
         path: ./target/debug/solang
@@ -92,7 +92,7 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-linux-arm64
         path: ./target/debug/solang
@@ -121,7 +121,7 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang.exe
         path: ./target/debug/solang.exe
@@ -146,7 +146,7 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-mac-arm
         path: ./target/debug/solang
@@ -170,7 +170,7 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-mac-intel
         path: ./target/debug/solang
@@ -180,16 +180,16 @@ jobs:
     runs-on: macos-11
     needs: [mac-arm, mac-intel]
     steps:
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@v3
       with:
         name: solang-mac-intel
     - run: mv solang solang-mac-intel
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@v3
       with:
         name: solang-mac-arm
     - run: mv solang solang-mac-arm
     - run: lipo -create -output solang-mac solang-mac-intel solang-mac-arm
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-mac
         path: solang-mac
@@ -228,7 +228,7 @@ jobs:
       run: rustup default stable
     - name: Setup yarn
       run: npm install -g yarn
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@v3
       with:
         name: solang-linux-x86-64
         path: bin
@@ -273,7 +273,7 @@ jobs:
         node-version: '14'
     - name: Rust Stable
       run: rustup default stable
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@v3
       with:
         name: solang-linux-x86-64
         path: bin
@@ -309,7 +309,7 @@ jobs:
     - uses: actions/setup-node@v3
       with:
         node-version: '14'
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@v3
       with:
         name: solang-linux-x86-64
         path: bin
@@ -338,7 +338,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@v3
       with:
         name: solang-linux-x86-64
         path: bin

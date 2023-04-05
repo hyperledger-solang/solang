@@ -12,7 +12,7 @@ jobs:
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3.1.0
       with:
         submodules: recursive
     - name: Rust stable
@@ -36,7 +36,7 @@ jobs:
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3.1.0
       with:
         submodules: recursive
     - name: Rust stable
