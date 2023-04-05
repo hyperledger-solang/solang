@@ -55,59 +55,15 @@ uint64_t sol_invoke_signed_c(
     const SolSignerSeeds *signers_seeds,
     int signers_seeds_len);
 
-uint64_t external_call(const SolPubkey *address, uint8_t *input, uint32_t input_len, SolParameters *params)
-{
-    SolAccountMeta metas[10];
-    SolInstruction instruction = {
-        .program_id = NULL,
-        .accounts = metas,
-        .account_len = params->ka_num,
-        .data = input,
-        .data_len = input_len,
-    };
 
-    int meta_no = 1;
-
-    for (int account_no = 0; account_no < params->ka_num; account_no++)
-    {
-        const SolAccountInfo *acc = &params->ka[account_no];
-
-        if (SolPubkey_same(address, acc->key))
-        {
-            metas[0].pubkey = acc->key;
-            metas[0].is_writable = acc->is_writable;
-            metas[0].is_signer = acc->is_signer;
-            instruction.program_id = acc->owner;
-        }
-        else
-        {
-
-            metas[meta_no].pubkey = acc->key;
-            metas[meta_no].is_writable = acc->is_writable;
-            metas[meta_no].is_signer = acc->is_signer;
-            meta_no += 1;
-        }
-    }
-
-    if (instruction.program_id)
-    {
-        return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
-    }
-    else
-    {
-        sol_log("call to account not in transaction");
-
-        return ERROR_INVALID_ACCOUNT_DATA;
-    }
-}
-
-// This function creates a new address and calls its constructor.
-uint64_t create_contract(uint8_t *input, uint32_t input_len, SolPubkey *address,
+// Calls an external function when 'program_id' is NULL or
+// creates a new contract and calls its constructor.
+uint64_t external_call(uint8_t *input, uint32_t input_len, SolPubkey *address,
                          SolPubkey *program_id, const SolSignerSeeds *seeds,
                          int seeds_len, SolParameters *params)
 {
     SolAccountMeta metas[10];
-    const SolInstruction instruction = {
+    SolInstruction instruction = {
         .program_id = program_id,
         .accounts = metas,
         .account_len = params->ka_num,
@@ -116,7 +72,7 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, SolPubkey *address,
     };
 
     int meta_no = 1;
-    bool seen_new_address = false;
+    int new_address_idx = -1;
 
     for (int account_no = 0; account_no < params->ka_num; account_no++)
     {
@@ -124,12 +80,12 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, SolPubkey *address,
 
         // The address for the new contract should go first. Note that there
         // may be duplicate entries, the order of those does not matter.
-        if (!seen_new_address && SolPubkey_same(address, acc->key))
+        if (new_address_idx < 0 && SolPubkey_same(address, acc->key))
         {
             metas[0].pubkey = acc->key;
             metas[0].is_writable = acc->is_writable;
             metas[0].is_signer = acc->is_signer;
-            seen_new_address = true;
+            new_address_idx = account_no;
         }
         else
         {
@@ -140,12 +96,33 @@ uint64_t create_contract(uint8_t *input, uint32_t input_len, SolPubkey *address,
         }
     }
 
-    if (!seen_new_address)
+    // If the program_id is null, we are dealing with an external call
+    if (!program_id)
     {
-        return ERROR_NEW_ACCOUNT_NEEDED;
-    }
+        if (new_address_idx < 0)
+        {
+            sol_log("call to account not in transaction");
 
-    return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, seeds, seeds_len);
+            return ERROR_INVALID_ACCOUNT_DATA;
+        }
+        else
+        {
+            instruction.program_id = params->ka[new_address_idx].owner;
+            return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
+        }
+    }
+    else
+    {
+        // This is a constructor call
+        if (new_address_idx < 0)
+        {
+            return ERROR_NEW_ACCOUNT_NEEDED;
+        }
+        else
+        {
+            return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, seeds, seeds_len);
+        }
+    }
 }
 
 uint64_t *sol_account_lamport(
