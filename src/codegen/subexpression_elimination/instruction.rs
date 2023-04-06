@@ -189,7 +189,6 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
             }
 
             Instr::AssertFailure { encoded_args: None }
-            | Instr::Unreachable
             | Instr::Nop
             | Instr::ReturnCode { .. }
             | Instr::Branch { .. }

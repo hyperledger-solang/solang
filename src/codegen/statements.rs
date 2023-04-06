@@ -155,7 +155,7 @@ pub(crate) fn statement(
                 }
             }
         }
-        Statement::Expression(_, reachable, expr) => {
+        Statement::Expression(_, _, expr) => {
             if let ast::Expression::Assign { left, right, .. } = &expr {
                 if should_remove_assignment(ns, left, func, opt) {
                     let mut params = SideEffectsCheckParameters {
@@ -168,19 +168,11 @@ pub(crate) fn statement(
                     };
                     right.recurse(&mut params, process_side_effects_expressions);
 
-                    if !reachable {
-                        cfg.add(vartab, Instr::Unreachable);
-                    }
-
                     return;
                 }
             }
 
             let _ = expression(expr, cfg, contract_no, Some(func), ns, vartab, opt);
-
-            if !reachable {
-                cfg.add(vartab, Instr::Unreachable);
-            }
         }
         Statement::Delete(_, ty, expr) => {
             let var_expr = expression(expr, cfg, contract_no, Some(func), ns, vartab, opt);

@@ -147,8 +147,6 @@ pub enum Instr {
         address: Expression,
         value: Expression,
     },
-    /// Insert unreachable instruction after e.g. self-destruct
-    Unreachable,
     /// Self destruct
     SelfDestruct { recipient: Expression },
     /// Emit event
@@ -336,7 +334,6 @@ impl Instr {
             }
 
             Instr::AssertFailure { encoded_args: None }
-            | Instr::Unreachable
             | Instr::Nop
             | Instr::ReturnCode { .. }
             | Instr::Branch { .. }
@@ -413,11 +410,11 @@ impl BasicBlock {
     pub fn edges(&self) -> Vec<usize> {
         let mut out = Vec::new();
 
-        // out cfg has edge as the last instruction in a block; EXCEPT
-        // Instr::AbiDecode() which has an edge when decoding fails
-        for instr in &self.instr {
+        // out cfg has edge as the last instruction in a block
+        for (i, instr) in self.instr.iter().rev().enumerate() {
             match instr {
                 Instr::Branch { block } => {
+                    assert_eq!(i, 0, "Branch is not last instruction in block");
                     out.push(*block);
                 }
                 Instr::BranchCond {
@@ -425,16 +422,28 @@ impl BasicBlock {
                     false_block,
                     ..
                 } => {
+                    assert_eq!(i, 0, "BranchCond is not last instruction in block");
                     out.push(*true_block);
                     out.push(*false_block);
                 }
                 Instr::Switch { default, cases, .. } => {
+                    assert_eq!(i, 0, "Switch is not last instruction in block");
                     out.push(*default);
                     for (_, goto) in cases {
                         out.push(*goto);
                     }
                 }
-                _ => (),
+                Instr::AssertFailure { .. }
+                | Instr::SelfDestruct { .. }
+                | Instr::ReturnCode { .. }
+                | Instr::ReturnData { .. }
+                | Instr::Return { .. } => {
+                    assert_eq!(i, 0, "instruction should be last in block");
+                }
+
+                _ => {
+                    assert_ne!(i, 0, "instruction should not be last in block");
+                }
             }
         }
 
@@ -1172,7 +1181,6 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, encoded_args),
                 self.expr_to_string(contract, ns, encoded_args_len)
             ),
-            Instr::Unreachable => "unreachable".to_string(),
             Instr::SelfDestruct { recipient } => format!(
                 "selfdestruct {}",
                 self.expr_to_string(contract, ns, recipient)

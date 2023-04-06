@@ -114,7 +114,6 @@ fn find_writable_vectors(
             | Instr::EmitEvent { .. }
             | Instr::ExternalCall { .. }
             | Instr::Constructor { .. }
-            | Instr::Unreachable
             | Instr::Print { .. }
             | Instr::AssertFailure { .. }
             | Instr::ReturnData { .. }

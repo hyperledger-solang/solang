@@ -25,10 +25,6 @@ pub(crate) fn statement(
     early_return: &Option<Instr>,
     opt: &Options,
 ) {
-    if !yul_statement.is_reachable() {
-        return;
-    }
-
     match yul_statement {
         YulStatement::FunctionCall(_, _, func_no, args) => {
             let returns = process_function_call(*func_no, args, contract_no, vartab, cfg, ns, opt);
@@ -44,6 +40,10 @@ pub(crate) fn statement(
         YulStatement::Block(block) => {
             for item in &block.body {
                 statement(item, contract_no, loops, ns, cfg, vartab, early_return, opt);
+
+                if !item.is_reachable() {
+                    break;
+                }
             }
         }
 
@@ -385,6 +385,10 @@ fn process_if_block(
 
     for stmt in &block.body {
         statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+
+        if !stmt.is_reachable() {
+            break;
+        }
     }
 
     if block.is_next_reachable() {
@@ -413,10 +417,10 @@ fn process_for_block(
 ) {
     for stmt in &init_block.body {
         statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
-    }
 
-    if !init_block.is_next_reachable() {
-        return;
+        if !stmt.is_reachable() {
+            return;
+        }
     }
 
     let cond_block = cfg.new_basic_block("cond".to_string());
@@ -458,6 +462,10 @@ fn process_for_block(
 
     for stmt in &execution_block.body {
         statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+
+        if !stmt.is_reachable() {
+            break;
+        }
     }
 
     if execution_block.is_next_reachable() {
@@ -470,6 +478,10 @@ fn process_for_block(
 
     for stmt in &post_block.body {
         statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+
+        if !stmt.is_reachable() {
+            break;
+        }
     }
 
     if post_block.is_next_reachable() {
@@ -522,6 +534,10 @@ fn switch(
         cfg.set_basic_block(new_block);
         for stmt in &default_block.body {
             statement(stmt, contract_no, loops, ns, cfg, vartab, early_return, opt);
+
+            if !stmt.is_reachable() {
+                break;
+            }
         }
         if default_block.is_next_reachable() {
             cfg.add(vartab, Instr::Branch { block: end_switch });
