@@ -25,7 +25,7 @@ use crate::sema::{
     {
         ast::{Builtin, Expression, Namespace, RetrieveType, Type},
         diagnostics::Diagnostics,
-        eval::{check_term_for_constant_overflow, eval_const_rational},
+        eval::check_term_for_constant_overflow,
     },
 };
 use num_bigint::BigInt;
@@ -165,9 +165,11 @@ pub fn expression(
             };
 
             if ty.is_rational() {
-                if let Err(diag) = eval_const_rational(&expr, ns) {
-                    diagnostics.push(diag);
-                }
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot use rational numbers with '>' operator".into(),
+                ));
+                return Err(());
             }
 
             Ok(expr)
@@ -206,9 +208,11 @@ pub fn expression(
             };
 
             if ty.is_rational() {
-                if let Err(diag) = eval_const_rational(&expr, ns) {
-                    diagnostics.push(diag);
-                }
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot use rational numbers with '<' operator".into(),
+                ));
+                return Err(());
             }
 
             Ok(expr)
@@ -246,9 +250,11 @@ pub fn expression(
             };
 
             if ty.is_rational() {
-                if let Err(diag) = eval_const_rational(&expr, ns) {
-                    diagnostics.push(diag);
-                }
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot use rational numbers with '>=' operator".into(),
+                ));
+                return Err(());
             }
 
             Ok(expr)
@@ -286,9 +292,11 @@ pub fn expression(
             };
 
             if ty.is_rational() {
-                if let Err(diag) = eval_const_rational(&expr, ns) {
-                    diagnostics.push(diag);
-                }
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot use rational numbers with '<=' operator".into(),
+                ));
+                return Err(());
             }
 
             Ok(expr)
