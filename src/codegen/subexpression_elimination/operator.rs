@@ -46,7 +46,7 @@ pub enum Operator {
     Cast(Type),
     BytesCast,
     Negate,
-    Complement,
+    BitwiseNot,
 }
 
 impl Expression {
@@ -108,7 +108,7 @@ impl Expression {
             Expression::LessEqual { signed: false, .. } => Operator::UnsignedLessEqual,
             Expression::Equal(..) => Operator::Equal,
             Expression::NotEqual(..) => Operator::NotEqual,
-            Expression::Complement(..) => Operator::Complement,
+            Expression::BitwiseNot(..) => Operator::BitwiseNot,
             Expression::StringCompare(..) => Operator::StringCompare,
             Expression::StringConcat(..) => Operator::StringConcat,
             Expression::AdvancePointer { .. } => Operator::AdvancePointer,

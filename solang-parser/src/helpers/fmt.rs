@@ -555,7 +555,7 @@ impl Display for pt::Expression {
             | Self::PreDecrement(..)
             | Self::PostDecrement(..)
             | Self::Not(..)
-            | Self::Complement(..)
+            | Self::BitwiseNot(..)
             | Self::UnaryPlus(..)
             | Self::Add(..)
             | Self::Negate(..)
@@ -626,7 +626,7 @@ impl pt::Expression {
             PreDecrement(..) | PostDecrement(..) => "--",
 
             Not(..) => "!",
-            Complement(..) => "~",
+            BitwiseNot(..) => "~",
             UnaryPlus(..) | Add(..) => "+",
             Negate(..) | Subtract(..) => "-",
             Power(..) => "**",
@@ -1041,7 +1041,7 @@ impl pt::UserDefinedOperator {
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::BitwiseAnd => "&",
-            Self::Complement => "~",
+            Self::BitwiseNot => "~",
             Self::Negate => "-",
             Self::BitwiseOr => "|",
             Self::BitwiseXor => "^",
@@ -2118,7 +2118,7 @@ mod tests {
                 pt::Expression::PreDecrement(loc!(), var("a")) => "--a",
                 pt::Expression::PostDecrement(loc!(), var("a")) => "a--",
                 pt::Expression::Not(loc!(), var("a")) => "!a",
-                pt::Expression::Complement(loc!(), var("a")) => "~a",
+                pt::Expression::BitwiseNot(loc!(), var("a")) => "~a",
                 pt::Expression::UnaryPlus(loc!(), var("a")) => "+a",
                 pt::Expression::Negate(loc!(), var("a")) => "-a",
 
@@ -2426,7 +2426,7 @@ mod tests {
 
             pt::UserDefinedOperator: {
                 pt::UserDefinedOperator::BitwiseAnd => "&",
-                pt::UserDefinedOperator::Complement => "~",
+                pt::UserDefinedOperator::BitwiseNot => "~",
                 pt::UserDefinedOperator::Negate => "-",
                 pt::UserDefinedOperator::BitwiseOr => "|",
                 pt::UserDefinedOperator::BitwiseXor => "^",

@@ -208,8 +208,8 @@ impl Expression {
 
             Expression::Not(loc, ..) => Expression::Not(*loc, Box::new(operand.clone())),
 
-            Expression::Complement(loc, expr_type, ..) => {
-                Expression::Complement(*loc, expr_type.clone(), Box::new(operand.clone()))
+            Expression::BitwiseNot(loc, expr_type, ..) => {
+                Expression::BitwiseNot(*loc, expr_type.clone(), Box::new(operand.clone()))
             }
 
             Expression::Negate(loc, expr_type, ..) => {
@@ -268,7 +268,7 @@ impl Expression {
             | Expression::Cast(_, _, operand)
             | Expression::BytesCast(_, _, _, operand)
             | Expression::Not(_, operand)
-            | Expression::Complement(_, _, operand)
+            | Expression::BitwiseNot(_, _, operand)
             | Expression::Negate(_, _, operand) => Some(operand),
 
             _ => None,

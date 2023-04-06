@@ -311,7 +311,7 @@ impl_for_enums! {
         | Self::FunctionCallBlock(l, ..)
         | Self::NamedFunctionCall(l, ..)
         | Self::Not(l, ..)
-        | Self::Complement(l, ..)
+        | Self::BitwiseNot(l, ..)
         | Self::Delete(l, ..)
         | Self::PreIncrement(l, ..)
         | Self::PreDecrement(l, ..)

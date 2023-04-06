@@ -149,7 +149,7 @@ pub enum Token<'input> {
     Colon,
     OpenBracket,
     CloseBracket,
-    Complement,
+    BitwiseNot,
     Question,
 
     Mapping,
@@ -244,7 +244,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Colon => write!(f, ":"),
             Token::OpenBracket => write!(f, "["),
             Token::CloseBracket => write!(f, "]"),
-            Token::Complement => write!(f, "~"),
+            Token::BitwiseNot => write!(f, "~"),
             Token::Question => write!(f, "?"),
             Token::ShiftRightAssign => write!(f, "<<="),
             Token::ShiftRight => write!(f, "<<"),
@@ -985,7 +985,7 @@ impl<'input> Lexer<'input> {
                 Some((i, ')')) => return Some(Ok((i, Token::CloseParenthesis, i + 1))),
                 Some((i, '{')) => return Some(Ok((i, Token::OpenCurlyBrace, i + 1))),
                 Some((i, '}')) => return Some(Ok((i, Token::CloseCurlyBrace, i + 1))),
-                Some((i, '~')) => return Some(Ok((i, Token::Complement, i + 1))),
+                Some((i, '~')) => return Some(Ok((i, Token::BitwiseNot, i + 1))),
                 Some((i, '=')) => match self.chars.peek() {
                     Some((_, '=')) => {
                         self.chars.next();

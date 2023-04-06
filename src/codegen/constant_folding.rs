@@ -667,13 +667,13 @@ fn expression(
                 )
             }
         }
-        Expression::Complement(loc, ty, expr) => {
+        Expression::BitwiseNot(loc, ty, expr) => {
             let expr = expression(expr, vars, cfg, ns);
             if let Expression::NumberLiteral(_, _, n) = expr.0 {
                 bigint_to_expression(loc, ty, !n)
             } else {
                 (
-                    Expression::Complement(*loc, ty.clone(), Box::new(expr.0)),
+                    Expression::BitwiseNot(*loc, ty.clone(), Box::new(expr.0)),
                     expr.1,
                 )
             }

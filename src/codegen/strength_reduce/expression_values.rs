@@ -58,7 +58,7 @@ pub(super) fn expression_values(
             not_equal_values(left_expr, right_expr, vars, ns)
         }
         Expression::Not(_, expr) => not_values(expr, vars, ns),
-        Expression::Complement(_, _, expr) => complement_values(expr, vars, ns),
+        Expression::BitwiseNot(_, _, expr) => complement_values(expr, vars, ns),
         Expression::Variable(_, _, var_no) => variable_values(*var_no, vars),
         Expression::InternalFunctionCfg(_) => {
             // reference to a function; ignore

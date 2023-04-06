@@ -133,7 +133,7 @@ pub fn eval_const_number(
         Expression::SignExt { loc, expr, .. } => Ok((*loc, eval_const_number(expr, ns)?.1)),
         Expression::Cast { loc, expr, .. } => Ok((*loc, eval_const_number(expr, ns)?.1)),
         Expression::Not { loc, expr: n } => Ok((*loc, !eval_const_number(n, ns)?.1)),
-        Expression::Complement { loc, expr, .. } => Ok((*loc, !eval_const_number(expr, ns)?.1)),
+        Expression::BitwiseNot { loc, expr, .. } => Ok((*loc, !eval_const_number(expr, ns)?.1)),
         Expression::Negate { loc, expr, .. } => Ok((*loc, -eval_const_number(expr, ns)?.1)),
         Expression::ConstantVariable {
             contract_no: Some(contract_no),
