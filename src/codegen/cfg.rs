@@ -783,7 +783,7 @@ impl ControlFlowGraph {
                 f
             ),
             Expression::Not(_, e) => format!("!{}", self.expr_to_string(contract, ns, e)),
-            Expression::Complement(_, _, e) => format!("~{}", self.expr_to_string(contract, ns, e)),
+            Expression::BitwiseNot(_, _, e) => format!("~{}", self.expr_to_string(contract, ns, e)),
             Expression::Negate(_, _, e) => format!("-{}", self.expr_to_string(contract, ns, e)),
             Expression::Poison => "☠".to_string(),
             Expression::AllocDynamicBytes(_, ty, size, None) => {

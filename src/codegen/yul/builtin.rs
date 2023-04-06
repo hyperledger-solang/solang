@@ -47,7 +47,7 @@ pub(crate) fn process_builtin(
     match builtin_ty {
         YulBuiltInFunction::Not => {
             let exp = expression(&args[0], contract_no, ns, vartab, cfg, opt);
-            Expression::Complement(*loc, exp.ty(), Box::new(exp))
+            Expression::BitwiseNot(*loc, exp.ty(), Box::new(exp))
         }
 
         YulBuiltInFunction::IsZero => {

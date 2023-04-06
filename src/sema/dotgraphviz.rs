@@ -953,7 +953,7 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::Complement { loc, ty, expr } => {
+            Expression::BitwiseNot { loc, ty, expr } => {
                 let node = self.add_node(
                     Node::new(
                         "complement",

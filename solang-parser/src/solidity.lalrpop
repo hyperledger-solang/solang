@@ -393,7 +393,7 @@ Precedence3: Expression = {
 
 Precedence2: Expression = {
     <a:@L> "!" <e:Precedence2> <b:@R> => Expression::Not(Loc::File(file_no, a, b), Box::new(e)),
-    <a:@L> "~" <e:Precedence2> <b:@R> => Expression::Complement(Loc::File(file_no, a, b), Box::new(e)),
+    <a:@L> "~" <e:Precedence2> <b:@R> => Expression::BitwiseNot(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "delete" <e:Precedence2> <b:@R>  => Expression::Delete(Loc::File(file_no, a, b), Box::new(e)),
     <a:@L> "new" <call:Precedence2> <b:@R> => Expression::New(Loc::File(file_no, a, b), Box::new(call)),
     <a:@L> "++" <e:Precedence2> <b:@R> => Expression::PreIncrement(Loc::File(file_no, a, b), Box::new(e)),
@@ -738,7 +738,7 @@ UsingFunction: UsingFunction = {
 
 UserDefinedOperator: UserDefinedOperator = {
     "as" "&" => UserDefinedOperator::BitwiseAnd,
-    "as" "~" => UserDefinedOperator::Complement,
+    "as" "~" => UserDefinedOperator::BitwiseNot,
     "as" "|" => UserDefinedOperator::BitwiseOr,
     "as" "^" => UserDefinedOperator::BitwiseXor,
     "as" "+" => UserDefinedOperator::Add,
@@ -1117,7 +1117,7 @@ extern {
         "%" => Token::Modulo,
         "**" => Token::Power,
         "!" => Token::Not,
-        "~" => Token::Complement,
+        "~" => Token::BitwiseNot,
         "++" => Token::Increment,
         "--" => Token::Decrement,
         "[" => Token::OpenBracket,

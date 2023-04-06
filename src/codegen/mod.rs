@@ -351,7 +351,7 @@ pub enum Expression {
     BytesCast(pt::Loc, Type, Type, Box<Expression>),
     BytesLiteral(pt::Loc, Type, Vec<u8>),
     Cast(pt::Loc, Type, Box<Expression>),
-    Complement(pt::Loc, Type, Box<Expression>),
+    BitwiseNot(pt::Loc, Type, Box<Expression>),
     ConstArrayLiteral(pt::Loc, Type, Vec<u32>, Vec<Expression>),
     UnsignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
     SignedDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
@@ -465,7 +465,7 @@ impl CodeLocation for Expression {
             | Expression::BitwiseXor(loc, ..)
             | Expression::Equal(loc, ..)
             | Expression::NotEqual(loc, ..)
-            | Expression::Complement(loc, ..)
+            | Expression::BitwiseNot(loc, ..)
             | Expression::Negate(loc, ..)
             | Expression::Less { loc, .. }
             | Expression::Not(loc, ..)
@@ -535,7 +535,7 @@ impl Recurse for Expression {
             | Expression::Negate(_, _, exp)
             | Expression::ZeroExt(_, _, exp)
             | Expression::SignExt(_, _, exp)
-            | Expression::Complement(_, _, exp)
+            | Expression::BitwiseNot(_, _, exp)
             | Expression::Load(_, _, exp)
             | Expression::StorageArrayLength { array: exp, .. }
             | Expression::StructMember(_, _, exp, _)
@@ -607,7 +607,7 @@ impl RetrieveType for Expression {
             | Expression::BitwiseXor(_, ty, ..)
             | Expression::ShiftLeft(_, ty, ..)
             | Expression::ShiftRight(_, ty, ..)
-            | Expression::Complement(_, ty, ..)
+            | Expression::BitwiseNot(_, ty, ..)
             | Expression::StorageArrayLength { ty, .. }
             | Expression::Negate(_, ty, ..)
             | Expression::StructLiteral(_, ty, ..)
@@ -1146,8 +1146,8 @@ impl Expression {
                     bytes_offset: Box::new(filter(offset, ctx)),
                 },
                 Expression::Not(loc, expr) => Expression::Not(*loc, Box::new(filter(expr, ctx))),
-                Expression::Complement(loc, ty, expr) => {
-                    Expression::Complement(*loc, ty.clone(), Box::new(filter(expr, ctx)))
+                Expression::BitwiseNot(loc, ty, expr) => {
+                    Expression::BitwiseNot(*loc, ty.clone(), Box::new(filter(expr, ctx)))
                 }
                 Expression::Negate(loc, ty, expr) => {
                     Expression::Negate(*loc, ty.clone(), Box::new(filter(expr, ctx)))

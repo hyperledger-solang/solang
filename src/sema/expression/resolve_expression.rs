@@ -351,7 +351,7 @@ pub fn expression(
                 expr: Box::new(expr.cast(loc, &Type::Bool, true, ns, diagnostics)?),
             })
         }
-        pt::Expression::Complement(loc, e) => {
+        pt::Expression::BitwiseNot(loc, e) => {
             let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
 
             used_variable(ns, &expr, symtable);
@@ -359,7 +359,7 @@ pub fn expression(
             if let Some(expr) = user_defined_operator(
                 loc,
                 &[&expr],
-                pt::UserDefinedOperator::Complement,
+                pt::UserDefinedOperator::BitwiseNot,
                 diagnostics,
                 ns,
             ) {
@@ -370,7 +370,7 @@ pub fn expression(
 
             get_int_length(&expr_ty, loc, true, ns, diagnostics)?;
 
-            Ok(Expression::Complement {
+            Ok(Expression::BitwiseNot {
                 loc: *loc,
                 ty: expr_ty,
                 expr: Box::new(expr),
