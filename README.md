@@ -135,14 +135,14 @@ Here is a brief description of what we envision for the next versions.
 
 ### V0.3
 
-| Milestone                                    | Status      |
+| Feature                                      | Status      |
 |----------------------------------------------|-------------|
 | Specify values as "1 sol" and "1e9 lamports" | Completed   |
 | Call Solana's Rust contracts from Solidity   | Completed   |
 | Improvements in overflow checking            | Completed   |
 | Support Solana's Program Derived Addresses   | Completed   |
 | Call Solidity from Solana's Rust contracts   | Not started |
-| Improve developer experience for Substrate   | In progress |
+| Improve developer experience for Substrate   | Complete    |
 | Tooling for calls between ink! <> solidity   | In progress |
 | Support chain extensions for Substrate       | Not started |
 | Provide CLI for node interactions            | Not started |
@@ -150,7 +150,7 @@ Here is a brief description of what we envision for the next versions.
 
 ### V0.4
 
-| Milestone                                          | Status      |
+| Feature                                            | Status      |
 |----------------------------------------------------|-------------|
 | Improve management over optimization passes        | Not started |
 | Adopt single static assignment for code generation | Not started |
