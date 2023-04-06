@@ -145,6 +145,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
         Target::Solana,
         false,
         true,
+        true,
     );
 
     ns.print_diagnostics_in_plain(&cache, false);

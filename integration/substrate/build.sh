@@ -6,6 +6,6 @@ if [[ $dup_contracts ]]; then
 	echo "Found contract with duplicate names: ${dup_contracts}"
 	/bin/false
 else
-	parallel solang compile -v -g --target substrate --log-runtime-errors --log-api-return-codes ::: *.sol test/*.sol
+	parallel solang compile -v -g --target substrate ::: *.sol test/*.sol ; solang compile -v --target substrate --release release_version.sol ;
 fi
 

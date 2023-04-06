@@ -91,6 +91,7 @@ pub struct Options {
     pub opt_level: OptimizationLevel,
     pub log_api_return_codes: bool,
     pub log_runtime_errors: bool,
+    pub log_prints: bool,
 }
 
 impl Default for Options {
@@ -105,6 +106,7 @@ impl Default for Options {
             opt_level: OptimizationLevel::Default,
             log_api_return_codes: false,
             log_runtime_errors: false,
+            log_prints: true,
         }
     }
 }

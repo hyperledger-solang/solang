@@ -180,11 +180,10 @@ fn main() {
                             .display_order(5),
                     )
                     .arg(
-                        Arg::new("LOGAPIRETURNS")
-                            .help("Log the return codes of runtime API calls in the environment")
-                            .long("log-api-return-codes")
-                            .action(ArgAction::SetTrue)
-                            .display_order(7),
+                        Arg::new("NOLOGAPIRETURNS")
+                            .help("Disable logging the return codes of runtime API calls in the environment")
+                            .long("no-log-api-return-codes")
+                            .action(ArgAction::SetFalse)
                     )
                     .arg(
                         Arg::new("GENERATEDEBUGINFORMATION")
@@ -195,9 +194,19 @@ fn main() {
                             .hide(true),
                     )
                     .arg(
-                        Arg::new("LOGRUNTIMEERRORS")
-                            .help("Log runtime errors in the environment")
-                            .long("log-runtime-errors")
+                        Arg::new("NOLOGRUNTIMEERRORS")
+                            .help("Disable logging runtime errors in the environment")
+                            .long("no-log-runtime-errors")
+                            .action(ArgAction::SetFalse),
+                    ).arg(
+                        Arg::new("NOPRINT")
+                            .help("Disable logging prints in the environment")
+                            .long("no-print")
+                            .action(ArgAction::SetFalse),
+                    ).arg(
+                        Arg::new("RELEASE")
+                            .help("Disable all debugging features such as prints, logging runtime errors, and logging api return codes")
+                            .long("release")
                             .action(ArgAction::SetTrue),
                     ),
             )
@@ -398,9 +407,13 @@ fn compile(matches: &ArgMatches) {
 
     let generate_debug_info = *matches.get_one("GENERATEDEBUGINFORMATION").unwrap();
 
-    let log_api_return_codes = *matches.get_one("LOGAPIRETURNS").unwrap();
+    let release = *matches.get_one::<bool>("RELEASE").unwrap();
 
-    let log_runtime_errors = *matches.get_one::<bool>("LOGRUNTIMEERRORS").unwrap();
+    let log_api_return_codes = *matches.get_one::<bool>("NOLOGAPIRETURNS").unwrap() & !release;
+
+    let log_runtime_errors = *matches.get_one::<bool>("NOLOGRUNTIMEERRORS").unwrap() & !release;
+
+    let log_prints = *matches.get_one::<bool>("NOPRINT").unwrap() & !release;
 
     let mut resolver = imports_arg(matches);
 
@@ -424,6 +437,7 @@ fn compile(matches: &ArgMatches) {
         opt_level,
         log_api_return_codes,
         log_runtime_errors,
+        log_prints,
     };
 
     let mut namespaces = Vec::new();

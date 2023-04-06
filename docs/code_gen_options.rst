@@ -4,8 +4,7 @@ Code Generation Options
 There are compiler flags to control code generation. They can be divided into two categories: 
 
 * Optimizer passes are enabled by default and make the generated code more optimal. 
-* Debugging options are not enabled by default, but they greatly improve
-  developer experience, at the cost of increased gas and storage usage.
+* Debugging options are enabled by default. They can be disabled in release builds, using `--release` CLI option, to decrease gas or compute units usage and code size.
 
 Optimizer Passes
 ----------------
@@ -149,11 +148,21 @@ as a function argument, for instance, the length is unknown.
 Debugging Options
 -----------------
 
-It may be desirable to have access to debug information regarding the contract execution. 
-However, this will lead to more instructions as well as higher gas usage. Hence, it is disabled by default,
-but can be enabled using CLI flags. Just make sure not to use them in production deployments.
+It is desirable to have access to debug information regarding the contract execution in the testing phase.
+Therefore, by default, debugging options are enabled; however, they can be deactivated by utilizing the command-line interface (CLI) flags.
+Debugging options should be disabled in release builds, as debug builds greatly increase contract size and gas consumption.
+Solang provides three debugging options, namely debug prints, logging API return codes, and logging runtime errors. For more flexible debugging,
+Solang supports disabling each debugging feature on its own, as well as disabling them all at once with the ``--release`` flag.
 
-.. _log-api-return-codes:
+.. _no-print:
+
+Print Function
+++++++++++++++
+
+Solang provides a :ref:`print_function` which is enabled by default.
+The ``no-print`` flag will instruct the compiler not to log debugging prints in the environment.
+
+.. _no-log-api-return-codes:
 
 Log runtime API call results
 ++++++++++++++++++++++++++++
@@ -161,9 +170,27 @@ Log runtime API call results
 Runtime API calls are not guaranteed to succeed.
 By design, the low level results of these calls are abstracted away in Solidity.
 For development purposes, it can be desirable to observe the low level return code of such calls.
-The ``--log-api-return-codes`` flag will make the contract print the return code of runtime calls, if there are any.
+The contract will print the return code of runtime calls by default, and this feature can be disabled by providing the 
+``--no-log-api-return-codes`` flag.
 
 .. note::
 
     This is only implemented for the Substrate target.
 
+
+.. _no-log-runtime-errors:
+
+Log Runtime Errors
+++++++++++++++++++
+
+In most cases, contract execution will emit a human readable error message in case a runtime error is encountered.
+The error is printed out alongside with the filename and line number that caused the error.
+This feature is enabled by default, and can be disabled by the ``--no-log-runtime-errors`` flag.
+
+.. _release:
+
+Release builds:
++++++++++++++++
+
+Release builds must not contain any debugging related logic. The ``--release`` flag will turn off all debugging features, 
+thereby reducing the required gas and storage.
