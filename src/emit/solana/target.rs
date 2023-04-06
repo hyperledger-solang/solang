@@ -8,7 +8,7 @@ use crate::emit::expression::{expression, string_to_basic_value};
 use crate::emit::loop_builder::LoopBuilder;
 use crate::emit::solana::SolanaTarget;
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
-use crate::sema::ast::{self, Namespace};
+use crate::sema::ast::{self, Namespace, Type};
 use inkwell::types::{BasicType, BasicTypeEnum, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
@@ -1264,23 +1264,23 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         let sol_params = function.get_last_param().unwrap().into_pointer_value();
 
-        let create_contract = binary.module.get_function("create_contract").unwrap();
+        let external_call_func = binary.module.get_function("external_call").unwrap();
 
         let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = contract_args.seeds {
             (
                 seeds,
                 binary.builder.build_int_cast(
                     len,
-                    create_contract.get_type().get_param_types()[5].into_int_type(),
+                    external_call_func.get_type().get_param_types()[5].into_int_type(),
                     "len",
                 ),
             )
         } else {
             (
-                create_contract.get_type().get_param_types()[4]
+                external_call_func.get_type().get_param_types()[4]
                     .const_zero()
                     .into_pointer_value(),
-                create_contract.get_type().get_param_types()[5]
+                external_call_func.get_type().get_param_types()[5]
                     .const_zero()
                     .into_int_value(),
             )
@@ -1289,7 +1289,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let ret = binary
             .builder
             .build_call(
-                create_contract,
+                external_call_func,
                 &[
                     binary.vector_bytes(encoded_args).into(),
                     encoded_args_len.into(),
@@ -1431,7 +1431,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         address: Option<PointerValue<'b>>,
         contract_args: ContractArgs<'b>,
         _ty: ast::CallTy,
-        _ns: &ast::Namespace,
+        ns: &ast::Namespace,
         _loc: Loc,
     ) {
         let address = address.unwrap();
@@ -1582,9 +1582,22 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .build_call(
                     external_call,
                     &[
-                        address.into(),
                         payload.into(),
                         payload_len.into(),
+                        address.into(),
+                        binary
+                            .llvm_type(&Type::Address(false), ns)
+                            .ptr_type(AddressSpace::default())
+                            .const_null()
+                            .into(),
+                        external_call.get_type().get_param_types()[4]
+                            .ptr_type(AddressSpace::default())
+                            .const_null()
+                            .into(),
+                        external_call.get_type().get_param_types()[5]
+                            .into_int_type()
+                            .const_zero()
+                            .into(),
                         parameters.into(),
                     ],
                     "",
