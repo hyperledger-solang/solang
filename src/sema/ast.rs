@@ -1014,7 +1014,7 @@ pub enum Expression {
         loc: pt::Loc,
         expr: Box<Expression>,
     },
-    Complement {
+    BitwiseNot {
         loc: pt::Loc,
         ty: Type,
         expr: Box<Expression>,
@@ -1200,7 +1200,7 @@ impl Recurse for Expression {
                 | Expression::PostIncrement { expr, .. }
                 | Expression::PostDecrement { expr, .. }
                 | Expression::Not { expr, .. }
-                | Expression::Complement { expr, .. }
+                | Expression::BitwiseNot { expr, .. }
                 | Expression::Negate { expr, .. }
                 | Expression::StructMember { expr, .. } => expr.recurse(cx, f),
 
@@ -1357,7 +1357,7 @@ impl CodeLocation for Expression {
             | Expression::Equal { loc, .. }
             | Expression::NotEqual { loc, .. }
             | Expression::Not { loc, expr: _ }
-            | Expression::Complement { loc, .. }
+            | Expression::BitwiseNot { loc, .. }
             | Expression::Negate { loc, .. }
             | Expression::ConditionalOperator { loc, .. }
             | Expression::Subscript { loc, .. }

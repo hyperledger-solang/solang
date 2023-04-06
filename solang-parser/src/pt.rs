@@ -580,8 +580,7 @@ pub enum UserDefinedOperator {
     BitwiseAnd,
     /// `~`
     ///
-    /// AKA BitwiseNot
-    Complement,
+    BitwiseNot,
     /// `-`
     ///
     /// Note that this is the same as `Subtract`, and that it is currently not being parsed.
@@ -619,7 +618,7 @@ impl UserDefinedOperator {
     #[inline]
     pub const fn args(&self) -> usize {
         match self {
-            UserDefinedOperator::Complement | UserDefinedOperator::Negate => 1,
+            UserDefinedOperator::BitwiseNot | UserDefinedOperator::Negate => 1,
             _ => 2,
         }
     }
@@ -627,7 +626,7 @@ impl UserDefinedOperator {
     /// Returns whether `self` is a unary operator.
     #[inline]
     pub const fn is_unary(&self) -> bool {
-        matches!(self, Self::Complement | Self::Negate)
+        matches!(self, Self::BitwiseNot | Self::Negate)
     }
 
     /// Returns whether `self` is a binary operator.
@@ -641,7 +640,7 @@ impl UserDefinedOperator {
     pub const fn is_bitwise(&self) -> bool {
         matches!(
             self,
-            Self::BitwiseAnd | Self::BitwiseOr | Self::BitwiseXor | Self::Complement
+            Self::BitwiseAnd | Self::BitwiseOr | Self::BitwiseXor | Self::BitwiseNot
         )
     }
 
@@ -971,7 +970,7 @@ pub enum Expression {
     /// `!<1>`
     Not(Loc, Box<Expression>),
     /// `~<1>`
-    Complement(Loc, Box<Expression>),
+    BitwiseNot(Loc, Box<Expression>),
     /// `delete <1>`
     Delete(Loc, Box<Expression>),
     /// `++<1>`
@@ -1089,7 +1088,7 @@ macro_rules! expr_components {
 
             // (None, Some)
             Not(_, expr)
-            | Complement(_, expr)
+            | BitwiseNot(_, expr)
             | New(_, expr)
             | Delete(_, expr)
             | UnaryPlus(_, expr)
@@ -1242,7 +1241,7 @@ impl Expression {
                 | PostDecrement(..)
                 | PreDecrement(..)
                 | Not(..)
-                | Complement(..)
+                | BitwiseNot(..)
                 | UnaryPlus(..)
                 | Negate(..)
         )

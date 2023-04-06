@@ -41,7 +41,7 @@ impl RetrieveType for Expression {
             | Expression::Load { ty, .. }
             | Expression::GetRef { ty, .. }
             | Expression::StorageLoad { ty, .. }
-            | Expression::Complement { ty, .. }
+            | Expression::BitwiseNot { ty, .. }
             | Expression::Negate { ty, .. }
             | Expression::ConditionalOperator { ty, .. }
             | Expression::StructMember { ty, .. }

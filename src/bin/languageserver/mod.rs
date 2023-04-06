@@ -583,7 +583,7 @@ impl<'a> Builder<'a> {
             | ast::Expression::PostDecrement { expr, .. }
             // Other Unary
             | ast::Expression::Not { expr, .. }
-            | ast::Expression::Complement { expr, .. }
+            | ast::Expression::BitwiseNot { expr, .. }
             | ast::Expression::Negate { expr, .. } => {
                 self.expression(expr, symtab);
             }
