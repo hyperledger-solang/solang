@@ -953,9 +953,6 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             target.value_transfer(bin, function, success, addr, value, ns, loc);
         }
-        Instr::Unreachable => {
-            // Nothing to do; unreachable instruction should have already been inserteds
-        }
         Instr::SelfDestruct { recipient } => {
             let recipient =
                 expression(target, bin, recipient, &w.vars, function, ns).into_array_value();

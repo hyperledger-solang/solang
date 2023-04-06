@@ -30,6 +30,10 @@ pub fn inline_assembly_cfg(
     let mut loops = LoopScopes::new();
     for stmt in &inline_assembly.body {
         statement(stmt, contract_no, &mut loops, ns, cfg, vartab, &None, opt);
+
+        if !stmt.is_reachable() {
+            break;
+        }
     }
 }
 
@@ -106,6 +110,10 @@ fn yul_function_cfg(
             &Some(returns.clone()),
             opt,
         );
+
+        if !stmt.is_reachable() {
+            break;
+        }
     }
 
     if yul_func.body.is_empty()
