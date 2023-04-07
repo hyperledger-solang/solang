@@ -289,7 +289,7 @@ pub fn expression(
             *loc,
             Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         ),
-        ast::Expression::Complement { loc, ty, expr } => Expression::Complement(
+        ast::Expression::BitwiseNot { loc, ty, expr } => Expression::BitwiseNot(
             *loc,
             ty.clone(),
             Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),

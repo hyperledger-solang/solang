@@ -1083,7 +1083,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
                 .into()
         }
-        Expression::Complement(_, _, e) => {
+        Expression::BitwiseNot(_, _, e) => {
             let e = expression(target, bin, e, vartab, function, ns).into_int_value();
 
             bin.builder.build_not(e, "").into()
