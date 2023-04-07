@@ -21,6 +21,9 @@ describe('Deploy release_version.sol and test the debug buffer is empty', () => 
         // The --release flag should remove all debugging features, making the debug buffer empty
         let res = await debug_buffer(conn, contract, `print_then_error`, [20])
         expect(res).toEqual("")
+
+        let res2 = await debug_buffer(conn, contract, `print_then_error`, [0])
+        expect(res2).toEqual("")
         conn.disconnect();
     });
 });
