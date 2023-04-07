@@ -121,7 +121,7 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
         transfers.push(match instr {
             Instr::Set {
                 res,
-                expr: Expression::Variable(_, _, src),
+                expr: Expression::Variable { var_no: src, .. },
                 ..
             } => {
                 vec![
@@ -181,8 +181,8 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
 
 fn array_var(expr: &Expression) -> Option<usize> {
     match expr {
-        Expression::Variable(_, _, var_no) => Some(*var_no),
-        Expression::Subscript(_, _, _, expr, _) | Expression::StructMember(_, _, expr, _) => {
+        Expression::Variable { var_no, .. } => Some(*var_no),
+        Expression::Subscript { expr, .. } | Expression::StructMember { expr, .. } => {
             array_var(expr)
         }
         _ => None,

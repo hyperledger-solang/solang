@@ -48,7 +48,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_return(Some(&bin.return_values[&ReturnCode::Success]));
         }
         Instr::Set { res, expr, .. } => {
-            if let Expression::Undefined(expr_type) = expr {
+            if let Expression::Undefined { ty: expr_type } = expr {
                 // If the variable has been declared as undefined, but we can
                 // initialize it with a default value
                 if let Some(default_expr) = expr_type.default(ns) {
@@ -703,12 +703,12 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     "seeds",
                 );
 
-                if let Expression::ArrayLiteral(_, _, _, exprs) = seeds {
+                if let Expression::ArrayLiteral { values, .. } = seeds {
                     for i in 0..len {
                         let val =
-                            expression(target, bin, &exprs[i as usize], &w.vars, function, ns);
+                            expression(target, bin, &values[i as usize], &w.vars, function, ns);
 
-                        let seed_count = exprs[i as usize]
+                        let seed_count = values[i as usize]
                             .ty()
                             .deref_memory()
                             .array_length()
@@ -859,12 +859,12 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     "seeds",
                 );
 
-                if let Expression::ArrayLiteral(_, _, _, exprs) = seeds {
+                if let Expression::ArrayLiteral { values, .. } = seeds {
                     for i in 0..len {
                         let val =
-                            expression(target, bin, &exprs[i as usize], &w.vars, function, ns);
+                            expression(target, bin, &values[i as usize], &w.vars, function, ns);
 
-                        let seed_count = exprs[i as usize]
+                        let seed_count = values[i as usize]
                             .ty()
                             .deref_any()
                             .array_length()

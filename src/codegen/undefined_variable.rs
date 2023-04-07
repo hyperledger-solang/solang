@@ -77,7 +77,7 @@ pub fn find_undefined_variables_in_expression(
     ctx: &mut FindUndefinedVariablesParams,
 ) -> bool {
     match &exp {
-        Expression::Variable(_, _, pos) => {
+        Expression::Variable { var_no: pos, .. } => {
             let variable = match ctx.func_no {
                 ASTFunction::YulFunction(func_no) => {
                     ctx.ns.yul_functions[func_no].symtable.vars.get(pos)
@@ -97,7 +97,7 @@ pub fn find_undefined_variables_in_expression(
                     {
                         // If an undefined definition reaches this read and the variable
                         // has not been modified since its definition, it is undefined
-                        if matches!(instr_expr, Expression::Undefined(_))
+                        if matches!(instr_expr, Expression::Undefined { .. })
                             && !*modified
                             && !matches!(var.ty, Type::Array(..))
                         {
@@ -110,7 +110,10 @@ pub fn find_undefined_variables_in_expression(
         }
 
         // This is a method call whose array will never be undefined
-        Expression::Builtin(_, _, Builtin::ArrayLength, _) => false,
+        Expression::Builtin {
+            builtin: Builtin::ArrayLength,
+            ..
+        } => false,
 
         _ => true,
     }

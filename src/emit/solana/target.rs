@@ -1875,7 +1875,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
         match expr {
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Timestamp, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Timestamp,
+                ..
+            } => {
                 let parameters = self.sol_parameters(binary);
 
                 let sol_clock = binary.module.get_function("sol_clock").unwrap();
@@ -1901,12 +1904,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_load(binary.context.i64_type(), timestamp, "timestamp")
             }
-            codegen::Expression::Builtin(
-                _,
-                _,
-                codegen::Builtin::BlockNumber | codegen::Builtin::Slot,
-                _,
-            ) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::BlockNumber | codegen::Builtin::Slot,
+                ..
+            } => {
                 let parameters = self.sol_parameters(binary);
 
                 let sol_clock = binary.module.get_function("sol_clock").unwrap();
@@ -1932,7 +1933,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_load(binary.context.i64_type(), slot, "timestamp")
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::GetAddress, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::GetAddress,
+                ..
+            } => {
                 let parameters = self.sol_parameters(binary);
 
                 let key = unsafe {
@@ -1964,7 +1968,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     "key",
                 )
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::ProgramId, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::ProgramId,
+                ..
+            } => {
                 let parameters = self.sol_parameters(binary);
 
                 let sol_pubkey_type = binary.module.get_struct_type("struct.SolPubkey").unwrap();
@@ -1992,7 +1999,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_load(binary.address_type(ns), account_id, "program_id")
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Calldata, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Calldata,
+                ..
+            } => {
                 let sol_params = self.sol_parameters(binary);
 
                 let input = binary
@@ -2056,7 +2066,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .left()
                     .unwrap()
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Signature, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Signature,
+                ..
+            } => {
                 let sol_params = self.sol_parameters(binary);
 
                 let input = binary
@@ -2093,18 +2106,22 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .left()
                     .unwrap()
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::SignatureVerify, args) => {
-                assert_eq!(args.len(), 3);
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::SignatureVerify,
+                args: values,
+                ..
+            } => {
+                assert_eq!(values.len(), 3);
 
                 let address = binary.build_alloca(function, binary.address_type(ns), "address");
 
                 binary.builder.build_store(
                     address,
-                    expression(self, binary, &args[0], vartab, function, ns).into_array_value(),
+                    expression(self, binary, &values[0], vartab, function, ns).into_array_value(),
                 );
 
-                let message = expression(self, binary, &args[1], vartab, function, ns);
-                let signature = expression(self, binary, &args[2], vartab, function, ns);
+                let message = expression(self, binary, &values[1], vartab, function, ns);
+                let signature = expression(self, binary, &values[2], vartab, function, ns);
                 let parameters = self.sol_parameters(binary);
                 let signature_verify = binary.module.get_function("signature_verify").unwrap();
 
@@ -2135,14 +2152,18 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     )
                     .into()
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Balance, args) => {
-                assert_eq!(args.len(), 1);
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Balance,
+                args: values,
+                ..
+            } => {
+                assert_eq!(values.len(), 1);
 
                 let address = binary.build_alloca(function, binary.address_type(ns), "address");
 
                 binary.builder.build_store(
                     address,
-                    expression(self, binary, &args[0], vartab, function, ns).into_array_value(),
+                    expression(self, binary, &values[0], vartab, function, ns).into_array_value(),
                 );
 
                 let account_lamport = binary.module.get_function("sol_account_lamport").unwrap();
@@ -2161,7 +2182,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .builder
                     .build_load(binary.context.i64_type(), lamport, "lamport")
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Accounts, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Accounts,
+                ..
+            } => {
                 let parameters = self.sol_parameters(binary);
 
                 unsafe {
@@ -2181,7 +2205,10 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 }
                 .into()
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::ArrayLength, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::ArrayLength,
+                ..
+            } => {
                 let parameters = self.sol_parameters(binary);
 
                 let ka_num = binary
@@ -2207,9 +2234,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     .build_int_truncate(ka_num, binary.context.i32_type(), "ka_num_32bits")
                     .into()
             }
-            codegen::Expression::StructMember(_, _, a, member) => {
+            codegen::Expression::StructMember { expr, member, .. } => {
                 let account_info =
-                    expression(self, binary, a, vartab, function, ns).into_pointer_value();
+                    expression(self, binary, expr, vartab, function, ns).into_pointer_value();
 
                 self.account_info_member(binary, function, account_info, *member, ns)
             }

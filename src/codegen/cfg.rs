@@ -538,29 +538,37 @@ impl ControlFlowGraph {
         if self.array_lengths_temps.contains_key(&array_pos) {
             let to_add = self.array_lengths_temps[&array_pos];
             let add_expr = if minus {
-                Expression::Subtract(
+                Expression::Subtract {
                     loc,
-                    Type::Uint(32),
-                    false,
-                    Box::new(Expression::Variable(loc, Type::Uint(32), to_add)),
-                    Box::new(Expression::NumberLiteral(
+                    ty: Type::Uint(32),
+                    unchecked: false,
+                    left: Box::new(Expression::Variable {
                         loc,
-                        Type::Uint(32),
-                        BigInt::one(),
-                    )),
-                )
+                        ty: Type::Uint(32),
+                        var_no: to_add,
+                    }),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::one(),
+                    }),
+                }
             } else {
-                Expression::Add(
+                Expression::Add {
                     loc,
-                    Type::Uint(32),
-                    false,
-                    Box::new(Expression::Variable(loc, Type::Uint(32), to_add)),
-                    Box::new(Expression::NumberLiteral(
+                    ty: Type::Uint(32),
+                    unchecked: false,
+                    left: Box::new(Expression::Variable {
                         loc,
-                        Type::Uint(32),
-                        BigInt::one(),
-                    )),
-                )
+                        ty: Type::Uint(32),
+                        var_no: to_add,
+                    }),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::one(),
+                    }),
+                }
             };
 
             // Add instruction to the cfg
@@ -577,146 +585,179 @@ impl ControlFlowGraph {
 
     pub fn expr_to_string(&self, contract: &Contract, ns: &Namespace, expr: &Expression) -> String {
         match expr {
-            Expression::FunctionArg(_, _, pos) => format!("(arg #{pos})"),
-            Expression::BoolLiteral(_, false) => "false".to_string(),
-            Expression::BoolLiteral(_, true) => "true".to_string(),
-            Expression::BytesLiteral(_, Type::String, s) => {
-                format!("{}", String::from_utf8_lossy(s))
+            Expression::FunctionArg { arg_no, .. } => format!("(arg #{arg_no})"),
+            Expression::BoolLiteral { value: false, .. } => "false".to_string(),
+            Expression::BoolLiteral { value: true, .. } => "true".to_string(),
+            Expression::BytesLiteral {
+                ty: Type::String,
+                value,
+                ..
+            } => {
+                format!("{}", String::from_utf8_lossy(value))
             }
-            Expression::BytesLiteral(_, _, s) => format!("hex\"{}\"", hex::encode(s)),
-            Expression::NumberLiteral(_, ty @ Type::Address(_), n) => {
-                format!("{} {:#x}", ty.to_string(ns), n)
+            Expression::BytesLiteral { value, .. } => format!("hex\"{}\"", hex::encode(value)),
+            Expression::NumberLiteral {
+                ty: ty @ Type::Address(_),
+                value,
+                ..
+            } => {
+                format!("{} {:#x}", ty.to_string(ns), value)
             }
-            Expression::NumberLiteral(_, ty, n) => {
-                format!("{} {}", ty.to_string(ns), n)
+            Expression::NumberLiteral { ty, value, .. } => {
+                format!("{} {}", ty.to_string(ns), value)
             }
-            Expression::RationalNumberLiteral(_, ty, n) => {
-                format!("{} {}", ty.to_string(ns), n)
+            Expression::RationalNumberLiteral { ty, rational, .. } => {
+                format!("{} {}", ty.to_string(ns), rational)
             }
-            Expression::StructLiteral(_, _, expr) => format!(
+            Expression::StructLiteral { values, .. } => format!(
                 "struct {{ {} }}",
-                expr.iter()
+                values
+                    .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::ConstArrayLiteral(_, _, dims, exprs) => format!(
+            Expression::ConstArrayLiteral {
+                lengths, values, ..
+            } => format!(
                 "constant {} [ {} ]",
-                dims.iter().map(|d| format!("[{d}]")).collect::<String>(),
-                exprs
+                lengths.iter().map(|d| format!("[{d}]")).collect::<String>(),
+                values
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::ArrayLiteral(_, _, dims, exprs) => format!(
+            Expression::ArrayLiteral {
+                lengths, values, ..
+            } => format!(
                 "{} [ {} ]",
-                dims.iter().map(|d| format!("[{d}]")).collect::<String>(),
-                exprs
+                lengths.iter().map(|d| format!("[{d}]")).collect::<String>(),
+                values
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::Add(_, _, unchecked, l, r) => format!(
+            Expression::Add {
+                unchecked,
+                left,
+                right,
+                ..
+            } => format!(
                 "({}{} + {})",
                 if *unchecked { "unchecked " } else { "" },
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::Subtract(_, _, unchecked, l, r) => format!(
+            Expression::Subtract {
+                unchecked,
+                left,
+                right,
+                ..
+            } => format!(
                 "({}{} - {})",
                 if *unchecked { "unchecked " } else { "" },
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::BitwiseOr(_, _, l, r) => format!(
+            Expression::BitwiseOr { left, right, .. } => format!(
                 "({} | {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::BitwiseAnd(_, _, l, r) => format!(
+            Expression::BitwiseAnd { left, right, .. } => format!(
                 "({} & {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::BitwiseXor(_, _, l, r) => format!(
+            Expression::BitwiseXor { left, right, .. } => format!(
                 "({} ^ {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::ShiftLeft(_, _, l, r) => format!(
+            Expression::ShiftLeft { left, right, .. } => format!(
                 "({} << {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::ShiftRight(_, _, l, r, _) => format!(
+            Expression::ShiftRight { left, right, .. } => format!(
                 "({} >> {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::Multiply(_, _, unchecked, l, r) => format!(
+            Expression::Multiply {
+                unchecked,
+                left,
+                right,
+                ..
+            } => format!(
                 "({}{} * {})",
                 if *unchecked { "unchecked " } else { "" },
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::SignedDivide(_, _, l, r) => format!(
+            Expression::SignedDivide { left, right, .. } => format!(
                 "(signed divide {} / {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r),
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right),
             ),
-            Expression::UnsignedDivide(_, _, l, r) => format!(
+            Expression::UnsignedDivide { left, right, .. } => format!(
                 "(unsigned divide {} / {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r),
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right),
             ),
-            Expression::SignedModulo(_, _, l, r) => format!(
+            Expression::SignedModulo { left, right, .. } => format!(
                 "(signed modulo {} % {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::UnsignedModulo(_, _, l, r) => format!(
+            Expression::UnsignedModulo { left, right, .. } => format!(
                 "(unsigned modulo {} % {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::Power(_, _, unchecked, l, r) => format!(
+            Expression::Power {
+                unchecked,
+                base,
+                exp,
+                ..
+            } => format!(
                 "({}{} ** {})",
                 if *unchecked { "unchecked " } else { "" },
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, base),
+                self.expr_to_string(contract, ns, exp)
             ),
-            Expression::Variable(_, _, res) => {
-                if let Some(var) = self.vars.get(res) {
+            Expression::Variable { var_no, .. } => {
+                if let Some(var) = self.vars.get(var_no) {
                     format!("%{}", var.id.name)
                 } else {
-                    panic!("error: non-existing variable {res} in CFG");
+                    panic!("error: non-existing variable {var_no} in CFG");
                 }
             }
-            Expression::Load(_, _, expr) => {
+            Expression::Load { expr, .. } => {
                 format!("(load {})", self.expr_to_string(contract, ns, expr))
             }
-            Expression::ZeroExt(_, ty, e) => format!(
+            Expression::ZeroExt { ty, expr, .. } => format!(
                 "(zext {} {})",
                 ty.to_string(ns),
-                self.expr_to_string(contract, ns, e)
+                self.expr_to_string(contract, ns, expr)
             ),
-            Expression::SignExt(_, ty, e) => format!(
+            Expression::SignExt { ty, expr, .. } => format!(
                 "(sext {} {})",
                 ty.to_string(ns),
-                self.expr_to_string(contract, ns, e)
+                self.expr_to_string(contract, ns, expr)
             ),
-            Expression::Trunc(_, ty, e) => format!(
+            Expression::Trunc { ty, expr, .. } => format!(
                 "(trunc {} {})",
                 ty.to_string(ns),
-                self.expr_to_string(contract, ns, e)
+                self.expr_to_string(contract, ns, expr)
             ),
             Expression::More {
-                loc: _,
                 signed,
                 left,
                 right,
+                ..
             } => format!(
                 "({} more {} > {})",
                 if *signed { "signed" } else { "unsigned" },
@@ -724,10 +765,10 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, right)
             ),
             Expression::Less {
-                loc: _,
                 signed,
                 left,
                 right,
+                ..
             } => format!(
                 "({} less {} < {})",
                 if *signed { "signed" } else { "unsigned" },
@@ -735,10 +776,10 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, right)
             ),
             Expression::MoreEqual {
-                loc: _,
                 signed,
                 left,
                 right,
+                ..
             } => format!(
                 "({} {} >= {})",
                 if *signed { "signed" } else { "unsigned" },
@@ -746,47 +787,63 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, right)
             ),
             Expression::LessEqual {
-                loc: _,
                 signed,
                 left,
                 right,
+                ..
             } => format!(
                 "({} {} <= {})",
                 if *signed { "signed" } else { "unsigned" },
                 self.expr_to_string(contract, ns, left),
                 self.expr_to_string(contract, ns, right)
             ),
-            Expression::Equal(_, l, r) => format!(
+            Expression::Equal { left, right, .. } => format!(
                 "({} == {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::NotEqual(_, l, r) => format!(
+            Expression::NotEqual { left, right, .. } => format!(
                 "({} != {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
+                self.expr_to_string(contract, ns, left),
+                self.expr_to_string(contract, ns, right)
             ),
-            Expression::Subscript(_, _, ty, a, i) => format!(
+            Expression::Subscript {
+                array_ty: ty,
+                expr,
+                index,
+                ..
+            } => format!(
                 "(subscript {} {}[{}])",
                 ty.to_string(ns),
-                self.expr_to_string(contract, ns, a),
-                self.expr_to_string(contract, ns, i)
+                self.expr_to_string(contract, ns, expr),
+                self.expr_to_string(contract, ns, index)
             ),
             Expression::StorageArrayLength { array, elem_ty, .. } => format!(
                 "(storage array length {}[{}])",
                 self.expr_to_string(contract, ns, array),
                 elem_ty.to_string(ns),
             ),
-            Expression::StructMember(_, _, a, f) => format!(
+            Expression::StructMember { expr, member, .. } => format!(
                 "(struct {} field {})",
-                self.expr_to_string(contract, ns, a),
-                f
+                self.expr_to_string(contract, ns, expr),
+                member
             ),
-            Expression::Not(_, e) => format!("!{}", self.expr_to_string(contract, ns, e)),
-            Expression::BitwiseNot(_, _, e) => format!("~{}", self.expr_to_string(contract, ns, e)),
-            Expression::Negate(_, _, e) => format!("-{}", self.expr_to_string(contract, ns, e)),
+            Expression::Not { expr, .. } => {
+                format!("!{}", self.expr_to_string(contract, ns, expr))
+            }
+            Expression::BitwiseNot { expr, .. } => {
+                format!("~{}", self.expr_to_string(contract, ns, expr))
+            }
+            Expression::Negate { expr, .. } => {
+                format!("-{}", self.expr_to_string(contract, ns, expr))
+            }
             Expression::Poison => "☠".to_string(),
-            Expression::AllocDynamicBytes(_, ty, size, None) => {
+            Expression::AllocDynamicBytes {
+                ty,
+                size,
+                initializer: None,
+                ..
+            } => {
                 let ty = if let Type::Slice(ty) = ty {
                     format!("slice {}", ty.to_string(ns))
                 } else {
@@ -799,7 +856,12 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, size)
                 )
             }
-            Expression::AllocDynamicBytes(_, ty, size, Some(init)) => {
+            Expression::AllocDynamicBytes {
+                ty,
+                size,
+                initializer: Some(init),
+                ..
+            } => {
                 let ty = if let Type::Slice(ty) = ty {
                     format!("slice {}", ty.to_string(ns))
                 } else {
@@ -816,17 +878,17 @@ impl ControlFlowGraph {
                     }
                 )
             }
-            Expression::StringCompare(_, l, r) => format!(
+            Expression::StringCompare { left, right, .. } => format!(
                 "(strcmp ({}) ({}))",
-                self.location_to_string(contract, ns, l),
-                self.location_to_string(contract, ns, r)
+                self.location_to_string(contract, ns, left),
+                self.location_to_string(contract, ns, right)
             ),
-            Expression::StringConcat(_, _, l, r) => format!(
+            Expression::StringConcat { left, right, .. } => format!(
                 "(concat ({}) ({}))",
-                self.location_to_string(contract, ns, l),
-                self.location_to_string(contract, ns, r)
+                self.location_to_string(contract, ns, left),
+                self.location_to_string(contract, ns, right)
             ),
-            Expression::Keccak256(_, _, exprs) => format!(
+            Expression::Keccak256 { exprs, .. } => format!(
                 "(keccak256 {})",
                 exprs
                     .iter()
@@ -834,22 +896,22 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::InternalFunctionCfg(cfg_no) => {
+            Expression::InternalFunctionCfg { cfg_no } => {
                 format!("function {}", contract.cfg[*cfg_no].name)
             }
-            Expression::ReturnData(_) => "(external call return data)".to_string(),
-            Expression::Cast(_, ty, e) => format!(
+            Expression::ReturnData { .. } => "(external call return data)".to_string(),
+            Expression::Cast { ty, expr, .. } => format!(
                 "{}({})",
                 ty.to_string(ns),
-                self.expr_to_string(contract, ns, e)
+                self.expr_to_string(contract, ns, expr)
             ),
-            Expression::BytesCast(_, ty, from, e) => format!(
+            Expression::BytesCast { ty, from, expr, .. } => format!(
                 "{} from:{} ({})",
                 ty.to_string(ns),
                 from.to_string(ns),
-                self.expr_to_string(contract, ns, e)
+                self.expr_to_string(contract, ns, expr)
             ),
-            Expression::Builtin(_, _, builtin, args) => format!(
+            Expression::Builtin { builtin, args, .. } => format!(
                 "(builtin {:?} ({}))",
                 builtin,
                 args.iter()
@@ -857,14 +919,15 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::FormatString(_, args) => format!(
+            Expression::FormatString { args: fields, .. } => format!(
                 "(format string {})",
-                args.iter()
+                fields
+                    .iter()
                     .map(|(spec, a)| format!("({} {})", spec, self.expr_to_string(contract, ns, a)))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::Undefined(_) => "undef".to_string(),
+            Expression::Undefined { .. } => "undef".to_string(),
             Expression::AdvancePointer {
                 pointer,
                 bytes_offset,
@@ -875,7 +938,7 @@ impl ControlFlowGraph {
                     self.expr_to_string(contract, ns, bytes_offset)
                 )
             }
-            Expression::GetRef(_, _, expr) => {
+            Expression::GetRef { expr, .. } => {
                 format!("(deref {}", self.expr_to_string(contract, ns, expr))
             }
             _ => panic!("{expr:?}"),
@@ -1620,7 +1683,11 @@ fn function_cfg(
                                     expr,
                                 },
                             );
-                            Expression::Variable(loc, ty, *id)
+                            Expression::Variable {
+                                loc,
+                                ty,
+                                var_no: *id,
+                            }
                         } else {
                             Expression::Poison
                         }
@@ -1701,7 +1768,11 @@ fn function_cfg(
                     .symtable
                     .returns
                     .iter()
-                    .map(|pos| Expression::Variable(loc, func.symtable.vars[pos].ty.clone(), *pos))
+                    .map(|pos| Expression::Variable {
+                        loc,
+                        ty: func.symtable.vars[pos].ty.clone(),
+                        var_no: *pos,
+                    })
                     .collect::<Vec<_>>(),
             },
         );
@@ -1727,7 +1798,11 @@ pub(crate) fn populate_arguments<T: FunctionAttributes>(
                 Instr::Set {
                     loc: func.get_parameters()[i].loc,
                     res: *pos,
-                    expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
+                    expr: Expression::FunctionArg {
+                        loc: var.id.loc,
+                        ty: var.ty.clone(),
+                        arg_no: i,
+                    },
                 },
             );
         }
@@ -1800,7 +1875,11 @@ fn generate_modifier_dispatch(
                 Instr::Set {
                     loc: var.id.loc,
                     res: *pos,
-                    expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
+                    expr: Expression::FunctionArg {
+                        loc: var.id.loc,
+                        ty: var.ty.clone(),
+                        arg_no: i,
+                    },
                 },
             );
         }
@@ -1835,11 +1914,11 @@ fn generate_modifier_dispatch(
     let mut return_tys = Vec::new();
 
     for (i, arg) in func.returns.iter().enumerate() {
-        value.push(Expression::Variable(
-            arg.loc,
-            arg.ty.clone(),
-            func.symtable.returns[i],
-        ));
+        value.push(Expression::Variable {
+            loc: arg.loc,
+            ty: arg.ty.clone(),
+            var_no: func.symtable.returns[i],
+        });
         return_tys.push(arg.ty.clone());
     }
 
@@ -1854,7 +1933,11 @@ fn generate_modifier_dispatch(
             .params
             .iter()
             .enumerate()
-            .map(|(i, p)| Expression::FunctionArg(p.loc, p.ty.clone(), i))
+            .map(|(i, p)| Expression::FunctionArg {
+                loc: p.loc,
+                ty: p.ty.clone(),
+                arg_no: i,
+            })
             .collect(),
     };
 
@@ -1891,7 +1974,11 @@ fn generate_modifier_dispatch(
                     .symtable
                     .returns
                     .iter()
-                    .map(|pos| Expression::Variable(loc, func.symtable.vars[pos].ty.clone(), *pos))
+                    .map(|pos| Expression::Variable {
+                        loc,
+                        ty: func.symtable.vars[pos].ty.clone(),
+                        var_no: *pos,
+                    })
                     .collect::<Vec<_>>(),
             },
         );
@@ -1975,11 +2062,11 @@ impl Contract {
             .iter()
             .find(|l| l.contract_no == var_contract_no && l.var_no == var_no)
         {
-            Expression::NumberLiteral(
+            Expression::NumberLiteral {
                 loc,
-                ty.unwrap_or_else(|| ns.storage_type()),
-                layout.slot.clone(),
-            )
+                ty: ty.unwrap_or_else(|| ns.storage_type()),
+                value: layout.slot.clone(),
+            }
         } else {
             panic!("get_storage_slot called on non-storage variable");
         }

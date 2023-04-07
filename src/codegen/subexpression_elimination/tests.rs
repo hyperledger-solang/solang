@@ -14,15 +14,23 @@ use solang_parser::pt::Loc;
 
 #[test]
 fn add_variable_function_arg() {
-    let var = Expression::Variable(Loc::Codegen, Type::Int(2), 1);
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(1), 1);
-    let add = Expression::Add(
-        Loc::Codegen,
-        Type::Int(0),
-        false,
-        Box::new(var.clone()),
-        Box::new(arg.clone()),
-    );
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        var_no: 1,
+    };
+    let arg = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Int(1),
+        arg_no: 1,
+    };
+    let add = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(0),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(arg.clone()),
+    };
 
     let instr = Instr::Set {
         loc: Loc::Codegen,
@@ -42,17 +50,23 @@ fn add_variable_function_arg() {
 
 #[test]
 fn add_constants() {
-    let var =
-        Expression::NumberLiteral(Loc::Codegen, Type::Int(2), BigInt::new(Sign::Plus, vec![3]));
-    let num =
-        Expression::NumberLiteral(Loc::Codegen, Type::Int(1), BigInt::new(Sign::Plus, vec![2]));
-    let sub = Expression::Subtract(
-        Loc::Codegen,
-        Type::Int(0),
-        false,
-        Box::new(var.clone()),
-        Box::new(num.clone()),
-    );
+    let var = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        value: BigInt::new(Sign::Plus, vec![3]),
+    };
+    let num = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Int(1),
+        value: BigInt::new(Sign::Plus, vec![2]),
+    };
+    let sub = Expression::Subtract {
+        loc: Loc::Codegen,
+        ty: Type::Int(0),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(num.clone()),
+    };
 
     let instr = Instr::SelfDestruct { recipient: sub };
 
@@ -68,15 +82,23 @@ fn add_constants() {
 
 #[test]
 fn add_commutative() {
-    let cte = Expression::NumberLiteral(Loc::Codegen, Type::Int(32), BigInt::from(20));
-    let var = Expression::Variable(Loc::Codegen, Type::Int(32), 3);
-    let expr = Expression::Add(
-        Loc::Codegen,
-        Type::Int(32),
-        true,
-        Box::new(cte.clone()),
-        Box::new(var.clone()),
-    );
+    let cte = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Int(32),
+        value: BigInt::from(20),
+    };
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(32),
+        var_no: 3,
+    };
+    let expr = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(32),
+        unchecked: true,
+        left: Box::new(cte.clone()),
+        right: Box::new(var.clone()),
+    };
 
     let instr = Instr::ValueTransfer {
         success: None,
@@ -84,13 +106,13 @@ fn add_commutative() {
         value: expr.clone(),
     };
 
-    let expr_other = Expression::Add(
-        Loc::Codegen,
-        Type::Int(32),
-        true,
-        Box::new(var),
-        Box::new(cte),
-    );
+    let expr_other = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(32),
+        unchecked: true,
+        left: Box::new(var),
+        right: Box::new(cte),
+    };
 
     let mut ave = AvailableExpression::default();
     let mut set = AvailableExpressionSet::default();
@@ -104,24 +126,35 @@ fn add_commutative() {
 
 #[test]
 fn non_commutative() {
-    let var = Expression::Variable(Loc::Codegen, Type::Int(2), 1);
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(1), 1);
-    let add = Expression::Add(
-        Loc::Codegen,
-        Type::Int(0),
-        false,
-        Box::new(var.clone()),
-        Box::new(arg.clone()),
-    );
-    let num =
-        Expression::NumberLiteral(Loc::Codegen, Type::Int(1), BigInt::new(Sign::Plus, vec![2]));
-    let sub = Expression::Subtract(
-        Loc::Codegen,
-        Type::Int(0),
-        false,
-        Box::new(add.clone()),
-        Box::new(num.clone()),
-    );
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        var_no: 1,
+    };
+    let arg = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Int(1),
+        arg_no: 1,
+    };
+    let add = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(0),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(arg.clone()),
+    };
+    let num = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Int(1),
+        value: BigInt::new(Sign::Plus, vec![2]),
+    };
+    let sub = Expression::Subtract {
+        loc: Loc::Codegen,
+        ty: Type::Int(0),
+        unchecked: false,
+        left: Box::new(add.clone()),
+        right: Box::new(num.clone()),
+    };
 
     let instr = Instr::AssertFailure {
         encoded_args: Some(sub.clone()),
@@ -142,15 +175,27 @@ fn non_commutative() {
 
 #[test]
 fn unary_operation() {
-    let var = Expression::Variable(Loc::Codegen, Type::Int(2), 1);
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(1), 1);
-    let cast = Expression::Cast(Loc::Codegen, Type::Int(32), Box::new(var));
-    let exp = Expression::ShiftLeft(
-        Loc::Codegen,
-        Type::Int(32),
-        Box::new(arg),
-        Box::new(cast.clone()),
-    );
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        var_no: 1,
+    };
+    let arg = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Int(1),
+        arg_no: 1,
+    };
+    let cast = Expression::Cast {
+        loc: Loc::Codegen,
+        ty: Type::Int(32),
+        expr: Box::new(var),
+    };
+    let exp = Expression::ShiftLeft {
+        loc: Loc::Codegen,
+        ty: Type::Int(32),
+        left: Box::new(arg),
+        right: Box::new(cast.clone()),
+    };
 
     let instr = Instr::Return {
         value: vec![exp.clone()],
@@ -168,16 +213,32 @@ fn unary_operation() {
 
 #[test]
 fn not_tracked() {
-    let var = Expression::Variable(Loc::Codegen, Type::Int(2), 1);
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(1), 1);
-    let load = Expression::Load(Loc::Codegen, Type::DynamicBytes, Box::new(var));
-    let minus = Expression::Negate(Loc::Codegen, Type::Int(32), Box::new(load.clone()));
-    let exp = Expression::ShiftLeft(
-        Loc::Codegen,
-        Type::Int(32),
-        Box::new(arg),
-        Box::new(minus.clone()),
-    );
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        var_no: 1,
+    };
+    let arg = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Int(1),
+        arg_no: 1,
+    };
+    let load = Expression::Load {
+        loc: Loc::Codegen,
+        ty: Type::DynamicBytes,
+        expr: Box::new(var),
+    };
+    let minus = Expression::Negate {
+        loc: Loc::Codegen,
+        ty: Type::Int(32),
+        expr: Box::new(load.clone()),
+    };
+    let exp = Expression::ShiftLeft {
+        loc: Loc::Codegen,
+        ty: Type::Int(32),
+        left: Box::new(arg),
+        right: Box::new(minus.clone()),
+    };
 
     let instr = Instr::PushMemory {
         res: 0,
@@ -199,62 +260,82 @@ fn not_tracked() {
 
 #[test]
 fn complex_expression() {
-    let var = Expression::Variable(Loc::Codegen, Type::Int(8), 2);
-    let cte = Expression::NumberLiteral(Loc::Codegen, Type::Int(8), BigInt::from(3));
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(9), 5);
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        var_no: 2,
+    };
+    let cte = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        value: BigInt::from(3),
+    };
+    let arg = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Int(9),
+        arg_no: 5,
+    };
 
-    let sum = Expression::Add(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var.clone()),
-        Box::new(cte.clone()),
-    );
-    let sub = Expression::Subtract(
-        Loc::Codegen,
-        Type::Int(3),
-        false,
-        Box::new(cte.clone()),
-        Box::new(arg.clone()),
-    );
-    let div = Expression::SignedDivide(
-        Loc::Codegen,
-        Type::Int(8),
-        Box::new(sum.clone()),
-        Box::new(sub.clone()),
-    );
-    let mul = Expression::Multiply(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var.clone()),
-        Box::new(cte.clone()),
-    );
+    let sum = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(cte.clone()),
+    };
+    let sub = Expression::Subtract {
+        loc: Loc::Codegen,
+        ty: Type::Int(3),
+        unchecked: false,
+        left: Box::new(cte.clone()),
+        right: Box::new(arg.clone()),
+    };
+    let div = Expression::SignedDivide {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(sum.clone()),
+        right: Box::new(sub.clone()),
+    };
+    let mul = Expression::Multiply {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(cte.clone()),
+    };
 
-    let shift = Expression::ShiftRight(
-        Loc::Codegen,
-        Type::Int(2),
-        Box::new(mul.clone()),
-        Box::new(div.clone()),
-        true,
-    );
-    let modu = Expression::SignedModulo(
-        Loc::Codegen,
-        Type::Int(8),
-        Box::new(cte.clone()),
-        Box::new(arg.clone()),
-    );
+    let shift = Expression::ShiftRight {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        left: Box::new(mul.clone()),
+        right: Box::new(div.clone()),
+        signed: true,
+    };
+    let modu = Expression::SignedModulo {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(cte.clone()),
+        right: Box::new(arg.clone()),
+    };
 
-    let zero = Expression::ZeroExt(Loc::Codegen, Type::Int(54), Box::new(shift.clone()));
-    let unary = Expression::Negate(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
+    let zero = Expression::ZeroExt {
+        loc: Loc::Codegen,
+        ty: Type::Int(54),
+        expr: Box::new(shift.clone()),
+    };
+    let unary = Expression::Negate {
+        loc: Loc::Codegen,
+        ty: Type::Int(44),
+        expr: Box::new(modu.clone()),
+    };
 
-    let pot = Expression::Power(
-        Loc::Codegen,
-        Type::Int(4),
-        true,
-        Box::new(zero.clone()),
-        Box::new(unary.clone()),
-    );
+    let pot = Expression::Power {
+        loc: Loc::Codegen,
+        ty: Type::Int(4),
+        unchecked: true,
+        base: Box::new(zero.clone()),
+        exp: Box::new(unary.clone()),
+    };
 
     let instr = Instr::Set {
         loc: Loc::Codegen,
@@ -281,39 +362,73 @@ fn complex_expression() {
     assert!(set.find_expression(&cte).is_some());
     assert!(set.find_expression(&var).is_some());
 
-    let var = Expression::Variable(Loc::Codegen, Type::Int(8), 4);
-    let sum2 = Expression::Add(
-        Loc::Codegen,
-        Type::Int(2),
-        false,
-        Box::new(var),
-        Box::new(cte),
-    );
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        var_no: 4,
+    };
+    let sum2 = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        unchecked: false,
+        left: Box::new(var),
+        right: Box::new(cte),
+    };
     assert!(set.find_expression(&sum2).is_none());
 }
 
 #[test]
 fn string() {
-    let var1 = Expression::Variable(Loc::Codegen, Type::String, 3);
-    let var2 = Expression::Variable(Loc::Codegen, Type::String, 4);
+    let var1 = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::String,
+        var_no: 3,
+    };
+    let var2 = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::String,
+        var_no: 4,
+    };
 
     let op1 = StringLocation::RunTime(Box::new(var1.clone()));
     let op2 = StringLocation::RunTime(Box::new(var2.clone()));
 
     let op3 = StringLocation::CompileTime(vec![0, 1]);
 
-    let concat = Expression::StringConcat(Loc::Codegen, Type::String, op1.clone(), op2.clone());
-    let compare = Expression::StringCompare(Loc::Codegen, op2.clone(), op1.clone());
+    let concat = Expression::StringConcat {
+        loc: Loc::Codegen,
+        ty: Type::String,
+        left: op1.clone(),
+        right: op2.clone(),
+    };
+    let compare = Expression::StringCompare {
+        loc: Loc::Codegen,
+        left: op2.clone(),
+        right: op1.clone(),
+    };
 
-    let concat2 = Expression::StringConcat(Loc::Codegen, Type::String, op2.clone(), op1);
-    let compare2 = Expression::StringCompare(Loc::Codegen, op2, op3);
+    let concat2 = Expression::StringConcat {
+        loc: Loc::Codegen,
+        ty: Type::String,
+        left: op2.clone(),
+        right: op1,
+    };
+    let compare2 = Expression::StringCompare {
+        loc: Loc::Codegen,
+        left: op2,
+        right: op3,
+    };
 
     let instr = Instr::Constructor {
         success: None,
         res: 0,
         contract_no: 0,
         encoded_args: concat.clone(),
-        encoded_args_len: Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::zero()),
+        encoded_args_len: Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(32),
+            value: BigInt::zero(),
+        },
         value: Some(compare.clone()),
         gas: concat2.clone(),
         salt: Some(compare2.clone()),
@@ -339,62 +454,82 @@ fn string() {
 
 #[test]
 fn kill() {
-    let var = Expression::Variable(Loc::Codegen, Type::Int(8), 2);
-    let cte = Expression::NumberLiteral(Loc::Codegen, Type::Int(8), BigInt::from(3));
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(9), 5);
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        var_no: 2,
+    };
+    let cte = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        value: BigInt::from(3),
+    };
+    let arg = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Int(9),
+        arg_no: 5,
+    };
 
-    let sum = Expression::Add(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var.clone()),
-        Box::new(cte.clone()),
-    );
-    let sub = Expression::Subtract(
-        Loc::Codegen,
-        Type::Int(3),
-        false,
-        Box::new(cte.clone()),
-        Box::new(arg.clone()),
-    );
-    let div = Expression::SignedDivide(
-        Loc::Codegen,
-        Type::Int(8),
-        Box::new(sum.clone()),
-        Box::new(sub.clone()),
-    );
-    let mul = Expression::Multiply(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var.clone()),
-        Box::new(cte.clone()),
-    );
+    let sum = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(cte.clone()),
+    };
+    let sub = Expression::Subtract {
+        loc: Loc::Codegen,
+        ty: Type::Int(3),
+        unchecked: false,
+        left: Box::new(cte.clone()),
+        right: Box::new(arg.clone()),
+    };
+    let div = Expression::SignedDivide {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(sum.clone()),
+        right: Box::new(sub.clone()),
+    };
+    let mul = Expression::Multiply {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(cte.clone()),
+    };
 
-    let shift = Expression::ShiftRight(
-        Loc::Codegen,
-        Type::Int(2),
-        Box::new(mul.clone()),
-        Box::new(div.clone()),
-        true,
-    );
-    let modu = Expression::SignedModulo(
-        Loc::Codegen,
-        Type::Int(8),
-        Box::new(cte.clone()),
-        Box::new(arg.clone()),
-    );
+    let shift = Expression::ShiftRight {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        left: Box::new(mul.clone()),
+        right: Box::new(div.clone()),
+        signed: true,
+    };
+    let modu = Expression::SignedModulo {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(cte.clone()),
+        right: Box::new(arg.clone()),
+    };
 
-    let zero = Expression::ZeroExt(Loc::Codegen, Type::Int(54), Box::new(shift.clone()));
-    let unary = Expression::Negate(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
+    let zero = Expression::ZeroExt {
+        loc: Loc::Codegen,
+        ty: Type::Int(54),
+        expr: Box::new(shift.clone()),
+    };
+    let unary = Expression::Negate {
+        loc: Loc::Codegen,
+        ty: Type::Int(44),
+        expr: Box::new(modu.clone()),
+    };
 
-    let pot = Expression::Power(
-        Loc::Codegen,
-        Type::Int(4),
-        true,
-        Box::new(zero.clone()),
-        Box::new(unary.clone()),
-    );
+    let pot = Expression::Power {
+        loc: Loc::Codegen,
+        ty: Type::Int(4),
+        unchecked: true,
+        base: Box::new(zero.clone()),
+        exp: Box::new(unary.clone()),
+    };
 
     let instr = Instr::Set {
         loc: Loc::Codegen,
@@ -428,62 +563,82 @@ fn kill() {
 
 #[test]
 fn clone() {
-    let var = Expression::Variable(Loc::Codegen, Type::Int(8), 2);
-    let cte = Expression::NumberLiteral(Loc::Codegen, Type::Int(8), BigInt::from(3));
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(9), 5);
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        var_no: 2,
+    };
+    let cte = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        value: BigInt::from(3),
+    };
+    let arg = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Int(9),
+        arg_no: 5,
+    };
 
-    let sum = Expression::Add(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var.clone()),
-        Box::new(cte.clone()),
-    );
-    let sub = Expression::Subtract(
-        Loc::Codegen,
-        Type::Int(3),
-        false,
-        Box::new(cte.clone()),
-        Box::new(arg.clone()),
-    );
-    let div = Expression::SignedDivide(
-        Loc::Codegen,
-        Type::Int(8),
-        Box::new(sum.clone()),
-        Box::new(sub.clone()),
-    );
-    let mul = Expression::Multiply(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var.clone()),
-        Box::new(cte.clone()),
-    );
+    let sum = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(cte.clone()),
+    };
+    let sub = Expression::Subtract {
+        loc: Loc::Codegen,
+        ty: Type::Int(3),
+        unchecked: false,
+        left: Box::new(cte.clone()),
+        right: Box::new(arg.clone()),
+    };
+    let div = Expression::SignedDivide {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(sum.clone()),
+        right: Box::new(sub.clone()),
+    };
+    let mul = Expression::Multiply {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(cte.clone()),
+    };
 
-    let shift = Expression::ShiftRight(
-        Loc::Codegen,
-        Type::Int(2),
-        Box::new(mul.clone()),
-        Box::new(div.clone()),
-        true,
-    );
-    let modu = Expression::SignedModulo(
-        Loc::Codegen,
-        Type::Int(8),
-        Box::new(cte.clone()),
-        Box::new(arg.clone()),
-    );
+    let shift = Expression::ShiftRight {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        left: Box::new(mul.clone()),
+        right: Box::new(div.clone()),
+        signed: true,
+    };
+    let modu = Expression::SignedModulo {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(cte.clone()),
+        right: Box::new(arg.clone()),
+    };
 
-    let zero = Expression::ZeroExt(Loc::Codegen, Type::Int(54), Box::new(shift.clone()));
-    let unary = Expression::Negate(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
+    let zero = Expression::ZeroExt {
+        loc: Loc::Codegen,
+        ty: Type::Int(54),
+        expr: Box::new(shift.clone()),
+    };
+    let unary = Expression::Negate {
+        loc: Loc::Codegen,
+        ty: Type::Int(44),
+        expr: Box::new(modu.clone()),
+    };
 
-    let pot = Expression::Power(
-        Loc::Codegen,
-        Type::Int(4),
-        true,
-        Box::new(zero.clone()),
-        Box::new(unary.clone()),
-    );
+    let pot = Expression::Power {
+        loc: Loc::Codegen,
+        ty: Type::Int(4),
+        unchecked: true,
+        base: Box::new(zero.clone()),
+        exp: Box::new(unary.clone()),
+    };
 
     let instr = Instr::Set {
         loc: Loc::Codegen,
@@ -515,65 +670,93 @@ fn clone() {
 
 #[test]
 fn intersect() {
-    let var = Expression::Variable(Loc::Codegen, Type::Int(8), 1);
-    let cte = Expression::NumberLiteral(Loc::Codegen, Type::Int(8), BigInt::from(3));
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(9), 5);
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        var_no: 1,
+    };
+    let cte = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        value: BigInt::from(3),
+    };
+    let arg = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Int(9),
+        arg_no: 5,
+    };
 
-    let sum = Expression::Add(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var.clone()),
-        Box::new(cte.clone()),
-    );
-    let sub = Expression::Subtract(
-        Loc::Codegen,
-        Type::Int(3),
-        false,
-        Box::new(cte.clone()),
-        Box::new(arg.clone()),
-    );
-    let div = Expression::SignedDivide(
-        Loc::Codegen,
-        Type::Int(8),
-        Box::new(sum.clone()),
-        Box::new(sub.clone()),
-    );
-    let mul = Expression::Multiply(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var.clone()),
-        Box::new(cte.clone()),
-    );
+    let sum = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(cte.clone()),
+    };
+    let sub = Expression::Subtract {
+        loc: Loc::Codegen,
+        ty: Type::Int(3),
+        unchecked: false,
+        left: Box::new(cte.clone()),
+        right: Box::new(arg.clone()),
+    };
+    let div = Expression::SignedDivide {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(sum.clone()),
+        right: Box::new(sub.clone()),
+    };
+    let mul = Expression::Multiply {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(cte.clone()),
+    };
 
-    let shift = Expression::ShiftRight(
-        Loc::Codegen,
-        Type::Int(2),
-        Box::new(mul.clone()),
-        Box::new(div.clone()),
-        true,
-    );
-    let modu = Expression::SignedModulo(
-        Loc::Codegen,
-        Type::Int(8),
-        Box::new(cte.clone()),
-        Box::new(arg.clone()),
-    );
+    let shift = Expression::ShiftRight {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        left: Box::new(mul.clone()),
+        right: Box::new(div.clone()),
+        signed: true,
+    };
+    let modu = Expression::SignedModulo {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(cte.clone()),
+        right: Box::new(arg.clone()),
+    };
 
-    let zero = Expression::ZeroExt(Loc::Codegen, Type::Int(54), Box::new(shift.clone()));
-    let unary = Expression::Negate(Loc::Codegen, Type::Int(44), Box::new(modu.clone()));
+    let zero = Expression::ZeroExt {
+        loc: Loc::Codegen,
+        ty: Type::Int(54),
+        expr: Box::new(shift.clone()),
+    };
+    let unary = Expression::Negate {
+        loc: Loc::Codegen,
+        ty: Type::Int(44),
+        expr: Box::new(modu.clone()),
+    };
 
-    let pot = Expression::Power(
-        Loc::Codegen,
-        Type::Int(4),
-        true,
-        Box::new(zero.clone()),
-        Box::new(unary.clone()),
-    );
+    let pot = Expression::Power {
+        loc: Loc::Codegen,
+        ty: Type::Int(4),
+        unchecked: true,
+        base: Box::new(zero.clone()),
+        exp: Box::new(unary.clone()),
+    };
 
-    let var2 = Expression::Variable(Loc::Codegen, Type::Int(8), 2);
-    let var3 = Expression::Variable(Loc::Codegen, Type::Int(8), 3);
+    let var2 = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        var_no: 2,
+    };
+    let var3 = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        var_no: 3,
+    };
 
     let instr = Instr::Set {
         loc: Loc::Codegen,
@@ -585,20 +768,20 @@ fn intersect() {
         value: vec![var2.clone(), var3.clone()],
     };
 
-    let sum2 = Expression::Add(
-        Loc::Codegen,
-        Type::Int(8),
-        true,
-        Box::new(var2),
-        Box::new(var3),
-    );
-    let sub2 = Expression::Subtract(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(arg.clone()),
-        Box::new(sum2.clone()),
-    );
+    let sum2 = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: true,
+        left: Box::new(var2),
+        right: Box::new(var3),
+    };
+    let sub2 = Expression::Subtract {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(arg.clone()),
+        right: Box::new(sum2.clone()),
+    };
 
     let instr3 = Instr::PushMemory {
         res: 0,
@@ -849,41 +1032,63 @@ fn test_flow() {
 
 #[test]
 fn unite_expressions() {
-    let var = Expression::Variable(Loc::Codegen, Type::Int(8), 1);
-    let cte = Expression::NumberLiteral(Loc::Codegen, Type::Int(8), BigInt::from(3));
-    let arg = Expression::FunctionArg(Loc::Codegen, Type::Int(9), 5);
+    let var = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        var_no: 1,
+    };
+    let cte = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        value: BigInt::from(3),
+    };
+    let arg = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Int(9),
+        arg_no: 5,
+    };
 
-    let sum = Expression::Add(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var.clone()),
-        Box::new(cte.clone()),
-    );
-    let sub = Expression::Subtract(
-        Loc::Codegen,
-        Type::Int(3),
-        false,
-        Box::new(cte.clone()),
-        Box::new(arg.clone()),
-    );
-    let div = Expression::SignedDivide(Loc::Codegen, Type::Int(8), Box::new(sum), Box::new(sub));
-    let mul = Expression::Multiply(
-        Loc::Codegen,
-        Type::Int(8),
-        false,
-        Box::new(var),
-        Box::new(cte.clone()),
-    );
+    let sum = Expression::Add {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var.clone()),
+        right: Box::new(cte.clone()),
+    };
+    let sub = Expression::Subtract {
+        loc: Loc::Codegen,
+        ty: Type::Int(3),
+        unchecked: false,
+        left: Box::new(cte.clone()),
+        right: Box::new(arg.clone()),
+    };
+    let div = Expression::SignedDivide {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(sum),
+        right: Box::new(sub),
+    };
+    let mul = Expression::Multiply {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        unchecked: false,
+        left: Box::new(var),
+        right: Box::new(cte.clone()),
+    };
 
-    let shift = Expression::ShiftRight(
-        Loc::Codegen,
-        Type::Int(2),
-        Box::new(mul),
-        Box::new(div),
-        true,
-    );
-    let modu = Expression::SignedModulo(Loc::Codegen, Type::Int(8), Box::new(cte), Box::new(arg));
+    let shift = Expression::ShiftRight {
+        loc: Loc::Codegen,
+        ty: Type::Int(2),
+        left: Box::new(mul),
+        right: Box::new(div),
+        signed: true,
+    };
+    let modu = Expression::SignedModulo {
+        loc: Loc::Codegen,
+        ty: Type::Int(8),
+        left: Box::new(cte),
+        right: Box::new(arg),
+    };
 
     let mut set_1 = AvailableExpressionSet::default();
     let mut ave = AvailableExpression::default();
@@ -922,26 +1127,42 @@ fn ancestor_found() {
     let mut traversing_order = vec![(0, false), (1, false), (2, false), (3, false)];
     traversing_order.reverse();
     let mut anticipated = AnticipatedExpressions::new(&dag, reverse_dag, traversing_order);
-    let var1 = Expression::Variable(Loc::Implicit, Type::Uint(32), 0);
-    let var2 = Expression::Variable(Loc::Implicit, Type::Uint(32), 1);
-    let addition = Expression::Add(
-        Loc::Implicit,
-        Type::Uint(32),
-        false,
-        Box::new(var1.clone()),
-        Box::new(var2.clone()),
-    );
+    let var1 = Expression::Variable {
+        loc: Loc::Implicit,
+        ty: Type::Uint(32),
+        var_no: 0,
+    };
+    let var2 = Expression::Variable {
+        loc: Loc::Implicit,
+        ty: Type::Uint(32),
+        var_no: 1,
+    };
+    let addition = Expression::Add {
+        loc: Loc::Implicit,
+        ty: Type::Uint(32),
+        unchecked: false,
+        left: Box::new(var1.clone()),
+        right: Box::new(var2.clone()),
+    };
     let instr = vec![
         vec![
             Instr::Set {
                 res: 0,
                 loc: Loc::Implicit,
-                expr: Expression::NumberLiteral(Loc::Implicit, Type::Uint(32), 9.into()),
+                expr: Expression::NumberLiteral {
+                    loc: Loc::Implicit,
+                    ty: Type::Uint(32),
+                    value: 9.into(),
+                },
             },
             Instr::Set {
                 res: 1,
                 loc: Loc::Implicit,
-                expr: Expression::NumberLiteral(Loc::Implicit, Type::Uint(32), 8.into()),
+                expr: Expression::NumberLiteral {
+                    loc: Loc::Implicit,
+                    ty: Type::Uint(32),
+                    value: 8.into(),
+                },
             },
             Instr::Branch { block: 1 },
         ],
@@ -990,26 +1211,42 @@ fn ancestor_not_found() {
     let mut traversing_order = vec![(0, false), (0, false), (2, false), (3, false)];
     traversing_order.reverse();
     let mut anticipated = AnticipatedExpressions::new(&dag, reverse_dag, traversing_order);
-    let var1 = Expression::Variable(Loc::Implicit, Type::Int(32), 0);
-    let var2 = Expression::Variable(Loc::Implicit, Type::Int(32), 1);
-    let expr = Expression::Multiply(
-        Loc::Implicit,
-        Type::Int(32),
-        false,
-        Box::new(var1.clone()),
-        Box::new(var2.clone()),
-    );
+    let var1 = Expression::Variable {
+        loc: Loc::Implicit,
+        ty: Type::Int(32),
+        var_no: 0,
+    };
+    let var2 = Expression::Variable {
+        loc: Loc::Implicit,
+        ty: Type::Int(32),
+        var_no: 1,
+    };
+    let expr = Expression::Multiply {
+        loc: Loc::Implicit,
+        ty: Type::Int(32),
+        unchecked: false,
+        left: Box::new(var1.clone()),
+        right: Box::new(var2.clone()),
+    };
     let instr = vec![
         vec![
             Instr::Set {
                 res: 0,
                 loc: Loc::Implicit,
-                expr: Expression::NumberLiteral(Loc::Implicit, Type::Int(32), 8.into()),
+                expr: Expression::NumberLiteral {
+                    loc: Loc::Implicit,
+                    ty: Type::Int(32),
+                    value: 8.into(),
+                },
             },
             Instr::Set {
                 res: 1,
                 loc: Loc::Implicit,
-                expr: Expression::NumberLiteral(Loc::Implicit, Type::Int(32), 7.into()),
+                expr: Expression::NumberLiteral {
+                    loc: Loc::Implicit,
+                    ty: Type::Int(32),
+                    value: 7.into(),
+                },
             },
             Instr::BranchCond {
                 cond: Expression::MoreEqual {
@@ -1026,12 +1263,20 @@ fn ancestor_not_found() {
             Instr::Set {
                 res: 0,
                 loc: Loc::Implicit,
-                expr: Expression::NumberLiteral(Loc::Implicit, Type::Int(32), 10.into()),
+                expr: Expression::NumberLiteral {
+                    loc: Loc::Implicit,
+                    ty: Type::Int(32),
+                    value: 10.into(),
+                },
             },
             Instr::Set {
                 res: 1,
                 loc: Loc::Implicit,
-                expr: Expression::NumberLiteral(Loc::Implicit, Type::Int(32), 27.into()),
+                expr: Expression::NumberLiteral {
+                    loc: Loc::Implicit,
+                    ty: Type::Int(32),
+                    value: 27.into(),
+                },
             },
             Instr::Branch { block: 3 },
         ],

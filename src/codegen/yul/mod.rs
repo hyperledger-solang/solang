@@ -86,12 +86,10 @@ fn yul_function_cfg(
                 .symtable
                 .returns
                 .iter()
-                .map(|pos| {
-                    Expression::Variable(
-                        pt::Loc::Codegen,
-                        yul_func.symtable.vars[pos].ty.clone(),
-                        *pos,
-                    )
+                .map(|pos| Expression::Variable {
+                    loc: pt::Loc::Codegen,
+                    ty: yul_func.symtable.vars[pos].ty.clone(),
+                    var_no: *pos,
                 })
                 .collect::<Vec<Expression>>(),
         }

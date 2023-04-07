@@ -29,9 +29,9 @@ impl AvailableExpression {
         expr_set: &mut AvailableExpressionSet<'b>,
     ) -> NodeId {
         let expr_type = match expr {
-            Expression::Variable(_, _, pos) => ExpressionType::Variable(*pos),
+            Expression::Variable { var_no: pos, .. } => ExpressionType::Variable(*pos),
 
-            Expression::FunctionArg(_, _, pos) => ExpressionType::FunctionArg(*pos),
+            Expression::FunctionArg { arg_no: pos, .. } => ExpressionType::FunctionArg(*pos),
 
             _ => unreachable!("This expression is not a variable or a function argument"),
         };

@@ -255,13 +255,13 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
         }
 
         match exp {
-            Expression::Variable(..) | Expression::FunctionArg(..) => {
+            Expression::Variable { .. } | Expression::FunctionArg { .. } => {
                 return Some(ave.add_variable_node(exp, self));
             }
 
-            Expression::NumberLiteral(..)
-            | Expression::BoolLiteral(..)
-            | Expression::BytesLiteral(..) => {
+            Expression::NumberLiteral { .. }
+            | Expression::BoolLiteral { .. }
+            | Expression::BytesLiteral { .. } => {
                 let key = exp.get_constant_expression_type();
 
                 let exp_id = if let Some(id) = self.expr_map.get(&key) {
@@ -273,8 +273,8 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 return Some(exp_id);
             }
 
-            Expression::StringCompare(_, left, right)
-            | Expression::StringConcat(_, _, left, right) => {
+            Expression::StringCompare { left, right, .. }
+            | Expression::StringConcat { left, right, .. } => {
                 return if let (
                     StringLocation::RunTime(operand_1),
                     StringLocation::RunTime(operand_2),
@@ -376,27 +376,27 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     /// Check if an expression is available
     pub fn find_expression(&self, exp: &Expression) -> Option<NodeId> {
         match exp {
-            Expression::FunctionArg(_, _, pos) => {
+            Expression::FunctionArg { arg_no: pos, .. } => {
                 return self
                     .expr_map
                     .get(&ExpressionType::FunctionArg(*pos))
                     .copied();
             }
 
-            Expression::Variable(_, _, pos) => {
+            Expression::Variable { var_no: pos, .. } => {
                 return self.expr_map.get(&ExpressionType::Variable(*pos)).copied();
             }
 
             //Expression::ConstantVariable(..)
-            Expression::NumberLiteral(..)
-            | Expression::BoolLiteral(..)
-            | Expression::BytesLiteral(..) => {
+            Expression::NumberLiteral { .. }
+            | Expression::BoolLiteral { .. }
+            | Expression::BytesLiteral { .. } => {
                 let key = exp.get_constant_expression_type();
                 return self.expr_map.get(&key).copied();
             }
 
-            Expression::StringCompare(_, left, right)
-            | Expression::StringConcat(_, _, left, right) => {
+            Expression::StringCompare { left, right, .. }
+            | Expression::StringConcat { left, right, .. } => {
                 if let (StringLocation::RunTime(operand_1), StringLocation::RunTime(operand_2)) =
                     (left, right)
                 {
@@ -500,17 +500,17 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     ) -> (Option<NodeId>, Expression) {
         match exp {
             // Variables, constants and literals will never be substituted
-            Expression::FunctionArg(..)
-            | Expression::Variable(..)
+            Expression::FunctionArg { .. }
+            | Expression::Variable {  .. }
             //| Expression::ConstantVariable(..)
-            | Expression::NumberLiteral(..)
-            | Expression::BoolLiteral(..)
-            | Expression::BytesLiteral(..) => {
+            | Expression::NumberLiteral {  .. }
+            | Expression::BoolLiteral{..}
+            | Expression::BytesLiteral{..} => {
                 return (self.gen_expression(exp, ave, &mut Some(cst)), exp.clone());
             }
 
-            Expression::StringCompare(_, left, right)
-            | Expression::StringConcat(_, _, left, right) => {
+            Expression::StringCompare { loc: _, left, right }
+            | Expression::StringConcat {  left, right, .. } => {
                 if let (StringLocation::RunTime(operand_1), StringLocation::RunTime(operand_2)) =
                     (left, right)
                 {

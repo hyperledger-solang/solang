@@ -27,7 +27,11 @@ pub(crate) struct BufferValidator<'a> {
 impl BufferValidator<'_> {
     pub fn new(buffer_size_var: usize, types: &[Type]) -> BufferValidator {
         BufferValidator {
-            buffer_length: Expression::Variable(Loc::Codegen, Type::Uint(32), buffer_size_var),
+            buffer_length: Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                var_no: buffer_size_var,
+            },
             types,
             verified_until: None,
             current_arg: 0,
@@ -99,13 +103,13 @@ impl BufferValidator<'_> {
         cfg: &mut ControlFlowGraph,
     ) {
         if self.validation_necessary() {
-            let offset_to_validate = Expression::Add(
-                Loc::Codegen,
-                Type::Uint(32),
-                false,
-                Box::new(offset.clone()),
-                Box::new(size.clone()),
-            );
+            let offset_to_validate = Expression::Add {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                unchecked: false,
+                left: Box::new(offset.clone()),
+                right: Box::new(size.clone()),
+            };
             self.validate_offset(offset_to_validate, ns, vartab, cfg);
         }
     }
@@ -173,17 +177,17 @@ impl BufferValidator<'_> {
             advance.add_assign(self.types[i].memory_size_of(ns));
         }
 
-        let reach = Expression::Add(
-            Loc::Codegen,
-            Type::Uint(32),
-            false,
-            Box::new(offset.clone()),
-            Box::new(Expression::NumberLiteral(
-                Loc::Codegen,
-                Type::Uint(32),
-                advance,
-            )),
-        );
+        let reach = Expression::Add {
+            loc: Loc::Codegen,
+            ty: Type::Uint(32),
+            unchecked: false,
+            left: Box::new(offset.clone()),
+            right: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                value: advance,
+            }),
+        };
 
         self.verified_until = Some(maximum_verifiable);
         self.build_out_of_bounds_fail_branch(reach, ns, vartab, cfg);

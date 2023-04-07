@@ -53,51 +53,51 @@ impl Expression {
     /// Get the respective Operator from an Expression
     pub fn get_ave_operator(&self) -> Operator {
         match self {
-            Expression::Add(_, _, unchecked, _, _) => {
+            Expression::Add { unchecked, .. } => {
                 if *unchecked {
                     Operator::UncheckedAdd
                 } else {
                     Operator::Add
                 }
             }
-            Expression::Subtract(_, _, unchecked, _, _) => {
+            Expression::Subtract { unchecked, .. } => {
                 if *unchecked {
                     Operator::UncheckedSubtract
                 } else {
                     Operator::Subtract
                 }
             }
-            Expression::Multiply(_, _, unchecked, _, _) => {
+            Expression::Multiply { unchecked, .. } => {
                 if *unchecked {
                     Operator::UncheckedMultiply
                 } else {
                     Operator::Multiply
                 }
             }
-            Expression::SignedDivide(..) => Operator::SignedDivide,
-            Expression::UnsignedDivide(..) => Operator::UnsignedDivide,
-            Expression::SignedModulo(..) => Operator::SignedModulo,
-            Expression::UnsignedModulo(..) => Operator::UnsignedModulo,
-            Expression::Power(_, _, unchecked, _, _) => {
+            Expression::SignedDivide { .. } => Operator::SignedDivide,
+            Expression::UnsignedDivide { .. } => Operator::UnsignedDivide,
+            Expression::SignedModulo { .. } => Operator::SignedModulo,
+            Expression::UnsignedModulo { .. } => Operator::UnsignedModulo,
+            Expression::Power { unchecked, .. } => {
                 if *unchecked {
                     Operator::UncheckedPower
                 } else {
                     Operator::Power
                 }
             }
-            Expression::BitwiseOr(..) => Operator::BitwiseOr,
-            Expression::BitwiseAnd(..) => Operator::BitwiseAnd,
-            Expression::BitwiseXor(..) => Operator::BitwiseXor,
-            Expression::ShiftLeft(..) => Operator::ShiftLeft,
-            Expression::ShiftRight(_, _, _, _, true) => Operator::SignedShiftRight,
-            Expression::ShiftRight(_, _, _, _, false) => Operator::UnsignedShiftRight,
-            Expression::Not(..) => Operator::Not,
-            Expression::ZeroExt(_, ty, ..) => Operator::ZeroExt(ty.clone()),
-            Expression::SignExt(_, ty, ..) => Operator::SignExt(ty.clone()),
-            Expression::Trunc(_, ty, ..) => Operator::Trunc(ty.clone()),
-            Expression::Cast(_, ty, ..) => Operator::Cast(ty.clone()),
-            Expression::BytesCast(..) => Operator::BytesCast,
-            Expression::Negate(..) => Operator::Negate,
+            Expression::BitwiseOr { .. } => Operator::BitwiseOr,
+            Expression::BitwiseAnd { .. } => Operator::BitwiseAnd,
+            Expression::BitwiseXor { .. } => Operator::BitwiseXor,
+            Expression::ShiftLeft { .. } => Operator::ShiftLeft,
+            Expression::ShiftRight { signed: true, .. } => Operator::SignedShiftRight,
+            Expression::ShiftRight { signed: false, .. } => Operator::UnsignedShiftRight,
+            Expression::Not { .. } => Operator::Not,
+            Expression::ZeroExt { ty, .. } => Operator::ZeroExt(ty.clone()),
+            Expression::SignExt { ty, .. } => Operator::SignExt(ty.clone()),
+            Expression::Trunc { ty, .. } => Operator::Trunc(ty.clone()),
+            Expression::Cast { ty, .. } => Operator::Cast(ty.clone()),
+            Expression::BytesCast { .. } => Operator::BytesCast,
+            Expression::Negate { .. } => Operator::Negate,
             Expression::More { signed: true, .. } => Operator::SignedMore,
             Expression::More { signed: false, .. } => Operator::UnsignedMore,
             Expression::Less { signed: true, .. } => Operator::SignedLess,
@@ -106,11 +106,11 @@ impl Expression {
             Expression::MoreEqual { signed: false, .. } => Operator::UnsignedMoreEqual,
             Expression::LessEqual { signed: true, .. } => Operator::SignedLessEqual,
             Expression::LessEqual { signed: false, .. } => Operator::UnsignedLessEqual,
-            Expression::Equal(..) => Operator::Equal,
-            Expression::NotEqual(..) => Operator::NotEqual,
-            Expression::BitwiseNot(..) => Operator::BitwiseNot,
-            Expression::StringCompare(..) => Operator::StringCompare,
-            Expression::StringConcat(..) => Operator::StringConcat,
+            Expression::Equal { .. } => Operator::Equal,
+            Expression::NotEqual { .. } => Operator::NotEqual,
+            Expression::BitwiseNot { .. } => Operator::BitwiseNot,
+            Expression::StringCompare { .. } => Operator::StringCompare,
+            Expression::StringConcat { .. } => Operator::StringConcat,
             Expression::AdvancePointer { .. } => Operator::AdvancePointer,
             _ => {
                 unreachable!("Expression does not represent an operator.")

@@ -32,8 +32,11 @@ pub(crate) fn function_dispatch(
     let argsdata_var = vartab.temp_name("input", &Type::BufferPointer);
     let argslen_var = vartab.temp_name("input_len", &Type::Uint(64));
 
-    let sol_params =
-        Expression::FunctionArg(Loc::Codegen, Type::Struct(StructType::SolParameters), 0);
+    let sol_params = Expression::FunctionArg {
+        loc: Loc::Codegen,
+        ty: Type::Struct(StructType::SolParameters),
+        arg_no: 0,
+    };
 
     // ty:bufferptr argsdata_var = load ty:ref(ty:bufferptr) (structmember ty:ref(ty:bufferptr) (funcarg ty:struct(solparam), 2))
     cfg.add(
@@ -41,21 +44,25 @@ pub(crate) fn function_dispatch(
         Instr::Set {
             res: argsdata_var,
             loc: Loc::Codegen,
-            expr: Expression::Load(
-                Loc::Codegen,
-                Type::BufferPointer,
-                Expression::StructMember(
-                    Loc::Codegen,
-                    Type::Ref(Type::BufferPointer.into()),
-                    sol_params.clone().into(),
-                    2,
-                )
+            expr: Expression::Load {
+                loc: Loc::Codegen,
+                ty: Type::BufferPointer,
+                expr: Expression::StructMember {
+                    loc: Loc::Codegen,
+                    ty: Type::Ref(Type::BufferPointer.into()),
+                    expr: sol_params.clone().into(),
+                    member: 2,
+                }
                 .into(),
-            ),
+            },
         },
     );
 
-    let argsdata = Expression::Variable(Loc::Codegen, Type::BufferPointer, argsdata_var);
+    let argsdata = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::BufferPointer,
+        var_no: argsdata_var,
+    };
 
     // ty:uint64 argslen_var = load ref(ty:uint64) (structmember ref(ty:uin64) (funcarg ty:struct(solparam), 3))
     cfg.add(
@@ -63,27 +70,36 @@ pub(crate) fn function_dispatch(
         Instr::Set {
             res: argslen_var,
             loc: Loc::Codegen,
-            expr: Expression::Load(
-                Loc::Codegen,
-                Type::Uint(64),
-                Expression::StructMember(
-                    Loc::Codegen,
-                    Type::Ref(Type::Uint(64).into()),
-                    sol_params.into(),
-                    3,
-                )
+            expr: Expression::Load {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                expr: Expression::StructMember {
+                    loc: Loc::Codegen,
+                    ty: Type::Ref(Type::Uint(64).into()),
+                    expr: sol_params.into(),
+                    member: 3,
+                }
                 .into(),
-            ),
+            },
         },
     );
 
-    let argslen = Expression::Variable(Loc::Codegen, Type::Uint(64), argslen_var);
+    let argslen = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Uint(64),
+        var_no: argslen_var,
+    };
 
     let not_fallback = Expression::MoreEqual {
         loc: Loc::Codegen,
         signed: false,
         left: argslen.clone().into(),
-        right: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(8u8)).into(),
+        right: Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(8u8),
+        }
+        .into(),
     };
 
     cfg.add(
@@ -96,35 +112,39 @@ pub(crate) fn function_dispatch(
     );
     cfg.set_basic_block(switch_block);
 
-    let fid = Expression::Builtin(
-        Loc::Codegen,
-        vec![Type::Uint(64)],
-        Builtin::ReadFromBuffer,
-        vec![
+    let fid = Expression::Builtin {
+        loc: Loc::Codegen,
+        tys: vec![Type::Uint(64)],
+        builtin: Builtin::ReadFromBuffer,
+        args: vec![
             argsdata.clone(),
-            Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::zero()),
+            Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::zero(),
+            },
         ],
-    );
+    };
 
     let argsdata = Expression::AdvancePointer {
         pointer: Box::new(argsdata),
-        bytes_offset: Box::new(Expression::NumberLiteral(
-            Loc::Codegen,
-            Type::Uint(32),
-            BigInt::from(8u8),
-        )),
+        bytes_offset: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(32),
+            value: BigInt::from(8u8),
+        }),
     };
-    let argslen = Expression::Subtract(
-        Loc::Codegen,
-        Type::Uint(64),
-        false,
-        Box::new(argslen),
-        Box::new(Expression::NumberLiteral(
-            Loc::Codegen,
-            Type::Uint(64),
-            BigInt::from(8u8),
-        )),
-    );
+    let argslen = Expression::Subtract {
+        loc: Loc::Codegen,
+        ty: Type::Uint(64),
+        unchecked: false,
+        left: Box::new(argslen),
+        right: Box::new(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            value: BigInt::from(8u8),
+        }),
+    };
 
     let magic = vartab.temp_name("magic", &Type::Uint(32));
 
@@ -133,7 +153,11 @@ pub(crate) fn function_dispatch(
         Instr::LoadStorage {
             res: magic,
             ty: Type::Uint(32),
-            storage: Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0.into()),
+            storage: Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                value: 0.into(),
+            },
         },
     );
 
@@ -173,11 +197,11 @@ pub(crate) fn function_dispatch(
         };
 
         cases.push((
-            Expression::NumberLiteral(
-                Loc::Codegen,
-                Type::Uint(64),
-                BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector),
-            ),
+            Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector),
+            },
             entry,
         ));
     }
@@ -281,16 +305,21 @@ fn add_function_dispatch_case(
         cfg.add(
             vartab,
             Instr::BranchCond {
-                cond: Expression::Equal(
-                    Loc::Codegen,
-                    Expression::Variable(Loc::Codegen, Type::Uint(32), magic).into(),
-                    Expression::NumberLiteral(
-                        Loc::Codegen,
-                        Type::Uint(32),
-                        ns.contracts[contract_no].selector().into(),
-                    )
+                cond: Expression::Equal {
+                    loc: Loc::Codegen,
+                    left: Expression::Variable {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(32),
+                        var_no: magic,
+                    }
                     .into(),
-                ),
+                    right: Expression::NumberLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(32),
+                        value: ns.contracts[contract_no].selector().into(),
+                    }
+                    .into(),
+                },
                 true_block: magic_ok,
                 false_block: magic_bad,
             },
@@ -308,7 +337,11 @@ fn add_function_dispatch_case(
         cfg.set_basic_block(magic_ok);
     }
 
-    let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(argslen));
+    let truncated_len = Expression::Trunc {
+        loc: Loc::Codegen,
+        ty: Type::Uint(32),
+        expr: Box::new(argslen),
+    };
 
     let tys = func_cfg
         .params
@@ -332,7 +365,11 @@ fn add_function_dispatch_case(
         let new_var = vartab.temp_anonymous(&item.ty);
         returns.push(new_var);
         return_tys.push(item.ty.clone());
-        returns_expr.push(Expression::Variable(Loc::Codegen, item.ty.clone(), new_var));
+        returns_expr.push(Expression::Variable {
+            loc: Loc::Codegen,
+            ty: item.ty.clone(),
+            var_no: new_var,
+        });
     }
 
     cfg.add(
@@ -347,7 +384,11 @@ fn add_function_dispatch_case(
 
     if !func_cfg.returns.is_empty() {
         let (data, data_len) = abi_encode(&Loc::Codegen, returns_expr, ns, vartab, cfg, false);
-        let zext_len = Expression::ZeroExt(Loc::Codegen, Type::Uint(64), Box::new(data_len));
+        let zext_len = Expression::ZeroExt {
+            loc: Loc::Codegen,
+            ty: Type::Uint(64),
+            expr: Box::new(data_len),
+        };
         cfg.add(
             vartab,
             Instr::ReturnData {
@@ -365,13 +406,22 @@ fn add_function_dispatch_case(
         cfg.add(
             vartab,
             Instr::ReturnData {
-                data: Expression::AllocDynamicBytes(
-                    Loc::Codegen,
-                    Type::DynamicBytes,
-                    Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0.into()).into(),
-                    None,
-                ),
-                data_len: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), 0.into()),
+                data: Expression::AllocDynamicBytes {
+                    loc: Loc::Codegen,
+                    ty: Type::DynamicBytes,
+                    size: Expression::NumberLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(32),
+                        value: 0.into(),
+                    }
+                    .into(),
+                    initializer: None,
+                },
+                data_len: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: 0.into(),
+                },
             },
         );
     }
@@ -403,7 +453,11 @@ fn add_constructor_dispatch_case(
             .iter()
             .map(|e| e.ty.clone())
             .collect::<Vec<Type>>();
-        let truncated_len = Expression::Trunc(Loc::Codegen, Type::Uint(32), Box::new(argslen));
+        let truncated_len = Expression::Trunc {
+            loc: Loc::Codegen,
+            ty: Type::Uint(32),
+            expr: Box::new(argslen),
+        };
         returns = abi_decode(
             &Loc::Codegen,
             argsdata,

@@ -68,11 +68,11 @@ pub(super) fn call_constructor(
             .selector(ns, &contract_no),
     };
 
-    let mut args = vec![Expression::BytesLiteral(
-        *loc,
-        Type::FunctionSelector,
-        selector,
-    )];
+    let mut args = vec![Expression::BytesLiteral {
+        loc: *loc,
+        ty: Type::FunctionSelector,
+        value: selector,
+    }];
 
     args.append(&mut constructor_args);
 

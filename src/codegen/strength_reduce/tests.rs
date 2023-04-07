@@ -37,15 +37,15 @@ fn expresson_known_bits() {
     let mut vars: Variables = HashMap::new();
 
     // zero extend 1
-    let expr = Expression::ZeroExt(
+    let expr = Expression::ZeroExt {
         loc,
-        Type::Uint(128),
-        Box::new(Expression::NumberLiteral(
+        ty: Type::Uint(128),
+        expr: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Uint(64),
-            BigInt::from(16),
-        )),
-    );
+            ty: Type::Uint(64),
+            value: BigInt::from(16),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -57,11 +57,15 @@ fn expresson_known_bits() {
     assert!(v.value[4]);
 
     // zero extend unknown value
-    let expr = Expression::ZeroExt(
+    let expr = Expression::ZeroExt {
         loc,
-        Type::Uint(128),
-        Box::new(Expression::FunctionArg(loc, Type::Uint(64), 0)),
-    );
+        ty: Type::Uint(128),
+        expr: Box::new(Expression::FunctionArg {
+            loc,
+            ty: Type::Uint(64),
+            arg_no: 0,
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -75,11 +79,15 @@ fn expresson_known_bits() {
     assert!(!v.value.all());
 
     // sign extend unknown value
-    let expr = Expression::SignExt(
+    let expr = Expression::SignExt {
         loc,
-        Type::Int(128),
-        Box::new(Expression::FunctionArg(loc, Type::Int(64), 0)),
-    );
+        ty: Type::Int(128),
+        expr: Box::new(Expression::FunctionArg {
+            loc,
+            ty: Type::Int(64),
+            arg_no: 0,
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -92,8 +100,11 @@ fn expresson_known_bits() {
 
     // get the sign.
 
-    let expr =
-        Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(0x8000_0000_0000_0000u64));
+    let expr = Expression::NumberLiteral {
+        loc,
+        ty: Type::Int(64),
+        value: BigInt::from(0x8000_0000_0000_0000u64),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -104,20 +115,24 @@ fn expresson_known_bits() {
 
     // test: bitwise or
     // sign extend unknown value with known sign
-    let expr = Expression::SignExt(
+    let expr = Expression::SignExt {
         loc,
-        Type::Int(128),
-        Box::new(Expression::BitwiseOr(
+        ty: Type::Int(128),
+        expr: Box::new(Expression::BitwiseOr {
             loc,
-            Type::Int(64),
-            Box::new(Expression::FunctionArg(loc, Type::Int(64), 0)),
-            Box::new(Expression::NumberLiteral(
+            ty: Type::Int(64),
+            left: Box::new(Expression::FunctionArg {
                 loc,
-                Type::Int(64),
-                BigInt::from(0x8000_0000_0000_0000u64),
-            )),
-        )),
-    );
+                ty: Type::Int(64),
+                arg_no: 0,
+            }),
+            right: Box::new(Expression::NumberLiteral {
+                loc,
+                ty: Type::Int(64),
+                value: BigInt::from(0x8000_0000_0000_0000u64),
+            }),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -130,11 +145,15 @@ fn expresson_known_bits() {
     assert!(v.value[63..128].all());
 
     // test: trunc
-    let expr = Expression::Trunc(
+    let expr = Expression::Trunc {
         loc,
-        Type::Int(32),
-        Box::new(Expression::FunctionArg(loc, Type::Int(64), 0)),
-    );
+        ty: Type::Int(32),
+        expr: Box::new(Expression::FunctionArg {
+            loc,
+            ty: Type::Int(64),
+            arg_no: 0,
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -147,20 +166,32 @@ fn expresson_known_bits() {
 
     // test: bitwise and
     // lets put unknown in a variable amd
-    let res = expression_values(&Expression::FunctionArg(loc, Type::Int(32), 0), &vars, &ns);
+    let res = expression_values(
+        &Expression::FunctionArg {
+            loc,
+            ty: Type::Int(32),
+            arg_no: 0,
+        },
+        &vars,
+        &ns,
+    );
 
     vars.insert(0, res);
 
-    let expr = Expression::BitwiseAnd(
+    let expr = Expression::BitwiseAnd {
         loc,
-        Type::Int(32),
-        Box::new(Expression::Variable(loc, Type::Int(32), 0)),
-        Box::new(Expression::NumberLiteral(
+        ty: Type::Int(32),
+        left: Box::new(Expression::Variable {
             loc,
-            Type::Int(32),
-            BigInt::from(0xffff),
-        )),
-    );
+            ty: Type::Int(32),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(0xffff),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -174,20 +205,20 @@ fn expresson_known_bits() {
     // test: bitwise xor
     let vars = HashMap::new();
 
-    let expr = Expression::BitwiseXor(
+    let expr = Expression::BitwiseXor {
         loc,
-        Type::Int(32),
-        Box::new(Expression::NumberLiteral(
+        ty: Type::Int(32),
+        left: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Int(32),
-            BigInt::from(-0x10000),
-        )),
-        Box::new(Expression::NumberLiteral(
+            ty: Type::Int(32),
+            value: BigInt::from(-0x10000),
+        }),
+        right: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Int(32),
-            BigInt::from(0xff0000),
-        )),
-    );
+            ty: Type::Int(32),
+            value: BigInt::from(0xff0000),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -200,21 +231,21 @@ fn expresson_known_bits() {
 
     // test: add
     // first try some constants
-    let expr = Expression::Add(
+    let expr = Expression::Add {
         loc,
-        Type::Int(32),
-        false,
-        Box::new(Expression::NumberLiteral(
+        ty: Type::Int(32),
+        unchecked: false,
+        left: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Int(32),
-            BigInt::from(123456),
-        )),
-        Box::new(Expression::NumberLiteral(
+            ty: Type::Int(32),
+            value: BigInt::from(123456),
+        }),
+        right: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Int(32),
-            BigInt::from(7899900),
-        )),
-    );
+            ty: Type::Int(32),
+            value: BigInt::from(7899900),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -229,17 +260,21 @@ fn expresson_known_bits() {
     assert_eq!(v.value.into_inner(), &bs[..]);
 
     // add: unknown plus constant
-    let expr = Expression::Add(
+    let expr = Expression::Add {
         loc,
-        Type::Int(32),
-        false,
-        Box::new(Expression::FunctionArg(loc, Type::Int(32), 0)),
-        Box::new(Expression::NumberLiteral(
+        ty: Type::Int(32),
+        unchecked: false,
+        left: Box::new(Expression::FunctionArg {
             loc,
-            Type::Int(32),
-            BigInt::from(7899900),
-        )),
-    );
+            ty: Type::Int(32),
+            arg_no: 0,
+        }),
+        right: Box::new(Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(7899900),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -249,21 +284,25 @@ fn expresson_known_bits() {
     assert!(!v.known_bits.all());
 
     // add: unknown plus constant
-    let expr = Expression::Add(
+    let expr = Expression::Add {
         loc,
-        Type::Uint(32),
-        false,
-        Box::new(Expression::ZeroExt(
+        ty: Type::Uint(32),
+        unchecked: false,
+        left: Box::new(Expression::ZeroExt {
             loc,
-            Type::Uint(32),
-            Box::new(Expression::FunctionArg(loc, Type::Uint(16), 0)),
-        )),
-        Box::new(Expression::NumberLiteral(
+            ty: Type::Uint(32),
+            expr: Box::new(Expression::FunctionArg {
+                loc,
+                ty: Type::Uint(16),
+                arg_no: 0,
+            }),
+        }),
+        right: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Uint(32),
-            BigInt::from(7899900),
-        )),
-    );
+            ty: Type::Uint(32),
+            value: BigInt::from(7899900),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -281,21 +320,21 @@ fn expresson_known_bits() {
 
     // test: substrate
     // first try some constants
-    let expr = Expression::Subtract(
+    let expr = Expression::Subtract {
         loc,
-        Type::Int(32),
-        false,
-        Box::new(Expression::NumberLiteral(
+        ty: Type::Int(32),
+        unchecked: false,
+        left: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Int(32),
-            BigInt::from(123456),
-        )),
-        Box::new(Expression::NumberLiteral(
+            ty: Type::Int(32),
+            value: BigInt::from(123456),
+        }),
+        right: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Int(32),
-            BigInt::from(-7899900),
-        )),
-    );
+            ty: Type::Int(32),
+            value: BigInt::from(-7899900),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -310,21 +349,25 @@ fn expresson_known_bits() {
     assert_eq!(v.value.into_inner(), &bs[..]);
 
     // subtract: unknown minus constant
-    let expr = Expression::Subtract(
+    let expr = Expression::Subtract {
         loc,
-        Type::Int(32),
-        false,
-        Box::new(Expression::SignExt(
+        ty: Type::Int(32),
+        unchecked: false,
+        left: Box::new(Expression::SignExt {
             loc,
-            Type::Uint(32),
-            Box::new(Expression::FunctionArg(loc, Type::Uint(16), 0)),
-        )),
-        Box::new(Expression::NumberLiteral(
+            ty: Type::Uint(32),
+            expr: Box::new(Expression::FunctionArg {
+                loc,
+                ty: Type::Uint(16),
+                arg_no: 0,
+            }),
+        }),
+        right: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Uint(32),
-            BigInt::from(7899900),
-        )),
-    );
+            ty: Type::Uint(32),
+            value: BigInt::from(7899900),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -338,25 +381,41 @@ fn expresson_known_bits() {
 
     // substrate: 2 values and 2 values -> 4 values (with dedup)
     let mut val1 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(32), BigInt::from(1)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(1),
+        },
         &vars,
         &ns,
     );
 
     let val2 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(32), BigInt::from(2)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(2),
+        },
         &vars,
         &ns,
     );
 
     let mut val3 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(32), BigInt::from(3)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(3),
+        },
         &vars,
         &ns,
     );
 
     let val4 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(32), BigInt::from(4)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(4),
+        },
         &vars,
         &ns,
     );
@@ -370,13 +429,21 @@ fn expresson_known_bits() {
     vars.insert(1, val3);
     // now we have: var 0 => 1, 4 and var 1 => 3, 2
 
-    let expr = Expression::Subtract(
+    let expr = Expression::Subtract {
         loc,
-        Type::Int(32),
-        false,
-        Box::new(Expression::Variable(loc, Type::Uint(32), 0)),
-        Box::new(Expression::Variable(loc, Type::Uint(32), 1)),
-    );
+        ty: Type::Int(32),
+        unchecked: false,
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(32),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(32),
+            var_no: 1,
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -386,22 +453,38 @@ fn expresson_known_bits() {
     let mut cmp_set = HashSet::new();
 
     cmp_set.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(32), BigInt::from(-2)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(-2),
+        },
         &vars,
         &ns,
     ));
     cmp_set.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(32), BigInt::from(-1)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(-1),
+        },
         &vars,
         &ns,
     ));
     cmp_set.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(32), BigInt::from(1)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(1),
+        },
         &vars,
         &ns,
     ));
     cmp_set.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(32), BigInt::from(2)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(32),
+            value: BigInt::from(2),
+        },
         &vars,
         &ns,
     ));
@@ -410,21 +493,21 @@ fn expresson_known_bits() {
 
     // test: multiply
     // constants signed
-    let expr = Expression::Multiply(
+    let expr = Expression::Multiply {
         loc,
-        Type::Int(32),
-        false,
-        Box::new(Expression::NumberLiteral(
+        ty: Type::Int(32),
+        unchecked: false,
+        left: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Int(32),
-            BigInt::from(123456),
-        )),
-        Box::new(Expression::NumberLiteral(
+            ty: Type::Int(32),
+            value: BigInt::from(123456),
+        }),
+        right: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Int(32),
-            BigInt::from(-7899900),
-        )),
-    );
+            ty: Type::Int(32),
+            value: BigInt::from(-7899900),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -439,21 +522,21 @@ fn expresson_known_bits() {
     assert_eq!(v.value.into_inner().to_vec(), &bs[..]);
 
     // constants unsigned
-    let expr = Expression::Multiply(
+    let expr = Expression::Multiply {
         loc,
-        Type::Uint(32),
-        false,
-        Box::new(Expression::NumberLiteral(
+        ty: Type::Uint(32),
+        unchecked: false,
+        left: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Uint(32),
-            BigInt::from(123456),
-        )),
-        Box::new(Expression::NumberLiteral(
+            ty: Type::Uint(32),
+            value: BigInt::from(123456),
+        }),
+        right: Box::new(Expression::NumberLiteral {
             loc,
-            Type::Uint(32),
-            BigInt::from(7899900),
-        )),
-    );
+            ty: Type::Uint(32),
+            value: BigInt::from(7899900),
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -471,17 +554,25 @@ fn expresson_known_bits() {
     let mut vars = HashMap::new();
 
     let mut var1 = expression_values(
-        &Expression::ZeroExt(
+        &Expression::ZeroExt {
             loc,
-            Type::Uint(64),
-            Box::new(Expression::FunctionArg(loc, Type::Uint(16), 0)),
-        ),
+            ty: Type::Uint(64),
+            expr: Box::new(Expression::FunctionArg {
+                loc,
+                ty: Type::Uint(16),
+                arg_no: 0,
+            }),
+        },
         &vars,
         &ns,
     );
 
     var1.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(4)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(4),
+        },
         &vars,
         &ns,
     ));
@@ -489,26 +580,42 @@ fn expresson_known_bits() {
     vars.insert(0, var1);
 
     let mut var2 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(3)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(3),
+        },
         &vars,
         &ns,
     );
 
     var2.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(0x20_0000)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(0x20_0000),
+        },
         &vars,
         &ns,
     ));
 
     vars.insert(1, var2);
 
-    let expr = Expression::Multiply(
+    let expr = Expression::Multiply {
         loc,
-        Type::Uint(64),
-        false,
-        Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
-    );
+        ty: Type::Uint(64),
+        unchecked: false,
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -518,12 +625,20 @@ fn expresson_known_bits() {
     let mut cmp_set = HashSet::new();
 
     cmp_set.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(3 * 4)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(3 * 4),
+        },
         &vars,
         &ns,
     ));
     cmp_set.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(0x20_0000 * 4)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(0x20_0000 * 4),
+        },
         &vars,
         &ns,
     ));
@@ -556,13 +671,21 @@ fn expresson_known_bits() {
     let mut vars = HashMap::new();
 
     let mut var1 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(102)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(102),
+        },
         &vars,
         &ns,
     );
 
     var1.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(u64::MAX)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(u64::MAX),
+        },
         &vars,
         &ns,
     ));
@@ -570,13 +693,21 @@ fn expresson_known_bits() {
     vars.insert(0, var1);
 
     let mut var2 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(1)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(1),
+        },
         &vars,
         &ns,
     );
 
     var2.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(0)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(0),
+        },
         &vars,
         &ns,
     ));
@@ -587,8 +718,16 @@ fn expresson_known_bits() {
     let expr = Expression::More {
         loc,
         signed: false,
-        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
     };
 
     let res = expression_values(&expr, &vars, &ns);
@@ -603,8 +742,16 @@ fn expresson_known_bits() {
     let expr = Expression::More {
         loc,
         signed: true,
-        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
     };
 
     let res = expression_values(&expr, &vars, &ns);
@@ -624,17 +771,25 @@ fn expresson_known_bits() {
     let mut vars = HashMap::new();
 
     let mut var1 = expression_values(
-        &Expression::ZeroExt(
+        &Expression::ZeroExt {
             loc,
-            Type::Int(64),
-            Box::new(Expression::FunctionArg(loc, Type::Uint(16), 0)),
-        ),
+            ty: Type::Int(64),
+            expr: Box::new(Expression::FunctionArg {
+                loc,
+                ty: Type::Uint(16),
+                arg_no: 0,
+            }),
+        },
         &vars,
         &ns,
     );
 
     var1.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(u64::MAX)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(u64::MAX),
+        },
         &vars,
         &ns,
     ));
@@ -642,13 +797,21 @@ fn expresson_known_bits() {
     vars.insert(0, var1);
 
     let mut var2 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(3)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(3),
+        },
         &vars,
         &ns,
     );
 
     var2.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(0)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(0),
+        },
         &vars,
         &ns,
     ));
@@ -659,8 +822,16 @@ fn expresson_known_bits() {
     let expr = Expression::MoreEqual {
         loc,
         signed: false,
-        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
     };
 
     let res = expression_values(&expr, &vars, &ns);
@@ -675,8 +846,16 @@ fn expresson_known_bits() {
     let expr = Expression::MoreEqual {
         loc,
         signed: true,
-        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
     };
 
     let res = expression_values(&expr, &vars, &ns);
@@ -696,21 +875,25 @@ fn expresson_known_bits() {
     let mut vars = HashMap::new();
 
     let var1 = expression_values(
-        &Expression::Subtract(
+        &Expression::Subtract {
             loc,
-            Type::Int(64),
-            false,
-            Box::new(Expression::ZeroExt(
+            ty: Type::Int(64),
+            unchecked: false,
+            left: Box::new(Expression::ZeroExt {
                 loc,
-                Type::Int(64),
-                Box::new(Expression::FunctionArg(loc, Type::Uint(16), 0)),
-            )),
-            Box::new(Expression::NumberLiteral(
+                ty: Type::Int(64),
+                expr: Box::new(Expression::FunctionArg {
+                    loc,
+                    ty: Type::Uint(16),
+                    arg_no: 0,
+                }),
+            }),
+            right: Box::new(Expression::NumberLiteral {
                 loc,
-                Type::Int(64),
-                BigInt::from(2),
-            )),
-        ),
+                ty: Type::Int(64),
+                value: BigInt::from(2),
+            }),
+        },
         &vars,
         &ns,
     );
@@ -718,13 +901,21 @@ fn expresson_known_bits() {
     vars.insert(0, var1);
 
     let mut var2 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(-1)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(-1),
+        },
         &vars,
         &ns,
     );
 
     var2.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(-4)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(-4),
+        },
         &vars,
         &ns,
     ));
@@ -735,8 +926,16 @@ fn expresson_known_bits() {
     let expr = Expression::Less {
         loc,
         signed: false,
-        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
     };
 
     let res = expression_values(&expr, &vars, &ns);
@@ -751,8 +950,16 @@ fn expresson_known_bits() {
     let expr = Expression::Less {
         loc,
         signed: true,
-        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
     };
 
     let res = expression_values(&expr, &vars, &ns);
@@ -769,11 +976,15 @@ fn expresson_known_bits() {
     let mut vars = HashMap::new();
 
     let var1 = expression_values(
-        &Expression::ZeroExt(
+        &Expression::ZeroExt {
             loc,
-            Type::Int(64),
-            Box::new(Expression::FunctionArg(loc, Type::Uint(16), 0)),
-        ),
+            ty: Type::Int(64),
+            expr: Box::new(Expression::FunctionArg {
+                loc,
+                ty: Type::Uint(16),
+                arg_no: 0,
+            }),
+        },
         &vars,
         &ns,
     );
@@ -781,13 +992,21 @@ fn expresson_known_bits() {
     vars.insert(0, var1);
 
     let mut var2 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(-2)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(-2),
+        },
         &vars,
         &ns,
     );
 
     var2.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(0)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(0),
+        },
         &vars,
         &ns,
     ));
@@ -798,8 +1017,16 @@ fn expresson_known_bits() {
     let expr = Expression::LessEqual {
         loc,
         signed: true,
-        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
     };
 
     let res = expression_values(&expr, &vars, &ns);
@@ -809,8 +1036,16 @@ fn expresson_known_bits() {
     let expr = Expression::LessEqual {
         loc,
         signed: false,
-        left: Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        right: Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
     };
 
     let res = expression_values(&expr, &vars, &ns);
@@ -848,11 +1083,15 @@ fn expresson_known_bits() {
     let mut vars = HashMap::new();
 
     let var1 = expression_values(
-        &Expression::ZeroExt(
+        &Expression::ZeroExt {
             loc,
-            Type::Int(64),
-            Box::new(Expression::FunctionArg(loc, Type::Uint(16), 0)),
-        ),
+            ty: Type::Int(64),
+            expr: Box::new(Expression::FunctionArg {
+                loc,
+                ty: Type::Uint(16),
+                arg_no: 0,
+            }),
+        },
         &vars,
         &ns,
     );
@@ -860,13 +1099,21 @@ fn expresson_known_bits() {
     vars.insert(0, var1);
 
     let mut var2 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(0)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(0),
+        },
         &vars,
         &ns,
     );
 
     var2.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(-4)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(-4),
+        },
         &vars,
         &ns,
     ));
@@ -874,11 +1121,19 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should be unkown or false
-    let expr = Expression::Equal(
+    let expr = Expression::Equal {
         loc,
-        Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
-    );
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 
@@ -913,11 +1168,15 @@ fn expresson_known_bits() {
     let mut vars = HashMap::new();
 
     let var1 = expression_values(
-        &Expression::ZeroExt(
+        &Expression::ZeroExt {
             loc,
-            Type::Int(64),
-            Box::new(Expression::FunctionArg(loc, Type::Uint(16), 0)),
-        ),
+            ty: Type::Int(64),
+            expr: Box::new(Expression::FunctionArg {
+                loc,
+                ty: Type::Uint(16),
+                arg_no: 0,
+            }),
+        },
         &vars,
         &ns,
     );
@@ -925,13 +1184,21 @@ fn expresson_known_bits() {
     vars.insert(0, var1);
 
     let mut var2 = expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(0x1000000)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(0x1000000),
+        },
         &vars,
         &ns,
     );
 
     var2.extend(expression_values(
-        &Expression::NumberLiteral(loc, Type::Int(64), BigInt::from(-4)),
+        &Expression::NumberLiteral {
+            loc,
+            ty: Type::Int(64),
+            value: BigInt::from(-4),
+        },
         &vars,
         &ns,
     ));
@@ -939,11 +1206,19 @@ fn expresson_known_bits() {
     vars.insert(1, var2);
 
     // should be true
-    let expr = Expression::NotEqual(
+    let expr = Expression::NotEqual {
         loc,
-        Box::new(Expression::Variable(loc, Type::Uint(64), 0)),
-        Box::new(Expression::Variable(loc, Type::Uint(64), 1)),
-    );
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 1,
+        }),
+    };
 
     let res = expression_values(&expr, &vars, &ns);
 

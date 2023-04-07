@@ -1333,7 +1333,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         }
 
         match expr {
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Calldata, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Calldata,
+                ..
+            } => {
                 // allocate vector for input
                 let v = call!(
                     "vector_new",
@@ -1382,7 +1385,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 v
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockNumber, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::BlockNumber,
+                ..
+            } => {
                 let block_number =
                     get_seal_value!("block_number", "seal_block_number", 32).into_int_value();
 
@@ -1396,7 +1402,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     )
                     .into()
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Timestamp, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Timestamp,
+                ..
+            } => {
                 let milliseconds = get_seal_value!("timestamp", "seal_now", 64).into_int_value();
 
                 // Solidity expects the timestamp in seconds, not milliseconds
@@ -1409,16 +1418,23 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     )
                     .into()
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Gasleft, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Gasleft,
+                ..
+            } => {
                 get_seal_value!("gas_left", "seal_gas_left", 64)
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Gasprice, expr) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Gasprice,
+                args: values,
+                ..
+            } => {
                 // gasprice is available as "tx.gasprice" which will give you the price for one unit
                 // of gas, or "tx.gasprice(uint64)" which will give you the price of N gas units
-                let gas = if expr.is_empty() {
+                let gas = if values.is_empty() {
                     binary.context.i64_type().const_int(1, false)
                 } else {
-                    expression(self, binary, &expr[0], vartab, function, ns).into_int_value()
+                    expression(self, binary, &values[0], vartab, function, ns).into_int_value()
                 };
 
                 let (scratch_buf, scratch_len) = scratch_buf!();
@@ -1441,7 +1457,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "price",
                 )
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Sender, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Sender,
+                ..
+            } => {
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
                 binary
@@ -1458,17 +1477,24 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .builder
                     .build_load(binary.address_type(ns), scratch_buf, "caller")
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Value, _) => {
-                self.value_transferred(binary, ns).into()
-            }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::MinimumBalance, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Value,
+                ..
+            } => self.value_transferred(binary, ns).into(),
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::MinimumBalance,
+                ..
+            } => {
                 get_seal_value!(
                     "minimum_balance",
                     "seal_minimum_balance",
                     ns.value_length as u32 * 8
                 )
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::GetAddress, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::GetAddress,
+                ..
+            } => {
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
                 binary
@@ -1485,7 +1511,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .builder
                     .build_load(binary.address_type(ns), scratch_buf, "self_address")
             }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Balance, _) => {
+            codegen::Expression::Builtin {
+                builtin: codegen::Builtin::Balance,
+                ..
+            } => {
                 let (scratch_buf, scratch_len) = scratch_buf!();
 
                 binary

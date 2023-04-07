@@ -202,7 +202,7 @@ fn resolve_case_block(
     match resolved_condition {
         YulExpression::NumberLiteral(..)
         | YulExpression::StringLiteral(..)
-        | YulExpression::BoolLiteral(..) => (),
+        | YulExpression::BoolLiteral { .. } => (),
 
         _ => {
             ns.diagnostics.push(Diagnostic::error(

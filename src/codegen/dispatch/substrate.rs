@@ -80,7 +80,11 @@ impl<'a> Dispatch<'a> {
             Instr::Set {
                 loc: Codegen,
                 res: input_len,
-                expr: Expression::FunctionArg(Codegen, Uint(32), 1),
+                expr: Expression::FunctionArg {
+                    loc: Codegen,
+                    ty: Uint(32),
+                    arg_no: 1,
+                },
             },
         );
 
@@ -91,7 +95,11 @@ impl<'a> Dispatch<'a> {
             Instr::Set {
                 loc: Codegen,
                 res: value,
-                expr: Expression::FunctionArg(Codegen, ns.value_type(), 2),
+                expr: Expression::FunctionArg {
+                    loc: Codegen,
+                    ty: ns.value_type(),
+                    arg_no: 2,
+                },
             },
         );
 
@@ -102,12 +110,24 @@ impl<'a> Dispatch<'a> {
             Instr::Set {
                 loc: Codegen,
                 res: input_ptr_var,
-                expr: Expression::FunctionArg(Codegen, Type::BufferPointer, 0),
+                expr: Expression::FunctionArg {
+                    loc: Codegen,
+                    ty: Type::BufferPointer,
+                    arg_no: 0,
+                },
             },
         );
-        let input_ptr = Expression::Variable(Codegen, Type::BufferPointer, input_ptr_var);
-        let selector_len: Box<Expression> =
-            Expression::NumberLiteral(Codegen, Uint(32), ns.target.selector_length().into()).into();
+        let input_ptr = Expression::Variable {
+            loc: Codegen,
+            ty: Type::BufferPointer,
+            var_no: input_ptr_var,
+        };
+        let selector_len: Box<Expression> = Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Uint(32),
+            value: ns.target.selector_length().into(),
+        }
+        .into();
         let input_ptr = Expression::AdvancePointer {
             pointer: input_ptr.into(),
             bytes_offset: selector_len.clone(),
@@ -133,7 +153,12 @@ impl<'a> Dispatch<'a> {
         let cond = Expression::Less {
             loc: Codegen,
             signed: false,
-            left: Expression::Variable(Codegen, Uint(32), self.input_len).into(),
+            left: Expression::Variable {
+                loc: Codegen,
+                ty: Uint(32),
+                var_no: self.input_len,
+            }
+            .into(),
             right: self.selector_len.clone(),
         };
         let default = self.cfg.new_basic_block("fb_or_recv".into());
@@ -152,7 +177,11 @@ impl<'a> Dispatch<'a> {
             .filter_map(|(func_no, func_cfg)| match func_cfg.ty {
                 FunctionTy::Function | FunctionTy::Constructor if func_cfg.public => {
                     let selector = BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector);
-                    let case = Expression::NumberLiteral(Codegen, selector_ty.clone(), selector);
+                    let case = Expression::NumberLiteral {
+                        loc: Codegen,
+                        ty: selector_ty.clone(),
+                        value: selector,
+                    };
                     Some((case, self.dispatch_case(func_no)))
                 }
                 _ => None,
@@ -165,19 +194,35 @@ impl<'a> Dispatch<'a> {
         self.add(Instr::Set {
             loc: Codegen,
             res: selector_var,
-            expr: Expression::Builtin(
-                Codegen,
-                vec![selector_ty.clone()],
-                Builtin::ReadFromBuffer,
-                vec![
-                    Expression::FunctionArg(Codegen, Type::BufferPointer, 0),
-                    Expression::NumberLiteral(Codegen, selector_ty.clone(), 0.into()),
+            expr: Expression::Builtin {
+                loc: Codegen,
+                tys: vec![selector_ty.clone()],
+                builtin: Builtin::ReadFromBuffer,
+                args: vec![
+                    Expression::FunctionArg {
+                        loc: Codegen,
+                        ty: Type::BufferPointer,
+                        arg_no: 0,
+                    },
+                    Expression::NumberLiteral {
+                        loc: Codegen,
+                        ty: selector_ty.clone(),
+                        value: 0.into(),
+                    },
                 ],
-            ),
+            },
         });
-        let selector = Expression::Variable(Codegen, selector_ty.clone(), selector_var);
+        let selector = Expression::Variable {
+            loc: Codegen,
+            ty: selector_ty.clone(),
+            var_no: selector_var,
+        };
         self.add(Instr::Store {
-            dest: Expression::FunctionArg(Codegen, selector_ty.clone(), 3),
+            dest: Expression::FunctionArg {
+                loc: Codegen,
+                ty: selector_ty.clone(),
+                arg_no: 3,
+            },
             data: selector.clone(),
         });
         self.add(Instr::Switch {
@@ -205,14 +250,18 @@ impl<'a> Dispatch<'a> {
         let cfg = &self.all_cfg[func_no];
         let mut args = vec![];
         if !cfg.params.is_empty() {
-            let buf_len = Expression::Variable(Codegen, Uint(32), self.input_len);
-            let arg_len = Expression::Subtract(
-                Codegen,
-                Uint(32),
-                false,
-                buf_len.into(),
-                self.selector_len.clone(),
-            );
+            let buf_len = Expression::Variable {
+                loc: Codegen,
+                ty: Uint(32),
+                var_no: self.input_len,
+            };
+            let arg_len = Expression::Subtract {
+                loc: Codegen,
+                ty: Uint(32),
+                unchecked: false,
+                left: buf_len.into(),
+                right: self.selector_len.clone(),
+            };
             args = abi_decode(
                 &Codegen,
                 &self.input_ptr,
@@ -220,7 +269,11 @@ impl<'a> Dispatch<'a> {
                 self.ns,
                 &mut self.vartab,
                 &mut self.cfg,
-                Some(Expression::Trunc(Codegen, Uint(32), arg_len.into())),
+                Some(Expression::Trunc {
+                    loc: Codegen,
+                    ty: Uint(32),
+                    expr: arg_len.into(),
+                }),
             );
         }
 
@@ -231,7 +284,11 @@ impl<'a> Dispatch<'a> {
             let new_var = self.vartab.temp_anonymous(&item.ty);
             returns.push(new_var);
             return_tys.push(item.ty.clone());
-            returns_expr.push(Expression::Variable(Codegen, item.ty.clone(), new_var));
+            returns_expr.push(Expression::Variable {
+                loc: Codegen,
+                ty: item.ty.clone(),
+                var_no: new_var,
+            });
         }
 
         self.add(Instr::Call {
@@ -242,13 +299,17 @@ impl<'a> Dispatch<'a> {
         });
 
         if cfg.returns.is_empty() {
-            let data_len = Expression::NumberLiteral(Codegen, Uint(32), 0.into());
-            let data = Expression::AllocDynamicBytes(
-                Codegen,
-                Type::DynamicBytes,
-                data_len.clone().into(),
-                None,
-            );
+            let data_len = Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Uint(32),
+                value: 0.into(),
+            };
+            let data = Expression::AllocDynamicBytes {
+                loc: Codegen,
+                ty: Type::DynamicBytes,
+                size: data_len.clone().into(),
+                initializer: None,
+            };
             self.add(Instr::ReturnData { data, data_len })
         } else {
             let (data, data_len) = abi_encode(
@@ -281,8 +342,18 @@ impl<'a> Dispatch<'a> {
             cond: Expression::More {
                 loc: Codegen,
                 signed: false,
-                left: Expression::Variable(Codegen, self.ns.value_type(), self.value).into(),
-                right: Expression::NumberLiteral(Codegen, self.ns.value_type(), 0.into()).into(),
+                left: Expression::Variable {
+                    loc: Codegen,
+                    ty: self.ns.value_type(),
+                    var_no: self.value,
+                }
+                .into(),
+                right: Expression::NumberLiteral {
+                    loc: Codegen,
+                    ty: self.ns.value_type(),
+                    value: 0.into(),
+                }
+                .into(),
             },
             true_block,
             false_block,
@@ -328,8 +399,18 @@ impl<'a> Dispatch<'a> {
             cond: Expression::More {
                 loc: Codegen,
                 signed: false,
-                left: Expression::Variable(Codegen, self.ns.value_type(), self.value).into(),
-                right: Expression::NumberLiteral(Codegen, self.ns.value_type(), 0.into()).into(),
+                left: Expression::Variable {
+                    loc: Codegen,
+                    ty: self.ns.value_type(),
+                    var_no: self.value,
+                }
+                .into(),
+                right: Expression::NumberLiteral {
+                    loc: Codegen,
+                    ty: self.ns.value_type(),
+                    value: 0.into(),
+                }
+                .into(),
             },
             true_block: receive_block,
             false_block: fallback_block,
@@ -343,13 +424,17 @@ impl<'a> Dispatch<'a> {
                 call: InternalCallTy::Static { cfg_no },
                 args: vec![],
             });
-            let data_len = Expression::NumberLiteral(Codegen, Uint(32), 0.into());
-            let data = Expression::AllocDynamicBytes(
-                Codegen,
-                Type::DynamicBytes,
-                data_len.clone().into(),
-                None,
-            );
+            let data_len = Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Uint(32),
+                value: 0.into(),
+            };
+            let data = Expression::AllocDynamicBytes {
+                loc: Codegen,
+                ty: Type::DynamicBytes,
+                size: data_len.clone().into(),
+                initializer: None,
+            };
             self.add(Instr::ReturnData { data, data_len })
         } else {
             self.selector_invalid();
@@ -363,13 +448,17 @@ impl<'a> Dispatch<'a> {
                 call: InternalCallTy::Static { cfg_no },
                 args: vec![],
             });
-            let data_len = Expression::NumberLiteral(Codegen, Uint(32), 0.into());
-            let data = Expression::AllocDynamicBytes(
-                Codegen,
-                Type::DynamicBytes,
-                data_len.clone().into(),
-                None,
-            );
+            let data_len = Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Uint(32),
+                value: 0.into(),
+            };
+            let data = Expression::AllocDynamicBytes {
+                loc: Codegen,
+                ty: Type::DynamicBytes,
+                size: data_len.clone().into(),
+                initializer: None,
+            };
             self.add(Instr::ReturnData { data, data_len })
         } else {
             self.selector_invalid()
