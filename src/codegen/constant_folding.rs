@@ -895,7 +895,7 @@ fn expression(
         Expression::Builtin {
             loc,
             tys,
-            builtin: Builtin::Keccak256,
+            kind: Builtin::Keccak256,
             args,
         } => {
             let arg = expression(&args[0], vars, cfg, ns);
@@ -923,7 +923,7 @@ fn expression(
                     Expression::Builtin {
                         loc: *loc,
                         tys: tys.clone(),
-                        builtin: Builtin::Keccak256,
+                        kind: Builtin::Keccak256,
                         args: vec![arg.0],
                     },
                     false,
@@ -933,7 +933,7 @@ fn expression(
         Expression::Builtin {
             loc,
             tys,
-            builtin: Builtin::Ripemd160,
+            kind: Builtin::Ripemd160,
             args,
         } => {
             let arg = expression(&args[0], vars, cfg, ns);
@@ -960,7 +960,7 @@ fn expression(
                     Expression::Builtin {
                         loc: *loc,
                         tys: tys.clone(),
-                        builtin: Builtin::Ripemd160,
+                        kind: Builtin::Ripemd160,
                         args: vec![arg.0],
                     },
                     false,
@@ -970,7 +970,7 @@ fn expression(
         Expression::Builtin {
             loc,
             tys,
-            builtin: Builtin::Blake2_256,
+            kind: Builtin::Blake2_256,
             args,
         } => {
             let arg = expression(&args[0], vars, cfg, ns);
@@ -995,7 +995,7 @@ fn expression(
                     Expression::Builtin {
                         loc: *loc,
                         tys: tys.clone(),
-                        builtin: Builtin::Blake2_256,
+                        kind: Builtin::Blake2_256,
                         args: vec![arg.0],
                     },
                     false,
@@ -1005,7 +1005,7 @@ fn expression(
         Expression::Builtin {
             loc,
             tys,
-            builtin: Builtin::Blake2_128,
+            kind: Builtin::Blake2_128,
             args,
         } => {
             let arg = expression(&args[0], vars, cfg, ns);
@@ -1030,7 +1030,7 @@ fn expression(
                     Expression::Builtin {
                         loc: *loc,
                         tys: tys.clone(),
-                        builtin: Builtin::Blake2_128,
+                        kind: Builtin::Blake2_128,
                         args: vec![arg.0],
                     },
                     false,
@@ -1040,7 +1040,7 @@ fn expression(
         Expression::Builtin {
             loc,
             tys,
-            builtin: Builtin::Sha256,
+            kind: Builtin::Sha256,
             args,
         } => {
             let arg = expression(&args[0], vars, cfg, ns);
@@ -1071,7 +1071,7 @@ fn expression(
                     Expression::Builtin {
                         loc: *loc,
                         tys: tys.clone(),
-                        builtin: Builtin::Sha256,
+                        kind: Builtin::Sha256,
                         args: vec![arg.0],
                     },
                     false,
@@ -1182,7 +1182,7 @@ fn expression(
         Expression::ArrayLiteral {
             loc,
             ty,
-            lengths,
+            dimensions: lengths,
             values: args,
         } => {
             let args = args
@@ -1194,7 +1194,7 @@ fn expression(
                 Expression::ArrayLiteral {
                     loc: *loc,
                     ty: ty.clone(),
-                    lengths: lengths.clone(),
+                    dimensions: lengths.clone(),
                     values: args,
                 },
                 false,
@@ -1203,7 +1203,7 @@ fn expression(
         Expression::ConstArrayLiteral {
             loc,
             ty,
-            lengths,
+            dimensions: lengths,
             values: args,
         } => {
             let args = args
@@ -1215,7 +1215,7 @@ fn expression(
                 Expression::ConstArrayLiteral {
                     loc: *loc,
                     ty: ty.clone(),
-                    lengths: lengths.clone(),
+                    dimensions: lengths.clone(),
                     values: args,
                 },
                 false,
@@ -1517,7 +1517,7 @@ fn expression(
         Expression::Builtin {
             loc,
             tys,
-            builtin,
+            kind: builtin,
             args,
         } => {
             let args = args
@@ -1529,7 +1529,7 @@ fn expression(
                 Expression::Builtin {
                     loc: *loc,
                     tys: tys.clone(),
-                    builtin: *builtin,
+                    kind: *builtin,
                     args,
                 },
                 false,

@@ -618,7 +618,9 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Expression::ConstArrayLiteral {
-                lengths, values, ..
+                dimensions: lengths,
+                values,
+                ..
             } => format!(
                 "constant {} [ {} ]",
                 lengths.iter().map(|d| format!("[{d}]")).collect::<String>(),
@@ -629,7 +631,9 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Expression::ArrayLiteral {
-                lengths, values, ..
+                dimensions: lengths,
+                values,
+                ..
             } => format!(
                 "{} [ {} ]",
                 lengths.iter().map(|d| format!("[{d}]")).collect::<String>(),
@@ -911,7 +915,11 @@ impl ControlFlowGraph {
                 from.to_string(ns),
                 self.expr_to_string(contract, ns, expr)
             ),
-            Expression::Builtin { builtin, args, .. } => format!(
+            Expression::Builtin {
+                kind: builtin,
+                args,
+                ..
+            } => format!(
                 "(builtin {:?} ({}))",
                 builtin,
                 args.iter()

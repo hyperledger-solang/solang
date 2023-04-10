@@ -42,7 +42,7 @@ pub(super) fn solana_deploy(
             right: Box::new(Expression::Builtin {
                 loc: Loc::Codegen,
                 tys: vec![Type::Address(false)],
-                builtin: Builtin::ProgramId,
+                kind: Builtin::ProgramId,
                 args: Vec::new(),
             }),
         };
@@ -104,7 +104,7 @@ pub(super) fn solana_deploy(
                 Type::Struct(StructType::AccountInfo).into(),
                 vec![ArrayLength::Dynamic],
             )],
-            builtin: Builtin::Accounts,
+            kind: Builtin::Accounts,
             args: vec![],
         }
         .into(),
@@ -120,7 +120,7 @@ pub(super) fn solana_deploy(
     let account_length = Expression::Builtin {
         loc: Loc::Codegen,
         tys: vec![Type::Uint(32)],
-        builtin: Builtin::ArrayLength,
+        kind: Builtin::ArrayLength,
         args: vec![Expression::StructMember {
             loc: Loc::Codegen,
             ty: Type::DynamicBytes,
@@ -248,7 +248,7 @@ pub(super) fn solana_deploy(
                 expr: Expression::ArrayLiteral {
                     loc: Loc::Codegen,
                     ty: metas_ty.clone(),
-                    lengths: vec![2],
+                    dimensions: vec![2],
                     values: vec![
                         Expression::StructLiteral {
                             loc: Loc::Codegen,
@@ -279,7 +279,7 @@ pub(super) fn solana_deploy(
                                     expr: Box::new(Expression::Builtin {
                                         loc: Loc::Codegen,
                                         tys: vec![Type::Address(false)],
-                                        builtin: Builtin::GetAddress,
+                                        kind: Builtin::GetAddress,
                                         args: vec![],
                                     }),
                                 },
@@ -459,7 +459,7 @@ pub(super) fn solana_deploy(
                     Expression::Builtin {
                         loc: Loc::Codegen,
                         tys: vec![Type::Address(false)],
-                        builtin: Builtin::ProgramId,
+                        kind: Builtin::ProgramId,
                         args: vec![],
                     }
                 },
@@ -507,7 +507,7 @@ pub(super) fn solana_deploy(
             let address_seeds = Expression::ArrayLiteral {
                 loc: Loc::Codegen,
                 ty,
-                lengths: vec![seeds.len() as u32],
+                dimensions: vec![seeds.len() as u32],
                 values: seeds,
             };
 
@@ -519,7 +519,7 @@ pub(super) fn solana_deploy(
             Some(Expression::ArrayLiteral {
                 loc: Loc::Codegen,
                 ty,
-                lengths: vec![1],
+                dimensions: vec![1],
                 values: vec![address_seeds],
             })
         } else {

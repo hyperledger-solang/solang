@@ -40,7 +40,7 @@ fn decode_compact(
     let read_byte = Expression::Builtin {
         loc: Codegen,
         tys: vec![Uint(8)],
-        builtin: Builtin::ReadFromBuffer,
+        kind: Builtin::ReadFromBuffer,
         args: vec![buffer.clone(), offset.clone()],
     };
     cfg.add(
@@ -152,7 +152,7 @@ fn decode_compact(
     let read_byte = Expression::Builtin {
         loc: Codegen,
         tys: vec![Uint(16)],
-        builtin: Builtin::ReadFromBuffer,
+        kind: Builtin::ReadFromBuffer,
         args: vec![buffer.clone(), offset.clone()],
     };
     let expr = Expression::ShiftRight {
@@ -189,7 +189,7 @@ fn decode_compact(
     let read_byte = Expression::Builtin {
         loc: Codegen,
         tys: vec![Uint(32)],
-        builtin: Builtin::ReadFromBuffer,
+        kind: Builtin::ReadFromBuffer,
         args: vec![buffer.clone(), offset.clone()],
     };
     let expr = Expression::ShiftRight {
@@ -508,7 +508,7 @@ impl AbiEncoding for ScaleEncoding {
         let address = Expression::Builtin {
             loc: Codegen,
             tys: vec![Type::Address(false)],
-            builtin: Builtin::ReadFromBuffer,
+            kind: Builtin::ReadFromBuffer,
             args: vec![buffer.clone(), offset.clone()],
         };
         let new_offset = offset.clone().add_u32(Expression::NumberLiteral {
@@ -519,7 +519,7 @@ impl AbiEncoding for ScaleEncoding {
         let selector = Expression::Builtin {
             loc: Codegen,
             tys: vec![Type::FunctionSelector],
-            builtin: Builtin::ReadFromBuffer,
+            kind: Builtin::ReadFromBuffer,
             args: vec![buffer.clone(), new_offset],
         };
         let ext_func = Expression::StructLiteral {
@@ -565,7 +565,7 @@ impl AbiEncoding for ScaleEncoding {
         let length = Expression::Builtin {
             loc: Codegen,
             tys: vec![Uint(32)],
-            builtin: Builtin::ArrayLength,
+            kind: Builtin::ArrayLength,
             args: vec![expr.clone()],
         };
         if self.is_packed() {

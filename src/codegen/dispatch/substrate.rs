@@ -197,7 +197,7 @@ impl<'a> Dispatch<'a> {
             expr: Expression::Builtin {
                 loc: Codegen,
                 tys: vec![selector_ty.clone()],
-                builtin: Builtin::ReadFromBuffer,
+                kind: Builtin::ReadFromBuffer,
                 args: vec![
                     Expression::FunctionArg {
                         loc: Codegen,

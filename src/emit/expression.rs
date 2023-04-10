@@ -1274,9 +1274,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into()
         }
         Expression::ConstArrayLiteral {
-            lengths: dimensions,
-            values,
-            ..
+            dimensions, values, ..
         } => {
             // For const arrays (declared with "constant" keyword, we should create a global constant
             let mut dims = dimensions.iter();
@@ -1323,7 +1321,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         }
         Expression::ArrayLiteral {
             ty,
-            lengths: dimensions,
+            dimensions,
             values,
             ..
         } => {
@@ -1414,24 +1412,24 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             }
         }
         Expression::Builtin {
-            builtin: Builtin::ArrayLength,
-            args: values,
+            kind: Builtin::ArrayLength,
+            args,
             ..
-        } if values[0].ty().array_deref().is_builtin_struct().is_none() => {
-            let array = expression(target, bin, &values[0], vartab, function, ns);
+        } if args[0].ty().array_deref().is_builtin_struct().is_none() => {
+            let array = expression(target, bin, &args[0], vartab, function, ns);
 
             bin.vector_len(array).into()
         }
         Expression::Builtin {
             tys: returns,
-            builtin: Builtin::ReadFromBuffer,
-            args: values,
+            kind: Builtin::ReadFromBuffer,
+            args,
             ..
         } => {
-            let v = expression(target, bin, &values[0], vartab, function, ns);
-            let offset = expression(target, bin, &values[1], vartab, function, ns).into_int_value();
+            let v = expression(target, bin, &args[0], vartab, function, ns);
+            let offset = expression(target, bin, &args[1], vartab, function, ns).into_int_value();
 
-            let data = if values[0].ty().is_dynamic_memory() {
+            let data = if args[0].ty().is_dynamic_memory() {
                 bin.vector_bytes(v)
             } else {
                 v.into_pointer_value()
@@ -1560,7 +1558,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into()
         }
         Expression::Builtin {
-            builtin: Builtin::Signature,
+            kind: Builtin::Signature,
             ..
         } if ns.target != Target::Solana => {
             // need to byte-reverse selector
@@ -1581,16 +1579,16 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.build_load(selector_type, selector, "selector")
         }
         Expression::Builtin {
-            builtin: Builtin::AddMod,
-            args: values,
+            kind: Builtin::AddMod,
+            args,
             ..
         } => {
             let arith_ty = bin.context.custom_width_int_type(512);
             let res_ty = bin.context.custom_width_int_type(256);
 
-            let x = expression(target, bin, &values[0], vartab, function, ns).into_int_value();
-            let y = expression(target, bin, &values[1], vartab, function, ns).into_int_value();
-            let k = expression(target, bin, &values[2], vartab, function, ns).into_int_value();
+            let x = expression(target, bin, &args[0], vartab, function, ns).into_int_value();
+            let y = expression(target, bin, &args[1], vartab, function, ns).into_int_value();
+            let k = expression(target, bin, &args[2], vartab, function, ns).into_int_value();
             let dividend = bin.builder.build_int_add(
                 bin.builder.build_int_z_extend(x, arith_ty, "wide_x"),
                 bin.builder.build_int_z_extend(y, arith_ty, "wide_y"),
@@ -1661,15 +1659,15 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into()
         }
         Expression::Builtin {
-            builtin: Builtin::MulMod,
-            args: values,
+            kind: Builtin::MulMod,
+            args,
             ..
         } => {
             let arith_ty = bin.context.custom_width_int_type(512);
             let res_ty = bin.context.custom_width_int_type(256);
 
-            let x = expression(target, bin, &values[0], vartab, function, ns).into_int_value();
-            let y = expression(target, bin, &values[1], vartab, function, ns).into_int_value();
+            let x = expression(target, bin, &args[0], vartab, function, ns).into_int_value();
+            let y = expression(target, bin, &args[1], vartab, function, ns).into_int_value();
             let x_m = bin.build_alloca(function, arith_ty, "x_m");
             let y_m = bin.build_alloca(function, arith_ty, "x_y");
             let x_times_y_m = bin.build_alloca(function, arith_ty, "x_times_y_m");
@@ -1689,7 +1687,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 ],
                 "",
             );
-            let k = expression(target, bin, &values[2], vartab, function, ns).into_int_value();
+            let k = expression(target, bin, &args[2], vartab, function, ns).into_int_value();
             let dividend = bin.builder.build_load(arith_ty, x_times_y_m, "x_t_y");
 
             let divisor = bin.builder.build_int_z_extend(k, arith_ty, "wide_k");
@@ -1757,27 +1755,27 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into()
         }
         Expression::Builtin {
-            builtin: hash @ Builtin::Ripemd160,
+            kind: hash @ Builtin::Ripemd160,
             args,
             ..
         }
         | Expression::Builtin {
-            builtin: hash @ Builtin::Keccak256,
+            kind: hash @ Builtin::Keccak256,
             args,
             ..
         }
         | Expression::Builtin {
-            builtin: hash @ Builtin::Blake2_128,
+            kind: hash @ Builtin::Blake2_128,
             args,
             ..
         }
         | Expression::Builtin {
-            builtin: hash @ Builtin::Blake2_256,
+            kind: hash @ Builtin::Blake2_256,
             args,
             ..
         }
         | Expression::Builtin {
-            builtin: hash @ Builtin::Sha256,
+            kind: hash @ Builtin::Sha256,
             args,
             ..
         } => {

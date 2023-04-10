@@ -515,7 +515,7 @@ fn length_suffix() {
         Expression::Builtin {
             loc,
             tys: vec![Type::Uint(32)],
-            builtin: Builtin::ArrayLength,
+            kind: Builtin::ArrayLength,
             args: vec![Expression::Variable {
                 loc,
                 ty: Type::Array(
@@ -561,7 +561,7 @@ fn length_suffix_panic() {
         Expression::Builtin {
             loc,
             tys: vec![Type::Uint(256)],
-            builtin: Builtin::ArrayLength,
+            kind: Builtin::ArrayLength,
             args: vec![Expression::Variable {
                 loc,
                 ty: Type::Array(

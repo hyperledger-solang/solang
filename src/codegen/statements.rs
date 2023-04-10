@@ -101,11 +101,11 @@ pub(crate) fn statement(
                     initializer: opt,
                 };
                 cfg.array_lengths_temps.insert(*pos, temp_res);
-            } else if let Expression::Variable { var_no: res, .. } = &expression {
+            } else if let Expression::Variable { var_no, .. } = &expression {
                 // If declaration happens with an existing array, check if the size of the array is known.
                 // If the size of the right hand side is known (is in the array_length_map), make the left hand side track it
                 // Now, we will have two keys in the map that point to the same temporary variable
-                if let Some(to_add) = cfg.array_lengths_temps.clone().get(res) {
+                if let Some(to_add) = cfg.array_lengths_temps.clone().get(var_no) {
                     cfg.array_lengths_temps.insert(*pos, *to_add);
                 }
             }
@@ -1454,7 +1454,7 @@ impl Type {
                     Some(Expression::ArrayLiteral {
                         loc: Codegen,
                         ty: self.clone(),
-                        lengths: Vec::new(),
+                        dimensions: Vec::new(),
                         values: Vec::new(),
                     })
                 }

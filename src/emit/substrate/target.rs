@@ -1334,7 +1334,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         match expr {
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::Calldata,
+                kind: codegen::Builtin::Calldata,
                 ..
             } => {
                 // allocate vector for input
@@ -1386,7 +1386,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 v
             }
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::BlockNumber,
+                kind: codegen::Builtin::BlockNumber,
                 ..
             } => {
                 let block_number =
@@ -1403,7 +1403,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .into()
             }
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::Timestamp,
+                kind: codegen::Builtin::Timestamp,
                 ..
             } => {
                 let milliseconds = get_seal_value!("timestamp", "seal_now", 64).into_int_value();
@@ -1419,22 +1419,22 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .into()
             }
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::Gasleft,
+                kind: codegen::Builtin::Gasleft,
                 ..
             } => {
                 get_seal_value!("gas_left", "seal_gas_left", 64)
             }
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::Gasprice,
-                args: values,
+                kind: codegen::Builtin::Gasprice,
+                args,
                 ..
             } => {
                 // gasprice is available as "tx.gasprice" which will give you the price for one unit
                 // of gas, or "tx.gasprice(uint64)" which will give you the price of N gas units
-                let gas = if values.is_empty() {
+                let gas = if args.is_empty() {
                     binary.context.i64_type().const_int(1, false)
                 } else {
-                    expression(self, binary, &values[0], vartab, function, ns).into_int_value()
+                    expression(self, binary, &args[0], vartab, function, ns).into_int_value()
                 };
 
                 let (scratch_buf, scratch_len) = scratch_buf!();
@@ -1458,7 +1458,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 )
             }
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::Sender,
+                kind: codegen::Builtin::Sender,
                 ..
             } => {
                 let (scratch_buf, scratch_len) = scratch_buf!();
@@ -1478,11 +1478,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_load(binary.address_type(ns), scratch_buf, "caller")
             }
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::Value,
+                kind: codegen::Builtin::Value,
                 ..
             } => self.value_transferred(binary, ns).into(),
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::MinimumBalance,
+                kind: codegen::Builtin::MinimumBalance,
                 ..
             } => {
                 get_seal_value!(
@@ -1492,7 +1492,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 )
             }
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::GetAddress,
+                kind: codegen::Builtin::GetAddress,
                 ..
             } => {
                 let (scratch_buf, scratch_len) = scratch_buf!();
@@ -1512,7 +1512,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_load(binary.address_type(ns), scratch_buf, "self_address")
             }
             codegen::Expression::Builtin {
-                builtin: codegen::Builtin::Balance,
+                kind: codegen::Builtin::Balance,
                 ..
             } => {
                 let (scratch_buf, scratch_len) = scratch_buf!();

@@ -356,7 +356,7 @@ pub enum Expression {
     ArrayLiteral {
         loc: pt::Loc,
         ty: Type,
-        lengths: Vec<u32>,
+        dimensions: Vec<u32>,
         values: Vec<Expression>,
     },
     BitwiseAnd {
@@ -384,7 +384,7 @@ pub enum Expression {
     Builtin {
         loc: pt::Loc,
         tys: Vec<Type>,
-        builtin: Builtin,
+        kind: Builtin,
         args: Vec<Expression>,
     },
     BytesCast {
@@ -411,7 +411,7 @@ pub enum Expression {
     ConstArrayLiteral {
         loc: pt::Loc,
         ty: Type,
-        lengths: Vec<u32>,
+        dimensions: Vec<u32>,
         values: Vec<Expression>,
     },
     UnsignedDivide {
@@ -1288,23 +1288,23 @@ impl Expression {
                 Expression::ArrayLiteral {
                     loc,
                     ty,
-                    lengths,
+                    dimensions: lengths,
                     values,
                 } => Expression::ArrayLiteral {
                     loc: *loc,
                     ty: ty.clone(),
-                    lengths: lengths.clone(),
+                    dimensions: lengths.clone(),
                     values: values.iter().map(|e| filter(e, ctx)).collect(),
                 },
                 Expression::ConstArrayLiteral {
                     loc,
                     ty,
-                    lengths,
+                    dimensions: lengths,
                     values,
                 } => Expression::ConstArrayLiteral {
                     loc: *loc,
                     ty: ty.clone(),
-                    lengths: lengths.clone(),
+                    dimensions: lengths.clone(),
                     values: values.iter().map(|e| filter(e, ctx)).collect(),
                 },
                 Expression::Add {
@@ -1639,7 +1639,7 @@ impl Expression {
                 Expression::Builtin {
                     loc,
                     tys,
-                    builtin,
+                    kind: builtin,
                     args,
                 } => {
                     let args = args.iter().map(|e| filter(e, ctx)).collect();
@@ -1647,7 +1647,7 @@ impl Expression {
                     Expression::Builtin {
                         loc: *loc,
                         tys: tys.clone(),
-                        builtin: *builtin,
+                        kind: *builtin,
                         args,
                     }
                 }

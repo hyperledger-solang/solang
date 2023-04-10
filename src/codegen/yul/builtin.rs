@@ -140,29 +140,29 @@ pub(crate) fn process_builtin(
         }
 
         YulBuiltInFunction::Gas => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], builtin: Builtin::Gasleft, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], kind: Builtin::Gasleft, args: vec![] }
         }
 
         YulBuiltInFunction::Address => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Address(false)], builtin: Builtin::GetAddress, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Address(false)], kind: Builtin::GetAddress, args: vec![] }
         }
 
         YulBuiltInFunction::Balance => {
             let addr = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Address(false), ns);
-            Expression::Builtin { loc: *loc, tys: vec![Type::Value], builtin: Builtin::Balance, args: vec![addr] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Value], kind: Builtin::Balance, args: vec![addr] }
         }
 
         YulBuiltInFunction::SelfBalance => {
-            let addr = Expression::Builtin { loc: *loc, tys: vec![Type::Contract(contract_no)], builtin: Builtin::GetAddress, args: vec![] };
-            Expression::Builtin { loc: *loc, tys: vec![Type::Value], builtin: Builtin::Balance, args: vec![addr] }
+            let addr = Expression::Builtin { loc: *loc, tys: vec![Type::Contract(contract_no)], kind: Builtin::GetAddress, args: vec![] };
+            Expression::Builtin { loc: *loc, tys: vec![Type::Value], kind: Builtin::Balance, args: vec![addr] }
         }
 
         YulBuiltInFunction::Caller => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Address(true)], builtin: Builtin::Sender, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Address(true)], kind: Builtin::Sender, args: vec![] }
         }
 
         YulBuiltInFunction::CallValue => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Value], builtin: Builtin::Value, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Value], kind: Builtin::Value, args: vec![] }
         }
 
         YulBuiltInFunction::SelfDestruct => {
@@ -180,37 +180,37 @@ pub(crate) fn process_builtin(
         }
 
         YulBuiltInFunction::GasPrice => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], builtin: Builtin::Gasprice, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], kind: Builtin::Gasprice, args: vec![] }
         }
 
         YulBuiltInFunction::ExtCodeSize => {
             let address = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Address(false), ns);
-            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(32)], builtin: Builtin::ExtCodeSize, args: vec![address] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(32)], kind: Builtin::ExtCodeSize, args: vec![address] }
         }
 
         YulBuiltInFunction::BlockHash => {
             let arg = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Uint(64), ns);
-            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(256)], builtin: Builtin::BlockHash, args: vec![arg] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(256)], kind: Builtin::BlockHash, args: vec![arg] }
         }
 
         YulBuiltInFunction::CoinBase => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Address(false)], builtin: Builtin::BlockCoinbase, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Address(false)], kind: Builtin::BlockCoinbase, args: vec![] }
         }
 
         YulBuiltInFunction::Timestamp => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], builtin: Builtin::Timestamp, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], kind: Builtin::Timestamp, args: vec![] }
         }
 
         YulBuiltInFunction::Number => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], builtin: Builtin::BlockNumber, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], kind: Builtin::BlockNumber, args: vec![] }
         }
 
         YulBuiltInFunction::Difficulty => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(256)], builtin: Builtin::BlockDifficulty, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(256)], kind: Builtin::BlockDifficulty, args: vec![] }
         }
 
         YulBuiltInFunction::GasLimit => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], builtin: Builtin::GasLimit, args: vec![] }
+            Expression::Builtin { loc: *loc, tys: vec![Type::Uint(64)], kind: Builtin::GasLimit, args: vec![] }
         }
     }
 }
@@ -379,7 +379,7 @@ fn process_arithmetic(
             let codegen_expr = Expression::Builtin {
                 loc: *loc,
                 tys: vec![left.ty()],
-                builtin,
+                kind: builtin,
                 args: vec![right, left, equalized_modulo],
             };
             branch_if_zero(modulo_operand, codegen_expr, cfg, vartab)

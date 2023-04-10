@@ -109,7 +109,7 @@ pub(super) fn abi_decode(
                 expr: Expression::Builtin {
                     loc: Codegen,
                     tys: vec![Uint(32)],
-                    builtin: Builtin::ArrayLength,
+                    kind: Builtin::ArrayLength,
                     args: vec![buffer.clone()],
                 },
             },
@@ -628,7 +628,7 @@ pub(super) trait AbiEncoding {
             let size = Expression::Builtin {
                 loc: Codegen,
                 tys: vec![Uint(32)],
-                builtin: Builtin::ArrayLength,
+                kind: Builtin::ArrayLength,
                 args: vec![sub_array],
             };
 
@@ -727,7 +727,7 @@ pub(super) trait AbiEncoding {
                 let read_value = Expression::Builtin {
                     loc: Codegen,
                     tys: vec![ty.clone()],
-                    builtin: Builtin::ReadFromBuffer,
+                    kind: Builtin::ReadFromBuffer,
                     args: vec![buffer.clone(), offset.clone()],
                 };
                 let read_var = vartab.temp_anonymous(ty);
@@ -775,7 +775,7 @@ pub(super) trait AbiEncoding {
                 let read_value = Expression::Builtin {
                     loc: Codegen,
                     tys: vec![ty.clone()],
-                    builtin: Builtin::ReadFromBuffer,
+                    kind: Builtin::ReadFromBuffer,
                     args: vec![buffer.clone(), offset.clone()],
                 };
 
@@ -922,7 +922,7 @@ pub(super) trait AbiEncoding {
                     let expr = Expression::ArrayLiteral {
                         loc: Codegen,
                         ty: array_ty.clone(),
-                        lengths: vec![],
+                        dimensions: vec![],
                         values: vec![],
                     };
                     cfg.add(
@@ -1003,7 +1003,7 @@ pub(super) trait AbiEncoding {
                         expr: Expression::ArrayLiteral {
                             loc: Codegen,
                             ty: array_ty.clone(),
-                            lengths: vec![],
+                            dimensions: vec![],
                             values: vec![],
                         },
                     },
@@ -1495,7 +1495,7 @@ pub(super) trait AbiEncoding {
                 Expression::Builtin {
                     loc: Codegen,
                     tys: vec![Uint(32)],
-                    builtin: Builtin::ArrayLength,
+                    kind: Builtin::ArrayLength,
                     args: vec![array.clone()],
                 }
             };
@@ -1608,7 +1608,7 @@ pub(super) trait AbiEncoding {
             let size = Expression::Builtin {
                 loc: Codegen,
                 tys: vec![Uint(32)],
-                builtin: Builtin::ArrayLength,
+                kind: Builtin::ArrayLength,
                 args: vec![arr],
             };
             let size_width = self.size_width(&size, vartab, cfg);
@@ -1887,7 +1887,7 @@ fn set_array_loop(
         Expression::Builtin {
             loc: Codegen,
             tys: vec![Uint(32)],
-            builtin: Builtin::ArrayLength,
+            kind: Builtin::ArrayLength,
             args: vec![sub_array],
         }
     };
@@ -1999,7 +1999,7 @@ fn array_outer_length(
     let get_size = Expression::Builtin {
         loc: Codegen,
         tys: vec![Uint(32)],
-        builtin: Builtin::ArrayLength,
+        kind: Builtin::ArrayLength,
         args: vec![arr.clone()],
     };
     let array_length = vartab.temp_anonymous(&Uint(32));

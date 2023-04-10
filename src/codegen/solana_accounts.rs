@@ -466,7 +466,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
 fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
     match expr {
         Expression::Builtin {
-            builtin: Builtin::Timestamp | Builtin::BlockNumber | Builtin::Slot,
+            kind: Builtin::Timestamp | Builtin::BlockNumber | Builtin::Slot,
             ..
         } => {
             data.add_account(
@@ -478,7 +478,7 @@ fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
             );
         }
         Expression::Builtin {
-            builtin: Builtin::SignatureVerify,
+            kind: Builtin::SignatureVerify,
             ..
         } => {
             data.add_account(
@@ -490,7 +490,7 @@ fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
             );
         }
         Expression::Builtin {
-            builtin: Builtin::Ripemd160 | Builtin::Keccak256 | Builtin::Sha256,
+            kind: Builtin::Ripemd160 | Builtin::Keccak256 | Builtin::Sha256,
             ..
         } => {
             data.add_system_account();

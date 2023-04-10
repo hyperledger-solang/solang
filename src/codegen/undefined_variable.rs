@@ -83,13 +83,13 @@ pub fn find_undefined_variables_in_expression(
                     ctx.ns.yul_functions[func_no].symtable.vars.get(var_no)
                 }
                 ASTFunction::SolidityFunction(func_no) => {
-                    ctx.ns.functions[func_no].symtable.vars.get(pos)
+                    ctx.ns.functions[func_no].symtable.vars.get(var_no)
                 }
 
                 ASTFunction::None => None,
             };
 
-            if let (Some(def_map), Some(var)) = (ctx.defs.get(pos), variable) {
+            if let (Some(def_map), Some(var)) = (ctx.defs.get(var_no), variable) {
                 for (def, modified) in def_map {
                     if let Instr::Set {
                         expr: instr_expr, ..
@@ -101,7 +101,7 @@ pub fn find_undefined_variables_in_expression(
                             && !*modified
                             && !matches!(var.ty, Type::Array(..))
                         {
-                            add_diagnostic(var, *pos, &exp.loc(), ctx.diagnostics);
+                            add_diagnostic(var, *var_no, &exp.loc(), ctx.diagnostics);
                         }
                     }
                 }
@@ -111,7 +111,7 @@ pub fn find_undefined_variables_in_expression(
 
         // This is a method call whose array will never be undefined
         Expression::Builtin {
-            builtin: Builtin::ArrayLength,
+            kind: Builtin::ArrayLength,
             ..
         } => false,
 

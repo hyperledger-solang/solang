@@ -115,7 +115,7 @@ pub(crate) fn function_dispatch(
     let fid = Expression::Builtin {
         loc: Loc::Codegen,
         tys: vec![Type::Uint(64)],
-        builtin: Builtin::ReadFromBuffer,
+        kind: Builtin::ReadFromBuffer,
         args: vec![
             argsdata.clone(),
             Expression::NumberLiteral {

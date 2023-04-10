@@ -192,7 +192,7 @@ fn process_suffix_access(
                     return Expression::Builtin {
                         loc: *loc,
                         tys: vec![Type::Uint(32)],
-                        builtin: Builtin::ArrayLength,
+                        kind: Builtin::ArrayLength,
                         args: vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
                     };
                 }

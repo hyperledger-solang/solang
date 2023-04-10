@@ -147,7 +147,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 left: Expression::Builtin {
                     loc,
                     tys: vec![Type::Uint(32)],
-                    builtin: Builtin::ArrayLength,
+                    kind: Builtin::ArrayLength,
                     args: vec![buffer.clone()],
                 }
                 .into(),
@@ -178,7 +178,7 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     value: Expression::Builtin {
                         loc,
                         tys: vec![Type::Bytes(32)],
-                        builtin: Builtin::Blake2_256,
+                        kind: Builtin::Blake2_256,
                         args: vec![buffer.clone()],
                     },
                 },

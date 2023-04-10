@@ -108,7 +108,7 @@ impl AbiEncoding for BorshEncoding {
                 expr: Expression::Builtin {
                     loc: Codegen,
                     tys: vec![Uint(32)],
-                    builtin: Builtin::ReadFromBuffer,
+                    kind: Builtin::ReadFromBuffer,
                     args: vec![buffer.clone(), offset.clone()],
                 },
             },
@@ -145,7 +145,7 @@ impl AbiEncoding for BorshEncoding {
         let selector = Expression::Builtin {
             loc: Codegen,
             tys: vec![Type::FunctionSelector],
-            builtin: Builtin::ReadFromBuffer,
+            kind: Builtin::ReadFromBuffer,
             args: vec![buffer.clone(), offset.clone()],
         };
 
@@ -158,7 +158,7 @@ impl AbiEncoding for BorshEncoding {
         let address = Expression::Builtin {
             loc: Codegen,
             tys: vec![Type::Address(false)],
-            builtin: Builtin::ReadFromBuffer,
+            kind: Builtin::ReadFromBuffer,
             args: vec![buffer.clone(), new_offset],
         };
 
@@ -185,7 +185,7 @@ impl AbiEncoding for BorshEncoding {
         let length = Expression::Builtin {
             loc: Codegen,
             tys: vec![Uint(32)],
-            builtin: Builtin::ArrayLength,
+            kind: Builtin::ArrayLength,
             args: vec![expr.clone()],
         };
 

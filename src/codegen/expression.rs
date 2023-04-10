@@ -339,7 +339,7 @@ pub fn expression(
         } => Expression::ArrayLiteral {
             loc: *loc,
             ty: ty.clone(),
-            lengths: dimensions.clone(),
+            dimensions: dimensions.clone(),
             values: values
                 .iter()
                 .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
@@ -353,7 +353,7 @@ pub fn expression(
         } => Expression::ConstArrayLiteral {
             loc: *loc,
             ty: ty.clone(),
-            lengths: dimensions.clone(),
+            dimensions: dimensions.clone(),
             values: values
                 .iter()
                 .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
@@ -1930,7 +1930,7 @@ fn builtin_evm_gasprice(
     let gasprice = Expression::Builtin {
         loc: *loc,
         tys: vec![ty.clone()],
-        builtin: Builtin::Gasprice,
+        kind: Builtin::Gasprice,
         args: vec![],
     };
     let units = expression(&expr[0], cfg, contract_no, func, ns, vartab, opt);
@@ -1989,7 +1989,7 @@ fn expr_builtin(
                 right: Box::new(Expression::Builtin {
                     loc: *loc,
                     tys: vec![Type::Uint(32)],
-                    builtin: Builtin::ArrayLength,
+                    kind: Builtin::ArrayLength,
                     args: vec![buf.clone()],
                 }),
             };
@@ -2032,7 +2032,7 @@ fn expr_builtin(
             let size = Expression::Builtin {
                 loc: *loc,
                 tys: vec![Type::Uint(32)],
-                builtin: Builtin::ArrayLength,
+                kind: Builtin::ArrayLength,
                 args: vec![data.clone()],
             };
 
@@ -2049,7 +2049,7 @@ fn expr_builtin(
                 right: Box::new(Expression::Builtin {
                     loc: *loc,
                     tys: vec![Type::Uint(32)],
-                    builtin: Builtin::ArrayLength,
+                    kind: Builtin::ArrayLength,
                     args: vec![buffer.clone()],
                 }),
             };
@@ -2126,7 +2126,7 @@ fn expr_builtin(
                 right: Box::new(Expression::Builtin {
                     loc: *loc,
                     tys: vec![Type::Uint(32)],
-                    builtin: Builtin::ArrayLength,
+                    kind: Builtin::ArrayLength,
                     args: vec![buf.clone()],
                 }),
             };
@@ -2159,7 +2159,7 @@ fn expr_builtin(
             Expression::Builtin {
                 loc: *loc,
                 tys: tys.to_vec(),
-                builtin: (&builtin).into(),
+                kind: (&builtin).into(),
                 args: vec![buf, offset],
             }
         }
@@ -2205,7 +2205,7 @@ fn expr_builtin(
                     expr: Expression::Builtin {
                         loc: *loc,
                         tys: tys.to_vec(),
-                        builtin: (&builtin).into(),
+                        kind: (&builtin).into(),
                         args: arguments,
                     },
                 },
@@ -2240,9 +2240,9 @@ fn expr_builtin(
             if !arguments.is_empty() && builtin == ast::Builtin::ArrayLength {
                 // If an array length instruction is called
                 // Get the variable it is assigned with
-                if let Expression::Variable { var_no: num, .. } = &arguments[0] {
+                if let Expression::Variable { var_no, .. } = &arguments[0] {
                     // Now that we have its temp in the map, retrieve the temp var res from the map
-                    if let Some(array_length_var) = cfg.array_lengths_temps.get(num) {
+                    if let Some(array_length_var) = cfg.array_lengths_temps.get(var_no) {
                         // If it's there, replace ArrayLength with the temp var
                         return Expression::Variable {
                             loc: *loc,
@@ -2255,7 +2255,7 @@ fn expr_builtin(
             Expression::Builtin {
                 loc: *loc,
                 tys: tys.to_vec(),
-                builtin: (&builtin).into(),
+                kind: (&builtin).into(),
                 args: arguments,
             }
         }
@@ -3147,7 +3147,7 @@ fn array_subscript(
                     let mut returned = Expression::Builtin {
                         loc: *loc,
                         tys: vec![Type::Uint(32)],
-                        builtin: Builtin::ArrayLength,
+                        kind: Builtin::ArrayLength,
                         args: vec![array.clone()],
                     };
 
@@ -3184,7 +3184,7 @@ fn array_subscript(
         Type::DynamicBytes => Expression::Builtin {
             loc: *loc,
             tys: vec![Type::Uint(32)],
-            builtin: Builtin::ArrayLength,
+            kind: Builtin::ArrayLength,
             args: vec![array.clone()],
         },
         _ => {
