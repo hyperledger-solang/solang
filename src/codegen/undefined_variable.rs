@@ -77,10 +77,10 @@ pub fn find_undefined_variables_in_expression(
     ctx: &mut FindUndefinedVariablesParams,
 ) -> bool {
     match &exp {
-        Expression::Variable { var_no: pos, .. } => {
+        Expression::Variable { var_no, .. } => {
             let variable = match ctx.func_no {
                 ASTFunction::YulFunction(func_no) => {
-                    ctx.ns.yul_functions[func_no].symtable.vars.get(pos)
+                    ctx.ns.yul_functions[func_no].symtable.vars.get(var_no)
                 }
                 ASTFunction::SolidityFunction(func_no) => {
                     ctx.ns.functions[func_no].symtable.vars.get(pos)

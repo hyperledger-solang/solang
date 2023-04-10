@@ -1400,10 +1400,10 @@ fn expression(
         Expression::StructMember {
             loc,
             ty,
-            expr: strct,
+            expr,
             member,
         } => {
-            let strct = expression(strct, vars, cfg, ns);
+            let strct = expression(expr, vars, cfg, ns);
 
             (
                 Expression::StructMember {

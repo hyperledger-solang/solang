@@ -376,15 +376,15 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
     /// Check if an expression is available
     pub fn find_expression(&self, exp: &Expression) -> Option<NodeId> {
         match exp {
-            Expression::FunctionArg { arg_no: pos, .. } => {
+            Expression::FunctionArg { arg_no, .. } => {
                 return self
                     .expr_map
-                    .get(&ExpressionType::FunctionArg(*pos))
+                    .get(&ExpressionType::FunctionArg(*arg_no))
                     .copied();
             }
 
-            Expression::Variable { var_no: pos, .. } => {
-                return self.expr_map.get(&ExpressionType::Variable(*pos)).copied();
+            Expression::Variable { var_no, .. } => {
+                return self.expr_map.get(&ExpressionType::Variable(*var_no)).copied();
             }
 
             //Expression::ConstantVariable(..)

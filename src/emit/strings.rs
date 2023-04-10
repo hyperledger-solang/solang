@@ -27,8 +27,8 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
 
     for (i, (spec, arg)) in args.iter().enumerate() {
         let len = if *spec == FormatArg::StringLiteral {
-            if let Expression::BytesLiteral { value: bs, .. } = arg {
-                bin.context.i32_type().const_int(bs.len() as u64, false)
+            if let Expression::BytesLiteral { value, .. } = arg {
+                bin.context.i32_type().const_int(value.len() as u64, false)
             } else {
                 unreachable!();
             }
@@ -100,8 +100,8 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
     // format it
     for (i, (spec, arg)) in args.iter().enumerate() {
         if *spec == FormatArg::StringLiteral {
-            if let Expression::BytesLiteral { value: bs, .. } = arg {
-                let s = bin.emit_global_string("format_arg", bs, true);
+            if let Expression::BytesLiteral { value, .. } = arg {
+                let s = bin.emit_global_string("format_arg", value, true);
                 let len = bin.context.i32_type().const_int(bs.len() as u64, false);
 
                 bin.builder.build_call(
