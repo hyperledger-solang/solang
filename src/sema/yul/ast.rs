@@ -22,12 +22,13 @@ pub struct YulBlock {
     pub loc: pt::Loc,
     pub reachable: bool,
     pub next_reachable: bool,
-    pub body: Vec<YulStatement>,
+    pub statements: Vec<YulStatement>,
 }
 
 impl YulBlock {
+    /// Returns if whatever follows the YulBlock is reachable
     pub fn is_next_reachable(&self) -> bool {
-        self.body.is_empty() || (!self.body.is_empty() && self.next_reachable)
+        self.statements.is_empty() || (!self.statements.is_empty() && self.next_reachable)
     }
 }
 
@@ -124,7 +125,7 @@ pub struct YulFunction {
     pub name: String,
     pub params: Arc<Vec<Parameter>>,
     pub returns: Arc<Vec<Parameter>>,
-    pub body: Vec<YulStatement>,
+    pub body: YulBlock,
     pub symtable: Symtable,
     pub parent_sol_func: Option<usize>,
     pub func_no: usize,
@@ -175,6 +176,8 @@ pub enum YulStatement {
 }
 
 impl YulStatement {
+    /// Returns if the current statement is reachable, i.e. there is a code path from the entry to
+    /// it.
     pub fn is_reachable(&self) -> bool {
         match self {
             YulStatement::FunctionCall(_, reachable, ..)

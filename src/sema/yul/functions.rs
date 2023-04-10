@@ -4,7 +4,7 @@ use crate::sema::ast::{Namespace, Parameter, Type};
 use crate::sema::expression::ExprContext;
 use crate::sema::symtable::{LoopScopes, Symtable, VariableInitializer, VariableUsage};
 use crate::sema::yul::ast::YulFunction;
-use crate::sema::yul::block::process_statements;
+use crate::sema::yul::block::resolve_yul_block;
 use crate::sema::yul::builtin::{parse_builtin_keyword, yul_unsupported_builtin};
 use crate::sema::yul::types::get_type_from_string;
 use solang_parser::diagnostics::{ErrorType, Level, Note};
@@ -218,7 +218,6 @@ pub(crate) fn resolve_function_definition(
     let mut symtable = Symtable::new();
     let mut local_ctx = context.clone();
     local_ctx.yul_function = true;
-    functions_table.new_scope();
 
     let (params, returns, func_no) = functions_table.get_params_returns_func_no(&func_def.id.name);
 
@@ -250,23 +249,23 @@ pub(crate) fn resolve_function_definition(
 
     let mut loop_scope = LoopScopes::new();
 
-    let (body, _) = process_statements(
+    let (body_block, _) = resolve_yul_block(
+        &func_def.body.loc,
         &func_def.body.statements,
         &local_ctx,
         true,
-        &mut symtable,
         &mut loop_scope,
         functions_table,
+        &mut symtable,
         ns,
     );
 
-    functions_table.leave_scope(ns);
     Ok(YulFunction {
         loc: func_def.loc,
         name: func_def.id.name.clone(),
         params,
         returns,
-        body,
+        body: body_block,
         symtable,
         func_no,
         parent_sol_func: context.function_no,

@@ -171,7 +171,7 @@ pub(crate) fn resolve_yul_statement(
 /// Top-leve function calls must not return anything, so there is a special function to handle them.
 fn resolve_top_level_function_call(
     func_call: &pt::YulFunctionCall,
-    mut reachable: bool,
+    reachable: bool,
     function_table: &mut FunctionsTable,
     context: &ExprContext,
     symtable: &mut Symtable,
@@ -186,9 +186,6 @@ fn resolve_top_level_function_call(
                     "top level function calls must not return anything".to_string(),
                 ));
                 return Err(());
-            }
-            if func_prototype.stops_execution {
-                reachable = false;
             }
             Ok((
                 YulStatement::BuiltInCall(loc, reachable, ty, args),
