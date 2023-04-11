@@ -519,7 +519,7 @@ impl Namespace {
         if path.identifiers.len() == 1 {
             let id = &path.identifiers[0];
 
-            // If we're in a contract, then error can be defined in current contract or its bases
+            // If we're in a contract, error can be defined in current contract or its bases
             if let Some(contract_no) = contract_no {
                 for contract_no in self.contract_bases(contract_no).into_iter().rev() {
                     let file_no = self.contracts[contract_no].loc.file_no();
