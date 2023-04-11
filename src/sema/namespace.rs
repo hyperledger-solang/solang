@@ -412,8 +412,8 @@ impl Namespace {
             }
         };
 
-        // if we are resolving an event name without namespace (so no explicit contract name
-        // or import symbol), then we should look both in the current contract and global scope
+        // If we are resolving an event name without namespace (so no explicit contract name
+        // or import symbol), then we should search both the current contract and global scope.
         if namespace.is_empty() {
             let mut events = Vec::new();
 
@@ -515,7 +515,7 @@ impl Namespace {
         diagnostics: &mut Diagnostics,
     ) -> Result<usize, ()> {
         // If we are resolving an error name without a namespace (so no explicit contract name
-        // or import symbol), then we should look both in the current contract and global scope
+        // or import symbol), then we should search both the current contract and global scope.
         if path.identifiers.len() == 1 {
             let id = &path.identifiers[0];
 
