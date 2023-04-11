@@ -1877,8 +1877,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         match expr {
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Timestamp,
+                args,
                 ..
             } => {
+                assert_eq!(args.len(), 0);
+
                 let parameters = self.sol_parameters(binary);
 
                 let sol_clock = binary.module.get_function("sol_clock").unwrap();
@@ -1906,8 +1909,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::BlockNumber | codegen::Builtin::Slot,
+                args,
                 ..
             } => {
+                assert_eq!(args.len(), 0);
+
                 let parameters = self.sol_parameters(binary);
 
                 let sol_clock = binary.module.get_function("sol_clock").unwrap();
@@ -1935,8 +1941,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::GetAddress,
+                args,
                 ..
             } => {
+                assert_eq!(args.len(), 0);
+
                 let parameters = self.sol_parameters(binary);
 
                 let key = unsafe {
@@ -1970,8 +1979,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::ProgramId,
+                args,
                 ..
             } => {
+                assert_eq!(args.len(), 0);
+
                 let parameters = self.sol_parameters(binary);
 
                 let sol_pubkey_type = binary.module.get_struct_type("struct.SolPubkey").unwrap();
@@ -2001,8 +2013,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Calldata,
+                args,
                 ..
             } => {
+                assert_eq!(args.len(), 0);
+
                 let sol_params = self.sol_parameters(binary);
 
                 let input = binary
@@ -2068,8 +2083,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Signature,
+                args,
                 ..
             } => {
+                assert_eq!(args.len(), 0);
+
                 let sol_params = self.sol_parameters(binary);
 
                 let input = binary
@@ -2184,8 +2202,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Accounts,
+                args,
                 ..
             } => {
+                assert_eq!(args.len(), 0);
+
                 let parameters = self.sol_parameters(binary);
 
                 unsafe {
@@ -2207,8 +2228,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::ArrayLength,
+                args,
                 ..
             } => {
+                assert_eq!(args.len(), 0);
+
                 let parameters = self.sol_parameters(binary);
 
                 let ka_num = binary

@@ -841,10 +841,10 @@ pub fn expression(
 
                 let array_pos = match expression(&args[0], cfg, contract_no, func, ns, vartab, opt)
                 {
-                    Expression::Variable { var_no: pos, .. } => {
-                        vartab.set_dirty(pos);
+                    Expression::Variable { var_no, .. } => {
+                        vartab.set_dirty(var_no);
 
-                        pos
+                        var_no
                     }
                     _ => unreachable!(),
                 };
@@ -3045,6 +3045,7 @@ pub fn default_gas(ns: &Namespace) -> Expression {
     Expression::NumberLiteral {
         loc: pt::Loc::Codegen,
         ty: Type::Uint(64),
+        // See EIP150
         value: if ns.target == Target::EVM {
             BigInt::from(i64::MAX)
         } else {

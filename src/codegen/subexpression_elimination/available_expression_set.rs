@@ -384,7 +384,10 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
             }
 
             Expression::Variable { var_no, .. } => {
-                return self.expr_map.get(&ExpressionType::Variable(*var_no)).copied();
+                return self
+                    .expr_map
+                    .get(&ExpressionType::Variable(*var_no))
+                    .copied();
             }
 
             //Expression::ConstantVariable(..)
