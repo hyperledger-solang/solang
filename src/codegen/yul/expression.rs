@@ -24,7 +24,10 @@ pub(crate) fn expression(
     match expr {
         ast::YulExpression::BoolLiteral(loc, value, ty) => {
             if matches!(ty, Type::Bool) {
-                return Expression::BoolLiteral(*loc, *value);
+                return Expression::BoolLiteral {
+                    loc: *loc,
+                    value: *value,
+                };
             }
 
             // If the user has coerced a type for bool, it is a number literal.
@@ -34,17 +37,27 @@ pub(crate) fn expression(
                 BigInt::from(0)
             };
 
-            Expression::NumberLiteral(*loc, ty.clone(), num)
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: ty.clone(),
+                value: num,
+            }
         }
-        ast::YulExpression::NumberLiteral(loc, value, ty) => {
-            Expression::NumberLiteral(*loc, ty.clone(), value.clone())
-        }
-        ast::YulExpression::StringLiteral(loc, value, ty) => {
-            Expression::NumberLiteral(*loc, ty.clone(), BigInt::from_bytes_be(Sign::Plus, value))
-        }
-        ast::YulExpression::YulLocalVariable(loc, ty, var_no) => {
-            Expression::Variable(*loc, ty.clone(), *var_no)
-        }
+        ast::YulExpression::NumberLiteral(loc, value, ty) => Expression::NumberLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            value: value.clone(),
+        },
+        ast::YulExpression::StringLiteral(loc, value, ty) => Expression::NumberLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            value: BigInt::from_bytes_be(Sign::Plus, value),
+        },
+        ast::YulExpression::YulLocalVariable(loc, ty, var_no) => Expression::Variable {
+            loc: *loc,
+            ty: ty.clone(),
+            var_no: *var_no,
+        },
         ast::YulExpression::ConstantVariable(_, _, Some(var_contract_no), var_no) => {
             codegen::expression(
                 ns.contracts[*var_contract_no].variables[*var_no]
@@ -72,9 +85,11 @@ pub(crate) fn expression(
         | ast::YulExpression::SolidityLocalVariable(_, _, Some(StorageLocation::Storage(_)), ..) => {
             panic!("Storage variables cannot be accessed without suffixed in yul");
         }
-        ast::YulExpression::SolidityLocalVariable(loc, ty, _, var_no) => {
-            Expression::Variable(*loc, ty.clone(), *var_no)
-        }
+        ast::YulExpression::SolidityLocalVariable(loc, ty, _, var_no) => Expression::Variable {
+            loc: *loc,
+            ty: ty.clone(),
+            var_no: *var_no,
+        },
         ast::YulExpression::SuffixAccess(loc, expr, suffix) => {
             process_suffix_access(loc, expr, suffix, contract_no, vartab, cfg, ns, opt)
         }
@@ -119,7 +134,11 @@ fn process_suffix_access(
                 Some(StorageLocation::Storage(_)),
                 var_no,
             ) => {
-                return Expression::Variable(*loc, Type::Uint(256), *var_no);
+                return Expression::Variable {
+                    loc: *loc,
+                    ty: Type::Uint(256),
+                    var_no: *var_no,
+                };
             }
 
             _ => (),
@@ -132,7 +151,11 @@ fn process_suffix_access(
                 Some(StorageLocation::Storage(_)),
                 ..,
             ) => {
-                return Expression::NumberLiteral(Loc::Codegen, Type::Uint(256), BigInt::from(0));
+                return Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(256),
+                    value: BigInt::from(0),
+                };
             }
 
             ast::YulExpression::SolidityLocalVariable(
@@ -142,11 +165,15 @@ fn process_suffix_access(
                 var_no,
             ) => {
                 if dims.last() == Some(&ArrayLength::Dynamic) {
-                    return Expression::Cast(
-                        *loc,
-                        Type::Uint(256),
-                        Box::new(Expression::Variable(*loc, ty.clone(), *var_no)),
-                    );
+                    return Expression::Cast {
+                        loc: *loc,
+                        ty: Type::Uint(256),
+                        expr: Box::new(Expression::Variable {
+                            loc: *loc,
+                            ty: ty.clone(),
+                            var_no: *var_no,
+                        }),
+                    };
                 }
             }
 
@@ -162,12 +189,12 @@ fn process_suffix_access(
             ) = expr
             {
                 if dims.last() == Some(&ArrayLength::Dynamic) {
-                    return Expression::Builtin(
-                        *loc,
-                        vec![Type::Uint(32)],
-                        Builtin::ArrayLength,
-                        vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
-                    );
+                    return Expression::Builtin {
+                        loc: *loc,
+                        tys: vec![Type::Uint(32)],
+                        kind: Builtin::ArrayLength,
+                        args: vec![expression(expr, contract_no, ns, vartab, cfg, opt)],
+                    };
                 }
             }
         }
@@ -240,7 +267,11 @@ pub(crate) fn process_function_call(
         let temp_pos = vartab.temp(&id, &ret.ty);
         return_tys.push(ret.ty.clone());
         res.push(temp_pos);
-        returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
+        returns.push(Expression::Variable {
+            loc: id.loc,
+            ty: ret.ty.clone(),
+            var_no: temp_pos,
+        });
     }
 
     cfg.add(

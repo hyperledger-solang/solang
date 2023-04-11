@@ -47,13 +47,21 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         let event = &self.ns.events[self.event_no];
         // For freestanding events the name of the emitting contract is used
         let contract_name = &self.ns.contracts[event.contract.unwrap_or(contract_no)].name;
-        let hash_len = Box::new(Expression::NumberLiteral(loc, Type::Uint(32), 32.into()));
+        let hash_len = Box::new(Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(32),
+            value: 32.into(),
+        });
         let id = self.ns.contracts[contract_no]
             .emits_events
             .iter()
             .position(|e| *e == self.event_no)
             .expect("contract emits this event");
-        let mut data = vec![Expression::NumberLiteral(loc, Type::Uint(8), id.into())];
+        let mut data = vec![Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(8),
+            value: id.into(),
+        }];
         let mut topics = vec![];
 
         // Events that are not anonymous always have themselves as a topic.
@@ -61,12 +69,12 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         if !event.anonymous {
             // First byte is 0 because there is no prefix for the event topic
             let encoded = format!("\0{}::{}", contract_name, &event.name);
-            topics.push(Expression::AllocDynamicBytes(
+            topics.push(Expression::AllocDynamicBytes {
                 loc,
-                Type::Slice(Type::Uint(8).into()),
-                hash_len.clone(),
-                Some(topic_hash(encoded.as_bytes())),
-            ));
+                ty: Type::Slice(Type::Uint(8).into()),
+                size: hash_len.clone(),
+                initializer: Some(topic_hash(encoded.as_bytes())),
+            });
         };
 
         // Topic prefixes are static and can be calculated at compile time.
@@ -89,7 +97,11 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
         for (ast_exp, field) in self.args.iter().zip(event.fields.iter()) {
             let value_exp = expression(ast_exp, cfg, contract_no, Some(func), self.ns, vartab, opt);
             let value_var = vartab.temp_anonymous(&value_exp.ty());
-            let value = Expression::Variable(loc, value_exp.ty(), value_var);
+            let value = Expression::Variable {
+                loc,
+                ty: value_exp.ty(),
+                var_no: value_var,
+            };
             cfg.add(
                 vartab,
                 Instr::Set {
@@ -107,7 +119,12 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
             let encoded = abi_encode(&loc, vec![value], self.ns, vartab, cfg, false).0;
             let prefix = StringLocation::CompileTime(topic_prefixes.pop_front().unwrap());
             let value = StringLocation::RunTime(encoded.into());
-            let concatenated = Expression::StringConcat(loc, Type::DynamicBytes, prefix, value);
+            let concatenated = Expression::StringConcat {
+                loc,
+                ty: Type::DynamicBytes,
+                left: prefix,
+                right: value,
+            };
 
             vartab.new_dirty_tracker();
             let var_buffer = vartab.temp_anonymous(&Type::DynamicBytes);
@@ -119,16 +136,20 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                     expr: concatenated,
                 },
             );
-            let buffer = Expression::Variable(loc, Type::DynamicBytes, var_buffer);
+            let buffer = Expression::Variable {
+                loc,
+                ty: Type::DynamicBytes,
+                var_no: var_buffer,
+            };
             let compare = Expression::More {
                 loc,
                 signed: false,
-                left: Expression::Builtin(
+                left: Expression::Builtin {
                     loc,
-                    vec![Type::Uint(32)],
-                    Builtin::ArrayLength,
-                    vec![buffer.clone()],
-                )
+                    tys: vec![Type::Uint(32)],
+                    kind: Builtin::ArrayLength,
+                    args: vec![buffer.clone()],
+                }
                 .into(),
                 right: hash_len.clone(),
             };
@@ -149,13 +170,17 @@ impl EventEmitter for SubstrateEventEmitter<'_> {
                 vartab,
                 Instr::WriteBuffer {
                     buf: buffer.clone(),
-                    offset: Expression::NumberLiteral(loc, Type::Uint(32), 0.into()),
-                    value: Expression::Builtin(
+                    offset: Expression::NumberLiteral {
                         loc,
-                        vec![Type::Bytes(32)],
-                        Builtin::Blake2_256,
-                        vec![buffer.clone()],
-                    ),
+                        ty: Type::Uint(32),
+                        value: 0.into(),
+                    },
+                    value: Expression::Builtin {
+                        loc,
+                        tys: vec![Type::Bytes(32)],
+                        kind: Builtin::Blake2_256,
+                        args: vec![buffer.clone()],
+                    },
                 },
             );
             vartab.set_dirty(var_buffer);

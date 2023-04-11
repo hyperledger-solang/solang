@@ -51,7 +51,7 @@ pub(crate) fn verify_type_from_expression(
     function_table: &FunctionsTable,
 ) -> Result<Type, Diagnostic> {
     match expr {
-        YulExpression::BoolLiteral(..) => Ok(Type::Bool),
+        YulExpression::BoolLiteral { .. } => Ok(Type::Bool),
 
         YulExpression::NumberLiteral(_, _, ty)
         | YulExpression::StringLiteral(_, _, ty)

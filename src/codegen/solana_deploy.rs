@@ -32,20 +32,20 @@ pub(super) fn solana_deploy(
 
     if let Some(program_id) = program_id {
         // emit code to check program_id == program_id
-        let cond = Expression::Equal(
-            Loc::Codegen,
-            Box::new(Expression::NumberLiteral(
-                Loc::Codegen,
-                Type::Address(false),
-                BigInt::from_bytes_be(Sign::Plus, program_id),
-            )),
-            Box::new(Expression::Builtin(
-                Loc::Codegen,
-                vec![Type::Address(false)],
-                Builtin::ProgramId,
-                Vec::new(),
-            )),
-        );
+        let cond = Expression::Equal {
+            loc: Loc::Codegen,
+            left: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Address(false),
+                value: BigInt::from_bytes_be(Sign::Plus, program_id),
+            }),
+            right: Box::new(Expression::Builtin {
+                loc: Loc::Codegen,
+                tys: vec![Type::Address(false)],
+                kind: Builtin::ProgramId,
+                args: Vec::new(),
+            }),
+        };
 
         let id_fail = cfg.new_basic_block("program_id_fail".to_string());
 
@@ -64,16 +64,16 @@ pub(super) fn solana_deploy(
 
         let message = format!("program_id should be {}", program_id.to_base58()).into_bytes();
 
-        let expr = Expression::AllocDynamicBytes(
-            Loc::Codegen,
-            Type::String,
-            Box::new(Expression::NumberLiteral(
-                Loc::Codegen,
-                Type::Uint(32),
-                BigInt::from(message.len()),
-            )),
-            Some(message),
-        );
+        let expr = Expression::AllocDynamicBytes {
+            loc: Loc::Codegen,
+            ty: Type::String,
+            size: Box::new(Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                value: BigInt::from(message.len()),
+            }),
+            initializer: Some(message),
+        };
 
         cfg.add(vartab, Instr::Print { expr });
 
@@ -91,38 +91,43 @@ pub(super) fn solana_deploy(
     // account via `tx.accounts[0].data.length`.
 
     // tx.accounts[0]
-    let tx_account_0 = Expression::Subscript(
-        Loc::Codegen,
-        Type::Struct(StructType::AccountInfo),
-        Type::Array(
+    let tx_account_0 = Expression::Subscript {
+        loc: Loc::Codegen,
+        ty: Type::Struct(StructType::AccountInfo),
+        array_ty: Type::Array(
             Type::Struct(StructType::AccountInfo).into(),
             vec![ArrayLength::Dynamic],
         ),
-        Expression::Builtin(
-            Loc::Codegen,
-            vec![Type::Array(
+        expr: Expression::Builtin {
+            loc: Loc::Codegen,
+            tys: vec![Type::Array(
                 Type::Struct(StructType::AccountInfo).into(),
                 vec![ArrayLength::Dynamic],
             )],
-            Builtin::Accounts,
-            vec![],
-        )
+            kind: Builtin::Accounts,
+            args: vec![],
+        }
         .into(),
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::zero()).into(),
-    );
+        index: Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(32),
+            value: BigInt::zero(),
+        }
+        .into(),
+    };
 
     // .data.length
-    let account_length = Expression::Builtin(
-        Loc::Codegen,
-        vec![Type::Uint(32)],
-        Builtin::ArrayLength,
-        vec![Expression::StructMember(
-            Loc::Codegen,
-            Type::DynamicBytes,
-            tx_account_0.into(),
-            2,
-        )],
-    );
+    let account_length = Expression::Builtin {
+        loc: Loc::Codegen,
+        tys: vec![Type::Uint(32)],
+        kind: Builtin::ArrayLength,
+        args: vec![Expression::StructMember {
+            loc: Loc::Codegen,
+            ty: Type::DynamicBytes,
+            expr: tx_account_0.into(),
+            member: 2,
+        }],
+    };
 
     let account_data_var = vartab.temp_name("data_length", &Type::Uint(32));
 
@@ -135,13 +140,22 @@ pub(super) fn solana_deploy(
         },
     );
 
-    let account_length = Expression::Variable(Loc::Codegen, Type::Uint(32), account_data_var);
+    let account_length = Expression::Variable {
+        loc: Loc::Codegen,
+        ty: Type::Uint(32),
+        var_no: account_data_var,
+    };
 
-    let account_no_data = Expression::Equal(
-        Loc::Codegen,
-        account_length.clone().into(),
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), 0.into()).into(),
-    );
+    let account_no_data = Expression::Equal {
+        loc: Loc::Codegen,
+        left: account_length.clone().into(),
+        right: Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(32),
+            value: 0.into(),
+        }
+        .into(),
+    };
 
     let account_exists = cfg.new_basic_block("account_exists".into());
     let create_account = cfg.new_basic_block("create_account".into());
@@ -161,11 +175,11 @@ pub(super) fn solana_deploy(
         loc: Loc::Codegen,
         signed: false,
         left: account_length.into(),
-        right: Expression::NumberLiteral(
-            Loc::Codegen,
-            Type::Uint(32),
-            contract.fixed_layout_size.clone(),
-        )
+        right: Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(32),
+            value: contract.fixed_layout_size.clone(),
+        }
         .into(),
     };
 
@@ -231,44 +245,56 @@ pub(super) fn solana_deploy(
             Instr::Set {
                 loc: Loc::Codegen,
                 res: metas,
-                expr: Expression::ArrayLiteral(
-                    Loc::Codegen,
-                    metas_ty.clone(),
-                    vec![2],
-                    vec![
-                        Expression::StructLiteral(
-                            Loc::Codegen,
-                            Type::Struct(StructType::AccountMeta),
-                            vec![
-                                Expression::GetRef(
-                                    Loc::Codegen,
-                                    Type::Address(false),
-                                    Box::new(payer),
-                                ),
-                                Expression::BoolLiteral(Loc::Codegen, true),
-                                Expression::BoolLiteral(Loc::Codegen, true),
+                expr: Expression::ArrayLiteral {
+                    loc: Loc::Codegen,
+                    ty: metas_ty.clone(),
+                    dimensions: vec![2],
+                    values: vec![
+                        Expression::StructLiteral {
+                            loc: Loc::Codegen,
+                            ty: Type::Struct(StructType::AccountMeta),
+                            values: vec![
+                                Expression::GetRef {
+                                    loc: Loc::Codegen,
+                                    ty: Type::Address(false),
+                                    expr: Box::new(payer),
+                                },
+                                Expression::BoolLiteral {
+                                    loc: Loc::Codegen,
+                                    value: true,
+                                },
+                                Expression::BoolLiteral {
+                                    loc: Loc::Codegen,
+                                    value: true,
+                                },
                             ],
-                        ),
-                        Expression::StructLiteral(
-                            Loc::Codegen,
-                            Type::Struct(StructType::AccountMeta),
-                            vec![
-                                Expression::GetRef(
-                                    Loc::Codegen,
-                                    Type::Address(false),
-                                    Box::new(Expression::Builtin(
-                                        Loc::Codegen,
-                                        vec![Type::Address(false)],
-                                        Builtin::GetAddress,
-                                        vec![],
-                                    )),
-                                ),
-                                Expression::BoolLiteral(Loc::Codegen, true),
-                                Expression::BoolLiteral(Loc::Codegen, true),
+                        },
+                        Expression::StructLiteral {
+                            loc: Loc::Codegen,
+                            ty: Type::Struct(StructType::AccountMeta),
+                            values: vec![
+                                Expression::GetRef {
+                                    loc: Loc::Codegen,
+                                    ty: Type::Address(false),
+                                    expr: Box::new(Expression::Builtin {
+                                        loc: Loc::Codegen,
+                                        tys: vec![Type::Address(false)],
+                                        kind: Builtin::GetAddress,
+                                        args: vec![],
+                                    }),
+                                },
+                                Expression::BoolLiteral {
+                                    loc: Loc::Codegen,
+                                    value: true,
+                                },
+                                Expression::BoolLiteral {
+                                    loc: Loc::Codegen,
+                                    value: true,
+                                },
                             ],
-                        ),
+                        },
                     ],
-                ),
+                },
             },
         );
 
@@ -290,24 +316,37 @@ pub(super) fn solana_deploy(
                 },
             );
 
-            let space = Expression::Variable(Loc::Codegen, Type::Uint(64), space_var);
+            let space = Expression::Variable {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                var_no: space_var,
+            };
 
             // https://github.com/solana-labs/solana/blob/718f433206c124da85a8aa2476c0753f351f9a28/sdk/program/src/rent.rs#L78-L82
-            let lamports = Expression::Multiply(
-                Loc::Codegen,
-                Type::Uint(64),
-                false,
-                Expression::Add(
-                    Loc::Codegen,
-                    Type::Uint(64),
-                    false,
-                    space.clone().into(),
-                    Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), 128.into()).into(),
-                )
-                .into(),
-                Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(3480 * 2))
+            let lamports = Expression::Multiply {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                overflowing: false,
+                left: Expression::Add {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    overflowing: false,
+                    left: space.clone().into(),
+                    right: Expression::NumberLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(64),
+                        value: 128.into(),
+                    }
                     .into(),
-            );
+                }
+                .into(),
+                right: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(3480 * 2),
+                }
+                .into(),
+            };
 
             (space, lamports)
         } else {
@@ -317,21 +356,25 @@ pub(super) fn solana_deploy(
             let lamports_runtime_constant = (128 + space_runtime_constant) * 3480 * 2;
 
             (
-                Expression::NumberLiteral(
-                    Loc::Codegen,
-                    Type::Uint(64),
-                    space_runtime_constant.into(),
-                ),
-                Expression::NumberLiteral(
-                    Loc::Codegen,
-                    Type::Uint(64),
-                    lamports_runtime_constant.into(),
-                ),
+                Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: space_runtime_constant.into(),
+                },
+                Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: lamports_runtime_constant.into(),
+                },
             )
         };
 
         let instruction_var = vartab.temp_name("instruction", &Type::DynamicBytes);
-        let instruction = Expression::Variable(Loc::Codegen, Type::DynamicBytes, instruction_var);
+        let instruction = Expression::Variable {
+            loc: Loc::Codegen,
+            ty: Type::DynamicBytes,
+            var_no: instruction_var,
+        };
 
         // The CreateAccount instruction is 52 bytes (4 + 8 + 8 + 32)
         let instruction_size = 52;
@@ -341,17 +384,17 @@ pub(super) fn solana_deploy(
             Instr::Set {
                 loc: Loc::Codegen,
                 res: instruction_var,
-                expr: Expression::AllocDynamicBytes(
-                    Loc::Codegen,
-                    Type::DynamicBytes,
-                    Expression::NumberLiteral(
-                        Loc::Codegen,
-                        Type::Uint(32),
-                        instruction_size.into(),
-                    )
+                expr: Expression::AllocDynamicBytes {
+                    loc: Loc::Codegen,
+                    ty: Type::DynamicBytes,
+                    size: Expression::NumberLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(32),
+                        value: instruction_size.into(),
+                    }
                     .into(),
-                    None,
-                ),
+                    initializer: None,
+                },
             },
         );
 
@@ -360,8 +403,16 @@ pub(super) fn solana_deploy(
             vartab,
             Instr::WriteBuffer {
                 buf: instruction.clone(),
-                value: Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(0)),
-                offset: Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(0)),
+                value: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(0),
+                },
+                offset: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(0),
+                },
             },
         );
 
@@ -371,7 +422,11 @@ pub(super) fn solana_deploy(
             Instr::WriteBuffer {
                 buf: instruction.clone(),
                 value: lamports,
-                offset: Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(4)),
+                offset: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(4),
+                },
             },
         );
 
@@ -381,7 +436,11 @@ pub(super) fn solana_deploy(
             Instr::WriteBuffer {
                 buf: instruction.clone(),
                 value: space,
-                offset: Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(12)),
+                offset: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(12),
+                },
             },
         );
 
@@ -391,20 +450,24 @@ pub(super) fn solana_deploy(
             Instr::WriteBuffer {
                 buf: instruction.clone(),
                 value: if let Some(program_id) = program_id {
-                    Expression::NumberLiteral(
-                        Loc::Codegen,
-                        Type::Address(false),
-                        BigInt::from_bytes_be(Sign::Plus, program_id),
-                    )
+                    Expression::NumberLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Address(false),
+                        value: BigInt::from_bytes_be(Sign::Plus, program_id),
+                    }
                 } else {
-                    Expression::Builtin(
-                        Loc::Codegen,
-                        vec![Type::Address(false)],
-                        Builtin::ProgramId,
-                        vec![],
-                    )
+                    Expression::Builtin {
+                        loc: Loc::Codegen,
+                        tys: vec![Type::Address(false)],
+                        kind: Builtin::ProgramId,
+                        args: vec![],
+                    }
                 },
-                offset: Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(20)),
+                offset: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(32),
+                    value: BigInt::from(20),
+                },
             },
         );
 
@@ -441,20 +504,24 @@ pub(super) fn solana_deploy(
                 vec![ArrayLength::Fixed(seeds.len().into())],
             );
 
-            let address_seeds =
-                Expression::ArrayLiteral(Loc::Codegen, ty, vec![seeds.len() as u32], seeds);
+            let address_seeds = Expression::ArrayLiteral {
+                loc: Loc::Codegen,
+                ty,
+                dimensions: vec![seeds.len() as u32],
+                values: seeds,
+            };
 
             let ty = Type::Array(
                 Box::new(Type::Slice(Box::new(Type::Slice(Box::new(Type::Bytes(1)))))),
                 vec![ArrayLength::Fixed(1.into())],
             );
 
-            Some(Expression::ArrayLiteral(
-                Loc::Codegen,
+            Some(Expression::ArrayLiteral {
+                loc: Loc::Codegen,
                 ty,
-                vec![1],
-                vec![address_seeds],
-            ))
+                dimensions: vec![1],
+                values: vec![address_seeds],
+            })
         } else {
             None
         };
@@ -464,15 +531,27 @@ pub(super) fn solana_deploy(
             Instr::ExternalCall {
                 success: None,
                 seeds,
-                address: Some(Expression::NumberLiteral(
-                    Loc::Codegen,
-                    Type::Address(false),
-                    BigInt::from(0),
-                )), // SystemProgram 11111111111111111111111111111111
-                accounts: Some(Expression::Variable(Loc::Codegen, metas_ty, metas)),
+                address: Some(Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Address(false),
+                    value: BigInt::from(0),
+                }), // SystemProgram 11111111111111111111111111111111
+                accounts: Some(Expression::Variable {
+                    loc: Loc::Codegen,
+                    ty: metas_ty,
+                    var_no: metas,
+                }),
                 payload: instruction,
-                value: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(0)),
-                gas: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(0)),
+                value: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(0),
+                },
+                gas: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(0),
+                },
                 callty: CallTy::Regular,
                 contract_function_no: None,
             },
@@ -495,12 +574,16 @@ pub(super) fn solana_deploy(
         vartab,
         Instr::SetStorage {
             ty: Type::Uint(32),
-            value: Expression::NumberLiteral(
-                Loc::Codegen,
-                Type::Uint(64),
-                BigInt::from(contract.selector()),
-            ),
-            storage: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::zero()),
+            value: Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::from(contract.selector()),
+            },
+            storage: Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::zero(),
+            },
         },
     );
 
@@ -515,12 +598,16 @@ pub(super) fn solana_deploy(
         vartab,
         Instr::SetStorage {
             ty: Type::Uint(32),
-            value: Expression::NumberLiteral(
-                Loc::Codegen,
-                Type::Uint(64),
-                BigInt::from(heap_offset),
-            ),
-            storage: Expression::NumberLiteral(Loc::Codegen, Type::Uint(64), BigInt::from(12)),
+            value: Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::from(heap_offset),
+            },
+            storage: Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(64),
+                value: BigInt::from(12),
+            },
         },
     );
 }

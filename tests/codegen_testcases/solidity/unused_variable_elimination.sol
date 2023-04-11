@@ -115,7 +115,7 @@ return 3;
         it2 = 1;
 
         return 2;
-// CHECK: store storage slot((unchecked %t2 + uint256 0)) ty:int256 =
+// CHECK: store storage slot((overflowing %t2 + uint256 0)) ty:int256 =
 // CHECK: store storage slot(uint256 2) ty:int256 =
 // NOT-CHECK: ty:struct c1.testStruct %t3 = struct { int256 1, int256 2 }
 // NOT-CHECK: alloc int256[] len uint32 5

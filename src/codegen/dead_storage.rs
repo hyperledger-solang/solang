@@ -208,7 +208,7 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
         transfers.push(match instr {
             Instr::Set {
                 res,
-                expr: Expression::Variable(_, _, src),
+                expr: Expression::Variable { var_no: src, .. },
                 ..
             } => {
                 vec![
@@ -312,8 +312,8 @@ fn instr_transfers(block_no: usize, block: &BasicBlock) -> Vec<Vec<Transfer>> {
 
 fn array_var(expr: &Expression) -> Option<usize> {
     match expr {
-        Expression::Variable(_, _, var_no) => Some(*var_no),
-        Expression::Subscript(_, _, _, expr, _) | Expression::StructMember(_, _, expr, _) => {
+        Expression::Variable { var_no, .. } => Some(*var_no),
+        Expression::Subscript { expr, .. } | Expression::StructMember { expr, .. } => {
             array_var(expr)
         }
         _ => None,
@@ -524,7 +524,11 @@ pub fn dead_storage(cfg: &mut ControlFlowGraph, _ns: &mut Namespace) {
                         cfg.blocks[block_no].instr[instr_no] = Instr::Set {
                             loc: Loc::Codegen,
                             res: *res,
-                            expr: Expression::Variable(Loc::Codegen, ty.clone(), *var_no),
+                            expr: Expression::Variable {
+                                loc: Loc::Codegen,
+                                ty: ty.clone(),
+                                var_no: *var_no,
+                            },
                         };
                     } else {
                         for (def, expr) in &vars.stores {
@@ -684,14 +688,17 @@ fn expression_compare(
     block_vars: &BlockVars,
 ) -> ExpressionCmp {
     let v = match (left, right) {
-        (Expression::NumberLiteral(_, _, left), Expression::NumberLiteral(_, _, right)) => {
+        (
+            Expression::NumberLiteral { value: left, .. },
+            Expression::NumberLiteral { value: right, .. },
+        ) => {
             if left == right {
                 ExpressionCmp::Equal
             } else {
                 ExpressionCmp::NotEqual
             }
         }
-        (Expression::Keccak256(_, _, left), Expression::Keccak256(_, _, right)) => {
+        (Expression::Keccak256 { exprs: left, .. }, Expression::Keccak256 { exprs: right, .. }) => {
             // This could be written with fold_first() rather than collect(), but that is an unstable feature.
             // Also fold first does not short circuit
             let cmps: Vec<ExpressionCmp> = left
@@ -710,11 +717,14 @@ fn expression_compare(
                 first
             }
         }
-        (Expression::ZeroExt(_, _, left), Expression::ZeroExt(_, _, right))
-        | (Expression::Trunc(_, _, left), Expression::Trunc(_, _, right)) => {
+        (Expression::ZeroExt { expr: left, .. }, Expression::ZeroExt { expr: right, .. })
+        | (Expression::Trunc { expr: left, .. }, Expression::Trunc { expr: right, .. }) => {
             expression_compare(left, left_vars, right, right_vars, cfg, block_vars)
         }
-        (Expression::FunctionArg(_, _, left), Expression::FunctionArg(_, _, right)) => {
+        (
+            Expression::FunctionArg { arg_no: left, .. },
+            Expression::FunctionArg { arg_no: right, .. },
+        ) => {
             if left == right {
                 ExpressionCmp::Equal
             } else {
@@ -722,10 +732,54 @@ fn expression_compare(
                 ExpressionCmp::Unknown
             }
         }
-        (Expression::Add(_, _, _, l1, r1), Expression::Add(_, _, _, l2, r2))
-        | (Expression::Multiply(_, _, _, l1, r1), Expression::Multiply(_, _, _, l2, r2))
-        | (Expression::Subtract(_, _, _, l1, r1), Expression::Subtract(_, _, _, l2, r2))
-        | (Expression::Subscript(_, _, _, l1, r1), Expression::Subscript(_, _, _, l2, r2)) => {
+        (
+            Expression::Add {
+                left: l1,
+                right: r1,
+                ..
+            },
+            Expression::Add {
+                left: l2,
+                right: r2,
+                ..
+            },
+        )
+        | (
+            Expression::Multiply {
+                left: l1,
+                right: r1,
+                ..
+            },
+            Expression::Multiply {
+                left: l2,
+                right: r2,
+                ..
+            },
+        )
+        | (
+            Expression::Subtract {
+                left: l1,
+                right: r1,
+                ..
+            },
+            Expression::Subtract {
+                left: l2,
+                right: r2,
+                ..
+            },
+        )
+        | (
+            Expression::Subscript {
+                expr: l1,
+                index: r1,
+                ..
+            },
+            Expression::Subscript {
+                expr: l2,
+                index: r2,
+                ..
+            },
+        ) => {
             let l = expression_compare(l1, left_vars, l2, right_vars, cfg, block_vars);
 
             let r = expression_compare(r1, left_vars, r2, right_vars, cfg, block_vars);
@@ -740,7 +794,7 @@ fn expression_compare(
                 ExpressionCmp::Unknown
             }
         }
-        (Expression::Variable(_, _, left), Expression::Variable(_, _, right)) => {
+        (Expression::Variable { var_no: left, .. }, Expression::Variable { var_no: right, .. }) => {
             // let's check that the variable left has the same reaching definitions as right
             let left = match left_vars.vars.get(left) {
                 Some(left) => left,

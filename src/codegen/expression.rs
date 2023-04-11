@@ -104,15 +104,19 @@ pub fn expression(
             if ty.is_rational() {
                 let (_, r) = eval_const_rational(expr, ns).unwrap();
 
-                Expression::NumberLiteral(*loc, ty.clone(), r.to_integer())
+                Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    value: r.to_integer(),
+                }
             } else {
-                Expression::Multiply(
-                    *loc,
-                    ty.clone(),
-                    *unchecked,
-                    Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-                    Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-                )
+                Expression::Multiply {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    overflowing: *unchecked,
+                    left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+                    right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+                }
             }
         }
         ast::Expression::Divide {
@@ -124,9 +128,19 @@ pub fn expression(
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
             if ty.is_signed_int(ns) {
-                Expression::SignedDivide(*loc, ty.clone(), Box::new(l), Box::new(r))
+                Expression::SignedDivide {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    left: Box::new(l),
+                    right: Box::new(r),
+                }
             } else {
-                Expression::UnsignedDivide(*loc, ty.clone(), Box::new(l), Box::new(r))
+                Expression::UnsignedDivide {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    left: Box::new(l),
+                    right: Box::new(r),
+                }
             }
         }
         ast::Expression::Modulo {
@@ -138,9 +152,19 @@ pub fn expression(
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
             if ty.is_signed_int(ns) {
-                Expression::SignedModulo(*loc, ty.clone(), Box::new(l), Box::new(r))
+                Expression::SignedModulo {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    left: Box::new(l),
+                    right: Box::new(r),
+                }
             } else {
-                Expression::UnsignedModulo(*loc, ty.clone(), Box::new(l), Box::new(r))
+                Expression::UnsignedModulo {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    left: Box::new(l),
+                    right: Box::new(r),
+                }
             }
         }
         ast::Expression::Power {
@@ -149,80 +173,80 @@ pub fn expression(
             unchecked,
             base,
             exp,
-        } => Expression::Power(
-            *loc,
-            ty.clone(),
-            *unchecked,
-            Box::new(expression(base, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(exp, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        } => Expression::Power {
+            loc: *loc,
+            ty: ty.clone(),
+            overflowing: *unchecked,
+            base: Box::new(expression(base, cfg, contract_no, func, ns, vartab, opt)),
+            exp: Box::new(expression(exp, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::BitwiseOr {
             loc,
             ty,
             left,
             right,
-        } => Expression::BitwiseOr(
-            *loc,
-            ty.clone(),
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        } => Expression::BitwiseOr {
+            loc: *loc,
+            ty: ty.clone(),
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::BitwiseAnd {
             loc,
             ty,
             left,
             right,
-        } => Expression::BitwiseAnd(
-            *loc,
-            ty.clone(),
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        } => Expression::BitwiseAnd {
+            loc: *loc,
+            ty: ty.clone(),
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::BitwiseXor {
             loc,
             ty,
             left,
             right,
-        } => Expression::BitwiseXor(
-            *loc,
-            ty.clone(),
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        } => Expression::BitwiseXor {
+            loc: *loc,
+            ty: ty.clone(),
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::ShiftLeft {
             loc,
             ty,
             left,
             right,
-        } => Expression::ShiftLeft(
-            *loc,
-            ty.clone(),
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        } => Expression::ShiftLeft {
+            loc: *loc,
+            ty: ty.clone(),
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::ShiftRight {
             loc,
             ty,
             left,
             right,
             sign,
-        } => Expression::ShiftRight(
-            *loc,
-            ty.clone(),
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-            *sign,
-        ),
-        ast::Expression::Equal { loc, left, right } => Expression::Equal(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
-        ast::Expression::NotEqual { loc, left, right } => Expression::NotEqual(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        } => Expression::ShiftRight {
+            loc: *loc,
+            ty: ty.clone(),
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+            signed: *sign,
+        },
+        ast::Expression::Equal { loc, left, right } => Expression::Equal {
+            loc: *loc,
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
+        ast::Expression::NotEqual { loc, left, right } => Expression::NotEqual {
+            loc: *loc,
+            left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+            right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::More { loc, left, right } => {
             let l = expression(left, cfg, contract_no, func, ns, vartab, opt);
             let r = expression(right, cfg, contract_no, func, ns, vartab, opt);
@@ -285,56 +309,56 @@ pub fn expression(
             vartab,
             opt,
         ),
-        ast::Expression::Not { loc, expr } => Expression::Not(
-            *loc,
-            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-        ),
-        ast::Expression::BitwiseNot { loc, ty, expr } => Expression::BitwiseNot(
-            *loc,
-            ty.clone(),
-            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-        ),
-        ast::Expression::Negate { loc, ty, expr } => Expression::Negate(
-            *loc,
-            ty.clone(),
-            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-        ),
-        ast::Expression::StructLiteral { loc, ty, values } => Expression::StructLiteral(
-            *loc,
-            ty.clone(),
-            values
+        ast::Expression::Not { loc, expr } => Expression::Not {
+            loc: *loc,
+            expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
+        },
+        ast::Expression::BitwiseNot { loc, ty, expr } => Expression::BitwiseNot {
+            loc: *loc,
+            ty: ty.clone(),
+            expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
+        },
+        ast::Expression::Negate { loc, ty, expr } => Expression::Negate {
+            loc: *loc,
+            ty: ty.clone(),
+            expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
+        },
+        ast::Expression::StructLiteral { loc, ty, values } => Expression::StructLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            values: values
                 .iter()
                 .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
                 .collect(),
-        ),
+        },
         ast::Expression::ArrayLiteral {
             loc,
             ty,
             dimensions,
             values,
-        } => Expression::ArrayLiteral(
-            *loc,
-            ty.clone(),
-            dimensions.clone(),
-            values
+        } => Expression::ArrayLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            dimensions: dimensions.clone(),
+            values: values
                 .iter()
                 .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
                 .collect(),
-        ),
+        },
         ast::Expression::ConstArrayLiteral {
             loc,
             ty,
             dimensions,
             values,
-        } => Expression::ConstArrayLiteral(
-            *loc,
-            ty.clone(),
-            dimensions.clone(),
-            values
+        } => Expression::ConstArrayLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            dimensions: dimensions.clone(),
+            values: values
                 .iter()
                 .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
                 .collect(),
-        ),
+        },
         ast::Expression::Assign { left, right, .. } => {
             // If we reach this condition, the assignment is inside an expression.
 
@@ -431,7 +455,11 @@ pub fn expression(
                 cfg,
                 opt,
             );
-            Expression::Variable(*loc, Type::Contract(*constructor_contract), address_res)
+            Expression::Variable {
+                loc: *loc,
+                ty: Type::Contract(*constructor_contract),
+                var_no: address_res,
+            }
         }
         ast::Expression::InternalFunction {
             function_no,
@@ -444,7 +472,9 @@ pub fn expression(
                 function_no
             };
 
-            Expression::InternalFunctionCfg(ns.contracts[contract_no].all_functions[function_no])
+            Expression::InternalFunctionCfg {
+                cfg_no: ns.contracts[contract_no].all_functions[function_no],
+            }
         }
         ast::Expression::StorageArrayLength {
             loc,
@@ -526,7 +556,11 @@ pub fn expression(
             ast::Expression::ExternalFunction { function_no, .. }
             | ast::Expression::InternalFunction { function_no, .. } => {
                 let selector = ns.functions[*function_no].selector(ns, &contract_no);
-                Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector)
+                Expression::BytesLiteral {
+                    loc: *loc,
+                    ty: Type::Bytes(selector.len() as u8),
+                    value: selector,
+                }
             }
             _ => {
                 let func_expr = expression(&func_expr[0], cfg, contract_no, func, ns, vartab, opt);
@@ -552,17 +586,21 @@ pub fn expression(
             function_no,
         } => {
             let address = expression(address, cfg, contract_no, func, ns, vartab, opt);
-            let selector = Expression::BytesLiteral(
-                *loc,
-                Type::Uint(32),
-                ns.functions[*function_no].selector(ns, &contract_no),
-            );
-            let struct_literal = Expression::StructLiteral(
-                *loc,
-                Type::Struct(StructType::ExternalFunction),
-                vec![selector, address],
-            );
-            Expression::Cast(*loc, ty.clone(), Box::new(struct_literal))
+            let selector = Expression::BytesLiteral {
+                loc: *loc,
+                ty: Type::Uint(32),
+                value: ns.functions[*function_no].selector(ns, &contract_no),
+            };
+            let struct_literal = Expression::StructLiteral {
+                loc: *loc,
+                ty: Type::Struct(StructType::ExternalFunction),
+                values: vec![selector, address],
+            };
+            Expression::Cast {
+                loc: *loc,
+                ty: ty.clone(),
+                expr: Box::new(struct_literal),
+            }
         }
         ast::Expression::Subscript {
             loc,
@@ -600,13 +638,17 @@ pub fn expression(
                         .sum()
                 };
 
-                Expression::Add(
-                    *loc,
-                    ns.storage_type(),
-                    true,
-                    Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
-                    Box::new(Expression::NumberLiteral(*loc, ns.storage_type(), offset)),
-                )
+                Expression::Add {
+                    loc: *loc,
+                    ty: ns.storage_type(),
+                    overflowing: true,
+                    left: Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: ns.storage_type(),
+                        value: offset,
+                    }),
+                }
             } else {
                 unreachable!();
             }
@@ -616,28 +658,28 @@ pub fn expression(
             ty,
             expr: var,
             field: member,
-        } => Expression::StructMember(
-            *loc,
-            ty.clone(),
-            Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
-            *member,
-        ),
-        ast::Expression::StringCompare { loc, left, right } => Expression::StringCompare(
-            *loc,
-            string_location(left, cfg, contract_no, func, ns, vartab, opt),
-            string_location(right, cfg, contract_no, func, ns, vartab, opt),
-        ),
+        } => Expression::StructMember {
+            loc: *loc,
+            ty: ty.clone(),
+            expr: Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
+            member: *member,
+        },
+        ast::Expression::StringCompare { loc, left, right } => Expression::StringCompare {
+            loc: *loc,
+            left: string_location(left, cfg, contract_no, func, ns, vartab, opt),
+            right: string_location(right, cfg, contract_no, func, ns, vartab, opt),
+        },
         ast::Expression::StringConcat {
             loc,
             ty,
             left,
             right,
-        } => Expression::StringConcat(
-            *loc,
-            ty.clone(),
-            string_location(left, cfg, contract_no, func, ns, vartab, opt),
-            string_location(right, cfg, contract_no, func, ns, vartab, opt),
-        ),
+        } => Expression::StringConcat {
+            loc: *loc,
+            ty: ty.clone(),
+            left: string_location(left, cfg, contract_no, func, ns, vartab, opt),
+            right: string_location(right, cfg, contract_no, func, ns, vartab, opt),
+        },
         ast::Expression::Or { loc, left, right } => {
             expr_or(left, cfg, contract_no, func, ns, vartab, loc, right, opt)
         }
@@ -647,30 +689,34 @@ pub fn expression(
         ast::Expression::CheckingTrunc { loc, to, expr } => {
             checking_trunc(loc, expr, to, cfg, contract_no, func, ns, vartab, opt)
         }
-        ast::Expression::Trunc { loc, to, expr } => Expression::Trunc(
-            *loc,
-            to.clone(),
-            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-        ),
-        ast::Expression::ZeroExt { loc, to, expr } => Expression::ZeroExt(
-            *loc,
-            to.clone(),
-            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-        ),
-        ast::Expression::SignExt { loc, to, expr } => Expression::SignExt(
-            *loc,
-            to.clone(),
-            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        ast::Expression::Trunc { loc, to, expr } => Expression::Trunc {
+            loc: *loc,
+            ty: to.clone(),
+            expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
+        },
+        ast::Expression::ZeroExt { loc, to, expr } => Expression::ZeroExt {
+            loc: *loc,
+            ty: to.clone(),
+            expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
+        },
+        ast::Expression::SignExt { loc, to, expr } => Expression::SignExt {
+            loc: *loc,
+            ty: to.clone(),
+            expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::Cast { loc, to, expr } if matches!(to, Type::Address(_)) => {
             if let Ok((_, address)) = eval_const_number(expr, ns) {
-                Expression::NumberLiteral(*loc, to.clone(), address)
+                Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: to.clone(),
+                    value: address,
+                }
             } else {
-                Expression::Cast(
-                    *loc,
-                    to.clone(),
-                    Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-                )
+                Expression::Cast {
+                    loc: *loc,
+                    ty: to.clone(),
+                    expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
+                }
             }
         }
         ast::Expression::Cast { to, expr, .. }
@@ -692,17 +738,21 @@ pub fn expression(
             if expr.ty() == Type::Rational {
                 let (_, n) = eval_const_rational(expr, ns).unwrap();
 
-                Expression::NumberLiteral(*loc, to.clone(), n.to_integer())
+                Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: to.clone(),
+                    value: n.to_integer(),
+                }
             } else if matches!(to, Type::String | Type::DynamicBytes)
                 && matches!(expr.ty(), Type::String | Type::DynamicBytes)
             {
                 expression(expr, cfg, contract_no, func, ns, vartab, opt)
             } else {
-                Expression::Cast(
-                    *loc,
-                    to.clone(),
-                    Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-                )
+                Expression::Cast {
+                    loc: *loc,
+                    ty: to.clone(),
+                    expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
+                }
             }
         }
         ast::Expression::BytesCast {
@@ -710,17 +760,17 @@ pub fn expression(
             to,
             from,
             expr,
-        } => Expression::BytesCast(
-            *loc,
-            to.clone(),
-            from.clone(),
-            Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
-        ),
-        ast::Expression::Load { loc, ty, expr: e } => Expression::Load(
-            *loc,
-            ty.clone(),
-            Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        } => Expression::BytesCast {
+            loc: *loc,
+            ty: to.clone(),
+            from: from.clone(),
+            expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
+        },
+        ast::Expression::Load { loc, ty, expr: e } => Expression::Load {
+            loc: *loc,
+            ty: ty.clone(),
+            expr: Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
+        },
         // for some built-ins, we have to inline special case code
         ast::Expression::Builtin {
             kind: ast::Builtin::UserTypeWrap,
@@ -791,10 +841,10 @@ pub fn expression(
 
                 let array_pos = match expression(&args[0], cfg, contract_no, func, ns, vartab, opt)
                 {
-                    Expression::Variable(_, _, pos) => {
-                        vartab.set_dirty(pos);
+                    Expression::Variable { var_no, .. } => {
+                        vartab.set_dirty(var_no);
 
-                        pos
+                        var_no
                     }
                     _ => unreachable!(),
                 };
@@ -810,7 +860,11 @@ pub fn expression(
                 );
                 cfg.modify_temp_array_length(*loc, true, array_pos, vartab);
 
-                Expression::Variable(*loc, ty[0].clone(), address_res)
+                Expression::Variable {
+                    loc: *loc,
+                    ty: ty[0].clone(),
+                    var_no: address_res,
+                }
             }
         }
         ast::Expression::Builtin {
@@ -949,37 +1003,50 @@ pub fn expression(
             opt,
         ),
         ast::Expression::InterfaceId { loc, contract_no } => interfaceid(ns, *contract_no, loc),
-        ast::Expression::BoolLiteral { loc, value } => Expression::BoolLiteral(*loc, *value),
-        ast::Expression::BytesLiteral { loc, ty, value } => {
-            Expression::BytesLiteral(*loc, ty.clone(), value.clone())
-        }
+        ast::Expression::BoolLiteral { loc, value } => Expression::BoolLiteral {
+            loc: *loc,
+            value: *value,
+        },
+        ast::Expression::BytesLiteral { loc, ty, value } => Expression::BytesLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            value: value.clone(),
+        },
         ast::Expression::CodeLiteral {
             loc, contract_no, ..
         } => code(loc, *contract_no, ns, opt),
-        ast::Expression::NumberLiteral { loc, ty, value } => {
-            Expression::NumberLiteral(*loc, ty.clone(), value.clone())
-        }
+        ast::Expression::NumberLiteral { loc, ty, value } => Expression::NumberLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            value: value.clone(),
+        },
         ast::Expression::RationalNumberLiteral { loc, ty, value } => {
-            Expression::RationalNumberLiteral(*loc, ty.clone(), value.clone())
+            Expression::RationalNumberLiteral {
+                loc: *loc,
+                ty: ty.clone(),
+                rational: value.clone(),
+            }
         }
-        ast::Expression::Variable { loc, ty, var_no } => {
-            Expression::Variable(*loc, ty.clone(), *var_no)
-        }
+        ast::Expression::Variable { loc, ty, var_no } => Expression::Variable {
+            loc: *loc,
+            ty: ty.clone(),
+            var_no: *var_no,
+        },
         ast::Expression::List {
             loc,
             list: elements,
-        } => Expression::List(
-            *loc,
-            elements
+        } => Expression::List {
+            loc: *loc,
+            exprs: elements
                 .iter()
                 .map(|e| expression(e, cfg, contract_no, func, ns, vartab, opt))
                 .collect::<Vec<Expression>>(),
-        ),
-        ast::Expression::GetRef { loc, ty, expr: exp } => Expression::GetRef(
-            *loc,
-            ty.clone(),
-            Box::new(expression(exp, cfg, contract_no, func, ns, vartab, opt)),
-        ),
+        },
+        ast::Expression::GetRef { loc, ty, expr: exp } => Expression::GetRef {
+            loc: *loc,
+            ty: ty.clone(),
+            expr: Box::new(expression(exp, cfg, contract_no, func, ns, vartab, opt)),
+        },
         ast::Expression::UserDefinedOperator {
             loc,
             ty,
@@ -1003,7 +1070,11 @@ pub fn expression(
                     return_tys: vec![ty.clone()],
                 },
             );
-            Expression::Variable(*loc, ty.clone(), var)
+            Expression::Variable {
+                loc: *loc,
+                ty: ty.clone(),
+                var_no: var,
+            }
         }
     }
 }
@@ -1022,10 +1093,10 @@ fn memory_array_push(
 ) -> Expression {
     let address_res = vartab.temp_anonymous(ty);
     let array_pos = match expression(array, cfg, contract_no, func, ns, vartab, opt) {
-        Expression::Variable(_, _, pos) => {
-            vartab.set_dirty(pos);
+        Expression::Variable { var_no, .. } => {
+            vartab.set_dirty(var_no);
 
-            pos
+            var_no
         }
         _ => unreachable!(),
     };
@@ -1040,7 +1111,11 @@ fn memory_array_push(
     );
     cfg.modify_temp_array_length(*loc, false, array_pos, vartab);
 
-    Expression::Variable(*loc, ty.clone(), address_res)
+    Expression::Variable {
+        loc: *loc,
+        ty: ty.clone(),
+        var_no: address_res,
+    }
 }
 
 fn post_incdec(
@@ -1059,7 +1134,11 @@ fn post_incdec(
     let res = vartab.temp_anonymous(ty);
     let v = expression(var, cfg, contract_no, func, ns, vartab, opt);
     let v = match var.ty() {
-        Type::Ref(ty) => Expression::Load(var.loc(), ty.as_ref().clone(), Box::new(v)),
+        Type::Ref(ty) => Expression::Load {
+            loc: var.loc(),
+            ty: ty.as_ref().clone(),
+            expr: Box::new(v),
+        },
         Type::StorageRef(_, ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
         _ => v,
     };
@@ -1071,22 +1150,34 @@ fn post_incdec(
             expr: v,
         },
     );
-    let one = Box::new(Expression::NumberLiteral(*loc, ty.clone(), BigInt::one()));
+    let one = Box::new(Expression::NumberLiteral {
+        loc: *loc,
+        ty: ty.clone(),
+        value: BigInt::one(),
+    });
     let expr = match expr {
-        ast::Expression::PostDecrement { .. } => Expression::Subtract(
-            *loc,
-            ty.clone(),
-            unchecked,
-            Box::new(Expression::Variable(*loc, ty.clone(), res)),
-            one,
-        ),
-        ast::Expression::PostIncrement { .. } => Expression::Add(
-            *loc,
-            ty.clone(),
-            unchecked,
-            Box::new(Expression::Variable(*loc, ty.clone(), res)),
-            one,
-        ),
+        ast::Expression::PostDecrement { .. } => Expression::Subtract {
+            loc: *loc,
+            ty: ty.clone(),
+            overflowing: unchecked,
+            left: Box::new(Expression::Variable {
+                loc: *loc,
+                ty: ty.clone(),
+                var_no: res,
+            }),
+            right: one,
+        },
+        ast::Expression::PostIncrement { .. } => Expression::Add {
+            loc: *loc,
+            ty: ty.clone(),
+            overflowing: unchecked,
+            left: Box::new(Expression::Variable {
+                loc: *loc,
+                ty: ty.clone(),
+                var_no: res,
+            }),
+            right: one,
+        },
         _ => unreachable!(),
     };
     match var {
@@ -1117,7 +1208,11 @@ fn post_incdec(
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
-                            value: Expression::Variable(*loc, ty.clone(), res),
+                            value: Expression::Variable {
+                                loc: *loc,
+                                ty: ty.clone(),
+                                var_no: res,
+                            },
                             ty: ty.clone(),
                             storage: dest,
                         },
@@ -1128,7 +1223,11 @@ fn post_incdec(
                         vartab,
                         Instr::Store {
                             dest,
-                            data: Expression::Variable(Loc::Codegen, ty.clone(), res),
+                            data: Expression::Variable {
+                                loc: Loc::Codegen,
+                                ty: ty.clone(),
+                                var_no: res,
+                            },
                         },
                     );
                 }
@@ -1136,7 +1235,11 @@ fn post_incdec(
             }
         }
     }
-    Expression::Variable(*loc, ty.clone(), res)
+    Expression::Variable {
+        loc: *loc,
+        ty: ty.clone(),
+        var_no: res,
+    }
 }
 
 fn pre_incdec(
@@ -1155,18 +1258,34 @@ fn pre_incdec(
     let res = vartab.temp_anonymous(ty);
     let v = expression(var, cfg, contract_no, func, ns, vartab, opt);
     let v = match var.ty() {
-        Type::Ref(ty) => Expression::Load(var.loc(), ty.as_ref().clone(), Box::new(v)),
+        Type::Ref(ty) => Expression::Load {
+            loc: var.loc(),
+            ty: ty.as_ref().clone(),
+            expr: Box::new(v),
+        },
         Type::StorageRef(_, ty) => load_storage(&var.loc(), ty.as_ref(), v, cfg, vartab),
         _ => v,
     };
-    let one = Box::new(Expression::NumberLiteral(*loc, ty.clone(), BigInt::one()));
+    let one = Box::new(Expression::NumberLiteral {
+        loc: *loc,
+        ty: ty.clone(),
+        value: BigInt::one(),
+    });
     let expr = match expr {
-        ast::Expression::PreDecrement { .. } => {
-            Expression::Subtract(*loc, ty.clone(), unchecked, Box::new(v), one)
-        }
-        ast::Expression::PreIncrement { .. } => {
-            Expression::Add(*loc, ty.clone(), unchecked, Box::new(v), one)
-        }
+        ast::Expression::PreDecrement { .. } => Expression::Subtract {
+            loc: *loc,
+            ty: ty.clone(),
+            overflowing: unchecked,
+            left: Box::new(v),
+            right: one,
+        },
+        ast::Expression::PreIncrement { .. } => Expression::Add {
+            loc: *loc,
+            ty: ty.clone(),
+            overflowing: unchecked,
+            left: Box::new(v),
+            right: one,
+        },
         _ => unreachable!(),
     };
     cfg.add(
@@ -1184,7 +1303,11 @@ fn pre_incdec(
                 Instr::Set {
                     loc: *loc,
                     res: *var_no,
-                    expr: Expression::Variable(*loc, ty.clone(), res),
+                    expr: Expression::Variable {
+                        loc: *loc,
+                        ty: ty.clone(),
+                        var_no: res,
+                    },
                 },
             );
         }
@@ -1196,7 +1319,11 @@ fn pre_incdec(
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
-                            value: Expression::Variable(*loc, ty.clone(), res),
+                            value: Expression::Variable {
+                                loc: *loc,
+                                ty: ty.clone(),
+                                var_no: res,
+                            },
                             ty: ty.clone(),
                             storage: dest,
                         },
@@ -1207,7 +1334,11 @@ fn pre_incdec(
                         vartab,
                         Instr::Store {
                             dest,
-                            data: Expression::Variable(Loc::Codegen, ty.clone(), res),
+                            data: Expression::Variable {
+                                loc: Loc::Codegen,
+                                ty: ty.clone(),
+                                var_no: res,
+                            },
                         },
                     );
                 }
@@ -1215,7 +1346,11 @@ fn pre_incdec(
             }
         }
     }
-    Expression::Variable(*loc, ty.clone(), res)
+    Expression::Variable {
+        loc: *loc,
+        ty: ty.clone(),
+        var_no: res,
+    }
 }
 
 fn expr_or(
@@ -1245,7 +1380,10 @@ fn expr_or(
         Instr::Set {
             loc: *loc,
             res: pos,
-            expr: Expression::BoolLiteral(*loc, true),
+            expr: Expression::BoolLiteral {
+                loc: *loc,
+                value: true,
+            },
         },
     );
     cfg.add(
@@ -1269,7 +1407,11 @@ fn expr_or(
     cfg.add(vartab, Instr::Branch { block: end_or });
     cfg.set_basic_block(end_or);
     cfg.set_phis(end_or, vartab.pop_dirty_tracker());
-    Expression::Variable(*loc, Type::Bool, pos)
+    Expression::Variable {
+        loc: *loc,
+        ty: Type::Bool,
+        var_no: pos,
+    }
 }
 
 fn and(
@@ -1299,7 +1441,10 @@ fn and(
         Instr::Set {
             loc: *loc,
             res: pos,
-            expr: Expression::BoolLiteral(*loc, false),
+            expr: Expression::BoolLiteral {
+                loc: *loc,
+                value: false,
+            },
         },
     );
     cfg.add(
@@ -1323,7 +1468,11 @@ fn and(
     cfg.add(vartab, Instr::Branch { block: end_and });
     cfg.set_basic_block(end_and);
     cfg.set_phis(end_and, vartab.pop_dirty_tracker());
-    Expression::Variable(*loc, Type::Bool, pos)
+    Expression::Variable {
+        loc: *loc,
+        ty: Type::Bool,
+        var_no: pos,
+    }
 }
 
 fn expr_assert(
@@ -1395,28 +1544,28 @@ fn require(
                         " require condition failed in {},\n",
                         ns.loc_to_string(false, &expr.loc())
                     );
-                    let print_expr = Expression::FormatString(
-                        Loc::Codegen,
-                        vec![
+                    let print_expr = Expression::FormatString {
+                        loc: Loc::Codegen,
+                        args: vec![
                             (
                                 FormatArg::StringLiteral,
-                                Expression::BytesLiteral(
-                                    Loc::Codegen,
-                                    Type::Bytes(prefix.len() as u8),
-                                    prefix.to_vec(),
-                                ),
+                                Expression::BytesLiteral {
+                                    loc: Loc::Codegen,
+                                    ty: Type::Bytes(prefix.len() as u8),
+                                    value: prefix.to_vec(),
+                                },
                             ),
                             (FormatArg::Default, expr),
                             (
                                 FormatArg::StringLiteral,
-                                Expression::BytesLiteral(
-                                    Loc::Codegen,
-                                    Type::Bytes(error_string.as_bytes().len() as u8),
-                                    error_string.as_bytes().to_vec(),
-                                ),
+                                Expression::BytesLiteral {
+                                    loc: Loc::Codegen,
+                                    ty: Type::Bytes(error_string.as_bytes().len() as u8),
+                                    value: error_string.as_bytes().to_vec(),
+                                },
                             ),
                         ],
-                    );
+                    };
                     cfg.add(vartab, Instr::Print { expr: print_expr });
                 } else {
                     log_runtime_error(
@@ -1458,28 +1607,28 @@ fn revert(
                 " revert encountered in {},\n",
                 ns.loc_to_string(false, &loc)
             );
-            let print_expr = Expression::FormatString(
-                Loc::Codegen,
-                vec![
+            let print_expr = Expression::FormatString {
+                loc: Loc::Codegen,
+                args: vec![
                     (
                         FormatArg::StringLiteral,
-                        Expression::BytesLiteral(
-                            Loc::Codegen,
-                            Type::Bytes(prefix.len() as u8),
-                            prefix.to_vec(),
-                        ),
+                        Expression::BytesLiteral {
+                            loc: Loc::Codegen,
+                            ty: Type::Bytes(prefix.len() as u8),
+                            value: prefix.to_vec(),
+                        },
                     ),
                     (FormatArg::Default, expr.clone().unwrap()),
                     (
                         FormatArg::StringLiteral,
-                        Expression::BytesLiteral(
-                            Loc::Codegen,
-                            Type::Bytes(error_string.as_bytes().len() as u8),
-                            error_string.as_bytes().to_vec(),
-                        ),
+                        Expression::BytesLiteral {
+                            loc: Loc::Codegen,
+                            ty: Type::Bytes(error_string.as_bytes().len() as u8),
+                            value: error_string.as_bytes().to_vec(),
+                        },
                     ),
                 ],
-            );
+            };
             cfg.add(vartab, Instr::Print { expr: print_expr });
         } else {
             log_runtime_error(
@@ -1548,24 +1697,32 @@ fn payable_send(
                 address: Some(address),
                 accounts: None,
                 seeds: None,
-                payload: Expression::AllocDynamicBytes(
-                    *loc,
-                    Type::DynamicBytes,
-                    Box::new(Expression::NumberLiteral(
-                        *loc,
-                        Type::Uint(32),
-                        BigInt::from(0),
-                    )),
-                    Some(vec![]),
-                ),
+                payload: Expression::AllocDynamicBytes {
+                    loc: *loc,
+                    ty: Type::DynamicBytes,
+                    size: Box::new(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(0),
+                    }),
+                    initializer: Some(vec![]),
+                },
                 value,
-                gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::from(i64::MAX)),
+                gas: Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(i64::MAX),
+                },
                 callty: CallTy::Regular,
                 contract_function_no: None,
             },
         );
     }
-    Expression::Variable(*loc, Type::Bool, success)
+    Expression::Variable {
+        loc: *loc,
+        ty: Type::Bool,
+        var_no: success,
+    }
 }
 
 fn payable_transfer(
@@ -1598,18 +1755,22 @@ fn payable_transfer(
                 accounts: None,
                 seeds: None,
                 address: Some(address),
-                payload: Expression::AllocDynamicBytes(
-                    *loc,
-                    Type::DynamicBytes,
-                    Box::new(Expression::NumberLiteral(
-                        *loc,
-                        Type::Uint(32),
-                        BigInt::from(0),
-                    )),
-                    Some(vec![]),
-                ),
+                payload: Expression::AllocDynamicBytes {
+                    loc: *loc,
+                    ty: Type::DynamicBytes,
+                    size: Box::new(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(0),
+                    }),
+                    initializer: Some(vec![]),
+                },
                 value,
-                gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::from(i64::MAX)),
+                gas: Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Uint(64),
+                    value: BigInt::from(i64::MAX),
+                },
                 callty: CallTy::Regular,
                 contract_function_no: None,
             },
@@ -1768,9 +1929,20 @@ fn builtin_evm_gasprice(
     opt: &Options,
 ) -> Expression {
     let ty = Type::Value;
-    let gasprice = Expression::Builtin(*loc, vec![ty.clone()], Builtin::Gasprice, vec![]);
+    let gasprice = Expression::Builtin {
+        loc: *loc,
+        tys: vec![ty.clone()],
+        kind: Builtin::Gasprice,
+        args: vec![],
+    };
     let units = expression(&expr[0], cfg, contract_no, func, ns, vartab, opt);
-    Expression::Multiply(*loc, ty, true, Box::new(units), Box::new(gasprice))
+    Expression::Multiply {
+        loc: *loc,
+        ty,
+        overflowing: true,
+        left: Box::new(units),
+        right: Box::new(gasprice),
+    }
 }
 
 fn expr_builtin(
@@ -1805,23 +1977,23 @@ fn expr_builtin(
             let cond = Expression::LessEqual {
                 loc: *loc,
                 signed: false,
-                left: Box::new(Expression::Add(
-                    *loc,
-                    Type::Uint(32),
-                    false,
-                    Box::new(offset.clone()),
-                    Box::new(Expression::NumberLiteral(
-                        *loc,
-                        Type::Uint(32),
-                        BigInt::from(args[1].ty().bits(ns) / 8),
-                    )),
-                )),
-                right: Box::new(Expression::Builtin(
-                    *loc,
-                    vec![Type::Uint(32)],
-                    Builtin::ArrayLength,
-                    vec![buf.clone()],
-                )),
+                left: Box::new(Expression::Add {
+                    loc: *loc,
+                    ty: Type::Uint(32),
+                    overflowing: false,
+                    left: Box::new(offset.clone()),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(args[1].ty().bits(ns) / 8),
+                    }),
+                }),
+                right: Box::new(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![Type::Uint(32)],
+                    kind: Builtin::ArrayLength,
+                    args: vec![buf.clone()],
+                }),
             };
 
             let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
@@ -1852,36 +2024,36 @@ fn expr_builtin(
             let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
             cfg.add(vartab, Instr::WriteBuffer { buf, value, offset });
 
-            Expression::Undefined(tys[0].clone())
+            Expression::Undefined { ty: tys[0].clone() }
         }
         ast::Builtin::WriteBytes | ast::Builtin::WriteString => {
             let buffer = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
             let data = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
             let offset = expression(&args[2], cfg, contract_no, func, ns, vartab, opt);
 
-            let size = Expression::Builtin(
-                *loc,
-                vec![Type::Uint(32)],
-                Builtin::ArrayLength,
-                vec![data.clone()],
-            );
+            let size = Expression::Builtin {
+                loc: *loc,
+                tys: vec![Type::Uint(32)],
+                kind: Builtin::ArrayLength,
+                args: vec![data.clone()],
+            };
 
             let cond = Expression::LessEqual {
                 loc: *loc,
                 signed: false,
-                left: Box::new(Expression::Add(
-                    *loc,
-                    Type::Uint(32),
-                    false,
-                    Box::new(offset.clone()),
-                    Box::new(size.clone()),
-                )),
-                right: Box::new(Expression::Builtin(
-                    *loc,
-                    vec![Type::Uint(32)],
-                    Builtin::ArrayLength,
-                    vec![buffer.clone()],
-                )),
+                left: Box::new(Expression::Add {
+                    loc: *loc,
+                    ty: Type::Uint(32),
+                    overflowing: false,
+                    left: Box::new(offset.clone()),
+                    right: Box::new(size.clone()),
+                }),
+                right: Box::new(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![Type::Uint(32)],
+                    kind: Builtin::ArrayLength,
+                    args: vec![buffer.clone()],
+                }),
             };
 
             let in_bounds = cfg.new_basic_block("in_bounds".to_string());
@@ -1921,7 +2093,7 @@ fn expr_builtin(
                     bytes: size,
                 },
             );
-            Expression::Undefined(tys[0].clone())
+            Expression::Undefined { ty: tys[0].clone() }
         }
         ast::Builtin::ReadInt8
         | ast::Builtin::ReadInt16LE
@@ -1942,23 +2114,23 @@ fn expr_builtin(
             let cond = Expression::LessEqual {
                 loc: *loc,
                 signed: false,
-                left: Box::new(Expression::Add(
-                    *loc,
-                    Type::Uint(32),
-                    false,
-                    Box::new(offset.clone()),
-                    Box::new(Expression::NumberLiteral(
-                        *loc,
-                        Type::Uint(32),
-                        BigInt::from(tys[0].bits(ns) / 8),
-                    )),
-                )),
-                right: Box::new(Expression::Builtin(
-                    *loc,
-                    vec![Type::Uint(32)],
-                    Builtin::ArrayLength,
-                    vec![buf.clone()],
-                )),
+                left: Box::new(Expression::Add {
+                    loc: *loc,
+                    ty: Type::Uint(32),
+                    overflowing: false,
+                    left: Box::new(offset.clone()),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(tys[0].bits(ns) / 8),
+                    }),
+                }),
+                right: Box::new(Expression::Builtin {
+                    loc: *loc,
+                    tys: vec![Type::Uint(32)],
+                    kind: Builtin::ArrayLength,
+                    args: vec![buf.clone()],
+                }),
             };
 
             let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
@@ -1986,7 +2158,12 @@ fn expr_builtin(
 
             cfg.set_basic_block(in_bounds);
 
-            Expression::Builtin(*loc, tys.to_vec(), (&builtin).into(), vec![buf, offset])
+            Expression::Builtin {
+                loc: *loc,
+                tys: tys.to_vec(),
+                kind: (&builtin).into(),
+                args: vec![buf, offset],
+            }
         }
         ast::Builtin::AddMod | ast::Builtin::MulMod => {
             let arguments: Vec<Expression> = args
@@ -1995,9 +2172,16 @@ fn expr_builtin(
                 .collect();
 
             let temp = vartab.temp_anonymous(&tys[0]);
-            let zero = Expression::NumberLiteral(*loc, tys[0].clone(), BigInt::zero());
-            let cond =
-                Expression::NotEqual(*loc, Box::new(zero.clone()), Box::new(arguments[2].clone()));
+            let zero = Expression::NumberLiteral {
+                loc: *loc,
+                ty: tys[0].clone(),
+                value: BigInt::zero(),
+            };
+            let cond = Expression::NotEqual {
+                loc: *loc,
+                left: Box::new(zero.clone()),
+                right: Box::new(arguments[2].clone()),
+            };
 
             let true_block = cfg.new_basic_block("builtin_call".to_string());
             let false_block = cfg.new_basic_block("zero".to_string());
@@ -2020,7 +2204,12 @@ fn expr_builtin(
                 Instr::Set {
                     loc: *loc,
                     res: temp,
-                    expr: Expression::Builtin(*loc, tys.to_vec(), (&builtin).into(), arguments),
+                    expr: Expression::Builtin {
+                        loc: *loc,
+                        tys: tys.to_vec(),
+                        kind: (&builtin).into(),
+                        args: arguments,
+                    },
                 },
             );
             cfg.add(vartab, Instr::Branch { block: end_if });
@@ -2038,7 +2227,11 @@ fn expr_builtin(
 
             cfg.set_phis(end_if, vartab.pop_dirty_tracker());
             cfg.set_basic_block(end_if);
-            Expression::Variable(*loc, tys[0].clone(), temp)
+            Expression::Variable {
+                loc: *loc,
+                ty: tys[0].clone(),
+                var_no: temp,
+            }
         }
         _ => {
             let arguments: Vec<Expression> = args
@@ -2049,15 +2242,24 @@ fn expr_builtin(
             if !arguments.is_empty() && builtin == ast::Builtin::ArrayLength {
                 // If an array length instruction is called
                 // Get the variable it is assigned with
-                if let Expression::Variable(_, _, num) = &arguments[0] {
+                if let Expression::Variable { var_no, .. } = &arguments[0] {
                     // Now that we have its temp in the map, retrieve the temp var res from the map
-                    if let Some(array_length_var) = cfg.array_lengths_temps.get(num) {
+                    if let Some(array_length_var) = cfg.array_lengths_temps.get(var_no) {
                         // If it's there, replace ArrayLength with the temp var
-                        return Expression::Variable(*loc, Type::Uint(32), *array_length_var);
+                        return Expression::Variable {
+                            loc: *loc,
+                            ty: Type::Uint(32),
+                            var_no: *array_length_var,
+                        };
                     }
                 }
             }
-            Expression::Builtin(*loc, tys.to_vec(), (&builtin).into(), arguments)
+            Expression::Builtin {
+                loc: *loc,
+                tys: tys.to_vec(),
+                kind: (&builtin).into(),
+                args: arguments,
+            }
         }
     }
 }
@@ -2075,7 +2277,12 @@ fn alloc_dynamic_array(
     opt: &Options,
 ) -> Expression {
     let size = expression(size, cfg, contract_no, func, ns, vartab, opt);
-    Expression::AllocDynamicBytes(*loc, ty.clone(), Box::new(size), init.clone())
+    Expression::AllocDynamicBytes {
+        loc: *loc,
+        ty: ty.clone(),
+        size: Box::new(size),
+        initializer: init.clone(),
+    }
 }
 
 fn add(
@@ -2091,13 +2298,13 @@ fn add(
     right: &ast::Expression,
     opt: &Options,
 ) -> Expression {
-    Expression::Add(
-        *loc,
-        ty.clone(),
-        unchecked,
-        Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-        Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-    )
+    Expression::Add {
+        loc: *loc,
+        ty: ty.clone(),
+        overflowing: unchecked,
+        left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+        right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+    }
 }
 
 fn subtract(
@@ -2113,13 +2320,13 @@ fn subtract(
     right: &ast::Expression,
     opt: &Options,
 ) -> Expression {
-    Expression::Subtract(
-        *loc,
-        ty.clone(),
-        unchecked,
-        Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
-        Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
-    )
+    Expression::Subtract {
+        loc: *loc,
+        ty: ty.clone(),
+        overflowing: unchecked,
+        left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
+        right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
+    }
 }
 
 fn checking_trunc(
@@ -2141,7 +2348,11 @@ fn checking_trunc(
 
     let source_ty = expr.ty();
 
-    let overflow = Expression::NumberLiteral(*loc, source_ty.clone(), BigInt::from(2u32).pow(bits));
+    let overflow = Expression::NumberLiteral {
+        loc: *loc,
+        ty: source_ty.clone(),
+        value: BigInt::from(2u32).pow(bits),
+    };
 
     let pos = vartab.temp(
         &pt::Identifier {
@@ -2171,7 +2382,11 @@ fn checking_trunc(
             cond: Expression::MoreEqual {
                 loc: *loc,
                 signed: false,
-                left: Box::new(Expression::Variable(*loc, source_ty.clone(), pos)),
+                left: Box::new(Expression::Variable {
+                    loc: *loc,
+                    ty: source_ty.clone(),
+                    var_no: pos,
+                }),
                 right: Box::new(overflow),
             },
             true_block: out_of_bounds,
@@ -2192,11 +2407,15 @@ fn checking_trunc(
 
     cfg.set_basic_block(in_bounds);
 
-    Expression::Trunc(
-        *loc,
-        ty.clone(),
-        Box::new(Expression::Variable(*loc, source_ty, pos)),
-    )
+    Expression::Trunc {
+        loc: *loc,
+        ty: ty.clone(),
+        expr: Box::new(Expression::Variable {
+            loc: *loc,
+            ty: source_ty,
+            var_no: pos,
+        }),
+    }
 }
 
 fn format_string(
@@ -2218,7 +2437,7 @@ fn format_string(
             )
         })
         .collect();
-    Expression::FormatString(*loc, args)
+    Expression::FormatString { loc: *loc, args }
 }
 
 fn conditional_operator(
@@ -2293,7 +2512,11 @@ fn conditional_operator(
 
     cfg.set_phis(done_block, vartab.pop_dirty_tracker());
 
-    Expression::Variable(*loc, ty.clone(), pos)
+    Expression::Variable {
+        loc: *loc,
+        ty: ty.clone(),
+        var_no: pos,
+    }
 }
 
 fn interfaceid(ns: &Namespace, contract_no: usize, loc: &pt::Loc) -> Expression {
@@ -2311,7 +2534,11 @@ fn interfaceid(ns: &Namespace, contract_no: usize, loc: &pt::Loc) -> Expression 
             }
         }
     }
-    Expression::BytesLiteral(*loc, Type::Bytes(selector_len), id.to_vec())
+    Expression::BytesLiteral {
+        loc: *loc,
+        ty: Type::Bytes(selector_len),
+        value: id.to_vec(),
+    }
 }
 
 pub fn assign_single(
@@ -2335,7 +2562,11 @@ pub fn assign_single(
                 },
             );
 
-            Expression::Variable(*loc, ty.clone(), *var_no)
+            Expression::Variable {
+                loc: *loc,
+                ty: ty.clone(),
+                var_no: *var_no,
+            }
         }
         _ => {
             let left_ty = left.ty();
@@ -2354,7 +2585,11 @@ pub fn assign_single(
 
             let cfg_right =
                 if !left_ty.is_contract_storage() && cfg_right.ty().is_fixed_reference_type(ns) {
-                    Expression::Load(pt::Loc::Codegen, cfg_right.ty(), Box::new(cfg_right))
+                    Expression::Load {
+                        loc: pt::Loc::Codegen,
+                        ty: cfg_right.ty(),
+                        expr: Box::new(cfg_right),
+                    }
                 } else {
                     cfg_right
                 };
@@ -2370,12 +2605,19 @@ pub fn assign_single(
 
             match left_ty {
                 Type::StorageRef(..) if set_storage_bytes => {
-                    if let Expression::Subscript(_, _, _, array, index) = dest {
+                    if let Expression::Subscript {
+                        expr: array, index, ..
+                    } = dest
+                    {
                         // Set a byte in a byte array
                         cfg.add(
                             vartab,
                             Instr::SetStorageBytes {
-                                value: Expression::Variable(left.loc(), ty.clone(), pos),
+                                value: Expression::Variable {
+                                    loc: left.loc(),
+                                    ty: ty.clone(),
+                                    var_no: pos,
+                                },
                                 storage: *array,
                                 offset: *index,
                             },
@@ -2388,7 +2630,11 @@ pub fn assign_single(
                     cfg.add(
                         vartab,
                         Instr::SetStorage {
-                            value: Expression::Variable(left.loc(), ty.clone(), pos),
+                            value: Expression::Variable {
+                                loc: left.loc(),
+                                ty: ty.clone(),
+                                var_no: pos,
+                            },
                             ty: ty.deref_any().clone(),
                             storage: dest,
                         },
@@ -2399,14 +2645,22 @@ pub fn assign_single(
                         vartab,
                         Instr::Store {
                             dest,
-                            data: Expression::Variable(Loc::Codegen, ty.clone(), pos),
+                            data: Expression::Variable {
+                                loc: Loc::Codegen,
+                                ty: ty.clone(),
+                                var_no: pos,
+                            },
                         },
                     );
                 }
                 _ => unreachable!(),
             }
 
-            Expression::Variable(left.loc(), ty.clone(), pos)
+            Expression::Variable {
+                loc: left.loc(),
+                ty: ty.clone(),
+                var_no: pos,
+            }
         }
     }
 }
@@ -2466,7 +2720,11 @@ pub fn emit_function_call(
                         let temp_pos = vartab.temp(&id, &ret.ty);
                         return_tys.push(ret.ty.clone());
                         res.push(temp_pos);
-                        returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
+                        returns.push(Expression::Variable {
+                            loc: id.loc,
+                            ty: ret.ty.clone(),
+                            var_no: temp_pos,
+                        });
                     }
 
                     cfg.add(
@@ -2515,7 +2773,11 @@ pub fn emit_function_call(
                         let temp_pos = vartab.temp(&id, ty);
                         res.push(temp_pos);
                         return_tys.push(ty.clone());
-                        return_values.push(Expression::Variable(id.loc, ty.clone(), temp_pos));
+                        return_values.push(Expression::Variable {
+                            loc: id.loc,
+                            ty: ty.clone(),
+                            var_no: temp_pos,
+                        });
                     }
 
                     cfg.add(
@@ -2563,7 +2825,11 @@ pub fn emit_function_call(
             let value = if let Some(value) = &call_args.value {
                 expression(value, cfg, caller_contract_no, func, ns, vartab, opt)
             } else {
-                Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
+                Expression::NumberLiteral {
+                    loc: pt::Loc::Codegen,
+                    ty: Type::Value,
+                    value: BigInt::zero(),
+                }
             };
             let accounts = call_args
                 .accounts
@@ -2592,8 +2858,12 @@ pub fn emit_function_call(
             );
 
             vec![
-                Expression::Variable(*loc, Type::Bool, success),
-                Expression::ReturnData(*loc),
+                Expression::Variable {
+                    loc: *loc,
+                    ty: Type::Bool,
+                    var_no: success,
+                },
+                Expression::ReturnData { loc: *loc },
             ]
         }
         ast::Expression::ExternalFunctionCall {
@@ -2638,7 +2908,11 @@ pub fn emit_function_call(
                 let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
-                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
+                    Expression::NumberLiteral {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Value,
+                        value: BigInt::zero(),
+                    }
                 };
 
                 let selector = dest_func.selector(ns, &caller_contract_no);
@@ -2647,7 +2921,11 @@ pub fn emit_function_call(
 
                 args.insert(
                     0,
-                    Expression::BytesLiteral(*loc, Type::Bytes(selector.len() as u8), selector),
+                    Expression::BytesLiteral {
+                        loc: *loc,
+                        ty: Type::Bytes(selector.len() as u8),
+                        value: selector,
+                    },
                 );
 
                 let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
@@ -2676,7 +2954,7 @@ pub fn emit_function_call(
                         .collect::<Vec<Type>>();
                     abi_decode(
                         loc,
-                        &Expression::ReturnData(*loc),
+                        &Expression::ReturnData { loc: *loc },
                         &tys,
                         ns,
                         vartab,
@@ -2705,7 +2983,11 @@ pub fn emit_function_call(
                 let value = if let Some(value) = &call_args.value {
                     expression(value, cfg, caller_contract_no, func, ns, vartab, opt)
                 } else {
-                    Expression::NumberLiteral(pt::Loc::Codegen, Type::Value, BigInt::zero())
+                    Expression::NumberLiteral {
+                        loc: pt::Loc::Codegen,
+                        ty: Type::Value,
+                        value: BigInt::zero(),
+                    }
                 };
 
                 let selector = function.external_function_selector();
@@ -2734,7 +3016,7 @@ pub fn emit_function_call(
                 if !func_returns.is_empty() && returns[0] != Type::Void {
                     abi_decode(
                         loc,
-                        &Expression::ReturnData(*loc),
+                        &Expression::ReturnData { loc: *loc },
                         returns,
                         ns,
                         vartab,
@@ -2762,16 +3044,16 @@ pub fn emit_function_call(
 }
 
 pub fn default_gas(ns: &Namespace) -> Expression {
-    Expression::NumberLiteral(
-        pt::Loc::Codegen,
-        Type::Uint(64),
+    Expression::NumberLiteral {
+        loc: pt::Loc::Codegen,
+        ty: Type::Uint(64),
         // See EIP150
-        if ns.target == Target::EVM {
+        value: if ns.target == Target::EVM {
             BigInt::from(i64::MAX)
         } else {
             BigInt::zero()
         },
-    )
+    }
 }
 
 /// Codegen for an array subscript expression
@@ -2789,13 +3071,13 @@ fn array_subscript(
     opt: &Options,
 ) -> Expression {
     if array_ty.is_storage_bytes() {
-        return Expression::Subscript(
-            *loc,
-            elem_ty.clone(),
-            array_ty.clone(),
-            Box::new(expression(array, cfg, contract_no, func, ns, vartab, opt)),
-            Box::new(expression(index, cfg, contract_no, func, ns, vartab, opt)),
-        );
+        return Expression::Subscript {
+            loc: *loc,
+            ty: elem_ty.clone(),
+            array_ty: array_ty.clone(),
+            expr: Box::new(expression(array, cfg, contract_no, func, ns, vartab, opt)),
+            index: Box::new(expression(index, cfg, contract_no, func, ns, vartab, opt)),
+        };
     }
 
     if array_ty.is_mapping() {
@@ -2803,15 +3085,19 @@ fn array_subscript(
         let index = expression(index, cfg, contract_no, func, ns, vartab, opt);
 
         return if ns.target == Target::Solana {
-            Expression::Subscript(
-                *loc,
-                elem_ty.clone(),
-                array_ty.clone(),
-                Box::new(array),
-                Box::new(index),
-            )
+            Expression::Subscript {
+                loc: *loc,
+                ty: elem_ty.clone(),
+                array_ty: array_ty.clone(),
+                expr: Box::new(array),
+                index: Box::new(index),
+            }
         } else {
-            Expression::Keccak256(*loc, array_ty.clone(), vec![array, index])
+            Expression::Keccak256 {
+                loc: *loc,
+                ty: array_ty.clone(),
+                exprs: vec![array, index],
+            }
         };
     }
 
@@ -2849,7 +3135,11 @@ fn array_subscript(
                         let array_length =
                             load_storage(loc, &Type::Uint(256), array.clone(), cfg, vartab);
 
-                        array = Expression::Keccak256(*loc, Type::Uint(256), vec![array]);
+                        array = Expression::Keccak256 {
+                            loc: *loc,
+                            ty: Type::Uint(256),
+                            exprs: vec![array],
+                        };
 
                         array_length
                     }
@@ -2857,19 +3147,25 @@ fn array_subscript(
                     // If a subscript is encountered array length will be called
 
                     // Return array length by default
-                    let mut returned = Expression::Builtin(
-                        *loc,
-                        vec![Type::Uint(32)],
-                        Builtin::ArrayLength,
-                        vec![array.clone()],
-                    );
+                    let mut returned = Expression::Builtin {
+                        loc: *loc,
+                        tys: vec![Type::Uint(32)],
+                        kind: Builtin::ArrayLength,
+                        args: vec![array.clone()],
+                    };
 
-                    if let Expression::Variable(loc, _, num) = &array {
+                    if let Expression::Variable {
+                        loc, var_no: num, ..
+                    } = &array
+                    {
                         // If the size is known (is in cfg.array_length_map), do the replacement
 
                         if let Some(array_length_var) = cfg.array_lengths_temps.get(num) {
-                            returned =
-                                Expression::Variable(*loc, Type::Uint(32), *array_length_var);
+                            returned = Expression::Variable {
+                                loc: *loc,
+                                ty: Type::Uint(32),
+                                var_no: *array_length_var,
+                            };
                         }
                     }
                     returned
@@ -2888,12 +3184,12 @@ fn array_subscript(
                 expression(&ast_big_int, cfg, contract_no, func, ns, vartab, opt)
             }
         },
-        Type::DynamicBytes => Expression::Builtin(
-            *loc,
-            vec![Type::Uint(32)],
-            Builtin::ArrayLength,
-            vec![array.clone()],
-        ),
+        Type::DynamicBytes => Expression::Builtin {
+            loc: *loc,
+            tys: vec![Type::Uint(32)],
+            kind: Builtin::ArrayLength,
+            args: vec![array.clone()],
+        },
         _ => {
             unreachable!();
         }
@@ -2932,7 +3228,11 @@ fn array_subscript(
             cond: Expression::MoreEqual {
                 loc: *loc,
                 signed: false,
-                left: Box::new(Expression::Variable(index_loc, coerced_ty.clone(), pos)),
+                left: Box::new(Expression::Variable {
+                    loc: index_loc,
+                    ty: coerced_ty.clone(),
+                    var_no: pos,
+                }),
                 right: Box::new(array_length.cast(&coerced_ty, ns)),
             },
             true_block: out_of_bounds,
@@ -2959,44 +3259,60 @@ fn array_subscript(
         let index_ty = Type::Uint(*array_length as u16 * 8);
 
         let to_width = array_ty.bits(ns);
-        let shift_arg_raw = Expression::Variable(index_loc, coerced_ty.clone(), pos);
+        let shift_arg_raw = Expression::Variable {
+            loc: index_loc,
+            ty: coerced_ty.clone(),
+            var_no: pos,
+        };
 
         let shift_arg = match index_width.cmp(&to_width) {
             Ordering::Equal => shift_arg_raw,
-            Ordering::Less => Expression::ZeroExt(*loc, index_ty.clone(), shift_arg_raw.into()),
-            Ordering::Greater => Expression::Trunc(*loc, index_ty.clone(), shift_arg_raw.into()),
+            Ordering::Less => Expression::ZeroExt {
+                loc: *loc,
+                ty: index_ty.clone(),
+                expr: shift_arg_raw.into(),
+            },
+            Ordering::Greater => Expression::Trunc {
+                loc: *loc,
+                ty: index_ty.clone(),
+                expr: shift_arg_raw.into(),
+            },
         };
 
-        return Expression::Trunc(
-            *loc,
-            res_ty,
-            Expression::ShiftRight(
-                *loc,
-                from_ty,
-                array.into(),
-                // shift by (array_length - 1 - index) * 8
-                Expression::ShiftLeft(
-                    *loc,
-                    index_ty.clone(),
-                    Box::new(Expression::Subtract(
-                        *loc,
-                        index_ty.clone(),
-                        true,
-                        Expression::NumberLiteral(
-                            *loc,
-                            index_ty.clone(),
-                            BigInt::from_u8(array_length - 1).unwrap(),
-                        )
+        return Expression::Trunc {
+            loc: *loc,
+            ty: res_ty,
+            expr: Expression::ShiftRight {
+                loc: *loc,
+                ty: from_ty,
+                left: array.into(),
+                right: Expression::ShiftLeft {
+                    loc: *loc,
+                    ty: index_ty.clone(),
+                    left: Box::new(Expression::Subtract {
+                        loc: *loc,
+                        ty: index_ty.clone(),
+                        overflowing: true,
+                        left: Expression::NumberLiteral {
+                            loc: *loc,
+                            ty: index_ty.clone(),
+                            value: BigInt::from_u8(array_length - 1).unwrap(),
+                        }
                         .into(),
-                        shift_arg.into(),
-                    )),
-                    Expression::NumberLiteral(*loc, index_ty, BigInt::from_u8(3).unwrap()).into(),
-                )
+                        right: shift_arg.into(),
+                    }),
+                    right: Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: index_ty,
+                        value: BigInt::from_u8(3).unwrap(),
+                    }
+                    .into(),
+                }
                 .into(),
-                false,
-            )
+                signed: false,
+            }
             .into(),
-        );
+        };
     }
 
     if let Type::StorageRef(_, ty) = &array_ty {
@@ -3005,97 +3321,126 @@ fn array_subscript(
 
         if ns.target == Target::Solana {
             if ty.array_length().is_some() && ty.is_sparse_solana(ns) {
-                let index =
-                    Expression::Variable(index_loc, coerced_ty, pos).cast(&Type::Uint(256), ns);
+                let index = Expression::Variable {
+                    loc: index_loc,
+                    ty: coerced_ty,
+                    var_no: pos,
+                }
+                .cast(&Type::Uint(256), ns);
 
-                Expression::Subscript(
-                    *loc,
-                    elem_ty,
-                    array_ty.clone(),
-                    Box::new(array),
-                    Box::new(index),
-                )
+                Expression::Subscript {
+                    loc: *loc,
+                    ty: elem_ty,
+                    array_ty: array_ty.clone(),
+                    expr: Box::new(array),
+                    index: Box::new(index),
+                }
             } else {
-                let index = Expression::Variable(index_loc, coerced_ty, pos).cast(&slot_ty, ns);
+                let index = Expression::Variable {
+                    loc: index_loc,
+                    ty: coerced_ty,
+                    var_no: pos,
+                }
+                .cast(&slot_ty, ns);
 
                 if ty.array_length().is_some() {
                     // fixed length array
                     let elem_size = elem_ty.deref_any().solana_storage_size(ns);
 
-                    Expression::Add(
-                        *loc,
-                        elem_ty,
-                        true,
-                        Box::new(array),
-                        Box::new(Expression::Multiply(
-                            *loc,
-                            slot_ty.clone(),
-                            true,
-                            Box::new(index),
-                            Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
-                        )),
-                    )
+                    Expression::Add {
+                        loc: *loc,
+                        ty: elem_ty,
+                        overflowing: true,
+                        left: Box::new(array),
+                        right: Box::new(Expression::Multiply {
+                            loc: *loc,
+                            ty: slot_ty.clone(),
+                            overflowing: true,
+                            left: Box::new(index),
+                            right: Box::new(Expression::NumberLiteral {
+                                loc: *loc,
+                                ty: slot_ty,
+                                value: elem_size,
+                            }),
+                        }),
+                    }
                 } else {
-                    Expression::Subscript(
-                        *loc,
-                        elem_ty,
-                        array_ty.clone(),
-                        Box::new(array),
-                        Box::new(index),
-                    )
+                    Expression::Subscript {
+                        loc: *loc,
+                        ty: elem_ty,
+                        array_ty: array_ty.clone(),
+                        expr: Box::new(array),
+                        index: Box::new(index),
+                    }
                 }
             }
         } else {
             let elem_size = elem_ty.storage_slots(ns);
 
-            if let Expression::NumberLiteral(_, _, arr_length) = &array_length {
+            if let Expression::NumberLiteral {
+                value: arr_length, ..
+            } = &array_length
+            {
                 if arr_length.mul(elem_size.clone()).to_u64().is_some() {
                     // we need to calculate the storage offset. If this can be done with 64 bit
                     // arithmetic it will be much more efficient on wasm
-                    return Expression::Add(
-                        *loc,
-                        elem_ty,
-                        true,
-                        Box::new(array),
-                        Box::new(Expression::ZeroExt(
-                            *loc,
-                            slot_ty,
-                            Box::new(Expression::Multiply(
-                                *loc,
-                                Type::Uint(64),
-                                true,
-                                Box::new(
-                                    Expression::Variable(index_loc, coerced_ty, pos)
-                                        .cast(&Type::Uint(64), ns),
+                    return Expression::Add {
+                        loc: *loc,
+                        ty: elem_ty,
+                        overflowing: true,
+                        left: Box::new(array),
+                        right: Box::new(Expression::ZeroExt {
+                            loc: *loc,
+                            ty: slot_ty,
+                            expr: Box::new(Expression::Multiply {
+                                loc: *loc,
+                                ty: Type::Uint(64),
+                                overflowing: true,
+                                left: Box::new(
+                                    Expression::Variable {
+                                        loc: index_loc,
+                                        ty: coerced_ty,
+                                        var_no: pos,
+                                    }
+                                    .cast(&Type::Uint(64), ns),
                                 ),
-                                Box::new(Expression::NumberLiteral(
-                                    *loc,
-                                    Type::Uint(64),
-                                    elem_size,
-                                )),
-                            )),
-                        )),
-                    );
+                                right: Box::new(Expression::NumberLiteral {
+                                    loc: *loc,
+                                    ty: Type::Uint(64),
+                                    value: elem_size,
+                                }),
+                            }),
+                        }),
+                    };
                 }
             }
 
             array_offset(
                 loc,
                 array,
-                Expression::Variable(index_loc, coerced_ty, pos).cast(&ns.storage_type(), ns),
+                Expression::Variable {
+                    loc: index_loc,
+                    ty: coerced_ty,
+                    var_no: pos,
+                }
+                .cast(&ns.storage_type(), ns),
                 elem_ty,
                 ns,
             )
         }
     } else {
         match array_ty.deref_memory() {
-            Type::DynamicBytes | Type::Array(..) => Expression::Subscript(
-                *loc,
-                elem_ty.clone(),
-                array_ty.clone(),
-                Box::new(array),
-                Box::new(Expression::Variable(index_loc, coerced_ty, pos)),
-            ),
+            Type::DynamicBytes | Type::Array(..) => Expression::Subscript {
+                loc: *loc,
+                ty: elem_ty.clone(),
+                array_ty: array_ty.clone(),
+                expr: Box::new(array),
+                index: Box::new(Expression::Variable {
+                    loc: index_loc,
+                    ty: coerced_ty,
+                    var_no: pos,
+                }),
+            },
             _ => {
                 // should not happen as type-checking already done
                 unreachable!();
@@ -3145,7 +3490,11 @@ pub fn load_storage(
         },
     );
 
-    Expression::Variable(*loc, ty.clone(), res)
+    Expression::Variable {
+        loc: *loc,
+        ty: ty.clone(),
+        var_no: res,
+    }
 }
 
 fn array_literal_to_memory_array(
@@ -3158,23 +3507,27 @@ fn array_literal_to_memory_array(
     let memory_array = vartab.temp_anonymous(ty);
     let elem_ty = ty.array_elem();
     let dims = expr.ty().array_length().unwrap().clone();
-    let array_size = Expression::NumberLiteral(*loc, Type::Uint(32), dims);
+    let array_size = Expression::NumberLiteral {
+        loc: *loc,
+        ty: Type::Uint(32),
+        value: dims,
+    };
 
     cfg.add(
         vartab,
         Instr::Set {
             loc: *loc,
             res: memory_array,
-            expr: Expression::AllocDynamicBytes(
-                *loc,
-                ty.clone(),
-                Box::new(array_size.clone()),
-                None,
-            ),
+            expr: Expression::AllocDynamicBytes {
+                loc: *loc,
+                ty: ty.clone(),
+                size: Box::new(array_size.clone()),
+                initializer: None,
+            },
         },
     );
 
-    let elements = if let Expression::ArrayLiteral(_, _, _, items) = expr {
+    let elements = if let Expression::ArrayLiteral { values: items, .. } = expr {
         items
     } else {
         unreachable!()
@@ -3184,17 +3537,21 @@ fn array_literal_to_memory_array(
         cfg.add(
             vartab,
             Instr::Store {
-                dest: Expression::Subscript(
-                    *loc,
-                    Type::Ref(Box::new(elem_ty.clone())),
-                    ty.clone(),
-                    Box::new(Expression::Variable(*loc, ty.clone(), memory_array)),
-                    Box::new(Expression::NumberLiteral(
-                        *loc,
-                        Type::Uint(32),
-                        BigInt::from(item_no),
-                    )),
-                ),
+                dest: Expression::Subscript {
+                    loc: *loc,
+                    ty: Type::Ref(Box::new(elem_ty.clone())),
+                    array_ty: ty.clone(),
+                    expr: Box::new(Expression::Variable {
+                        loc: *loc,
+                        ty: ty.clone(),
+                        var_no: memory_array,
+                    }),
+                    index: Box::new(Expression::NumberLiteral {
+                        loc: *loc,
+                        ty: Type::Uint(32),
+                        value: BigInt::from(item_no),
+                    }),
+                },
                 data: item.clone(),
             },
         );
@@ -3212,7 +3569,11 @@ fn array_literal_to_memory_array(
 
     cfg.array_lengths_temps.insert(memory_array, temp_res);
 
-    Expression::Variable(*loc, ty.clone(), memory_array)
+    Expression::Variable {
+        loc: *loc,
+        ty: ty.clone(),
+        var_no: memory_array,
+    }
 }
 
 /// This function encodes the arguments for the assert-failure instruction
@@ -3230,7 +3591,11 @@ pub(super) fn assert_failure(
     }
 
     let selector = 0x08c3_79a0u32;
-    let selector = Expression::NumberLiteral(Loc::Codegen, Type::Uint(32), BigInt::from(selector));
+    let selector = Expression::NumberLiteral {
+        loc: Loc::Codegen,
+        ty: Type::Uint(32),
+        value: BigInt::from(selector),
+    };
     let args = vec![selector, arg.unwrap()];
 
     let (encoded_buffer, _) = abi_encode(loc, args, ns, vartab, cfg, false);
@@ -3249,23 +3614,32 @@ fn code(loc: &Loc, contract_no: usize, ns: &Namespace, opt: &Options) -> Express
 
     let code = contract.emit(ns, opt);
 
-    let size = Expression::NumberLiteral(*loc, Type::Uint(32), code.len().into());
+    let size = Expression::NumberLiteral {
+        loc: *loc,
+        ty: Type::Uint(32),
+        value: code.len().into(),
+    };
 
-    Expression::AllocDynamicBytes(*loc, Type::DynamicBytes, size.into(), Some(code))
+    Expression::AllocDynamicBytes {
+        loc: *loc,
+        ty: Type::DynamicBytes,
+        size: size.into(),
+        initializer: Some(code),
+    }
 }
 
 fn string_to_expr(string: String) -> Expression {
-    Expression::FormatString(
-        Loc::Codegen,
-        vec![(
+    Expression::FormatString {
+        loc: Loc::Codegen,
+        args: vec![(
             FormatArg::StringLiteral,
-            Expression::BytesLiteral(
-                Loc::Codegen,
-                Type::Bytes(string.as_bytes().len() as u8),
-                string.as_bytes().to_vec(),
-            ),
+            Expression::BytesLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Bytes(string.as_bytes().len() as u8),
+                value: string.as_bytes().to_vec(),
+            },
         )],
-    )
+    }
 }
 
 pub(crate) fn log_runtime_error(
@@ -3287,49 +3661,52 @@ fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
     let prefix = b"print: ";
     let delimiter = b",\n";
 
-    if let Expression::FormatString(loc, args) = &mut expr {
+    if let Expression::FormatString { loc, args } = &mut expr {
         let mut new_vec = Vec::new();
         new_vec.push((
             FormatArg::StringLiteral,
-            Expression::BytesLiteral(
-                Loc::Codegen,
-                Type::Bytes(prefix.len() as u8),
-                prefix.to_vec(),
-            ),
+            Expression::BytesLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Bytes(prefix.len() as u8),
+                value: prefix.to_vec(),
+            },
         ));
         new_vec.append(args);
         new_vec.push((
             FormatArg::StringLiteral,
-            Expression::BytesLiteral(
-                Loc::Codegen,
-                Type::Bytes(delimiter.len() as u8),
-                delimiter.to_vec(),
-            ),
+            Expression::BytesLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Bytes(delimiter.len() as u8),
+                value: delimiter.to_vec(),
+            },
         ));
 
-        Expression::FormatString(*loc, new_vec)
+        Expression::FormatString {
+            loc: *loc,
+            args: new_vec,
+        }
     } else {
-        Expression::FormatString(
-            Loc::Codegen,
-            vec![
+        Expression::FormatString {
+            loc: Loc::Codegen,
+            args: vec![
                 (
                     FormatArg::StringLiteral,
-                    Expression::BytesLiteral(
-                        Loc::Codegen,
-                        Type::Bytes(prefix.len() as u8),
-                        prefix.to_vec(),
-                    ),
+                    Expression::BytesLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Bytes(prefix.len() as u8),
+                        value: prefix.to_vec(),
+                    },
                 ),
                 (FormatArg::Default, expr),
                 (
                     FormatArg::StringLiteral,
-                    Expression::BytesLiteral(
-                        Loc::Codegen,
-                        Type::Bytes(delimiter.len() as u8),
-                        delimiter.to_vec(),
-                    ),
+                    Expression::BytesLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Bytes(delimiter.len() as u8),
+                        value: delimiter.to_vec(),
+                    },
                 ),
             ],
-        )
+        }
     }
 }

@@ -395,7 +395,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
 pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
     target: &T,
     bin: &Binary<'a>,
-    unchecked: bool,
+    overflowing: bool,
     bits: u32,
     signed: bool,
     o: PointerValue<'a>,
@@ -422,7 +422,7 @@ pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
         "__{}power{}{}",
         if signed { 's' } else { 'u' },
         bits,
-        if unchecked { "unchecked" } else { "" }
+        if overflowing { "overflowing" } else { "" }
     );
     let ty = bin.context.custom_width_int_type(bits);
 
@@ -477,7 +477,7 @@ pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
         target,
         bin,
         function,
-        unchecked,
+        overflowing,
         result.as_basic_value().into_int_value(),
         base.as_basic_value().into_int_value(),
         signed,
@@ -523,7 +523,7 @@ pub(super) fn power<'a, T: TargetRuntime<'a> + ?Sized>(
         target,
         bin,
         function,
-        unchecked,
+        overflowing,
         base.as_basic_value().into_int_value(),
         base.as_basic_value().into_int_value(),
         signed,

@@ -25,7 +25,7 @@ contract foo {
                 }
 
             // CHECK: block1: # end_switch
-	        // CHECK: ty:uint256 %1.cse_temp = (unchecked %x + %y)
+	        // CHECK: ty:uint256 %1.cse_temp = (overflowing %x + %y)
 	        // CHECK: branchcond (%1.cse_temp == uint256 90), block5, block6
             if eq(add(x, y), 90) {
                 yy := 9

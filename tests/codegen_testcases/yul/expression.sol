@@ -58,10 +58,10 @@ contract testing {
 // BEGIN-CHECK: testing::testing::function::yulLocalVariable__uint256
     function yulLocalVariable(uint256 a) public pure {
         assembly {
-            // CHECK: ty:uint256 %x = (unchecked uint256 2 + (arg #0))
+            // CHECK: ty:uint256 %x = (overflowing uint256 2 + (arg #0))
             let x := add(2, a)
 
-            // CHECK: ty:uint256 %y = (unchecked uint256 2 + (arg #0))
+            // CHECK: ty:uint256 %y = (overflowing uint256 2 + (arg #0))
             let y := x
         }
     }
@@ -166,14 +166,14 @@ contract testing {
                 let y := 9
             }
 
-            // CHECK: ty:int32 %k = (trunc int32 (unchecked (zext uint256 (arg #0)) + uint256 2))
+            // CHECK: ty:int32 %k = (trunc int32 (overflowing (zext uint256 (arg #0)) + uint256 2))
             let k : s32 := add(a, 2)
 
-            // CHECK: %ret.temp.58 = call testing::yul_function_0::get (sext uint256 (trunc int32 (unchecked (zext uint256 (arg #0)) + uint256 2)))
+            // CHECK: %ret.temp.58 = call testing::yul_function_0::get (sext uint256 (trunc int32 (overflowing (zext uint256 (arg #0)) + uint256 2)))
             let x := get(k)
             // CHECK: ty:uint256 %x = %ret.temp.58
 
-            // CHECK: %ret1.temp.59, %ret2.temp.60 = call testing::yul_function_2::multipleReturns %x, (trunc int32 (unchecked (zext uint256 (arg #0)) + uint256 2))
+            // CHECK: %ret1.temp.59, %ret2.temp.60 = call testing::yul_function_2::multipleReturns %x, (trunc int32 (overflowing (zext uint256 (arg #0)) + uint256 2))
             let l, m := multipleReturns(x, k)
             // CHECK: ty:uint256 %l = (zext uint256 %ret1.temp.59)
             // CHECK: ty:uint256 %m = (sext uint256 %ret2.temp.60)

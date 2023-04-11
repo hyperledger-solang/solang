@@ -27,7 +27,11 @@ impl AbiEncoding for BorshEncoding {
         _vartab: &mut Vartable,
         _cfg: &mut ControlFlowGraph,
     ) -> Expression {
-        Expression::NumberLiteral(Codegen, Uint(32), 4.into())
+        Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Uint(32),
+            value: 4.into(),
+        }
     }
 
     fn encode_size(
@@ -60,13 +64,18 @@ impl AbiEncoding for BorshEncoding {
             },
         );
         let mut size = Type::FunctionSelector.memory_size_of(ns);
-        let offset = Expression::Add(
-            Codegen,
-            Uint(32),
-            false,
-            offset.clone().into(),
-            Expression::NumberLiteral(Codegen, Uint(32), size.clone()).into(),
-        );
+        let offset = Expression::Add {
+            loc: Codegen,
+            ty: Uint(32),
+            overflowing: false,
+            left: offset.clone().into(),
+            right: Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Uint(32),
+                value: size.clone(),
+            }
+            .into(),
+        };
         cfg.add(
             vartab,
             Instr::WriteBuffer {
@@ -76,7 +85,11 @@ impl AbiEncoding for BorshEncoding {
             },
         );
         size.add_assign(BigInt::from(ns.address_length));
-        Expression::NumberLiteral(Codegen, Uint(32), size)
+        Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Uint(32),
+            value: size,
+        }
     }
 
     fn retrieve_array_length(
@@ -92,17 +105,21 @@ impl AbiEncoding for BorshEncoding {
             Instr::Set {
                 loc: Codegen,
                 res: array_length,
-                expr: Expression::Builtin(
-                    Codegen,
-                    vec![Uint(32)],
-                    Builtin::ReadFromBuffer,
-                    vec![buffer.clone(), offset.clone()],
-                ),
+                expr: Expression::Builtin {
+                    loc: Codegen,
+                    tys: vec![Uint(32)],
+                    kind: Builtin::ReadFromBuffer,
+                    args: vec![buffer.clone(), offset.clone()],
+                },
             },
         );
         (
             array_length,
-            Expression::NumberLiteral(Codegen, Uint(32), 4.into()),
+            Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Uint(32),
+                value: 4.into(),
+            },
         )
     }
 
@@ -118,41 +135,42 @@ impl AbiEncoding for BorshEncoding {
     ) -> (Expression, Expression) {
         let selector_size = Type::FunctionSelector.memory_size_of(ns);
         // External function has selector + address
-        let size = Expression::NumberLiteral(
-            Codegen,
-            Uint(32),
-            BigInt::from(ns.address_length) + &selector_size,
-        );
+        let size = Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Uint(32),
+            value: BigInt::from(ns.address_length) + &selector_size,
+        };
         validator.validate_offset_plus_size(offset, &size, ns, vartab, cfg);
 
-        let selector = Expression::Builtin(
-            Codegen,
-            vec![Type::FunctionSelector],
-            Builtin::ReadFromBuffer,
-            vec![buffer.clone(), offset.clone()],
-        );
+        let selector = Expression::Builtin {
+            loc: Codegen,
+            tys: vec![Type::FunctionSelector],
+            kind: Builtin::ReadFromBuffer,
+            args: vec![buffer.clone(), offset.clone()],
+        };
 
-        let new_offset =
-            offset
-                .clone()
-                .add_u32(Expression::NumberLiteral(Codegen, Uint(32), selector_size));
+        let new_offset = offset.clone().add_u32(Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Uint(32),
+            value: selector_size,
+        });
 
-        let address = Expression::Builtin(
-            Codegen,
-            vec![Type::Address(false)],
-            Builtin::ReadFromBuffer,
-            vec![buffer.clone(), new_offset],
-        );
+        let address = Expression::Builtin {
+            loc: Codegen,
+            tys: vec![Type::Address(false)],
+            kind: Builtin::ReadFromBuffer,
+            args: vec![buffer.clone(), new_offset],
+        };
 
-        let external_func = Expression::Cast(
-            Codegen,
-            ty.clone(),
-            Box::new(Expression::StructLiteral(
-                Codegen,
-                Type::Struct(StructType::ExternalFunction),
-                vec![selector, address],
-            )),
-        );
+        let external_func = Expression::Cast {
+            loc: Codegen,
+            ty: ty.clone(),
+            expr: Box::new(Expression::StructLiteral {
+                loc: Codegen,
+                ty: Type::Struct(StructType::ExternalFunction),
+                values: vec![selector, address],
+            }),
+        };
 
         (external_func, size)
     }
@@ -164,17 +182,21 @@ impl AbiEncoding for BorshEncoding {
         _cfg: &mut ControlFlowGraph,
     ) -> Expression {
         // When encoding a variable length array, the total size is "length (u32)" + elements
-        let length = Expression::Builtin(
-            Codegen,
-            vec![Uint(32)],
-            Builtin::ArrayLength,
-            vec![expr.clone()],
-        );
+        let length = Expression::Builtin {
+            loc: Codegen,
+            tys: vec![Uint(32)],
+            kind: Builtin::ArrayLength,
+            args: vec![expr.clone()],
+        };
 
         if self.is_packed() {
             length
         } else {
-            length.add_u32(Expression::NumberLiteral(Codegen, Uint(32), 4.into()))
+            length.add_u32(Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Uint(32),
+                value: 4.into(),
+            })
         }
     }
 
