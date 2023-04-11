@@ -618,12 +618,13 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Expression::ConstArrayLiteral {
-                dimensions: lengths,
-                values,
-                ..
+                dimensions, values, ..
             } => format!(
                 "constant {} [ {} ]",
-                lengths.iter().map(|d| format!("[{d}]")).collect::<String>(),
+                dimensions
+                    .iter()
+                    .map(|d| format!("[{d}]"))
+                    .collect::<String>(),
                 values
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))
@@ -631,12 +632,13 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Expression::ArrayLiteral {
-                dimensions: lengths,
-                values,
-                ..
+                dimensions, values, ..
             } => format!(
                 "{} [ {} ]",
-                lengths.iter().map(|d| format!("[{d}]")).collect::<String>(),
+                dimensions
+                    .iter()
+                    .map(|d| format!("[{d}]"))
+                    .collect::<String>(),
                 values
                     .iter()
                     .map(|e| self.expr_to_string(contract, ns, e))

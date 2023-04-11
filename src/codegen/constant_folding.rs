@@ -374,7 +374,7 @@ fn expression(
         Expression::Add {
             loc,
             ty,
-            overflowing: unchecked,
+            overflowing,
             left,
             right,
         } => {
@@ -392,7 +392,7 @@ fn expression(
                     Expression::Add {
                         loc: *loc,
                         ty: ty.clone(),
-                        overflowing: *unchecked,
+                        overflowing: *overflowing,
                         left: Box::new(left.0),
                         right: Box::new(right.0),
                     },
@@ -403,7 +403,7 @@ fn expression(
         Expression::Subtract {
             loc,
             ty,
-            overflowing: unchecked,
+            overflowing,
             left,
             right,
         } => {
@@ -421,7 +421,7 @@ fn expression(
                     Expression::Subtract {
                         loc: *loc,
                         ty: ty.clone(),
-                        overflowing: *unchecked,
+                        overflowing: *overflowing,
                         left: Box::new(left.0),
                         right: Box::new(right.0),
                     },
@@ -454,7 +454,7 @@ fn expression(
         Expression::Multiply {
             loc,
             ty,
-            overflowing: unchecked,
+            overflowing,
             left,
             right,
         } => {
@@ -472,7 +472,7 @@ fn expression(
                     Expression::Multiply {
                         loc: *loc,
                         ty: ty.clone(),
-                        overflowing: *unchecked,
+                        overflowing: *overflowing,
                         left: Box::new(left.0),
                         right: Box::new(right.0),
                     },
@@ -637,7 +637,7 @@ fn expression(
         Expression::Power {
             loc,
             ty,
-            overflowing: unchecked,
+            overflowing,
             base,
             exp,
         } => {
@@ -665,7 +665,7 @@ fn expression(
                 Expression::Power {
                     loc: *loc,
                     ty: ty.clone(),
-                    overflowing: *unchecked,
+                    overflowing: *overflowing,
                     base: Box::new(base.0),
                     exp: Box::new(exp.0),
                 },
@@ -1182,7 +1182,7 @@ fn expression(
         Expression::ArrayLiteral {
             loc,
             ty,
-            dimensions: lengths,
+            dimensions,
             values: args,
         } => {
             let args = args
@@ -1194,7 +1194,7 @@ fn expression(
                 Expression::ArrayLiteral {
                     loc: *loc,
                     ty: ty.clone(),
-                    dimensions: lengths.clone(),
+                    dimensions: dimensions.clone(),
                     values: args,
                 },
                 false,
@@ -1203,7 +1203,7 @@ fn expression(
         Expression::ConstArrayLiteral {
             loc,
             ty,
-            dimensions: lengths,
+            dimensions,
             values: args,
         } => {
             let args = args
@@ -1215,7 +1215,7 @@ fn expression(
                 Expression::ConstArrayLiteral {
                     loc: *loc,
                     ty: ty.clone(),
-                    dimensions: lengths.clone(),
+                    dimensions: dimensions.clone(),
                     values: args,
                 },
                 false,
