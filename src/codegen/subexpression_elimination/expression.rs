@@ -12,12 +12,12 @@ impl Expression {
             Expression::Add {
                 loc,
                 ty: expr_type,
-                unchecked: check,
+                overflowing: check,
                 ..
             } => Expression::Add {
                 loc: *loc,
                 ty: expr_type.clone(),
-                unchecked: *check,
+                overflowing: *check,
                 left: Box::new(left.clone()),
                 right: Box::new(right.clone()),
             },
@@ -25,12 +25,12 @@ impl Expression {
             Expression::Multiply {
                 loc,
                 ty: expr_type,
-                unchecked: check,
+                overflowing: check,
                 ..
             } => Expression::Multiply {
                 loc: *loc,
                 ty: expr_type.clone(),
-                unchecked: *check,
+                overflowing: *check,
                 left: Box::new(left.clone()),
                 right: Box::new(right.clone()),
             },
@@ -76,12 +76,12 @@ impl Expression {
             Expression::Subtract {
                 loc,
                 ty: expr_type,
-                unchecked: check,
+                overflowing: check,
                 ..
             } => Expression::Subtract {
                 loc: *loc,
                 ty: expr_type.clone(),
-                unchecked: *check,
+                overflowing: *check,
                 left: Box::new(left.clone()),
                 right: Box::new(right.clone()),
             },
@@ -124,12 +124,12 @@ impl Expression {
             Expression::Power {
                 loc,
                 ty: expr_type,
-                unchecked: check,
+                overflowing: check,
                 ..
             } => Expression::Power {
                 loc: *loc,
                 ty: expr_type.clone(),
-                unchecked: *check,
+                overflowing: *check,
                 base: Box::new(left.clone()),
                 exp: Box::new(right.clone()),
             },

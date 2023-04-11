@@ -36,7 +36,7 @@ pub fn array_offset(
         Expression::Add {
             loc: *loc,
             ty: slot_ty,
-            unchecked: true,
+            overflowing: true,
             left: Box::new(start),
             right: Box::new(index),
         }
@@ -45,7 +45,7 @@ pub fn array_offset(
         Expression::Add {
             loc: *loc,
             ty: slot_ty.clone(),
-            unchecked: true,
+            overflowing: true,
             left: Box::new(start),
             right: Box::new(Expression::ShiftLeft {
                 loc: *loc,
@@ -62,12 +62,12 @@ pub fn array_offset(
         Expression::Add {
             loc: *loc,
             ty: slot_ty.clone(),
-            unchecked: true,
+            overflowing: true,
             left: Box::new(start),
             right: Box::new(Expression::Multiply {
                 loc: *loc,
                 ty: slot_ty.clone(),
-                unchecked: true,
+                overflowing: true,
                 left: Box::new(index),
                 right: Box::new(Expression::NumberLiteral {
                     loc: *loc,
@@ -155,7 +155,7 @@ pub fn storage_slots_array_push(
     let new_length = Expression::Add {
         loc: *loc,
         ty: slot_ty.clone(),
-        unchecked: true,
+        overflowing: true,
         left: Box::new(Expression::Variable {
             loc: *loc,
             ty: slot_ty.clone(),
@@ -265,7 +265,7 @@ pub fn storage_slots_array_pop(
             expr: Expression::Subtract {
                 loc: *loc,
                 ty: length_ty.clone(),
-                unchecked: true,
+                overflowing: true,
                 left: Box::new(Expression::Variable {
                     loc: *loc,
                     ty: length_ty.clone(),

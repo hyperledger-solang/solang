@@ -106,7 +106,7 @@ impl BufferValidator<'_> {
             let offset_to_validate = Expression::Add {
                 loc: Loc::Codegen,
                 ty: Type::Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: Box::new(offset.clone()),
                 right: Box::new(size.clone()),
             };
@@ -180,7 +180,7 @@ impl BufferValidator<'_> {
         let reach = Expression::Add {
             loc: Loc::Codegen,
             ty: Type::Uint(32),
-            unchecked: false,
+            overflowing: false,
             left: Box::new(offset.clone()),
             right: Box::new(Expression::NumberLiteral {
                 loc: Loc::Codegen,

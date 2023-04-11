@@ -130,7 +130,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Add {
             loc,
             ty,
-            unchecked,
+            overflowing: unchecked,
             left,
             right,
             ..
@@ -159,7 +159,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Subtract {
             loc,
             ty,
-            unchecked,
+            overflowing: unchecked,
             left,
             right,
         } => {
@@ -187,7 +187,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Multiply {
             loc,
             ty: res_ty,
-            unchecked,
+            overflowing: unchecked,
             left,
             right,
         } => {
@@ -682,7 +682,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Power {
             loc,
             ty: res_ty,
-            unchecked,
+            overflowing: unchecked,
             base: l,
             exp: r,
         } => {

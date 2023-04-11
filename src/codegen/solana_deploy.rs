@@ -326,11 +326,11 @@ pub(super) fn solana_deploy(
             let lamports = Expression::Multiply {
                 loc: Loc::Codegen,
                 ty: Type::Uint(64),
-                unchecked: false,
+                overflowing: false,
                 left: Expression::Add {
                     loc: Loc::Codegen,
                     ty: Type::Uint(64),
-                    unchecked: false,
+                    overflowing: false,
                     left: space.clone().into(),
                     right: Expression::NumberLiteral {
                         loc: Loc::Codegen,

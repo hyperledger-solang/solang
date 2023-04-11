@@ -258,7 +258,7 @@ impl<'a> Dispatch<'a> {
             let arg_len = Expression::Subtract {
                 loc: Codegen,
                 ty: Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: buf_len.into(),
                 right: self.selector_len.clone(),
             };

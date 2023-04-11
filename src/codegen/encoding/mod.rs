@@ -71,7 +71,7 @@ pub(super) fn abi_encode(
         offset = Expression::Add {
             loc: *loc,
             ty: Uint(32),
-            unchecked: false,
+            overflowing: false,
             left: offset.into(),
             right: advance.into(),
         };
@@ -137,7 +137,7 @@ pub(super) fn abi_decode(
         offset = Expression::Add {
             loc: *loc,
             ty: Uint(32),
-            unchecked: false,
+            overflowing: false,
             left: Box::new(offset),
             right: Box::new(advance),
         };
@@ -162,7 +162,7 @@ fn calculate_size_args(
         size = Expression::Add {
             loc: Codegen,
             ty: Uint(32),
-            unchecked: false,
+            overflowing: false,
             left: size.into(),
             right: additional.into(),
         };
@@ -446,7 +446,7 @@ pub(super) trait AbiEncoding {
             offset = Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: offset.clone().into(),
                 right: advance.into(),
             };
@@ -456,7 +456,7 @@ pub(super) trait AbiEncoding {
             runtime_size = Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: runtime_size.into(),
                 right: advance.clone().into(),
             };
@@ -539,7 +539,7 @@ pub(super) trait AbiEncoding {
                 (Some(len), false) => Expression::Add {
                     loc: Codegen,
                     ty: Uint(32),
-                    unchecked: false,
+                    overflowing: false,
                     left: bytes_size.into(),
                     right: len.into(),
                 },
@@ -581,7 +581,7 @@ pub(super) trait AbiEncoding {
         let sub = Expression::Subtract {
             loc: Codegen,
             ty: Uint(32),
-            unchecked: false,
+            overflowing: false,
             left: offset_var,
             right: offset.clone().into(),
         };
@@ -666,7 +666,7 @@ pub(super) trait AbiEncoding {
                     expr: Expression::Add {
                         loc: Codegen,
                         ty: Uint(32),
-                        unchecked: false,
+                        overflowing: false,
                         left: elem_size.into(),
                         right: offset_expr.into(),
                     },
@@ -1053,7 +1053,7 @@ pub(super) trait AbiEncoding {
                     expr: Expression::Subtract {
                         loc: Codegen,
                         ty: Uint(32),
-                        unchecked: false,
+                        overflowing: false,
                         left: Box::new(offset_expr.clone()),
                         right: Box::new(offset.clone()),
                     },
@@ -1190,7 +1190,7 @@ pub(super) trait AbiEncoding {
                     expr: Expression::Add {
                         loc: Codegen,
                         ty: Uint(32),
-                        unchecked: false,
+                        overflowing: false,
                         left: Box::new(advance),
                         right: Box::new(offset_expr.clone()),
                     },
@@ -1313,7 +1313,7 @@ pub(super) trait AbiEncoding {
             offset = Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: Box::new(offset.clone()),
                 right: Box::new(advance),
             };
@@ -1330,7 +1330,7 @@ pub(super) trait AbiEncoding {
             runtime_size = Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: Box::new(runtime_size),
                 right: Box::new(advance.clone()),
             };
@@ -1509,7 +1509,7 @@ pub(super) trait AbiEncoding {
                 size = Expression::Multiply {
                     loc: Codegen,
                     ty: Uint(32),
-                    unchecked: false,
+                    overflowing: false,
                     left: size.into(),
                     right: local_size.clone().into(),
                 };
@@ -1523,7 +1523,7 @@ pub(super) trait AbiEncoding {
             let size = Expression::Multiply {
                 loc: Codegen,
                 ty: Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: size.into(),
                 right: type_size.into(),
             };
@@ -1548,7 +1548,7 @@ pub(super) trait AbiEncoding {
             Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: size_var.into(),
                 right: size_width.into(),
             }
@@ -1625,7 +1625,7 @@ pub(super) trait AbiEncoding {
                     expr: Expression::Add {
                         loc: Codegen,
                         ty: Uint(32),
-                        unchecked: false,
+                        overflowing: false,
                         left: size_var.into(),
                         right: size_width.into(),
                     },
@@ -1651,7 +1651,7 @@ pub(super) trait AbiEncoding {
                     expr: Expression::Add {
                         loc: Codegen,
                         ty: Uint(32),
-                        unchecked: false,
+                        overflowing: false,
                         left: size_var.into(),
                         right: elem_size.into(),
                     },
@@ -1700,7 +1700,7 @@ pub(super) trait AbiEncoding {
             size = Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: size.clone().into(),
                 right: expr_size,
             };
@@ -1947,7 +1947,7 @@ fn finish_array_loop(for_loop: &ForLoop, vartab: &mut Vartable, cfg: &mut Contro
             expr: Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),
-                unchecked: false,
+                overflowing: false,
                 left: index_var.into(),
                 right: one.into(),
             },
@@ -2077,7 +2077,7 @@ fn calculate_array_bytes_size(length_var: usize, elem_ty: &Type, ns: &Namespace)
     Expression::Multiply {
         loc: Codegen,
         ty: Uint(32),
-        unchecked: false,
+        overflowing: false,
         left: var.into(),
         right: size.into(),
     }

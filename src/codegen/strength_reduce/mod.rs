@@ -219,7 +219,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
             Expression::Multiply {
                 loc,
                 ty,
-                unchecked,
+                overflowing: unchecked,
                 left,
                 right,
             } => {
@@ -282,7 +282,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     expr: Box::new(Expression::Multiply {
                                         loc: *loc,
                                         ty: Type::Int(64),
-                                        unchecked: *unchecked,
+                                        overflowing: *unchecked,
                                         left: Box::new(
                                             left.as_ref().clone().cast(&Type::Int(64), ns),
                                         ),
@@ -313,7 +313,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                 expr: Box::new(Expression::Multiply {
                                     loc: *loc,
                                     ty: Type::Uint(64),
-                                    unchecked: *unchecked,
+                                    overflowing: *unchecked,
                                     left: Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
                                     right: Box::new(
                                         right.as_ref().clone().cast(&Type::Uint(64), ns),

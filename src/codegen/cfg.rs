@@ -541,7 +541,7 @@ impl ControlFlowGraph {
                 Expression::Subtract {
                     loc,
                     ty: Type::Uint(32),
-                    unchecked: false,
+                    overflowing: false,
                     left: Box::new(Expression::Variable {
                         loc,
                         ty: Type::Uint(32),
@@ -557,7 +557,7 @@ impl ControlFlowGraph {
                 Expression::Add {
                     loc,
                     ty: Type::Uint(32),
-                    unchecked: false,
+                    overflowing: false,
                     left: Box::new(Expression::Variable {
                         loc,
                         ty: Type::Uint(32),
@@ -644,24 +644,24 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Expression::Add {
-                unchecked,
+                overflowing,
                 left,
                 right,
                 ..
             } => format!(
                 "({}{} + {})",
-                if *unchecked { "unchecked " } else { "" },
+                if *overflowing { "overflowing " } else { "" },
                 self.expr_to_string(contract, ns, left),
                 self.expr_to_string(contract, ns, right)
             ),
             Expression::Subtract {
-                unchecked,
+                overflowing,
                 left,
                 right,
                 ..
             } => format!(
                 "({}{} - {})",
-                if *unchecked { "unchecked " } else { "" },
+                if *overflowing { "overflowing " } else { "" },
                 self.expr_to_string(contract, ns, left),
                 self.expr_to_string(contract, ns, right)
             ),
@@ -691,13 +691,13 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, right)
             ),
             Expression::Multiply {
-                unchecked,
+                overflowing,
                 left,
                 right,
                 ..
             } => format!(
                 "({}{} * {})",
-                if *unchecked { "unchecked " } else { "" },
+                if *overflowing { "overflowing " } else { "" },
                 self.expr_to_string(contract, ns, left),
                 self.expr_to_string(contract, ns, right)
             ),
@@ -722,13 +722,13 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, right)
             ),
             Expression::Power {
-                unchecked,
+                overflowing,
                 base,
                 exp,
                 ..
             } => format!(
                 "({}{} ** {})",
-                if *unchecked { "unchecked " } else { "" },
+                if *overflowing { "overflowing " } else { "" },
                 self.expr_to_string(contract, ns, base),
                 self.expr_to_string(contract, ns, exp)
             ),

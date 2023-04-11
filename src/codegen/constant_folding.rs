@@ -374,7 +374,7 @@ fn expression(
         Expression::Add {
             loc,
             ty,
-            unchecked,
+            overflowing: unchecked,
             left,
             right,
         } => {
@@ -392,7 +392,7 @@ fn expression(
                     Expression::Add {
                         loc: *loc,
                         ty: ty.clone(),
-                        unchecked: *unchecked,
+                        overflowing: *unchecked,
                         left: Box::new(left.0),
                         right: Box::new(right.0),
                     },
@@ -403,7 +403,7 @@ fn expression(
         Expression::Subtract {
             loc,
             ty,
-            unchecked,
+            overflowing: unchecked,
             left,
             right,
         } => {
@@ -421,7 +421,7 @@ fn expression(
                     Expression::Subtract {
                         loc: *loc,
                         ty: ty.clone(),
-                        unchecked: *unchecked,
+                        overflowing: *unchecked,
                         left: Box::new(left.0),
                         right: Box::new(right.0),
                     },
@@ -454,7 +454,7 @@ fn expression(
         Expression::Multiply {
             loc,
             ty,
-            unchecked,
+            overflowing: unchecked,
             left,
             right,
         } => {
@@ -472,7 +472,7 @@ fn expression(
                     Expression::Multiply {
                         loc: *loc,
                         ty: ty.clone(),
-                        unchecked: *unchecked,
+                        overflowing: *unchecked,
                         left: Box::new(left.0),
                         right: Box::new(right.0),
                     },
@@ -637,7 +637,7 @@ fn expression(
         Expression::Power {
             loc,
             ty,
-            unchecked,
+            overflowing: unchecked,
             base,
             exp,
         } => {
@@ -665,7 +665,7 @@ fn expression(
                 Expression::Power {
                     loc: *loc,
                     ty: ty.clone(),
-                    unchecked: *unchecked,
+                    overflowing: *unchecked,
                     base: Box::new(base.0),
                     exp: Box::new(exp.0),
                 },

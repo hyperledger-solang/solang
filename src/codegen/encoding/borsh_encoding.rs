@@ -67,7 +67,7 @@ impl AbiEncoding for BorshEncoding {
         let offset = Expression::Add {
             loc: Codegen,
             ty: Uint(32),
-            unchecked: false,
+            overflowing: false,
             left: offset.clone().into(),
             right: Expression::NumberLiteral {
                 loc: Codegen,

@@ -27,7 +27,7 @@ fn add_variable_function_arg() {
     let add = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(0),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(arg.clone()),
     };
@@ -63,7 +63,7 @@ fn add_constants() {
     let sub = Expression::Subtract {
         loc: Loc::Codegen,
         ty: Type::Int(0),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(num.clone()),
     };
@@ -95,7 +95,7 @@ fn add_commutative() {
     let expr = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(32),
-        unchecked: true,
+        overflowing: true,
         left: Box::new(cte.clone()),
         right: Box::new(var.clone()),
     };
@@ -109,7 +109,7 @@ fn add_commutative() {
     let expr_other = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(32),
-        unchecked: true,
+        overflowing: true,
         left: Box::new(var),
         right: Box::new(cte),
     };
@@ -139,7 +139,7 @@ fn non_commutative() {
     let add = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(0),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(arg.clone()),
     };
@@ -151,7 +151,7 @@ fn non_commutative() {
     let sub = Expression::Subtract {
         loc: Loc::Codegen,
         ty: Type::Int(0),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(add.clone()),
         right: Box::new(num.clone()),
     };
@@ -279,14 +279,14 @@ fn complex_expression() {
     let sum = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(cte.clone()),
     };
     let sub = Expression::Subtract {
         loc: Loc::Codegen,
         ty: Type::Int(3),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(cte.clone()),
         right: Box::new(arg.clone()),
     };
@@ -299,7 +299,7 @@ fn complex_expression() {
     let mul = Expression::Multiply {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(cte.clone()),
     };
@@ -332,7 +332,7 @@ fn complex_expression() {
     let pot = Expression::Power {
         loc: Loc::Codegen,
         ty: Type::Int(4),
-        unchecked: true,
+        overflowing: true,
         base: Box::new(zero.clone()),
         exp: Box::new(unary.clone()),
     };
@@ -370,7 +370,7 @@ fn complex_expression() {
     let sum2 = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(2),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var),
         right: Box::new(cte),
     };
@@ -473,14 +473,14 @@ fn kill() {
     let sum = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(cte.clone()),
     };
     let sub = Expression::Subtract {
         loc: Loc::Codegen,
         ty: Type::Int(3),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(cte.clone()),
         right: Box::new(arg.clone()),
     };
@@ -493,7 +493,7 @@ fn kill() {
     let mul = Expression::Multiply {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(cte.clone()),
     };
@@ -526,7 +526,7 @@ fn kill() {
     let pot = Expression::Power {
         loc: Loc::Codegen,
         ty: Type::Int(4),
-        unchecked: true,
+        overflowing: true,
         base: Box::new(zero.clone()),
         exp: Box::new(unary.clone()),
     };
@@ -582,14 +582,14 @@ fn clone() {
     let sum = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(cte.clone()),
     };
     let sub = Expression::Subtract {
         loc: Loc::Codegen,
         ty: Type::Int(3),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(cte.clone()),
         right: Box::new(arg.clone()),
     };
@@ -602,7 +602,7 @@ fn clone() {
     let mul = Expression::Multiply {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(cte.clone()),
     };
@@ -635,7 +635,7 @@ fn clone() {
     let pot = Expression::Power {
         loc: Loc::Codegen,
         ty: Type::Int(4),
-        unchecked: true,
+        overflowing: true,
         base: Box::new(zero.clone()),
         exp: Box::new(unary.clone()),
     };
@@ -689,14 +689,14 @@ fn intersect() {
     let sum = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(cte.clone()),
     };
     let sub = Expression::Subtract {
         loc: Loc::Codegen,
         ty: Type::Int(3),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(cte.clone()),
         right: Box::new(arg.clone()),
     };
@@ -709,7 +709,7 @@ fn intersect() {
     let mul = Expression::Multiply {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(cte.clone()),
     };
@@ -742,7 +742,7 @@ fn intersect() {
     let pot = Expression::Power {
         loc: Loc::Codegen,
         ty: Type::Int(4),
-        unchecked: true,
+        overflowing: true,
         base: Box::new(zero.clone()),
         exp: Box::new(unary.clone()),
     };
@@ -771,14 +771,14 @@ fn intersect() {
     let sum2 = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: true,
+        overflowing: true,
         left: Box::new(var2),
         right: Box::new(var3),
     };
     let sub2 = Expression::Subtract {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(arg.clone()),
         right: Box::new(sum2.clone()),
     };
@@ -1051,14 +1051,14 @@ fn unite_expressions() {
     let sum = Expression::Add {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var.clone()),
         right: Box::new(cte.clone()),
     };
     let sub = Expression::Subtract {
         loc: Loc::Codegen,
         ty: Type::Int(3),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(cte.clone()),
         right: Box::new(arg.clone()),
     };
@@ -1071,7 +1071,7 @@ fn unite_expressions() {
     let mul = Expression::Multiply {
         loc: Loc::Codegen,
         ty: Type::Int(8),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var),
         right: Box::new(cte.clone()),
     };
@@ -1140,7 +1140,7 @@ fn ancestor_found() {
     let addition = Expression::Add {
         loc: Loc::Implicit,
         ty: Type::Uint(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var1.clone()),
         right: Box::new(var2.clone()),
     };
@@ -1224,7 +1224,7 @@ fn ancestor_not_found() {
     let expr = Expression::Multiply {
         loc: Loc::Implicit,
         ty: Type::Int(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(var1.clone()),
         right: Box::new(var2.clone()),
     };

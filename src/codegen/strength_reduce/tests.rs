@@ -234,7 +234,7 @@ fn expresson_known_bits() {
     let expr = Expression::Add {
         loc,
         ty: Type::Int(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::NumberLiteral {
             loc,
             ty: Type::Int(32),
@@ -263,7 +263,7 @@ fn expresson_known_bits() {
     let expr = Expression::Add {
         loc,
         ty: Type::Int(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::FunctionArg {
             loc,
             ty: Type::Int(32),
@@ -287,7 +287,7 @@ fn expresson_known_bits() {
     let expr = Expression::Add {
         loc,
         ty: Type::Uint(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::ZeroExt {
             loc,
             ty: Type::Uint(32),
@@ -323,7 +323,7 @@ fn expresson_known_bits() {
     let expr = Expression::Subtract {
         loc,
         ty: Type::Int(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::NumberLiteral {
             loc,
             ty: Type::Int(32),
@@ -352,7 +352,7 @@ fn expresson_known_bits() {
     let expr = Expression::Subtract {
         loc,
         ty: Type::Int(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::SignExt {
             loc,
             ty: Type::Uint(32),
@@ -432,7 +432,7 @@ fn expresson_known_bits() {
     let expr = Expression::Subtract {
         loc,
         ty: Type::Int(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::Variable {
             loc,
             ty: Type::Uint(32),
@@ -496,7 +496,7 @@ fn expresson_known_bits() {
     let expr = Expression::Multiply {
         loc,
         ty: Type::Int(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::NumberLiteral {
             loc,
             ty: Type::Int(32),
@@ -525,7 +525,7 @@ fn expresson_known_bits() {
     let expr = Expression::Multiply {
         loc,
         ty: Type::Uint(32),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::NumberLiteral {
             loc,
             ty: Type::Uint(32),
@@ -604,7 +604,7 @@ fn expresson_known_bits() {
     let expr = Expression::Multiply {
         loc,
         ty: Type::Uint(64),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::Variable {
             loc,
             ty: Type::Uint(64),
@@ -878,7 +878,7 @@ fn expresson_known_bits() {
         &Expression::Subtract {
             loc,
             ty: Type::Int(64),
-            unchecked: false,
+            overflowing: false,
             left: Box::new(Expression::ZeroExt {
                 loc,
                 ty: Type::Int(64),

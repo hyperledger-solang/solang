@@ -321,7 +321,7 @@ fn encode_compact(
     let mul = Expression::Multiply {
         loc: Codegen,
         ty: Uint(32),
-        unchecked: false,
+        overflowing: false,
         left: expr.clone().into(),
         right: four,
     };
@@ -464,7 +464,7 @@ impl AbiEncoding for ScaleEncoding {
         let offset = Expression::Add {
             loc: Codegen,
             ty: Uint(32),
-            unchecked: false,
+            overflowing: false,
             left: offset.clone().into(),
             right: size.into(),
         };

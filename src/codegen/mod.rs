@@ -343,7 +343,7 @@ pub enum Expression {
     Add {
         loc: pt::Loc,
         ty: Type,
-        unchecked: bool,
+        overflowing: bool,
         left: Box<Expression>,
         right: Box<Expression>,
     },
@@ -501,7 +501,7 @@ pub enum Expression {
     Multiply {
         loc: pt::Loc,
         ty: Type,
-        unchecked: bool,
+        overflowing: bool,
         left: Box<Expression>,
         right: Box<Expression>,
     },
@@ -523,7 +523,7 @@ pub enum Expression {
     Power {
         loc: pt::Loc,
         ty: Type,
-        unchecked: bool,
+        overflowing: bool,
         base: Box<Expression>,
         exp: Box<Expression>,
     },
@@ -591,7 +591,7 @@ pub enum Expression {
     Subtract {
         loc: pt::Loc,
         ty: Type,
-        unchecked: bool,
+        overflowing: bool,
         left: Box<Expression>,
         right: Box<Expression>,
     },
@@ -851,7 +851,7 @@ impl Expression {
         Expression::Add {
             loc: pt::Loc::Codegen,
             ty: Type::Uint(32),
-            unchecked: false,
+            overflowing: false,
             left: self.into(),
             right: other.into(),
         }
@@ -1310,39 +1310,39 @@ impl Expression {
                 Expression::Add {
                     loc,
                     ty,
-                    unchecked,
+                    overflowing: unchecked,
                     left,
                     right,
                 } => Expression::Add {
                     loc: *loc,
                     ty: ty.clone(),
-                    unchecked: *unchecked,
+                    overflowing: *unchecked,
                     left: Box::new(filter(left, ctx)),
                     right: Box::new(filter(right, ctx)),
                 },
                 Expression::Subtract {
                     loc,
                     ty,
-                    unchecked,
+                    overflowing: unchecked,
                     left,
                     right,
                 } => Expression::Subtract {
                     loc: *loc,
                     ty: ty.clone(),
-                    unchecked: *unchecked,
+                    overflowing: *unchecked,
                     left: Box::new(filter(left, ctx)),
                     right: Box::new(filter(right, ctx)),
                 },
                 Expression::Multiply {
                     loc,
                     ty,
-                    unchecked,
+                    overflowing: unchecked,
                     left,
                     right,
                 } => Expression::Multiply {
                     loc: *loc,
                     ty: ty.clone(),
-                    unchecked: *unchecked,
+                    overflowing: *unchecked,
                     left: Box::new(filter(left, ctx)),
                     right: Box::new(filter(right, ctx)),
                 },
@@ -1371,13 +1371,13 @@ impl Expression {
                 Expression::Power {
                     loc,
                     ty,
-                    unchecked,
+                    overflowing: unchecked,
                     base,
                     exp,
                 } => Expression::Power {
                     loc: *loc,
                     ty: ty.clone(),
-                    unchecked: *unchecked,
+                    overflowing: *unchecked,
                     base: Box::new(filter(base, ctx)),
                     exp: Box::new(filter(exp, ctx)),
                 },

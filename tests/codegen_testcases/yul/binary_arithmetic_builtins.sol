@@ -4,31 +4,31 @@ contract testing {
 // BEGIN-CHECK: testing::testing::function::add_sub_mul__int16_int32_uint256_uint128
     function add_sub_mul(int16 a, int32 b, uint256 c, uint128 d) public pure {
         assembly {
-            // CHECK: ty:uint256 %e = (sext uint256 (unchecked (sext int32 (arg #0)) + (arg #1)))
+            // CHECK: ty:uint256 %e = (sext uint256 (overflowing (sext int32 (arg #0)) + (arg #1)))
             let e := add(a, b)
 
-            // CHECK: ty:uint256 %f = uint256((unchecked (sext int256 (arg #1)) + int256((arg #2))))
+            // CHECK: ty:uint256 %f = uint256((overflowing (sext int256 (arg #1)) + int256((arg #2))))
             let f := add(b, c)
 
-            // CHECK: ty:uint256 %g = (unchecked (arg #2) + (zext uint256 (arg #3)))
+            // CHECK: ty:uint256 %g = (overflowing (arg #2) + (zext uint256 (arg #3)))
             let g := add(c, d)
 
-            // CHECK: ty:uint256 %h = (sext uint256 (unchecked (sext int136 (arg #0)) + (zext int136 (arg #3))))
+            // CHECK: ty:uint256 %h = (sext uint256 (overflowing (sext int136 (arg #0)) + (zext int136 (arg #3))))
             let h := add(a, d)
 
-            // CHECK: ty:uint256 %i = uint256((unchecked (sext int256 (arg #0)) + int256((arg #2))))
+            // CHECK: ty:uint256 %i = uint256((overflowing (sext int256 (arg #0)) + int256((arg #2))))
             let i := add(a, c)
 
-            // CHECK: ty:uint256 %j = (sext uint256 (unchecked (sext int136 (arg #1)) + (zext int136 (arg #3))))
+            // CHECK: ty:uint256 %j = (sext uint256 (overflowing (sext int136 (arg #1)) + (zext int136 (arg #3))))
             let j := add(b, d)
 
-            // CHECK: ty:int32 %k = (unchecked (sext int32 (arg #0)) - (arg #1))
+            // CHECK: ty:int32 %k = (overflowing (sext int32 (arg #0)) - (arg #1))
             let k : s32 := sub(a, b)
 
-            // CHECK: ty:int256 %l = int256((unchecked (arg #2) - (zext uint256 (arg #3))))
+            // CHECK: ty:int256 %l = int256((overflowing (arg #2) - (zext uint256 (arg #3))))
             let l : s256 := sub(c, d)
 
-            // CHECK: ty:uint256 %m = (unchecked (arg #2) * (zext uint256 (arg #3)))
+            // CHECK: ty:uint256 %m = (overflowing (arg #2) * (zext uint256 (arg #3)))
             let m := mul(c, d)
 
             // CHECK: ty:uint256 %n = uint256 43981
@@ -49,13 +49,13 @@ contract testing {
             // CHECK: ty:bool %s = true
             let s : bool := true
 
-            // CHECK: ty:uint256 %t = (unchecked uint256 22193982385802470 + uint256(false))
+            // CHECK: ty:uint256 %t = (overflowing uint256 22193982385802470 + uint256(false))
             let t := add(q, r)
 
             // CHECK: ty:uint256 %u = uint256 -1
             let u := sub(false, true)
 
-            // CHECK: ty:uint256 %v = uint256((unchecked true + false))
+            // CHECK: ty:uint256 %v = uint256((overflowing true + false))
             let v := add(s, r)
         }
     }
@@ -117,7 +117,7 @@ contract testing {
 // BEGIN-CHECK: testing::testing::function::exponential__int128_int8
     function exponential(int128 a, int8 b) public pure {
         assembly {
-            // CHECK: ty:uint256 %x = (sext uint256 (unchecked (arg #0) ** (sext int128 (arg #1))))
+            // CHECK: ty:uint256 %x = (sext uint256 (overflowing (arg #0) ** (sext int128 (arg #1))))
             let x := exp(a, b)
         }
     }

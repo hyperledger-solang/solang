@@ -53,21 +53,30 @@ impl Expression {
     /// Get the respective Operator from an Expression
     pub fn get_ave_operator(&self) -> Operator {
         match self {
-            Expression::Add { unchecked, .. } => {
+            Expression::Add {
+                overflowing: unchecked,
+                ..
+            } => {
                 if *unchecked {
                     Operator::UncheckedAdd
                 } else {
                     Operator::Add
                 }
             }
-            Expression::Subtract { unchecked, .. } => {
+            Expression::Subtract {
+                overflowing: unchecked,
+                ..
+            } => {
                 if *unchecked {
                     Operator::UncheckedSubtract
                 } else {
                     Operator::Subtract
                 }
             }
-            Expression::Multiply { unchecked, .. } => {
+            Expression::Multiply {
+                overflowing: unchecked,
+                ..
+            } => {
                 if *unchecked {
                     Operator::UncheckedMultiply
                 } else {
@@ -78,7 +87,10 @@ impl Expression {
             Expression::UnsignedDivide { .. } => Operator::UnsignedDivide,
             Expression::SignedModulo { .. } => Operator::SignedModulo,
             Expression::UnsignedModulo { .. } => Operator::UnsignedModulo,
-            Expression::Power { unchecked, .. } => {
+            Expression::Power {
+                overflowing: unchecked,
+                ..
+            } => {
                 if *unchecked {
                     Operator::UncheckedPower
                 } else {

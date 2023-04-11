@@ -137,8 +137,8 @@ contract deadstorage {
         return test11var[index] + test11var[index2];
     }
 
-// CHECK: load storage slot((unchecked uint256 8
-// CHECK: load storage slot((unchecked uint256 8
+// CHECK: load storage slot((overflowing uint256 8
+// CHECK: load storage slot((overflowing uint256 8
 
 // BEGIN-CHECK: deadstorage::function::test12
     // one load needed for this
@@ -147,8 +147,8 @@ contract deadstorage {
         return test12var[index] + test12var[index];
 
     }
-// CHECK: load storage slot((unchecked uint256 19
-// NOT-CHECK: load storage slot((unchecked uint256 19
+// CHECK: load storage slot((overflowing uint256 19
+// NOT-CHECK: load storage slot((overflowing uint256 19
 }
 
 contract foo {

@@ -238,21 +238,21 @@ fn process_arithmetic(
         YulBuiltInFunction::Add => Expression::Add {
             loc: *loc,
             ty: left.ty(),
-            unchecked: true,
+            overflowing: true,
             left: Box::new(left),
             right: Box::new(right),
         },
         YulBuiltInFunction::Sub => Expression::Subtract {
             loc: *loc,
             ty: left.ty(),
-            unchecked: true,
+            overflowing: true,
             left: Box::new(left),
             right: Box::new(right),
         },
         YulBuiltInFunction::Mul => Expression::Multiply {
             loc: *loc,
             ty: left.ty(),
-            unchecked: true,
+            overflowing: true,
             left: Box::new(left),
             right: Box::new(right),
         },
@@ -295,7 +295,7 @@ fn process_arithmetic(
         YulBuiltInFunction::Exp => Expression::Power {
             loc: *loc,
             ty: left.ty(),
-            unchecked: true,
+            overflowing: true,
             base: Box::new(left),
             exp: Box::new(right),
         },
@@ -580,7 +580,7 @@ fn byte_builtin(
     let op_31_sub_arg0 = Expression::Subtract {
         loc: *loc,
         ty: Type::Uint(256),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(Expression::NumberLiteral {
             loc: *loc,
             ty: Type::Uint(256),

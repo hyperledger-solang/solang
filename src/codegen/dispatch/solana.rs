@@ -137,7 +137,7 @@ pub(crate) fn function_dispatch(
     let argslen = Expression::Subtract {
         loc: Loc::Codegen,
         ty: Type::Uint(64),
-        unchecked: false,
+        overflowing: false,
         left: Box::new(argslen),
         right: Box::new(Expression::NumberLiteral {
             loc: Loc::Codegen,
