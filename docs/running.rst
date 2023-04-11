@@ -129,7 +129,7 @@ Options:
    Disable the :ref:`no-print` debugging feature
 
 \-\-release
-   Disable all debugging features for :ref:`release` builds
+   Disable all debugging features for :ref:`release`
 
 .. warning::
 
