@@ -1199,6 +1199,7 @@ pub fn build_solidity_with_options(
         Target::default_substrate(),
         log_api_return_codes,
         log_runtime_errors,
+        true,
     );
 
     ns.print_diagnostics_in_plain(&cache, false);

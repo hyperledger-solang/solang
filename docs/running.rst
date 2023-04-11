@@ -119,8 +119,17 @@ Options:
 \-\-no\-cse
    Disable the :ref:`common-subexpression-elimination` optimization
 
-\-\-log\-api\-return\-codes
-   Disable the :ref:`common-subexpression-elimination` optimization
+\-\-no\-log\-api\-return\-codes
+   Disable the :ref:`no-log-api-return-codes` debugging feature
+
+\-\-no\-log\-runtime\-errors
+   Disable the :ref:`no-log-runtime-errors` debugging feature
+
+\-\-no\-prints
+   Disable the :ref:`no-print` debugging feature
+
+\-\-release
+   Disable all debugging features for :ref:`release`
 
 .. warning::
 

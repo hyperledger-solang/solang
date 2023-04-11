@@ -37,6 +37,7 @@ fn test_abstract() {
         Target::default_substrate(),
         false,
         false,
+        true,
     );
 
     assert!(!ns.diagnostics.any_errors());
@@ -76,6 +77,7 @@ fn test_abstract() {
         Target::default_substrate(),
         false,
         false,
+        true,
     );
 
     assert!(!ns.diagnostics.any_errors());

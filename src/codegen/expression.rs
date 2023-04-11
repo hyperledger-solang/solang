@@ -877,15 +877,17 @@ pub fn expression(
             args,
             ..
         } => {
-            let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
+            if opt.log_prints {
+                let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
-            let to_print = if ns.target.is_substrate() {
-                add_prefix_and_delimiter_to_print(expr)
-            } else {
-                expr
-            };
+                let to_print = if ns.target.is_substrate() {
+                    add_prefix_and_delimiter_to_print(expr)
+                } else {
+                    expr
+                };
 
-            cfg.add(vartab, Instr::Print { expr: to_print });
+                cfg.add(vartab, Instr::Print { expr: to_print });
+            }
 
             Expression::Poison
         }

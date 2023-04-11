@@ -537,6 +537,8 @@ This function does not write the length of the byte array to the buffer.
 Miscellaneous
 _____________
 
+.. _print_function:
+
 print(string)
 +++++++++++++
 

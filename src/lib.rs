@@ -124,12 +124,14 @@ pub fn compile(
     target: Target,
     log_api_return_codes: bool,
     log_runtime_errors: bool,
+    log_prints: bool,
 ) -> (Vec<(Vec<u8>, String)>, sema::ast::Namespace) {
     let mut ns = parse_and_resolve(filename, resolver, target);
     let opts = codegen::Options {
         log_api_return_codes,
         opt_level: opt_level.into(),
         log_runtime_errors,
+        log_prints,
         ..Default::default()
     };
 
