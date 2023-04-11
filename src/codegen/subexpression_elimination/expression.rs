@@ -348,14 +348,14 @@ impl Expression {
     /// Retrieve the operands of a unary expression
     pub fn get_unary_operand(&self) -> Option<&Expression> {
         match self {
-            Expression::ZeroExt { expr: operand, .. }
-            | Expression::SignExt { expr: operand, .. }
-            | Expression::Trunc { expr: operand, .. }
-            | Expression::Cast { expr: operand, .. }
-            | Expression::BytesCast { expr: operand, .. }
-            | Expression::Not { expr: operand, .. }
-            | Expression::BitwiseNot { expr: operand, .. }
-            | Expression::Negate { expr: operand, .. } => Some(operand),
+            Expression::ZeroExt { expr, .. }
+            | Expression::SignExt { expr, .. }
+            | Expression::Trunc { expr, .. }
+            | Expression::Cast { expr, .. }
+            | Expression::BytesCast { expr, .. }
+            | Expression::Not { expr, .. }
+            | Expression::BitwiseNot { expr, .. }
+            | Expression::Negate { expr, .. } => Some(expr),
 
             _ => None,
         }

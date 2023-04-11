@@ -2231,7 +2231,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 args,
                 ..
             } => {
-                assert_eq!(args.len(), 0);
+                assert_eq!(args.len(), 1);
 
                 let parameters = self.sol_parameters(binary);
 
