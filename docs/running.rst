@@ -128,6 +128,9 @@ Options:
 \-\-no\-prints
    Disable the :ref:`no-print` debugging feature
 
+\-\-release
+   Disable all debugging features for :ref:`release` builds
+
 .. warning::
 
     If multiple Solidity source files define the same contract name, you will get a single
