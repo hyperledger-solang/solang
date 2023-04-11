@@ -514,7 +514,7 @@ impl Namespace {
         path: &pt::IdentifierPath,
         diagnostics: &mut Diagnostics,
     ) -> Result<usize, ()> {
-        // if we are resolving an event name without namespace (so no explicit contract name
+        // If we are resolving an event name without namespace (so no explicit contract name
         // or import symbol), then we should look both in the current contract and global scope
         if path.identifiers.len() == 1 {
             let id = &path.identifiers[0];
