@@ -116,12 +116,12 @@ contract Test {
         int k=0;
         int l=0;
         int m=0;
-        // CHECK: ty:int256 %1.cse_temp = (unchecked (arg #0) * (arg #1))
+        // CHECK: ty:int256 %1.cse_temp = (overflowing (arg #0) * (arg #1))
         // CHECK: block1: # end_switch
 	    // CHECK: ty:int256 %m = %1.cse_temp
 	    // CHECK: return (%l + %1.cse_temp)
         assembly {
-            switch y 
+            switch y
                 case 1 {
                     // CHECK: block2: # case_0
 	                // CHECK: ty:int256 %j = %1.cse_temp

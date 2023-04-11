@@ -620,7 +620,7 @@ fn resolve_suffix_access(
             return Err(());
         }
 
-        YulExpression::BoolLiteral(..)
+        YulExpression::BoolLiteral { .. }
         | YulExpression::NumberLiteral(..)
         | YulExpression::StringLiteral(..)
         | YulExpression::YulLocalVariable(..)
@@ -668,7 +668,7 @@ pub(crate) fn check_type(
 
             YulExpression::StringLiteral(..)
             | YulExpression::NumberLiteral(..)
-            | YulExpression::BoolLiteral(..)
+            | YulExpression::BoolLiteral { .. }
             | YulExpression::ConstantVariable(..) => {
                 return Some(Diagnostic::error(
                     expr.loc(),

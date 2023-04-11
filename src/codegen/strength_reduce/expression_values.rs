@@ -16,17 +16,23 @@ pub(super) fn expression_values(
     ns: &Namespace,
 ) -> HashSet<Value> {
     match expr {
-        Expression::NumberLiteral(_, ty, v) => number_literal_values(ty, v, ns),
-        Expression::BoolLiteral(_, v) => bool_literal_values(*v),
-        Expression::ZeroExt(_, ty, expr) => zero_ext_values(ty, expr, vars, ns),
-        Expression::SignExt(_, ty, expr) => sign_ext_values(ty, expr, vars, ns),
-        Expression::Trunc(_, ty, expr) => trunc_values(ty, expr, vars, ns),
-        Expression::BitwiseOr(_, _, left, right) => bitwise_or_values(left, right, vars, ns),
-        Expression::BitwiseAnd(_, _, left, right) => bitwise_and_values(left, right, vars, ns),
-        Expression::BitwiseXor(_, _, left, right) => bitwise_xor_values(left, right, vars, ns),
-        Expression::Add(_, ty, _, left, right) => add_values(ty, left, right, vars, ns),
-        Expression::Subtract(_, ty, _, left, right) => subtract_values(ty, left, right, vars, ns),
-        Expression::Multiply(_, ty, _, left, right) => multiply_values(ty, left, right, vars, ns),
+        Expression::NumberLiteral { ty, value, .. } => number_literal_values(ty, value, ns),
+        Expression::BoolLiteral { value, .. } => bool_literal_values(*value),
+        Expression::ZeroExt { ty, expr, .. } => zero_ext_values(ty, expr, vars, ns),
+        Expression::SignExt { ty, expr, .. } => sign_ext_values(ty, expr, vars, ns),
+        Expression::Trunc { ty, expr, .. } => trunc_values(ty, expr, vars, ns),
+        Expression::BitwiseOr { left, right, .. } => bitwise_or_values(left, right, vars, ns),
+        Expression::BitwiseAnd { left, right, .. } => bitwise_and_values(left, right, vars, ns),
+        Expression::BitwiseXor { left, right, .. } => bitwise_xor_values(left, right, vars, ns),
+        Expression::Add {
+            ty, left, right, ..
+        } => add_values(ty, left, right, vars, ns),
+        Expression::Subtract {
+            ty, left, right, ..
+        } => subtract_values(ty, left, right, vars, ns),
+        Expression::Multiply {
+            ty, left, right, ..
+        } => multiply_values(ty, left, right, vars, ns),
         Expression::More {
             left,
             right,
@@ -51,22 +57,26 @@ pub(super) fn expression_values(
             signed,
             ..
         } => less_equal_values(left, right, *signed, vars, ns),
-        Expression::Equal(_, left_expr, right_expr) => {
-            equal_values(left_expr, right_expr, vars, ns)
-        }
-        Expression::NotEqual(_, left_expr, right_expr) => {
-            not_equal_values(left_expr, right_expr, vars, ns)
-        }
-        Expression::Not(_, expr) => not_values(expr, vars, ns),
-        Expression::BitwiseNot(_, _, expr) => complement_values(expr, vars, ns),
-        Expression::Variable(_, _, var_no) => variable_values(*var_no, vars),
-        Expression::InternalFunctionCfg(_) => {
+        Expression::Equal {
+            left: left_expr,
+            right: right_expr,
+            ..
+        } => equal_values(left_expr, right_expr, vars, ns),
+        Expression::NotEqual {
+            left: left_expr,
+            right: right_expr,
+            ..
+        } => not_equal_values(left_expr, right_expr, vars, ns),
+        Expression::Not { expr, .. } => not_values(expr, vars, ns),
+        Expression::BitwiseNot { expr, .. } => complement_values(expr, vars, ns),
+        Expression::Variable { var_no, .. } => variable_values(*var_no, vars),
+        Expression::InternalFunctionCfg { .. } => {
             // reference to a function; ignore
             HashSet::new()
         }
-        Expression::Undefined(expr_type) => {
+        Expression::Undefined { ty } => {
             // If the variable is undefined, we can return the default value to optimize operations
-            if let Some(default_expr) = expr_type.default(ns) {
+            if let Some(default_expr) = ty.default(ns) {
                 return expression_values(&default_expr, vars, ns);
             }
 

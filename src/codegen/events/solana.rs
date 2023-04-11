@@ -34,8 +34,11 @@ impl EventEmitter for SolanaEventEmitter<'_> {
         hasher.update(discriminator_image.as_bytes());
         let result = hasher.finalize();
 
-        let discriminator =
-            Expression::BytesLiteral(Loc::Codegen, Type::Bytes(8), result[..8].to_vec());
+        let discriminator = Expression::BytesLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Bytes(8),
+            value: result[..8].to_vec(),
+        };
 
         let mut codegen_args = self
             .args

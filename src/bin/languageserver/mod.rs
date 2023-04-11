@@ -180,16 +180,36 @@ impl<'a> Builder<'a> {
                 let mut val = format!("{} {}", self.expanded_ty(&param.ty), param.name_as_str());
                 if let Some(expr) = self.ns.var_constants.get(loc) {
                     match expr {
-                        codegen::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
-                        | codegen::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
-                            write!(val, " = hex\"{}\"", hex::encode(bs)).unwrap();
+                        codegen::Expression::BytesLiteral {
+                            ty: ast::Type::Bytes(_),
+                            value,
+                            ..
                         }
-                        codegen::Expression::BytesLiteral(_, ast::Type::String, bs) => {
-                            write!(val, " = \"{}\"", String::from_utf8_lossy(bs)).unwrap();
+                        | codegen::Expression::BytesLiteral {
+                            ty: ast::Type::DynamicBytes,
+                            value,
+                            ..
+                        } => {
+                            write!(val, " = hex\"{}\"", hex::encode(value)).unwrap();
                         }
-                        codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
-                        | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
-                            write!(val, " = {n}").unwrap();
+                        codegen::Expression::BytesLiteral {
+                            ty: ast::Type::String,
+                            value,
+                            ..
+                        } => {
+                            write!(val, " = \"{}\"", String::from_utf8_lossy(value)).unwrap();
+                        }
+                        codegen::Expression::NumberLiteral {
+                            ty: ast::Type::Uint(_),
+                            value,
+                            ..
+                        }
+                        | codegen::Expression::NumberLiteral {
+                            ty: ast::Type::Int(_),
+                            value,
+                            ..
+                        } => {
+                            write!(val, " = {value}").unwrap();
                         }
                         _ => (),
                     }
@@ -525,16 +545,16 @@ impl<'a> Builder<'a> {
 
                 if let Some(expr) = self.ns.var_constants.get(loc) {
                     match expr {
-                        codegen::Expression::BytesLiteral(_, ast::Type::Bytes(_), bs)
-                        | codegen::Expression::BytesLiteral(_, ast::Type::DynamicBytes, bs) => {
-                            write!(val, " hex\"{}\"", hex::encode(bs)).unwrap();
+                        codegen::Expression::BytesLiteral{ ty: ast::Type::Bytes(_), value, .. }
+                        | codegen::Expression::BytesLiteral{ ty: ast::Type::DynamicBytes, value, ..} => {
+                            write!(val, " hex\"{}\"", hex::encode(value)).unwrap();
                         }
-                        codegen::Expression::BytesLiteral(_, ast::Type::String, bs) => {
-                            write!(val, " \"{}\"", String::from_utf8_lossy(bs)).unwrap();
+                        codegen::Expression::BytesLiteral{ ty: ast::Type::String, value, ..} => {
+                            write!(val, " \"{}\"", String::from_utf8_lossy(value)).unwrap();
                         }
-                        codegen::Expression::NumberLiteral(_, ast::Type::Uint(_), n)
-                        | codegen::Expression::NumberLiteral(_, ast::Type::Int(_), n) => {
-                            write!(val, " {n}").unwrap();
+                        codegen::Expression::NumberLiteral { ty: ast::Type::Uint(_), value, .. }
+                        | codegen::Expression::NumberLiteral { ty: ast::Type::Int(_), value, .. } => {
+                            write!(val, " {value}").unwrap();
                         }
                         _ => (),
                     }

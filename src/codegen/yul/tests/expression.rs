@@ -25,20 +25,28 @@ fn bool_literal() {
 
     let expr = ast::YulExpression::BoolLiteral(loc, true, Type::Bool);
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
-    assert_eq!(res, Expression::BoolLiteral(loc, true));
+    assert_eq!(res, Expression::BoolLiteral { loc, value: true });
 
     let expr = ast::YulExpression::BoolLiteral(loc, true, Type::Uint(32));
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(loc, Type::Uint(32), BigInt::from(1))
+        Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(32),
+            value: BigInt::from(1)
+        }
     );
 
     let expr = ast::YulExpression::BoolLiteral(loc, false, Type::Uint(32));
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(loc, Type::Uint(32), BigInt::from(0))
+        Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(32),
+            value: BigInt::from(0)
+        }
     );
 }
 
@@ -54,7 +62,11 @@ fn number_literal() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(loc, Type::Uint(256), BigInt::from(32))
+        Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(256),
+            value: BigInt::from(32)
+        }
     );
 }
 
@@ -70,11 +82,11 @@ fn string_literal() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(
+        Expression::NumberLiteral {
             loc,
-            Type::Uint(128),
-            BigInt::from_bytes_be(Sign::Plus, &[0, 3, 255, 127])
-        )
+            ty: Type::Uint(128),
+            value: BigInt::from_bytes_be(Sign::Plus, &[0, 3, 255, 127])
+        }
     );
 }
 
@@ -88,7 +100,14 @@ fn yul_local_variable() {
 
     let expr = ast::YulExpression::YulLocalVariable(loc, Type::Int(16), 5);
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
-    assert_eq!(res, Expression::Variable(loc, Type::Int(16), 5));
+    assert_eq!(
+        res,
+        Expression::Variable {
+            loc,
+            ty: Type::Int(16),
+            var_no: 5
+        }
+    );
 }
 
 #[test]
@@ -146,7 +165,11 @@ fn contract_constant_variable() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(64))
+        Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(64)
+        }
     );
 }
 
@@ -179,7 +202,11 @@ fn global_constant_variable() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(loc, Type::Uint(64), BigInt::from(64))
+        Expression::NumberLiteral {
+            loc,
+            ty: Type::Uint(64),
+            value: BigInt::from(64)
+        }
     );
 }
 
@@ -224,7 +251,14 @@ fn solidity_local_variable() {
 
     let expr = ast::YulExpression::SolidityLocalVariable(loc, Type::Uint(32), None, 7);
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
-    assert_eq!(res, Expression::Variable(loc, Type::Uint(32), 7));
+    assert_eq!(
+        res,
+        Expression::Variable {
+            loc,
+            ty: Type::Uint(32),
+            var_no: 7
+        }
+    );
 }
 
 #[test]
@@ -280,7 +314,11 @@ fn slot_suffix() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(Loc::File(1, 2, 3), Type::Uint(256), BigInt::from(2))
+        Expression::NumberLiteral {
+            loc: Loc::File(1, 2, 3),
+            ty: Type::Uint(256),
+            value: BigInt::from(2)
+        }
     );
 
     let expr = ast::YulExpression::SuffixAccess(
@@ -294,7 +332,14 @@ fn slot_suffix() {
         YulSuffix::Slot,
     );
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
-    assert_eq!(res, Expression::Variable(loc, Type::Uint(256), 0));
+    assert_eq!(
+        res,
+        Expression::Variable {
+            loc,
+            ty: Type::Uint(256),
+            var_no: 0
+        }
+    );
 }
 
 #[test]
@@ -342,7 +387,11 @@ fn offset_suffix() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(256), BigInt::from(0))
+        Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(256),
+            value: BigInt::from(0)
+        }
     );
 
     let expr = ast::YulExpression::SuffixAccess(
@@ -358,7 +407,11 @@ fn offset_suffix() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::NumberLiteral(Loc::Codegen, Type::Uint(256), BigInt::from(0))
+        Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Uint(256),
+            value: BigInt::from(0)
+        }
     );
 
     let expr = ast::YulExpression::SuffixAccess(
@@ -374,15 +427,15 @@ fn offset_suffix() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::Cast(
+        Expression::Cast {
             loc,
-            Type::Uint(256),
-            Box::new(Expression::Variable(
+            ty: Type::Uint(256),
+            expr: Box::new(Expression::Variable {
                 loc,
-                Type::Array(Box::new(Type::Uint(256)), vec![ArrayLength::Dynamic]),
-                1
-            ))
-        )
+                ty: Type::Array(Box::new(Type::Uint(256)), vec![ArrayLength::Dynamic]),
+                var_no: 1
+            })
+        }
     );
 }
 
@@ -459,13 +512,13 @@ fn length_suffix() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::Builtin(
+        Expression::Builtin {
             loc,
-            vec![Type::Uint(32)],
-            Builtin::ArrayLength,
-            vec![Expression::Variable(
+            tys: vec![Type::Uint(32)],
+            kind: Builtin::ArrayLength,
+            args: vec![Expression::Variable {
                 loc,
-                Type::Array(
+                ty: Type::Array(
                     Box::new(Type::Uint(32)),
                     vec![
                         ArrayLength::Dynamic,
@@ -473,9 +526,9 @@ fn length_suffix() {
                         ArrayLength::Dynamic
                     ]
                 ),
-                3
-            )]
-        )
+                var_no: 3
+            }]
+        }
     );
 }
 
@@ -505,13 +558,13 @@ fn length_suffix_panic() {
     let res = expression(&expr, 0, &ns, &mut vartab, &mut cfg, &opt);
     assert_eq!(
         res,
-        Expression::Builtin(
+        Expression::Builtin {
             loc,
-            vec![Type::Uint(256)],
-            Builtin::ArrayLength,
-            vec![Expression::Variable(
+            tys: vec![Type::Uint(256)],
+            kind: Builtin::ArrayLength,
+            args: vec![Expression::Variable {
                 loc,
-                Type::Array(
+                ty: Type::Array(
                     Box::new(Type::Uint(32)),
                     vec![
                         ArrayLength::Dynamic,
@@ -519,9 +572,9 @@ fn length_suffix_panic() {
                         ArrayLength::Dynamic
                     ]
                 ),
-                3
-            )]
-        )
+                var_no: 3
+            }]
+        }
     );
 }
 
@@ -551,24 +604,24 @@ fn selector_suffix() {
 
     assert_eq!(
         res,
-        Expression::Load(
+        Expression::Load {
             loc,
-            Type::FunctionSelector,
-            Box::new(Expression::StructMember(
+            ty: Type::FunctionSelector,
+            expr: Box::new(Expression::StructMember {
                 loc,
-                Type::Ref(Box::new(Type::FunctionSelector)),
-                Box::new(Expression::Variable(
+                ty: Type::Ref(Box::new(Type::FunctionSelector)),
+                expr: Box::new(Expression::Variable {
                     loc,
-                    Type::ExternalFunction {
+                    ty: Type::ExternalFunction {
                         mutability: Mutability::Pure(loc),
                         params: vec![],
                         returns: vec![],
                     },
-                    4
-                )),
-                0
-            ))
-        )
+                    var_no: 4
+                }),
+                member: 0
+            })
+        }
     );
 }
 
@@ -620,24 +673,24 @@ fn address_suffix() {
 
     assert_eq!(
         res,
-        Expression::Load(
+        Expression::Load {
             loc,
-            Type::Address(false),
-            Box::new(Expression::StructMember(
+            ty: Type::Address(false),
+            expr: Box::new(Expression::StructMember {
                 loc,
-                Type::Ref(Box::new(Type::Address(false))),
-                Box::new(Expression::Variable(
+                ty: Type::Ref(Box::new(Type::Address(false))),
+                expr: Box::new(Expression::Variable {
                     loc,
-                    Type::ExternalFunction {
+                    ty: Type::ExternalFunction {
                         mutability: Mutability::Pure(loc),
                         params: vec![],
                         returns: vec![]
                     },
-                    4
-                )),
-                1
-            ))
-        )
+                    var_no: 4
+                }),
+                member: 1
+            })
+        }
     );
 }
 

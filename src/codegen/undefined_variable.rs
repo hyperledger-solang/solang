@@ -77,19 +77,19 @@ pub fn find_undefined_variables_in_expression(
     ctx: &mut FindUndefinedVariablesParams,
 ) -> bool {
     match &exp {
-        Expression::Variable(_, _, pos) => {
+        Expression::Variable { var_no, .. } => {
             let variable = match ctx.func_no {
                 ASTFunction::YulFunction(func_no) => {
-                    ctx.ns.yul_functions[func_no].symtable.vars.get(pos)
+                    ctx.ns.yul_functions[func_no].symtable.vars.get(var_no)
                 }
                 ASTFunction::SolidityFunction(func_no) => {
-                    ctx.ns.functions[func_no].symtable.vars.get(pos)
+                    ctx.ns.functions[func_no].symtable.vars.get(var_no)
                 }
 
                 ASTFunction::None => None,
             };
 
-            if let (Some(def_map), Some(var)) = (ctx.defs.get(pos), variable) {
+            if let (Some(def_map), Some(var)) = (ctx.defs.get(var_no), variable) {
                 for (def, modified) in def_map {
                     if let Instr::Set {
                         expr: instr_expr, ..
@@ -97,11 +97,11 @@ pub fn find_undefined_variables_in_expression(
                     {
                         // If an undefined definition reaches this read and the variable
                         // has not been modified since its definition, it is undefined
-                        if matches!(instr_expr, Expression::Undefined(_))
+                        if matches!(instr_expr, Expression::Undefined { .. })
                             && !*modified
                             && !matches!(var.ty, Type::Array(..))
                         {
-                            add_diagnostic(var, *pos, &exp.loc(), ctx.diagnostics);
+                            add_diagnostic(var, *var_no, &exp.loc(), ctx.diagnostics);
                         }
                     }
                 }
@@ -110,7 +110,10 @@ pub fn find_undefined_variables_in_expression(
         }
 
         // This is a method call whose array will never be undefined
-        Expression::Builtin(_, _, Builtin::ArrayLength, _) => false,
+        Expression::Builtin {
+            kind: Builtin::ArrayLength,
+            ..
+        } => false,
 
         _ => true,
     }

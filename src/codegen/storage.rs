@@ -33,39 +33,49 @@ pub fn array_offset(
     // the index needs to be cast to i256 and multiplied by the number
     // of slots for each element
     if elem_size == BigInt::one() {
-        Expression::Add(*loc, slot_ty, true, Box::new(start), Box::new(index))
+        Expression::Add {
+            loc: *loc,
+            ty: slot_ty,
+            overflowing: true,
+            left: Box::new(start),
+            right: Box::new(index),
+        }
     } else if (elem_size.clone() & (elem_size.clone() - BigInt::one())) == BigInt::zero() {
         // elem_size is power of 2
-        Expression::Add(
-            *loc,
-            slot_ty.clone(),
-            true,
-            Box::new(start),
-            Box::new(Expression::ShiftLeft(
-                *loc,
-                slot_ty.clone(),
-                Box::new(index),
-                Box::new(Expression::NumberLiteral(
-                    *loc,
-                    slot_ty,
-                    BigInt::from_u64(elem_size.bits() - 1).unwrap(),
-                )),
-            )),
-        )
+        Expression::Add {
+            loc: *loc,
+            ty: slot_ty.clone(),
+            overflowing: true,
+            left: Box::new(start),
+            right: Box::new(Expression::ShiftLeft {
+                loc: *loc,
+                ty: slot_ty.clone(),
+                left: Box::new(index),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: slot_ty,
+                    value: BigInt::from_u64(elem_size.bits() - 1).unwrap(),
+                }),
+            }),
+        }
     } else {
-        Expression::Add(
-            *loc,
-            slot_ty.clone(),
-            true,
-            Box::new(start),
-            Box::new(Expression::Multiply(
-                *loc,
-                slot_ty.clone(),
-                true,
-                Box::new(index),
-                Box::new(Expression::NumberLiteral(*loc, slot_ty, elem_size)),
-            )),
-        )
+        Expression::Add {
+            loc: *loc,
+            ty: slot_ty.clone(),
+            overflowing: true,
+            left: Box::new(start),
+            right: Box::new(Expression::Multiply {
+                loc: *loc,
+                ty: slot_ty.clone(),
+                overflowing: true,
+                left: Box::new(index),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: slot_ty,
+                    value: elem_size,
+                }),
+            }),
+        }
     }
 }
 
@@ -108,8 +118,16 @@ pub fn storage_slots_array_push(
             res: entry_pos,
             expr: array_offset(
                 loc,
-                Expression::Keccak256(*loc, slot_ty.clone(), vec![var_expr.clone()]),
-                Expression::Variable(*loc, slot_ty.clone(), length_pos),
+                Expression::Keccak256 {
+                    loc: *loc,
+                    ty: slot_ty.clone(),
+                    exprs: vec![var_expr.clone()],
+                },
+                Expression::Variable {
+                    loc: *loc,
+                    ty: slot_ty.clone(),
+                    var_no: length_pos,
+                },
                 elem_ty.clone(),
                 ns,
             ),
@@ -124,23 +142,31 @@ pub fn storage_slots_array_push(
             Instr::SetStorage {
                 ty: elem_ty.clone(),
                 value,
-                storage: Expression::Variable(*loc, slot_ty.clone(), entry_pos),
+                storage: Expression::Variable {
+                    loc: *loc,
+                    ty: slot_ty.clone(),
+                    var_no: entry_pos,
+                },
             },
         );
     }
 
     // increase length
-    let new_length = Expression::Add(
-        *loc,
-        slot_ty.clone(),
-        true,
-        Box::new(Expression::Variable(*loc, slot_ty.clone(), length_pos)),
-        Box::new(Expression::NumberLiteral(
-            *loc,
-            slot_ty.clone(),
-            BigInt::one(),
-        )),
-    );
+    let new_length = Expression::Add {
+        loc: *loc,
+        ty: slot_ty.clone(),
+        overflowing: true,
+        left: Box::new(Expression::Variable {
+            loc: *loc,
+            ty: slot_ty.clone(),
+            var_no: length_pos,
+        }),
+        right: Box::new(Expression::NumberLiteral {
+            loc: *loc,
+            ty: slot_ty.clone(),
+            value: BigInt::one(),
+        }),
+    };
 
     cfg.add(
         vartab,
@@ -152,7 +178,11 @@ pub fn storage_slots_array_push(
     );
 
     if args.len() == 1 {
-        Expression::Variable(*loc, elem_ty, entry_pos)
+        Expression::Variable {
+            loc: *loc,
+            ty: elem_ty,
+            var_no: entry_pos,
+        }
     } else {
         Expression::Poison
     }
@@ -195,15 +225,19 @@ pub fn storage_slots_array_pop(
     cfg.add(
         vartab,
         Instr::BranchCond {
-            cond: Expression::Equal(
-                *loc,
-                Box::new(Expression::Variable(*loc, length_ty.clone(), length_pos)),
-                Box::new(Expression::NumberLiteral(
-                    *loc,
-                    length_ty.clone(),
-                    BigInt::zero(),
-                )),
-            ),
+            cond: Expression::Equal {
+                loc: *loc,
+                left: Box::new(Expression::Variable {
+                    loc: *loc,
+                    ty: length_ty.clone(),
+                    var_no: length_pos,
+                }),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: length_ty.clone(),
+                    value: BigInt::zero(),
+                }),
+            },
             true_block: empty_array,
             false_block: has_elements,
         },
@@ -228,13 +262,21 @@ pub fn storage_slots_array_pop(
         Instr::Set {
             loc: pt::Loc::Codegen,
             res: new_length,
-            expr: Expression::Subtract(
-                *loc,
-                length_ty.clone(),
-                true,
-                Box::new(Expression::Variable(*loc, length_ty.clone(), length_pos)),
-                Box::new(Expression::NumberLiteral(*loc, length_ty, BigInt::one())),
-            ),
+            expr: Expression::Subtract {
+                loc: *loc,
+                ty: length_ty.clone(),
+                overflowing: true,
+                left: Box::new(Expression::Variable {
+                    loc: *loc,
+                    ty: length_ty.clone(),
+                    var_no: length_pos,
+                }),
+                right: Box::new(Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: length_ty,
+                    value: BigInt::one(),
+                }),
+            },
         },
     );
 
@@ -250,8 +292,16 @@ pub fn storage_slots_array_pop(
             res: entry_pos,
             expr: array_offset(
                 loc,
-                Expression::Keccak256(*loc, slot_ty.clone(), vec![var_expr.clone()]),
-                Expression::Variable(*loc, slot_ty.clone(), new_length),
+                Expression::Keccak256 {
+                    loc: *loc,
+                    ty: slot_ty.clone(),
+                    exprs: vec![var_expr.clone()],
+                },
+                Expression::Variable {
+                    loc: *loc,
+                    ty: slot_ty.clone(),
+                    var_no: new_length,
+                },
                 elem_ty.clone(),
                 ns,
             ),
@@ -264,7 +314,11 @@ pub fn storage_slots_array_pop(
         let expr = load_storage(
             loc,
             &elem_ty,
-            Expression::Variable(*loc, elem_ty.clone(), entry_pos),
+            Expression::Variable {
+                loc: *loc,
+                ty: elem_ty.clone(),
+                var_no: entry_pos,
+            },
             cfg,
             vartab,
         );
@@ -277,16 +331,26 @@ pub fn storage_slots_array_pop(
                 expr,
             },
         );
-        Expression::Variable(*loc, elem_ty.clone(), res_pos)
+        Expression::Variable {
+            loc: *loc,
+            ty: elem_ty.clone(),
+            var_no: res_pos,
+        }
     } else {
-        Expression::Undefined(elem_ty.clone())
+        Expression::Undefined {
+            ty: elem_ty.clone(),
+        }
     };
 
     cfg.add(
         vartab,
         Instr::ClearStorage {
             ty: elem_ty,
-            storage: Expression::Variable(*loc, slot_ty.clone(), entry_pos),
+            storage: Expression::Variable {
+                loc: *loc,
+                ty: slot_ty.clone(),
+                var_no: entry_pos,
+            },
         },
     );
 
@@ -295,7 +359,11 @@ pub fn storage_slots_array_pop(
         vartab,
         Instr::SetStorage {
             ty: slot_ty.clone(),
-            value: Expression::Variable(*loc, slot_ty, new_length),
+            value: Expression::Variable {
+                loc: *loc,
+                ty: slot_ty,
+                var_no: new_length,
+            },
             storage: var_expr,
         },
     );
@@ -348,7 +416,11 @@ pub fn array_push(
         },
     );
 
-    Expression::Variable(*loc, ty, res)
+    Expression::Variable {
+        loc: *loc,
+        ty,
+        var_no: res,
+    }
 }
 
 /// Pop() method on array or bytes in storage
@@ -383,8 +455,12 @@ pub fn array_pop(
     );
 
     if let Some(res) = res {
-        Expression::Variable(*loc, ty, res)
+        Expression::Variable {
+            loc: *loc,
+            ty,
+            var_no: res,
+        }
     } else {
-        Expression::Undefined(ty)
+        Expression::Undefined { ty }
     }
 }

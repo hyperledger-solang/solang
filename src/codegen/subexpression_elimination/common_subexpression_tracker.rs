@@ -59,10 +59,10 @@ impl<'a> CommonSubExpressionTracker<'a> {
         // as we are not supposed to exchange them by temporaries.
         if matches!(
             exp,
-            Expression::FunctionArg(..)
-                | Expression::Variable(..)
-                | Expression::BytesLiteral(..)
-                | Expression::NumberLiteral(..) //| Expression::ConstantVariable(..)
+            Expression::FunctionArg { .. }
+                | Expression::Variable { .. }
+                | Expression::BytesLiteral { .. }
+                | Expression::NumberLiteral { .. } //| Expression::ConstantVariable(..)
         ) {
             return;
         }
@@ -206,15 +206,15 @@ impl<'a> CommonSubExpressionTracker<'a> {
             common_expression.in_cfg = true;
         }
 
-        Some(Expression::Variable(
-            if common_expression.var_loc.is_some() {
+        Some(Expression::Variable {
+            loc: if common_expression.var_loc.is_some() {
                 common_expression.var_loc.unwrap()
             } else {
                 Loc::Codegen
             },
-            common_expression.var_type.clone(),
-            common_expression.var_no.unwrap(),
-        ))
+            ty: common_expression.var_type.clone(),
+            var_no: common_expression.var_no.unwrap(),
+        })
     }
 
     /// Add new instructions to the instruction vector

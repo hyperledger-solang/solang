@@ -405,9 +405,9 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
         } => {
             if let Some(address) = address {
                 address.recurse(data, check_expression);
-                if let Expression::NumberLiteral(_, _, num) = address {
+                if let Expression::NumberLiteral { value, .. } = address {
                     // Check if we can auto populate this account
-                    if let Some(account) = account_from_number(num) {
+                    if let Some(account) = account_from_number(value) {
                         data.add_account(
                             account.to_string(),
                             SolanaAccount {
@@ -465,12 +465,10 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
 /// Collect accounts from this expression
 fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
     match expr {
-        Expression::Builtin(
-            _,
-            _,
-            Builtin::Timestamp | Builtin::BlockNumber | Builtin::Slot,
-            ..,
-        ) => {
+        Expression::Builtin {
+            kind: Builtin::Timestamp | Builtin::BlockNumber | Builtin::Slot,
+            ..
+        } => {
             data.add_account(
                 CLOCK_ACCOUNT.to_string(),
                 SolanaAccount {
@@ -479,7 +477,10 @@ fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
                 },
             );
         }
-        Expression::Builtin(_, _, Builtin::SignatureVerify, ..) => {
+        Expression::Builtin {
+            kind: Builtin::SignatureVerify,
+            ..
+        } => {
             data.add_account(
                 INSTRUCTION_ACCOUNT.to_string(),
                 SolanaAccount {
@@ -488,12 +489,10 @@ fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
                 },
             );
         }
-        Expression::Builtin(
-            _,
-            _,
-            Builtin::Ripemd160 | Builtin::Keccak256 | Builtin::Sha256,
-            ..,
-        ) => {
+        Expression::Builtin {
+            kind: Builtin::Ripemd160 | Builtin::Keccak256 | Builtin::Sha256,
+            ..
+        } => {
             data.add_system_account();
         }
 

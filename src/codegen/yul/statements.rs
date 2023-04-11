@@ -155,7 +155,7 @@ fn process_variable_declaration(
     } else {
         let mut inits: Vec<Expression> = Vec::with_capacity(vars.len());
         for item in vars {
-            inits.push(Expression::Undefined(item.1.clone()));
+            inits.push(Expression::Undefined { ty: item.1.clone() });
         }
 
         inits
@@ -287,12 +287,16 @@ fn cfg_single_assigment(
                         _ => unreachable!(),
                     };
 
-                    let ptr = Expression::StructMember(
-                        *loc,
-                        Type::Ref(Box::new(member_ty)),
-                        Box::new(Expression::Variable(*loc, ty.clone(), *var_no)),
-                        member_no,
-                    );
+                    let ptr = Expression::StructMember {
+                        loc: *loc,
+                        ty: Type::Ref(Box::new(member_ty)),
+                        expr: Box::new(Expression::Variable {
+                            loc: *loc,
+                            ty: ty.clone(),
+                            var_no: *var_no,
+                        }),
+                        member: member_no,
+                    };
 
                     cfg.add(
                         vartab,
@@ -327,7 +331,7 @@ fn cfg_single_assigment(
             }
         }
 
-        ast::YulExpression::BoolLiteral(..)
+        ast::YulExpression::BoolLiteral { .. }
         | ast::YulExpression::NumberLiteral(..)
         | ast::YulExpression::StringLiteral(..)
         | ast::YulExpression::SolidityLocalVariable(..)
@@ -357,15 +361,15 @@ fn process_if_block(
     let bool_cond = if cond.ty() == Type::Bool {
         cond
     } else {
-        Expression::NotEqual(
-            block.loc,
-            Box::new(Expression::NumberLiteral(
-                pt::Loc::Codegen,
-                cond.ty(),
-                BigInt::from_u8(0).unwrap(),
-            )),
-            Box::new(cond),
-        )
+        Expression::NotEqual {
+            loc: block.loc,
+            left: Box::new(Expression::NumberLiteral {
+                loc: pt::Loc::Codegen,
+                ty: cond.ty(),
+                value: BigInt::from_u8(0).unwrap(),
+            }),
+            right: Box::new(cond),
+        }
     };
 
     let then = cfg.new_basic_block("then".to_string());
@@ -432,15 +436,15 @@ fn process_for_block(
     let cond_expr = if cond_expr.ty() == Type::Bool {
         cond_expr
     } else {
-        Expression::NotEqual(
-            *loc,
-            Box::new(Expression::NumberLiteral(
-                pt::Loc::Codegen,
-                cond_expr.ty(),
-                BigInt::from_u8(0).unwrap(),
-            )),
-            Box::new(cond_expr),
-        )
+        Expression::NotEqual {
+            loc: *loc,
+            left: Box::new(Expression::NumberLiteral {
+                loc: pt::Loc::Codegen,
+                ty: cond_expr.ty(),
+                value: BigInt::from_u8(0).unwrap(),
+            }),
+            right: Box::new(cond_expr),
+        }
     };
 
     cfg.add(

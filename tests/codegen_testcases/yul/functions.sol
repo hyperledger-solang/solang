@@ -13,7 +13,7 @@ contract testing {
                 if lt(x, 2) {
                     // CHECK: block1: # then
                     x := sub(a, b)
-                    // CHECK: ty:uint256 %x = (unchecked (arg #0) - (arg #1))
+                    // CHECK: ty:uint256 %x = (overflowing (arg #0) - (arg #1))
                     leave
                     // CHECK: return
                 }
@@ -30,7 +30,7 @@ contract testing {
                 if lt(a, 2) {
                     // CHECK: block1: # then
                     ret1 := add(sub(a,b), mul(shr(a, 2), 3))
-                    // CHECK: ty:uint256 %ret1 = uint256((unchecked (unchecked int256((arg #0)) - (sext int256 (arg #1))) + int256((unchecked (uint256 2 >> (arg #0)) * uint256 3))))
+                    // CHECK: ty:uint256 %ret1 = uint256((overflowing (overflowing int256((arg #0)) - (sext int256 (arg #1))) + int256((overflowing (uint256 2 >> (arg #0)) * uint256 3))))
                     leave
                     // CHECK: return %ret1
                 }

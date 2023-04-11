@@ -216,7 +216,13 @@ fn block_reduce(
 fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) -> Expression {
     let filter = |expr: &Expression, ns: &mut Namespace| -> Expression {
         match expr {
-            Expression::Multiply(loc, ty, unchecked, left, right) => {
+            Expression::Multiply {
+                loc,
+                ty,
+                overflowing: unchecked,
+                left,
+                right,
+            } => {
                 let bits = ty.bits(ns) as usize;
                 if bits >= 128 {
                     let left_values = expression_values(left, vars, ns);
@@ -239,12 +245,16 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     ),
                                 );
 
-                                return Expression::ShiftLeft(
-                                    *loc,
-                                    ty.clone(),
-                                    left.clone(),
-                                    Box::new(Expression::NumberLiteral(*loc, ty.clone(), shift)),
-                                );
+                                return Expression::ShiftLeft {
+                                    loc: *loc,
+                                    ty: ty.clone(),
+                                    left: left.clone(),
+                                    right: Box::new(Expression::NumberLiteral {
+                                        loc: *loc,
+                                        ty: ty.clone(),
+                                        value: shift,
+                                    }),
+                                };
                             }
 
                             cmp *= 2;
@@ -266,17 +276,21 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     ),
                                 );
 
-                                return Expression::SignExt(
-                                    *loc,
-                                    ty.clone(),
-                                    Box::new(Expression::Multiply(
-                                        *loc,
-                                        Type::Int(64),
-                                        *unchecked,
-                                        Box::new(left.as_ref().clone().cast(&Type::Int(64), ns)),
-                                        Box::new(right.as_ref().clone().cast(&Type::Int(64), ns)),
-                                    )),
-                                );
+                                return Expression::SignExt {
+                                    loc: *loc,
+                                    ty: ty.clone(),
+                                    expr: Box::new(Expression::Multiply {
+                                        loc: *loc,
+                                        ty: Type::Int(64),
+                                        overflowing: *unchecked,
+                                        left: Box::new(
+                                            left.as_ref().clone().cast(&Type::Int(64), ns),
+                                        ),
+                                        right: Box::new(
+                                            right.as_ref().clone().cast(&Type::Int(64), ns),
+                                        ),
+                                    }),
+                                };
                             }
                         }
                     } else {
@@ -293,25 +307,37 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                 ),
                             );
 
-                            return Expression::ZeroExt(
-                                *loc,
-                                ty.clone(),
-                                Box::new(Expression::Multiply(
-                                    *loc,
-                                    Type::Uint(64),
-                                    *unchecked,
-                                    Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
-                                    Box::new(right.as_ref().clone().cast(&Type::Uint(64), ns)),
-                                )),
-                            );
+                            return Expression::ZeroExt {
+                                loc: *loc,
+                                ty: ty.clone(),
+                                expr: Box::new(Expression::Multiply {
+                                    loc: *loc,
+                                    ty: Type::Uint(64),
+                                    overflowing: *unchecked,
+                                    left: Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
+                                    right: Box::new(
+                                        right.as_ref().clone().cast(&Type::Uint(64), ns),
+                                    ),
+                                }),
+                            };
                         }
                     }
                 }
 
                 expr.clone()
             }
-            Expression::UnsignedDivide(loc, ty, left, right)
-            | Expression::SignedDivide(loc, ty, left, right) => {
+            Expression::UnsignedDivide {
+                loc,
+                ty,
+                left,
+                right,
+            }
+            | Expression::SignedDivide {
+                loc,
+                ty,
+                left,
+                right,
+            } => {
                 let bits = ty.bits(ns) as usize;
 
                 if bits >= 128 {
@@ -335,13 +361,17 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     ),
                                 );
 
-                                return Expression::ShiftRight(
-                                    *loc,
-                                    ty.clone(),
-                                    left.clone(),
-                                    Box::new(Expression::NumberLiteral(*loc, ty.clone(), shift)),
-                                    ty.is_signed_int(ns),
-                                );
+                                return Expression::ShiftRight {
+                                    loc: *loc,
+                                    ty: ty.clone(),
+                                    left: left.clone(),
+                                    right: Box::new(Expression::NumberLiteral {
+                                        loc: *loc,
+                                        ty: ty.clone(),
+                                        value: shift,
+                                    }),
+                                    signed: ty.is_signed_int(ns),
+                                };
                             }
 
                             cmp *= 2;
@@ -362,16 +392,20 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     ),
                                 );
 
-                                return Expression::SignExt(
-                                    *loc,
-                                    ty.clone(),
-                                    Box::new(Expression::UnsignedDivide(
-                                        *loc,
-                                        Type::Int(64),
-                                        Box::new(left.as_ref().clone().cast(&Type::Int(64), ns)),
-                                        Box::new(right.as_ref().clone().cast(&Type::Int(64), ns)),
-                                    )),
-                                );
+                                return Expression::SignExt {
+                                    loc: *loc,
+                                    ty: ty.clone(),
+                                    expr: Box::new(Expression::UnsignedDivide {
+                                        loc: *loc,
+                                        ty: Type::Int(64),
+                                        left: Box::new(
+                                            left.as_ref().clone().cast(&Type::Int(64), ns),
+                                        ),
+                                        right: Box::new(
+                                            right.as_ref().clone().cast(&Type::Int(64), ns),
+                                        ),
+                                    }),
+                                };
                             }
                         }
                     } else {
@@ -385,24 +419,36 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                 format!("{} divide optimized to uint64 divide", ty.to_string(ns),),
                             );
 
-                            return Expression::ZeroExt(
-                                *loc,
-                                ty.clone(),
-                                Box::new(Expression::UnsignedDivide(
-                                    *loc,
-                                    Type::Uint(64),
-                                    Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
-                                    Box::new(right.as_ref().clone().cast(&Type::Uint(64), ns)),
-                                )),
-                            );
+                            return Expression::ZeroExt {
+                                loc: *loc,
+                                ty: ty.clone(),
+                                expr: Box::new(Expression::UnsignedDivide {
+                                    loc: *loc,
+                                    ty: Type::Uint(64),
+                                    left: Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
+                                    right: Box::new(
+                                        right.as_ref().clone().cast(&Type::Uint(64), ns),
+                                    ),
+                                }),
+                            };
                         }
                     }
                 }
 
                 expr.clone()
             }
-            Expression::SignedModulo(loc, ty, left, right)
-            | Expression::UnsignedModulo(loc, ty, left, right) => {
+            Expression::SignedModulo {
+                loc,
+                ty,
+                left,
+                right,
+            }
+            | Expression::UnsignedModulo {
+                loc,
+                ty,
+                left,
+                right,
+            } => {
                 let bits = ty.bits(ns) as usize;
 
                 if bits >= 128 {
@@ -426,12 +472,16 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     ),
                                 );
 
-                                return Expression::BitwiseAnd(
-                                    *loc,
-                                    ty.clone(),
-                                    left.clone(),
-                                    Box::new(Expression::NumberLiteral(*loc, ty.clone(), cmp - 1)),
-                                );
+                                return Expression::BitwiseAnd {
+                                    loc: *loc,
+                                    ty: ty.clone(),
+                                    left: left.clone(),
+                                    right: Box::new(Expression::NumberLiteral {
+                                        loc: *loc,
+                                        ty: ty.clone(),
+                                        value: cmp - 1,
+                                    }),
+                                };
                             }
 
                             cmp *= 2;
@@ -451,16 +501,20 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                     ),
                                 );
 
-                                return Expression::SignExt(
-                                    *loc,
-                                    ty.clone(),
-                                    Box::new(Expression::SignedModulo(
-                                        *loc,
-                                        Type::Int(64),
-                                        Box::new(left.as_ref().clone().cast(&Type::Int(64), ns)),
-                                        Box::new(right.as_ref().clone().cast(&Type::Int(64), ns)),
-                                    )),
-                                );
+                                return Expression::SignExt {
+                                    loc: *loc,
+                                    ty: ty.clone(),
+                                    expr: Box::new(Expression::SignedModulo {
+                                        loc: *loc,
+                                        ty: Type::Int(64),
+                                        left: Box::new(
+                                            left.as_ref().clone().cast(&Type::Int(64), ns),
+                                        ),
+                                        right: Box::new(
+                                            right.as_ref().clone().cast(&Type::Int(64), ns),
+                                        ),
+                                    }),
+                                };
                             }
                         }
                     } else {
@@ -474,16 +528,18 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                                 format!("{} modulo optimized to uint64 modulo", ty.to_string(ns)),
                             );
 
-                            return Expression::ZeroExt(
-                                *loc,
-                                ty.clone(),
-                                Box::new(Expression::UnsignedModulo(
-                                    *loc,
-                                    Type::Uint(64),
-                                    Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
-                                    Box::new(right.as_ref().clone().cast(&Type::Uint(64), ns)),
-                                )),
-                            );
+                            return Expression::ZeroExt {
+                                loc: *loc,
+                                ty: ty.clone(),
+                                expr: Box::new(Expression::UnsignedModulo {
+                                    loc: *loc,
+                                    ty: Type::Uint(64),
+                                    left: Box::new(left.as_ref().clone().cast(&Type::Uint(64), ns)),
+                                    right: Box::new(
+                                        right.as_ref().clone().cast(&Type::Uint(64), ns),
+                                    ),
+                                }),
+                            };
                         }
                     }
                 }
