@@ -1818,7 +1818,7 @@ impl Dot {
         }
 
         local_parent = func_node;
-        for (item_no, item) in ns.yul_functions[func_no].body.iter().enumerate() {
+        for (item_no, item) in ns.yul_functions[func_no].body.statements.iter().enumerate() {
             local_parent = self.add_yul_statement(
                 item,
                 local_parent,
@@ -2201,7 +2201,7 @@ impl Dot {
         );
 
         parent = node;
-        for (statement_no, child_statement) in block.body.iter().enumerate() {
+        for (statement_no, child_statement) in block.statements.iter().enumerate() {
             parent = self.add_yul_statement(
                 child_statement,
                 parent,

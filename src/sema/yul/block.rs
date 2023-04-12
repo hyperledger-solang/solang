@@ -47,7 +47,7 @@ pub fn resolve_yul_block(
             loc: *loc,
             reachable,
             next_reachable,
-            body,
+            statements: body,
         },
         next_reachable,
     )

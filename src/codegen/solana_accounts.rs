@@ -296,12 +296,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 item.recurse(data, check_expression);
             }
         }
-        Instr::Branch { .. }
-        | Instr::Nop
-        | Instr::ReturnCode { .. }
-        | Instr::PopMemory { .. }
-        | Instr::Unreachable => (),
-
+        Instr::Branch { .. } | Instr::Nop | Instr::ReturnCode { .. } | Instr::PopMemory { .. } => {}
         Instr::Store {
             dest,
             data: store_data,

@@ -95,7 +95,7 @@ fn yul_function_cfg(
         }
     };
 
-    for stmt in &yul_func.body {
+    for stmt in &yul_func.body.statements {
         statement(
             stmt,
             contract_no,
@@ -108,9 +108,7 @@ fn yul_function_cfg(
         );
     }
 
-    if yul_func.body.is_empty()
-        || (!yul_func.body.is_empty() && yul_func.body.last().unwrap().is_reachable())
-    {
+    if yul_func.body.statements.is_empty() || yul_func.body.next_reachable {
         cfg.add(&mut vartab, returns);
     }
 

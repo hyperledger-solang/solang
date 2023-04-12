@@ -221,7 +221,7 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
             Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),
             Statement::Assembly(inline_assembly, _) => {
                 for function_no in inline_assembly.functions.start..inline_assembly.functions.end {
-                    recurse_yul_statements(&ns.yul_functions[function_no].body, state);
+                    recurse_yul_statements(&ns.yul_functions[function_no].body.statements, state);
                 }
                 recurse_yul_statements(&inline_assembly.body, state);
             }
@@ -355,7 +355,7 @@ fn recurse_yul_statements(stmts: &[YulStatement], state: &mut StateCheck) {
                 }
             }
             YulStatement::Block(block) => {
-                recurse_yul_statements(&block.body, state);
+                recurse_yul_statements(&block.statements, state);
             }
             YulStatement::Assignment(_, _, _, value)
             | YulStatement::VariableDeclaration(_, _, _, Some(value)) => {
@@ -363,7 +363,7 @@ fn recurse_yul_statements(stmts: &[YulStatement], state: &mut StateCheck) {
             }
             YulStatement::IfBlock(_, _, condition, block) => {
                 condition.recurse(state, check_expression_mutability_yul);
-                recurse_yul_statements(&block.body, state);
+                recurse_yul_statements(&block.statements, state);
             }
             YulStatement::Switch {
                 condition,
@@ -375,11 +375,11 @@ fn recurse_yul_statements(stmts: &[YulStatement], state: &mut StateCheck) {
                 for item in cases {
                     item.condition
                         .recurse(state, check_expression_mutability_yul);
-                    recurse_yul_statements(&item.block.body, state);
+                    recurse_yul_statements(&item.block.statements, state);
                 }
 
                 if let Some(block) = default {
-                    recurse_yul_statements(&block.body, state);
+                    recurse_yul_statements(&block.statements, state);
                 }
             }
             YulStatement::For {
@@ -389,10 +389,10 @@ fn recurse_yul_statements(stmts: &[YulStatement], state: &mut StateCheck) {
                 execution_block,
                 ..
             } => {
-                recurse_yul_statements(&init_block.body, state);
+                recurse_yul_statements(&init_block.statements, state);
                 condition.recurse(state, check_expression_mutability_yul);
-                recurse_yul_statements(&post_block.body, state);
-                recurse_yul_statements(&execution_block.body, state);
+                recurse_yul_statements(&post_block.statements, state);
+                recurse_yul_statements(&execution_block.statements, state);
             }
 
             _ => (),

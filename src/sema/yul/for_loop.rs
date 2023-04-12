@@ -119,7 +119,7 @@ fn resolve_for_init_block(
             loc: init_block.loc,
             reachable,
             next_reachable,
-            body,
+            statements: body,
         },
         next_reachable,
     ))

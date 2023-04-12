@@ -1448,7 +1448,6 @@ impl CodeLocation for Instr {
             Instr::Switch { cond, .. } => cond.loc(),
             Instr::ReturnData { data, .. } => data.loc(),
             Instr::Branch { .. }
-            | Instr::Unreachable
             | Instr::ReturnCode { .. }
             | Instr::Nop
             | Instr::AssertFailure { .. }
