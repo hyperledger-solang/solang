@@ -40,6 +40,7 @@ strict digraph "tests/contract_testcases/solana/using_import.sol" {
 	diagnostic_43 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/solana/using_import.sol:7:2-35"]
 	diagnostic_44 [label="found contract 'A'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:1-14"]
 	diagnostic_45 [label="found library 'L'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:2:1-13"]
+	diagnostic_46 [label="error 'E' has never been used\nlevel Warning\ntests/contract_testcases/solana/simple.sol:3:7-8"]
 	structs -> S
 	errors -> E
 	free_functions -> inc [label="function"]
@@ -81,4 +82,5 @@ strict digraph "tests/contract_testcases/solana/using_import.sol" {
 	diagnostics -> diagnostic_43 [label="Warning"]
 	diagnostics -> diagnostic_44 [label="Debug"]
 	diagnostics -> diagnostic_45 [label="Debug"]
+	diagnostics -> diagnostic_46 [label="Warning"]
 }

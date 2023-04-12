@@ -10,8 +10,8 @@ strict digraph "tests/contract_testcases/solana/error2.sol" {
 	contract [label="contract C\ntests/contract_testcases/solana/error2.sol:10:1-18:2"]
 	diagnostic [label="X1 is already defined as an enum\nlevel Error\ntests/contract_testcases/solana/error2.sol:3:7-9"]
 	note [label="location of previous definition\ntests/contract_testcases/solana/error2.sol:2:6-8"]
-	diagnostic_15 [label="expecting 'error', got 'foo'\nlevel Error\ntests/contract_testcases/solana/error2.sol:4:1-4"]
-	diagnostic_16 [label="expression found where 'error' was expected\nlevel Error\ntests/contract_testcases/solana/error2.sol:5:1-4"]
+	diagnostic_15 [label="'function', 'error', or 'event' expected\nlevel Error\ntests/contract_testcases/solana/error2.sol:4:1-4"]
+	diagnostic_16 [label="'function', 'error', or 'event' expected\nlevel Error\ntests/contract_testcases/solana/error2.sol:5:1-4"]
 	diagnostic_17 [label="X2 is already defined as an error\nlevel Error\ntests/contract_testcases/solana/error2.sol:7:6-8"]
 	note_18 [label="location of previous definition\ntests/contract_testcases/solana/error2.sol:6:7-9"]
 	diagnostic_19 [label="found contract 'C'\nlevel Debug\ntests/contract_testcases/solana/error2.sol:10:1-18:2"]
@@ -21,8 +21,8 @@ strict digraph "tests/contract_testcases/solana/error2.sol" {
 	note_23 [label="location of previous declaration of 'X'\ntests/contract_testcases/solana/error2.sol:12:11-16"]
 	diagnostic_24 [label="mapping type is not permitted as error field\nlevel Error\ntests/contract_testcases/solana/error2.sol:14:11-32"]
 	diagnostic_25 [label="type 'X' not found\nlevel Error\ntests/contract_testcases/solana/error2.sol:15:11-12"]
-	diagnostic_26 [label="expecting 'error', got 'meh'\nlevel Error\ntests/contract_testcases/solana/error2.sol:16:2-5"]
-	diagnostic_27 [label="expression found where 'error' was expected\nlevel Error\ntests/contract_testcases/solana/error2.sol:17:2-6"]
+	diagnostic_26 [label="'function', 'error', or 'event' expected\nlevel Error\ntests/contract_testcases/solana/error2.sol:16:2-5"]
+	diagnostic_27 [label="'function', 'error', or 'event' expected\nlevel Error\ntests/contract_testcases/solana/error2.sol:17:2-6"]
 	enums -> X1
 	enums -> X2
 	errors -> X2_4

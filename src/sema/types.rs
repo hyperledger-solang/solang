@@ -144,17 +144,18 @@ pub fn resolve_typenames<'a>(
             pt::SourceUnitPart::ErrorDefinition(def) => {
                 match &def.keyword {
                     pt::Expression::Variable(id) if id.name == "error" => (),
-                    pt::Expression::Variable(id) => {
+                    _ => {
+                        // This can be:
+                        //
+                        // int[2] var(bool);
+                        // S var2();
+                        // funtion var3(int x);
+                        // Event var4(bool f1);
+                        // Error var4(bool f1);
+                        // Feh.b1 var5();
                         ns.diagnostics.push(Diagnostic::error(
-                            id.loc,
-                            format!("expecting 'error', got '{}'", id.name),
-                        ));
-                        continue;
-                    }
-                    e => {
-                        ns.diagnostics.push(Diagnostic::error(
-                            e.loc(),
-                            "expression found where 'error' was expected".into(),
+                            def.keyword.loc(),
+                            "'function', 'error', or 'event' expected".into(),
                         ));
                         continue;
                     }
@@ -542,17 +543,20 @@ fn resolve_contract<'a>(
             pt::ContractPart::ErrorDefinition(def) => {
                 match &def.keyword {
                     pt::Expression::Variable(id) if id.name == "error" => (),
-                    pt::Expression::Variable(id) => {
+                    _ => {
+                        // this can be:
+                        //
+                        // contract c {
+                        //     int[2] var(bool);
+                        //     S var2();
+                        //     funtion var3(int x);
+                        //     Event var4(bool f1);
+                        //     Error var4(bool f1);
+                        //     Feh.b1 var5();
+                        //}
                         ns.diagnostics.push(Diagnostic::error(
-                            id.loc,
-                            format!("expecting 'error', got '{}'", id.name),
-                        ));
-                        continue;
-                    }
-                    e => {
-                        ns.diagnostics.push(Diagnostic::error(
-                            e.loc(),
-                            "expression found where 'error' was expected".into(),
+                            def.keyword.loc(),
+                            "'function', 'error', or 'event' expected".into(),
                         ));
                         continue;
                     }

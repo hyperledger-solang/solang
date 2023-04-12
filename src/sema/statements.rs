@@ -967,6 +967,8 @@ fn revert_pos_arg(
             ));
         }
 
+        ns.errors[error_no].used = true;
+
         Ok(Statement::Revert {
             loc: *loc,
             error_no: Some(error_no),
@@ -1147,6 +1149,8 @@ fn revert_named_arg(
                 ));
             }
         }
+
+        ns.errors[error_no].used = true;
 
         Ok(Statement::Revert {
             loc: *loc,

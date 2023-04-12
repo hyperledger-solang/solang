@@ -16,6 +16,7 @@ strict digraph "tests/contract_testcases/solana/simple.sol" {
 	contract_18 [label="contract L\ntests/contract_testcases/solana/simple.sol:2:1-13"]
 	diagnostic [label="found contract 'A'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:1:1-14"]
 	diagnostic_21 [label="found library 'L'\nlevel Debug\ntests/contract_testcases/solana/simple.sol:2:1-13"]
+	diagnostic_22 [label="error 'E' has never been used\nlevel Warning\ntests/contract_testcases/solana/simple.sol:3:7-8"]
 	structs -> S
 	errors -> E
 	free_functions -> inc [label="function"]
@@ -33,4 +34,5 @@ strict digraph "tests/contract_testcases/solana/simple.sol" {
 	contracts -> contract_18
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_21 [label="Debug"]
+	diagnostics -> diagnostic_22 [label="Warning"]
 }
