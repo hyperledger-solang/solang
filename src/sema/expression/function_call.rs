@@ -2170,6 +2170,11 @@ pub(super) fn parse_call_args(
                         ),
                     ));
                     return Err(());
+                } else if expr_ty.is_dynamic(ns) {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        "dynamic array is not supported for the 'accounts' argument".to_string(),
+                    ));
                 }
 
                 res.accounts = Some(Box::new(expr));
