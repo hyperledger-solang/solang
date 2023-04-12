@@ -108,7 +108,7 @@ fn yul_function_cfg(
         );
     }
 
-    if yul_func.body.statements.is_empty() || yul_func.body.next_reachable {
+    if yul_func.body.is_next_reachable() {
         cfg.add(&mut vartab, returns);
     }
 

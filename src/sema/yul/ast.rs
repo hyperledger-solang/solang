@@ -28,7 +28,7 @@ pub struct YulBlock {
 impl YulBlock {
     /// Returns if whatever follows the YulBlock is reachable
     pub fn is_next_reachable(&self) -> bool {
-        self.statements.is_empty() || (!self.statements.is_empty() && self.next_reachable)
+        self.statements.is_empty() || self.next_reachable
     }
 }
 
