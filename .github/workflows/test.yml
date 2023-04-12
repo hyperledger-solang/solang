@@ -58,7 +58,7 @@ jobs:
 
   linux-x86-64:
     name: Linux x86-64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
     - name: Checkout sources
@@ -99,7 +99,7 @@ jobs:
 
   windows:
     name: Windows
-    runs-on: windows-latest
+    runs-on: windows-latest-l
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -215,7 +215,7 @@ jobs:
 
   anchor:
     name: Anchor Integration test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     container: ghcr.io/hyperledger/solang-llvm:ci
     needs: linux-x86-64
     steps:
@@ -262,7 +262,7 @@ jobs:
 
   solana:
     name: Solana Integration test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     container: ghcr.io/hyperledger/solang-llvm:ci
     needs: linux-x86-64
     steps:
@@ -296,7 +296,7 @@ jobs:
 
   substrate:
     name: Substrate Integration test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
     needs: linux-x86-64
     steps:
     - name: Checkout sources
