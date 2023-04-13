@@ -1128,7 +1128,7 @@ fn post_incdec(
     ns: &Namespace,
     loc: &pt::Loc,
     expr: &ast::Expression,
-    unchecked: bool,
+    overflowing: bool,
     opt: &Options,
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
@@ -1159,7 +1159,7 @@ fn post_incdec(
         ast::Expression::PostDecrement { .. } => Expression::Subtract {
             loc: *loc,
             ty: ty.clone(),
-            overflowing: unchecked,
+            overflowing,
             left: Box::new(Expression::Variable {
                 loc: *loc,
                 ty: ty.clone(),
@@ -1170,7 +1170,7 @@ fn post_incdec(
         ast::Expression::PostIncrement { .. } => Expression::Add {
             loc: *loc,
             ty: ty.clone(),
-            overflowing: unchecked,
+            overflowing,
             left: Box::new(Expression::Variable {
                 loc: *loc,
                 ty: ty.clone(),
@@ -1252,7 +1252,7 @@ fn pre_incdec(
     ns: &Namespace,
     loc: &pt::Loc,
     expr: &ast::Expression,
-    unchecked: bool,
+    overflowing: bool,
     opt: &Options,
 ) -> Expression {
     let res = vartab.temp_anonymous(ty);
@@ -1275,14 +1275,14 @@ fn pre_incdec(
         ast::Expression::PreDecrement { .. } => Expression::Subtract {
             loc: *loc,
             ty: ty.clone(),
-            overflowing: unchecked,
+            overflowing,
             left: Box::new(v),
             right: one,
         },
         ast::Expression::PreIncrement { .. } => Expression::Add {
             loc: *loc,
             ty: ty.clone(),
-            overflowing: unchecked,
+            overflowing,
             left: Box::new(v),
             right: one,
         },
@@ -2288,7 +2288,7 @@ fn alloc_dynamic_array(
 fn add(
     loc: &pt::Loc,
     ty: &Type,
-    unchecked: bool,
+    overflowing: bool,
     left: &ast::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -2301,7 +2301,7 @@ fn add(
     Expression::Add {
         loc: *loc,
         ty: ty.clone(),
-        overflowing: unchecked,
+        overflowing,
         left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
         right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
     }
@@ -2310,7 +2310,7 @@ fn add(
 fn subtract(
     loc: &pt::Loc,
     ty: &Type,
-    unchecked: bool,
+    overflowing: bool,
     left: &ast::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -2323,7 +2323,7 @@ fn subtract(
     Expression::Subtract {
         loc: *loc,
         ty: ty.clone(),
-        overflowing: unchecked,
+        overflowing,
         left: Box::new(expression(left, cfg, contract_no, func, ns, vartab, opt)),
         right: Box::new(expression(right, cfg, contract_no, func, ns, vartab, opt)),
     }

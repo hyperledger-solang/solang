@@ -130,7 +130,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Add {
             loc,
             ty,
-            overflowing: unchecked,
+            overflowing,
             left,
             right,
             ..
@@ -138,7 +138,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let left = expression(target, bin, left, vartab, function, ns).into_int_value();
             let right = expression(target, bin, right, vartab, function, ns).into_int_value();
 
-            if !unchecked {
+            if !overflowing {
                 let signed = ty.is_signed_int(ns);
                 build_binary_op_with_overflow_check(
                     target,
@@ -159,14 +159,14 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Subtract {
             loc,
             ty,
-            overflowing: unchecked,
+            overflowing,
             left,
             right,
         } => {
             let left = expression(target, bin, left, vartab, function, ns).into_int_value();
             let right = expression(target, bin, right, vartab, function, ns).into_int_value();
 
-            if !unchecked {
+            if !overflowing {
                 let signed = ty.is_signed_int(ns);
                 build_binary_op_with_overflow_check(
                     target,
@@ -187,7 +187,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Multiply {
             loc,
             ty: res_ty,
-            overflowing: unchecked,
+            overflowing,
             left,
             right,
         } => {
@@ -198,7 +198,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 target,
                 bin,
                 function,
-                *unchecked,
+                *overflowing,
                 left,
                 right,
                 res_ty.is_signed_int(ns),
@@ -682,7 +682,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
         Expression::Power {
             loc,
             ty: res_ty,
-            overflowing: unchecked,
+            overflowing,
             base: l,
             exp: r,
         } => {
@@ -694,7 +694,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             let f = power(
                 target,
                 bin,
-                *unchecked,
+                *overflowing,
                 bits,
                 res_ty.is_signed_int(ns),
                 o,
@@ -713,7 +713,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             // Load the result pointer
             let res = bin.builder.build_load(left.get_type(), o, "");
 
-            if *unchecked || ns.target.is_substrate() {
+            if *overflowing || ns.target.is_substrate() {
                 // In Substrate, overflow case will hit an unreachable expression, so no additional checks are needed.
                 res
             } else {
