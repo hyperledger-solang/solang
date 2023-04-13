@@ -536,3 +536,52 @@ fn solana_discriminator_type() {
         .diagnostics
         .contains_message("implicit conversion would truncate from bytes8 to bytes4"));
 }
+
+#[test]
+fn dynamic_account_metas() {
+    let src = r#"
+    import 'solana';
+
+contract creator {
+    Child public c;
+    function create_child_with_meta(address child, address payer) public {
+        AccountMeta[] metas = new AccountMeta[](2);
+
+        metas[0] = AccountMeta({pubkey: child, is_signer: false, is_writable: false});
+        metas[1] = AccountMeta({pubkey: payer, is_signer: true, is_writable: true});
+
+        c = new Child{accounts: metas}(payer);
+
+        c.say_hello();
+    }
+}
+
+@program_id("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT")
+contract Child {
+    @payer(payer)
+    @space(511 + 7)
+    constructor(address payer) {
+        print("In child constructor");
+    }
+
+    function say_hello() pure public {
+        print("Hello there");
+    }
+}
+    "#;
+    let mut cache = FileResolver::new();
+    cache.set_file_contents("test.sol", src.to_string());
+
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
+
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 2);
+    assert_eq!(
+        errors[0].message,
+        "'address' call argument required on solana"
+    );
+    assert_eq!(
+        errors[1].message,
+        "dynamic array is not supported for the 'accounts' argument"
+    );
+}
