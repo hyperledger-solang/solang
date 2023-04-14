@@ -895,6 +895,12 @@ fn statement(
     }
 }
 
+/// Resolve a revert statement with position arguments, and optional error, e.g.
+/// ```ignore
+/// revert();
+/// revert("the reason why");
+/// revert NotEnoughBalance(address);
+/// ```
 fn revert_pos_arg(
     loc: &pt::Loc,
     path: &Option<pt::IdentifierPath>,
@@ -1018,6 +1024,12 @@ fn revert_pos_arg(
     }
 }
 
+/// Resolve a revert statement with named arguments, and optional error, e.g.
+/// ```ignore
+/// revert({foo: 1}); // not allowed
+/// revert({reason:"the reason why"}); // not allowed
+/// revert NotEnoughBalance({user: address});
+/// ```
 fn revert_named_arg(
     loc: &pt::Loc,
     path: &Option<pt::IdentifierPath>,

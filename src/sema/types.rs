@@ -894,6 +894,11 @@ fn event_decl(
     (doc, fields)
 }
 
+/// Resolve an error definition which can be defined in a contract or outside, e.g:
+/// error Foo(int bar, bool foo);
+/// contract {
+///     error Bar(bytes4 selector);
+/// }
 fn error_decl(
     def: &pt::ErrorDefinition,
     file_no: usize,

@@ -507,6 +507,10 @@ impl Namespace {
         }
     }
 
+    /// Resolve an error definition with the given path. The error may be defined in a contract,
+    /// global level or it may have been imported via an import object. The return value is
+    /// an error definition number in the namespace.errors Vec, or an Err(()) if it could not be
+    /// resolved. A diagnostic will be added to the diagnostics.
     pub(super) fn resolve_error(
         &mut self,
         file_no: usize,
