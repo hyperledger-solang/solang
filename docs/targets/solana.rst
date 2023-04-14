@@ -46,6 +46,8 @@ Runtime
 - The Solana target requires `Solana <https://www.solana.com/>`_ v1.8.1.
 - Function selectors are eight bytes wide and known as *discriminators*.
 - Solana provides different builtins, e.g. ``tx.program_id`` and ``tx.accounts``.
+- When creating a contract in Solidity using ``new``, one :ref:`needs to provide <solana_constructor>` the data account
+  address that is going to be initialized for the new contract.
 
 Compute budget
 ++++++++++++++
@@ -210,6 +212,8 @@ known account. The account can be specified in the source code using an annotati
     .. code-block:: bash
 
         solana-keygen grind --starts-with Foo:1
+
+.. _payer_seeds_bump:
 
 Setting the payer, seeds, bump, and space for a contract
 _________________________________________________________

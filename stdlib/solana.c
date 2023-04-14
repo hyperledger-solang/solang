@@ -102,6 +102,7 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolPubkey *address,
         if (new_address_idx < 0)
         {
             sol_log("call to account not in transaction");
+            sol_panic();
 
             return ERROR_INVALID_ACCOUNT_DATA;
         }
@@ -116,6 +117,9 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolPubkey *address,
         // This is a constructor call
         if (new_address_idx < 0)
         {
+            sol_log("new account needed");
+            sol_panic();
+
             return ERROR_NEW_ACCOUNT_NEEDED;
         }
         else

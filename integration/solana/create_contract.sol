@@ -2,6 +2,7 @@ import 'solana';
 
 contract creator {
     Child public c;
+    Child public c_metas;
 
     function create_child(address child, address payer) public {
         print("Going to create child");
@@ -21,6 +22,18 @@ contract creator {
         print("Going to create Seed2");
         new Seed2{address: child}(payer, seed, space);
     }
+
+    function create_child_with_metas(address child, address payer) public {
+        print("Going to create child with metas");
+        AccountMeta[3] metas = [
+            AccountMeta({pubkey: child, is_signer: true, is_writable: true}),
+            AccountMeta({pubkey: payer, is_signer: true, is_writable: true}),
+            AccountMeta({pubkey: address"11111111111111111111111111111111", is_writable: false, is_signer: false})
+        ];
+
+        c_metas = new Child{accounts: metas}(payer);        
+        c_metas.use_metas();
+    }
 }
 
 @program_id("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT")
@@ -33,6 +46,10 @@ contract Child {
 
     function say_hello() pure public {
         print("Hello there");
+    }
+
+    function use_metas() pure public {
+        print("I am using metas");
     }
 }
 

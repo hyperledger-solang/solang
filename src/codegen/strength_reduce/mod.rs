@@ -161,19 +161,21 @@ fn block_reduce(
             }
             Instr::Constructor {
                 encoded_args,
-                encoded_args_len,
                 value,
                 gas,
                 salt,
+                accounts,
                 ..
             } => {
                 *encoded_args = expression_reduce(encoded_args, &vars, ns);
-                *encoded_args_len = expression_reduce(encoded_args_len, &vars, ns);
                 if let Some(value) = value {
                     *value = expression_reduce(value, &vars, ns);
                 }
                 if let Some(salt) = salt {
                     *salt = expression_reduce(salt, &vars, ns);
+                }
+                if let Some(accounts) = accounts {
+                    *accounts = expression_reduce(accounts, &vars, ns);
                 }
                 *gas = expression_reduce(gas, &vars, ns);
             }

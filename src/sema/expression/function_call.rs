@@ -2215,12 +2215,25 @@ pub(super) fn parse_call_args(
     }
 
     // address is required on solana constructors
-    if ns.target == Target::Solana && !external_call && res.address.is_none() {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            format!("'address' call argument required on {}", ns.target),
-        ));
-        return Err(());
+    if ns.target == Target::Solana && !external_call {
+        if res.address.is_none() && res.accounts.is_none() {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "either 'address' or 'accounts' call argument is required on {}",
+                    ns.target
+                ),
+            ));
+            return Err(());
+        } else if res.address.is_some() && res.accounts.is_some() {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "'address' and 'accounts' call arguments cannot be used together. \
+                The first address provided on the accounts vector must be the contract's address."
+                    .to_string(),
+            ));
+            return Err(());
+        }
     }
 
     Ok(res)

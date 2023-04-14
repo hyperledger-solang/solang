@@ -87,7 +87,7 @@ pub fn string_format(
                 let arg_ty = arg_ty.deref_any();
 
                 if matches!(specifier, FormatArg::Binary | FormatArg::Hex) {
-                    if !matches!(arg_ty, Type::Uint(_) | Type::Int(_)) {
+                    if !matches!(arg_ty, Type::Uint(_) | Type::Int(_) | Type::Address(_)) {
                         diagnostics.push(Diagnostic::error(
                             arg.loc(),
                             String::from("argument must be signed or unsigned integer type"),
