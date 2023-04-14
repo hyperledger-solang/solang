@@ -487,3 +487,43 @@ pub fn check_unused_events(ns: &mut Namespace) {
         }
     }
 }
+
+/// Check for unused error definitions. Here NotEnoughBalance is never used in a
+/// revert statement.
+///
+/// ```ignore
+/// contract c {
+///     error NotEnoughBalance(address user);
+///     error UnknownUser(address user);
+///
+///     mapping(address => uint64) balances;
+///
+///     function balance(address user) public returns (uint64 balance) {
+///         balance = balances[user];
+///         if (balance == 0) {
+///             revert UnknownUser(user);
+///         }
+///     }
+/// }
+/// ```
+pub fn check_unused_errors(ns: &mut Namespace) {
+    // it is an error to shadow error definitions
+    for error in &ns.errors {
+        if !error.used {
+            if let Some(contract_no) = error.contract {
+                // don't complain about error definitions in interfaces or abstract contracts
+                if matches!(
+                    ns.contracts[contract_no].ty,
+                    ContractTy::Interface(_) | ContractTy::Abstract(_)
+                ) {
+                    continue;
+                }
+            }
+
+            ns.diagnostics.push(Diagnostic::warning(
+                error.loc,
+                format!("error '{}' has never been used", error.name),
+            ));
+        }
+    }
+}

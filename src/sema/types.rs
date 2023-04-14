@@ -4,8 +4,8 @@ use super::tags::resolve_tags;
 use super::{annotions_not_allowed, ast, SourceUnit, SOLANA_BUCKET_SIZE};
 use super::{
     ast::{
-        ArrayLength, Contract, Diagnostic, EnumDecl, EventDecl, Mapping, Namespace, Parameter,
-        StructDecl, StructType, Symbol, Tag, Type, UserTypeDecl,
+        ArrayLength, Contract, Diagnostic, EnumDecl, ErrorDecl, EventDecl, Mapping, Namespace,
+        Parameter, StructDecl, StructType, Symbol, Tag, Type, UserTypeDecl,
     },
     diagnostics::Diagnostics,
     ContractDefinition, SOLANA_SPARSE_ARRAY_SIZE,
@@ -30,13 +30,19 @@ type Graph = petgraph::Graph<(), usize, Directed, usize>;
 pub struct ResolveFields<'a> {
     structs: Vec<ResolveStructFields<'a>>,
     events: Vec<ResolveEventFields<'a>>,
+    errors: Vec<ResolveErrorFields<'a>>,
 }
 
 struct ResolveEventFields<'a> {
     event_no: usize,
     pt: &'a pt::EventDefinition,
     comments: Vec<DocComment>,
-    contract: Option<usize>,
+}
+
+struct ResolveErrorFields<'a> {
+    error_no: usize,
+    pt: &'a pt::ErrorDefinition,
+    comments: Vec<DocComment>,
 }
 
 struct ResolveStructFields<'a> {
@@ -56,6 +62,7 @@ pub fn resolve_typenames<'a>(
     let mut delay = ResolveFields {
         structs: Vec::new(),
         events: Vec::new(),
+        errors: Vec::new(),
     };
 
     for item in &tree.items {
@@ -132,7 +139,54 @@ pub fn resolve_typenames<'a>(
                     event_no,
                     pt: def,
                     comments: item.doccomments.clone(),
+                });
+            }
+            pt::SourceUnitPart::ErrorDefinition(def) => {
+                match &def.keyword {
+                    pt::Expression::Variable(id) if id.name == "error" => (),
+                    _ => {
+                        // This can be:
+                        //
+                        // int[2] var(bool);
+                        // S var2();
+                        // funtion var3(int x);
+                        // Event var4(bool f1);
+                        // Error var4(bool f1);
+                        // Feh.b1 var5();
+                        ns.diagnostics.push(Diagnostic::error(
+                            def.keyword.loc(),
+                            "'function', 'error', or 'event' expected".into(),
+                        ));
+                        continue;
+                    }
+                }
+
+                annotions_not_allowed(&item.annotations, "error", ns);
+
+                let error_no = ns.errors.len();
+
+                if !ns.add_symbol(
+                    file_no,
+                    None,
+                    def.name.as_ref().unwrap(),
+                    Symbol::Error(def.name.as_ref().unwrap().loc, error_no),
+                ) {
+                    continue;
+                }
+
+                ns.errors.push(ErrorDecl {
+                    tags: Vec::new(),
+                    name: def.name.as_ref().unwrap().name.to_owned(),
+                    loc: def.name.as_ref().unwrap().loc,
                     contract: None,
+                    fields: Vec::new(),
+                    used: false,
+                });
+
+                delay.errors.push(ResolveErrorFields {
+                    error_no,
+                    pt: def,
+                    comments: item.doccomments.clone(),
                 });
             }
             pt::SourceUnitPart::TypeDefinition(ty) => {
@@ -341,12 +395,24 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 
     // now we can resolve the fields for the events
     for event in delay.events {
-        let (tags, fields) = event_decl(event.pt, file_no, &event.comments, event.contract, ns);
+        let contract_no = ns.events[event.event_no].contract;
+
+        let (tags, fields) = event_decl(event.pt, file_no, &event.comments, contract_no, ns);
 
         ns.events[event.event_no].signature =
             ns.signature(&ns.events[event.event_no].name, &fields);
         ns.events[event.event_no].fields = fields;
         ns.events[event.event_no].tags = tags;
+    }
+
+    // now we can resolve the fields for the errors
+    for error in delay.errors {
+        let contract_no = ns.errors[error.error_no].contract;
+
+        let (tags, fields) = error_decl(error.pt, file_no, &error.comments, contract_no, ns);
+
+        ns.errors[error.error_no].fields = fields;
+        ns.errors[error.error_no].tags = tags;
     }
 }
 
@@ -472,7 +538,56 @@ fn resolve_contract<'a>(
                     event_no,
                     pt,
                     comments: parts.doccomments.clone(),
+                });
+            }
+            pt::ContractPart::ErrorDefinition(def) => {
+                match &def.keyword {
+                    pt::Expression::Variable(id) if id.name == "error" => (),
+                    _ => {
+                        // this can be:
+                        //
+                        // contract c {
+                        //     int[2] var(bool);
+                        //     S var2();
+                        //     funtion var3(int x);
+                        //     Event var4(bool f1);
+                        //     Error var4(bool f1);
+                        //     Feh.b1 var5();
+                        //}
+                        ns.diagnostics.push(Diagnostic::error(
+                            def.keyword.loc(),
+                            "'function', 'error', or 'event' expected".into(),
+                        ));
+                        continue;
+                    }
+                }
+
+                annotions_not_allowed(&parts.annotations, "error", ns);
+
+                let error_no = ns.errors.len();
+
+                if !ns.add_symbol(
+                    file_no,
+                    Some(contract_no),
+                    def.name.as_ref().unwrap(),
+                    Symbol::Error(def.name.as_ref().unwrap().loc, error_no),
+                ) {
+                    continue;
+                }
+
+                ns.errors.push(ErrorDecl {
+                    tags: Vec::new(),
+                    name: def.name.as_ref().unwrap().name.to_owned(),
+                    loc: def.name.as_ref().unwrap().loc,
                     contract: Some(contract_no),
+                    fields: Vec::new(),
+                    used: false,
+                });
+
+                delay.errors.push(ResolveErrorFields {
+                    error_no,
+                    pt: def,
+                    comments: parts.doccomments.clone(),
                 });
             }
             pt::ContractPart::TypeDefinition(ty) => {
@@ -769,6 +884,93 @@ fn event_decl(
     let doc = resolve_tags(
         def.name.as_ref().unwrap().loc.file_no(),
         "event",
+        tags,
+        Some(&fields),
+        None,
+        None,
+        ns,
+    );
+
+    (doc, fields)
+}
+
+/// Resolve an error definition which can be defined in a contract or outside, e.g:
+/// error Foo(int bar, bool foo);
+/// contract {
+///     error Bar(bytes4 selector);
+/// }
+fn error_decl(
+    def: &pt::ErrorDefinition,
+    file_no: usize,
+    tags: &[DocComment],
+    contract_no: Option<usize>,
+    ns: &mut Namespace,
+) -> (Vec<Tag>, Vec<Parameter>) {
+    let mut fields: Vec<Parameter> = Vec::new();
+
+    for field in &def.fields {
+        let mut diagnostics = Diagnostics::default();
+
+        let mut ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics)
+        {
+            Ok(s) => s,
+            Err(()) => {
+                ns.diagnostics.extend(diagnostics);
+                Type::Unresolved
+            }
+        };
+
+        if ty.contains_mapping(ns) {
+            ns.diagnostics.push(Diagnostic::error(
+                field.loc,
+                "mapping type is not permitted as error field".to_string(),
+            ));
+            ty = Type::Unresolved;
+        }
+
+        let id = if let Some(name) = &field.name {
+            if let Some(other) = fields
+                .iter()
+                .find(|f| f.id.as_ref().map(|id| id.name.as_str()) == Some(name.name.as_str()))
+            {
+                ns.diagnostics.push(Diagnostic::error_with_note(
+                    name.loc,
+                    format!(
+                        "error '{}' has duplicate field name '{}'",
+                        def.name.as_ref().unwrap().name,
+                        name.name
+                    ),
+                    other.loc,
+                    format!(
+                        "location of previous declaration of '{}'",
+                        other.name_as_str()
+                    ),
+                ));
+                continue;
+            }
+            Some(pt::Identifier {
+                name: name.name.to_owned(),
+                loc: name.loc,
+            })
+        } else {
+            None
+        };
+
+        fields.push(Parameter {
+            loc: field.loc,
+            id,
+            ty,
+            ty_loc: Some(field.ty.loc()),
+            indexed: false,
+            readonly: false,
+            infinite_size: false,
+            recursive: false,
+        });
+    }
+
+    let doc = resolve_tags(
+        def.name.as_ref().unwrap().loc.file_no(),
+        "error",
         tags,
         Some(&fields),
         None,

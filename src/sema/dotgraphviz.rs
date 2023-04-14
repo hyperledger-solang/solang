@@ -1629,17 +1629,31 @@ impl Dot {
 
                     let event = &ns.events[*event_no];
 
-                    if let Some(contract) = event.contract {
-                        labels.insert(
-                            1,
-                            format!("event {}.{}", ns.contracts[contract].name, event.name),
-                        );
-                    } else {
-                        labels.insert(1, format!("event {}", event.name));
-                    }
+                    labels.insert(1, format!("event {}", event.symbol_name(ns)));
 
                     parent =
                         self.add_node(Node::new("emit", labels), Some(parent), Some(parent_rel));
+
+                    for (no, arg) in args.iter().enumerate() {
+                        self.add_expression(arg, Some(func), ns, parent, format!("arg #{no}"));
+                    }
+                }
+                Statement::Revert {
+                    loc,
+                    error_no,
+                    args,
+                    ..
+                } => {
+                    let mut labels = vec![String::from("revert"), ns.loc_to_string(true, loc)];
+
+                    if let Some(error_no) = error_no {
+                        let error = &ns.errors[*error_no];
+
+                        labels.insert(1, format!("error {}", error.symbol_name(ns)));
+                    }
+
+                    parent =
+                        self.add_node(Node::new("revert", labels), Some(parent), Some(parent_rel));
 
                     for (no, arg) in args.iter().enumerate() {
                         self.add_expression(arg, Some(func), ns, parent, format!("arg #{no}"));
@@ -2368,6 +2382,36 @@ impl Namespace {
                 let node = dot.add_node(e, Some(events), None);
 
                 dot.add_tags(&decl.tags, node);
+            }
+        }
+
+        // errors
+        if !self.errors.is_empty() {
+            let errors = dot.add_node(Node::new("errors", Vec::new()), None, None);
+
+            for error in &self.errors {
+                let mut labels = vec![
+                    format!("name:{}", error.name),
+                    self.loc_to_string(true, &error.loc),
+                ];
+
+                if let Some(contract) = &error.contract {
+                    labels.insert(1, format!("contract: {contract}"));
+                }
+
+                for field in &error.fields {
+                    labels.push(format!(
+                        "field name:{} ty:{}",
+                        field.name_as_str(),
+                        field.ty.to_string(self),
+                    ));
+                }
+
+                let e = Node::new(&error.name, labels);
+
+                let node = dot.add_node(e, Some(errors), None);
+
+                dot.add_tags(&error.tags, node);
             }
         }
 

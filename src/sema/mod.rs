@@ -3,6 +3,7 @@
 use self::{
     functions::{resolve_params, resolve_returns},
     symtable::Symtable,
+    unused_variable::check_unused_errors,
     variables::variable_decl,
 };
 use crate::file_resolver::{FileResolver, ResolvedFile};
@@ -83,6 +84,7 @@ pub fn sema(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Name
         // Checks for unused variables
         check_unused_namespace_variables(ns);
         check_unused_events(ns);
+        check_unused_errors(ns);
     }
 }
 

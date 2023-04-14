@@ -44,7 +44,7 @@ describe('Deploy runtime_errors.sol and test the debug buffer', () => {
         expect(res7).toContain(`runtime_error: assert failure in runtime_errors.sol:32:16-24`)
 
         let res8 = await debug_buffer(conn, contract, `i_will_revert`, [], 0);
-        expect(res8).toContain(`runtime_error: revert encountered in runtime_errors.sol:77:9-15`)
+        expect(res8).toContain(`runtime_error: revert encountered in runtime_errors.sol:77:9-17`)
 
         let res9 = await debug_buffer(conn, contract, `write_integer_failure`, [1], 0);
         expect(res9).toContain(`runtime_error: integer too large to write in buffer in runtime_errors.sol:82:18-31`)

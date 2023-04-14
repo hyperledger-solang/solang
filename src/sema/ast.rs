@@ -186,6 +186,25 @@ impl EventDecl {
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct ErrorDecl {
+    pub tags: Vec<Tag>,
+    pub name: String,
+    pub loc: pt::Loc,
+    pub contract: Option<usize>,
+    pub fields: Vec<Parameter>,
+    pub used: bool,
+}
+
+impl ErrorDecl {
+    pub fn symbol_name(&self, ns: &Namespace) -> String {
+        match &self.contract {
+            Some(c) => format!("{}.{}", ns.contracts[*c].name, self.name),
+            None => self.name.to_string(),
+        }
+    }
+}
+
 impl fmt::Display for StructDecl {
     /// Make the struct name into a string for printing. The struct can be declared either
     /// inside or outside a contract.
@@ -563,6 +582,7 @@ pub enum Symbol {
     Variable(pt::Loc, Option<usize>, usize),
     Struct(pt::Loc, StructType),
     Event(Vec<(pt::Loc, usize)>),
+    Error(pt::Loc, usize),
     Contract(pt::Loc, usize),
     Import(pt::Loc, usize),
     UserType(pt::Loc, usize),
@@ -576,6 +596,7 @@ impl CodeLocation for Symbol {
             | Symbol::Struct(loc, _)
             | Symbol::Contract(loc, _)
             | Symbol::Import(loc, _)
+            | Symbol::Error(loc, _)
             | Symbol::UserType(loc, _) => *loc,
             Symbol::Event(items) | Symbol::Function(items) => items[0].0,
         }
@@ -631,6 +652,7 @@ pub struct Namespace {
     pub enums: Vec<EnumDecl>,
     pub structs: Vec<StructDecl>,
     pub events: Vec<EventDecl>,
+    pub errors: Vec<ErrorDecl>,
     pub contracts: Vec<Contract>,
     /// Global using declarations
     pub using: Vec<Using>,
@@ -1402,6 +1424,7 @@ impl CodeLocation for Statement {
             | Statement::Destructure(loc, ..)
             | Statement::Continue(loc, ..)
             | Statement::Break(loc, ..)
+            | Statement::Revert { loc, .. }
             | Statement::Return(loc, ..)
             | Statement::Emit { loc, .. }
             | Statement::TryCatch(loc, ..)
@@ -1492,7 +1515,6 @@ pub enum Builtin {
     ArrayLength,
     Assert,
     Print,
-    Revert,
     Require,
     SelfDestruct,
     Keccak256,
@@ -1603,6 +1625,11 @@ pub enum Statement {
     Continue(pt::Loc),
     Break(pt::Loc),
     Return(pt::Loc, Option<Expression>),
+    Revert {
+        loc: pt::Loc,
+        error_no: Option<usize>,
+        args: Vec<Expression>,
+    },
     Emit {
         loc: pt::Loc,
         event_no: usize,
@@ -1723,7 +1750,10 @@ impl Statement {
             | Statement::Emit { .. }
             | Statement::Delete(..) => true,
 
-            Statement::Continue(_) | Statement::Break(_) | Statement::Return(..) => false,
+            Statement::Continue(_)
+            | Statement::Break(_)
+            | Statement::Return(..)
+            | Statement::Revert { .. } => false,
 
             Statement::If(_, reachable, ..)
             | Statement::While(_, reachable, ..)

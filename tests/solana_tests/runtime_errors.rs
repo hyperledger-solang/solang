@@ -314,7 +314,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: revert encountered in test.sol:70:9-15,\n"
+        "runtime_error: revert encountered in test.sol:70:9-17,\n"
     );
 
     vm.logs.clear();

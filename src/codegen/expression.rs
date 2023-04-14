@@ -897,11 +897,6 @@ pub fn expression(
             ..
         } => require(cfg, args, contract_no, func, ns, vartab, opt, expr.loc()),
         ast::Expression::Builtin {
-            kind: ast::Builtin::Revert,
-            args,
-            ..
-        } => revert(args, cfg, contract_no, func, ns, vartab, opt, expr.loc()),
-        ast::Expression::Builtin {
             kind: ast::Builtin::SelfDestruct,
             args,
             ..
@@ -1583,66 +1578,6 @@ fn require(
         _ => assert_failure(&Loc::Codegen, expr, ns, cfg, vartab),
     }
     cfg.set_basic_block(true_);
-    Expression::Poison
-}
-
-fn revert(
-    args: &[ast::Expression],
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    loc: Loc,
-) -> Expression {
-    let expr = args
-        .get(0)
-        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
-
-    if opt.log_runtime_errors {
-        if expr.is_some() {
-            let prefix = b"runtime_error: ";
-            let error_string = format!(
-                " revert encountered in {},\n",
-                ns.loc_to_string(false, &loc)
-            );
-            let print_expr = Expression::FormatString {
-                loc: Loc::Codegen,
-                args: vec![
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Loc::Codegen,
-                            ty: Type::Bytes(prefix.len() as u8),
-                            value: prefix.to_vec(),
-                        },
-                    ),
-                    (FormatArg::Default, expr.clone().unwrap()),
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Loc::Codegen,
-                            ty: Type::Bytes(error_string.as_bytes().len() as u8),
-                            value: error_string.as_bytes().to_vec(),
-                        },
-                    ),
-                ],
-            };
-            cfg.add(vartab, Instr::Print { expr: print_expr });
-        } else {
-            log_runtime_error(
-                opt.log_runtime_errors,
-                "revert encountered",
-                loc,
-                cfg,
-                vartab,
-                ns,
-            )
-        }
-    }
-
-    assert_failure(&Loc::Codegen, expr, ns, cfg, vartab);
     Expression::Poison
 }
 
