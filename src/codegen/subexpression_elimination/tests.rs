@@ -9,6 +9,7 @@ use crate::codegen::subexpression_elimination::{AvailableExpression, AvailableEx
 use crate::codegen::Expression;
 use crate::sema::ast::{StringLocation, Type};
 use num_bigint::{BigInt, Sign};
+use num_rational::BigRational;
 use num_traits::Zero;
 use solang_parser::pt::Loc;
 
@@ -869,7 +870,16 @@ fn test_flow() {
     traversing_order.reverse();
     let anticipated = AnticipatedExpressions::new(&dag, reverse_dag, traversing_order);
     let flow = anticipated.calculate_flow(3, 4);
-    assert_eq!(flow, vec![2000.0, 1000.0, 1000.0, 1000.0, 1000.0]);
+    assert_eq!(
+        flow,
+        vec![
+            BigRational::from_integer(2000.into()),
+            BigRational::from_integer(1000.into()),
+            BigRational::from_integer(1000.into()),
+            BigRational::from_integer(1000.into()),
+            BigRational::from_integer(1000.into())
+        ]
+    );
 
     // Case 2:
     let dag = vec![
@@ -890,7 +900,16 @@ fn test_flow() {
     traversing_order.reverse();
     let anticipated_expressions = AnticipatedExpressions::new(&dag, reverse_dag, traversing_order);
     let flow = anticipated_expressions.calculate_flow(3, 4);
-    assert_eq!(flow, vec![2000.0, 1250.0, 500.0, 1000.0, 1000.0]);
+    assert_eq!(
+        flow,
+        vec![
+            BigRational::from_integer(2000.into()),
+            BigRational::from_integer(1250.into()),
+            BigRational::from_integer(500.into()),
+            BigRational::from_integer(1000.into()),
+            BigRational::from_integer(1000.into())
+        ]
+    );
 
     // Case 3
     let dag = vec![
@@ -920,7 +939,17 @@ fn test_flow() {
     traversing_order.reverse();
     let anticipated_expressions = AnticipatedExpressions::new(&dag, reverse_dag, traversing_order);
     let flow = anticipated_expressions.calculate_flow(4, 5);
-    assert_eq!(flow, vec![2000.0, 500.0, 0.0, 500.0, 1500.0, 1000.0]);
+    assert_eq!(
+        flow,
+        vec![
+            BigRational::from_integer(2000.into()),
+            BigRational::from_integer(500.into()),
+            BigRational::from_integer(0.into()),
+            BigRational::from_integer(500.into()),
+            BigRational::from_integer(1500.into()),
+            BigRational::from_integer(1000.into())
+        ]
+    );
 
     // Case 4
     let dag = vec![
@@ -961,18 +990,18 @@ fn test_flow() {
     let flow = anticipated_expressions.calculate_flow(5, 8);
     for (item_no, flow_mag) in flow.iter().enumerate() {
         if item_no == 0 {
-            assert!((*flow_mag - 2000.0).abs() < 0.000001);
+            assert_eq!(*flow_mag, BigRational::from_integer(2000.into()));
         } else {
-            assert!((*flow_mag - 2000.0).abs() > 0.000001);
+            assert_ne!(*flow_mag, BigRational::from_integer(2000.into()));
         }
     }
 
     let flow = anticipated_expressions.calculate_flow(3, 5);
     for (item_no, flow_mag) in flow.iter().enumerate() {
         if item_no == 0 {
-            assert!((*flow_mag - 2000.0).abs() < 0.000001);
+            assert_eq!(*flow_mag, BigRational::from_integer(2000.into()));
         } else {
-            assert!((*flow_mag - 2000.0).abs() > 0.000001);
+            assert_ne!(*flow_mag, BigRational::from_integer(2000.into()));
         }
     }
 
@@ -1015,17 +1044,17 @@ fn test_flow() {
     let flow = anticipated_expressions.calculate_flow(8, 6);
     for (item_no, flow_mag) in flow.iter().enumerate() {
         if item_no == 0 {
-            assert!((*flow_mag - 2000.0).abs() < 0.000001);
+            assert_eq!(*flow_mag, BigRational::from_integer(2000.into()));
         } else {
-            assert!((*flow_mag - 2000.0).abs() > 0.000001);
+            assert_ne!(*flow_mag, BigRational::from_integer(2000.into()));
         }
     }
     let flow = anticipated_expressions.calculate_flow(8, 3);
     for (item_no, flow_mag) in flow.iter().enumerate() {
         if item_no == 0 {
-            assert!((*flow_mag - 2000.0).abs() < 0.000001);
+            assert_eq!(*flow_mag, BigRational::from_integer(2000.into()));
         } else {
-            assert!((*flow_mag - 2000.0).abs() > 0.000001);
+            assert_ne!(*flow_mag, BigRational::from_integer(2000.into()));
         }
     }
 }

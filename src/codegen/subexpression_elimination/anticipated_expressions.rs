@@ -5,6 +5,8 @@ use crate::codegen::subexpression_elimination::{
     kill_loop_variables, AvailableExpression, AvailableExpressionSet,
 };
 use crate::codegen::Expression;
+use num_rational::BigRational;
+use num_traits::Zero;
 use std::collections::HashMap;
 
 /// The AnticipatedExpression struct manages everything related to traversing the CFG backwards, so
@@ -111,15 +113,18 @@ impl<'a> AnticipatedExpressions<'a> {
     /// When I use the term flow, I am referring to a flow network (https://en.wikipedia.org/wiki/Flow_network).
     /// The flow of each vertex is equally divided between its children, and the flow a vertex
     /// receives is the sum of the flows from its incoming edges.
-    pub(super) fn calculate_flow(&self, block_1: usize, block_2: usize) -> Vec<f64> {
-        let mut flow: Vec<f64> = vec![0.0; self.reverse_dag.len()];
-        flow[block_1] = 1000.0;
-        flow[block_2] = 1000.0;
+    pub(super) fn calculate_flow(&self, block_1: usize, block_2: usize) -> Vec<BigRational> {
+        let mut flow: Vec<BigRational> = vec![BigRational::zero(); self.reverse_dag.len()];
+        flow[block_1] = BigRational::from_integer(1000.into());
+        flow[block_2] = BigRational::from_integer(1000.into());
 
         for (block_no, _) in &self.traversing_order {
-            let divided_flow = flow[*block_no] / (self.reverse_dag[*block_no].len() as f64);
-            for child in &self.reverse_dag[*block_no] {
-                flow[*child] += divided_flow;
+            if !self.reverse_dag[*block_no].is_empty() {
+                let divided_flow = &flow[*block_no]
+                    / (BigRational::from_integer(self.reverse_dag[*block_no].len().into()));
+                for child in &self.reverse_dag[*block_no] {
+                    flow[*child] += &divided_flow;
+                }
             }
         }
 
@@ -153,7 +158,7 @@ impl<'a> AnticipatedExpressions<'a> {
             // 3. The expression must be available at the anticipated expression set for the block
             //    we are analysing.
             if (candidate == usize::MAX || self.depth[block_no] > self.depth[candidate])
-                && (2000.0 - *flow_magnitude).abs() < 0.000001
+                && BigRational::from_integer(2000.into()) == *flow_magnitude
                 && self
                     .reverse_sets
                     .get(&block_no)
