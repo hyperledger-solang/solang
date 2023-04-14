@@ -7,18 +7,18 @@ use crate::sema::ast::Type;
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum Operator {
     Add,
-    UncheckedAdd,
+    OverflowingAdd,
     Subtract,
-    UncheckedSubtract,
+    OverflowingSubtract,
     Multiply,
-    UncheckedMultiply,
+    OverflowingMultiply,
     SignedDivide,
     UnsignedDivide,
     Modulo,
     SignedModulo,
     UnsignedModulo,
     Power,
-    UncheckedPower,
+    OverflowingPower,
     BitwiseOr,
     BitwiseAnd,
     BitwiseXor,
@@ -53,32 +53,23 @@ impl Expression {
     /// Get the respective Operator from an Expression
     pub fn get_ave_operator(&self) -> Operator {
         match self {
-            Expression::Add {
-                overflowing: unchecked,
-                ..
-            } => {
-                if *unchecked {
-                    Operator::UncheckedAdd
+            Expression::Add { overflowing, .. } => {
+                if *overflowing {
+                    Operator::OverflowingAdd
                 } else {
                     Operator::Add
                 }
             }
-            Expression::Subtract {
-                overflowing: unchecked,
-                ..
-            } => {
-                if *unchecked {
-                    Operator::UncheckedSubtract
+            Expression::Subtract { overflowing, .. } => {
+                if *overflowing {
+                    Operator::OverflowingSubtract
                 } else {
                     Operator::Subtract
                 }
             }
-            Expression::Multiply {
-                overflowing: unchecked,
-                ..
-            } => {
-                if *unchecked {
-                    Operator::UncheckedMultiply
+            Expression::Multiply { overflowing, .. } => {
+                if *overflowing {
+                    Operator::OverflowingMultiply
                 } else {
                     Operator::Multiply
                 }
@@ -87,12 +78,9 @@ impl Expression {
             Expression::UnsignedDivide { .. } => Operator::UnsignedDivide,
             Expression::SignedModulo { .. } => Operator::SignedModulo,
             Expression::UnsignedModulo { .. } => Operator::UnsignedModulo,
-            Expression::Power {
-                overflowing: unchecked,
-                ..
-            } => {
-                if *unchecked {
-                    Operator::UncheckedPower
+            Expression::Power { overflowing, .. } => {
+                if *overflowing {
+                    Operator::OverflowingPower
                 } else {
                     Operator::Power
                 }
