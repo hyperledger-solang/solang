@@ -9,7 +9,6 @@ build = "build.rs"
 description = "Solang Solidity Parser"
 keywords = [ "solidity", "parser" ]
 edition = "2021"
-exclude = [ "/testdata" ]
 
 [build-dependencies]
 lalrpop = "0.19"

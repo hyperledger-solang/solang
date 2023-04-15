@@ -131,6 +131,12 @@ impl FileResolver {
     ) -> Result<ResolvedFile, String> {
         let path = PathBuf::from(filename);
 
+        let path = if let Ok(m) = path.strip_prefix("./") {
+            m.to_path_buf()
+        } else {
+            path
+        };
+
         // first check maps
         let mut iter = path.iter();
         if let Some(first_part) = iter.next() {
@@ -195,8 +201,7 @@ impl FileResolver {
             start_import_no = *import_no;
         }
 
-        if self.import_paths.is_empty() {
-            // we have no import paths, resolve by what's in the cache
+        if self.cached_paths.contains_key(&path) {
             let full_path = path;
             let base = full_path
                 .parent()

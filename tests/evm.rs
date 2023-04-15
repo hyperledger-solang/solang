@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use solang::{file_resolver::FileResolver, parse_and_resolve, sema::ast, Target};
-use std::ffi::OsStr;
+use std::{ffi::OsStr, fs, path::Path};
+use walkdir::WalkDir;
 
 fn test_solidity(src: &str) -> ast::Namespace {
     let mut cache = FileResolver::new();
@@ -165,4 +166,135 @@ contract testing  {
     );
 
     assert!(!ns.diagnostics.any_errors());
+}
+
+#[test]
+fn ethereum_solidity_tests() {
+    let error_matcher = regex::Regex::new(r"// ----\r?\n// \w+Error( \d+)?:").unwrap();
+
+    let semantic_tests = WalkDir::new(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("testdata/solidity/test/libsolidity/semanticTests"),
+    )
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
+
+    let syntax_tests = WalkDir::new(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("testdata/solidity/test/libsolidity/syntaxTests"),
+    )
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
+
+    let errors: usize = semantic_tests
+        .into_iter()
+        .chain(syntax_tests.into_iter())
+        .map(|entry| {
+            let file_name = entry.file_name().to_string_lossy();
+            let path = entry.path().parent().unwrap();
+
+            // FIXME: max_depth_reached_4.sol causes a stack overflow in resolve_expression.rs
+            // FIXNE: others listed explicitly cause panics and need fixing
+            if !file_name.ends_with("max_depth_reached_4.sol")
+                && !file_name.ends_with("invalid_utf8_sequence.sol")
+                && !file_name.ends_with("basefee_berlin_function.sol")
+                && !file_name.ends_with("inline_assembly_embedded_function_call.sol")
+                && !file_name.ends_with("cannot_be_function_call.sol")
+                && !file_name.ends_with("complex_cyclic_constant.sol")
+                && !file_name.ends_with("cyclic_constant.sol")
+                && !file_name.ends_with("pure_functions.sol")
+                && !file_name.ends_with("pure_non_rational.sol")
+                && !file_name.ends_with("linkersymbol_function.sol")
+                && !file_name.ends_with("370_shift_constant_left_excessive_rvalue.sol")
+                && file_name.ends_with(".sol")
+            {
+                let source = fs::read_to_string(entry.path()).unwrap();
+
+                let expect_error = error_matcher.is_match(&source);
+
+                let (mut cache, names) = set_file_contents(&source, path);
+
+                cache.add_import_path(path).unwrap();
+
+                let errors: usize = names
+                    .iter()
+                    .map(|name| {
+                        let ns = parse_and_resolve(OsStr::new(&name), &mut cache, Target::EVM);
+
+                        if ns.diagnostics.any_errors() {
+                            if !expect_error {
+                                println!("file: {}", entry.path().display());
+
+                                ns.print_diagnostics_in_plain(&cache, false);
+
+                                1
+                            } else {
+                                0
+                            }
+                        } else if expect_error {
+                            println!("file: {}", entry.path().display());
+
+                            println!("expecting error, none found");
+
+                            1
+                        } else {
+                            0
+                        }
+                    })
+                    .sum();
+
+                errors
+            } else {
+                0
+            }
+        })
+        .sum();
+
+    assert_eq!(errors, 1062);
+}
+
+fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
+    let mut cache = FileResolver::new();
+    let mut name = "test.sol".to_owned();
+    let mut names = Vec::new();
+    let mut contents = String::new();
+    let source_delimiter = regex::Regex::new(r"==== Source: (.*) ====").unwrap();
+    let external_source_delimiter = regex::Regex::new(r"==== ExternalSource: (.*) ====").unwrap();
+    let equals = regex::Regex::new("([a-zA-Z0-9_]+)=(.*)").unwrap();
+
+    for line in source.lines() {
+        if let Some(cap) = source_delimiter.captures(line) {
+            if !contents.is_empty() {
+                cache.set_file_contents(&name, contents);
+                names.push(name);
+            }
+            name = cap.get(1).unwrap().as_str().to_owned();
+            if name == "////" {
+                name = "test.sol".to_owned();
+            }
+            contents = String::new();
+        } else if let Some(cap) = external_source_delimiter.captures(line) {
+            let mut name = cap.get(1).unwrap().as_str().to_owned();
+            if let Some(cap) = equals.captures(&name) {
+                let mut ext = path.to_path_buf();
+                ext.push(cap.get(2).unwrap().as_str());
+                name = cap.get(1).unwrap().as_str().to_owned();
+                let source = fs::read_to_string(ext).unwrap();
+                cache.set_file_contents(&name, source);
+            }
+            // else rely on file resolver to import stuff
+        } else {
+            contents.push_str(line);
+            contents.push('\n');
+        }
+    }
+
+    if !contents.is_empty() {
+        cache.set_file_contents(&name, contents);
+        names.push(name);
+    }
+
+    (cache, names)
 }
