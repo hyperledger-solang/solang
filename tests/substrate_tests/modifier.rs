@@ -348,3 +348,36 @@ fn repeated_modifier() {
     runtime.function_expect_failure("contfunc", (0u64, 1u64).encode());
     runtime.function("contfunc", (1u64, 1u64).encode());
 }
+
+#[test]
+fn modifier_in_library() {
+    let mut runtime = build_solidity(
+        r##"
+        library LibWidthMod {
+            modifier m(uint64 v) {
+                require(v > 100);
+                _;
+            }
+
+            function withMod(uint64 self) m(self) internal view {
+                require(self > 10);
+            }
+        }
+
+        contract Test {
+            using LibWidthMod for uint64;
+
+            function test(uint64 n) external {
+                n.withMod();
+                LibWidthMod.withMod(n);
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function_expect_failure("test", 0u64.encode());
+    runtime.function_expect_failure("test", 50u64.encode());
+    runtime.function_expect_failure("test", 100u64.encode());
+    runtime.function("test", 200u64.encode());
+}
