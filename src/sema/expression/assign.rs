@@ -14,16 +14,12 @@ use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 
 macro_rules! check_immutable {
-    ($context:expr, $diagnostics:expr, $immutable:expr) => {
-        if $immutable {
+    ($immutable:expr, $context:expr, $ns:expr, $diagnostics:expr, $loc:expr) => {
+        if *$immutable {
             if let Some(function_no) = $context.function_no {
-                if !$context.ns.functions[function_no].is_constructor() {
+                if !$ns.functions[function_no].is_constructor() {
                     $diagnostics.push(Diagnostic::error(
-                        $context
-                            .current_source_unit
-                            .source_line($context.current_source_unit_offset)
-                            .unwrap()
-                            .0,
+                        *$loc,
                         "cannot assign to immutable outside of constructor".to_string(),
                     ));
                     return Err(());
@@ -143,7 +139,7 @@ pub(super) fn assign_single(
                 right: Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
             }),
             Type::StorageRef(immutable, r_ty) => {
-                check_immutable!(context, diagnostics, immutable);
+                check_immutable!(immutable, context, ns, diagnostics, loc);
                 Ok(Expression::Assign {
                     loc: *loc,
                     ty: *r_ty.clone(),
@@ -377,7 +373,7 @@ pub(super) fn assign_expr(
                 }
             },
             Type::StorageRef(immutable, r_ty) => {
-                check_immutable!(context, diagnostics, immutable);
+                check_immutable!(immutable, context, ns, diagnostics, loc);
 
                 match r_ty.as_ref() {
                     Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign {
