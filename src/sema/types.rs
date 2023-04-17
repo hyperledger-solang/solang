@@ -1441,7 +1441,15 @@ impl Type {
 
     /// Returns the size a type occupies in memory
     pub fn memory_size_of(&self, ns: &Namespace) -> BigInt {
-        match self {
+        self.memory_size_of_internal(ns, &mut HashSet::new())
+    }
+
+    pub fn memory_size_of_internal(
+        &self,
+        ns: &Namespace,
+        structs_visited: &mut HashSet<usize>,
+    ) -> BigInt {
+        self.guarded_recursion(structs_visited, 0.into(), |structs_visited| match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
             Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
@@ -1454,7 +1462,7 @@ impl Type {
             }
             Type::Array(ty, dims) => {
                 let pointer_size = (ns.target.ptr_size() / 8).into();
-                ty.memory_size_of(ns).mul(
+                ty.memory_size_of_internal(ns, structs_visited).mul(
                     dims.iter()
                         .map(|d| match d {
                             ArrayLength::Fixed(n) => n,
@@ -1468,7 +1476,7 @@ impl Type {
                 .definition(ns)
                 .fields
                 .iter()
-                .map(|d| d.ty.memory_size_of(ns))
+                .map(|d| d.ty.memory_size_of_internal(ns, structs_visited))
                 .sum::<BigInt>(),
             Type::String
             | Type::DynamicBytes
@@ -1477,13 +1485,16 @@ impl Type {
             | Type::StorageRef(..) => BigInt::from(ns.target.ptr_size() / 8),
             Type::ExternalFunction { .. } => {
                 // Address and selector
-                Type::Address(false).memory_size_of(ns) + Type::Uint(32).memory_size_of(ns)
+                Type::Address(false).memory_size_of_internal(ns, structs_visited)
+                    + Type::Uint(32).memory_size_of_internal(ns, structs_visited)
             }
             Type::Unresolved | Type::Mapping(..) => BigInt::zero(),
-            Type::UserType(no) => ns.user_types[*no].ty.memory_size_of(ns),
+            Type::UserType(no) => ns.user_types[*no]
+                .ty
+                .memory_size_of_internal(ns, structs_visited),
             Type::FunctionSelector => BigInt::from(ns.target.selector_length()),
             _ => unimplemented!("sizeof on {:?}", self),
-        }
+        })
     }
 
     /// Retrieve the alignment for each type, if it is a struct member.
