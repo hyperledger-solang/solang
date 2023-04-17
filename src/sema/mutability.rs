@@ -253,6 +253,18 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             state.read(loc)
         }
         Expression::Builtin {
+            kind: Builtin::FunctionSelector,
+            args,
+            ..
+        } => {
+            if let Expression::ExternalFunction { .. } = &args[0] {
+                // in the case of `this.func.selector`, the address of this is not used and
+                // therefore does not read state. Do not recurse down the `address` field of
+                // Expression::ExternalFunction
+                return false;
+            }
+        }
+        Expression::Builtin {
             loc,
             kind:
                 Builtin::GetAddress
