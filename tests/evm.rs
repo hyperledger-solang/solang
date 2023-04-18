@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use rayon::prelude::*;
 use solang::{file_resolver::FileResolver, parse_and_resolve, sema::ast, Target};
 use std::{ffi::OsStr, fs, path::Path};
 use walkdir::WalkDir;
@@ -176,24 +177,24 @@ fn ethereum_solidity_tests() {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("testdata/solidity/test/libsolidity/semanticTests"),
     )
-    .into_iter()
-    .collect::<Result<Vec<_>, _>>()
-    .unwrap();
+    .into_iter();
 
     let syntax_tests = WalkDir::new(
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("testdata/solidity/test/libsolidity/syntaxTests"),
     )
-    .into_iter()
-    .collect::<Result<Vec<_>, _>>()
-    .unwrap();
+    .into_iter();
 
-    let errors: usize = semantic_tests
+    let entries: Vec<_> = semantic_tests
         .into_iter()
         .chain(syntax_tests.into_iter())
-        .map(|entry| {
+        .collect();
+
+    let errors: usize = entries
+        .into_par_iter()
+        .filter_map(|e| {
+            let entry = e.unwrap();
             let file_name = entry.file_name().to_string_lossy();
-            let path = entry.path().parent().unwrap();
 
             // FIXME: max_depth_reached_4.sol causes a stack overflow in resolve_expression.rs
             // FIXNE: others listed explicitly cause panics and need fixing
@@ -210,45 +211,50 @@ fn ethereum_solidity_tests() {
                 && !file_name.ends_with("370_shift_constant_left_excessive_rvalue.sol")
                 && file_name.ends_with(".sol")
             {
-                let source = fs::read_to_string(entry.path()).unwrap();
+                Some(entry)
+            } else {
+                None
+            }
+        })
+        .map(|entry| {
+            let path = entry.path().parent().unwrap();
 
-                let expect_error = error_matcher.is_match(&source);
+            let source = fs::read_to_string(entry.path()).unwrap();
 
-                let (mut cache, names) = set_file_contents(&source, path);
+            let expect_error = error_matcher.is_match(&source);
 
-                cache.add_import_path(path).unwrap();
+            let (mut cache, names) = set_file_contents(&source, path);
 
-                let errors: usize = names
-                    .iter()
-                    .map(|name| {
-                        let ns = parse_and_resolve(OsStr::new(&name), &mut cache, Target::EVM);
+            cache.add_import_path(path).unwrap();
 
-                        if ns.diagnostics.any_errors() {
-                            if !expect_error {
-                                println!("file: {}", entry.path().display());
+            let errors: usize = names
+                .iter()
+                .map(|name| {
+                    let ns = parse_and_resolve(OsStr::new(&name), &mut cache, Target::EVM);
 
-                                ns.print_diagnostics_in_plain(&cache, false);
-
-                                1
-                            } else {
-                                0
-                            }
-                        } else if expect_error {
+                    if ns.diagnostics.any_errors() {
+                        if !expect_error {
                             println!("file: {}", entry.path().display());
 
-                            println!("expecting error, none found");
+                            ns.print_diagnostics_in_plain(&cache, false);
 
                             1
                         } else {
                             0
                         }
-                    })
-                    .sum();
+                    } else if expect_error {
+                        println!("file: {}", entry.path().display());
 
-                errors
-            } else {
-                0
-            }
+                        println!("expecting error, none found");
+
+                        1
+                    } else {
+                        0
+                    }
+                })
+                .sum();
+
+            errors
         })
         .sum();
 
