@@ -754,17 +754,12 @@ fn statement(
                     };
                 }
                 // is it an underscore modifier statement
-                pt::Expression::Variable(id) if id.name == "_" => {
-                    return if ns.functions[function_no].ty == pt::FunctionTy::Modifier {
-                        res.push(Statement::Underscore(*loc));
-                        Ok(true)
-                    } else {
-                        ns.diagnostics.push(Diagnostic::error(
-                            *loc,
-                            "underscore statement only permitted in modifiers".to_string(),
-                        ));
-                        Err(())
-                    };
+                pt::Expression::Variable(id)
+                    if id.name == "_"
+                        && ns.functions[function_no].ty == pt::FunctionTy::Modifier =>
+                {
+                    res.push(Statement::Underscore(*loc));
+                    return Ok(true);
                 }
                 pt::Expression::FunctionCall(loc, ty, args) => {
                     let ret = call_expr(
