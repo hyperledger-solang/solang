@@ -173,25 +173,21 @@ contract testing  {
 fn ethereum_solidity_tests() {
     let error_matcher = regex::Regex::new(r"// ----\r?\n// \w+Error( \d+)?:").unwrap();
 
-    let semantic_tests = WalkDir::new(
+    let entries = WalkDir::new(
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("testdata/solidity/test/libsolidity/semanticTests"),
     )
-    .into_iter();
-
-    let syntax_tests = WalkDir::new(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("testdata/solidity/test/libsolidity/syntaxTests"),
-    )
-    .into_iter();
-
-    let entries: Vec<_> = semantic_tests
-        .into_iter()
-        .chain(syntax_tests.into_iter())
-        .collect();
+    .into_iter()
+    .chain(
+        WalkDir::new(
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("testdata/solidity/test/libsolidity/syntaxTests"),
+        )
+        .into_iter(),
+    );
 
     let errors: usize = entries
-        .into_par_iter()
+        .par_bridge()
         .filter_map(|e| {
             let entry = e.unwrap();
             let file_name = entry.file_name().to_string_lossy();
