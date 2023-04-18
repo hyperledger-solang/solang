@@ -1184,7 +1184,7 @@ fn test_libsolidity() {
 
     let semantic_tests = WalkDir::new(
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("testdata/solidity/test/libsolidity/semanticTests"),
+            .join("../testdata/solidity/test/libsolidity/semanticTests"),
     )
     .into_iter()
     .collect::<Result<Vec<_>, _>>()
@@ -1194,7 +1194,7 @@ fn test_libsolidity() {
 
     let syntax_tests = WalkDir::new(
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("testdata/solidity/test/libsolidity/syntaxTests"),
+            .join("../testdata/solidity/test/libsolidity/syntaxTests"),
     )
     .into_iter()
     .collect::<Result<Vec<_>, _>>()
