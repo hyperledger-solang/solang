@@ -51,6 +51,7 @@ pub(super) fn get_int_length(
         Type::Uint(n) => Ok((*n, false)),
         Type::Int(n) => Ok((*n, true)),
         Type::Value => Ok((ns.value_length as u16 * 8, false)),
+        Type::FunctionSelector => Ok((ns.target.selector_length() as u16 * 8, false)),
         Type::Bytes(n) if allow_bytes => Ok((*n as u16 * 8, false)),
         Type::Enum(n) => {
             diagnostics.push(Diagnostic::error(
@@ -124,6 +125,9 @@ pub fn coerce_number(
         }
         (_, Type::Bytes(_)) if allow_bytes => {
             return Ok(r.clone());
+        }
+        (Type::FunctionSelector, _) | (_, Type::FunctionSelector) if allow_bytes => {
+            return Ok(Type::Bytes(ns.target.selector_length()));
         }
         (Type::Rational, Type::Int(_)) => {
             return Ok(Type::Rational);

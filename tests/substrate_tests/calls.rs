@@ -798,3 +798,40 @@ call: seal_call=0,
 "##
     );
 }
+
+#[test]
+fn selector() {
+    let mut runtime = build_solidity_with_options(
+        r##"
+        contract c {
+            function g() pure public returns (bytes4) {
+                return this.f.selector ^ this.x.selector;
+            }
+            function f() public pure {}
+            function x() public pure {}
+        }"##,
+        false,
+        true,
+    );
+
+    let messages = runtime.programs[runtime.current_program]
+        .abi
+        .spec()
+        .messages();
+
+    let f = messages.iter().find(|f| f.label() == "f").unwrap();
+
+    let x = messages.iter().find(|f| f.label() == "x").unwrap();
+
+    let res: Vec<u8> = f
+        .selector()
+        .to_bytes()
+        .iter()
+        .zip(x.selector().to_bytes())
+        .map(|(f, x)| f ^ x)
+        .collect();
+
+    runtime.function("g", vec![]);
+
+    assert_eq!(runtime.vm.output, res);
+}
