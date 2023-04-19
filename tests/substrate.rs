@@ -9,8 +9,8 @@ use rand::Rng;
 use sha2::{Digest, Sha256};
 use std::{collections::HashMap, ffi::OsStr, fmt, fmt::Write};
 use tiny_keccak::{Hasher, Keccak};
-use wasmi::memory_units::Pages;
-use wasmi::*;
+use wasmi::core::{Trap, TrapCode};
+use wasmi::{Engine, Instance, Memory, Module, Value};
 
 use solang::file_resolver::FileResolver;
 use solang::{compile, Target};
@@ -20,23 +20,21 @@ mod substrate_tests;
 type StorageKey = [u8; 32];
 type Account = [u8; 32];
 
-/// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
-const NONE_SENTINEL: RuntimeValue = RuntimeValue::I32(-1);
-
-fn account_new() -> Account {
-    let mut rng = rand::thread_rng();
-
-    let mut a = [0u8; 32];
-
-    rng.fill(&mut a[..]);
-
-    a
+struct Contract {
+    account: Account,
+    abi: InkProject,
+    instance: Instance,
+    value: u128,
+    storage: HashMap<StorageKey, Vec<u8>>,
 }
+
+/// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
+const NONE_SENTINEL: Value = Value::I32(-1);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct HostCodeTerminate {}
 
-impl HostError for HostCodeTerminate {}
+//impl HostError for HostCodeTerminate {}
 
 impl fmt::Display for HostCodeTerminate {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -53,7 +51,7 @@ impl fmt::Display for HostCodeReturn {
     }
 }
 
-impl HostError for HostCodeReturn {}
+//impl HostError for HostCodeReturn {}
 
 #[derive(FromPrimitive)]
 #[allow(non_camel_case_types)]
@@ -90,50 +88,39 @@ pub struct Event {
     data: Vec<u8>,
 }
 
-pub struct VirtualMachine {
-    account: Account,
+pub struct VirtualMachine<'a> {
+    contract: &'a Contract,
     caller: Account,
-    memory: MemoryRef,
+    memory: Memory,
     input: Vec<u8>,
     pub output: Vec<u8>,
     pub value: u128,
 }
 
-impl VirtualMachine {
-    fn new(account: Account, caller: Account, value: u128) -> Self {
+impl<'a> VirtualMachine<'a> {
+    fn new(contract: &'a Contract, caller: Account, value: u128, memory: Memory) -> Self {
         VirtualMachine {
-            memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
+            contract,
+            caller,
+            memory,
             input: Vec::new(),
             output: Vec::new(),
-            account,
-            caller,
             value,
         }
     }
 }
 
-pub struct Program {
-    abi: InkProject,
-    code: Vec<u8>,
-}
-
-pub struct MockSubstrate {
-    pub store: HashMap<(Account, StorageKey), Vec<u8>>,
-    pub programs: Vec<Program>,
+pub struct MockSubstrate<'a> {
+    pub contracts: Vec<Contract>,
     pub printbuf: String,
-    pub accounts: HashMap<Account, (Vec<u8>, u128)>,
-    pub current_program: usize,
-    pub vm: VirtualMachine,
+    pub current_contract: usize,
+    pub vm: VirtualMachine<'a>,
     pub events: Vec<Event>,
 }
 
 impl Externals for MockSubstrate {
     #[allow(clippy::cognitive_complexity)]
-    fn invoke_index(
-        &mut self,
-        index: usize,
-        args: RuntimeArgs,
-    ) -> Result<Option<RuntimeValue>, Trap> {
+    fn invoke_index(&mut self, index: usize, args: RuntimeArgs) -> Result<Option<Value>, Trap> {
         macro_rules! set_seal_value {
             ($name:literal, $dest_ptr:expr, $len_ptr:expr, $buf:expr) => {{
                 println!("{}: {}", $name, hex::encode($buf));
@@ -207,7 +194,7 @@ impl Externals for MockSubstrate {
                     panic!("seal_get_storage: {e}");
                 }
 
-                if let Some(value) = self.store.get(&(self.vm.account, key)) {
+                if let Some(value) = self.store.get(&(self.vm.contract, key)) {
                     println!("seal_get_storage: {key:?} = {value:?}");
 
                     let len = self
@@ -230,10 +217,10 @@ impl Externals for MockSubstrate {
                         .set_value(len_ptr, value.len() as u32)
                         .expect("seal_get_storage len_ptr should be valid");
 
-                    Ok(Some(RuntimeValue::I32(0)))
+                    Ok(Some(Value::I32(0)))
                 } else {
                     println!("seal_get_storage: {key:?} = nil");
-                    Ok(Some(RuntimeValue::I32(1)))
+                    Ok(Some(Value::I32(1)))
                 }
             }
             Some(SubstrateExternal::seal_clear_storage) => {
@@ -250,8 +237,8 @@ impl Externals for MockSubstrate {
                 println!("seal_clear_storage: {key:?}");
                 let pre_existing_len = self
                     .store
-                    .remove(&(self.vm.account, key))
-                    .map(|e| RuntimeValue::I32(e.len() as i32))
+                    .remove(&(self.vm.contract, key))
+                    .map(|e| Value::I32(e.len() as i32))
                     .or(Some(NONE_SENTINEL));
 
                 Ok(pre_existing_len)
@@ -281,8 +268,8 @@ impl Externals for MockSubstrate {
 
                 let pre_existing_len = self
                     .store
-                    .insert((self.vm.account, key), data)
-                    .map(|e| RuntimeValue::I32(e.len() as i32))
+                    .insert((self.vm.contract, key), data)
+                    .map(|e| Value::I32(e.len() as i32))
                     .or(Some(NONE_SENTINEL));
 
                 Ok(pre_existing_len)
@@ -412,7 +399,7 @@ impl Externals for MockSubstrate {
                 }
 
                 match flags {
-                    0 | 1 => Err(Trap::new(TrapKind::Host(Box::new(HostCodeReturn(flags))))),
+                    0 | 1 => Err(Trap::new(TrapCode::Host(Box::new(HostCodeReturn(flags))))),
                     _ => panic!("seal_return flag {flags} not valid"),
                 }
             }
@@ -433,10 +420,10 @@ impl Externals for MockSubstrate {
 
                 self.printbuf.push_str(&s);
 
-                Ok(Some(RuntimeValue::I32(0)))
+                Ok(Some(Value::I32(0)))
             }
             Some(SubstrateExternal::instantiation_nonce) => {
-                Ok(Some(RuntimeValue::I64(self.accounts.len() as i64)))
+                Ok(Some(Value::I64(self.accounts.len() as i64)))
             }
             Some(SubstrateExternal::seal_call) => {
                 let flags: u32 = args.nth_checked(0)?;
@@ -465,7 +452,7 @@ impl Externals for MockSubstrate {
 
                 if !self.accounts.contains_key(&account) {
                     // substrate would return NotCallable
-                    return Ok(Some(RuntimeValue::I32(0x8)));
+                    return Ok(Some(Value::I32(0x8)));
                 }
 
                 let mut input = Vec::new();
@@ -481,11 +468,11 @@ impl Externals for MockSubstrate {
                     hex::encode(&input)
                 );
 
-                let mut vm = VirtualMachine::new(account, self.vm.account, value);
+                let mut vm = VirtualMachine::new(account, self.vm.contract, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
-                let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
+                let module = self.create_module(&self.accounts.get(&self.vm.contract).unwrap().0);
 
                 self.vm.input = input;
 
@@ -493,11 +480,11 @@ impl Externals for MockSubstrate {
 
                 let ret = match ret {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                        TrapKind::Host(host_error) => {
+                        TrapCode::Host(host_error) => {
                             if let Some(ret) = host_error.downcast_ref::<HostCodeReturn>() {
-                                Some(RuntimeValue::I32(ret.0))
+                                Some(Value::I32(ret.0))
                             } else if host_error.downcast_ref::<HostCodeTerminate>().is_some() {
-                                Some(RuntimeValue::I32(1))
+                                Some(Value::I32(1))
                             } else {
                                 return Err(trap);
                             }
@@ -516,7 +503,7 @@ impl Externals for MockSubstrate {
 
                 println!("seal_call ret={:?} buf={}", ret, hex::encode(&output));
 
-                if let Some(acc) = self.accounts.get_mut(&vm.account) {
+                if let Some(acc) = self.accounts.get_mut(&vm.contract) {
                     acc.1 += vm.value;
                 }
 
@@ -550,14 +537,14 @@ impl Externals for MockSubstrate {
 
                 if !self.accounts.contains_key(&account) {
                     // substrate would return TransferFailed
-                    return Ok(Some(RuntimeValue::I32(0x5)));
+                    return Ok(Some(Value::I32(0x5)));
                 }
 
                 if let Some(acc) = self.accounts.get_mut(&account) {
                     acc.1 += value;
                 }
 
-                Ok(Some(RuntimeValue::I32(0)))
+                Ok(Some(Value::I32(0)))
             }
             Some(SubstrateExternal::seal_instantiate) => {
                 let codehash_ptr: u32 = args.nth_checked(0)?;
@@ -616,18 +603,19 @@ impl Externals for MockSubstrate {
 
                 if self.accounts.contains_key(&account) {
                     // substrate would return TRAP_RETURN_CODE (0x0100)
-                    return Ok(Some(RuntimeValue::I32(0x100)));
+                    return Ok(Some(Value::I32(0x100)));
                 }
 
                 let program = self
                     .programs
                     .iter()
                     .find(|program| {
-                        blake2_rfc::blake2b::blake2b(32, &[], &program.code).as_bytes() == codehash
+                        blake2_rfc::blake2b::blake2b(32, &[], &program.instance).as_bytes()
+                            == codehash
                     })
                     .expect("codehash not found");
 
-                self.accounts.insert(account, (program.code.clone(), 0));
+                self.accounts.insert(account, (program.instance.clone(), 0));
 
                 let mut input = Vec::new();
                 input.resize(input_len as usize, 0u8);
@@ -636,19 +624,19 @@ impl Externals for MockSubstrate {
                     panic!("seal_instantiate: {e}");
                 }
 
-                let mut vm = VirtualMachine::new(account, self.vm.account, value);
+                let mut vm = VirtualMachine::new(account, self.vm.contract, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
-                let module = self.create_module(&program.code);
+                let module = self.create_module(&program.instance);
 
                 self.vm.input = input;
 
                 let ret = match module.invoke_export("deploy", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                        TrapKind::Host(host_error) => {
+                        TrapCode::Host(host_error) => {
                             if let Some(ret) = host_error.downcast_ref::<HostCodeReturn>() {
-                                Some(RuntimeValue::I32(ret.0))
+                                Some(Value::I32(ret.0))
                             } else {
                                 return Err(trap);
                             }
@@ -672,8 +660,8 @@ impl Externals for MockSubstrate {
                     &output
                 );
 
-                if let Some(RuntimeValue::I32(0)) = ret {
-                    self.accounts.get_mut(&vm.account).unwrap().1 += vm.value;
+                if let Some(Value::I32(0)) = ret {
+                    self.accounts.get_mut(&vm.contract).unwrap().1 += vm.value;
                     set_seal_value!(
                         "seal_instantiate account",
                         account_ptr,
@@ -700,7 +688,7 @@ impl Externals for MockSubstrate {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = self.vm.account;
+                let scratch = self.vm.contract;
 
                 set_seal_value!("seal_address", dest_ptr, len_ptr, &scratch);
 
@@ -720,7 +708,7 @@ impl Externals for MockSubstrate {
                 let dest_ptr: u32 = args.nth_checked(0)?;
                 let len_ptr: u32 = args.nth_checked(1)?;
 
-                let scratch = self.accounts[&self.vm.account].1.to_le_bytes();
+                let scratch = self.accounts[&self.vm.contract].1.to_le_bytes();
 
                 set_seal_value!("seal_balance", dest_ptr, len_ptr, &scratch);
 
@@ -786,15 +774,15 @@ impl Externals for MockSubstrate {
                     panic!("seal_terminate: {e}");
                 }
 
-                let remaining = self.accounts[&self.vm.account].1;
+                let remaining = self.accounts[&self.vm.contract].1;
 
                 self.accounts.get_mut(&account).unwrap().1 += remaining;
 
                 println!("seal_terminate: {} {}", hex::encode(account), remaining);
 
-                self.accounts.remove(&self.vm.account);
+                self.accounts.remove(&self.vm.contract);
 
-                Err(Trap::new(TrapKind::Host(Box::new(HostCodeTerminate {}))))
+                Err(Trap::new(TrapCode::Host(Box::new(HostCodeTerminate {}))))
             }
             Some(SubstrateExternal::seal_deposit_event) => {
                 let mut topic_ptr: u32 = args.nth_checked(0)?;
@@ -900,7 +888,7 @@ impl ModuleImportResolver for MockSubstrate {
     }
 }
 
-impl MockSubstrate {
+impl<'a> MockSubstrate<'a> {
     fn create_module(&self, code: &[u8]) -> ModuleRef {
         let module = Module::from_buffer(code).expect("parse wasm should work");
 
@@ -917,12 +905,12 @@ impl MockSubstrate {
         .expect("Failed to run start function in module")
     }
 
-    fn invoke_deploy(&mut self, module: ModuleRef) -> Option<RuntimeValue> {
+    fn invoke_deploy(&mut self, module: ModuleRef) -> Option<Value> {
         match module.invoke_export("deploy", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Host(host_error) => {
+                TrapCode::Host(host_error) => {
                     if let Some(ret) = host_error.downcast_ref::<HostCodeReturn>() {
-                        Some(RuntimeValue::I32(ret.0))
+                        Some(Value::I32(ret.0))
                     } else {
                         panic!("did not go as planned");
                     }
@@ -934,14 +922,14 @@ impl MockSubstrate {
         }
     }
 
-    fn invoke_call(&mut self, module: ModuleRef) -> Option<RuntimeValue> {
+    fn invoke_call(&mut self, module: ModuleRef) -> Option<Value> {
         match module.invoke_export("call", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Host(host_error) => {
+                TrapCode::Host(host_error) => {
                     if let Some(ret) = host_error.downcast_ref::<HostCodeReturn>() {
-                        Some(RuntimeValue::I32(ret.0))
+                        Some(Value::I32(ret.0))
                     } else if host_error.downcast_ref::<HostCodeTerminate>().is_some() {
-                        Some(RuntimeValue::I32(1))
+                        Some(Value::I32(1))
                     } else {
                         panic!("did not go as planned");
                     }
@@ -954,22 +942,18 @@ impl MockSubstrate {
     }
 
     pub fn set_program(&mut self, index: usize) {
-        let account = account_new();
-
-        let code = self.programs[index].code.clone();
-        self.accounts.insert(account, (code, 0));
-        self.vm = VirtualMachine::new(account, account_new(), 0);
-
-        self.current_program = index;
+        //let code = self.programs[index].instance.clone();
+        self.vm = VirtualMachine::new(&self.contracts[index], rand::random(), 0, todo!());
+        self.current_contract = index;
     }
 
     pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
-        let m = &self.programs[self.current_program]
+        let m = &self.programs[self.current_contract]
             .abi
             .spec()
             .constructors()[index];
 
-        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
+        let module = self.create_module(&self.accounts.get(&self.vm.contract).unwrap().0);
 
         self.vm.input = m
             .selector()
@@ -981,42 +965,42 @@ impl MockSubstrate {
 
         let ret = self.invoke_deploy(module);
 
-        if let Some(RuntimeValue::I32(ret)) = ret {
+        if let Some(Value::I32(ret)) = ret {
             if ret != 0 {
                 panic!("non zero return")
             }
         }
     }
 
-    pub fn constructor_expect_return(&mut self, index: usize, expected_ret: i32, args: Vec<u8>) {
-        let m = &self.programs[self.current_program]
-            .abi
-            .spec()
-            .constructors()[index];
+    //pub fn constructor_expect_return(&mut self, index: usize, expected_ret: i32, args: Vec<u8>) {
+    //    let m = &self.programs[self.current_contract]
+    //        .abi
+    //        .spec()
+    //        .constructors()[index];
 
-        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
+    //    let module = self.create_module(&self.accounts.get(&self.vm.contract).unwrap().0);
 
-        self.vm.input = m
-            .selector()
-            .to_bytes()
-            .iter()
-            .copied()
-            .chain(args)
-            .collect();
+    //    self.vm.input = m
+    //        .selector()
+    //        .to_bytes()
+    //        .iter()
+    //        .copied()
+    //        .chain(args)
+    //        .collect();
 
-        let ret = self.invoke_deploy(module);
+    //    let ret = self.invoke_deploy(module);
 
-        if let Some(RuntimeValue::I32(ret)) = ret {
-            println!("function_expected_return: got {ret} expected {expected_ret}");
+    //    if let Some(Value::I32(ret)) = ret {
+    //        println!("function_expected_return: got {ret} expected {expected_ret}");
 
-            if expected_ret != ret {
-                panic!("non one return")
-            }
-        }
-    }
+    //        if expected_ret != ret {
+    //            panic!("non one return")
+    //        }
+    //    }
+    //}
 
     pub fn function(&mut self, name: &str, args: Vec<u8>) {
-        let m = self.programs[self.current_program]
+        let m = self.programs[self.current_contract]
             .abi
             .spec()
             .messages()
@@ -1024,7 +1008,7 @@ impl MockSubstrate {
             .find(|f| f.label() == name)
             .unwrap();
 
-        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
+        let module = self.create_module(&self.accounts.get(&self.vm.contract).unwrap().0);
 
         self.vm.input = m
             .selector()
@@ -1036,201 +1020,193 @@ impl MockSubstrate {
 
         println!("input:{}", hex::encode(&self.vm.input));
 
-        if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
+        if let Some(Value::I32(ret)) = self.invoke_call(module) {
             assert!(ret == 0, "non zero return: {ret}");
         }
     }
 
-    pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
-        let m = self.programs[self.current_program]
-            .abi
-            .spec()
-            .messages()
-            .iter()
-            .find(|m| m.label() == name)
-            .unwrap();
+    //pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
+    //    let m = self.programs[self.current_contract]
+    //        .abi
+    //        .spec()
+    //        .messages()
+    //        .iter()
+    //        .find(|m| m.label() == name)
+    //        .unwrap();
 
-        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
+    //    let module = self.create_module(&self.accounts.get(&self.vm.contract).unwrap().0);
 
-        self.vm.input = m
-            .selector()
-            .to_bytes()
-            .iter()
-            .copied()
-            .chain(args)
-            .collect();
+    //    self.vm.input = m
+    //        .selector()
+    //        .to_bytes()
+    //        .iter()
+    //        .copied()
+    //        .chain(args)
+    //        .collect();
 
-        match module.invoke_export("call", &[], self) {
-            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Unreachable => (),
-                _ => panic!("trap: {trap:?}"),
-            },
-            Err(err) => {
-                panic!("unexpected error: {err:?}");
-            }
-            Ok(v) => {
-                panic!("unexpected return value: {v:?}");
-            }
-        }
-    }
+    //    match module.invoke_export("call", &[], self) {
+    //        Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+    //            TrapCode::UnreachableCodeReached => (),
+    //            _ => panic!("trap: {trap:?}"),
+    //        },
+    //        Err(err) => {
+    //            panic!("unexpected error: {err:?}");
+    //        }
+    //        Ok(v) => {
+    //            panic!("unexpected return value: {v:?}");
+    //        }
+    //    }
+    //}
 
-    pub fn raw_function(&mut self, input: Vec<u8>) {
-        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
+    //pub fn raw_function(&mut self, input: Vec<u8>) {
+    //    let module = self.create_module(&self.accounts.get(&self.vm.contract).unwrap().0);
 
-        self.vm.input = input;
+    //    self.vm.input = input;
 
-        if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
-            if ret != 0 {
-                panic!("non zero return")
-            }
-        }
-    }
+    //    if let Some(Value::I32(ret)) = self.invoke_call(module) {
+    //        if ret != 0 {
+    //            panic!("non zero return")
+    //        }
+    //    }
+    //}
 
-    pub fn raw_function_failure(&mut self, input: Vec<u8>) {
-        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
+    //pub fn raw_function_failure(&mut self, input: Vec<u8>) {
+    //    let module = self.create_module(&self.accounts.get(&self.vm.contract).unwrap().0);
 
-        self.vm.input = input;
+    //    self.vm.input = input;
 
-        match module.invoke_export("call", &[], self) {
-            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Unreachable => (),
-                _ => panic!("trap: {trap:?}"),
-            },
-            Err(err) => {
-                panic!("unexpected error: {err:?}");
-            }
-            Ok(v) => {
-                panic!("unexpected return value: {v:?}");
-            }
-        }
-    }
+    //    match module.invoke_export("call", &[], self) {
+    //        Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+    //            TrapCode::UnreachableCodeReached => (),
+    //            _ => panic!("trap: {trap:?}"),
+    //        },
+    //        Err(err) => {
+    //            panic!("unexpected error: {err:?}");
+    //        }
+    //        Ok(v) => {
+    //            panic!("unexpected return value: {v:?}");
+    //        }
+    //    }
+    //}
 
-    pub fn raw_constructor(&mut self, input: Vec<u8>) {
-        let module = self.create_module(&self.accounts.get(&self.vm.account).unwrap().0);
+    //pub fn raw_constructor(&mut self, input: Vec<u8>) {
+    //    let module = self.create_module(&self.accounts.get(&self.vm.contract).unwrap().0);
 
-        self.vm.input = input;
+    //    self.vm.input = input;
 
-        if let Some(RuntimeValue::I32(ret)) = self.invoke_deploy(module) {
-            if ret != 0 {
-                panic!("non zero return")
-            }
-        }
-    }
+    //    if let Some(Value::I32(ret)) = self.invoke_deploy(module) {
+    //        if ret != 0 {
+    //            panic!("non zero return")
+    //        }
+    //    }
+    //}
 
-    pub fn heap_verify(&self) {
-        let memsize = self.vm.memory.current_size().0 * 0x10000;
-        println!("memory size:{memsize}");
-        let mut buf = Vec::new();
-        buf.resize(memsize, 0);
+    //pub fn heap_verify(&self) {
+    //    let memsize = self.vm.memory.current_size().0 * 0x10000;
+    //    println!("memory size:{memsize}");
+    //    let mut buf = Vec::new();
+    //    buf.resize(memsize, 0);
 
-        let mut current_elem = 0x10000;
-        let mut last_elem = 0u32;
+    //    let mut current_elem = 0x10000;
+    //    let mut last_elem = 0u32;
 
-        loop {
-            let next: u32 = self.vm.memory.get_value(current_elem).unwrap();
-            let prev: u32 = self.vm.memory.get_value(current_elem + 4).unwrap();
-            let length: u32 = self.vm.memory.get_value(current_elem + 8).unwrap();
-            let allocated: u32 = self.vm.memory.get_value(current_elem + 12).unwrap();
+    //    loop {
+    //        let next: u32 = self.vm.memory.get_value(current_elem).unwrap();
+    //        let prev: u32 = self.vm.memory.get_value(current_elem + 4).unwrap();
+    //        let length: u32 = self.vm.memory.get_value(current_elem + 8).unwrap();
+    //        let allocated: u32 = self.vm.memory.get_value(current_elem + 12).unwrap();
 
-            println!("next:{next:08x} prev:{prev:08x} length:{length} allocated:{allocated}");
+    //        println!("next:{next:08x} prev:{prev:08x} length:{length} allocated:{allocated}");
 
-            let mut buf = vec![0u8; length as usize];
+    //        let mut buf = vec![0u8; length as usize];
 
-            self.vm
-                .memory
-                .get_into(current_elem + 16, &mut buf)
-                .unwrap();
+    //        self.vm
+    //            .memory
+    //            .get_into(current_elem + 16, &mut buf)
+    //            .unwrap();
 
-            if allocated == 0 {
-                println!("{:08x} {} not allocated", current_elem + 16, length);
-            } else {
-                println!("{:08x} {} allocated", current_elem + 16, length);
+    //        if allocated == 0 {
+    //            println!("{:08x} {} not allocated", current_elem + 16, length);
+    //        } else {
+    //            println!("{:08x} {} allocated", current_elem + 16, length);
 
-                assert_eq!(allocated & 0xffff, 1);
+    //            assert_eq!(allocated & 0xffff, 1);
 
-                for offset in (0..buf.len()).step_by(16) {
-                    let mut hex = "\t".to_string();
-                    let mut chars = "\t".to_string();
-                    for i in 0..16 {
-                        if offset + i >= buf.len() {
-                            break;
-                        }
-                        let b = buf[offset + i];
-                        write!(hex, " {b:02x}").unwrap();
-                        if b.is_ascii() && !b.is_ascii_control() {
-                            write!(chars, "  {}", b as char).unwrap();
-                        } else {
-                            chars.push_str("   ");
-                        }
-                    }
-                    println!("{hex}\n{chars}");
-                }
-            }
+    //            for offset in (0..buf.len()).step_by(16) {
+    //                let mut hex = "\t".to_string();
+    //                let mut chars = "\t".to_string();
+    //                for i in 0..16 {
+    //                    if offset + i >= buf.len() {
+    //                        break;
+    //                    }
+    //                    let b = buf[offset + i];
+    //                    write!(hex, " {b:02x}").unwrap();
+    //                    if b.is_ascii() && !b.is_ascii_control() {
+    //                        write!(chars, "  {}", b as char).unwrap();
+    //                    } else {
+    //                        chars.push_str("   ");
+    //                    }
+    //                }
+    //                println!("{hex}\n{chars}");
+    //            }
+    //        }
 
-            assert_eq!(last_elem, prev);
+    //        assert_eq!(last_elem, prev);
 
-            if next == 0 {
-                break;
-            }
+    //        if next == 0 {
+    //            break;
+    //        }
 
-            last_elem = current_elem;
-            current_elem = next;
-        }
-    }
+    //        last_elem = current_elem;
+    //        current_elem = next;
+    //    }
+    //}
 }
 
 pub fn build_solidity(src: &str) -> MockSubstrate {
     build_solidity_with_options(src, false, true)
 }
 
-pub fn build_solidity_with_options(
-    src: &str,
-    log_api_return_codes: bool,
-    log_runtime_errors: bool,
-) -> MockSubstrate {
+pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
+    let engine = Engine::default();
+    let contracts: Vec<Contract> = build_wasm(src, log_ret, log_err)
+        .iter()
+        .map(|blob| Module::new(&engine, &mut &blob[..]).unwrap())
+        .map(|module| Contract {
+            abi: todo!(),
+            account: todo!(),
+            instance: todo!(),
+            value: 0,
+            storage: HashMap::new(),
+        })
+        .collect();
+
+    let vm = VirtualMachine::new(&contracts[0], rand::random(), 0, todo!());
+
+    MockSubstrate {
+        contracts,
+        printbuf: String::new(),
+        current_contract: 0,
+        vm,
+        events: Vec::new(),
+    }
+}
+
+fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<Vec<u8>> {
     let mut cache = FileResolver::new();
-
     cache.set_file_contents("test.sol", src.to_string());
-
-    let (res, ns) = compile(
+    let (wasm, ns) = compile(
         OsStr::new("test.sol"),
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::default_substrate(),
-        log_api_return_codes,
-        log_runtime_errors,
+        log_ret,
+        log_err,
         true,
     );
-
     ns.print_diagnostics_in_plain(&cache, false);
-
-    assert!(!res.is_empty());
-
-    let programs: Vec<Program> = res
-        .iter()
-        .map(|res| Program {
-            code: res.0.clone(),
-            abi: load_abi(&res.1),
-        })
-        .collect();
-
-    let mut accounts = HashMap::new();
-
-    let account = account_new();
-
-    accounts.insert(account, (programs[0].code.clone(), 0));
-
-    let vm = VirtualMachine::new(account, account_new(), 0);
-
-    MockSubstrate {
-        accounts,
-        printbuf: String::new(),
-        store: HashMap::new(),
-        programs,
-        vm,
-        current_program: 0,
-        events: Vec::new(),
-    }
+    assert!(!wasm.is_empty());
+    wasm
 }
 
 fn load_abi(s: &str) -> InkProject {
