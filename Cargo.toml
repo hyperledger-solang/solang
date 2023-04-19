@@ -10,7 +10,7 @@ description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "solana", "substrate" ]
 rust-version = "1.65.0"
 edition = "2021"
-exclude = [ "/.*", "/docs",  "/examples", "/solana-library", "/tests", "/integration", "/vscode" ]
+exclude = [ "/.*", "/docs",  "/examples", "/solana-library", "/tests", "/integration", "/vscode", "/testdata" ]
 
 [build-dependencies]
 cc = "1.0"
@@ -79,6 +79,7 @@ byte-slice-cast = "1.2"
 borsh = "0.10"
 tempfile = "3.3"
 rayon = "1"
+walkdir = "2.3.3"
 
 [package.metadata.docs.rs]
 no-default-features = true

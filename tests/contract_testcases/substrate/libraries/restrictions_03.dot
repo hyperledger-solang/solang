@@ -1,8 +1,12 @@
 strict digraph "tests/contract_testcases/substrate/libraries/restrictions_03.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_03.sol:2:9-4:10"]
-	diagnostic [label="found library 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_03.sol:2:9-4:10"]
+	contract [label="contract c\ntests/contract_testcases/substrate/libraries/restrictions_03.sol:2:9-6:10"]
+	diagnostic [label="found library 'c'\nlevel Debug\ntests/contract_testcases/substrate/libraries/restrictions_03.sol:2:9-6:10"]
 	diagnostic_4 [label="function in a library cannot be payable\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_03.sol:3:13-40"]
+	diagnostic_5 [label="modifier in a library cannot override\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_03.sol:4:26-34"]
+	diagnostic_6 [label="modifier in a library must have a body\nlevel Error\ntests/contract_testcases/substrate/libraries/restrictions_03.sol:5:13-26"]
 	contracts -> contract
 	diagnostics -> diagnostic [label="Debug"]
 	diagnostics -> diagnostic_4 [label="Error"]
+	diagnostics -> diagnostic_5 [label="Error"]
+	diagnostics -> diagnostic_6 [label="Error"]
 }

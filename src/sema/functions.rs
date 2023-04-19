@@ -346,7 +346,7 @@ pub fn contract_function(
             success = false;
         }
     } else if ns.contracts[contract_no].is_library() {
-        if func.ty != pt::FunctionTy::Function {
+        if func.ty != pt::FunctionTy::Function && func.ty != pt::FunctionTy::Modifier {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
                 format!("{} not allowed in a library", func.ty),
@@ -355,19 +355,19 @@ pub fn contract_function(
         } else if func.body.is_none() {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
-                "function in a library must have a body".to_string(),
+                format!("{} in a library must have a body", func.ty),
             ));
             success = false;
         } else if let Some((loc, _)) = is_override {
             ns.diagnostics.push(Diagnostic::error(
                 loc,
-                "function in a library cannot override".to_string(),
+                format!("{} in a library cannot override", func.ty),
             ));
             success = false;
         } else if let Some(pt::Mutability::Payable(_)) = mutability {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
-                "function in a library cannot be payable".to_string(),
+                format!("{} in a library cannot be payable", func.ty),
             ));
             success = false;
         }
@@ -401,7 +401,7 @@ pub fn contract_function(
         is_virtual.is_some()
     };
 
-    if !is_virtual && func.body.is_none() {
+    if !is_virtual && func.body.is_none() && !ns.contracts[contract_no].is_library() {
         ns.diagnostics.push(Diagnostic::error(
             func.loc,
             "function with no body missing 'virtual'. This was permitted in older versions of the Solidity language, please update.".to_string(),
