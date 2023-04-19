@@ -958,7 +958,7 @@ pub(super) fn resolve_call(
         } else {
             // tx.gasprice(1) is a bad idea, just like tx.gasprice. Warn about this
             if ns.target.is_substrate() && func.builtin == Builtin::Gasprice {
-                if let Ok((_, val)) = eval_const_number(&cast_args[0], ns) {
+                if let Ok((_, val)) = eval_const_number(&cast_args[0], ns, diagnostics) {
                     if val == BigInt::one() {
                         diagnostics.push(Diagnostic::warning(
                             *loc,
