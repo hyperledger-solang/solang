@@ -472,7 +472,23 @@ fn multiply_values(
         })
         .collect()
 }
-
+fn get_value(
+    _signed : bool,
+    _l :&Value,
+    _r :&Value,
+    compare:impl Fn(BigInt,BigInt) -> bool
+) -> bool {
+    if _signed {
+        compare(
+        BigInt::from_signed_bytes_le(&_l.get_signed_max_value().into_inner())
+                    , BigInt::from_signed_bytes_le(&_r.get_signed_min_value().into_inner()))
+    }
+    else {
+        compare(
+        BigInt::from_bytes_le(Sign::Plus, &_l.get_unsigned_max_value().into_inner())
+                    , BigInt::from_bytes_le(Sign::Plus, &_r.get_unsigned_min_value().into_inner()))
+    }
+}
 fn more_values(
     left: &Expression,
     right: &Expression,
@@ -490,13 +506,7 @@ fn more_values(
             let mut known_bits = BitArray::new([0u8; 32]);
             let mut value = BitArray::new([0u8; 32]);
 
-            let is_true = if signed {
-                BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
-                    > BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
-            } else {
-                BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_max_value().into_inner())
-                    > BigInt::from_bytes_le(Sign::Plus, &r.get_unsigned_min_value().into_inner())
-            };
+            let is_true = get_value(signed, l, r ,|a, b| a > b);
 
             if is_true {
                 // we know that this comparison is always true
@@ -504,16 +514,7 @@ fn more_values(
                 value.set(0, true);
             } else {
                 // maybe the comparison is always false
-                let is_false = if signed {
-                    BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
-                        <= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
-                } else {
-                    BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_min_value().into_inner())
-                        <= BigInt::from_bytes_le(
-                            Sign::Plus,
-                            &r.get_unsigned_max_value().into_inner(),
-                        )
-                };
+                let is_false = get_value(signed, l, r , |a, b| a < b);
 
                 if is_false {
                     // we know that this comparison is always false
@@ -547,13 +548,7 @@ fn more_equal_values(
             let mut known_bits = BitArray::new([0u8; 32]);
             let mut value = BitArray::new([0u8; 32]);
 
-            let is_true = if signed {
-                BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
-                    >= BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
-            } else {
-                BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_max_value().into_inner())
-                    >= BigInt::from_bytes_le(Sign::Plus, &r.get_unsigned_min_value().into_inner())
-            };
+            let is_true = get_value(signed, l, r ,|a, b| a >= b);
 
             if is_true {
                 // we know that this comparison is always true
@@ -561,16 +556,7 @@ fn more_equal_values(
                 value.set(0, true);
             } else {
                 // maybe the comparison is always false
-                let is_false = if signed {
-                    BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
-                        < BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
-                } else {
-                    BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_min_value().into_inner())
-                        < BigInt::from_bytes_le(
-                            Sign::Plus,
-                            &r.get_unsigned_max_value().into_inner(),
-                        )
-                };
+                let is_false = get_value(signed, l, r, |a, b| a < b);
 
                 if is_false {
                     // we know that this comparison is always false
@@ -618,16 +604,7 @@ fn less_values(
                 value.set(0, true);
             } else {
                 // maybe the comparison is always false
-                let is_false = if signed {
-                    BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
-                        >= BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
-                } else {
-                    BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_min_value().into_inner())
-                        >= BigInt::from_bytes_le(
-                            Sign::Plus,
-                            &r.get_unsigned_max_value().into_inner(),
-                        )
-                };
+                let is_false = get_value(signed, l, r,|a, b| a >= b);
 
                 if is_false {
                     // we know that this comparison is always false
@@ -661,13 +638,7 @@ fn less_equal_values(
             let mut known_bits = BitArray::new([0u8; 32]);
             let mut value = BitArray::new([0u8; 32]);
 
-            let is_true = if signed {
-                BigInt::from_signed_bytes_le(&l.get_signed_max_value().into_inner())
-                    <= BigInt::from_signed_bytes_le(&r.get_signed_min_value().into_inner())
-            } else {
-                BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_max_value().into_inner())
-                    <= BigInt::from_bytes_le(Sign::Plus, &r.get_unsigned_min_value().into_inner())
-            };
+            let is_true = get_value(signed, l, r, |a, b| a <= b);
 
             if is_true {
                 // we know that this comparison is always true
@@ -675,16 +646,7 @@ fn less_equal_values(
                 value.set(0, true);
             } else {
                 // maybe the comparison is always false
-                let is_false = if signed {
-                    BigInt::from_signed_bytes_le(&l.get_signed_min_value().into_inner())
-                        > BigInt::from_signed_bytes_le(&r.get_signed_max_value().into_inner())
-                } else {
-                    BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_min_value().into_inner())
-                        > BigInt::from_bytes_le(
-                            Sign::Plus,
-                            &r.get_unsigned_max_value().into_inner(),
-                        )
-                };
+                let is_false = get_value(signed, l, r, |a, b| a > b);
 
                 if is_false {
                     // we know that this comparison is always false
