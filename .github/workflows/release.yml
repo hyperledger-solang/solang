@@ -8,7 +8,7 @@ name: Build Release Binaries
 jobs:
   linux-x86-64:
     name: Linux x86-64
-    runs-on: ubuntu-latest
+    runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
     - name: Checkout sources

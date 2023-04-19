@@ -9,7 +9,7 @@ on:
 jobs:
   repolinter:
     name: Repolinter
-    runs-on: ubuntu-latest
+    runs-on: solang-ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -18,7 +18,7 @@ jobs:
 
   lints:
     name: Lints
-    runs-on: ubuntu-latest
+    runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
       - name: Checkout sources
@@ -40,7 +40,7 @@ jobs:
 
   docs:
     name: Docs
-    runs-on: ubuntu-latest
+    runs-on: solang-ubuntu-latest
     container: ubuntu:20.04
     steps:
       - name: Checkout sources
@@ -58,7 +58,7 @@ jobs:
 
   linux-x86-64:
     name: Linux x86-64
-    runs-on: ubuntu-latest-m
+    runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci
     steps:
     - name: Checkout sources
@@ -99,7 +99,7 @@ jobs:
 
   windows:
     name: Windows
-    runs-on: windows-latest-l
+    runs-on: solang-windows-latest
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -215,7 +215,7 @@ jobs:
 
   anchor:
     name: Anchor Integration test
-    runs-on: ubuntu-latest-m
+    runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci
     needs: linux-x86-64
     steps:
@@ -262,7 +262,7 @@ jobs:
 
   solana:
     name: Solana Integration test
-    runs-on: ubuntu-latest-m
+    runs-on: solang-ubuntu-latest
     container: ghcr.io/hyperledger/solang-llvm:ci
     needs: linux-x86-64
     steps:
@@ -296,7 +296,7 @@ jobs:
 
   substrate:
     name: Substrate Integration test
-    runs-on: ubuntu-latest-m
+    runs-on: solang-ubuntu-latest
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -333,7 +333,7 @@ jobs:
 
   vscode:
     name: Visual Code Extension
-    runs-on: ubuntu-latest
+    runs-on: solang-ubuntu-latest
     needs: linux-x86-64
     steps:
     - name: Checkout
