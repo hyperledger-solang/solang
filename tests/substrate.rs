@@ -13,7 +13,8 @@ use std::{collections::HashMap, ffi::OsStr, fmt, fmt::Write};
 use tiny_keccak::{Hasher, Keccak};
 use wasmi::core::{Trap, TrapCode};
 use wasmi::{
-    Caller, Engine, Extern, Func, Instance, Linker, Memory, Module, Store, Value, WasmRet,
+    AsContext, AsContextMut, Caller, Engine, Extern, Func, Instance, Linker, Memory, Module, Store,
+    Value, WasmRet,
 };
 
 use solang::file_resolver::FileResolver;
@@ -33,7 +34,7 @@ struct Contract {
 }
 
 #[derive(Default)]
-struct Runtime {
+struct VirtualMachine {
     contracts: Vec<Contract>,
     printbuf: String,
     call_stack: Vec<CallContext>,
@@ -43,14 +44,15 @@ struct Runtime {
 struct CallContext {
     caller: Account,
     contract: usize,
-    instance: Memory,
+    instance: Instance,
+    memory: Memory,
     input: Vec<u8>,
     output: Vec<u8>,
     value: u128,
 }
 
 pub struct MockSubstrate {
-    store: Store<Runtime>,
+    store: Store<VirtualMachine>,
 }
 
 /// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
@@ -81,12 +83,22 @@ pub struct Event {
     data: Vec<u8>,
 }
 
-fn seal_input(store: &mut Store<Runtime>) -> Func {
-    let f = |caller: Caller<'_, Runtime>, dest_ptr: i32, len_ptr: i32| {
-        let len = caller.data().call_stack.last().unwrap();
-        println!("seal_input");
-    };
-    Func::wrap(store, f)
+impl VirtualMachine {
+    fn mem(&self) -> Memory {
+        self.call_stack.last().unwrap().memory
+    }
+}
+
+fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
+    Func::wrap(
+        store,
+        |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
+            let mem = caller.data().call_stack.last().unwrap().memory;
+            let (mem, vm) = mem.data_and_store_mut(&mut caller);
+            assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
+            println!("seal_input");
+        },
+    )
 }
 
 //impl Externals for MockSubstrate {
@@ -1126,8 +1138,8 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
 
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
     let engine = Engine::default();
-    let mut store = Store::new(&engine, Runtime::default());
-    let mut linker = <Linker<Runtime>>::new(&engine);
+    let mut store = Store::new(&engine, VirtualMachine::default());
+    let mut linker = <Linker<VirtualMachine>>::new(&engine);
     store.data_mut().contracts = build_wasm(src, log_ret, log_err)
         .iter()
         .map(|(blob, abi)| {
