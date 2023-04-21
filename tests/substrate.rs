@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+/// Mock runtime for the contracts pallet.
 use blake2_rfc::blake2b::blake2b;
 use contract_metadata::ContractMetadata;
 use ink::metadata::InkProject;
-// Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
@@ -19,6 +19,8 @@ use wasmi::{
 
 use solang::file_resolver::FileResolver;
 use solang::{compile, Target};
+
+use wasm_host_derive::wasm_host;
 
 //mod substrate_tests;
 
@@ -36,9 +38,28 @@ struct Contract {
 #[derive(Default)]
 struct VirtualMachine {
     contracts: Vec<Contract>,
-    printbuf: String,
+    debug_buffer: String,
     call_stack: Vec<CallContext>,
     events: Vec<Event>,
+}
+
+#[wasm_host]
+impl VirtualMachine {
+    #[link(seal0)]
+    fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
+        Func::wrap(
+            store,
+            |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
+                let mem = caller.data().call_stack.last().unwrap().memory;
+                let (mem, vm) = mem.data_and_store_mut(&mut caller);
+                assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
+                println!("seal_input");
+            },
+        )
+    }
+
+    #[link(seal0)]
+    fn foo() {}
 }
 
 struct CallContext {
@@ -81,12 +102,6 @@ impl fmt::Display for HostCodeReturn {
 pub struct Event {
     topics: Vec<[u8; 32]>,
     data: Vec<u8>,
-}
-
-impl VirtualMachine {
-    fn mem(&self) -> Memory {
-        self.call_stack.last().unwrap().memory
-    }
 }
 
 fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {

@@ -80,6 +80,7 @@ borsh = "0.10"
 tempfile = "3.3"
 rayon = "1"
 walkdir = "2.3.3"
+wasm_host_derive = { path = "tests/wasm_host_derive" }
 
 [package.metadata.docs.rs]
 no-default-features = true
@@ -92,4 +93,4 @@ default = ["llvm"]
 llvm = ["inkwell", "libc"]
 
 [workspace]
-members = ["solang-parser"]
+members = ["solang-parser", "tests/wasm_host_derive"]
