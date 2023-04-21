@@ -1615,7 +1615,7 @@ pub enum Statement {
         reachable: bool,
         init: Vec<Statement>,
         cond: Option<Expression>,
-        next: Vec<Statement>,
+        next: Option<Expression>,
         body: Vec<Statement>,
     },
     DoWhile(pt::Loc, bool, Vec<Statement>, Expression),
@@ -1689,18 +1689,12 @@ impl Recurse for Statement {
                         stmt.recurse(cx, f);
                     }
                 }
-                Statement::For {
-                    init, next, body, ..
-                } => {
+                Statement::For { init, body, .. } => {
                     for stmt in init {
                         stmt.recurse(cx, f);
                     }
 
                     for stmt in body {
-                        stmt.recurse(cx, f);
-                    }
-
-                    for stmt in next {
                         stmt.recurse(cx, f);
                     }
                 }

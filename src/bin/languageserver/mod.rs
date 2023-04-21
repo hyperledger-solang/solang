@@ -255,8 +255,8 @@ impl<'a> Builder<'a> {
                 for stat in init {
                     self.statement(stat, symtab);
                 }
-                for stat in next {
-                    self.statement(stat, symtab);
+                if let Some(exp) = next {
+                    self.expression(exp, symtab);
                 }
                 for stat in body {
                     self.statement(stat, symtab);

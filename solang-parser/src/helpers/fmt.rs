@@ -2285,7 +2285,7 @@ mod tests {
                     loc!(),
                     None,
                     Some(Box::new(expr!(true))),
-                    Some(Box::new(pt::Statement::Expression(loc!(), expr!(++i)))),
+                    Some(Box::new(expr!(++i))),
                     Some(Box::new(stmt!({})))
                 ) => "for (; true; ++i) {}",
 
