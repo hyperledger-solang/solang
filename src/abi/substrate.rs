@@ -3,7 +3,7 @@ use contract_metadata::{
     CodeHash, Compiler, Contract, ContractMetadata, Language, Source, SourceCompiler,
     SourceLanguage, SourceWasm,
 };
-use ink::metadata::{
+use ink_metadata::{
     layout::{FieldLayout, Layout, LayoutKey, LeafLayout, RootLayout, StructLayout},
     ConstructorSpec, ContractSpec, EventParamSpec, EventSpec, InkProject, MessageParamSpec,
     MessageSpec, ReturnTypeSpec, TypeSpec,
@@ -437,7 +437,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .collect::<Vec<_>>();
         EventSpec::new(e.name.clone())
             .args(args)
-            .docs(vec![render(&e.tags).as_str()])
+            .docs(vec![render(&e.tags)])
             .done()
     };
 
