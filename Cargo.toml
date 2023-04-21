@@ -54,7 +54,7 @@ anchor-syn = { version = "0.27.0", features = ["idl"] }
 convert_case = "0.6"
 parse-display = "0.8.0"
 parity-scale-codec = "3.4"
-ink = "4.1.0"
+ink = "=4.1.0"
 scale-info = "2.4"
 petgraph = "0.6.3"
 wasmparser = "0.102.0"
