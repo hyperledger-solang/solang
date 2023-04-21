@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use contract_metadata::ContractMetadata;
-use ink::metadata::InkProject;
+use ink_metadata::InkProject;
 // Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
