@@ -3,7 +3,8 @@
 /// Mock runtime for the contracts pallet.
 use blake2_rfc::blake2b::blake2b;
 use contract_metadata::ContractMetadata;
-use ink::metadata::InkProject;
+use ink_metadata::InkProject;
+// Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
