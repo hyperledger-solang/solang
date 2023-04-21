@@ -46,22 +46,23 @@ struct VirtualMachine {
 #[wasm_host]
 impl VirtualMachine {
     #[link(seal0)]
-    fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
-        Func::wrap(
-            store,
-            |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
-                let mem = caller.data().call_stack.last().unwrap().memory;
-                let (mem, vm) = mem.data_and_store_mut(&mut caller);
-                assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
-                println!("seal_input");
-            },
-        )
+    fn seal_input(&mut self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
+        assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
+        println!("seal_input");
     }
-
-    #[link(seal0)]
-    fn foo() {}
 }
 
+fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
+    Func::wrap(
+        store,
+        |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
+            let mem = caller.data().call_stack.last().unwrap().memory;
+            let (mem, vm) = mem.data_and_store_mut(&mut caller);
+            assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
+            println!("seal_input");
+        },
+    )
+}
 struct CallContext {
     caller: Account,
     contract: usize,
@@ -72,8 +73,12 @@ struct CallContext {
     value: u128,
 }
 
-pub struct MockSubstrate {
-    store: Store<VirtualMachine>,
+pub struct MockSubstrate(Store<VirtualMachine>);
+
+impl MockSubstrate {
+    pub fn output(&self) -> &[u8] {
+        &self.0.data().call_stack.last().unwrap().output
+    }
 }
 
 /// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
@@ -104,17 +109,17 @@ pub struct Event {
     data: Vec<u8>,
 }
 
-fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
-    Func::wrap(
-        store,
-        |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
-            let mem = caller.data().call_stack.last().unwrap().memory;
-            let (mem, vm) = mem.data_and_store_mut(&mut caller);
-            assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
-            println!("seal_input");
-        },
-    )
-}
+//fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
+//    Func::wrap(
+//        store,
+//        |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
+//            let mem = caller.data().call_stack.last().unwrap().memory;
+//            let (mem, vm) = mem.data_and_store_mut(&mut caller);
+//            assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
+//            println!("seal_input");
+//        },
+//    )
+//}
 
 //impl Externals for MockSubstrate {
 //    #[allow(clippy::cognitive_complexity)]
@@ -1177,7 +1182,7 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
             }
         })
         .collect();
-    MockSubstrate { store }
+    MockSubstrate(store)
 }
 
 fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {
