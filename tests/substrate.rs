@@ -29,16 +29,16 @@ use wasm_host_derive::wasm_host;
 
 type StorageKey = [u8; 32];
 type Account = [u8; 32];
+type Storage = HashMap<StorageKey, Vec<u8>>;
+type MockEnv = Vec<(Vec<Contract>, Runtime)>;
 
 static NODES: Lazy<Mutex<MockEnv>> = Lazy::new(|| Vec::new().into());
-
-type MockEnv = Vec<(Vec<Contract>, Runtime)>;
 
 struct Contract {
     abi: InkProject,
     account: Account,
     code: Vec<u8>,
-    storage: HashMap<StorageKey, Vec<u8>>,
+    storage: Storage,
     value: u128,
 }
 
@@ -108,7 +108,7 @@ impl Contract {
 #[derive(Default)]
 struct Runtime {
     debug_buffer: String,
-    call_stack: Vec<VirtualMachine>,
+    vm: VirtualMachine,
     events: Vec<Event>,
 }
 
@@ -129,19 +129,49 @@ impl VirtualMachine {
         assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
         println!("seal_input");
     }
+
+    #[link(seal0)]
+    fn seal_return(&mut self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32, _: i32) {
+        assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
+        println!("seal_return");
+    }
+
+    #[link(seal0)]
+    fn seal_value_transferred(&mut self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
+        assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
+        println!("seal_return");
+    }
+    #[link(seal0)]
+    fn seal_debug_message(&mut self, mem: &mut [u8], data_ptr: i32, len: i32) {
+        let mut buf = Vec::new();
+        buf.resize(len as usize, 0u8);
+
+        let msg = mem
+            .get(data_ptr as usize..(data_ptr + len) as usize)
+            .unwrap();
+        //if msg.is_none() {
+        //    panic!("seal_debug_message: {e}");
+        //}
+
+        let s = String::from_utf8(msg.into()).expect("seal_debug_message: Invalid UFT8");
+
+        //println!("seal_debug_message: {s}");
+
+        Ok(0)
+    }
 }
 
-fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
-    Func::wrap(
-        store,
-        |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
-            let mem = caller.data().memory.unwrap();
-            let (mem, vm) = mem.data_and_store_mut(&mut caller);
-            assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
-            println!("seal_input");
-        },
-    )
-}
+//fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
+//    Func::wrap(
+//        store,
+//        |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
+//            let mem = caller.data().memory.unwrap();
+//            let (mem, vm) = mem.data_and_store_mut(&mut caller);
+//            assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
+//            println!("seal_input");
+//        },
+//    )
+//}
 pub struct MockSubstrate {
     node: usize,
     contract: usize,
@@ -149,8 +179,15 @@ pub struct MockSubstrate {
 
 impl MockSubstrate {
     pub fn output(&self) -> Vec<u8> {
-        let node = &NODES.lock().unwrap()[self.node];
-        node.1.call_stack.first().unwrap().output.to_vec()
+        NODES.lock().unwrap()[self.node].1.vm.output.to_vec()
+    }
+
+    pub fn debug_buffer(&self) -> String {
+        NODES.lock().unwrap()[self.node].1.debug_buffer.to_string()
+    }
+
+    pub fn events(&self) -> Vec<Event> {
+        NODES.lock().unwrap()[self.node].1.events.clone()
     }
 
     fn selector(&self, name: &str) -> [u8; 4] {
@@ -214,6 +251,7 @@ impl HostError for HostReturn {}
 //    }
 //}
 
+#[derive(Clone)]
 pub struct Event {
     topics: Vec<[u8; 32]>,
     data: Vec<u8>,
@@ -1133,7 +1171,10 @@ impl MockSubstrate {
         input.append(&mut args);
         println!("input:{}", hex::encode(&input));
 
-        contract.execute(input, "call");
+        match contract.execute(input, "call") {
+            Ok(vm) => NODES.lock().unwrap()[self.node].1.vm = vm,
+            Err(e) => panic!("{e}"),
+        }
         //if let Some(Value::I32(ret)) = self.invoke_call(module) {
         //    assert!(ret == 0, "non zero return: {ret}");
         //}
@@ -1314,4 +1355,20 @@ fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)>
 fn load_abi(s: &str) -> InkProject {
     let bundle = serde_json::from_str::<ContractMetadata>(s).unwrap();
     serde_json::from_value::<InkProject>(serde_json::to_value(bundle.abi).unwrap()).unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::build_solidity_with_options;
+
+    #[test]
+    fn it_works() {
+        let mut runtime = build_solidity_with_options(
+            r##"contract Foo { function foo() public {print("hello world");} }"##,
+            true,
+            true,
+        );
+
+        runtime.function("foo", vec![]);
+    }
 }
