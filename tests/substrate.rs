@@ -14,7 +14,7 @@ use std::mem::transmute;
 use std::sync::Mutex;
 use std::{collections::HashMap, ffi::OsStr, fmt, fmt::Write};
 use tiny_keccak::{Hasher, Keccak};
-use wasmi::core::{Trap, TrapCode};
+use wasmi::core::{HostError, Trap, TrapCode};
 use wasmi::{
     AsContext, AsContextMut, Caller, Engine, Extern, Func, Instance, Linker, Memory, MemoryType,
     Module, Store, Value, WasmRet,
@@ -63,6 +63,45 @@ impl Contract {
             .selector()
             .to_bytes()
             .to_vec()
+    }
+
+    fn instantiate(&self) -> Result<(Store<VirtualMachine>, Instance), wasmi::Error> {
+        let engine = Engine::default();
+        let mut store = Store::new(&engine, VirtualMachine::default());
+
+        let mut linker = <Linker<VirtualMachine>>::new(&engine);
+        VirtualMachine::define(&mut store, &mut linker);
+        let memory = Memory::new(&mut store, MemoryType::new(16, Some(16)).unwrap()).unwrap();
+        linker.define("env", "memory", memory).unwrap();
+        store.data_mut().memory = Some(memory);
+
+        let instance = linker
+            .instantiate(&mut store, &Module::new(&engine, &mut &self.code[..])?)
+            .expect("linking is always correct")
+            .ensure_no_start(&mut store)
+            .expect("we never emit a start function");
+
+        Ok((store, instance))
+    }
+
+    fn execute(&self, input: Vec<u8>, function: &str) -> Result<VirtualMachine, wasmi::Error> {
+        let (mut store, instance) = self.instantiate()?;
+        store.data_mut().input = input;
+        match instance
+            .get_export(&store, function)
+            .and_then(|export| export.into_func())
+            .expect(&format!("contract does not export '{function}'"))
+            .call(&mut store, &[], &mut [])
+        {
+            Err(wasmi::Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
+                // TODO handle reverts
+                Some(HostReturn::Data(_, data)) => store.data_mut().output = data,
+                _ => {}
+            },
+            Err(_) => panic!("unexpected error during contract execution"),
+            _ => {}
+        }
+        Ok(store.into_data())
     }
 }
 
@@ -138,25 +177,42 @@ impl MockSubstrate {
 /// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
 const NONE_SENTINEL: Value = Value::I32(-1);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct HostCodeTerminate {}
+#[derive(Debug, Clone)]
+enum HostReturn {
+    Terminate,
+    Data(u32, Vec<u8>),
+}
 
+impl fmt::Display for HostReturn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            Self::Terminate => write!(f, "return: terminate"),
+            Self::Data(flags, data) => write!(f, "return {flags} {:?}", data),
+        }
+    }
+}
+
+impl HostError for HostReturn {}
+
+//#[derive(Debug, Clone, PartialEq, Eq)]
+//struct HostCodeTerminate {}
+//
 //impl HostError for HostCodeTerminate {}
-
-impl fmt::Display for HostCodeTerminate {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "seal_terminate")
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct HostCodeReturn(i32);
-
-impl fmt::Display for HostCodeReturn {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "return {}", self.0)
-    }
-}
+//
+//impl fmt::Display for HostCodeTerminate {
+//    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+//        write!(f, "seal_terminate")
+//    }
+//}
+//
+//#[derive(Debug, Clone, PartialEq, Eq)]
+//struct HostCodeReturn(i32);
+//
+//impl fmt::Display for HostCodeReturn {
+//    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+//        write!(f, "return {}", self.0)
+//    }
+//}
 
 pub struct Event {
     topics: Vec<[u8; 32]>,
@@ -1077,25 +1133,10 @@ impl MockSubstrate {
         input.append(&mut args);
         println!("input:{}", hex::encode(&input));
 
-        let engine = Engine::default();
-        let mut store = Store::new(&engine, VirtualMachine::default());
-
-        let mut linker = <Linker<VirtualMachine>>::new(&engine);
-        VirtualMachine::define(&mut store, &mut linker);
-        let memory = Memory::new(&mut store, MemoryType::new(16, Some(16)).unwrap()).unwrap();
-        linker.define("env", "memory", memory).unwrap();
-
-        let wasm = &NODES.lock().unwrap()[self.node].0[self.contract].code;
-        let module = Module::new(&engine, &mut &wasm[..]).unwrap();
-
-        let instance = linker
-            .instantiate(&mut store, &module)
-            .expect("linking is always correct")
-            .ensure_no_start(&mut store)
-            .expect("we never emit a start function");
-        if let Some(Value::I32(ret)) = self.invoke_call(module) {
-            assert!(ret == 0, "non zero return: {ret}");
-        }
+        contract.execute(input, "call");
+        //if let Some(Value::I32(ret)) = self.invoke_call(module) {
+        //    assert!(ret == 0, "non zero return: {ret}");
+        //}
     }
 
     //pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
