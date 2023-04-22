@@ -7,15 +7,17 @@ use ink_metadata::InkProject;
 // Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use once_cell::sync::Lazy;
 use rand::Rng;
 use sha2::{Digest, Sha256};
 use std::mem::transmute;
+use std::sync::Mutex;
 use std::{collections::HashMap, ffi::OsStr, fmt, fmt::Write};
 use tiny_keccak::{Hasher, Keccak};
 use wasmi::core::{Trap, TrapCode};
 use wasmi::{
-    AsContext, AsContextMut, Caller, Engine, Extern, Func, Instance, Linker, Memory, Module, Store,
-    Value, WasmRet,
+    AsContext, AsContextMut, Caller, Engine, Extern, Func, Instance, Linker, Memory, MemoryType,
+    Module, Store, Value, WasmRet,
 };
 
 use solang::file_resolver::FileResolver;
@@ -28,20 +30,50 @@ use wasm_host_derive::wasm_host;
 type StorageKey = [u8; 32];
 type Account = [u8; 32];
 
+static NODES: Lazy<Mutex<MockEnv>> = Lazy::new(|| Vec::new().into());
+
+type MockEnv = Vec<(Vec<Contract>, Runtime)>;
+
+//struct Node {
+//    contracts: Vec<Contract>,
+//    vm: VirtualMachine,
+//}
+
 struct Contract {
-    account: Account,
     abi: InkProject,
-    module: Module,
+    account: Account,
+    code: Vec<u8>,
     storage: HashMap<StorageKey, Vec<u8>>,
     value: u128,
 }
 
+impl Contract {
+    fn new(abi: &str, code: &[u8], value: u128) -> Self {
+        Self {
+            abi: load_abi(abi),
+            account: blake2b(32, &[], code).as_bytes().try_into().unwrap(),
+            code: code.to_vec(),
+            storage: HashMap::new(),
+            value,
+        }
+    }
+}
+
+#[derive(Default)]
+struct Runtime {
+    debug_buffer: String,
+    call_stack: Vec<VirtualMachine>,
+    events: Vec<Event>,
+}
+
 #[derive(Default)]
 struct VirtualMachine {
-    contracts: Vec<Contract>,
-    debug_buffer: String,
-    call_stack: Vec<CallContext>,
-    events: Vec<Event>,
+    caller: Account,
+    contract: Account,
+    memory: Option<Memory>,
+    input: Vec<u8>,
+    output: Vec<u8>,
+    value: u128,
 }
 
 #[wasm_host]
@@ -57,28 +89,22 @@ fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
     Func::wrap(
         store,
         |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
-            let mem = caller.data().call_stack.last().unwrap().memory;
+            let mem = caller.data().memory.unwrap();
             let (mem, vm) = mem.data_and_store_mut(&mut caller);
             assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
             println!("seal_input");
         },
     )
 }
-struct CallContext {
-    caller: Account,
+pub struct MockSubstrate {
+    node: usize,
     contract: usize,
-    instance: Instance,
-    memory: Memory,
-    input: Vec<u8>,
-    output: Vec<u8>,
-    value: u128,
 }
 
-pub struct MockSubstrate(Store<VirtualMachine>);
-
 impl MockSubstrate {
-    pub fn output(&self) -> &[u8] {
-        &self.0.data().call_stack.last().unwrap().output
+    pub fn output(&self) -> Vec<u8> {
+        let node = &NODES.lock().unwrap()[self.node];
+        node.1.call_stack.first().unwrap().output.to_vec()
     }
 }
 
@@ -931,10 +957,38 @@ impl MockSubstrate {
         //}
     }
 
+    fn instantiate_contract(
+        &mut self,
+        contract: usize,
+        input: Vec<u8>,
+        value: u128,
+    ) -> Result<(), wasmi::Error> {
+        //let module = Module::new(self.
+        //        &self.store.data().contracts[contract].module,
+        //let instance = self
+        //    .linker
+        //    .instantiate(
+        //        &mut self.store,
+        //    )
+        //    .unwrap()
+        //    .start(&mut self.store)
+        //    .unwrap();
+        //let memory = instance.get_memory(&mut self.store, "memory").unwrap();
+        //let ctx = CallContext {
+        //    caller: rand::random(),
+        //    contract,
+        //    input,
+        //    instance,
+        //    memory,
+        //    output: vec![],
+        //    value,
+        //};
+        //self.store.data_mut().call_stack.push(ctx);
+        Ok(())
+    }
+
     pub fn set_program(&mut self, index: usize) {
-        //let code = self.programs[index].instance.clone();
-        //self.vm = VirtualMachine::new(&self.contracts[index], rand::random(), 0, todo!());
-        //self.current_contract = index;
+        self.contract = index;
     }
 
     //pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
@@ -1158,32 +1212,43 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
 }
 
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
-    let engine = Engine::default();
-    let mut store = Store::new(&engine, VirtualMachine::default());
-    let mut linker = <Linker<VirtualMachine>>::new(&engine);
-    store.data_mut().contracts = build_wasm(src, log_ret, log_err)
+    let mut storage = NODES.lock().unwrap();
+    let node = storage.len();
+
+    let contracts = build_wasm(src, log_ret, log_err)
         .iter()
-        .map(|(blob, abi)| {
-            //let module = Module::new(&engine, &mut &blob[..]).expect("valid Wasm");
-            //let instance = linker
-            //    .instantiate(&mut store, &module)
-            //    .expect("linking is always correct")
-            //    .ensure_no_start(&mut store)
-            //    .expect("we never emit a start function");
-            //let account = blake2_rfc::blake2b::blake2b(32, &[], blob)
-            //    .as_bytes()
-            //    .try_into()
-            //    .expect("hash len == account len");
-            Contract {
-                abi: load_abi(abi),
-                account: blake2b(32, &[], blob).as_bytes().try_into().unwrap(),
-                module: Module::new(&engine, &mut &blob[..]).unwrap(),
-                storage: HashMap::new(),
-                value: 0,
-            }
-        })
+        .map(|(code, abi)| Contract::new(abi, code, 0))
         .collect();
-    MockSubstrate(store)
+    storage.push((contracts, Default::default()));
+
+    MockSubstrate { node, contract: 0 }
+    //let engine = Engine::default();
+    //let mut store = Store::new(&engine, VirtualMachine::default());
+
+    //let mut linker = <Linker<VirtualMachine>>::new(&engine);
+    //VirtualMachine::define(&mut store, &mut linker);
+    //let memory = Memory::new(&mut store, MemoryType::new(16, Some(16)).unwrap()).unwrap();
+    //linker.define("env", "memory", memory).unwrap();
+
+    //store.data_mut().contracts = build_wasm(src, log_ret, log_err)
+    //    .iter()
+    //    .map(|(blob, abi)| {
+    //        //let module = Module::new(&engine, &mut &blob[..]).unwrap();
+    //        Contract {
+    //            abi: load_abi(abi),
+    //            module: Module::new(&engine, &mut &blob[..]).unwrap(),
+    //            account: blake2b(32, &[], blob).as_bytes().try_into().unwrap(),
+    //            storage: HashMap::new(),
+    //            value: 0,
+    //        }
+    //    })
+    //    .collect();
+
+    //let instance = linker
+    //    .instantiate(&mut store, &module)
+    //    .expect("linking is always correct")
+    //    .ensure_no_start(&mut store)
+    //    .expect("we never emit a start function");
 }
 
 fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {

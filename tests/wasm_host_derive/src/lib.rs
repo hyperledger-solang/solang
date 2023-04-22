@@ -49,13 +49,15 @@ impl HostFn {
         let module = &self.module;
 
         quote!(
-            linker.define(#module, #name, ::wasmi::Func::wrap(
-                store, |mut __ctx__: ::wasmi::Caller<#host_ty>, #params| {
-                    let mem = __ctx__.data().call_stack.last().unwrap().memory;
-                    let (mem, vm) = mem.data_and_store_mut(&mut __ctx__);
-                    #block
-                }
-            ));
+            linker
+                .define(#module, #name, ::wasmi::Func::wrap(
+                    store, |mut __ctx__: ::wasmi::Caller<#host_ty>, #params| {
+                        let mem = __ctx__.data().memory.unwrap();
+                        let (mem, vm) = mem.data_and_store_mut(&mut __ctx__);
+                        #block
+                    }
+                ))
+                .unwrap();
         )
     }
 }
@@ -74,9 +76,8 @@ pub fn wasm_host(_attr: TokenStream, item: TokenStream) -> TokenStream {
         fn define(
             store: &mut ::wasmi::Store<#host_ty>,
             linker: &mut ::wasmi::Linker<#host_ty>
-        ) -> Result<(),::wasmi::errors::LinkerError> {
+        ) {
             #( #impls )*
-            Ok(())
         }
     })
     .into()
