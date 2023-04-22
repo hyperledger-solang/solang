@@ -30,12 +30,11 @@ use wasm_host_derive::wasm_host;
 type StorageKey = [u8; 32];
 type Account = [u8; 32];
 type Storage = HashMap<StorageKey, Vec<u8>>;
-type MockEnv = Vec<(Vec<Contract>, Runtime)>;
 
-static NODES: Lazy<Mutex<MockEnv>> = Lazy::new(|| Vec::new().into());
-
+#[derive(Clone)]
 struct Contract {
-    abi: InkProject,
+    messages: HashMap<String, Vec<u8>>,
+    constructors: Vec<Vec<u8>>,
     account: Account,
     code: Vec<u8>,
     storage: Storage,
@@ -44,8 +43,22 @@ struct Contract {
 
 impl Contract {
     fn new(abi: &str, code: &[u8], value: u128) -> Self {
+        let abi = load_abi(abi);
+        let messages = abi
+            .spec()
+            .messages()
+            .iter()
+            .map(|f| (f.label().to_string(), f.selector().to_bytes().to_vec()))
+            .collect();
+        let constructors = abi
+            .spec()
+            .messages()
+            .iter()
+            .map(|f| f.selector().to_bytes().to_vec())
+            .collect();
         Self {
-            abi: load_abi(abi),
+            messages,
+            constructors,
             account: blake2b(32, &[], code).as_bytes().try_into().unwrap(),
             code: code.to_vec(),
             storage: HashMap::new(),
@@ -53,21 +66,12 @@ impl Contract {
         }
     }
 
-    fn selector(&self, name: &str) -> Vec<u8> {
-        self.abi
-            .spec()
-            .messages()
-            .iter()
-            .find(|f| f.label() == name)
-            .expect(&format!("function '{name}' not found"))
-            .selector()
-            .to_bytes()
-            .to_vec()
-    }
-
-    fn instantiate(&self) -> Result<(Store<VirtualMachine>, Instance), wasmi::Error> {
+    fn instantiate(
+        &self,
+        vm: VirtualMachine,
+    ) -> Result<(Store<VirtualMachine>, Instance), wasmi::Error> {
         let engine = Engine::default();
-        let mut store = Store::new(&engine, VirtualMachine::default());
+        let mut store = Store::new(&engine, vm);
 
         let mut linker = <Linker<VirtualMachine>>::new(&engine);
         VirtualMachine::define(&mut store, &mut linker);
@@ -84,8 +88,13 @@ impl Contract {
         Ok((store, instance))
     }
 
-    fn execute(&self, input: Vec<u8>, function: &str) -> Result<VirtualMachine, wasmi::Error> {
-        let (mut store, instance) = self.instantiate()?;
+    fn execute(
+        &self,
+        input: Vec<u8>,
+        function: &str,
+        vm: VirtualMachine,
+    ) -> Result<VirtualMachine, wasmi::Error> {
+        let (mut store, instance) = self.instantiate(vm)?;
         store.data_mut().input = input;
         match instance
             .get_export(&store, function)
@@ -105,17 +114,20 @@ impl Contract {
     }
 }
 
-#[derive(Default)]
-struct Runtime {
-    debug_buffer: String,
-    vm: VirtualMachine,
-    events: Vec<Event>,
-}
+//#[derive(Default)]
+//struct Runtime {
+//    debug_buffer: String,
+//    vm: VirtualMachine,
+//    events: Vec<Event>,
+//}
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct VirtualMachine {
+    contracts: Vec<Contract>,
+    debug_buffer: String,
+    events: Vec<Event>,
     caller: Account,
-    contract: Account,
+    //contract: Account,
     memory: Option<Memory>,
     input: Vec<u8>,
     output: Vec<u8>,
@@ -125,38 +137,34 @@ struct VirtualMachine {
 #[wasm_host]
 impl VirtualMachine {
     #[link(seal0)]
-    fn seal_input(&mut self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
-        assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
+    fn seal_input(vm: Self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
+        // TODO validate len_ptr
+        for i in 0..vm.input.len() {
+            mem[i + dest_ptr as usize] = vm.input[i]
+        }
         println!("seal_input");
     }
 
     #[link(seal0)]
-    fn seal_return(&mut self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32, _: i32) {
+    fn seal_return(vm: Self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32, _: i32) {
         assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
         println!("seal_return");
     }
 
     #[link(seal0)]
-    fn seal_value_transferred(&mut self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
+    fn seal_value_transferred(vm: Self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
         assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
-        println!("seal_return");
+        println!("seal_value_transferred");
     }
-    #[link(seal0)]
-    fn seal_debug_message(&mut self, mem: &mut [u8], data_ptr: i32, len: i32) {
-        let mut buf = Vec::new();
-        buf.resize(len as usize, 0u8);
 
+    #[link(seal0)]
+    fn seal_debug_message(vm: Self, mem: &mut [u8], data_ptr: i32, len: i32) {
         let msg = mem
             .get(data_ptr as usize..(data_ptr + len) as usize)
-            .unwrap();
-        //if msg.is_none() {
-        //    panic!("seal_debug_message: {e}");
-        //}
-
-        let s = String::from_utf8(msg.into()).expect("seal_debug_message: Invalid UFT8");
-
-        //println!("seal_debug_message: {s}");
-
+            .expect("seal_debug_message: invalid data range");
+        let s = std::str::from_utf8(msg).expect("seal_debug_message: Invalid UFT8");
+        println!("seal_debug_message: {s}");
+        vm.debug_buffer.push_str(s);
         Ok(0)
     }
 }
@@ -173,21 +181,21 @@ impl VirtualMachine {
 //    )
 //}
 pub struct MockSubstrate {
-    node: usize,
+    vm: VirtualMachine,
     contract: usize,
 }
 
 impl MockSubstrate {
     pub fn output(&self) -> Vec<u8> {
-        NODES.lock().unwrap()[self.node].1.vm.output.to_vec()
+        self.vm.output.clone()
     }
 
     pub fn debug_buffer(&self) -> String {
-        NODES.lock().unwrap()[self.node].1.debug_buffer.to_string()
+        self.vm.debug_buffer.to_string()
     }
 
     pub fn events(&self) -> Vec<Event> {
-        NODES.lock().unwrap()[self.node].1.events.clone()
+        self.vm.events.clone()
     }
 
     fn selector(&self, name: &str) -> [u8; 4] {
@@ -256,18 +264,6 @@ pub struct Event {
     topics: Vec<[u8; 32]>,
     data: Vec<u8>,
 }
-
-//fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
-//    Func::wrap(
-//        store,
-//        |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
-//            let mem = caller.data().call_stack.last().unwrap().memory;
-//            let (mem, vm) = mem.data_and_store_mut(&mut caller);
-//            assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
-//            println!("seal_input");
-//        },
-//    )
-//}
 
 //impl Externals for MockSubstrate {
 //    #[allow(clippy::cognitive_complexity)]
@@ -1165,14 +1161,16 @@ impl MockSubstrate {
     //}
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let contract = &NODES.lock().unwrap()[self.node].0[self.contract];
-
-        let mut input = contract.selector(name);
+        let mut input = self.vm.contracts[self.contract]
+            .messages
+            .get(name)
+            .unwrap()
+            .clone();
         input.append(&mut args);
         println!("input:{}", hex::encode(&input));
 
-        match contract.execute(input, "call") {
-            Ok(vm) => NODES.lock().unwrap()[self.node].1.vm = vm,
+        match self.vm.contracts[self.contract].execute(input, "call", self.vm.clone()) {
+            Ok(vm) => self.vm = vm,
             Err(e) => panic!("{e}"),
         }
         //if let Some(Value::I32(ret)) = self.invoke_call(module) {
@@ -1323,16 +1321,16 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
 }
 
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
-    let mut storage = NODES.lock().unwrap();
-    let node = storage.len();
-
     let contracts = build_wasm(src, log_ret, log_err)
         .iter()
         .map(|(code, abi)| Contract::new(abi, code, 0))
         .collect();
-    storage.push((contracts, Default::default()));
 
-    MockSubstrate { node, contract: 0 }
+    let mut vm = VirtualMachine::default();
+    vm.contracts = contracts;
+    vm.caller = rand::random();
+
+    MockSubstrate { vm, contract: 0 }
 }
 
 fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {
@@ -1359,15 +1357,12 @@ fn load_abi(s: &str) -> InkProject {
 
 #[cfg(test)]
 mod tests {
-    use crate::build_solidity_with_options;
+    use crate::*;
 
     #[test]
     fn it_works() {
-        let mut runtime = build_solidity_with_options(
-            r##"contract Foo { function foo() public {print("hello world");} }"##,
-            true,
-            true,
-        );
+        let mut runtime =
+            build_solidity(r##"contract Foo { function foo() public {print("hello world");} }"##);
 
         runtime.function("foo", vec![]);
     }
