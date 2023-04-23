@@ -163,18 +163,20 @@ impl Runtime {
     }
 }
 
-fn len_from_ptr(mem: &[u8], ptr: i32) -> usize {
+fn len_from_ptr(mem: &[u8], ptr: u32) -> usize {
     u32::from_le_bytes(mem[ptr as usize..ptr as usize + 4].try_into().unwrap()) as usize
 }
 
-fn write_mem(mem: &mut [u8], ptr: i32, buf: &[u8]) {
+fn write_mem(mem: &mut [u8], ptr: u32, buf: &[u8]) {
     mem[ptr as usize..ptr as usize + buf.len()].copy_from_slice(buf);
 }
+
+fn hash(mem: &mut [u8], ptr: u32, data: &[u8]) {}
 
 #[wasm_host]
 impl Runtime {
     #[link(seal0)]
-    fn seal_input(dest_ptr: i32, len_ptr: i32) -> Result<(), Trap> {
+    fn seal_input(dest_ptr: u32, len_ptr: u32) -> Result<(), Trap> {
         assert!(len_from_ptr(mem, len_ptr) >= vm.input.len());
         println!("seal_input: {}", hex::encode(&vm.input));
 
@@ -185,14 +187,14 @@ impl Runtime {
     }
 
     #[link(seal0)]
-    fn seal_return(flags: i32, data_ptr: i32, data_len: i32) -> Result<(), Trap> {
+    fn seal_return(flags: u32, data_ptr: u32, data_len: u32) -> Result<(), Trap> {
         let output = mem[data_ptr as usize..(data_ptr + data_len) as usize].to_vec();
         println!("seal_return: {flags} {}", hex::encode(&output));
         Err(Trap::from(HostReturn::Data(flags as u32, output)))
     }
 
     #[link(seal0)]
-    fn seal_value_transferred(dest_ptr: i32, out_len_ptr: i32) -> Result<(), Trap> {
+    fn seal_value_transferred(dest_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let value = vm.value.to_le_bytes();
         assert!(len_from_ptr(mem, out_len_ptr) >= value.len());
         println!("seal_value_transferred: {}", vm.value);
@@ -204,20 +206,21 @@ impl Runtime {
     }
 
     #[link(seal0)]
-    fn seal_debug_message(data_ptr: i32, len: i32) -> Result<i32, Trap> {
+    fn seal_debug_message(data_ptr: u32, len: u32) -> Result<i32, Trap> {
         let buf = &mem[data_ptr as usize..(data_ptr + len) as usize];
         let msg = std::str::from_utf8(buf).expect("seal_debug_message: Invalid UFT8");
         vm.debug_buffer.push_str(msg);
+
         println!("seal_debug_message: {msg}");
         Ok(0)
     }
 
     #[link(seal1)]
     fn seal_get_storage(
-        key_ptr: i32,
-        key_len: i32,
-        out_ptr: i32,
-        out_len_ptr: i32,
+        key_ptr: u32,
+        key_len: u32,
+        out_ptr: u32,
+        out_len_ptr: u32,
     ) -> Result<i32, Trap> {
         let key = StorageKey::try_from(&mem[key_ptr as usize..(key_ptr + key_len) as usize])
             .expect("storage key size must be 32 bytes");
@@ -235,10 +238,10 @@ impl Runtime {
 
     #[link(seal2)]
     fn seal_set_storage(
-        key_ptr: i32,
-        key_len: i32,
-        value_ptr: i32,
-        value_len: i32,
+        key_ptr: u32,
+        key_len: u32,
+        value_ptr: u32,
+        value_len: u32,
     ) -> Result<i32, Trap> {
         let key = StorageKey::try_from(&mem[key_ptr as usize..(key_ptr + key_len) as usize])
             .expect("storage key size must be 32 bytes");
@@ -252,7 +255,7 @@ impl Runtime {
     }
 
     #[link(seal1)]
-    fn seal_clear_storage(key_ptr: i32, key_len: i32) -> Result<i32, Trap> {
+    fn seal_clear_storage(key_ptr: u32, key_len: u32) -> Result<i32, Trap> {
         let key = StorageKey::try_from(&mem[key_ptr as usize..(key_ptr + key_len) as usize])
             .expect("storage key size must be 32 bytes");
         println!("clear_storage: {}", hex::encode(key));
@@ -261,6 +264,36 @@ impl Runtime {
             Some(value) => Ok(value.len() as i32),
             _ => Ok(-1), // In pallets contract, u32::MAX = -1 is the "none sentinel"
         }
+    }
+
+    #[link(seal0)]
+    fn seal_hash_keccak_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
+        let mut hasher = Keccak::v256();
+        hasher.update(&mem[input_ptr as usize..(input_ptr + input_len) as usize]);
+        hasher.finalize(&mut mem[output_ptr as usize..(output_ptr + 32) as usize]);
+        Ok(())
+    }
+
+    #[link(seal0)]
+    fn seal_hash_sha2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
+        let mut hasher = Sha256::new();
+        hasher.update(&mem[input_ptr as usize..(input_ptr + input_len) as usize]);
+        write_mem(mem, output_ptr, &hasher.finalize());
+        Ok(())
+    }
+
+    #[link(seal0)]
+    fn seal_hash_blake2_128(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
+        let data = &mem[input_ptr as usize..(input_ptr + input_len) as usize];
+        write_mem(mem, output_ptr, blake2b(16, &[], data).as_bytes());
+        Ok(())
+    }
+
+    #[link(seal0)]
+    fn seal_hash_blake2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
+        let data = &mem[input_ptr as usize..(input_ptr + input_len) as usize];
+        write_mem(mem, output_ptr, blake2b(32, &[], data).as_bytes());
+        Ok(())
     }
 }
 
