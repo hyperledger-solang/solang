@@ -9,6 +9,7 @@ struct HostFn {
     module: String,
     params: TokenStream2,
     block: TokenStream2,
+    returns: TokenStream2,
 }
 
 impl HostFn {
@@ -25,20 +26,12 @@ impl HostFn {
             .find(|attr| attr.path().get_ident().unwrap() == "link")
             .map(|attr| attr.parse_args::<Ident>().unwrap().to_string())?;
 
-        // The first 2 inputs of the impl function do not belong to the wasm host function
-        let params = item
-            .sig
-            .inputs
-            .iter()
-            .skip(2)
-            .collect::<Punctuated<_, Comma>>()
-            .into_token_stream();
-
         Some(HostFn {
             name: item.sig.ident.to_string(),
             module,
-            params,
-            block: item.block.clone().into_token_stream(),
+            params: item.sig.inputs.to_token_stream(),
+            block: item.block.to_token_stream(),
+            returns: item.sig.output.to_token_stream(),
         })
     }
 
@@ -47,11 +40,12 @@ impl HostFn {
         let params = &self.params;
         let name = &self.name;
         let module = &self.module;
+        let returns = &self.returns;
 
         quote!(
             linker
                 .define(#module, #name, ::wasmi::Func::wrap(
-                    &mut store, |mut __ctx__: ::wasmi::Caller<#host_ty>, #params| {
+                    &mut store, |mut __ctx__: ::wasmi::Caller<#host_ty>, #params| #returns {
                         let mem = __ctx__.data().memory.unwrap();
                         let (mem, vm) = mem.data_and_store_mut(&mut __ctx__);
                         #block

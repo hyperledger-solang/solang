@@ -16,8 +16,8 @@ use std::{collections::HashMap, ffi::OsStr, fmt, fmt::Write};
 use tiny_keccak::{Hasher, Keccak};
 use wasmi::core::{HostError, Trap, TrapCode};
 use wasmi::{
-    AsContext, AsContextMut, Caller, Engine, Extern, Func, Instance, Linker, Memory, MemoryType,
-    Module, Store, Value, WasmRet,
+    AsContext, AsContextMut, Caller, Engine, Error, Extern, Func, Instance, Linker, Memory,
+    MemoryType, Module, Store, Value, WasmRet,
 };
 
 use solang::file_resolver::FileResolver;
@@ -66,7 +66,7 @@ impl Contract {
         }
     }
 
-    fn instantiate(&self, vm: Runtime) -> Result<(Store<Runtime>, Instance), wasmi::Error> {
+    fn instantiate(&self, vm: Runtime) -> Result<(Store<Runtime>, Instance), Error> {
         let engine = Engine::default();
         let mut store = Store::new(&engine, vm);
 
@@ -85,7 +85,7 @@ impl Contract {
         Ok((store, instance))
     }
 
-    fn execute(&self, function: &str, vm: Runtime) -> Result<Runtime, wasmi::Error> {
+    fn execute(&self, function: &str, vm: Runtime) -> Result<Runtime, Error> {
         let (mut store, instance) = self.instantiate(vm)?;
         match instance
             .get_export(&store, function)
@@ -93,9 +93,9 @@ impl Contract {
             .expect(&format!("contract does not export '{function}'"))
             .call(&mut store, &[], &mut [])
         {
-            Err(wasmi::Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
-                Some(HostReturn::Data(_, data)) => store.data_mut().output = data,
-                _ => {} // For now, we do not care about reverts
+            Err(Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
+                Some(HostReturn::Data(_, data)) => store.data_mut().output = data.clone(),
+                _ => panic!("contract trapped"),
             },
             Err(_) => panic!("unexpected error during contract execution"),
             Ok(_) => {}
@@ -118,13 +118,33 @@ struct Runtime {
 }
 
 impl Runtime {
-    fn new(contracts: Vec<Contract>, input: Vec<u8>) -> Self {
+    fn new(contracts: Vec<Contract>) -> Self {
         Self {
             contracts,
-            input,
             caller: rand::random(),
             ..Default::default()
         }
+    }
+
+    //fn invoke_contract(mut self, no: usize, name: &str, mut args: Vec<u8>) -> Self {
+    //    let mut contract = self.contracts[no].clone();
+    //    self.input = contract
+    //        .messages
+    //        .remove(name)
+    //        .expect(&format!("contract {no} has no function '{name}'"));
+    //    self.input.append(&mut args);
+    //    println!("input:{}", hex::encode(&self.input));
+    //    contract.execute("call", self).unwrap()
+    //}
+
+    fn invoke(mut self, account: Account, input: Vec<u8>, export: &str) -> Result<Self, Error> {
+        self.input = input;
+        self.contracts
+            .iter()
+            .find(|contract| contract.account == account)
+            .expect(&format!("contract {} not found", hex::encode(account)))
+            .clone()
+            .execute(export, self)
     }
 }
 
@@ -139,27 +159,30 @@ fn write_mem(mem: &mut [u8], ptr: i32, buf: &[u8]) {
 #[wasm_host]
 impl Runtime {
     #[link(seal0)]
-    fn seal_input(vm: Self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
+    fn seal_input(dest_ptr: i32, len_ptr: i32) -> Result<(), Trap> {
         assert!(len_from_ptr(mem, len_ptr) >= vm.input.len());
         mem[dest_ptr as usize..dest_ptr as usize + vm.input.len()].copy_from_slice(&vm.input);
         println!("seal_input: {}", hex::encode(&vm.input));
+        Ok(())
     }
 
     #[link(seal0)]
-    fn seal_return(vm: Self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32, _: i32) {
-        vm.output = mem[dest_ptr as usize..len_from_ptr(mem, len_ptr)].to_vec();
-        println!("seal_return: {}", hex::encode(&vm.output));
+    fn seal_return(flags: i32, data_ptr: i32, data_len: i32) -> Result<(), Trap> {
+        let output = mem[data_ptr as usize..(data_ptr + data_len) as usize].to_vec();
+        println!("seal_return: {flags} {}", hex::encode(&output));
+        Err(Trap::from(HostReturn::Data(flags as u32, output)))
     }
 
     #[link(seal0)]
-    fn seal_value_transferred(vm: Self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
+    fn seal_value_transferred(dest_ptr: i32, len_ptr: i32) -> Result<(), Trap> {
         let value = vm.value.to_le_bytes();
         assert!(len_from_ptr(mem, len_ptr) >= value.len());
         write_mem(mem, dest_ptr, &value);
+        Ok(())
     }
 
     #[link(seal0)]
-    fn seal_debug_message(vm: Self, mem: &mut [u8], data_ptr: i32, len: i32) {
+    fn seal_debug_message(data_ptr: i32, len: i32) -> Result<i32, Trap> {
         let buf = &mem[data_ptr as usize..(data_ptr + len) as usize];
         let msg = std::str::from_utf8(buf).expect("seal_debug_message: Invalid UFT8");
         println!("seal_debug_message: {msg}");
@@ -168,23 +191,27 @@ impl Runtime {
     }
 }
 
+#[derive(Default)]
 pub struct MockSubstrate {
-    vm: Runtime,
-    contract: usize,
+    contracts: Vec<Contract>,
+    pub contract: usize,
+    pub output: Vec<u8>,
+    pub debug_buffer: String,
+    pub events: Vec<Event>,
 }
 
 impl MockSubstrate {
-    pub fn output(&self) -> Vec<u8> {
-        self.vm.output.clone()
-    }
+    //pub fn output(&self) -> Vec<u8> {
+    //    self.vm.output.clone()
+    //}
 
-    pub fn debug_buffer(&self) -> String {
-        self.vm.debug_buffer.to_string()
-    }
+    //pub fn debug_buffer(&self) -> String {
+    //    self.vm.debug_buffer.to_string()
+    //}
 
-    pub fn events(&self) -> Vec<Event> {
-        self.vm.events.clone()
-    }
+    //pub fn events(&self) -> Vec<Event> {
+    //    self.vm.events.clone()
+    //}
 
     fn selector(&self, name: &str) -> [u8; 4] {
         todo!()
@@ -1067,7 +1094,7 @@ impl MockSubstrate {
         contract: usize,
         input: Vec<u8>,
         value: u128,
-    ) -> Result<(), wasmi::Error> {
+    ) -> Result<(), Error> {
         //let module = Module::new(self.
         //        &self.store.data().contracts[contract].module,
         //let instance = self
@@ -1148,22 +1175,22 @@ impl MockSubstrate {
     //    }
     //}
 
-    pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.vm.contracts[self.contract]
-            .messages
-            .get(name)
-            .unwrap()
-            .clone();
+    pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
+        let mut input = self.contracts[self.contract].constructors[index].clone();
         input.append(&mut args);
-        println!("input:{}", hex::encode(&input));
+        self.contracts = Runtime::new(self.contracts.clone())
+            .invoke(self.contracts[self.contract].account, input, "deploy")
+            .unwrap()
+            .contracts;
+    }
 
-        let vm = Runtime::new(self.vm.contracts.clone(), input);
-        self.vm = self.vm.contracts[self.contract]
-            .execute("call", vm)
-            .unwrap();
-        //if let Some(Value::I32(ret)) = self.invoke_call(module) {
-        //    assert!(ret == 0, "non zero return: {ret}");
-        //}
+    pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
+        let mut input = self.contracts[self.contract].messages[name].clone();
+        input.append(&mut args);
+        self.contracts = Runtime::new(self.contracts.clone())
+            .invoke(self.contracts[self.contract].account, input, "call")
+            .unwrap()
+            .contracts;
     }
 
     //pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
@@ -1313,8 +1340,11 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
         .iter()
         .map(|(code, abi)| Contract::new(abi, code, 0))
         .collect();
-    let vm = Runtime::new(contracts, vec![]);
-    MockSubstrate { vm, contract: 0 }
+
+    MockSubstrate {
+        contracts,
+        ..Default::default()
+    }
 }
 
 fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {
