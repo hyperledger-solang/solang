@@ -66,15 +66,12 @@ impl Contract {
         }
     }
 
-    fn instantiate(
-        &self,
-        vm: VirtualMachine,
-    ) -> Result<(Store<VirtualMachine>, Instance), wasmi::Error> {
+    fn instantiate(&self, vm: Runtime) -> Result<(Store<Runtime>, Instance), wasmi::Error> {
         let engine = Engine::default();
         let mut store = Store::new(&engine, vm);
 
-        let mut linker = <Linker<VirtualMachine>>::new(&engine);
-        VirtualMachine::define(&mut store, &mut linker);
+        let mut linker = <Linker<Runtime>>::new(&engine);
+        Runtime::define(&mut store, &mut linker);
         let memory = Memory::new(&mut store, MemoryType::new(16, Some(16)).unwrap()).unwrap();
         linker.define("env", "memory", memory).unwrap();
         store.data_mut().memory = Some(memory);
@@ -88,14 +85,8 @@ impl Contract {
         Ok((store, instance))
     }
 
-    fn execute(
-        &self,
-        input: Vec<u8>,
-        function: &str,
-        vm: VirtualMachine,
-    ) -> Result<VirtualMachine, wasmi::Error> {
+    fn execute(&self, function: &str, vm: Runtime) -> Result<Runtime, wasmi::Error> {
         let (mut store, instance) = self.instantiate(vm)?;
-        store.data_mut().input = input;
         match instance
             .get_export(&store, function)
             .and_then(|export| export.into_func())
@@ -103,26 +94,18 @@ impl Contract {
             .call(&mut store, &[], &mut [])
         {
             Err(wasmi::Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
-                // TODO handle reverts
                 Some(HostReturn::Data(_, data)) => store.data_mut().output = data,
-                _ => {}
+                _ => {} // For now, we do not care about reverts
             },
             Err(_) => panic!("unexpected error during contract execution"),
-            _ => {}
+            Ok(_) => {}
         }
         Ok(store.into_data())
     }
 }
 
-//#[derive(Default)]
-//struct Runtime {
-//    debug_buffer: String,
-//    vm: VirtualMachine,
-//    events: Vec<Event>,
-//}
-
 #[derive(Default, Clone)]
-struct VirtualMachine {
+struct Runtime {
     contracts: Vec<Contract>,
     debug_buffer: String,
     events: Vec<Event>,
@@ -134,54 +117,59 @@ struct VirtualMachine {
     value: u128,
 }
 
+impl Runtime {
+    fn new(contracts: Vec<Contract>, input: Vec<u8>) -> Self {
+        Self {
+            contracts,
+            input,
+            caller: rand::random(),
+            ..Default::default()
+        }
+    }
+}
+
+fn len_from_ptr(mem: &[u8], ptr: i32) -> usize {
+    u32::from_le_bytes(mem[ptr as usize..ptr as usize + 4].try_into().unwrap()) as usize
+}
+
+fn write_mem(mem: &mut [u8], ptr: i32, buf: &[u8]) {
+    mem[ptr as usize..ptr as usize + buf.len()].copy_from_slice(buf);
+}
+
 #[wasm_host]
-impl VirtualMachine {
+impl Runtime {
     #[link(seal0)]
     fn seal_input(vm: Self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
-        // TODO validate len_ptr
-        for i in 0..vm.input.len() {
-            mem[i + dest_ptr as usize] = vm.input[i]
-        }
-        println!("seal_input");
+        assert!(len_from_ptr(mem, len_ptr) >= vm.input.len());
+        mem[dest_ptr as usize..dest_ptr as usize + vm.input.len()].copy_from_slice(&vm.input);
+        println!("seal_input: {}", hex::encode(&vm.input));
     }
 
     #[link(seal0)]
     fn seal_return(vm: Self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32, _: i32) {
-        assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
-        println!("seal_return");
+        vm.output = mem[dest_ptr as usize..len_from_ptr(mem, len_ptr)].to_vec();
+        println!("seal_return: {}", hex::encode(&vm.output));
     }
 
     #[link(seal0)]
     fn seal_value_transferred(vm: Self, mem: &mut [u8], dest_ptr: i32, len_ptr: i32) {
-        assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
-        println!("seal_value_transferred");
+        let value = vm.value.to_le_bytes();
+        assert!(len_from_ptr(mem, len_ptr) >= value.len());
+        write_mem(mem, dest_ptr, &value);
     }
 
     #[link(seal0)]
     fn seal_debug_message(vm: Self, mem: &mut [u8], data_ptr: i32, len: i32) {
-        let msg = mem
-            .get(data_ptr as usize..(data_ptr + len) as usize)
-            .expect("seal_debug_message: invalid data range");
-        let s = std::str::from_utf8(msg).expect("seal_debug_message: Invalid UFT8");
-        println!("seal_debug_message: {s}");
-        vm.debug_buffer.push_str(s);
+        let buf = &mem[data_ptr as usize..(data_ptr + len) as usize];
+        let msg = std::str::from_utf8(buf).expect("seal_debug_message: Invalid UFT8");
+        println!("seal_debug_message: {msg}");
+        vm.debug_buffer.push_str(msg);
         Ok(0)
     }
 }
 
-//fn seal_input(store: impl AsContextMut<UserState = VirtualMachine>) -> Func {
-//    Func::wrap(
-//        store,
-//        |mut caller: Caller<'_, VirtualMachine>, dest_ptr: i32, len_ptr: i32| {
-//            let mem = caller.data().memory.unwrap();
-//            let (mem, vm) = mem.data_and_store_mut(&mut caller);
-//            assert!(len_ptr.is_positive() && len_ptr as usize <= mem.len() - 4);
-//            println!("seal_input");
-//        },
-//    )
-//}
 pub struct MockSubstrate {
-    vm: VirtualMachine,
+    vm: Runtime,
     contract: usize,
 }
 
@@ -1169,10 +1157,10 @@ impl MockSubstrate {
         input.append(&mut args);
         println!("input:{}", hex::encode(&input));
 
-        match self.vm.contracts[self.contract].execute(input, "call", self.vm.clone()) {
-            Ok(vm) => self.vm = vm,
-            Err(e) => panic!("{e}"),
-        }
+        let vm = Runtime::new(self.vm.contracts.clone(), input);
+        self.vm = self.vm.contracts[self.contract]
+            .execute("call", vm)
+            .unwrap();
         //if let Some(Value::I32(ret)) = self.invoke_call(module) {
         //    assert!(ret == 0, "non zero return: {ret}");
         //}
@@ -1325,11 +1313,7 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
         .iter()
         .map(|(code, abi)| Contract::new(abi, code, 0))
         .collect();
-
-    let mut vm = VirtualMachine::default();
-    vm.contracts = contracts;
-    vm.caller = rand::random();
-
+    let vm = Runtime::new(contracts, vec![]);
     MockSubstrate { vm, contract: 0 }
 }
 
@@ -1361,9 +1345,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let mut runtime =
-            build_solidity(r##"contract Foo { function foo() public {print("hello world");} }"##);
-
-        runtime.function("foo", vec![]);
+        build_solidity(r##"contract Foo { function foo() public {print("hello world");} }"##)
+            .function("foo", vec![]);
     }
 }
