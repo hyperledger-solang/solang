@@ -93,14 +93,17 @@ impl Contract {
             .expect(&format!("contract does not export '{function}'"))
             .call(&mut store, &[], &mut [])
         {
+            Err(Error::Trap(trap)) if trap.trap_code().is_some() => Err(Error::Trap(trap)),
             Err(Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
-                Some(HostReturn::Data(_, data)) => store.data_mut().output = data.clone(),
-                _ => panic!("contract trapped"),
+                Some(HostReturn::Data(_, data)) => {
+                    store.data_mut().output = data;
+                    Ok(store.into_data())
+                }
+                _ => panic!("contract execution stopped with unexpected trap"),
             },
-            Err(_) => panic!("unexpected error during contract execution"),
-            Ok(_) => {}
+            Err(e) => panic!("unexpected error during contract execution: {e}"),
+            Ok(_) => Ok(store.into_data()),
         }
-        Ok(store.into_data())
     }
 }
 
