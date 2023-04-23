@@ -3,6 +3,7 @@
 /// Mock runtime for the contracts pallet.
 use blake2_rfc::blake2b::blake2b;
 use contract_metadata::ContractMetadata;
+use funty::Numeric;
 use ink_metadata::InkProject;
 // Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
@@ -35,6 +36,7 @@ type Storage = HashMap<StorageKey, Vec<u8>>;
 struct Contract {
     messages: HashMap<String, Vec<u8>>,
     constructors: Vec<Vec<u8>>,
+    code_hash: [u8; 32],
     account: Account,
     code: Vec<u8>,
     storage: Storage,
@@ -59,7 +61,8 @@ impl Contract {
         Self {
             messages,
             constructors,
-            account: blake2b(32, &[], code).as_bytes().try_into().unwrap(),
+            code_hash: blake2b(32, &[], code).as_bytes().try_into().unwrap(),
+            account: rand::random(),
             code: code.to_vec(),
             storage: HashMap::new(),
             value,
@@ -148,10 +151,11 @@ impl Runtime {
         value: u128,
     ) -> Result<Self, Error> {
         for (n, contract) in self.contracts.iter().enumerate() {
-            if contract.account == account {
+            if contract.code_hash == account {
                 self.input = input;
                 self.contract = n;
                 self.value = value;
+                self.caller = rand::random();
                 return contract.clone().execute(export, self);
             }
         }
@@ -172,8 +176,11 @@ impl Runtime {
     #[link(seal0)]
     fn seal_input(dest_ptr: i32, len_ptr: i32) -> Result<(), Trap> {
         assert!(len_from_ptr(mem, len_ptr) >= vm.input.len());
-        write_mem(mem, dest_ptr, &vm.input);
         println!("seal_input: {}", hex::encode(&vm.input));
+
+        write_mem(mem, dest_ptr, &vm.input);
+        write_mem(mem, len_ptr, &(vm.input.len() as u32).to_le_bytes());
+
         Ok(())
     }
 
@@ -188,8 +195,11 @@ impl Runtime {
     fn seal_value_transferred(dest_ptr: i32, out_len_ptr: i32) -> Result<(), Trap> {
         let value = vm.value.to_le_bytes();
         assert!(len_from_ptr(mem, out_len_ptr) >= value.len());
-        write_mem(mem, dest_ptr, &value);
         println!("seal_value_transferred: {}", vm.value);
+
+        write_mem(mem, dest_ptr, &value);
+        write_mem(mem, out_len_ptr, &(value.len() as u32).to_le_bytes());
+
         Ok(())
     }
 
@@ -217,11 +227,8 @@ impl Runtime {
         };
         println!("get_storage: {}={}", hex::encode(key), hex::encode(&value));
 
-        let out_len = len_from_ptr(mem, out_len_ptr);
-        write_mem(mem, out_ptr, &value);
-
-        let value_len = &(value.len() as u32).to_le_bytes();
-        write_mem(mem, out_len_ptr, value_len);
+        write_mem(mem, out_ptr, value);
+        write_mem(mem, out_len_ptr, &(value.len() as u32).to_le_bytes());
 
         Ok(0)
     }
@@ -239,6 +246,18 @@ impl Runtime {
         println!("set_storage: {}={}", hex::encode(key), hex::encode(&value));
 
         match vm.contracts[vm.contract].storage.insert(key, value) {
+            Some(value) => Ok(value.len() as i32),
+            _ => Ok(-1), // In pallets contract, u32::MAX = -1 is the "none sentinel"
+        }
+    }
+
+    #[link(seal1)]
+    fn seal_clear_storage(key_ptr: i32, key_len: i32) -> Result<i32, Trap> {
+        let key = StorageKey::try_from(&mem[key_ptr as usize..(key_ptr + key_len) as usize])
+            .expect("storage key size must be 32 bytes");
+        println!("clear_storage: {}", hex::encode(key));
+
+        match vm.contracts[vm.contract].storage.remove(&key) {
             Some(value) => Ok(value.len() as i32),
             _ => Ok(-1), // In pallets contract, u32::MAX = -1 is the "none sentinel"
         }
@@ -1232,19 +1251,25 @@ impl MockSubstrate {
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
         let mut input = self.contracts[self.contract].constructors[index].clone();
         input.append(&mut args);
-        self.contracts = Runtime::new(self.contracts.clone())
-            .invoke(self.contracts[self.contract].account, input, "deploy", 1)
-            .unwrap()
-            .contracts;
+        let result = Runtime::new(self.contracts.clone())
+            .invoke(self.contracts[self.contract].code_hash, input, "deploy", 1)
+            .unwrap();
+        self.contracts = result.contracts;
+        self.output = result.output;
+        self.debug_buffer = result.debug_buffer;
+        self.events = result.events;
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.contracts[self.contract].messages[name].clone();
         input.append(&mut args);
-        self.contracts = Runtime::new(self.contracts.clone())
-            .invoke(self.contracts[self.contract].account, input, "call", 0)
-            .unwrap()
-            .contracts;
+        let result = Runtime::new(self.contracts.clone())
+            .invoke(self.contracts[self.contract].code_hash, input, "call", 0)
+            .unwrap();
+        self.contracts = result.contracts;
+        self.output = result.output;
+        self.debug_buffer = result.debug_buffer;
+        self.events = result.events;
     }
 
     //pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
@@ -1440,7 +1465,7 @@ mod tests {
                     u = _u;
                 }
 
-                function foo() public view returns(uint64) {
+                function foo(uint8 i) public view returns(uint64) {
                     print("hello world");
                     return u;
                 }
@@ -1448,7 +1473,7 @@ mod tests {
         );
 
         runtime.constructor(0, 1337u64.encode());
-        runtime.function("foo", vec![]);
+        runtime.function("foo", vec![0x00]);
         assert_eq!(runtime.output, 1337u64.encode());
     }
 }
