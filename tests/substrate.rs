@@ -37,7 +37,7 @@ struct Contract {
     messages: HashMap<String, Vec<u8>>,
     constructors: Vec<Vec<u8>>,
     code_hash: [u8; 32],
-    account: Account,
+    address: Account,
     code: Vec<u8>,
     storage: Storage,
     value: u128,
@@ -62,7 +62,7 @@ impl Contract {
             messages,
             constructors,
             code_hash: blake2b(32, &[], code).as_bytes().try_into().unwrap(),
-            account: rand::random(),
+            address: rand::random(),
             code: code.to_vec(),
             storage: HashMap::new(),
             value,
@@ -102,6 +102,7 @@ impl Contract {
                     store.data_mut().output = data;
                     Ok(store.into_data())
                 }
+                Some(HostReturn::Terminate) => Ok(store.into_data()),
                 _ => panic!("contract execution stopped with unexpected trap"),
             },
             Err(e) => panic!("unexpected error during contract execution: {e}"),
@@ -155,7 +156,6 @@ impl Runtime {
                 self.input = input;
                 self.contract = n;
                 self.value = value;
-                self.caller = rand::random();
                 return contract.clone().execute(export, self);
             }
         }
@@ -293,6 +293,68 @@ impl Runtime {
     fn seal_hash_blake2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let data = &mem[input_ptr as usize..(input_ptr + input_len) as usize];
         write_mem(mem, output_ptr, blake2b(32, &[], data).as_bytes());
+        Ok(())
+    }
+
+    #[link(seal1)]
+    fn seal_call(
+        _flags: u32,
+        callee_ptr: u32,
+        _gas: u64,
+        value_ptr: u32,
+        input_ptr: u32,
+        input_len: u32,
+        output_ptr: u32,
+        output_len_ptr: u32,
+    ) -> Result<i32, Trap> {
+        let callee =
+            Account::try_from(&mem[callee_ptr as usize..(callee_ptr + 32) as usize]).unwrap();
+
+        let value = &mem[value_ptr as usize..(value_ptr + 16) as usize];
+        let value = u128::from_le_bytes(value.try_into().unwrap());
+        if value > vm.contracts[vm.contract].value {
+            return Ok(5);
+        }
+        let input = mem[input_ptr as usize..(input_ptr + input_len) as usize].to_vec();
+
+        let (index, _) = vm
+            .contracts
+            .iter()
+            .enumerate()
+            .find(|(_, contract)| contract.address == callee)
+            .expect(&format!("invalid callee address {}", hex::encode(callee)));
+        let mut runtime = vm.clone();
+        runtime.contract = index - 1;
+        runtime.caller = vm.contracts[vm.contract].address;
+        let runtime = match runtime.invoke(callee, input, "call", value) {
+            Ok(runtime) => runtime,
+            Err(_) => return Ok(1),
+        };
+
+        vm.contracts[vm.contract].value -= value;
+        vm.contracts = runtime.contracts;
+        vm.debug_buffer = runtime.debug_buffer;
+        vm.events = runtime.events;
+
+        if output_len_ptr != u32::MAX {
+            assert!(len_from_ptr(mem, output_len_ptr) >= runtime.output.len());
+            write_mem(mem, output_ptr, &runtime.output);
+            let actual_length = &(runtime.output.len() as u32).to_le_bytes();
+            write_mem(mem, output_len_ptr, actual_length);
+        }
+
+        Ok(0)
+    }
+
+    #[link(seal0)]
+    fn instantiation_nonce() -> Result<u64, Trap> {
+        Ok(vm.contracts.len() as u64)
+    }
+
+    #[link(seal0)]
+    fn seal_minimum_balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+        assert!(len_from_ptr(mem, out_len_ptr) >= 16);
+        write_mem(mem, out_ptr, &500usize.to_le_bytes());
         Ok(())
     }
 }
@@ -1492,21 +1554,30 @@ mod tests {
         let mut runtime = build_solidity(
             r##"
             contract Foo {
-                uint64 u;
-                
+                uint64 public u;
+
                 constructor(uint64 _u) {
                     u = _u;
                 }
 
-                function foo(uint8 i) public view returns(uint64) {
+                function foo() public view returns(uint64) {
                     print("hello world");
                     return u;
                 }
+            }
+
+            contract Bar {
+                    function bar() public returns(uint64) {
+                            Foo foo = new Foo(123);
+                            return foo.u();
+                    }
             }"##,
         );
 
-        runtime.constructor(0, 1337u64.encode());
-        runtime.function("foo", vec![0x00]);
+        //runtime.constructor(0, 1337u64.encode());
+        //runtime.function("foo", vec![0x00]);
+        runtime.set_program(1);
+        runtime.function("bar", vec![]);
         assert_eq!(runtime.output, 1337u64.encode());
     }
 }
