@@ -52,10 +52,10 @@ impl Contract {
             .collect();
         let constructors = abi
             .spec()
-            .messages()
+            .constructors()
             .iter()
             .map(|f| f.selector().to_bytes().to_vec())
-            .collect();
+            .collect::<Vec<_>>();
         Self {
             messages,
             constructors,
@@ -113,7 +113,7 @@ struct Runtime {
     debug_buffer: String,
     events: Vec<Event>,
     caller: Account,
-    //contract: Account,
+    contract: usize,
     memory: Option<Memory>,
     input: Vec<u8>,
     output: Vec<u8>,
@@ -140,14 +140,22 @@ impl Runtime {
     //    contract.execute("call", self).unwrap()
     //}
 
-    fn invoke(mut self, account: Account, input: Vec<u8>, export: &str) -> Result<Self, Error> {
-        self.input = input;
-        self.contracts
-            .iter()
-            .find(|contract| contract.account == account)
-            .expect(&format!("contract {} not found", hex::encode(account)))
-            .clone()
-            .execute(export, self)
+    fn invoke(
+        mut self,
+        account: Account,
+        input: Vec<u8>,
+        export: &str,
+        value: u128,
+    ) -> Result<Self, Error> {
+        for (n, contract) in self.contracts.iter().enumerate() {
+            if contract.account == account {
+                self.input = input;
+                self.contract = n;
+                self.value = value;
+                return contract.clone().execute(export, self);
+            }
+        }
+        panic!("contract {} not found", hex::encode(account))
     }
 }
 
@@ -164,7 +172,7 @@ impl Runtime {
     #[link(seal0)]
     fn seal_input(dest_ptr: i32, len_ptr: i32) -> Result<(), Trap> {
         assert!(len_from_ptr(mem, len_ptr) >= vm.input.len());
-        mem[dest_ptr as usize..dest_ptr as usize + vm.input.len()].copy_from_slice(&vm.input);
+        write_mem(mem, dest_ptr, &vm.input);
         println!("seal_input: {}", hex::encode(&vm.input));
         Ok(())
     }
@@ -177,10 +185,11 @@ impl Runtime {
     }
 
     #[link(seal0)]
-    fn seal_value_transferred(dest_ptr: i32, len_ptr: i32) -> Result<(), Trap> {
+    fn seal_value_transferred(dest_ptr: i32, out_len_ptr: i32) -> Result<(), Trap> {
         let value = vm.value.to_le_bytes();
-        assert!(len_from_ptr(mem, len_ptr) >= value.len());
+        assert!(len_from_ptr(mem, out_len_ptr) >= value.len());
         write_mem(mem, dest_ptr, &value);
+        println!("seal_value_transferred: {}", vm.value);
         Ok(())
     }
 
@@ -188,9 +197,51 @@ impl Runtime {
     fn seal_debug_message(data_ptr: i32, len: i32) -> Result<i32, Trap> {
         let buf = &mem[data_ptr as usize..(data_ptr + len) as usize];
         let msg = std::str::from_utf8(buf).expect("seal_debug_message: Invalid UFT8");
-        println!("seal_debug_message: {msg}");
         vm.debug_buffer.push_str(msg);
+        println!("seal_debug_message: {msg}");
         Ok(0)
+    }
+
+    #[link(seal1)]
+    fn seal_get_storage(
+        key_ptr: i32,
+        key_len: i32,
+        out_ptr: i32,
+        out_len_ptr: i32,
+    ) -> Result<i32, Trap> {
+        let key = StorageKey::try_from(&mem[key_ptr as usize..(key_ptr + key_len) as usize])
+            .expect("storage key size must be 32 bytes");
+        let value = match vm.contracts[vm.contract].storage.get(&key) {
+            Some(value) => value,
+            _ => return Ok(3), // In pallet-contracts, ReturnCode::KeyNotFound == 3
+        };
+        println!("get_storage: {}={}", hex::encode(key), hex::encode(&value));
+
+        let out_len = len_from_ptr(mem, out_len_ptr);
+        write_mem(mem, out_ptr, &value);
+
+        let value_len = &(value.len() as u32).to_le_bytes();
+        write_mem(mem, out_len_ptr, value_len);
+
+        Ok(0)
+    }
+
+    #[link(seal2)]
+    fn seal_set_storage(
+        key_ptr: i32,
+        key_len: i32,
+        value_ptr: i32,
+        value_len: i32,
+    ) -> Result<i32, Trap> {
+        let key = StorageKey::try_from(&mem[key_ptr as usize..(key_ptr + key_len) as usize])
+            .expect("storage key size must be 32 bytes");
+        let value = mem[value_ptr as usize..(value_ptr + value_len) as usize].to_vec();
+        println!("set_storage: {}={}", hex::encode(key), hex::encode(&value));
+
+        match vm.contracts[vm.contract].storage.insert(key, value) {
+            Some(value) => Ok(value.len() as i32),
+            _ => Ok(-1), // In pallets contract, u32::MAX = -1 is the "none sentinel"
+        }
     }
 }
 
@@ -1182,7 +1233,7 @@ impl MockSubstrate {
         let mut input = self.contracts[self.contract].constructors[index].clone();
         input.append(&mut args);
         self.contracts = Runtime::new(self.contracts.clone())
-            .invoke(self.contracts[self.contract].account, input, "deploy")
+            .invoke(self.contracts[self.contract].account, input, "deploy", 1)
             .unwrap()
             .contracts;
     }
@@ -1191,7 +1242,7 @@ impl MockSubstrate {
         let mut input = self.contracts[self.contract].messages[name].clone();
         input.append(&mut args);
         self.contracts = Runtime::new(self.contracts.clone())
-            .invoke(self.contracts[self.contract].account, input, "call")
+            .invoke(self.contracts[self.contract].account, input, "call", 0)
             .unwrap()
             .contracts;
     }
@@ -1374,11 +1425,30 @@ fn load_abi(s: &str) -> InkProject {
 
 #[cfg(test)]
 mod tests {
+    use parity_scale_codec::Encode;
+
     use crate::*;
 
     #[test]
     fn it_works() {
-        build_solidity(r##"contract Foo { function foo() public {print("hello world");} }"##)
-            .function("foo", vec![]);
+        let mut runtime = build_solidity(
+            r##"
+            contract Foo {
+                uint64 u;
+                
+                constructor(uint64 _u) {
+                    u = _u;
+                }
+
+                function foo() public view returns(uint64) {
+                    print("hello world");
+                    return u;
+                }
+            }"##,
+        );
+
+        runtime.constructor(0, 1337u64.encode());
+        runtime.function("foo", vec![]);
+        assert_eq!(runtime.output, 1337u64.encode());
     }
 }
