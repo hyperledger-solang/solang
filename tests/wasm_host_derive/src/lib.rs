@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, ToTokens};
-use syn::{punctuated::Punctuated, token::Comma, Ident, ImplItem, ItemImpl, LitInt, Type};
+use syn::{ImplItem, ItemImpl, LitInt, Type};
 
 #[derive(Debug)]
 struct HostFn {
@@ -35,7 +35,7 @@ impl HostFn {
         })
     }
 
-    fn to_tokens(&self, host_ty: &Box<Type>) -> TokenStream2 {
+    fn to_tokens(&self, host_ty: &Type) -> TokenStream2 {
         let block = &self.block;
         let params = &self.params;
         let name = &self.name;

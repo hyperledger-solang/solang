@@ -5,10 +5,12 @@ use blake2_rfc::blake2b::blake2b;
 use contract_metadata::ContractMetadata;
 use funty::Numeric;
 use ink_metadata::InkProject;
+use ink_primitives::Hash;
 // Create WASM virtual machine like substrate
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use once_cell::sync::Lazy;
+use parity_scale_codec::Decode;
 use rand::Rng;
 use sha2::{Digest, Sha256};
 use std::mem::transmute;
@@ -70,12 +72,11 @@ impl Contract {
         }
     }
 
-    fn from_existing(&self, salt: &[u8], value: u128) -> (Account, Self) {
-        let mut contract = self.clone();
-        contract.address = Account::try_from(blake2b(32, &[], &salt).as_bytes()).unwrap();
-        contract.value = value;
-        contract.storage.clear();
-        (contract.address, contract)
+    fn into_new(mut self, salt: &[u8], value: u128) -> (Account, Self) {
+        self.address = Account::try_from(blake2b(32, &[], salt).as_bytes()).unwrap();
+        self.value = value;
+        self.storage.clear();
+        (self.address, self)
     }
 
     fn instantiate(&self, vm: Runtime) -> Result<(Store<Runtime>, Instance), Error> {
@@ -102,7 +103,7 @@ impl Contract {
         match instance
             .get_export(&store, function)
             .and_then(|export| export.into_func())
-            .expect(&format!("contract does not export '{function}'"))
+            .expect("contract does not export '{function}'")
             .call(&mut store, &[], &mut [])
         {
             Err(Error::Trap(trap)) if trap.trap_code().is_some() => Err(Error::Trap(trap)),
@@ -142,29 +143,28 @@ impl Runtime {
         }
     }
 
-    fn new_context(&self, callee: Account, input: Vec<u8>, value: u128) -> (Self, Contract) {
-        let (index, target) = self
+    fn into_new(mut self, callee: Account, input: Vec<u8>, value: u128) -> (Contract, Self) {
+        let (index, _) = self
             .contracts
             .iter()
             .enumerate()
             .find(|(_, contract)| contract.address == callee)
-            .expect(&format!("contract {} not found", hex::encode(callee)));
+            .unwrap_or_else(|| panic!("contract {} not found", hex::encode(callee)));
 
-        let mut vm = self.clone();
-        vm.contract = index;
-        vm.caller = self.contracts[self.contract].address;
-        vm.value = value;
-        vm.input = input;
-        vm.output.clear();
+        self.contract = index;
+        self.caller = self.contracts[self.contract].address;
+        self.value = value;
+        self.input = input;
+        self.output.clear();
 
-        (vm, target.clone())
+        (self.contracts[index].clone(), self)
     }
 
-    fn return_context(self, other: &mut Self) {
-        other.contracts = self.contracts;
-        other.debug_buffer = self.debug_buffer;
-        other.events = self.events;
-        other.output = self.output;
+    fn return_to(self, consumer: &mut Self) {
+        consumer.contracts = self.contracts;
+        consumer.debug_buffer = self.debug_buffer;
+        consumer.events = self.events;
+        consumer.output = self.output;
     }
 
     fn call(
@@ -180,8 +180,8 @@ impl Runtime {
             hex::encode(&input)
         );
 
-        let (runtime, contract) = self.new_context(callee, input, value);
-        contract.execute(export, runtime)?.return_context(self);
+        let (contract, runtime) = self.clone().into_new(callee, input, value);
+        contract.execute(export, runtime)?.return_to(self);
         Ok(())
     }
 
@@ -196,8 +196,9 @@ impl Runtime {
             .contracts
             .iter()
             .find(|contract| contract.code_hash == code_hash)
-            .expect(&format!("code hash {} not found", hex::encode(code_hash)))
-            .from_existing(salt, value);
+            .unwrap_or_else(|| panic!("code hash {} not found", hex::encode(code_hash)))
+            .clone()
+            .into_new(salt, value);
 
         self.contracts.push(contract);
         self.call("deploy", address, input, 0)
@@ -241,7 +242,7 @@ impl Runtime {
     fn seal_return(flags: u32, data_ptr: u32, data_len: u32) -> Result<(), Trap> {
         let output = read_buf(mem, data_ptr, data_len);
         println!("seal_return: {flags} {}", hex::encode(&output));
-        Err(HostReturn::Data(flags as u32, output).into())
+        Err(HostReturn::Data(flags, output).into())
     }
 
     #[seal(0)]
@@ -278,7 +279,7 @@ impl Runtime {
             Some(value) => value,
             _ => return Ok(3), // In pallet-contracts, ReturnCode::KeyNotFound == 3
         };
-        println!("get_storage: {}={}", hex::encode(key), hex::encode(&value));
+        println!("get_storage: {}={}", hex::encode(key), hex::encode(value));
 
         write_buf(mem, out_ptr, value);
         write_buf(mem, out_len_ptr, &(value.len() as u32).to_le_bytes());
@@ -531,6 +532,27 @@ impl Runtime {
 
         Err(HostReturn::Terminate.into())
     }
+
+    #[seal(0)]
+    fn seal_deposit_event(
+        topics_ptr: u32,
+        topics_len: u32,
+        data_ptr: u32,
+        data_len: u32,
+    ) -> Result<(), Trap> {
+        let data = read_buf(mem, data_ptr, data_len);
+        let topics = if topics_len > 0 {
+            <Vec<Hash>>::decode(&mut &read_buf(mem, topics_ptr, topics_len)[..]).unwrap()
+        } else {
+            vec![]
+        };
+
+        println!("seal_deposit_event data: {}", hex::encode(&data));
+        println!("seal_deposit_event topics: {topics:?}");
+        vm.events.push(Event { topics, data });
+
+        Ok(())
+    }
 }
 
 #[derive(Default)]
@@ -555,7 +577,7 @@ impl fmt::Display for HostReturn {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
             Self::Terminate => write!(f, "return: terminate"),
-            Self::Data(flags, data) => write!(f, "return {flags} {:?}", data),
+            Self::Data(flags, data) => write!(f, "return {flags} {data:?}"),
         }
     }
 }
@@ -582,9 +604,9 @@ impl HostError for HostReturn {}
 //    }
 //}
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Event {
-    topics: Vec<[u8; 32]>,
+    topics: Vec<Hash>,
     data: Vec<u8>,
 }
 
