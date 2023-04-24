@@ -133,29 +133,10 @@ impl Runtime {
         }
     }
 
-    //fn invoke_contract(mut self, no: usize, name: &str, mut args: Vec<u8>) -> Self {
-    //    let mut contract = self.contracts[no].clone();
-    //    self.input = contract
-    //        .messages
-    //        .remove(name)
-    //        .expect(&format!("contract {no} has no function '{name}'"));
-    //    self.input.append(&mut args);
-    //    println!("input:{}", hex::encode(&self.input));
-    //    contract.execute("call", self).unwrap()
-    //}
-
-    fn invoke(
-        mut self,
-        account: Account,
-        input: Vec<u8>,
-        export: &str,
-        value: u128,
-    ) -> Result<Self, Error> {
+    fn invoke(mut self, account: Account, export: &str) -> Result<Self, Error> {
         for (n, contract) in self.contracts.iter().enumerate() {
-            if contract.code_hash == account {
-                self.input = input;
+            if contract.address == account {
                 self.contract = n;
-                self.value = value;
                 return contract.clone().execute(export, self);
             }
         }
@@ -169,6 +150,22 @@ fn len_from_ptr(mem: &[u8], ptr: u32) -> usize {
 
 fn write_mem(mem: &mut [u8], ptr: u32, buf: &[u8]) {
     mem[ptr as usize..ptr as usize + buf.len()].copy_from_slice(buf);
+}
+
+fn read_mem(mem: &[u8], ptr: u32, len: u32) -> Vec<u8> {
+    mem[ptr as usize..(ptr + len) as usize].to_vec()
+}
+
+fn read_value(vm: &Runtime, mem: &[u8], ptr: u32) -> u128 {
+    let value = u128::from_le_bytes(read_mem(mem, ptr, 16).try_into().unwrap());
+    if value > vm.contracts[vm.contract].value {
+        panic!("ReturnCode::TransferFailed");
+    }
+    value
+}
+
+fn read_account(mem: &[u8], ptr: u32) -> Account {
+    Account::try_from(&mem[ptr as usize..(ptr + 32) as usize]).unwrap()
 }
 
 fn hash(mem: &mut [u8], ptr: u32, data: &[u8]) {}
@@ -188,7 +185,7 @@ impl Runtime {
 
     #[link(seal0)]
     fn seal_return(flags: u32, data_ptr: u32, data_len: u32) -> Result<(), Trap> {
-        let output = mem[data_ptr as usize..(data_ptr + data_len) as usize].to_vec();
+        let output = read_mem(mem, data_ptr, data_len);
         println!("seal_return: {flags} {}", hex::encode(&output));
         Err(Trap::from(HostReturn::Data(flags as u32, output)))
     }
@@ -207,8 +204,8 @@ impl Runtime {
 
     #[link(seal0)]
     fn seal_debug_message(data_ptr: u32, len: u32) -> Result<i32, Trap> {
-        let buf = &mem[data_ptr as usize..(data_ptr + len) as usize];
-        let msg = std::str::from_utf8(buf).expect("seal_debug_message: Invalid UFT8");
+        let buf = read_mem(mem, data_ptr, len);
+        let msg = std::str::from_utf8(&buf).expect("seal_debug_message: Invalid UFT8");
         vm.debug_buffer.push_str(msg);
 
         println!("seal_debug_message: {msg}");
@@ -222,7 +219,7 @@ impl Runtime {
         out_ptr: u32,
         out_len_ptr: u32,
     ) -> Result<i32, Trap> {
-        let key = StorageKey::try_from(&mem[key_ptr as usize..(key_ptr + key_len) as usize])
+        let key = StorageKey::try_from(read_mem(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
         let value = match vm.contracts[vm.contract].storage.get(&key) {
             Some(value) => value,
@@ -243,7 +240,7 @@ impl Runtime {
         value_ptr: u32,
         value_len: u32,
     ) -> Result<i32, Trap> {
-        let key = StorageKey::try_from(&mem[key_ptr as usize..(key_ptr + key_len) as usize])
+        let key = StorageKey::try_from(read_mem(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
         let value = mem[value_ptr as usize..(value_ptr + value_len) as usize].to_vec();
         println!("set_storage: {}={}", hex::encode(key), hex::encode(&value));
@@ -256,7 +253,7 @@ impl Runtime {
 
     #[link(seal1)]
     fn seal_clear_storage(key_ptr: u32, key_len: u32) -> Result<i32, Trap> {
-        let key = StorageKey::try_from(&mem[key_ptr as usize..(key_ptr + key_len) as usize])
+        let key = StorageKey::try_from(read_mem(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
         println!("clear_storage: {}", hex::encode(key));
 
@@ -269,7 +266,7 @@ impl Runtime {
     #[link(seal0)]
     fn seal_hash_keccak_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let mut hasher = Keccak::v256();
-        hasher.update(&mem[input_ptr as usize..(input_ptr + input_len) as usize]);
+        hasher.update(&read_mem(mem, input_ptr, input_len));
         hasher.finalize(&mut mem[output_ptr as usize..(output_ptr + 32) as usize]);
         Ok(())
     }
@@ -277,22 +274,22 @@ impl Runtime {
     #[link(seal0)]
     fn seal_hash_sha2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let mut hasher = Sha256::new();
-        hasher.update(&mem[input_ptr as usize..(input_ptr + input_len) as usize]);
+        hasher.update(read_mem(mem, input_ptr, input_len));
         write_mem(mem, output_ptr, &hasher.finalize());
         Ok(())
     }
 
     #[link(seal0)]
     fn seal_hash_blake2_128(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
-        let data = &mem[input_ptr as usize..(input_ptr + input_len) as usize];
-        write_mem(mem, output_ptr, blake2b(16, &[], data).as_bytes());
+        let data = read_mem(mem, input_ptr, input_len);
+        write_mem(mem, output_ptr, blake2b(16, &[], &data).as_bytes());
         Ok(())
     }
 
     #[link(seal0)]
     fn seal_hash_blake2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
-        let data = &mem[input_ptr as usize..(input_ptr + input_len) as usize];
-        write_mem(mem, output_ptr, blake2b(32, &[], data).as_bytes());
+        let data = read_mem(mem, input_ptr, input_len);
+        write_mem(mem, output_ptr, blake2b(32, &[], &data).as_bytes());
         Ok(())
     }
 
@@ -307,31 +304,22 @@ impl Runtime {
         output_ptr: u32,
         output_len_ptr: u32,
     ) -> Result<i32, Trap> {
-        let callee =
-            Account::try_from(&mem[callee_ptr as usize..(callee_ptr + 32) as usize]).unwrap();
-
-        let value = &mem[value_ptr as usize..(value_ptr + 16) as usize];
-        let value = u128::from_le_bytes(value.try_into().unwrap());
-        if value > vm.contracts[vm.contract].value {
-            return Ok(5);
-        }
-        let input = mem[input_ptr as usize..(input_ptr + input_len) as usize].to_vec();
-
-        let (index, _) = vm
-            .contracts
-            .iter()
-            .enumerate()
-            .find(|(_, contract)| contract.address == callee)
-            .expect(&format!("invalid callee address {}", hex::encode(callee)));
         let mut runtime = vm.clone();
-        runtime.contract = index - 1;
         runtime.caller = vm.contracts[vm.contract].address;
-        let runtime = match runtime.invoke(callee, input, "call", value) {
+        runtime.input = read_mem(mem, input_ptr, input_len);
+        runtime.value = read_value(vm, mem, value_ptr);
+        let callee = read_account(mem, callee_ptr);
+        println!(
+            "seal_call: account={} input={}",
+            hex::encode(callee),
+            hex::encode(&runtime.input)
+        );
+        let runtime = match runtime.invoke(callee, "call") {
             Ok(runtime) => runtime,
             Err(_) => return Ok(1),
         };
 
-        vm.contracts[vm.contract].value -= value;
+        vm.contracts[vm.contract].value -= runtime.value;
         vm.contracts = runtime.contracts;
         vm.debug_buffer = runtime.debug_buffer;
         vm.events = runtime.events;
@@ -354,8 +342,69 @@ impl Runtime {
     #[link(seal0)]
     fn seal_minimum_balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         assert!(len_from_ptr(mem, out_len_ptr) >= 16);
-        write_mem(mem, out_ptr, &500usize.to_le_bytes());
+        write_mem(mem, out_ptr, &500u128.to_le_bytes());
         Ok(())
+    }
+
+    #[link(seal1)]
+    fn seal_instantiate(
+        code_hash_ptr: u32,
+        _gas: u64,
+        value_ptr: u32,
+        input_data_ptr: u32,
+        input_data_len: u32,
+        address_ptr: u32,
+        address_len_ptr: u32,
+        output_ptr: u32,
+        output_len_ptr: u32,
+        salt_ptr: u32,
+        salt_len: u32,
+    ) -> Result<i32, Trap> {
+        let code_hash = read_account(mem, code_hash_ptr);
+        let salt = read_mem(mem, salt_ptr, salt_len);
+        let account = Account::try_from(blake2b(32, &[], &salt).as_bytes()).unwrap();
+        let value = read_value(vm, mem, value_ptr);
+
+        let mut contract = vm
+            .contracts
+            .iter()
+            .find(|contract| contract.code_hash == code_hash)
+            .unwrap()
+            .clone();
+        contract.value = value;
+        contract.address = account;
+        contract.storage.clear();
+        vm.contracts.push(contract);
+
+        let mut runtime = vm.clone();
+        runtime.caller = vm.contracts[vm.contract].address;
+        runtime.input = read_mem(mem, input_data_ptr, input_data_len);
+        runtime.value = value;
+        println!(
+            "seal_instantiate value={value} input={} account={}",
+            hex::encode(&runtime.input),
+            hex::encode(&account),
+        );
+        let runtime = match runtime.invoke(account, "deploy") {
+            Ok(runtime) => runtime,
+            Err(_) => return Ok(1),
+        };
+
+        vm.contracts[vm.contract].value -= runtime.value;
+        vm.contracts = runtime.contracts;
+        vm.debug_buffer = runtime.debug_buffer;
+        vm.events = runtime.events;
+
+        write_mem(mem, output_ptr, &runtime.output);
+        write_mem(
+            mem,
+            output_len_ptr,
+            &(runtime.output.len() as u32).to_le_bytes(),
+        );
+        write_mem(mem, address_ptr, &account);
+        write_mem(mem, address_len_ptr, &(account.len() as u32).to_le_bytes());
+
+        Ok(0)
     }
 }
 
@@ -1344,11 +1393,12 @@ impl MockSubstrate {
     //}
 
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
-        let mut input = self.contracts[self.contract].constructors[index].clone();
-        input.append(&mut args);
-        let result = Runtime::new(self.contracts.clone())
-            .invoke(self.contracts[self.contract].code_hash, input, "deploy", 1)
-            .unwrap();
+        let mut runtime = Runtime::new(self.contracts.clone());
+        runtime.input = self.contracts[self.contract].constructors[index].clone();
+        runtime.input.append(&mut args);
+        let address = self.contracts[self.contract].address;
+        let result = runtime.invoke(address, "deploy").unwrap();
+
         self.contracts = result.contracts;
         self.output = result.output;
         self.debug_buffer = result.debug_buffer;
@@ -1356,11 +1406,12 @@ impl MockSubstrate {
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.contracts[self.contract].messages[name].clone();
-        input.append(&mut args);
-        let result = Runtime::new(self.contracts.clone())
-            .invoke(self.contracts[self.contract].code_hash, input, "call", 0)
-            .unwrap();
+        let mut runtime = Runtime::new(self.contracts.clone());
+        runtime.input = self.contracts[self.contract].messages[name].clone();
+        runtime.input.append(&mut args);
+        let address = self.contracts[self.contract].address;
+        let result = runtime.invoke(address, "call").unwrap();
+
         self.contracts = result.contracts;
         self.output = result.output;
         self.debug_buffer = result.debug_buffer;
@@ -1512,7 +1563,7 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
     let contracts = build_wasm(src, log_ret, log_err)
         .iter()
-        .map(|(code, abi)| Contract::new(abi, code, 0))
+        .map(|(code, abi)| Contract::new(abi, code, 500))
         .collect();
 
     MockSubstrate {
@@ -1574,10 +1625,11 @@ mod tests {
             }"##,
         );
 
-        //runtime.constructor(0, 1337u64.encode());
-        //runtime.function("foo", vec![0x00]);
+        runtime.constructor(0, 1337u64.encode());
+        runtime.function("foo", vec![0x00]);
+        assert_eq!(runtime.output, 1337u64.encode());
         runtime.set_program(1);
         runtime.function("bar", vec![]);
-        assert_eq!(runtime.output, 1337u64.encode());
+        assert_eq!(runtime.output, 123u64.encode());
     }
 }
