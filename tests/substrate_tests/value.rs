@@ -31,11 +31,8 @@ fn external_call_value() {
     runtime.function("step1", Vec::new());
     runtime.function("step2", Vec::new());
 
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 1523));
+    // Minimum balance + transferred value = 500 + 1023
+    assert_eq!(runtime.programs.last().unwrap().value, 1523);
 
     let mut runtime = build_solidity(
         r##"
@@ -61,11 +58,8 @@ fn external_call_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 1523));
+    // Minimum balance + transferred value = 500 + 1023
+    assert_eq!(runtime.programs.last().unwrap().value, 1523);
 }
 
 #[test]
@@ -88,11 +82,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 500));
+    assert_eq!(runtime.programs.last().unwrap().value, 500);
 
     let mut runtime = build_solidity(
         r##"
@@ -112,11 +102,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 0));
+    assert_eq!(runtime.programs.last().unwrap().value, 0);
 
     let mut runtime = build_solidity(
         r##"
@@ -136,11 +122,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 499));
+    assert_eq!(runtime.programs.last().unwrap().value, 499);
 
     let mut runtime = build_solidity(
         r##"
@@ -165,11 +147,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 511));
+    assert_eq!(runtime.programs.last().unwrap().value, 511);
 
     let mut runtime = build_solidity(
         r##"
@@ -194,11 +172,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 511));
+    assert_eq!(runtime.programs.last().unwrap().value, 511)
 }
 
 #[test]
@@ -395,10 +369,10 @@ fn selfdestruct() {
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
-    assert_eq!(runtime.programs[0].value, 0);
+    assert_eq!(runtime.programs[0].value, 20000 - 511);
 
-    runtime.function_expect_failure("step2", Vec::new());
-    assert_eq!(runtime.programs[0].value, 511);
+    runtime.function("step2", Vec::new());
+    assert_eq!(runtime.programs[0].value, 20000);
 }
 
 #[test]
@@ -429,12 +403,7 @@ fn send_and_transfer() {
 
     // no receive() required for send/transfer
     assert_eq!(runtime.output, true.encode());
-
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 1011));
+    assert_eq!(runtime.programs.last().unwrap().value, 1011);
 
     let mut runtime = build_solidity(
         r##"
@@ -461,12 +430,7 @@ fn send_and_transfer() {
     runtime.function("step1", Vec::new());
 
     assert_eq!(runtime.output, true.encode());
-
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 1011));
+    assert_eq!(runtime.programs.last().unwrap().value, 1011);
 
     let mut runtime = build_solidity(
         r##"
@@ -491,12 +455,7 @@ fn send_and_transfer() {
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
-
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 1011));
+    assert_eq!(runtime.programs.last().unwrap().value, 1011);
 
     let mut runtime = build_solidity(
         r##"
@@ -522,9 +481,5 @@ fn send_and_transfer() {
 
     runtime.function("step1", Vec::new());
 
-    assert!(runtime
-        .programs
-        .iter()
-        .filter(|contract| contract.address != runtime.account)
-        .all(|contract| contract.value == 1011));
+    assert_eq!(runtime.programs.last().unwrap().value, 1011);
 }

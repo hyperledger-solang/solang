@@ -492,6 +492,7 @@ fn destructuring_call() {
         }"#,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
@@ -509,6 +510,7 @@ fn destructuring_call() {
         }"#,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
@@ -533,6 +535,7 @@ fn destructuring_call() {
         }"#,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 }
 

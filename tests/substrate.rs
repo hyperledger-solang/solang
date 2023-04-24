@@ -68,7 +68,7 @@ impl Contract {
             address: rand::random(),
             code: code.to_vec(),
             storage: HashMap::new(),
-            value: 20000,
+            value: 0,
         }
     }
 
@@ -97,8 +97,10 @@ impl Contract {
         Ok((store, instance))
     }
 
-    fn execute(&self, function: &str, vm: Runtime) -> Result<Runtime, (Error, String)> {
+    fn execute(&mut self, function: &str, vm: Runtime) -> Result<Runtime, (Error, String)> {
+        let transferred_value = vm.value;
         let (mut store, instance) = self.instantiate(vm).map_err(|e| (e, String::new()))?;
+
         match instance
             .get_export(&store, function)
             .and_then(|export| export.into_func())
@@ -106,6 +108,7 @@ impl Contract {
             .call(&mut store, &[], &mut [])
         {
             Err(Error::Trap(trap)) if trap.trap_code().is_some() => {
+                self.value -= transferred_value;
                 Err((Error::Trap(trap), store.data().debug_buffer.clone()))
             }
             Err(Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
@@ -153,10 +156,13 @@ impl Runtime {
             .unwrap_or_else(|| panic!("contract {} not found", hex::encode(callee)));
 
         self.contract = index;
-        self.caller = self.contracts[self.contract].address;
+        //self.caller = self.contracts[self.contract].address;
+        dbg!(self.caller);
         self.value = value;
         self.input = input;
         self.output.clear();
+
+        self.contracts[index].value += value;
 
         (self.contracts[index].clone(), self)
     }
@@ -181,7 +187,7 @@ impl Runtime {
             hex::encode(&input)
         );
 
-        let (contract, runtime) = self.clone().into_new(callee, input, value);
+        let (mut contract, runtime) = self.clone().into_new(callee, input, value);
         contract.execute(export, runtime)?.return_to(self);
         Ok(())
     }
@@ -525,7 +531,7 @@ impl Runtime {
     fn seal_terminate(beneficiary_ptr: u32) -> Result<(), Trap> {
         let free = vm.contracts.remove(vm.contract).value;
         let address = read_account(mem, beneficiary_ptr);
-        println!("seal_terminate: {} {free}", hex::encode(address));
+        println!("seal_terminate: {} gets {free}", hex::encode(address));
 
         if let Some(to) = vm.contracts.iter_mut().find(|c| c.address == address) {
             to.value += free;
@@ -1511,13 +1517,14 @@ impl MockSubstrate {
     fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) -> Result<(), Error> {
         let callee = self.programs[self.current_program].address;
         let mut runtime = Runtime::new(&self.programs);
+        self.account = callee;
+        self.caller = runtime.caller;
+
         runtime.call(export, callee, input, value).map_err(|e| {
             self.debug_buffer = e.1;
             e.0
         })?;
 
-        self.caller = runtime.caller;
-        self.account = self.programs[self.current_program].address;
         self.programs = runtime.contracts;
         self.output = runtime.output;
         self.debug_buffer = runtime.debug_buffer;
@@ -1766,6 +1773,7 @@ mod tests {
         runtime.function("foo", vec![0x00]);
         assert_eq!(runtime.output, 1337u64.encode());
         runtime.set_program(1);
+        runtime.constructor(0, vec![]);
         runtime.function("bar", vec![]);
         assert_eq!(runtime.output, 123u64.encode());
     }
