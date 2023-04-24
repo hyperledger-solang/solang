@@ -348,10 +348,7 @@ fn string_storage() {
 
     runtime.function("set_bar", Vec::new());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.account, [0u8; 32])).unwrap(),
-        b"foobar"
-    );
+    assert_eq!(runtime.programs[0].storage[&[0; 32]], b"foobar");
 
     runtime.function("get_bar", Vec::new());
 
@@ -471,8 +468,8 @@ fn bytes_storage_subscript() {
     runtime.function("set_index", Arg(1, 0x33).encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.account, [0u8; 32])).unwrap(),
-        &vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)
+        runtime.programs[0].storage[&[0u8; 32]],
+        vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)
     );
 
     let mut runtime = build_solidity(
@@ -503,22 +500,22 @@ fn bytes_storage_subscript() {
     runtime.function("or", Arg(1, 0x50).encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.account, [0u8; 32])).unwrap(),
-        &vec!(0xde, 0xfd, 0xca, 0xfe)
+        runtime.programs[0].storage[&[0u8; 32]],
+        vec!(0xde, 0xfd, 0xca, 0xfe)
     );
 
     runtime.function("and", Arg(3, 0x7f).encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.account, [0u8; 32])).unwrap(),
-        &vec!(0xde, 0xfd, 0xca, 0x7e)
+        runtime.programs[0].storage[&[0u8; 32]],
+        vec!(0xde, 0xfd, 0xca, 0x7e)
     );
 
     runtime.function("xor", Arg(2, 0xff).encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.account, [0u8; 32])).unwrap(),
-        &vec!(0xde, 0xfd, 0x35, 0x7e)
+        runtime.programs[0].storage[&[0u8; 32]],
+        vec!(0xde, 0xfd, 0x35, 0x7e)
     );
 }
 
@@ -585,24 +582,15 @@ fn bytes_memory_subscript() {
 
     runtime.function("or", Arg(1, 0x50).encode());
 
-    assert_eq!(
-        runtime.output,
-        Ret(vec!(0xde, 0xfd, 0xca, 0xfe)).encode()
-    );
+    assert_eq!(runtime.output, Ret(vec!(0xde, 0xfd, 0xca, 0xfe)).encode());
 
     runtime.function("and", Arg(3, 0x7f).encode());
 
-    assert_eq!(
-        runtime.output,
-        Ret(vec!(0xde, 0xad, 0xca, 0x7e)).encode()
-    );
+    assert_eq!(runtime.output, Ret(vec!(0xde, 0xad, 0xca, 0x7e)).encode());
 
     runtime.function("xor", Arg(2, 0xff).encode());
 
-    assert_eq!(
-        runtime.output,
-        Ret(vec!(0xde, 0xad, 0x35, 0xfe)).encode()
-    );
+    assert_eq!(runtime.output, Ret(vec!(0xde, 0xad, 0x35, 0xfe)).encode());
 }
 
 #[test]

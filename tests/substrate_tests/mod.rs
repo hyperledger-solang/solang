@@ -26,7 +26,7 @@ mod mappings;
 mod primitives;
 mod statements;
 mod storage;
-//mod strings;
+mod strings;
 mod structs;
 mod value;
 mod variables;
