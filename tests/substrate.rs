@@ -167,7 +167,13 @@ impl Runtime {
         other.output = self.output;
     }
 
-    fn call(&mut self, export: &str, callee: Account, input: Vec<u8>, value: u128) {
+    fn call(
+        &mut self,
+        export: &str,
+        callee: Account,
+        input: Vec<u8>,
+        value: u128,
+    ) -> Result<(), Error> {
         println!(
             "{export}: account={} input={} value={value}",
             hex::encode(callee),
@@ -175,13 +181,17 @@ impl Runtime {
         );
 
         let (runtime, contract) = self.new_context(callee, input, value);
-        contract
-            .execute(export, runtime)
-            .expect("callee trapped")
-            .return_context(self);
+        contract.execute(export, runtime)?.return_context(self);
+        Ok(())
     }
 
-    fn deploy(&mut self, code_hash: [u8; 32], value: u128, salt: &[u8], input: Vec<u8>) {
+    fn deploy(
+        &mut self,
+        code_hash: [u8; 32],
+        value: u128,
+        salt: &[u8],
+        input: Vec<u8>,
+    ) -> Result<(), Error> {
         let (address, contract) = self
             .contracts
             .iter()
@@ -190,7 +200,7 @@ impl Runtime {
             .from_existing(salt, value);
 
         self.contracts.push(contract);
-        self.call("deploy", address, input, 0);
+        self.call("deploy", address, input, 0)
     }
 }
 
@@ -352,7 +362,7 @@ impl Runtime {
         let value = read_value(mem, value_ptr);
         assert!(value <= vm.contracts[vm.contract].value);
 
-        vm.call("call", callee, salt, value);
+        vm.call("call", callee, salt, value).unwrap();
         vm.contracts[vm.contract].value -= value;
 
         if output_len_ptr != u32::MAX {
@@ -396,7 +406,7 @@ impl Runtime {
         let value = read_value(mem, value_ptr);
         assert!(value <= vm.contracts[vm.contract].value);
 
-        vm.deploy(target, value, &salt, input);
+        vm.deploy(target, value, &salt, input).unwrap();
         vm.contracts[vm.contract].value -= value;
 
         write_buf(mem, output_ptr, &vm.output);
@@ -1360,29 +1370,55 @@ impl MockSubstrate {
     //    }
     //}
 
-    fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) {
+    fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) -> Result<(), Error> {
         let callee = self.contracts[self.contract].address;
         let mut runtime = Runtime::new(&self.contracts);
-        runtime.call(export, callee, input, value);
+        runtime.call(export, callee, input, value)?;
 
         self.contracts = runtime.contracts;
         self.output = runtime.output;
         self.debug_buffer = runtime.debug_buffer;
         self.events = runtime.events;
+
+        Ok(())
     }
 
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
         let mut input = self.contracts[self.contract].constructors[index].clone();
         input.append(&mut args);
-        self.invoke("deploy", input, 20000);
+        self.raw_constructor(input);
+    }
+
+    pub fn raw_constructor(&mut self, input: Vec<u8>) {
+        self.invoke("deploy", input, 20000).unwrap();
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.contracts[self.contract].messages[name].clone();
         input.append(&mut args);
-        self.invoke("call", input, 0);
+        self.raw_function(input);
     }
 
+    pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
+        let mut input = self.contracts[self.contract].messages[name].clone();
+        input.append(&mut args);
+        self.raw_function_failure(input);
+    }
+
+    pub fn raw_function(&mut self, input: Vec<u8>) {
+        self.invoke("call", input, 0).unwrap();
+    }
+
+    pub fn raw_function_failure(&mut self, input: Vec<u8>) {
+        match self.invoke("call", input, 0) {
+            Err(wasmi::Error::Trap(trap)) => match trap.trap_code() {
+                Some(TrapCode::UnreachableCodeReached) => (),
+                _ => panic!("trap: {trap:?}"),
+            },
+            Err(err) => panic!("unexpected error: {err:?}"),
+            Ok(_) => panic!("unexpected return from main"),
+        }
+    }
     //pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
     //    let m = self.programs[self.current_contract]
     //        .abi
