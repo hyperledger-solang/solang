@@ -562,6 +562,8 @@ pub struct MockSubstrate {
     pub output: Vec<u8>,
     pub debug_buffer: String,
     pub events: Vec<Event>,
+    pub caller: Account,
+    pub account: Account,
 }
 
 /// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
@@ -1510,6 +1512,8 @@ impl MockSubstrate {
         let mut runtime = Runtime::new(&self.contracts);
         runtime.call(export, callee, input, value)?;
 
+        self.caller = runtime.caller;
+        self.account = self.contracts[self.contract].address;
         self.contracts = runtime.contracts;
         self.output = runtime.output;
         self.debug_buffer = runtime.debug_buffer;
