@@ -70,6 +70,14 @@ impl Contract {
         }
     }
 
+    fn from_existing(&self, salt: &[u8], value: u128) -> (Account, Self) {
+        let mut contract = self.clone();
+        contract.address = Account::try_from(blake2b(32, &[], &salt).as_bytes()).unwrap();
+        contract.value = value;
+        contract.storage.clear();
+        (contract.address, contract)
+    }
+
     fn instantiate(&self, vm: Runtime) -> Result<(Store<Runtime>, Instance), Error> {
         let engine = Engine::default();
         let mut store = Store::new(&engine, vm);
@@ -134,20 +142,6 @@ impl Runtime {
         }
     }
 
-    fn call(&mut self, export: &str, callee: Account, input: Vec<u8>, value: u128) {
-        println!(
-            "{export}: account={} input={} value={value}",
-            hex::encode(callee),
-            hex::encode(&input)
-        );
-
-        let (runtime, contract) = self.new_context(callee, input, value);
-        contract
-            .execute(export, runtime)
-            .expect("callee trapped")
-            .return_context(self);
-    }
-
     fn new_context(&self, callee: Account, input: Vec<u8>, value: u128) -> (Self, Contract) {
         let (index, target) = self
             .contracts
@@ -173,17 +167,28 @@ impl Runtime {
         other.output = self.output;
     }
 
-    fn deploy(&mut self, code: [u8; 32], value: u128, salt: &[u8], input: Vec<u8>) {
-        let mut contract = self
+    fn call(&mut self, export: &str, callee: Account, input: Vec<u8>, value: u128) {
+        println!(
+            "{export}: account={} input={} value={value}",
+            hex::encode(callee),
+            hex::encode(&input)
+        );
+
+        let (runtime, contract) = self.new_context(callee, input, value);
+        contract
+            .execute(export, runtime)
+            .expect("callee trapped")
+            .return_context(self);
+    }
+
+    fn deploy(&mut self, code_hash: [u8; 32], value: u128, salt: &[u8], input: Vec<u8>) {
+        let (address, contract) = self
             .contracts
             .iter()
-            .find(|contract| contract.code_hash == code)
-            .unwrap()
-            .clone();
-        let address = Account::try_from(blake2b(32, &[], &salt).as_bytes()).unwrap();
-        contract.address = address;
-        contract.value = value;
-        contract.storage.clear();
+            .find(|contract| contract.code_hash == code_hash)
+            .expect(&format!("code hash {} not found", hex::encode(code_hash)))
+            .from_existing(salt, value);
+
         self.contracts.push(contract);
         self.call("deploy", address, input, 0);
     }
@@ -193,23 +198,21 @@ fn len_from_ptr(mem: &[u8], ptr: u32) -> usize {
     u32::from_le_bytes(mem[ptr as usize..ptr as usize + 4].try_into().unwrap()) as usize
 }
 
-fn write_mem(mem: &mut [u8], ptr: u32, buf: &[u8]) {
+fn write_buf(mem: &mut [u8], ptr: u32, buf: &[u8]) {
     mem[ptr as usize..ptr as usize + buf.len()].copy_from_slice(buf);
 }
 
-fn read_mem(mem: &[u8], ptr: u32, len: u32) -> Vec<u8> {
+fn read_buf(mem: &[u8], ptr: u32, len: u32) -> Vec<u8> {
     mem[ptr as usize..(ptr + len) as usize].to_vec()
 }
 
-fn read_value(vm: &Runtime, mem: &[u8], ptr: u32) -> u128 {
-    u128::from_le_bytes(read_mem(mem, ptr, 16).try_into().unwrap())
+fn read_value(mem: &[u8], ptr: u32) -> u128 {
+    u128::from_le_bytes(read_buf(mem, ptr, 16).try_into().unwrap())
 }
 
 fn read_account(mem: &[u8], ptr: u32) -> Account {
     Account::try_from(&mem[ptr as usize..(ptr + 32) as usize]).unwrap()
 }
-
-fn hash(mem: &mut [u8], ptr: u32, data: &[u8]) {}
 
 #[wasm_host]
 impl Runtime {
@@ -218,15 +221,15 @@ impl Runtime {
         assert!(len_from_ptr(mem, len_ptr) >= vm.input.len());
         println!("seal_input: {}", hex::encode(&vm.input));
 
-        write_mem(mem, dest_ptr, &vm.input);
-        write_mem(mem, len_ptr, &(vm.input.len() as u32).to_le_bytes());
+        write_buf(mem, dest_ptr, &vm.input);
+        write_buf(mem, len_ptr, &(vm.input.len() as u32).to_le_bytes());
 
         Ok(())
     }
 
     #[link(seal0)]
     fn seal_return(flags: u32, data_ptr: u32, data_len: u32) -> Result<(), Trap> {
-        let output = read_mem(mem, data_ptr, data_len);
+        let output = read_buf(mem, data_ptr, data_len);
         println!("seal_return: {flags} {}", hex::encode(&output));
         Err(Trap::from(HostReturn::Data(flags as u32, output)))
     }
@@ -237,19 +240,18 @@ impl Runtime {
         assert!(len_from_ptr(mem, out_len_ptr) >= value.len());
         println!("seal_value_transferred: {}", vm.value);
 
-        write_mem(mem, dest_ptr, &value);
-        write_mem(mem, out_len_ptr, &(value.len() as u32).to_le_bytes());
+        write_buf(mem, dest_ptr, &value);
+        write_buf(mem, out_len_ptr, &(value.len() as u32).to_le_bytes());
 
         Ok(())
     }
 
     #[link(seal0)]
     fn seal_debug_message(data_ptr: u32, len: u32) -> Result<i32, Trap> {
-        let buf = read_mem(mem, data_ptr, len);
+        let buf = read_buf(mem, data_ptr, len);
         let msg = std::str::from_utf8(&buf).expect("seal_debug_message: Invalid UFT8");
-        vm.debug_buffer.push_str(msg);
-
         println!("seal_debug_message: {msg}");
+        vm.debug_buffer.push_str(msg);
         Ok(0)
     }
 
@@ -260,7 +262,7 @@ impl Runtime {
         out_ptr: u32,
         out_len_ptr: u32,
     ) -> Result<i32, Trap> {
-        let key = StorageKey::try_from(read_mem(mem, key_ptr, key_len))
+        let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
         let value = match vm.contracts[vm.contract].storage.get(&key) {
             Some(value) => value,
@@ -268,8 +270,8 @@ impl Runtime {
         };
         println!("get_storage: {}={}", hex::encode(key), hex::encode(&value));
 
-        write_mem(mem, out_ptr, value);
-        write_mem(mem, out_len_ptr, &(value.len() as u32).to_le_bytes());
+        write_buf(mem, out_ptr, value);
+        write_buf(mem, out_len_ptr, &(value.len() as u32).to_le_bytes());
 
         Ok(0)
     }
@@ -281,7 +283,7 @@ impl Runtime {
         value_ptr: u32,
         value_len: u32,
     ) -> Result<i32, Trap> {
-        let key = StorageKey::try_from(read_mem(mem, key_ptr, key_len))
+        let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
         let value = mem[value_ptr as usize..(value_ptr + value_len) as usize].to_vec();
         println!("set_storage: {}={}", hex::encode(key), hex::encode(&value));
@@ -294,7 +296,7 @@ impl Runtime {
 
     #[link(seal1)]
     fn seal_clear_storage(key_ptr: u32, key_len: u32) -> Result<i32, Trap> {
-        let key = StorageKey::try_from(read_mem(mem, key_ptr, key_len))
+        let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
         println!("clear_storage: {}", hex::encode(key));
 
@@ -307,7 +309,7 @@ impl Runtime {
     #[link(seal0)]
     fn seal_hash_keccak_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let mut hasher = Keccak::v256();
-        hasher.update(&read_mem(mem, input_ptr, input_len));
+        hasher.update(&read_buf(mem, input_ptr, input_len));
         hasher.finalize(&mut mem[output_ptr as usize..(output_ptr + 32) as usize]);
         Ok(())
     }
@@ -315,22 +317,22 @@ impl Runtime {
     #[link(seal0)]
     fn seal_hash_sha2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let mut hasher = Sha256::new();
-        hasher.update(read_mem(mem, input_ptr, input_len));
-        write_mem(mem, output_ptr, &hasher.finalize());
+        hasher.update(read_buf(mem, input_ptr, input_len));
+        write_buf(mem, output_ptr, &hasher.finalize());
         Ok(())
     }
 
     #[link(seal0)]
     fn seal_hash_blake2_128(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
-        let data = read_mem(mem, input_ptr, input_len);
-        write_mem(mem, output_ptr, blake2b(16, &[], &data).as_bytes());
+        let data = read_buf(mem, input_ptr, input_len);
+        write_buf(mem, output_ptr, blake2b(16, &[], &data).as_bytes());
         Ok(())
     }
 
     #[link(seal0)]
     fn seal_hash_blake2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
-        let data = read_mem(mem, input_ptr, input_len);
-        write_mem(mem, output_ptr, blake2b(32, &[], &data).as_bytes());
+        let data = read_buf(mem, input_ptr, input_len);
+        write_buf(mem, output_ptr, blake2b(32, &[], &data).as_bytes());
         Ok(())
     }
 
@@ -346,8 +348,8 @@ impl Runtime {
         output_len_ptr: u32,
     ) -> Result<i32, Trap> {
         let callee = read_account(mem, callee_ptr);
-        let salt = read_mem(mem, input_ptr, input_len);
-        let value = read_value(vm, mem, value_ptr);
+        let salt = read_buf(mem, input_ptr, input_len);
+        let value = read_value(mem, value_ptr);
         assert!(value <= vm.contracts[vm.contract].value);
 
         vm.call("call", callee, salt, value);
@@ -355,8 +357,8 @@ impl Runtime {
 
         if output_len_ptr != u32::MAX {
             assert!(len_from_ptr(mem, output_len_ptr) >= vm.output.len());
-            write_mem(mem, output_ptr, &vm.output);
-            write_mem(mem, output_len_ptr, &(vm.output.len() as u32).to_le_bytes());
+            write_buf(mem, output_ptr, &vm.output);
+            write_buf(mem, output_len_ptr, &(vm.output.len() as u32).to_le_bytes());
         }
 
         Ok(0)
@@ -370,7 +372,7 @@ impl Runtime {
     #[link(seal0)]
     fn seal_minimum_balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         assert!(len_from_ptr(mem, out_len_ptr) >= 16);
-        write_mem(mem, out_ptr, &500u128.to_le_bytes());
+        write_buf(mem, out_ptr, &500u128.to_le_bytes());
         Ok(())
     }
 
@@ -389,20 +391,20 @@ impl Runtime {
         salt_len: u32,
     ) -> Result<i32, Trap> {
         let target = read_account(mem, code_hash_ptr);
-        let salt = read_mem(mem, salt_ptr, salt_len);
-        let input = read_mem(mem, input_data_ptr, input_data_len);
-        let value = read_value(vm, mem, value_ptr);
+        let salt = read_buf(mem, salt_ptr, salt_len);
+        let input = read_buf(mem, input_data_ptr, input_data_len);
+        let value = read_value(mem, value_ptr);
         assert!(value <= vm.contracts[vm.contract].value);
 
         vm.deploy(target, value, &salt, input);
         vm.contracts[vm.contract].value -= value;
 
-        write_mem(mem, output_ptr, &vm.output);
-        write_mem(mem, output_len_ptr, &(vm.output.len() as u32).to_le_bytes());
+        write_buf(mem, output_ptr, &vm.output);
+        write_buf(mem, output_len_ptr, &(vm.output.len() as u32).to_le_bytes());
 
         let address = vm.contracts.last().unwrap().address;
-        write_mem(mem, address_ptr, &address);
-        write_mem(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
+        write_buf(mem, address_ptr, &address);
+        write_buf(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
 
         Ok(0)
     }
@@ -415,40 +417,6 @@ pub struct MockSubstrate {
     pub output: Vec<u8>,
     pub debug_buffer: String,
     pub events: Vec<Event>,
-}
-
-impl MockSubstrate {
-    //pub fn output(&self) -> Vec<u8> {
-    //    self.vm.output.clone()
-    //}
-
-    //pub fn debug_buffer(&self) -> String {
-    //    self.vm.debug_buffer.to_string()
-    //}
-
-    //pub fn events(&self) -> Vec<Event> {
-    //    self.vm.events.clone()
-    //}
-
-    fn selector(&self, name: &str) -> [u8; 4] {
-        todo!()
-        //        .abi
-        //        .spec()
-        //        .messages()
-        //        .iter()
-        //        .find(|f| f.label() == name)
-        //        .unwrap();
-
-        //    let module = self.create_module(&self.accounts.get(&self.vm.contract).unwrap().0);
-
-        //    self.vm.input = m
-        //        .selector()
-        //        .to_bytes()
-        //        .iter()
-        //        .copied()
-        //        .chain(args)
-        //        .collect();
-    }
 }
 
 /// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
