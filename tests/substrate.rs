@@ -1697,29 +1697,22 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
 }
 
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
-    let contracts = build_wasm(src, log_ret, log_err)
-        .iter()
-        .map(|(code, abi)| Contract::new(abi, code))
-        .collect();
-
     MockSubstrate {
-        contracts,
+        contracts: build_wasm(src, log_ret, log_err)
+            .iter()
+            .map(|(code, abi)| Contract::new(abi, code))
+            .collect(),
         ..Default::default()
     }
 }
 
 fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {
+    let tmp_file = OsStr::new("test.sol");
     let mut cache = FileResolver::new();
-    cache.set_file_contents("test.sol", src.to_string());
-    let (wasm, ns) = compile(
-        OsStr::new("test.sol"),
-        &mut cache,
-        inkwell::OptimizationLevel::Default,
-        Target::default_substrate(),
-        log_ret,
-        log_err,
-        true,
-    );
+    cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
+    let opt = inkwell::OptimizationLevel::Default;
+    let target = Target::default_substrate();
+    let (wasm, ns) = compile(tmp_file, &mut cache, opt, target, log_ret, log_err, true);
     ns.print_diagnostics_in_plain(&cache, false);
     assert!(!wasm.is_empty());
     wasm
