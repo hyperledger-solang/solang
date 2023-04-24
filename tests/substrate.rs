@@ -44,7 +44,7 @@ struct Contract {
 }
 
 impl Contract {
-    fn new(abi: &str, code: &[u8], value: u128) -> Self {
+    fn new(abi: &str, code: &[u8]) -> Self {
         let abi = load_abi(abi);
         let messages = abi
             .spec()
@@ -58,6 +58,7 @@ impl Contract {
             .iter()
             .map(|f| f.selector().to_bytes().to_vec())
             .collect::<Vec<_>>();
+
         Self {
             messages,
             constructors,
@@ -65,7 +66,7 @@ impl Contract {
             address: rand::random(),
             code: code.to_vec(),
             storage: HashMap::new(),
-            value,
+            value: 20000,
         }
     }
 
@@ -103,7 +104,7 @@ impl Contract {
                     Ok(store.into_data())
                 }
                 Some(HostReturn::Terminate) => Ok(store.into_data()),
-                _ => panic!("contract execution stopped with unexpected trap"),
+                _ => panic!("contract execution stopped by unexpected trap"),
             },
             Err(e) => panic!("unexpected error during contract execution: {e}"),
             Ok(_) => Ok(store.into_data()),
@@ -125,22 +126,66 @@ struct Runtime {
 }
 
 impl Runtime {
-    fn new(contracts: Vec<Contract>) -> Self {
+    fn new(contracts: &[Contract]) -> Self {
         Self {
-            contracts,
+            contracts: contracts.to_vec(),
             caller: rand::random(),
             ..Default::default()
         }
     }
 
-    fn invoke(mut self, account: Account, export: &str) -> Result<Self, Error> {
-        for (n, contract) in self.contracts.iter().enumerate() {
-            if contract.address == account {
-                self.contract = n;
-                return contract.clone().execute(export, self);
-            }
-        }
-        panic!("contract {} not found", hex::encode(account))
+    fn call(&mut self, export: &str, callee: Account, input: Vec<u8>, value: u128) {
+        println!(
+            "{export}: account={} input={} value={value}",
+            hex::encode(callee),
+            hex::encode(&input)
+        );
+
+        let (runtime, contract) = self.new_context(callee, input, value);
+        contract
+            .execute(export, runtime)
+            .expect("callee trapped")
+            .return_context(self);
+    }
+
+    fn new_context(&self, callee: Account, input: Vec<u8>, value: u128) -> (Self, Contract) {
+        let (index, target) = self
+            .contracts
+            .iter()
+            .enumerate()
+            .find(|(_, contract)| contract.address == callee)
+            .expect(&format!("contract {} not found", hex::encode(callee)));
+
+        let mut vm = self.clone();
+        vm.contract = index;
+        vm.caller = self.contracts[self.contract].address;
+        vm.value = value;
+        vm.input = input;
+        vm.output.clear();
+
+        (vm, target.clone())
+    }
+
+    fn return_context(self, other: &mut Self) {
+        other.contracts = self.contracts;
+        other.debug_buffer = self.debug_buffer;
+        other.events = self.events;
+        other.output = self.output;
+    }
+
+    fn deploy(&mut self, code: [u8; 32], value: u128, salt: &[u8], input: Vec<u8>) {
+        let mut contract = self
+            .contracts
+            .iter()
+            .find(|contract| contract.code_hash == code)
+            .unwrap()
+            .clone();
+        let address = Account::try_from(blake2b(32, &[], &salt).as_bytes()).unwrap();
+        contract.address = address;
+        contract.value = value;
+        contract.storage.clear();
+        self.contracts.push(contract);
+        self.call("deploy", address, input, 0);
     }
 }
 
@@ -157,11 +202,7 @@ fn read_mem(mem: &[u8], ptr: u32, len: u32) -> Vec<u8> {
 }
 
 fn read_value(vm: &Runtime, mem: &[u8], ptr: u32) -> u128 {
-    let value = u128::from_le_bytes(read_mem(mem, ptr, 16).try_into().unwrap());
-    if value > vm.contracts[vm.contract].value {
-        panic!("ReturnCode::TransferFailed");
-    }
-    value
+    u128::from_le_bytes(read_mem(mem, ptr, 16).try_into().unwrap())
 }
 
 fn read_account(mem: &[u8], ptr: u32) -> Account {
@@ -304,31 +345,18 @@ impl Runtime {
         output_ptr: u32,
         output_len_ptr: u32,
     ) -> Result<i32, Trap> {
-        let mut runtime = vm.clone();
-        runtime.caller = vm.contracts[vm.contract].address;
-        runtime.input = read_mem(mem, input_ptr, input_len);
-        runtime.value = read_value(vm, mem, value_ptr);
         let callee = read_account(mem, callee_ptr);
-        println!(
-            "seal_call: account={} input={}",
-            hex::encode(callee),
-            hex::encode(&runtime.input)
-        );
-        let runtime = match runtime.invoke(callee, "call") {
-            Ok(runtime) => runtime,
-            Err(_) => return Ok(1),
-        };
+        let salt = read_mem(mem, input_ptr, input_len);
+        let value = read_value(vm, mem, value_ptr);
+        assert!(value <= vm.contracts[vm.contract].value);
 
-        vm.contracts[vm.contract].value -= runtime.value;
-        vm.contracts = runtime.contracts;
-        vm.debug_buffer = runtime.debug_buffer;
-        vm.events = runtime.events;
+        vm.call("call", callee, salt, value);
+        vm.contracts[vm.contract].value -= value;
 
         if output_len_ptr != u32::MAX {
-            assert!(len_from_ptr(mem, output_len_ptr) >= runtime.output.len());
-            write_mem(mem, output_ptr, &runtime.output);
-            let actual_length = &(runtime.output.len() as u32).to_le_bytes();
-            write_mem(mem, output_len_ptr, actual_length);
+            assert!(len_from_ptr(mem, output_len_ptr) >= vm.output.len());
+            write_mem(mem, output_ptr, &vm.output);
+            write_mem(mem, output_len_ptr, &(vm.output.len() as u32).to_le_bytes());
         }
 
         Ok(0)
@@ -360,49 +388,21 @@ impl Runtime {
         salt_ptr: u32,
         salt_len: u32,
     ) -> Result<i32, Trap> {
-        let code_hash = read_account(mem, code_hash_ptr);
+        let target = read_account(mem, code_hash_ptr);
         let salt = read_mem(mem, salt_ptr, salt_len);
-        let account = Account::try_from(blake2b(32, &[], &salt).as_bytes()).unwrap();
+        let input = read_mem(mem, input_data_ptr, input_data_len);
         let value = read_value(vm, mem, value_ptr);
+        assert!(value <= vm.contracts[vm.contract].value);
 
-        let mut contract = vm
-            .contracts
-            .iter()
-            .find(|contract| contract.code_hash == code_hash)
-            .unwrap()
-            .clone();
-        contract.value = value;
-        contract.address = account;
-        contract.storage.clear();
-        vm.contracts.push(contract);
+        vm.deploy(target, value, &salt, input);
+        vm.contracts[vm.contract].value -= value;
 
-        let mut runtime = vm.clone();
-        runtime.caller = vm.contracts[vm.contract].address;
-        runtime.input = read_mem(mem, input_data_ptr, input_data_len);
-        runtime.value = value;
-        println!(
-            "seal_instantiate value={value} input={} account={}",
-            hex::encode(&runtime.input),
-            hex::encode(&account),
-        );
-        let runtime = match runtime.invoke(account, "deploy") {
-            Ok(runtime) => runtime,
-            Err(_) => return Ok(1),
-        };
+        write_mem(mem, output_ptr, &vm.output);
+        write_mem(mem, output_len_ptr, &(vm.output.len() as u32).to_le_bytes());
 
-        vm.contracts[vm.contract].value -= runtime.value;
-        vm.contracts = runtime.contracts;
-        vm.debug_buffer = runtime.debug_buffer;
-        vm.events = runtime.events;
-
-        write_mem(mem, output_ptr, &runtime.output);
-        write_mem(
-            mem,
-            output_len_ptr,
-            &(runtime.output.len() as u32).to_le_bytes(),
-        );
-        write_mem(mem, address_ptr, &account);
-        write_mem(mem, address_len_ptr, &(account.len() as u32).to_le_bytes());
+        let address = vm.contracts.last().unwrap().address;
+        write_mem(mem, address_ptr, &address);
+        write_mem(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
 
         Ok(0)
     }
@@ -1392,30 +1392,27 @@ impl MockSubstrate {
     //    }
     //}
 
-    pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
-        let mut runtime = Runtime::new(self.contracts.clone());
-        runtime.input = self.contracts[self.contract].constructors[index].clone();
-        runtime.input.append(&mut args);
-        let address = self.contracts[self.contract].address;
-        let result = runtime.invoke(address, "deploy").unwrap();
+    fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) {
+        let callee = self.contracts[self.contract].address;
+        let mut runtime = Runtime::new(&self.contracts);
+        runtime.call(export, callee, input, value);
 
-        self.contracts = result.contracts;
-        self.output = result.output;
-        self.debug_buffer = result.debug_buffer;
-        self.events = result.events;
+        self.contracts = runtime.contracts;
+        self.output = runtime.output;
+        self.debug_buffer = runtime.debug_buffer;
+        self.events = runtime.events;
+    }
+
+    pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
+        let mut input = self.contracts[self.contract].constructors[index].clone();
+        input.append(&mut args);
+        self.invoke("deploy", input, 20000);
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut runtime = Runtime::new(self.contracts.clone());
-        runtime.input = self.contracts[self.contract].messages[name].clone();
-        runtime.input.append(&mut args);
-        let address = self.contracts[self.contract].address;
-        let result = runtime.invoke(address, "call").unwrap();
-
-        self.contracts = result.contracts;
-        self.output = result.output;
-        self.debug_buffer = result.debug_buffer;
-        self.events = result.events;
+        let mut input = self.contracts[self.contract].messages[name].clone();
+        input.append(&mut args);
+        self.invoke("call", input, 0);
     }
 
     //pub fn function_expect_failure(&mut self, name: &str, args: Vec<u8>) {
@@ -1563,7 +1560,7 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
     let contracts = build_wasm(src, log_ret, log_err)
         .iter()
-        .map(|(code, abi)| Contract::new(abi, code, 500))
+        .map(|(code, abi)| Contract::new(abi, code))
         .collect();
 
     MockSubstrate {
