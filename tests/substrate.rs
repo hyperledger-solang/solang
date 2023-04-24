@@ -418,6 +418,28 @@ impl Runtime {
 
         Ok(0)
     }
+
+    #[link(seal0)]
+    fn seal_transfer(
+        account_ptr: u32,
+        _account_len: u32,
+        value_ptr: u32,
+        _value_len: u32,
+    ) -> Result<i32, Trap> {
+        let value = read_value(mem, value_ptr);
+        if value > vm.contracts[vm.contract].value {
+            return Ok(5); // ReturnCode::TransferFailed
+        }
+
+        let accout = read_account(mem, account_ptr);
+        if let Some(to) = vm.contracts.iter_mut().find(|c| c.address == accout) {
+            to.value += value;
+            vm.contracts[vm.contract].value -= value;
+            return Ok(0);
+        }
+
+        Ok(5)
+    }
 }
 
 #[derive(Default)]
