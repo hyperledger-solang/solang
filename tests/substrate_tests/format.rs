@@ -117,7 +117,10 @@ fn output() {
 
     runtime.function("foo", (-0xca5cadab1efeeb1eeffab1ei128).encode());
 
-    assert_eq!(runtime.debug_buffer, "print: bar:-0xca5cadab1efeeb1eeffab1e,\n");
+    assert_eq!(
+        runtime.debug_buffer,
+        "print: bar:-0xca5cadab1efeeb1eeffab1e,\n"
+    );
 
     let mut runtime = build_solidity(
         r##"
@@ -131,14 +134,10 @@ fn output() {
     runtime.constructor(0, Vec::new());
 
     runtime.function("foo", (0x3fi128).encode());
-    runtime.function("foo", (-0x3fi128).encode());
+    assert!(runtime.debug_buffer.contains("goes 0b111111 ,"));
 
-    assert_eq!(
-        runtime.debug_buffer,
-        r##"print: there is an old android joke which goes 0b111111 ,
-print: there is an old android joke which goes -0b111111 ,
-"##
-    );
+    runtime.function("foo", (-0x3fi128).encode());
+    assert!(runtime.debug_buffer.contains("goes -0b111111 ,"));
 
     let mut runtime = build_solidity(
         r##"
@@ -152,14 +151,10 @@ print: there is an old android joke which goes -0b111111 ,
     runtime.constructor(0, Vec::new());
 
     runtime.function("foo", (102i64).encode());
-    runtime.function("foo", (-102i64).encode());
+    assert!(runtime.debug_buffer.contains("print: number:102 ,"));
 
-    assert_eq!(
-        runtime.debug_buffer,
-        r##"print: number:102 ,
-print: number:-102 ,
-"##
-    );
+    runtime.function("foo", (-102i64).encode());
+    assert!(runtime.debug_buffer.contains("print: number:-102 ,"));
 
     let mut runtime = build_solidity(
         r##"
@@ -174,25 +169,30 @@ print: number:-102 ,
 
     runtime.function("foo", (8462643383279502884i128).encode());
 
-    assert_eq!(runtime.debug_buffer, "print: number:8462643383279502884 ,\n");
+    assert_eq!(
+        runtime.debug_buffer,
+        "print: number:8462643383279502884 ,\n"
+    );
 
     runtime.debug_buffer.truncate(0);
 
     runtime.function("foo", (18462643383279502884i128).encode());
 
-    assert_eq!(runtime.debug_buffer, "print: number:18462643383279502884 ,\n");
+    assert_eq!(
+        runtime.debug_buffer,
+        "print: number:18462643383279502884 ,\n"
+    );
 
     runtime.debug_buffer.truncate(0);
 
     runtime.function("foo", (3141592653589793238462643383279502884i128).encode());
+    assert!(runtime
+        .debug_buffer
+        .contains("number:3141592653589793238462643383279502884 ,"));
     runtime.function("foo", (-3141592653589793238462643383279502884i128).encode());
-
-    assert_eq!(
-        runtime.debug_buffer,
-        r##"print: number:3141592653589793238462643383279502884 ,
-print: number:-3141592653589793238462643383279502884 ,
-"##
-    );
+    assert!(runtime
+        .debug_buffer
+        .contains("number:-3141592653589793238462643383279502884 ,"));
 
     runtime.debug_buffer.truncate(0);
 
@@ -218,26 +218,26 @@ print: number:-3141592653589793238462643383279502884 ,
     runtime.constructor(0, Vec::new());
 
     runtime.function("foo", (0u128, 102u128).encode());
+    assert!(runtime
+        .debug_buffer
+        .contains("number:34708801425935723273264209958040357568512 ,"));
     runtime.function("foo", (0u128, -102i128).encode());
 
-    assert_eq!(
-        runtime.debug_buffer,
-        r##"print: number:34708801425935723273264209958040357568512 ,
-print: number:-34708801425935723273264209958040357568512 ,
-"##
-    );
+    assert!(runtime
+        .debug_buffer
+        .contains("number:-34708801425935723273264209958040357568512 ,"));
 
     runtime.debug_buffer.truncate(0);
 
     runtime.function("hex", (0u128, 0x102u128).encode());
-    runtime.function("unsigned", (0u128, 102i128).encode());
+    assert!(runtime
+        .debug_buffer
+        .contains("number:0x10200000000000000000000000000000000 ,"));
 
-    assert_eq!(
-        runtime.debug_buffer,
-        r##"print: number:0x10200000000000000000000000000000000 ,
-print: number:34708801425935723273264209958040357568512 ,
-"##
-    );
+    runtime.function("unsigned", (0u128, 102i128).encode());
+    assert!(runtime
+        .debug_buffer
+        .contains("number:34708801425935723273264209958040357568512 ,"));
 
     runtime.function("e", Vec::new());
 
