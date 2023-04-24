@@ -26,7 +26,7 @@ fn const_array_array() {
 
     runtime.function("f", Val32(1).encode());
 
-    assert_eq!(runtime.vm.output, Val8(2).encode());
+    assert_eq!(runtime.output, Val8(2).encode());
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn votes() {
         .encode(),
     );
 
-    assert_eq!(runtime.vm.output, true.encode());
+    assert_eq!(runtime.output, true.encode());
 
     runtime.function(
         "f",
@@ -71,7 +71,7 @@ fn votes() {
         .encode(),
     );
 
-    assert_eq!(runtime.vm.output, false.encode());
+    assert_eq!(runtime.output, false.encode());
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn return_array() {
 
     runtime.function("array", Vec::new());
 
-    assert_eq!(runtime.vm.output, Res([4, 84564, 31213, 1312]).encode());
+    assert_eq!(runtime.output, Res([4, 84564, 31213, 1312]).encode());
 }
 
 #[test]
@@ -133,7 +133,7 @@ fn storage_arrays() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.output, Val(val.1).encode());
+        assert_eq!(runtime.output, Val(val.1).encode());
     }
 }
 
@@ -178,7 +178,7 @@ fn enum_arrays() {
     }
 
     runtime.function("count_bar2", Arg(a).encode());
-    assert_eq!(runtime.vm.output, Ret(count).encode());
+    assert_eq!(runtime.output, Ret(count).encode());
 }
 
 #[test]
@@ -299,7 +299,7 @@ fn storage_to_memory() {
 
     let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
 
-    assert_eq!(runtime.vm.output, val.encode());
+    assert_eq!(runtime.output, val.encode());
 }
 
 #[test]
@@ -326,7 +326,7 @@ fn memory_to_storage() {
 
     let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
 
-    assert_eq!(runtime.vm.output, val.encode());
+    assert_eq!(runtime.output, val.encode());
 }
 
 #[test]
@@ -370,7 +370,7 @@ fn array_in_struct() {
 
     let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
 
-    assert_eq!(runtime.vm.output, val.encode());
+    assert_eq!(runtime.output, val.encode());
 }
 
 #[test]
@@ -404,7 +404,7 @@ fn struct_in_array() {
 
     runtime.function("copy", vec![]);
 
-    assert_eq!(runtime.vm.output, val.encode());
+    assert_eq!(runtime.output, val.encode());
 }
 
 #[test]
@@ -438,7 +438,7 @@ fn struct_in_fixed_array() {
 
     runtime.function("copy", vec![]);
 
-    assert_eq!(runtime.vm.output, val.encode());
+    assert_eq!(runtime.output, val.encode());
 }
 
 #[test]
@@ -467,7 +467,7 @@ fn struct_array_struct() {
 
     runtime.function("get_memory", Vec::new());
 
-    assert_eq!(runtime.vm.output, true.encode());
+    assert_eq!(runtime.output, true.encode());
 }
 
 #[test]
@@ -544,7 +544,7 @@ fn struct_array_struct_abi() {
 
     runtime.function("get_bar", Vec::new());
 
-    assert_eq!(runtime.vm.output, b.encode());
+    assert_eq!(runtime.output, b.encode());
 
     runtime.function("set_bar", b.encode());
 }
@@ -1053,7 +1053,7 @@ fn storage_dynamic_array_pop() {
     runtime.function("test", Vec::new());
 
     // We should have one entry for the length; pop should have removed the 102 entry
-    assert_eq!(runtime.store.len(), 1);
+    assert_eq!(runtime.programs[0].storage.len(), 1);
 
     // ensure that structs and fixed arrays are wiped by pop
     let mut runtime = build_solidity(
@@ -1092,7 +1092,7 @@ fn storage_dynamic_array_pop() {
     runtime.function("test", Vec::new());
 
     // We should have one entry for the length; pop should have removed the 102 entry
-    assert_eq!(runtime.store.len(), 1);
+    assert_eq!(runtime.programs[0].storage.len(), 1);
 }
 
 #[test]
@@ -1116,7 +1116,7 @@ fn storage_delete() {
     runtime.function("test", Vec::new());
 
     // We should have one entry for the length; pop should have removed the 102 entry
-    assert!(runtime.store.is_empty());
+    assert!(runtime.programs[0].storage.is_empty());
 
     // ensure that structs and fixed arrays are wiped by delete
     let mut runtime = build_solidity(
@@ -1155,7 +1155,7 @@ fn storage_delete() {
     runtime.function("test", Vec::new());
 
     // We should have one entry for the length; delete should have removed the entry
-    assert_eq!(runtime.store.len(), 1);
+    assert_eq!(runtime.programs[0].storage.len(), 1);
 
     // ensure that structs and fixed arrays are wiped by delete
     let mut runtime = build_solidity(
@@ -1178,16 +1178,16 @@ fn storage_delete() {
 
     runtime.function("setup", Vec::new());
 
-    assert_eq!(runtime.store.len(), 3);
+    assert_eq!(runtime.programs[0].storage.len(), 3);
 
     runtime.function("clear", Vec::new());
 
-    assert_eq!(runtime.store.len(), 0);
+    assert_eq!(runtime.programs[0].storage.len(), 0);
 
     // our delete operator has to iterate over the dynamic array. Ensure it works if the array is empty
     runtime.function("clear", Vec::new());
 
-    assert_eq!(runtime.store.len(), 0);
+    assert_eq!(runtime.programs[0].storage.len(), 0);
 }
 
 #[test]
@@ -1236,7 +1236,7 @@ fn storage_dynamic_copy() {
     runtime.function("storage_to_memory", Vec::new());
     runtime.function("memory_to_storage", Vec::new());
 
-    assert_eq!(runtime.store.len(), 6);
+    assert_eq!(runtime.programs[0].storage.len(), 6);
 }
 
 #[test]
@@ -1264,7 +1264,7 @@ fn abi_encode_dynamic_array() {
     runtime.function("encode", Vec::new());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         Int32Array(vec!(0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30)).encode()
     );
 }
@@ -1331,7 +1331,7 @@ fn abi_encode_dynamic_array2() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         Array(vec!((true, 64), (false, 102), (true, 0x800))).encode()
     );
 }
@@ -1367,7 +1367,7 @@ fn abi_encode_dynamic_array3() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         Array(vec!(
             (true, 64, "abc".to_owned()),
             (false, 102, "a".to_owned()),
@@ -1407,7 +1407,7 @@ fn abi_encode_dynamic_array4() {
     runtime.heap_verify();
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         Array([
             (true, 64, "abc".to_owned()),
             (false, 102, "a".to_owned()),
@@ -1457,7 +1457,7 @@ fn alloc_size_from_storage() {
 
     runtime.constructor(0, Vec::new());
     runtime.function("contfunc", Vec::new());
-    assert_eq!(runtime.vm.output, vec![0u64].encode());
+    assert_eq!(runtime.output, vec![0u64].encode());
 }
 
 #[test]
@@ -1481,10 +1481,10 @@ fn fixed_bytes() {
 
     for i in 0..32u8 {
         runtime.function("uploadData", vec![i, 0]);
-        assert_eq!(runtime.vm.output[..], [0]);
+        assert_eq!(runtime.output[..], [0]);
 
         runtime.function("uploadData", vec![i, 1]);
-        assert_eq!(runtime.vm.output[..], [i]);
+        assert_eq!(runtime.output[..], [i]);
     }
 
     let mut runtime = build_solidity(
@@ -1506,10 +1506,10 @@ fn fixed_bytes() {
 
     for i in 0..32u8 {
         runtime.function("uploadData", vec![i, 0]);
-        assert_eq!(runtime.vm.output[..], [0]);
+        assert_eq!(runtime.output[..], [0]);
 
         runtime.function("uploadData", vec![i, 1]);
-        assert_eq!(runtime.vm.output[..], [i]);
+        assert_eq!(runtime.output[..], [i]);
     }
 }
 

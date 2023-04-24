@@ -100,7 +100,7 @@ fn test_uint64() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.output, Val(val.1).encode());
+        assert_eq!(runtime.output, Val(val.1).encode());
     }
 }
 
@@ -145,7 +145,7 @@ fn test_enum() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.output, Val(val.1).encode());
+        assert_eq!(runtime.output, Val(val.1).encode());
     }
 }
 
@@ -192,7 +192,7 @@ fn test_string() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.output, Val(val.1).encode());
+        assert_eq!(runtime.output, Val(val.1).encode());
     }
 }
 
@@ -261,7 +261,7 @@ fn test_user() {
     for val in &vals {
         runtime.function("get", GetArg(val.0.clone()).encode());
 
-        assert_eq!(runtime.vm.output, GetRet(true, *val.1).encode());
+        assert_eq!(runtime.output, GetRet(true, *val.1).encode());
     }
 
     // now delete them
@@ -273,14 +273,14 @@ fn test_user() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.output, GetRet(false, [0u8; 32]).encode());
+        assert_eq!(runtime.output, GetRet(false, [0u8; 32]).encode());
     }
 
     runtime.function("add", AddArg(b"foo".to_vec(), [1u8; 32]).encode());
 
     runtime.function("get_foo", Vec::new());
 
-    assert_eq!(runtime.vm.output, GetRet(true, [1u8; 32]).encode());
+    assert_eq!(runtime.output, GetRet(true, [1u8; 32]).encode());
 }
 
 #[test]
@@ -337,7 +337,7 @@ fn test_string_map() {
     for (address, val) in &vals {
         runtime.function("get", GetArg(*address).encode());
 
-        assert_eq!(runtime.vm.output, GetRet(val.clone()).encode());
+        assert_eq!(runtime.output, GetRet(val.clone()).encode());
     }
 
     // now delete them
@@ -349,7 +349,7 @@ fn test_string_map() {
     for address in vals.keys() {
         runtime.function("get", GetArg(*address).encode());
 
-        assert_eq!(runtime.vm.output, GetRet(Vec::new()).encode());
+        assert_eq!(runtime.output, GetRet(Vec::new()).encode());
     }
 }
 
@@ -398,6 +398,6 @@ fn test_address() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.output, Val(val.1).encode());
+        assert_eq!(runtime.output, Val(val.1).encode());
     }
 }

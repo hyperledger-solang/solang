@@ -38,7 +38,7 @@ fn external_call() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret(1020).encode());
+    assert_eq!(runtime.output, Ret(1020).encode());
 }
 
 #[test]
@@ -102,7 +102,7 @@ fn revert_constructor() {
 
     runtime.function_expect_failure("test", Vec::new());
 
-    assert_eq!(runtime.vm.output.len(), 0);
+    assert_eq!(runtime.output.len(), 0);
 }
 
 #[test]
@@ -154,7 +154,7 @@ fn external_datatypes() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret(1020).encode());
+    assert_eq!(runtime.output, Ret(1020).encode());
 }
 
 #[test]
@@ -196,7 +196,7 @@ fn creation_code() {
 
     // return value should be the code for the second contract
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         Ret(runtime.programs[1].code.clone()).encode()
     );
 }
@@ -226,7 +226,7 @@ fn issue666() {
 
     runtime.constructor(0, Vec::new());
 
-    let flipper_address = runtime.vm.account;
+    let flipper_address = runtime.account;
 
     println!("flipper_address={}", hex::encode(flipper_address));
 
@@ -236,7 +236,7 @@ fn issue666() {
 
     runtime.function("superFlip", Vec::new());
 
-    assert!(runtime.vm.output.is_empty());
+    assert!(runtime.output.is_empty());
 }
 
 #[test]

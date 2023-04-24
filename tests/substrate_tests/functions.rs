@@ -28,7 +28,7 @@ fn constructors() {
     runtime.constructor(0, Vec::new());
     runtime.function("get", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val(1).encode());
+    assert_eq!(runtime.output, Val(1).encode());
 
     // parse
     let mut runtime = build_solidity(
@@ -49,7 +49,7 @@ fn constructors() {
     runtime.constructor(0, Val(0xaa_bb_cc_dd).encode());
     runtime.function("get", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val(0xaa_bb_cc_dd).encode());
+    assert_eq!(runtime.output, Val(0xaa_bb_cc_dd).encode());
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn constructor_override_selector() {
 
     runtime.function("get", Vec::new());
 
-    assert_eq!(runtime.vm.output, 0xaa_bb_cc_ddu64.encode());
+    assert_eq!(runtime.output, 0xaa_bb_cc_ddu64.encode());
 }
 
 #[test]
@@ -128,7 +128,7 @@ fn function_override_selector() {
     runtime.raw_function(input);
     runtime.function("get", Vec::new());
 
-    assert_eq!(runtime.vm.output, 0xaa_bb_cc_ddu64.encode());
+    assert_eq!(runtime.output, 0xaa_bb_cc_ddu64.encode());
 }
 
 #[test]
@@ -155,7 +155,7 @@ fn fallback() {
     runtime.raw_function([0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec());
     runtime.function("get", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val(356).encode());
+    assert_eq!(runtime.output, Val(356).encode());
 }
 
 #[test]
@@ -200,7 +200,7 @@ fn nofallback() {
     runtime.raw_function([0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec());
     runtime.function("get", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val(356).encode());
+    assert_eq!(runtime.output, Val(356).encode());
 }
 
 #[test]
@@ -264,13 +264,13 @@ fn shadowing() {
 
     runtime.function("get", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val(0x1234_5678_9abc_def0).encode());
+    assert_eq!(runtime.output, Val(0x1234_5678_9abc_def0).encode());
 
     runtime.function("badset", Val(1).encode());
 
     runtime.function("get", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val(0x1234_5678_9abc_def0).encode());
+    assert_eq!(runtime.output, Val(0x1234_5678_9abc_def0).encode());
 }
 
 #[test]
@@ -350,7 +350,7 @@ fn test_example() {
 
     runtime.function("is_zombie_reaper", Vec::new());
 
-    assert_eq!(runtime.vm.output, ValBool(false).encode());
+    assert_eq!(runtime.output, ValBool(false).encode());
 
     runtime.function("reap_processes", Vec::new());
 
@@ -404,11 +404,11 @@ fn args_and_returns() {
 
     runtime.function("foo1", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val32(-102).encode());
+    assert_eq!(runtime.output, Val32(-102).encode());
 
     runtime.function("foo2", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val32(553).encode());
+    assert_eq!(runtime.output, Val32(553).encode());
 }
 
 #[test]

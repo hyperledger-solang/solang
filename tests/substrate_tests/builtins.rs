@@ -688,22 +688,22 @@ fn my_token() {
         0x31, 0x32,
     ];
     runtime.function("test", TokenTest(addr, true).encode());
-    assert_eq!(&runtime.vm.caller[..], &runtime.vm.output[..]);
+    assert_eq!(&runtime.caller[..], &runtime.output[..]);
 
     runtime.function("test", TokenTest(addr, false).encode());
-    assert_eq!(&runtime.vm.output[..], &addr[..]);
+    assert_eq!(&runtime.output[..], &addr[..]);
 
     runtime.function(
         "test",
-        TokenTest(<[u8; 32]>::try_from(&runtime.vm.caller[..]).unwrap(), true).encode(),
+        TokenTest(<[u8; 32]>::try_from(&runtime.caller[..]).unwrap(), true).encode(),
     );
-    assert_eq!(&runtime.vm.caller[..], &runtime.vm.output[..]);
+    assert_eq!(&runtime.caller[..], &runtime.output[..]);
 
     runtime.function(
         "test",
-        TokenTest(<[u8; 32]>::try_from(&runtime.vm.caller[..]).unwrap(), false).encode(),
+        TokenTest(<[u8; 32]>::try_from(&runtime.caller[..]).unwrap(), false).encode(),
     );
-    assert_eq!(&runtime.vm.caller[..], &runtime.vm.output[..]);
+    assert_eq!(&runtime.caller[..], &runtime.output[..]);
 }
 
 #[test]
@@ -744,10 +744,10 @@ fn hash() {
     ]);
 
     runtime.function("set", h.encode());
-    assert_eq!(&runtime.vm.output[..], &h.0[..]);
+    assert_eq!(&runtime.output[..], &h.0[..]);
 
     runtime.function("get", vec![]);
-    assert_eq!(&runtime.vm.output[..], &h.0[..]);
+    assert_eq!(&runtime.output[..], &h.0[..]);
 
     runtime.function("test_encoding", vec![]);
 }

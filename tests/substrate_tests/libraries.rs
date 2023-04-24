@@ -36,11 +36,11 @@ fn simple() {
     runtime.constructor(0, Vec::new());
     runtime.function("foo", Val(102).encode());
 
-    assert_eq!(runtime.vm.output, Val(65536).encode());
+    assert_eq!(runtime.output, Val(65536).encode());
 
     runtime.function("bar", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val(102).encode());
+    assert_eq!(runtime.output, Val(102).encode());
 }
 
 #[test]
@@ -67,7 +67,7 @@ fn using() {
     runtime.constructor(0, Vec::new());
     runtime.function("foo", Val(102).encode());
 
-    assert_eq!(runtime.vm.output, Val(65536).encode());
+    assert_eq!(runtime.output, Val(65536).encode());
 
     // the using directive can specify a different type than the function in the library,
     // as long as it casts implicitly and matches the type of method call _exactly_
@@ -91,7 +91,7 @@ fn using() {
     runtime.constructor(0, Vec::new());
     runtime.function("foo", 102u32.encode());
 
-    assert_eq!(runtime.vm.output, Val(65536).encode());
+    assert_eq!(runtime.output, Val(65536).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -117,7 +117,7 @@ fn using() {
     runtime.constructor(0, Vec::new());
     runtime.function("foo", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val(571).encode());
+    assert_eq!(runtime.output, Val(571).encode());
 }
 
 #[test]
@@ -152,5 +152,5 @@ fn using_in_base() {
     runtime.constructor(0, Vec::new());
     runtime.function("baz", 102u64.encode());
 
-    assert_eq!(runtime.vm.output, true.encode());
+    assert_eq!(runtime.output, true.encode());
 }

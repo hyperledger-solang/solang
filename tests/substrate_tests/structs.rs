@@ -153,7 +153,7 @@ fn structs_decode() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         Foo {
             f1: [0xf3, 0x3e, 0xc3],
             f2: 0xfd7f,
@@ -188,7 +188,7 @@ fn structs_decode() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         vec![
             Foo {
                 f1: [0, 0, 0],
@@ -237,7 +237,7 @@ fn structs_decode() {
     runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 
-    let mut output: &[u8] = &runtime.vm.output;
+    let mut output: &[u8] = &runtime.output;
 
     assert_eq!(
         Vec::<Foo2>::decode(&mut output).expect("decode failed"),
@@ -252,7 +252,7 @@ fn structs_decode() {
 
     runtime.function("test_zero", Vec::new());
 
-    let mut output: &[u8] = &runtime.vm.output;
+    let mut output: &[u8] = &runtime.output;
 
     assert_eq!(
         Vec::<Foo2>::decode(&mut output).expect("decode failed"),
@@ -333,7 +333,7 @@ fn structs_in_structs_decode() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         Bar {
             a: true,
             b: Foo {
@@ -466,7 +466,7 @@ fn return_from_struct_storage() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         Foo {
             f1: [0x70, 0x6e, 0x67],
             f2: 0x89ab_cdef,
@@ -612,5 +612,5 @@ fn encode_decode_bytes_in_field() {
     );
 
     runtime.function("test", vec![]);
-    assert_eq!(runtime.vm.output, Foo([0x41, 0x42, 0x43, 0x44]).encode())
+    assert_eq!(runtime.output, Foo([0x41, 0x42, 0x43, 0x44]).encode())
 }

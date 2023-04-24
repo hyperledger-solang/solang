@@ -27,12 +27,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
 
     runtime.function("bar", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
+        runtime.store.get(&(runtime.account, slot)).unwrap(),
         &vec!(7, 0)
     );
 
@@ -58,12 +58,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
 
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
+        runtime.store.get(&(runtime.account, slot)).unwrap(),
         &vec!(5, 0)
     );
 
@@ -91,12 +91,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
 
     runtime.function("test", 11u16.encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
+        runtime.store.get(&(runtime.account, slot)).unwrap(),
         &vec!(5, 0)
     );
 
@@ -134,12 +134,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
 
     runtime.function("test", 11u16.encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
+        runtime.store.get(&(runtime.account, slot)).unwrap(),
         &vec!(5, 0)
     );
 
@@ -164,12 +164,12 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
 
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
+        runtime.store.get(&(runtime.account, slot)).unwrap(),
         &vec!(6, 0)
     );
 }
@@ -202,12 +202,12 @@ fn inherit_modifier() {
     let mut slot = [0u8; 32];
     slot[0] = 1;
 
-    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
 
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
+        runtime.store.get(&(runtime.account, slot)).unwrap(),
         &vec!(7, 0, 0, 0)
     );
 
@@ -244,12 +244,12 @@ fn inherit_modifier() {
     let mut slot = [0u8; 32];
     slot[0] = 1;
 
-    assert_eq!(runtime.store.get(&(runtime.vm.account, slot)), None);
+    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
 
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, slot)).unwrap(),
+        runtime.store.get(&(runtime.account, slot)).unwrap(),
         &vec!(10, 0, 0, 0)
     );
 }
@@ -286,7 +286,7 @@ fn return_values() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
-    assert_eq!(runtime.vm.output, Val(5).encode());
+    assert_eq!(runtime.output, Val(5).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -320,7 +320,7 @@ fn return_values() {
     struct StructS(bool, u64, String);
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output,
         StructS(true, 5, String::from("Hello, World!")).encode()
     );
 }

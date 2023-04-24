@@ -28,7 +28,7 @@ use solang::{compile, Target};
 
 use wasm_host_derive::wasm_host;
 
-//mod substrate_tests;
+mod substrate_tests;
 
 type StorageKey = [u8; 32];
 type Account = [u8; 32];
@@ -557,8 +557,8 @@ impl Runtime {
 
 #[derive(Default)]
 pub struct MockSubstrate {
-    contracts: Vec<Contract>,
-    pub contract: usize,
+    pub programs: Vec<Contract>,
+    pub current_program: usize,
     pub output: Vec<u8>,
     pub debug_buffer: String,
     pub events: Vec<Event>,
@@ -1452,7 +1452,7 @@ impl MockSubstrate {
     }
 
     pub fn set_program(&mut self, index: usize) {
-        self.contract = index;
+        self.current_program = index;
     }
 
     //pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
@@ -1508,13 +1508,13 @@ impl MockSubstrate {
     //}
 
     fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) -> Result<(), Error> {
-        let callee = self.contracts[self.contract].address;
-        let mut runtime = Runtime::new(&self.contracts);
+        let callee = self.programs[self.current_program].address;
+        let mut runtime = Runtime::new(&self.programs);
         runtime.call(export, callee, input, value)?;
 
         self.caller = runtime.caller;
-        self.account = self.contracts[self.contract].address;
-        self.contracts = runtime.contracts;
+        self.account = self.programs[self.current_program].address;
+        self.programs = runtime.contracts;
         self.output = runtime.output;
         self.debug_buffer = runtime.debug_buffer;
         self.events = runtime.events;
@@ -1523,7 +1523,7 @@ impl MockSubstrate {
     }
 
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
-        let mut input = self.contracts[self.contract].constructors[index].clone();
+        let mut input = self.programs[self.current_program].constructors[index].clone();
         input.append(&mut args);
         self.raw_constructor(input);
     }
@@ -1533,13 +1533,13 @@ impl MockSubstrate {
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.contracts[self.contract].messages[name].clone();
+        let mut input = self.programs[self.current_program].messages[name].clone();
         input.append(&mut args);
         self.raw_function(input);
     }
 
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.contracts[self.contract].messages[name].clone();
+        let mut input = self.programs[self.current_program].messages[name].clone();
         input.append(&mut args);
         self.raw_function_failure(input);
     }
@@ -1702,7 +1702,7 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
 
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
     MockSubstrate {
-        contracts: build_wasm(src, log_ret, log_err)
+        programs: build_wasm(src, log_ret, log_err)
             .iter()
             .map(|(code, abi)| Contract::new(abi, code))
             .collect(),

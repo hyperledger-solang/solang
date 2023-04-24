@@ -35,11 +35,11 @@ fn revert() {
 
     runtime.function_expect_failure("test", Vec::new());
 
-    assert_eq!(runtime.vm.output.len(), 0);
+    assert_eq!(runtime.output.len(), 0);
 
     runtime.function_expect_failure("a", Vec::new());
 
-    assert_eq!(runtime.vm.output.len(), 0);
+    assert_eq!(runtime.output.len(), 0);
 
     let mut runtime = build_solidity(
         r##"
@@ -52,7 +52,7 @@ fn revert() {
 
     runtime.function_expect_failure("test", Vec::new());
 
-    assert_eq!(runtime.vm.output.len(), 0);
+    assert_eq!(runtime.output.len(), 0);
 }
 
 #[test]
@@ -73,11 +73,11 @@ fn require() {
     runtime.function_expect_failure("test1", Vec::new());
 
     // The reason is lost
-    assert_eq!(runtime.vm.output.len(), 0);
+    assert_eq!(runtime.output.len(), 0);
 
     runtime.function("test2", Vec::new());
 
-    assert_eq!(runtime.vm.output.len(), 0);
+    assert_eq!(runtime.output.len(), 0);
 }
 
 #[test]
@@ -545,13 +545,13 @@ fn payable_functions() {
     runtime.vm.value = 0;
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret(3).encode());
+    assert_eq!(runtime.output, Ret(3).encode());
 
     runtime.vm.value = 0;
     runtime.raw_function(b"abde".to_vec());
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret(2).encode());
+    assert_eq!(runtime.output, Ret(2).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -578,7 +578,7 @@ fn payable_functions() {
     runtime.vm.value = 0;
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret(3).encode());
+    assert_eq!(runtime.output, Ret(3).encode());
 
     runtime.vm.value = 0;
     runtime.raw_function_failure(b"abde".to_vec());
@@ -609,7 +609,7 @@ fn payable_functions() {
     runtime.raw_function(b"abde".to_vec());
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret(2).encode());
+    assert_eq!(runtime.output, Ret(2).encode());
 }
 
 #[test]
@@ -789,7 +789,7 @@ fn log_api_call_return_values_works() {
 
     runtime.function("test", vec![]);
     assert_eq!(
-        &runtime.printbuf,
+        &runtime.debug_buffer,
         r##"call: instantiation_nonce=1,
 call: seal_instantiate=0,
 print: hi!,
@@ -833,5 +833,5 @@ fn selector() {
 
     runtime.function("g", vec![]);
 
-    assert_eq!(runtime.vm.output, res);
+    assert_eq!(runtime.output, res);
 }
