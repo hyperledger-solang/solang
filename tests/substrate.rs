@@ -204,7 +204,7 @@ impl Runtime {
     }
 }
 
-fn len_from_ptr(mem: &[u8], ptr: u32) -> usize {
+fn read_len(mem: &[u8], ptr: u32) -> usize {
     u32::from_le_bytes(mem[ptr as usize..ptr as usize + 4].try_into().unwrap()) as usize
 }
 
@@ -226,9 +226,9 @@ fn read_account(mem: &[u8], ptr: u32) -> Account {
 
 #[wasm_host]
 impl Runtime {
-    #[link(seal0)]
+    #[seal(0)]
     fn seal_input(dest_ptr: u32, len_ptr: u32) -> Result<(), Trap> {
-        assert!(len_from_ptr(mem, len_ptr) >= vm.input.len());
+        assert!(read_len(mem, len_ptr) >= vm.input.len());
         println!("seal_input: {}", hex::encode(&vm.input));
 
         write_buf(mem, dest_ptr, &vm.input);
@@ -237,17 +237,17 @@ impl Runtime {
         Ok(())
     }
 
-    #[link(seal0)]
+    #[seal(0)]
     fn seal_return(flags: u32, data_ptr: u32, data_len: u32) -> Result<(), Trap> {
         let output = read_buf(mem, data_ptr, data_len);
         println!("seal_return: {flags} {}", hex::encode(&output));
-        Err(Trap::from(HostReturn::Data(flags as u32, output)))
+        Err(HostReturn::Data(flags as u32, output).into())
     }
 
-    #[link(seal0)]
+    #[seal(0)]
     fn seal_value_transferred(dest_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let value = vm.value.to_le_bytes();
-        assert!(len_from_ptr(mem, out_len_ptr) >= value.len());
+        assert!(read_len(mem, out_len_ptr) >= value.len());
         println!("seal_value_transferred: {}", vm.value);
 
         write_buf(mem, dest_ptr, &value);
@@ -256,7 +256,7 @@ impl Runtime {
         Ok(())
     }
 
-    #[link(seal0)]
+    #[seal(0)]
     fn seal_debug_message(data_ptr: u32, len: u32) -> Result<i32, Trap> {
         let buf = read_buf(mem, data_ptr, len);
         let msg = std::str::from_utf8(&buf).expect("seal_debug_message: Invalid UFT8");
@@ -265,7 +265,7 @@ impl Runtime {
         Ok(0)
     }
 
-    #[link(seal1)]
+    #[seal(1)]
     fn seal_get_storage(
         key_ptr: u32,
         key_len: u32,
@@ -286,7 +286,7 @@ impl Runtime {
         Ok(0)
     }
 
-    #[link(seal2)]
+    #[seal(2)]
     fn seal_set_storage(
         key_ptr: u32,
         key_len: u32,
@@ -304,7 +304,7 @@ impl Runtime {
         }
     }
 
-    #[link(seal1)]
+    #[seal(1)]
     fn seal_clear_storage(key_ptr: u32, key_len: u32) -> Result<i32, Trap> {
         let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
@@ -316,7 +316,7 @@ impl Runtime {
         }
     }
 
-    #[link(seal0)]
+    #[seal(0)]
     fn seal_hash_keccak_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let mut hasher = Keccak::v256();
         hasher.update(&read_buf(mem, input_ptr, input_len));
@@ -324,7 +324,7 @@ impl Runtime {
         Ok(())
     }
 
-    #[link(seal0)]
+    #[seal(0)]
     fn seal_hash_sha2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let mut hasher = Sha256::new();
         hasher.update(read_buf(mem, input_ptr, input_len));
@@ -332,21 +332,21 @@ impl Runtime {
         Ok(())
     }
 
-    #[link(seal0)]
+    #[seal(0)]
     fn seal_hash_blake2_128(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let data = read_buf(mem, input_ptr, input_len);
         write_buf(mem, output_ptr, blake2b(16, &[], &data).as_bytes());
         Ok(())
     }
 
-    #[link(seal0)]
+    #[seal(0)]
     fn seal_hash_blake2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let data = read_buf(mem, input_ptr, input_len);
         write_buf(mem, output_ptr, blake2b(32, &[], &data).as_bytes());
         Ok(())
     }
 
-    #[link(seal1)]
+    #[seal(1)]
     fn seal_call(
         _flags: u32,
         callee_ptr: u32,
@@ -366,7 +366,7 @@ impl Runtime {
         vm.contracts[vm.contract].value -= value;
 
         if output_len_ptr != u32::MAX {
-            assert!(len_from_ptr(mem, output_len_ptr) >= vm.output.len());
+            assert!(read_len(mem, output_len_ptr) >= vm.output.len());
             write_buf(mem, output_ptr, &vm.output);
             write_buf(mem, output_len_ptr, &(vm.output.len() as u32).to_le_bytes());
         }
@@ -374,19 +374,19 @@ impl Runtime {
         Ok(0)
     }
 
-    #[link(seal0)]
+    #[seal(0)]
     fn instantiation_nonce() -> Result<u64, Trap> {
         Ok(vm.contracts.len() as u64)
     }
 
-    #[link(seal0)]
+    #[seal(0)]
     fn seal_minimum_balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
-        assert!(len_from_ptr(mem, out_len_ptr) >= 16);
+        assert!(read_len(mem, out_len_ptr) >= 16);
         write_buf(mem, out_ptr, &500u128.to_le_bytes());
         Ok(())
     }
 
-    #[link(seal1)]
+    #[seal(1)]
     fn seal_instantiate(
         code_hash_ptr: u32,
         _gas: u64,
@@ -419,13 +419,8 @@ impl Runtime {
         Ok(0)
     }
 
-    #[link(seal0)]
-    fn seal_transfer(
-        account_ptr: u32,
-        _account_len: u32,
-        value_ptr: u32,
-        _value_len: u32,
-    ) -> Result<i32, Trap> {
+    #[seal(0)]
+    fn seal_transfer(account_ptr: u32, _: u32, value_ptr: u32, _: u32) -> Result<i32, Trap> {
         let value = read_value(mem, value_ptr);
         if value > vm.contracts[vm.contract].value {
             return Ok(5); // ReturnCode::TransferFailed
@@ -439,6 +434,102 @@ impl Runtime {
         }
 
         Ok(5)
+    }
+
+    #[seal(0)]
+    fn seal_address(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+        let address = vm.contracts[vm.contract].address;
+        let out_len = read_len(mem, out_len_ptr);
+        assert!(out_len >= address.len());
+
+        write_buf(mem, out_ptr, &address);
+        write_buf(mem, out_len_ptr, &(address.len() as u32).to_le_bytes());
+
+        Ok(())
+    }
+
+    #[seal(0)]
+    fn seal_caller(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+        let out_len = read_len(mem, out_len_ptr);
+        assert!(out_len >= vm.caller.len());
+
+        write_buf(mem, out_ptr, &vm.caller);
+        write_buf(mem, out_len_ptr, &(vm.caller.len() as u32).to_le_bytes());
+
+        Ok(())
+    }
+
+    #[seal(0)]
+    fn seal_balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+        let balance = vm.contracts[vm.contract].value.to_le_bytes();
+        let out_len = read_len(mem, out_len_ptr);
+        assert!(out_len >= balance.len());
+
+        write_buf(mem, out_ptr, &balance);
+        write_buf(mem, out_len_ptr, &(balance.len() as u32).to_le_bytes());
+
+        Ok(())
+    }
+
+    #[seal(0)]
+    fn block_number(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+        let block = 950_119_597u32.to_le_bytes();
+        let out_len = read_len(mem, out_len_ptr);
+        assert!(out_len >= block.len());
+
+        write_buf(mem, out_ptr, &block);
+        write_buf(mem, out_len_ptr, &(block.len() as u32).to_le_bytes());
+
+        Ok(())
+    }
+
+    #[seal(0)]
+    fn seal_now(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+        let now = 1594035638000u64.to_le_bytes();
+        let out_len = read_len(mem, out_len_ptr);
+        assert!(out_len >= now.len());
+
+        write_buf(mem, out_ptr, &now);
+        write_buf(mem, out_len_ptr, &(now.len() as u32).to_le_bytes());
+
+        Ok(())
+    }
+
+    #[seal(0)]
+    fn seal_gas_left(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+        let gas = 2_224_097_461u64.to_le_bytes();
+        let out_len = read_len(mem, out_len_ptr);
+        assert!(out_len >= gas.len());
+
+        write_buf(mem, out_ptr, &gas);
+        write_buf(mem, out_len_ptr, &(gas.len() as u32).to_le_bytes());
+
+        Ok(())
+    }
+
+    #[seal(0)]
+    fn seal_weight_to_fee(gas: u64, out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+        let price = (59_541_253_813_967 * gas as u128).to_le_bytes();
+        let out_len = read_len(mem, out_len_ptr);
+        assert!(out_len >= price.len());
+
+        write_buf(mem, out_ptr, &price);
+        write_buf(mem, out_len_ptr, &(price.len() as u32).to_le_bytes());
+
+        Ok(())
+    }
+
+    #[seal(1)]
+    fn seal_terminate(beneficiary_ptr: u32) -> Result<(), Trap> {
+        let free = vm.contracts.remove(vm.contract).value;
+        let address = read_account(mem, beneficiary_ptr);
+        println!("seal_terminate: {} {free}", hex::encode(address));
+
+        if let Some(to) = vm.contracts.iter_mut().find(|c| c.address == address) {
+            to.value += free;
+        }
+
+        Err(HostReturn::Terminate.into())
     }
 }
 

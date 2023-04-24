@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, ToTokens};
-use syn::{punctuated::Punctuated, token::Comma, Ident, ImplItem, ItemImpl, Type};
+use syn::{punctuated::Punctuated, token::Comma, Ident, ImplItem, ItemImpl, LitInt, Type};
 
 #[derive(Debug)]
 struct HostFn {
@@ -23,8 +23,8 @@ impl HostFn {
         let module = item
             .attrs
             .iter()
-            .find(|attr| attr.path().get_ident().unwrap() == "link")
-            .map(|attr| attr.parse_args::<Ident>().unwrap().to_string())?;
+            .find(|attr| attr.path().get_ident().unwrap() == "seal")
+            .map(|attr| format!("seal{}", attr.parse_args::<LitInt>().unwrap()))?;
 
         Some(HostFn {
             name: item.sig.ident.to_string(),
