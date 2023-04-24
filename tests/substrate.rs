@@ -35,7 +35,7 @@ type Account = [u8; 32];
 type Storage = HashMap<StorageKey, Vec<u8>>;
 
 #[derive(Clone)]
-struct Contract {
+pub struct Contract {
     messages: HashMap<String, Vec<u8>>,
     constructors: Vec<Vec<u8>>,
     code_hash: [u8; 32],
@@ -90,23 +90,24 @@ impl Contract {
         store.data_mut().memory = Some(memory);
 
         let instance = linker
-            .instantiate(&mut store, &Module::new(&engine, &mut &self.code[..])?)
-            .expect("linking is always correct")
+            .instantiate(&mut store, &Module::new(&engine, &mut &self.code[..])?)?
             .ensure_no_start(&mut store)
             .expect("we never emit a start function");
 
         Ok((store, instance))
     }
 
-    fn execute(&self, function: &str, vm: Runtime) -> Result<Runtime, Error> {
-        let (mut store, instance) = self.instantiate(vm)?;
+    fn execute(&self, function: &str, vm: Runtime) -> Result<Runtime, (Error, String)> {
+        let (mut store, instance) = self.instantiate(vm).map_err(|e| (e, String::new()))?;
         match instance
             .get_export(&store, function)
             .and_then(|export| export.into_func())
             .expect("contract does not export '{function}'")
             .call(&mut store, &[], &mut [])
         {
-            Err(Error::Trap(trap)) if trap.trap_code().is_some() => Err(Error::Trap(trap)),
+            Err(Error::Trap(trap)) if trap.trap_code().is_some() => {
+                Err((Error::Trap(trap), store.data().debug_buffer.clone()))
+            }
             Err(Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
                 Some(HostReturn::Data(_, data)) => {
                     store.data_mut().output = data;
@@ -173,7 +174,7 @@ impl Runtime {
         callee: Account,
         input: Vec<u8>,
         value: u128,
-    ) -> Result<(), Error> {
+    ) -> Result<(), (Error, String)> {
         println!(
             "{export}: account={} input={} value={value}",
             hex::encode(callee),
@@ -191,7 +192,7 @@ impl Runtime {
         value: u128,
         salt: &[u8],
         input: Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), (Error, String)> {
         let (address, contract) = self
             .contracts
             .iter()
@@ -1510,7 +1511,10 @@ impl MockSubstrate {
     fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) -> Result<(), Error> {
         let callee = self.programs[self.current_program].address;
         let mut runtime = Runtime::new(&self.programs);
-        runtime.call(export, callee, input, value)?;
+        runtime.call(export, callee, input, value).map_err(|e| {
+            self.debug_buffer = e.1;
+            e.0
+        })?;
 
         self.caller = runtime.caller;
         self.account = self.programs[self.current_program].address;
