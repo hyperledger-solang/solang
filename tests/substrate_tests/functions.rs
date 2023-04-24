@@ -125,7 +125,7 @@ fn function_override_selector() {
     let mut input: Vec<u8> = vec![1, 2, 3, 4];
     input.extend(0xaa_bb_cc_ddu64.encode());
 
-    runtime.raw_function(input);
+    runtime.raw_function(input, 0);
     runtime.function("get", Vec::new());
 
     assert_eq!(runtime.output, 0xaa_bb_cc_ddu64.encode());
@@ -152,7 +152,7 @@ fn fallback() {
         }",
     );
 
-    runtime.raw_function([0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec());
+    runtime.raw_function([0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec(), 0);
     runtime.function("get", Vec::new());
 
     assert_eq!(runtime.output, Val(356).encode());
@@ -176,7 +176,7 @@ fn function_wrong_selector() {
         }",
     );
 
-    runtime.raw_function(vec![0xaa, 0xbb, 0xcc, 0xdd]);
+    runtime.raw_function(vec![0xaa, 0xbb, 0xcc, 0xdd], 0);
 }
 
 #[test]
@@ -197,7 +197,7 @@ fn nofallback() {
         }",
     );
 
-    runtime.raw_function([0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec());
+    runtime.raw_function([0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec(), 0);
     runtime.function("get", Vec::new());
 
     assert_eq!(runtime.output, Val(356).encode());

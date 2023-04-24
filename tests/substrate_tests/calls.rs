@@ -540,15 +540,12 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.vm.value = 1;
-    runtime.raw_function(b"abde".to_vec());
-    runtime.vm.value = 0;
+    runtime.raw_function(b"abde".to_vec(), 1);
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.output, Ret(3).encode());
 
-    runtime.vm.value = 0;
-    runtime.raw_function(b"abde".to_vec());
+    runtime.raw_function(b"abde".to_vec(), 0);
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.output, Ret(2).encode());
@@ -573,15 +570,12 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.vm.value = 1;
-    runtime.raw_function(b"abde".to_vec());
-    runtime.vm.value = 0;
+    runtime.raw_function(b"abde".to_vec(), 1);
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.output, Ret(3).encode());
 
-    runtime.vm.value = 0;
-    runtime.raw_function_failure(b"abde".to_vec());
+    runtime.raw_function_failure(b"abde".to_vec(), 0);
     let mut runtime = build_solidity(
         r##"
         contract c {
@@ -602,11 +596,9 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.vm.value = 1;
-    runtime.raw_function_failure(b"abde".to_vec());
+    runtime.raw_function_failure(b"abde".to_vec(), 1);
 
-    runtime.vm.value = 0;
-    runtime.raw_function(b"abde".to_vec());
+    runtime.raw_function(b"abde".to_vec(), 0);
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.output, Ret(2).encode());

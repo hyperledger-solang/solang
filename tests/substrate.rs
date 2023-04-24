@@ -1535,21 +1535,21 @@ impl MockSubstrate {
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.programs[self.current_program].messages[name].clone();
         input.append(&mut args);
-        self.raw_function(input);
+        self.raw_function(input, 0);
     }
 
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.programs[self.current_program].messages[name].clone();
         input.append(&mut args);
-        self.raw_function_failure(input);
+        self.raw_function_failure(input, 0);
     }
 
-    pub fn raw_function(&mut self, input: Vec<u8>) {
-        self.invoke("call", input, 0).unwrap();
+    pub fn raw_function(&mut self, input: Vec<u8>, value: u128) {
+        self.invoke("call", input, value).unwrap();
     }
 
-    pub fn raw_function_failure(&mut self, input: Vec<u8>) {
-        match self.invoke("call", input, 0) {
+    pub fn raw_function_failure(&mut self, input: Vec<u8>, value: u128) {
+        match self.invoke("call", input, value) {
             Err(wasmi::Error::Trap(trap)) => match trap.trap_code() {
                 Some(TrapCode::UnreachableCodeReached) => (),
                 _ => panic!("trap: {trap:?}"),

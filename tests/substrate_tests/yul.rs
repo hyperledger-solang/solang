@@ -160,23 +160,13 @@ contract testing  {
     runtime.function("test_balance", Vec::new());
     assert_eq!(
         runtime.output[..16].to_vec(),
-        runtime
-            .accounts
-            .get_mut(&runtime.account)
-            .unwrap()
-            .1
-            .encode(),
+        runtime.programs[0].value.encode()
     );
 
     runtime.function("test_selfbalance", Vec::new());
     assert_eq!(
         runtime.output[..16].to_vec(),
-        runtime
-            .accounts
-            .get_mut(&runtime.account)
-            .unwrap()
-            .1
-            .encode(),
+        runtime.programs[0].value.encode()
     );
 
     runtime.function("test_caller", Vec::new());

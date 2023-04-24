@@ -377,8 +377,8 @@ fn msg() {
         }"##,
     );
 
-    runtime.vm.value = 145_594_775_678_703_046_797_448_357_509_034_994_219;
-    runtime.function("test", Vec::new());
+    let value = 145_594_775_678_703_046_797_448_357_509_034_994_219;
+    runtime.raw_function(runtime.programs[0].messages["test"], value);
 
     let mut runtime = build_solidity(
         r##"
