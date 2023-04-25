@@ -97,7 +97,7 @@ impl Contract {
         Ok((store, instance))
     }
 
-    fn execute(&self, function: &str, vm: Runtime) -> Result<Runtime, (Error, String)> {
+    fn execute(&self, function: &str, vm: Runtime) -> Result<Store<Runtime>, (Error, String)> {
         let (mut store, instance) = self.instantiate(vm).map_err(|e| (e, String::new()))?;
 
         match instance
@@ -112,13 +112,13 @@ impl Contract {
             Err(Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
                 Some(HostReturn::Data(_, data)) => {
                     store.data_mut().output = data;
-                    Ok(store.into_data())
+                    Ok(store)
                 }
-                Some(HostReturn::Terminate) => Ok(store.into_data()),
+                Some(HostReturn::Terminate) => Ok(store),
                 _ => panic!("contract execution stopped by unexpected trap"),
             },
             Err(e) => panic!("unexpected error during contract execution: {e}"),
-            Ok(_) => Ok(store.into_data()),
+            Ok(_) => Ok(store),
         }
     }
 }
@@ -176,7 +176,7 @@ impl Runtime {
         callee: Account,
         input: Vec<u8>,
         value: u128,
-    ) -> Result<Runtime, Error> {
+    ) -> Result<Store<Runtime>, Error> {
         println!(
             "{export}: account={} input={} value={value}",
             hex::encode(callee),
@@ -198,7 +198,7 @@ impl Runtime {
         value: u128,
         salt: &[u8],
         input: Vec<u8>,
-    ) -> Result<Runtime, Error> {
+    ) -> Result<Store<Runtime>, Error> {
         let (address, contract) = self
             .contracts
             .iter()
@@ -375,7 +375,7 @@ impl Runtime {
         let value = read_value(mem, value_ptr);
         assert!(value <= vm.contracts[vm.contract].value);
 
-        let state = vm.call("call", callee, salt, value).unwrap();
+        let state = vm.call("call", callee, salt, value).unwrap().into_data();
 
         if output_len_ptr != u32::MAX {
             assert!(read_len(mem, output_len_ptr) >= state.output.len());
@@ -421,7 +421,7 @@ impl Runtime {
         let value = read_value(mem, value_ptr);
         assert!(value <= vm.contracts[vm.contract].value);
 
-        let state = vm.deploy(target, value, &salt, input).unwrap();
+        let state = vm.deploy(target, value, &salt, input).unwrap().into_data();
 
         write_buf(mem, output_ptr, &vm.output);
         let output_len = &(state.output.len() as u32).to_le_bytes();
@@ -571,9 +571,8 @@ impl Runtime {
     }
 }
 
-#[derive(Default)]
 pub struct MockSubstrate {
-    state: Runtime,
+    state: Store<Runtime>,
     pub current_program: usize,
     pub account: Account,
 }
@@ -1468,31 +1467,31 @@ impl MockSubstrate {
     }
 
     pub fn output(&self) -> Vec<u8> {
-        self.state.output.clone()
+        self.state.data().output.clone()
     }
 
     pub fn caller(&self) -> Account {
-        self.state.caller
+        self.state.data().caller
     }
 
     pub fn debug_buffer(&self) -> String {
-        self.state.debug_buffer.clone()
+        self.state.data().debug_buffer.clone()
     }
 
     pub fn events(&self) -> Vec<Event> {
-        self.state.events.clone()
+        self.state.data().events.clone()
     }
 
     pub fn storage(&self, key: StorageKey) -> &[u8] {
-        &self.state.contracts[self.current_program].storage[&key]
+        &self.state.data().contracts[self.current_program].storage[&key]
     }
 
     pub fn value(&self, contract: usize) -> u128 {
-        self.state.contracts[contract].value
+        self.state.data().contracts[contract].value
     }
 
     pub fn selector(&self, contract: usize, function_name: &str) -> &[u8] {
-        &self.state.contracts[contract].messages[function_name]
+        &self.state.data().contracts[contract].messages[function_name]
     }
 
     //pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
@@ -1548,16 +1547,17 @@ impl MockSubstrate {
     //}
 
     fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) -> Result<(), Error> {
-        let callee = self.state.contracts[self.current_program].address;
+        let callee = self.state.data().contracts[self.current_program].address;
         self.account = callee;
-        self.state.debug_buffer.clear();
-        self.state.events.clear();
-        self.state = self.state.call(export, callee, input, value)?;
+        self.state.data_mut().debug_buffer.clear();
+        self.state.data_mut().events.clear();
+        self.state = self.state.data_mut().call(export, callee, input, value)?;
         Ok(())
     }
 
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
-        let mut input = self.state.contracts[self.current_program].constructors[index].clone();
+        let mut input =
+            self.state.data().contracts[self.current_program].constructors[index].clone();
         input.append(&mut args);
         self.raw_constructor(input);
     }
@@ -1567,13 +1567,13 @@ impl MockSubstrate {
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.state.contracts[self.current_program].messages[name].clone();
+        let mut input = self.state.data().contracts[self.current_program].messages[name].clone();
         input.append(&mut args);
         self.raw_function(input, 0);
     }
 
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.state.contracts[self.current_program].messages[name].clone();
+        let mut input = self.state.data().contracts[self.current_program].messages[name].clone();
         input.append(&mut args);
         self.raw_function_failure(input, 0);
     }
@@ -1668,66 +1668,68 @@ impl MockSubstrate {
     //    }
     //}
 
-    //pub fn heap_verify(&self) {
-    //    let memsize = self.vm.memory.current_size().0 * 0x10000;
-    //    println!("memory size:{memsize}");
-    //    let mut buf = Vec::new();
-    //    buf.resize(memsize, 0);
+    pub fn heap_verify(&mut self) {
+        let mem = self.state.data().memory.unwrap().data(&mut self.state);
+        //let memsize = mem.len();
+        //let memsize = self.vm.memory.current_size().0 * 0x10000;
+        //println!("memory size:{memsize}");
+        //let mut buf = Vec::new();
+        //buf.resize(memsize, 0);
 
-    //    let mut current_elem = 0x10000;
-    //    let mut last_elem = 0u32;
+        //let mut current_elem = 0x10000;
+        //let mut last_elem = 0u32;
 
-    //    loop {
-    //        let next: u32 = self.vm.memory.get_value(current_elem).unwrap();
-    //        let prev: u32 = self.vm.memory.get_value(current_elem + 4).unwrap();
-    //        let length: u32 = self.vm.memory.get_value(current_elem + 8).unwrap();
-    //        let allocated: u32 = self.vm.memory.get_value(current_elem + 12).unwrap();
+        //loop {
+        //    let next: u32 = self.vm.memory.get_value(current_elem).unwrap();
+        //    let prev: u32 = self.vm.memory.get_value(current_elem + 4).unwrap();
+        //    let length: u32 = self.vm.memory.get_value(current_elem + 8).unwrap();
+        //    let allocated: u32 = self.vm.memory.get_value(current_elem + 12).unwrap();
 
-    //        println!("next:{next:08x} prev:{prev:08x} length:{length} allocated:{allocated}");
+        //    println!("next:{next:08x} prev:{prev:08x} length:{length} allocated:{allocated}");
 
-    //        let mut buf = vec![0u8; length as usize];
+        //    let mut buf = vec![0u8; length as usize];
 
-    //        self.vm
-    //            .memory
-    //            .get_into(current_elem + 16, &mut buf)
-    //            .unwrap();
+        //    self.vm
+        //        .memory
+        //        .get_into(current_elem + 16, &mut buf)
+        //        .unwrap();
 
-    //        if allocated == 0 {
-    //            println!("{:08x} {} not allocated", current_elem + 16, length);
-    //        } else {
-    //            println!("{:08x} {} allocated", current_elem + 16, length);
+        //    if allocated == 0 {
+        //        println!("{:08x} {} not allocated", current_elem + 16, length);
+        //    } else {
+        //        println!("{:08x} {} allocated", current_elem + 16, length);
 
-    //            assert_eq!(allocated & 0xffff, 1);
+        //        assert_eq!(allocated & 0xffff, 1);
 
-    //            for offset in (0..buf.len()).step_by(16) {
-    //                let mut hex = "\t".to_string();
-    //                let mut chars = "\t".to_string();
-    //                for i in 0..16 {
-    //                    if offset + i >= buf.len() {
-    //                        break;
-    //                    }
-    //                    let b = buf[offset + i];
-    //                    write!(hex, " {b:02x}").unwrap();
-    //                    if b.is_ascii() && !b.is_ascii_control() {
-    //                        write!(chars, "  {}", b as char).unwrap();
-    //                    } else {
-    //                        chars.push_str("   ");
-    //                    }
-    //                }
-    //                println!("{hex}\n{chars}");
-    //            }
-    //        }
+        //        for offset in (0..buf.len()).step_by(16) {
+        //            let mut hex = "\t".to_string();
+        //            let mut chars = "\t".to_string();
+        //            for i in 0..16 {
+        //                if offset + i >= buf.len() {
+        //                    break;
+        //                }
+        //                let b = buf[offset + i];
+        //                write!(hex, " {b:02x}").unwrap();
+        //                if b.is_ascii() && !b.is_ascii_control() {
+        //                    write!(chars, "  {}", b as char).unwrap();
+        //                } else {
+        //                    chars.push_str("   ");
+        //                }
+        //            }
+        //            println!("{hex}\n{chars}");
+        //        }
+        //    }
 
-    //        assert_eq!(last_elem, prev);
+        //    assert_eq!(last_elem, prev);
 
-    //        if next == 0 {
-    //            break;
-    //        }
+        //    if next == 0 {
+        //        break;
+        //    }
 
-    //        last_elem = current_elem;
-    //        current_elem = next;
-    //    }
-    //}
+        //    last_elem = current_elem;
+        //    current_elem = next;
+        //}
+    }
 }
 
 pub fn build_solidity(src: &str) -> MockSubstrate {
@@ -1741,8 +1743,9 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
         .collect();
 
     MockSubstrate {
-        state: Runtime::new(contracts),
-        ..Default::default()
+        state: Store::new(&Engine::default(), Runtime::new(contracts)),
+        account: Default::default(),
+        current_program: 0,
     }
 }
 
