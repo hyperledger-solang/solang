@@ -187,18 +187,8 @@ fn creation_code() {
         }"##,
     );
 
-    runtime.constructor(0, Vec::new());
-
     runtime.function("test", Vec::new());
-
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Ret(Vec<u8>);
-
-    // return value should be the code for the second contract
-    assert_eq!(
-        runtime.output(),
-        Ret(runtime.programs[1].code.clone()).encode()
-    );
+    assert_eq!(runtime.output(), runtime.contracts()[1].code.encode());
 }
 
 #[test]
@@ -258,21 +248,31 @@ fn mangle_function_names_in_abi() {
         }"##,
     );
 
-    let messages: Vec<String> = runtime
-        .programs
-        .get(0)
-        .unwrap()
-        .abi
-        .spec()
-        .messages()
-        .iter()
-        .map(|m| m.label().clone())
-        .collect();
+    //let messages: Vec<String> = runtime
+    //    .programs
+    //    .get(0)
+    //    .unwrap()
+    //    .abi
+    //    .spec()
+    //    .messages()
+    //    .iter()
+    //    .map(|m| m.label().clone())
+    //    .collect();
 
-    assert!(!messages.contains(&"foo".to_string()));
-    assert!(messages.contains(&"foo_".to_string()));
-    assert!(messages.contains(&"foo_uint256_addressArray2Array".to_string()));
-    assert!(messages.contains(&"foo_uint8Array2__int256_bool_address".to_string()));
+    //assert!(!messages.contains(&"foo".to_string()));
+    assert!(runtime.contracts()[0].messages.get("foo").is_none());
+    //assert!(messages.contains(&"foo_".to_string()));
+    assert!(runtime.contracts()[0].messages.get("foo_").is_some());
+    //assert!(messages.contains(&"foo_uint256_addressArray2Array".to_string()));
+    assert!(runtime.contracts()[0]
+        .messages
+        .get("foo_uint256_addressArray2Array")
+        .is_some());
+    //assert!(messages.contains(&"foo_uint8Array2__int256_bool_address".to_string()));
+    assert!(runtime.contracts()[0]
+        .messages
+        .get("foo_uint8Array2__int256_bool_address")
+        .is_some());
 }
 
 #[test]
@@ -288,31 +288,35 @@ fn mangle_overloaded_function_names_in_abi() {
         }"##,
     );
 
-    let messages_a: Vec<String> = runtime
-        .programs
-        .get(0)
-        .unwrap()
-        .abi
-        .spec()
-        .messages()
-        .iter()
-        .map(|m| m.label().clone())
-        .collect();
+    //let messages_a: Vec<String> = runtime
+    //    .programs
+    //    .get(0)
+    //    .unwrap()
+    //    .abi
+    //    .spec()
+    //    .messages()
+    //    .iter()
+    //    .map(|m| m.label().clone())
+    //    .collect();
 
-    assert!(messages_a.contains(&"foo".to_string()));
-    assert!(!messages_a.contains(&"foo_bool".to_string()));
+    assert!(runtime.contracts()[0].messages.get("foo").is_some());
+    //assert!(messages_a.contains(&"foo".to_string()));
+    assert!(runtime.contracts()[0].messages.get("foo_bool").is_none());
+    //assert!(!messages_a.contains(&"foo_bool".to_string()));
 
-    let messages_b: Vec<String> = runtime
-        .programs
-        .get(1)
-        .unwrap()
-        .abi
-        .spec()
-        .messages()
-        .iter()
-        .map(|m| m.label().clone())
-        .collect();
+    //let messages_b: Vec<String> = runtime
+    //    .programs
+    //    .get(1)
+    //    .unwrap()
+    //    .abi
+    //    .spec()
+    //    .messages()
+    //    .iter()
+    //    .map(|m| m.label().clone())
+    //    .collect();
 
-    assert!(!messages_b.contains(&"foo".to_string()));
-    assert!(messages_b.contains(&"foo_bool".to_string()));
+    assert!(runtime.contracts()[1].messages.get("foo").is_none());
+    //assert!(!messages_b.contains(&"foo".to_string()));
+    assert!(runtime.contracts()[1].messages.get("foo_bool").is_some());
+    //assert!(messages_b.contains(&"foo_bool".to_string()));
 }
