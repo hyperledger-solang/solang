@@ -32,7 +32,7 @@ fn external_call_value() {
     runtime.function("step2", Vec::new());
 
     // Minimum balance + transferred value = 500 + 1023
-    assert_eq!(runtime.contracts.last().unwrap().value, 1523);
+    assert_eq!(runtime.value(2), 1523);
 
     let mut runtime = build_solidity(
         r##"
@@ -59,7 +59,7 @@ fn external_call_value() {
     runtime.function("step1", Vec::new());
 
     // Minimum balance + transferred value = 500 + 1023
-    assert_eq!(runtime.contracts.last().unwrap().value, 1523);
+    assert_eq!(runtime.value(2), 1523);
 }
 
 #[test]
@@ -82,7 +82,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.contracts.last().unwrap().value, 500);
+    assert_eq!(runtime.value(2), 500);
 
     let mut runtime = build_solidity(
         r##"
@@ -102,7 +102,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.contracts.last().unwrap().value, 0);
+    assert_eq!(runtime.value(2), 0);
 
     let mut runtime = build_solidity(
         r##"
@@ -122,7 +122,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.contracts.last().unwrap().value, 499);
+    assert_eq!(runtime.value(2), 499);
 
     let mut runtime = build_solidity(
         r##"
@@ -147,7 +147,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.contracts.last().unwrap().value, 511);
+    assert_eq!(runtime.value(2), 511);
 
     let mut runtime = build_solidity(
         r##"
@@ -172,7 +172,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.contracts.last().unwrap().value, 511)
+    assert_eq!(runtime.value(2), 511)
 }
 
 #[test]
@@ -333,12 +333,9 @@ fn balance() {
     );
 
     runtime.constructor(0, Vec::new());
-
-    runtime.contracts[0].value = 315;
-
     runtime.function("step1", Vec::new());
-
-    assert_eq!(runtime.output(), 315u128.to_le_bytes());
+    // Constructor received 20000 by default, however 500 were sent to "o"
+    assert_eq!(runtime.output(), 19500u128.to_le_bytes());
 
     runtime.function("step2", Vec::new());
 
@@ -369,10 +366,10 @@ fn selfdestruct() {
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
-    assert_eq!(runtime.contracts[0].value, 20000 - 511);
+    assert_eq!(runtime.value(0), 20000 - 511);
 
     runtime.function("step2", Vec::new());
-    assert_eq!(runtime.contracts[0].value, 20000);
+    assert_eq!(runtime.value(0), 20000);
 }
 
 #[test]
@@ -403,7 +400,7 @@ fn send_and_transfer() {
 
     // no receive() required for send/transfer
     assert_eq!(runtime.output(), true.encode());
-    assert_eq!(runtime.contracts.last().unwrap().value, 1011);
+    assert_eq!(runtime.value(2), 1011);
 
     let mut runtime = build_solidity(
         r##"
@@ -430,7 +427,7 @@ fn send_and_transfer() {
     runtime.function("step1", Vec::new());
 
     assert_eq!(runtime.output(), true.encode());
-    assert_eq!(runtime.contracts.last().unwrap().value, 1011);
+    assert_eq!(runtime.value(2), 1011);
 
     let mut runtime = build_solidity(
         r##"
@@ -455,7 +452,7 @@ fn send_and_transfer() {
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
-    assert_eq!(runtime.contracts.last().unwrap().value, 1011);
+    assert_eq!(runtime.value(2), 1011);
 
     let mut runtime = build_solidity(
         r##"
@@ -481,5 +478,5 @@ fn send_and_transfer() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.contracts.last().unwrap().value, 1011);
+    assert_eq!(runtime.value(2), 1011);
 }

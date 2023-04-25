@@ -1483,6 +1483,18 @@ impl MockSubstrate {
         self.state.events.clone()
     }
 
+    pub fn storage(&self, key: StorageKey) -> &[u8] {
+        &self.state.contracts[self.current_program].storage[&key]
+    }
+
+    pub fn value(&self, contract: usize) -> u128 {
+        self.state.contracts[contract].value
+    }
+
+    pub fn selector(&self, contract: usize, function_name: &str) -> &[u8] {
+        &self.state.contracts[contract].messages[function_name]
+    }
+
     //pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
     //    let m = &self.programs[self.current_contract]
     //        .abi
