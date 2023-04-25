@@ -137,6 +137,7 @@ fn contract_already_exists() {
         }"##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function_expect_failure("test", Vec::new());
 
     let mut runtime = build_solidity(
@@ -156,6 +157,7 @@ fn contract_already_exists() {
         }"##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 }
 
@@ -184,6 +186,7 @@ fn try_catch_external_calls() {
         "##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
@@ -210,6 +213,7 @@ fn try_catch_external_calls() {
         "##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function_expect_failure("test", Vec::new());
 
     let mut runtime = build_solidity(
@@ -266,6 +270,7 @@ fn try_catch_external_calls() {
         "##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function_expect_failure("test", Vec::new());
 
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
@@ -322,6 +327,7 @@ fn try_catch_external_calls() {
         }"##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("create_child", Vec::new());
 
     runtime.function_expect_failure("test", Vec::new());
@@ -351,6 +357,7 @@ fn try_catch_constructor() {
         "##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
@@ -379,6 +386,7 @@ fn try_catch_constructor() {
         "##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
@@ -406,6 +414,7 @@ fn try_catch_constructor() {
         "##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function_expect_failure("test", Vec::new());
 }
 
@@ -443,7 +452,7 @@ fn payable_constructors() {
         }"##,
     );
 
-    runtime.vm.value = 1;
+    runtime.value = 1;
     runtime.constructor(0, Vec::new());
 
     // contructors w/o payable means can't send value
@@ -460,7 +469,7 @@ fn payable_constructors() {
         }"##,
     );
 
-    runtime.vm.value = 1;
+    runtime.value = 1;
     runtime.constructor(0, Vec::new());
 
     // contructors w/ payable means can send value
@@ -476,7 +485,7 @@ fn payable_constructors() {
         }"##,
     );
 
-    runtime.vm.value = 1;
+    runtime.value = 1;
     runtime.constructor(0, Vec::new());
 }
 
@@ -492,7 +501,7 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.vm.value = 1;
+    runtime.value = 1;
     runtime.function_expect_failure("test", Vec::new());
 
     // test both
@@ -507,9 +516,9 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.vm.value = 1;
+    runtime.value = 1;
     runtime.function_expect_failure("test2", Vec::new());
-    runtime.vm.value = 1;
+    runtime.value = 1;
     runtime.function("test", Vec::new());
 
     // test fallback and receive
@@ -779,10 +788,11 @@ fn log_api_call_return_values_works() {
         false,
     );
 
+    runtime.constructor(0, vec![]);
     runtime.function("test", vec![]);
     assert_eq!(
         &runtime.debug_buffer(),
-        r##"call: instantiation_nonce=1,
+        r##"call: instantiation_nonce=2,
 call: seal_instantiate=0,
 print: hi!,
 call: seal_debug_message=0,
@@ -806,24 +816,12 @@ fn selector() {
         true,
     );
 
-    let messages = runtime.programs[runtime.current_program]
-        .abi
-        .spec()
-        .messages();
-
-    let f = messages.iter().find(|f| f.label() == "f").unwrap();
-
-    let x = messages.iter().find(|f| f.label() == "x").unwrap();
-
-    let res: Vec<u8> = f
-        .selector()
-        .to_bytes()
-        .iter()
-        .zip(x.selector().to_bytes())
-        .map(|(f, x)| f ^ x)
-        .collect();
-
     runtime.function("g", vec![]);
 
-    assert_eq!(runtime.output(), res);
+    runtime.contracts()[0].messages["f"]
+        .iter()
+        .zip(&runtime.contracts()[0].messages["x"])
+        .map(|(f, x)| f ^ x)
+        .zip(runtime.output())
+        .for_each(|(actual, expected)| assert_eq!(actual, expected));
 }

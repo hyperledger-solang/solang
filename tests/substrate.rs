@@ -152,23 +152,15 @@ impl Runtime {
         self.contracts[self.contract].value -= transferred_value;
     }
 
-    fn instantiate_call(&self, callee: Account, input: Vec<u8>, value: u128) -> (&Contract, Self) {
-        let (index, _) = self
-            .contracts
-            .iter()
-            .enumerate()
-            .find(|(_, contract)| contract.address == callee)
-            .unwrap_or_else(|| panic!("contract {} not found", hex::encode(callee)));
-
+    fn prepare_call_context(&self, callee: usize, input: Vec<u8>, value: u128) -> Self {
         let mut runtime = self.clone();
         runtime.caller = runtime.contracts[runtime.contract].address;
-        runtime.contract = index;
+        runtime.contract = callee;
         runtime.value = value;
         runtime.input = input;
         runtime.output.clear();
-        runtime.contracts[index].value += value;
-
-        (&self.contracts[index], runtime)
+        runtime.contracts[callee].value += value;
+        runtime
     }
 
     fn call(
@@ -184,9 +176,15 @@ impl Runtime {
             hex::encode(&input)
         );
 
-        let (contract, runtime) = self.instantiate_call(callee, input, value);
-        contract
-            .execute(export, runtime)
+        let (index, _) = self
+            .contracts
+            .iter()
+            .enumerate()
+            .find(|(_, contract)| contract.address == callee)
+            .ok_or(Error::Trap(Trap::from(TrapCode::UnreachableCodeReached)))?;
+
+        self.contracts[index]
+            .execute(export, self.prepare_call_context(index, input, value))
             .map_err(|(err, debug_buffer)| {
                 self.debug_buffer = debug_buffer;
                 err
@@ -206,6 +204,15 @@ impl Runtime {
             .find(|contract| contract.code_hash == code_hash)
             .unwrap_or_else(|| panic!("code hash {} not found", hex::encode(code_hash)))
             .create_instance(salt);
+
+        if self
+            .contracts
+            .iter()
+            .find(|c| c.address == address)
+            .is_some()
+        {
+            return Err(Error::Trap(TrapCode::UnreachableCodeReached.into()));
+        }
 
         self.contracts.push(contract);
         self.call("deploy", address, input, value)
@@ -376,7 +383,10 @@ impl Runtime {
         let value = read_value(mem, value_ptr);
         assert!(value <= vm.contracts[vm.contract].value);
 
-        let state = vm.call("call", callee, salt, value).unwrap().into_data();
+        let state = vm
+            .call("call", callee, salt, value)
+            .map_err(|_| Trap::from(TrapCode::UnreachableCodeReached))?
+            .into_data();
 
         if output_len_ptr != u32::MAX {
             assert!(read_len(mem, output_len_ptr) >= state.output.len());
@@ -422,7 +432,10 @@ impl Runtime {
         let value = read_value(mem, value_ptr);
         assert!(value <= vm.contracts[vm.contract].value);
 
-        let state = vm.deploy(target, value, &salt, input).unwrap().into_data();
+        let state = vm
+            .deploy(target, value, &salt, input)
+            .map_err(|_| Trap::from(TrapCode::UnreachableCodeReached))?
+            .into_data();
 
         write_buf(mem, output_ptr, &vm.output);
         let output_len = &(state.output.len() as u32).to_le_bytes();
@@ -576,6 +589,7 @@ pub struct MockSubstrate {
     state: Store<Runtime>,
     pub current_program: usize,
     pub account: Account,
+    pub value: u128,
 }
 
 /// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
@@ -1574,13 +1588,13 @@ impl MockSubstrate {
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.state.data().contracts[self.current_program].messages[name].clone();
         input.append(&mut args);
-        self.raw_function(input, 0);
+        self.raw_function(input, self.value);
     }
 
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.state.data().contracts[self.current_program].messages[name].clone();
         input.append(&mut args);
-        self.raw_function_failure(input, 0);
+        self.raw_function_failure(input, self.value);
     }
 
     pub fn raw_function(&mut self, input: Vec<u8>, value: u128) {
@@ -1747,6 +1761,7 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
         state: Store::new(&Engine::default(), Runtime::new(contracts)),
         account: Default::default(),
         current_program: 0,
+        value: 0,
     }
 }
 
