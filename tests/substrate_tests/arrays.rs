@@ -1053,7 +1053,7 @@ fn storage_dynamic_array_pop() {
     runtime.function("test", Vec::new());
 
     // We should have one entry for the length; pop should have removed the 102 entry
-    assert_eq!(runtime.programs[0].storage.len(), 1);
+    assert_eq!(runtime.storage().len(), 1);
 
     // ensure that structs and fixed arrays are wiped by pop
     let mut runtime = build_solidity(
@@ -1092,7 +1092,7 @@ fn storage_dynamic_array_pop() {
     runtime.function("test", Vec::new());
 
     // We should have one entry for the length; pop should have removed the 102 entry
-    assert_eq!(runtime.programs[0].storage.len(), 1);
+    assert_eq!(runtime.storage().len(), 1);
 }
 
 #[test]
@@ -1116,7 +1116,7 @@ fn storage_delete() {
     runtime.function("test", Vec::new());
 
     // We should have one entry for the length; pop should have removed the 102 entry
-    assert!(runtime.programs[0].storage.is_empty());
+    assert!(runtime.storage().is_empty());
 
     // ensure that structs and fixed arrays are wiped by delete
     let mut runtime = build_solidity(
@@ -1155,7 +1155,7 @@ fn storage_delete() {
     runtime.function("test", Vec::new());
 
     // We should have one entry for the length; delete should have removed the entry
-    assert_eq!(runtime.programs[0].storage.len(), 1);
+    assert_eq!(runtime.storage().len(), 1);
 
     // ensure that structs and fixed arrays are wiped by delete
     let mut runtime = build_solidity(
@@ -1178,16 +1178,16 @@ fn storage_delete() {
 
     runtime.function("setup", Vec::new());
 
-    assert_eq!(runtime.programs[0].storage.len(), 3);
+    assert_eq!(runtime.storage().len(), 3);
 
     runtime.function("clear", Vec::new());
 
-    assert_eq!(runtime.programs[0].storage.len(), 0);
+    assert_eq!(runtime.storage().len(), 0);
 
     // our delete operator has to iterate over the dynamic array. Ensure it works if the array is empty
     runtime.function("clear", Vec::new());
 
-    assert_eq!(runtime.programs[0].storage.len(), 0);
+    assert_eq!(runtime.storage().len(), 0);
 }
 
 #[test]
@@ -1236,7 +1236,7 @@ fn storage_dynamic_copy() {
     runtime.function("storage_to_memory", Vec::new());
     runtime.function("memory_to_storage", Vec::new());
 
-    assert_eq!(runtime.programs[0].storage.len(), 6);
+    assert_eq!(runtime.storage().len(), 6);
 }
 
 #[test]

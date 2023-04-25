@@ -6,7 +6,7 @@ mod enums;
 mod expressions;
 
 mod array_boundary_check;
-//mod arrays;
+mod arrays;
 //mod builtins;
 //mod calls;
 //mod contracts;

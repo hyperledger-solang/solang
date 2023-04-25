@@ -1482,8 +1482,8 @@ impl MockSubstrate {
         self.state.data().events.clone()
     }
 
-    pub fn storage(&self, key: StorageKey) -> &[u8] {
-        &self.state.data().contracts[self.current_program].storage[&key]
+    pub fn storage(&self) -> &HashMap<[u8; 32], Vec<u8>> {
+        &self.state.data().contracts[self.current_program].storage
     }
 
     pub fn value(&self, contract: usize) -> u128 {
@@ -1670,9 +1670,9 @@ impl MockSubstrate {
 
     pub fn heap_verify(&mut self) {
         let mem = self.state.data().memory.unwrap().data(&mut self.state);
-        //let memsize = mem.len();
+        let memsize = mem.len();
         //let memsize = self.vm.memory.current_size().0 * 0x10000;
-        //println!("memory size:{memsize}");
+        println!("memory size:{memsize}");
         //let mut buf = Vec::new();
         //buf.resize(memsize, 0);
 
