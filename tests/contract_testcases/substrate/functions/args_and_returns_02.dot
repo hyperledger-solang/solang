@@ -4,11 +4,15 @@ strict digraph "tests/contract_testcases/substrate/functions/args_and_returns_02
 	parameters [label="parameters\nbool arg1\nuint256 arg2"]
 	returns [label="returns\naddress \nuint256 "]
 	diagnostic [label="found contract 'args'\nlevel Debug\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:2:5-5:6"]
-	diagnostic_7 [label="missing return statement\nlevel Error\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:4:10"]
+	diagnostic_7 [label="function can be declared 'pure'\nlevel Warning\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:3:9-74"]
+	diagnostic_8 [label="function parameter 'arg1' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:3:27-31"]
+	diagnostic_9 [label="function parameter 'arg2' has never been read\nlevel Warning\ntests/contract_testcases/substrate/functions/args_and_returns_02.sol:3:38-42"]
 	contracts -> contract
 	contract -> foo [label="function"]
 	foo -> parameters [label="parameters"]
 	foo -> returns [label="returns"]
 	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_7 [label="Error"]
+	diagnostics -> diagnostic_7 [label="Warning"]
+	diagnostics -> diagnostic_8 [label="Warning"]
+	diagnostics -> diagnostic_9 [label="Warning"]
 }
