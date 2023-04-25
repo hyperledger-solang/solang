@@ -71,7 +71,8 @@ pub struct ExprContext {
 impl Expression {
     /// Is this expression 0
     pub(super) fn const_zero(&self, ns: &Namespace) -> bool {
-        if let Ok((_, value)) = eval_const_number(self, ns) {
+        let mut diagnostics = Diagnostics::default();
+        if let Ok((_, value)) = eval_const_number(self, ns, &mut diagnostics) {
             value == BigInt::zero()
         } else {
             false
@@ -393,7 +394,9 @@ impl Expression {
                 let enum_ty = &ns.enums[*enum_no];
 
                 // TODO would be help to have current contract to resolve contract constants
-                if let Ok((_, big_number)) = eval_const_number(self, ns) {
+                let mut temp_diagnostics = Diagnostics::default();
+
+                if let Ok((_, big_number)) = eval_const_number(self, ns, &mut temp_diagnostics) {
                     if let Some(number) = big_number.to_usize() {
                         if enum_ty.values.len() > number {
                             return Ok(Expression::NumberLiteral {

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::ast::{Diagnostic, Expression, Namespace, Type};
+use super::{
+    ast::{Diagnostic, Expression, Namespace, Type},
+    diagnostics::Diagnostics,
+};
 use num_bigint::BigInt;
 use num_bigint::Sign;
 use num_rational::BigRational;
@@ -15,75 +18,88 @@ use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Shl, Shr, Sub};
 pub fn eval_const_number(
     expr: &Expression,
     ns: &Namespace,
-) -> Result<(pt::Loc, BigInt), Diagnostic> {
+    diagnostics: &mut Diagnostics,
+) -> Result<(pt::Loc, BigInt), ()> {
     match expr {
         Expression::Add {
             loc, left, right, ..
         } => Ok((
             *loc,
-            eval_const_number(left, ns)?.1 + eval_const_number(right, ns)?.1,
+            eval_const_number(left, ns, diagnostics)?.1
+                + eval_const_number(right, ns, diagnostics)?.1,
         )),
         Expression::Subtract {
             loc, left, right, ..
         } => Ok((
             *loc,
-            eval_const_number(left, ns)?.1 - eval_const_number(right, ns)?.1,
+            eval_const_number(left, ns, diagnostics)?.1
+                - eval_const_number(right, ns, diagnostics)?.1,
         )),
         Expression::Multiply {
             loc, left, right, ..
         } => Ok((
             *loc,
-            eval_const_number(left, ns)?.1 * eval_const_number(right, ns)?.1,
+            eval_const_number(left, ns, diagnostics)?.1
+                * eval_const_number(right, ns, diagnostics)?.1,
         )),
         Expression::Divide {
             loc, left, right, ..
         } => {
-            let divisor = eval_const_number(right, ns)?.1;
+            let divisor = eval_const_number(right, ns, diagnostics)?.1;
 
             if divisor.is_zero() {
-                Err(Diagnostic::error(*loc, "divide by zero".to_string()))
+                diagnostics.push(Diagnostic::error(*loc, "divide by zero".to_string()));
+
+                Err(())
             } else {
-                Ok((*loc, eval_const_number(left, ns)?.1 / divisor))
+                Ok((*loc, eval_const_number(left, ns, diagnostics)?.1 / divisor))
             }
         }
         Expression::Modulo {
             loc, left, right, ..
         } => {
-            let divisor = eval_const_number(right, ns)?.1;
+            let divisor = eval_const_number(right, ns, diagnostics)?.1;
 
             if divisor.is_zero() {
-                Err(Diagnostic::error(*loc, "divide by zero".to_string()))
+                diagnostics.push(Diagnostic::error(*loc, "divide by zero".to_string()));
+
+                Err(())
             } else {
-                Ok((*loc, eval_const_number(left, ns)?.1 % divisor))
+                Ok((*loc, eval_const_number(left, ns, diagnostics)?.1 % divisor))
             }
         }
         Expression::BitwiseAnd {
             loc, left, right, ..
         } => Ok((
             *loc,
-            eval_const_number(left, ns)?.1 & eval_const_number(right, ns)?.1,
+            eval_const_number(left, ns, diagnostics)?.1
+                & eval_const_number(right, ns, diagnostics)?.1,
         )),
         Expression::BitwiseOr {
             loc, left, right, ..
         } => Ok((
             *loc,
-            eval_const_number(left, ns)?.1 | eval_const_number(right, ns)?.1,
+            eval_const_number(left, ns, diagnostics)?.1
+                | eval_const_number(right, ns, diagnostics)?.1,
         )),
         Expression::BitwiseXor {
             loc, left, right, ..
         } => Ok((
             *loc,
-            eval_const_number(left, ns)?.1 ^ eval_const_number(right, ns)?.1,
+            eval_const_number(left, ns, diagnostics)?.1
+                ^ eval_const_number(right, ns, diagnostics)?.1,
         )),
         Expression::Power { loc, base, exp, .. } => {
-            let b = eval_const_number(base, ns)?.1;
-            let mut e = eval_const_number(exp, ns)?.1;
+            let b = eval_const_number(base, ns, diagnostics)?.1;
+            let mut e = eval_const_number(exp, ns, diagnostics)?.1;
 
             if e.sign() == Sign::Minus {
-                Err(Diagnostic::error(
-                    expr.loc(),
+                diagnostics.push(Diagnostic::error(
+                    *loc,
                     "power cannot take negative number as exponent".to_string(),
-                ))
+                ));
+
+                Err(())
             } else if e.sign() == Sign::NoSign {
                 Ok((*loc, BigInt::one()))
             } else {
@@ -99,15 +115,14 @@ pub fn eval_const_number(
         Expression::ShiftLeft {
             loc, left, right, ..
         } => {
-            let l = eval_const_number(left, ns)?.1;
-            let r = eval_const_number(right, ns)?.1;
+            let l = eval_const_number(left, ns, diagnostics)?.1;
+            let r = eval_const_number(right, ns, diagnostics)?.1;
             let r = match r.to_usize() {
                 Some(r) => r,
                 None => {
-                    return Err(Diagnostic::error(
-                        expr.loc(),
-                        format!("cannot left shift by {r}"),
-                    ));
+                    diagnostics.push(Diagnostic::error(*loc, format!("cannot left shift by {r}")));
+
+                    return Err(());
                 }
             };
             Ok((*loc, l << r))
@@ -115,52 +130,71 @@ pub fn eval_const_number(
         Expression::ShiftRight {
             loc, left, right, ..
         } => {
-            let l = eval_const_number(left, ns)?.1;
-            let r = eval_const_number(right, ns)?.1;
+            let l = eval_const_number(left, ns, diagnostics)?.1;
+            let r = eval_const_number(right, ns, diagnostics)?.1;
             let r = match r.to_usize() {
                 Some(r) => r,
                 None => {
-                    return Err(Diagnostic::error(
-                        expr.loc(),
-                        format!("cannot right shift by {r}"),
-                    ));
+                    diagnostics.push(Diagnostic::error(*loc, format!("right left shift by {r}")));
+
+                    return Err(());
                 }
             };
             Ok((*loc, l >> r))
         }
         Expression::NumberLiteral { loc, value, .. } => Ok((*loc, value.clone())),
-        Expression::ZeroExt { loc, expr, .. } => Ok((*loc, eval_const_number(expr, ns)?.1)),
-        Expression::SignExt { loc, expr, .. } => Ok((*loc, eval_const_number(expr, ns)?.1)),
-        Expression::Cast { loc, expr, .. } => Ok((*loc, eval_const_number(expr, ns)?.1)),
-        Expression::Not { loc, expr: n } => Ok((*loc, !eval_const_number(n, ns)?.1)),
-        Expression::BitwiseNot { loc, expr, .. } => Ok((*loc, !eval_const_number(expr, ns)?.1)),
-        Expression::Negate { loc, expr, .. } => Ok((*loc, -eval_const_number(expr, ns)?.1)),
+        Expression::ZeroExt { loc, expr, .. } => {
+            Ok((*loc, eval_const_number(expr, ns, diagnostics)?.1))
+        }
+        Expression::SignExt { loc, expr, .. } => {
+            Ok((*loc, eval_const_number(expr, ns, diagnostics)?.1))
+        }
+        Expression::Cast { loc, expr, .. } => {
+            Ok((*loc, eval_const_number(expr, ns, diagnostics)?.1))
+        }
+        Expression::Not { loc, expr: n } => Ok((*loc, !eval_const_number(n, ns, diagnostics)?.1)),
+        Expression::BitwiseNot { loc, expr, .. } => {
+            Ok((*loc, !eval_const_number(expr, ns, diagnostics)?.1))
+        }
+        Expression::Negate { loc, expr, .. } => {
+            Ok((*loc, -eval_const_number(expr, ns, diagnostics)?.1))
+        }
         Expression::ConstantVariable {
             contract_no: Some(contract_no),
             var_no,
             ..
         } => {
-            let expr = ns.contracts[*contract_no].variables[*var_no]
-                .initializer
-                .as_ref()
-                .unwrap()
-                .clone();
+            let var = &ns.contracts[*contract_no].variables[*var_no];
 
-            eval_const_number(&expr, ns)
+            if let Some(init) = &var.initializer {
+                eval_const_number(init, ns, diagnostics)
+            } else {
+                // we should have errored about this already
+                Err(())
+            }
         }
         Expression::ConstantVariable {
             contract_no: None,
             var_no,
             ..
         } => {
-            let expr = ns.constants[*var_no].initializer.as_ref().unwrap().clone();
+            let var = &ns.constants[*var_no];
 
-            eval_const_number(&expr, ns)
+            if let Some(init) = &var.initializer {
+                eval_const_number(init, ns, diagnostics)
+            } else {
+                // we should have errored about this already
+                Err(())
+            }
         }
-        _ => Err(Diagnostic::error(
-            expr.loc(),
-            "expression not allowed in constant number expression".to_string(),
-        )),
+        _ => {
+            diagnostics.push(Diagnostic::error(
+                expr.loc(),
+                "expression not allowed in constant number expression".to_string(),
+            ));
+
+            Err(())
+        }
     }
 }
 
