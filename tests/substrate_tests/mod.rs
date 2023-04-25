@@ -18,7 +18,7 @@ mod format;
 mod function_types;
 mod functions;
 mod imports;
-//mod inheritance;
+mod inheritance;
 mod libraries;
 mod loops;
 mod mappings;
