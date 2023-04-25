@@ -1115,7 +1115,7 @@ fn test_mul_within_range() {
         }"#
         .replace("intN", &format!("int{width}"));
 
-        let width_rounded = (width as usize / 8).next_power_of_two();
+        let width_rounded = (width / 8usize).next_power_of_two();
         let mut runtime = build_solidity(&src);
 
         // The range of values that can be held in unsigned N bits is [0, 2^N-1]. Here we generate a random number within this range and multiply it by 1
@@ -1137,7 +1137,7 @@ fn test_mul_within_range() {
         let value = a * b;
 
         let mut value_data = value.to_bytes_le();
-        value_data.resize((width / 8) as usize, 0);
+        value_data.resize(width / 8, 0);
 
         assert_eq!(value_data, runtime.output()[..width / 8]);
     }
