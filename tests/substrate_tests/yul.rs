@@ -84,16 +84,16 @@ contract testing  {
     );
 
     runtime.function("test_local_vec", Val256(U256::from(7)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(14)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(14)).encode());
 
     runtime.function("test_struct", Val256(U256::from(20)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(27)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(27)).encode());
 
     runtime.function("test_mem_vec", Val256(U256::from(30)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(37)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(37)).encode());
 
     runtime.function("test_mem_struct", Val256(U256::from(8)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(15)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(15)).encode());
 
     runtime.function(
         "calldata_vec",
@@ -103,10 +103,10 @@ contract testing  {
         }
         .encode(),
     );
-    assert_eq!(runtime.output, Val256(U256::from(26)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(26)).encode());
 
     runtime.function("storage_struct", Val256(U256::from(17)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(24)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(24)).encode());
 }
 
 #[test]
@@ -153,32 +153,32 @@ contract testing  {
 
     runtime.constructor(0, Vec::new());
     runtime.function("test_address", Vec::new());
-    let mut b_vec = runtime.output.to_vec();
+    let mut b_vec = runtime.output().to_vec();
     b_vec.reverse();
     assert_eq!(b_vec, runtime.account.to_vec());
 
     runtime.function("test_balance", Vec::new());
     assert_eq!(
-        runtime.output[..16].to_vec(),
-        runtime.programs[0].value.encode()
+        runtime.output()[..16].to_vec(),
+        runtime.contracts[0].value.encode()
     );
 
     runtime.function("test_selfbalance", Vec::new());
     assert_eq!(
-        runtime.output[..16].to_vec(),
-        runtime.programs[0].value.encode()
+        runtime.output()[..16].to_vec(),
+        runtime.contracts[0].value.encode()
     );
 
     runtime.function("test_caller", Vec::new());
-    let mut b_vec = runtime.output.to_vec();
+    let mut b_vec = runtime.output().to_vec();
     b_vec.reverse();
-    assert_eq!(b_vec, runtime.caller.to_vec());
+    assert_eq!(b_vec, runtime.caller().to_vec());
 
-    let selector = runtime.programs[0].messages["test_callvalue"].clone();
+    let selector = runtime.contracts[0].messages["test_callvalue"].clone();
     runtime.raw_function(selector, 0xdeadcafe);
     let mut expected = 0xdeadcafeu32.to_le_bytes().to_vec();
     expected.resize(32, 0);
-    assert_eq!(runtime.output, expected);
+    assert_eq!(runtime.output(), expected);
 }
 
 #[test]
@@ -243,23 +243,23 @@ contract Testing {
     runtime.constructor(0, Vec::new());
 
     runtime.function("switch_default", Val256(U256::from(1)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(5)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(5)).encode());
 
     runtime.function("switch_default", Val256(U256::from(2)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(6)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(6)).encode());
 
     runtime.function("switch_default", Val256(U256::from(6)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(9)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(9)).encode());
 
     runtime.function("switch_no_default", Val256(U256::from(1)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(3)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(3)).encode());
 
     runtime.function("switch_no_default", Val256(U256::from(2)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(6)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(6)).encode());
 
     runtime.function("switch_no_default", Val256(U256::from(6)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(4)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(4)).encode());
 
     runtime.function("switch_no_case", Val256(U256::from(3)).encode());
-    assert_eq!(runtime.output, Val256(U256::from(4)).encode());
+    assert_eq!(runtime.output(), Val256(U256::from(4)).encode());
 }

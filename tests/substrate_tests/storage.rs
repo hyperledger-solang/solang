@@ -33,7 +33,7 @@ contract foo {
     runtime.function("f", Vec::new());
 
     assert_eq!(
-        runtime.output,
+        runtime.output(),
         [SStruct { f1: 1 }, SStruct { f1: 2 }].encode(),
     );
 }

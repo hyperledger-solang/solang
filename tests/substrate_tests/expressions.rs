@@ -33,11 +33,11 @@ fn celcius_and_fahrenheit() {
 
     runtime.function("celcius2fahrenheit", Val(10).encode());
 
-    assert_eq!(runtime.output, Val(50).encode());
+    assert_eq!(runtime.output(), Val(50).encode());
 
     runtime.function("fahrenheit2celcius", Val(50).encode());
 
-    assert_eq!(runtime.output, Val(10).encode());
+    assert_eq!(runtime.output(), Val(10).encode());
 }
 
 #[test]
@@ -78,11 +78,11 @@ fn digits() {
 
     runtime.function("digitslen", Val64(1234567).encode());
 
-    assert_eq!(runtime.output, Val32(7).encode());
+    assert_eq!(runtime.output(), Val32(7).encode());
 
     runtime.function("sumdigits", Val64(123456789).encode());
 
-    assert_eq!(runtime.output, Val32(45).encode());
+    assert_eq!(runtime.output(), Val32(45).encode());
 }
 
 #[test]
@@ -126,7 +126,7 @@ fn large_loops() {
     let mut rets = Val64(7000000000).encode();
     rets.resize(32, 0);
 
-    assert_eq!(runtime.output, rets);
+    assert_eq!(runtime.output(), rets);
 }
 
 #[test]
@@ -231,15 +231,15 @@ fn expressions() {
 
     runtime.function("add_100", Val16(0xffc0).encode());
 
-    assert_eq!(runtime.output, Val16(36).encode());
+    assert_eq!(runtime.output(), Val16(36).encode());
 
     runtime.function("clear_digit", Val8(25).encode());
 
-    assert_eq!(runtime.output, Val8(20).encode());
+    assert_eq!(runtime.output(), Val8(20).encode());
 
     runtime.function("low_digit", Val8(25).encode());
 
-    assert_eq!(runtime.output, Val8(5).encode());
+    assert_eq!(runtime.output(), Val8(5).encode());
 
     runtime.function("test_comparisons", Vec::new());
 
@@ -394,7 +394,7 @@ fn divisions128() {
 
     runtime.function("return_neg", Vec::new());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.output[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.output()[..]) {
         assert_eq!(r, -100);
     } else {
         panic!();
@@ -402,7 +402,7 @@ fn divisions128() {
 
     runtime.function("return_pos", Vec::new());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.output[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.output()[..]) {
         assert_eq!(r, 255);
     } else {
         panic!();
@@ -410,7 +410,7 @@ fn divisions128() {
 
     runtime.function("do_div", Args(-9900, -100).encode());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.output[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.output()[..]) {
         assert_eq!(r, 99);
     } else {
         panic!();
@@ -418,7 +418,7 @@ fn divisions128() {
 
     runtime.function("do_div", Args(-101213131318098987, -100000).encode());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.output[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.output()[..]) {
         assert_eq!(r, 1012131313180);
     } else {
         panic!();
@@ -484,7 +484,7 @@ fn complement() {
 
     runtime.function("do_complement", args);
 
-    let ret = runtime.output;
+    let ret = runtime.output();
 
     assert!(ret.len() == 32);
     assert!(ret.into_iter().filter(|x| *x == 255).count() == 32);
@@ -530,7 +530,7 @@ fn bitwise() {
 
     runtime.function("do_xor", args);
 
-    let ret = &runtime.output;
+    let ret = &runtime.output();
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -541,7 +541,7 @@ fn bitwise() {
 
     runtime.function("do_or", args);
 
-    let ret = &runtime.output;
+    let ret = &runtime.output();
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -552,7 +552,7 @@ fn bitwise() {
 
     runtime.function("do_and", args);
 
-    let ret = &runtime.output;
+    let ret = &runtime.output();
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 0).count() == 32);
@@ -637,7 +637,7 @@ fn assign_bitwise() {
 
     runtime.function("do_xor", args);
 
-    let ret = &runtime.output;
+    let ret = &runtime.output();
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -648,7 +648,7 @@ fn assign_bitwise() {
 
     runtime.function("do_or", args);
 
-    let ret = &runtime.output;
+    let ret = &runtime.output();
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -659,7 +659,7 @@ fn assign_bitwise() {
 
     runtime.function("do_and", args);
 
-    let ret = &runtime.output;
+    let ret = &runtime.output();
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 0).count() == 32);
@@ -833,7 +833,7 @@ fn power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.output, Val(1024).encode());
+    assert_eq!(runtime.output(), Val(1024).encode());
 
     // n ** 1 = n
     let args = Val(2345)
@@ -844,7 +844,7 @@ fn power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.output, Val(2345).encode());
+    assert_eq!(runtime.output(), Val(2345).encode());
 
     // n ** 0 = 0
     let args = Val(0xdead_beef)
@@ -855,7 +855,7 @@ fn power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.output, Val(1).encode());
+    assert_eq!(runtime.output(), Val(1).encode());
 
     // 0 ** n = 0
     let args = Val(0)
@@ -866,11 +866,11 @@ fn power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.output, Val(0).encode());
+    assert_eq!(runtime.output(), Val(0).encode());
 
     runtime.function("power_with_cast", Vec::new());
 
-    assert_eq!(runtime.output, Val(0x1_0000_0000).encode());
+    assert_eq!(runtime.output(), Val(0x1_0000_0000).encode());
 }
 
 #[test]
@@ -897,7 +897,7 @@ fn large_power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.output, Val(1024).encode());
+    assert_eq!(runtime.output(), Val(1024).encode());
 
     // n ** 1 = n
     let args = Val(2345)
@@ -908,7 +908,7 @@ fn large_power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.output, Val(2345).encode());
+    assert_eq!(runtime.output(), Val(2345).encode());
 
     // n ** 0 = 0
     let args = Val(0xdeadbeef)
@@ -919,7 +919,7 @@ fn large_power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.output, Val(1).encode());
+    assert_eq!(runtime.output(), Val(1).encode());
 
     // 0 ** n = 0
     let args = Val(0)
@@ -930,7 +930,7 @@ fn large_power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.output, Val(0).encode());
+    assert_eq!(runtime.output(), Val(0).encode());
 
     // 10 ** 36 = 1000000000000000000000000000000000000
     let args = Val(10)
@@ -942,7 +942,7 @@ fn large_power() {
     runtime.function("power", args);
 
     assert_eq!(
-        runtime.output,
+        runtime.output(),
         Val(1000000000000000000000000000000000000).encode()
     );
 }
@@ -983,9 +983,8 @@ fn test_power_overflow_boundaries() {
         let res = BigUint::from(2_usize).pow((width - 1).try_into().unwrap());
         let mut res_data = res.to_bytes_le();
         res_data.resize(width / 8, 0);
-        contract.output.truncate(width / 8);
 
-        assert_eq!(contract.output, res_data);
+        assert_eq!(contract.output()[..width / 8], res_data);
 
         let exp = exp.add(1_usize);
         let mut exp_data = exp.to_bytes_le();
@@ -1020,7 +1019,7 @@ fn multiply() {
 
     runtime.function("multiply_with_cast", Vec::new());
 
-    assert_eq!(runtime.output, 65025u64.encode());
+    assert_eq!(runtime.output(), 65025u64.encode());
 
     let mut rand = || -> (BigInt, Vec<u8>) {
         let length = rng.gen::<usize>() % size;
@@ -1045,9 +1044,9 @@ fn multiply() {
             a_data.into_iter().chain(b_data.into_iter()).collect(),
         );
 
-        println!("out: res:{:?}", runtime.output);
+        println!("out: res:{:?}", runtime.output());
 
-        let res = BigInt::from_bytes_le(Sign::Plus, &runtime.output);
+        let res = BigInt::from_bytes_le(Sign::Plus, &runtime.output());
 
         println!("{res} = {a} * {b}");
 
@@ -1056,7 +1055,7 @@ fn multiply() {
         let (_, mut res) = (a * b).to_bytes_le();
         res.resize(size, 0);
 
-        assert_eq!(res, runtime.output);
+        assert_eq!(res, runtime.output());
     }
 }
 
@@ -1094,15 +1093,13 @@ fn test_mul_within_range_signed() {
             a_data.into_iter().chain(b_data.into_iter()).collect(),
         );
 
-        runtime.output.truncate(width / 8);
-
         let value = a * b;
         let value_sign = value.sign();
 
         let mut value_data = value.to_signed_bytes_le();
         value_data.resize(width / 8, sign_extend(value_sign));
 
-        assert_eq!(value_data, runtime.output);
+        assert_eq!(value_data, runtime.output()[..width / 8]);
     }
 }
 
@@ -1137,14 +1134,12 @@ fn test_mul_within_range() {
             a_data.into_iter().chain(b_data.into_iter()).collect(),
         );
 
-        runtime.output.truncate((width / 8) as usize);
-
         let value = a * b;
 
         let mut value_data = value.to_bytes_le();
         value_data.resize((width / 8) as usize, 0);
 
-        assert_eq!(value_data, runtime.output);
+        assert_eq!(value_data, runtime.output()[..width / 8]);
     }
 }
 
@@ -1189,9 +1184,8 @@ fn test_overflow_boundaries() {
         let res = upper_boundary.clone().mul(1_u32);
         let mut res_data = res.to_signed_bytes_le();
         res_data.resize((width / 8) as usize, 0);
-        contract.output.truncate((width / 8) as usize);
 
-        assert_eq!(res_data, contract.output);
+        assert_eq!(res_data, contract.output()[..(width / 8) as usize]);
 
         contract.function(
             "mul",
@@ -1205,9 +1199,8 @@ fn test_overflow_boundaries() {
         let res = lower_boundary.clone().mul(1_u32);
         let mut res_data = res.to_signed_bytes_le();
         res_data.resize((width / 8) as usize, 0);
-        contract.output.truncate((width / 8) as usize);
 
-        assert_eq!(res_data, contract.output);
+        assert_eq!(res_data, contract.output()[..(width / 8) as usize]);
 
         let upper_boundary_plus_one = BigInt::from(2_u32).pow(width - 1);
 
@@ -1445,18 +1438,18 @@ fn bytes_bitwise() {
     runtime.function("or", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
     assert_eq!(
-        runtime.output,
+        runtime.output(),
         Bytes5([0x81, 0x81, 0x81, 0x81, 0x01]).encode()
     );
 
     runtime.function("and", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
-    assert_eq!(runtime.output, Bytes5([0x01, 0x01, 0, 0, 0]).encode());
+    assert_eq!(runtime.output(), Bytes5([0x01, 0x01, 0, 0, 0]).encode());
 
     runtime.function("xor", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
     assert_eq!(
-        runtime.output,
+        runtime.output(),
         Bytes5([0xfe, 0x01, 0x01, 0x01, 0x01]).encode()
     );
 
@@ -1464,14 +1457,14 @@ fn bytes_bitwise() {
     runtime.function("shift_left", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        runtime.output,
+        runtime.output(),
         Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode()
     );
 
     runtime.function("shift_right", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        runtime.output,
+        runtime.output(),
         Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode()
     );
 
@@ -1479,14 +1472,14 @@ fn bytes_bitwise() {
     runtime.function("shift_left2", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        runtime.output,
+        runtime.output(),
         Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode()
     );
 
     runtime.function("shift_right2", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        runtime.output,
+        runtime.output(),
         Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode()
     );
 
@@ -1496,14 +1489,14 @@ fn bytes_bitwise() {
     // complement
     runtime.function("complement", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
-    assert_eq!(runtime.output, Bytes3([0x0c, 0x82, 0xfc]).encode());
+    assert_eq!(runtime.output(), Bytes3([0x0c, 0x82, 0xfc]).encode());
 
     // array access
     let bytes7 = *b"NAWABRA";
     for i in 0..6 {
         runtime.function("bytes_array", BytesArray(bytes7, i).encode());
 
-        assert_eq!(runtime.output, [bytes7[i as usize]]);
+        assert_eq!(runtime.output(), [bytes7[i as usize]]);
     }
 }
 
@@ -1873,11 +1866,11 @@ fn address_compare() {
 
     runtime.function("order", Args(address0, address1).encode());
 
-    assert_eq!(runtime.output, Args(address0, address1).encode());
+    assert_eq!(runtime.output(), Args(address0, address1).encode());
 
     runtime.function("order", Args(address1, address0).encode());
 
-    assert_eq!(runtime.output, Args(address0, address1).encode());
+    assert_eq!(runtime.output(), Args(address0, address1).encode());
 }
 
 #[test]

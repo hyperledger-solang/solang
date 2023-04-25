@@ -280,6 +280,11 @@ impl Runtime {
     ) -> Result<i32, Trap> {
         let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
+        println!("get_storage CONTRACT {} {}", hex::encode(key), vm.contract);
+        println!(
+            "get_storage value {:?}",
+            vm.contracts[vm.contract].storage.get(&key)
+        );
         let value = match vm.contracts[vm.contract].storage.get(&key) {
             Some(value) => value,
             _ => return Ok(3), // In pallet-contracts, ReturnCode::KeyNotFound == 3
@@ -304,6 +309,7 @@ impl Runtime {
         let value = mem[value_ptr as usize..(value_ptr + value_len) as usize].to_vec();
         println!("set_storage: {}={}", hex::encode(key), hex::encode(&value));
 
+        println!("set_storage CONTRACT {}", vm.contract);
         match vm.contracts[vm.contract].storage.insert(key, value) {
             Some(value) => Ok(value.len() as i32),
             _ => Ok(-1), // In pallets contract, u32::MAX = -1 is the "none sentinel"
@@ -562,14 +568,10 @@ impl Runtime {
 
 #[derive(Default)]
 pub struct MockSubstrate {
-    pub programs: Vec<Contract>,
+    contracts: Vec<Contract>,
+    state: Option<Runtime>,
     pub current_program: usize,
-    pub output: Vec<u8>,
-    pub debug_buffer: String,
-    pub events: Vec<Event>,
-    pub caller: Account,
     pub account: Account,
-    pub heap_very: bool,
 }
 
 /// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
@@ -1461,6 +1463,34 @@ impl MockSubstrate {
         self.current_program = index;
     }
 
+    pub fn output(&self) -> Vec<u8> {
+        self.state
+            .as_ref()
+            .map(|state| state.output.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn caller(&self) -> Account {
+        self.state
+            .as_ref()
+            .map(|state| state.caller)
+            .unwrap_or_default()
+    }
+
+    pub fn debug_buffer(&self) -> String {
+        self.state
+            .as_ref()
+            .map(|state| state.debug_buffer.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn events(&self) -> Vec<Event> {
+        self.state
+            .as_ref()
+            .map(|state| state.events.clone())
+            .unwrap_or_default()
+    }
+
     //pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
     //    let m = &self.programs[self.current_contract]
     //        .abi
@@ -1514,26 +1544,31 @@ impl MockSubstrate {
     //}
 
     fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) -> Result<(), Error> {
-        let callee = self.programs[self.current_program].address;
-        let mut runtime = Runtime::new(&self.programs);
+        let callee = self.contracts[self.current_program].address;
         self.account = callee;
-        self.caller = runtime.caller;
 
-        runtime.call(export, callee, input, value).map_err(|e| {
-            self.debug_buffer = runtime.debug_buffer.clone();
-            e
-        })?;
+        let mut state = Runtime::new(&self.contracts);
+        let result = state.call(export, callee, input, value);
+        self.contracts = state.contracts.clone();
+        self.state = Some(state);
 
-        self.programs = runtime.contracts;
-        self.output = runtime.output;
-        self.debug_buffer = runtime.debug_buffer;
-        self.events = runtime.events;
+        result
 
-        Ok(())
+        //runtime.call(export, callee, input, value).map_err(|e| {
+        //    self.debug_buffer = runtime.debug_buffer.clone();
+        //    e
+        //})?;
+
+        //self.contracts = runtime.contracts;
+        //self.output = runtime.output;
+        //self.debug_buffer = runtime.debug_buffer;
+        //self.events = runtime.events;
+
+        //Ok(())
     }
 
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
-        let mut input = self.programs[self.current_program].constructors[index].clone();
+        let mut input = self.contracts[self.current_program].constructors[index].clone();
         input.append(&mut args);
         self.raw_constructor(input);
     }
@@ -1543,13 +1578,13 @@ impl MockSubstrate {
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.programs[self.current_program].messages[name].clone();
+        let mut input = self.contracts[self.current_program].messages[name].clone();
         input.append(&mut args);
         self.raw_function(input, 0);
     }
 
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.programs[self.current_program].messages[name].clone();
+        let mut input = self.contracts[self.current_program].messages[name].clone();
         input.append(&mut args);
         self.raw_function_failure(input, 0);
     }
@@ -1712,7 +1747,7 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
 
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
     MockSubstrate {
-        programs: build_wasm(src, log_ret, log_err)
+        contracts: build_wasm(src, log_ret, log_err)
             .iter()
             .map(|(code, abi)| Contract::new(abi, code))
             .collect(),
@@ -1770,10 +1805,10 @@ mod tests {
 
         runtime.constructor(0, 1337u64.encode());
         runtime.function("foo", vec![0x00]);
-        assert_eq!(runtime.output, 1337u64.encode());
+        assert_eq!(runtime.output(), 1337u64.encode());
         runtime.set_program(1);
         runtime.constructor(0, vec![]);
         runtime.function("bar", vec![]);
-        assert_eq!(runtime.output, 123u64.encode());
+        assert_eq!(runtime.output(), 123u64.encode());
     }
 }

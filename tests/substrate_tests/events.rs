@@ -35,8 +35,8 @@ fn anonymous() {
     runtime.constructor(0, Vec::new());
     runtime.function("emit_event", Vec::new());
 
-    assert_eq!(runtime.events.len(), 1);
-    let event = &runtime.events[0];
+    assert_eq!(runtime.events().len(), 1);
+    let event = &runtime.events()[0];
     assert_eq!(event.topics.len(), 0);
     assert_eq!(event.data, (0u8, true).encode());
 }
@@ -64,8 +64,8 @@ fn emit() {
     runtime.constructor(0, Vec::new());
     runtime.function("emit_event", Vec::new());
 
-    assert_eq!(runtime.events.len(), 2);
-    let event = &runtime.events[0];
+    assert_eq!(runtime.events().len(), 2);
+    let event = &runtime.events()[0];
     assert_eq!(event.topics.len(), 2);
     assert_eq!(event.topics[0], topic_hash(b"\0a::foo"));
     let topic = PrefixedValue {
@@ -76,7 +76,7 @@ fn emit() {
     assert_eq!(event.topics[1], topic_hash(&topic[..]));
     assert_eq!(event.data, Event::Foo(true, 102, 1).encode());
 
-    let event = &runtime.events[1];
+    let event = &runtime.events()[1];
     assert_eq!(event.topics.len(), 2);
     println!("topic hash: {:?}", event.topics[0]);
     println!("topic hash: {:?}", event.topics[0]);
@@ -251,8 +251,8 @@ fn erc20_ink_example() {
     let value = 10;
     runtime.function("emit_event", Transfer { from, to, value }.encode());
 
-    assert_eq!(runtime.events.len(), 1);
-    let event = &runtime.events[0];
+    assert_eq!(runtime.events().len(), 1);
+    let event = &runtime.events()[0];
     assert_eq!(event.data, Event::Transfer(from, to, value).encode());
 
     assert_eq!(event.topics.len(), 3);
@@ -289,8 +289,8 @@ fn freestanding() {
     runtime.constructor(0, Vec::new());
     runtime.function("emit_event", Vec::new());
 
-    assert_eq!(runtime.events.len(), 1);
-    let event = &runtime.events[0];
+    assert_eq!(runtime.events().len(), 1);
+    let event = &runtime.events()[0];
     assert_eq!(event.data, (0u8, true).encode());
     assert_eq!(event.topics[0], topic_hash(b"\0a::A"));
     let expected_topic = PrefixedValue {
@@ -310,8 +310,8 @@ fn different_contract() {
     runtime.constructor(0, Vec::new());
     runtime.function("emit_event", Vec::new());
 
-    assert_eq!(runtime.events.len(), 1);
-    let event = &runtime.events[0];
+    assert_eq!(runtime.events().len(), 1);
+    let event = &runtime.events()[0];
     assert_eq!(event.data, (0u8, true).encode());
     assert_eq!(event.topics[0], topic_hash(b"\0A::X"));
     let expected_topic = PrefixedValue {

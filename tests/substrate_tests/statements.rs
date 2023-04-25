@@ -30,7 +30,7 @@ fn destruct_from_array() {
     let fakes = vec![true];
     let id = vec![1, 0, 0, 0, 1];
     runtime.function("reveal", Arg { values, fakes, id }.encode());
-    assert_eq!(runtime.output, true.encode());
+    assert_eq!(runtime.output(), true.encode());
 }
 
 #[test]
@@ -69,5 +69,5 @@ fn destruct_from_struct() {
     let fakes = S2(vec![true]);
     let id = vec![1, 0, 0, 0, 1];
     runtime.function("reveal", Arg { values, fakes, id }.encode());
-    assert_eq!(runtime.output, true.encode());
+    assert_eq!(runtime.output(), true.encode());
 }

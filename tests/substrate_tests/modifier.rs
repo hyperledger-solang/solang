@@ -286,7 +286,7 @@ fn return_values() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Val(u64);
 
-    assert_eq!(runtime.output, Val(5).encode());
+    assert_eq!(runtime.output(), Val(5).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -320,7 +320,7 @@ fn return_values() {
     struct StructS(bool, u64, String);
 
     assert_eq!(
-        runtime.output,
+        runtime.output(),
         StructS(true, 5, String::from("Hello, World!")).encode()
     );
 }
