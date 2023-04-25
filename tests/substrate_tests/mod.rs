@@ -7,7 +7,7 @@ mod expressions;
 
 mod array_boundary_check;
 mod arrays;
-//mod builtins;
+mod builtins;
 //mod calls;
 //mod contracts;
 mod debug_buffer_format;

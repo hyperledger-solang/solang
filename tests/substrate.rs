@@ -145,7 +145,7 @@ impl Runtime {
         }
     }
 
-    fn update_caller_state(&mut self, callee_state: Self, transferred_value: u128) {
+    fn accept_state(&mut self, callee_state: Self, transferred_value: u128) {
         self.debug_buffer = callee_state.debug_buffer;
         self.events = callee_state.events;
         self.contracts = callee_state.contracts;
@@ -161,6 +161,7 @@ impl Runtime {
             .unwrap_or_else(|| panic!("contract {} not found", hex::encode(callee)));
 
         let mut runtime = self.clone();
+        runtime.caller = runtime.contracts[runtime.contract].address;
         runtime.contract = index;
         runtime.value = value;
         runtime.input = input;
@@ -384,7 +385,7 @@ impl Runtime {
             write_buf(mem, output_len_ptr, output_len);
         }
 
-        vm.update_caller_state(state, value);
+        vm.accept_state(state, value);
 
         Ok(0)
     }
@@ -431,7 +432,7 @@ impl Runtime {
         write_buf(mem, address_ptr, &address);
         write_buf(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
 
-        vm.update_caller_state(state, value);
+        vm.accept_state(state, value);
 
         Ok(0)
     }
@@ -489,7 +490,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn block_number(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn seal_block_number(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let block = 950_119_597u32.to_le_bytes();
         let out_len = read_len(mem, out_len_ptr);
         assert!(out_len >= block.len());
@@ -1480,6 +1481,10 @@ impl MockSubstrate {
 
     pub fn events(&self) -> Vec<Event> {
         self.state.data().events.clone()
+    }
+
+    pub fn contracts(&self) -> &[Contract] {
+        &self.state.data().contracts
     }
 
     pub fn storage(&self) -> &HashMap<[u8; 32], Vec<u8>> {

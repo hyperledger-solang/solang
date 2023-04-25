@@ -231,6 +231,7 @@ fn call() {
         }"##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test1", Vec::new());
     runtime.function("test2", Vec::new());
 
@@ -289,6 +290,7 @@ fn call() {
         }"##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test1", Vec::new());
     runtime.function("test2", Vec::new());
 }
@@ -378,7 +380,7 @@ fn msg() {
     );
 
     let value = 145_594_775_678_703_046_797_448_357_509_034_994_219;
-    runtime.raw_function(runtime.programs[0].messages["test"], value);
+    runtime.raw_function(runtime.contracts()[0].messages["test"].to_vec(), value);
 
     let mut runtime = build_solidity(
         r##"
@@ -399,6 +401,7 @@ fn msg() {
         "##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 }
 
