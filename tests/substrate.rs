@@ -72,11 +72,11 @@ impl Contract {
         }
     }
 
-    fn into_new(mut self, salt: &[u8], value: u128) -> (Account, Self) {
-        self.address = Account::try_from(blake2b(32, &[], salt).as_bytes()).unwrap();
-        self.value = value;
-        self.storage.clear();
-        (self.address, self)
+    fn create_instance(&self, salt: &[u8]) -> (Account, Self) {
+        let mut instance = self.clone();
+        instance.address = Account::try_from(blake2b(32, &[], salt).as_bytes()).unwrap();
+        instance.storage.clear();
+        (instance.address, instance)
     }
 
     fn instantiate(&self, vm: Runtime) -> Result<(Store<Runtime>, Instance), Error> {
@@ -97,8 +97,7 @@ impl Contract {
         Ok((store, instance))
     }
 
-    fn execute(&mut self, function: &str, vm: Runtime) -> Result<Runtime, (Error, String)> {
-        let transferred_value = vm.value;
+    fn execute(&self, function: &str, vm: Runtime) -> Result<Runtime, (Error, String)> {
         let (mut store, instance) = self.instantiate(vm).map_err(|e| (e, String::new()))?;
 
         match instance
@@ -108,7 +107,6 @@ impl Contract {
             .call(&mut store, &[], &mut [])
         {
             Err(Error::Trap(trap)) if trap.trap_code().is_some() => {
-                self.value -= transferred_value;
                 Err((Error::Trap(trap), store.data().debug_buffer.clone()))
             }
             Err(Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
@@ -147,7 +145,7 @@ impl Runtime {
         }
     }
 
-    fn into_new(mut self, callee: Account, input: Vec<u8>, value: u128) -> (Contract, Self) {
+    fn instantiate_call(&self, callee: Account, input: Vec<u8>, value: u128) -> (&Contract, Self) {
         let (index, _) = self
             .contracts
             .iter()
@@ -155,23 +153,14 @@ impl Runtime {
             .find(|(_, contract)| contract.address == callee)
             .unwrap_or_else(|| panic!("contract {} not found", hex::encode(callee)));
 
-        self.contract = index;
-        //self.caller = self.contracts[self.contract].address;
-        dbg!(self.caller);
-        self.value = value;
-        self.input = input;
-        self.output.clear();
+        let mut runtime = self.clone();
+        runtime.contract = index;
+        runtime.value = value;
+        runtime.input = input;
+        runtime.output.clear();
+        runtime.contracts[index].value += value;
 
-        self.contracts[index].value += value;
-
-        (self.contracts[index].clone(), self)
-    }
-
-    fn return_to(self, consumer: &mut Self) {
-        consumer.contracts = self.contracts;
-        consumer.debug_buffer = self.debug_buffer;
-        consumer.events = self.events;
-        consumer.output = self.output;
+        (&self.contracts[index], runtime)
     }
 
     fn call(
@@ -180,16 +169,26 @@ impl Runtime {
         callee: Account,
         input: Vec<u8>,
         value: u128,
-    ) -> Result<(), (Error, String)> {
+    ) -> Result<(), Error> {
         println!(
             "{export}: account={} input={} value={value}",
             hex::encode(callee),
             hex::encode(&input)
         );
 
-        let (mut contract, runtime) = self.clone().into_new(callee, input, value);
-        contract.execute(export, runtime)?.return_to(self);
-        Ok(())
+        let (contract, runtime) = self.instantiate_call(callee, input, value);
+        contract
+            .execute(export, runtime)
+            .map(|state| {
+                self.contracts = state.contracts;
+                self.debug_buffer = state.debug_buffer;
+                self.events = state.events;
+                self.output = state.output;
+            })
+            .map_err(|(err, debug_buffer)| {
+                self.debug_buffer = debug_buffer;
+                err
+            })
     }
 
     fn deploy(
@@ -198,17 +197,16 @@ impl Runtime {
         value: u128,
         salt: &[u8],
         input: Vec<u8>,
-    ) -> Result<(), (Error, String)> {
+    ) -> Result<(), Error> {
         let (address, contract) = self
             .contracts
             .iter()
             .find(|contract| contract.code_hash == code_hash)
             .unwrap_or_else(|| panic!("code hash {} not found", hex::encode(code_hash)))
-            .clone()
-            .into_new(salt, value);
+            .create_instance(salt);
 
         self.contracts.push(contract);
-        self.call("deploy", address, input, 0)
+        self.call("deploy", address, input, value)
     }
 }
 
@@ -571,6 +569,7 @@ pub struct MockSubstrate {
     pub events: Vec<Event>,
     pub caller: Account,
     pub account: Account,
+    pub heap_very: bool,
 }
 
 /// In `ink!`, u32::MAX (which is -1 in 2s complement) represents a `None` value
@@ -1521,8 +1520,8 @@ impl MockSubstrate {
         self.caller = runtime.caller;
 
         runtime.call(export, callee, input, value).map_err(|e| {
-            self.debug_buffer = e.1;
-            e.0
+            self.debug_buffer = runtime.debug_buffer.clone();
+            e
         })?;
 
         self.programs = runtime.contracts;
