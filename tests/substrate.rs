@@ -100,8 +100,8 @@ impl Contract {
                 Err((Error::Trap(trap), store.data().debug_buffer.clone()))
             }
             Err(Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
-                Some(HostReturn::Data(_, data)) => {
-                    store.data_mut().output = data;
+                Some(HostReturn::Data(flags, data)) => {
+                    store.data_mut().output = HostReturn::Data(flags, data);
                     Ok(store)
                 }
                 Some(HostReturn::Terminate) => Ok(store),
@@ -122,7 +122,7 @@ struct Runtime {
     contract: usize,
     memory: Option<Memory>,
     input: Vec<u8>,
-    output: Vec<u8>,
+    output: HostReturn,
     value: u128,
 }
 
@@ -148,7 +148,7 @@ impl Runtime {
         runtime.contract = callee;
         runtime.value = value;
         runtime.input = input;
-        runtime.output.clear();
+        runtime.output = Default::default();
         runtime.contracts[callee].value += value;
         runtime
     }
@@ -171,7 +171,7 @@ impl Runtime {
             .iter()
             .enumerate()
             .find(|(_, contract)| contract.address == callee)
-            .ok_or(Error::Trap(Trap::from(TrapCode::UnreachableCodeReached)))?;
+            .ok_or(Error::Trap(Trap::from(TrapCode::UnreachableCodeReached)))?; // TODO this should return 7 (CodeNotFound)
 
         self.contracts[index]
             .execute(export, self.prepare_call_context(index, input, value))
@@ -257,7 +257,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_debug_message(data_ptr: u32, len: u32) -> Result<i32, Trap> {
+    fn seal_debug_message(data_ptr: u32, len: u32) -> Result<u32, Trap> {
         let buf = read_buf(mem, data_ptr, len);
         let msg = std::str::from_utf8(&buf).expect("seal_debug_message: Invalid UFT8");
         println!("seal_debug_message: {msg}");
@@ -271,10 +271,9 @@ impl Runtime {
         key_len: u32,
         out_ptr: u32,
         out_len_ptr: u32,
-    ) -> Result<i32, Trap> {
+    ) -> Result<u32, Trap> {
         let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
-        println!("get_storage CONTRACT {} {}", hex::encode(key), vm.contract);
         println!(
             "get_storage value {:?}",
             vm.contracts[vm.contract].storage.get(&key)
@@ -297,28 +296,27 @@ impl Runtime {
         key_len: u32,
         value_ptr: u32,
         value_len: u32,
-    ) -> Result<i32, Trap> {
+    ) -> Result<u32, Trap> {
         let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
         let value = mem[value_ptr as usize..(value_ptr + value_len) as usize].to_vec();
         println!("set_storage: {}={}", hex::encode(key), hex::encode(&value));
 
-        println!("set_storage CONTRACT {}", vm.contract);
         match vm.contracts[vm.contract].storage.insert(key, value) {
-            Some(value) => Ok(value.len() as i32),
-            _ => Ok(-1), // In pallets contract, u32::MAX = -1 is the "none sentinel"
+            Some(value) => Ok(value.len() as u32),
+            _ => Ok(u32::MAX), // In pallets contract, u32::MAX is the "none sentinel"
         }
     }
 
     #[seal(1)]
-    fn seal_clear_storage(key_ptr: u32, key_len: u32) -> Result<i32, Trap> {
+    fn seal_clear_storage(key_ptr: u32, key_len: u32) -> Result<u32, Trap> {
         let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
         println!("clear_storage: {}", hex::encode(key));
 
         match vm.contracts[vm.contract].storage.remove(&key) {
-            Some(value) => Ok(value.len() as i32),
-            _ => Ok(-1), // In pallets contract, u32::MAX = -1 is the "none sentinel"
+            Some(value) => Ok(value.len() as u32),
+            _ => Ok(u32::MAX), // In pallets contract, u32::MAX is the "none sentinel"
         }
     }
 
@@ -362,26 +360,31 @@ impl Runtime {
         input_len: u32,
         output_ptr: u32,
         output_len_ptr: u32,
-    ) -> Result<i32, Trap> {
+    ) -> Result<u32, Trap> {
         let callee = read_account(mem, callee_ptr);
-        let salt = read_buf(mem, input_ptr, input_len);
+        let input = read_buf(mem, input_ptr, input_len);
         let value = read_value(mem, value_ptr);
-        assert!(value <= vm.contracts[vm.contract].value);
 
-        let state = match vm.call("call", callee, salt, value) {
-            Err(_) => return Ok(1), // ReturnCode::CalleeTrapped (there are others, but we don't test it yet)
-            Ok(state) => state.into_data(),
+        if value > vm.contracts[vm.contract].value {
+            return Ok(5); // ReturnCode::TransferFailed
+        }
+
+        let ((flags, data), state) = match vm.call("call", callee, input, value) {
+            Ok(state) => ((state.data().output.as_data()), state),
+            Err(_) => return Ok(1), // ReturnCode::CalleeTrapped
         };
 
         if output_len_ptr != u32::MAX {
-            assert!(read_len(mem, output_len_ptr) >= state.output.len());
-            write_buf(mem, output_ptr, &state.output);
-            let output_len = &(state.output.len() as u32).to_le_bytes();
-            write_buf(mem, output_len_ptr, output_len);
+            assert!(read_len(mem, output_len_ptr) >= data.len());
+            write_buf(mem, output_ptr, &data);
+            write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
         }
 
-        vm.accept_state(state, value);
+        if flags == 2 {
+            return Ok(2); // ReturnCode::CalleeReverted
+        }
 
+        vm.accept_state(state.into_data(), value);
         Ok(0)
     }
 
@@ -410,35 +413,41 @@ impl Runtime {
         output_len_ptr: u32,
         salt_ptr: u32,
         salt_len: u32,
-    ) -> Result<i32, Trap> {
+    ) -> Result<u32, Trap> {
         let target = read_account(mem, code_hash_ptr);
         let salt = read_buf(mem, salt_ptr, salt_len);
         let input = read_buf(mem, input_data_ptr, input_data_len);
         let value = read_value(mem, value_ptr);
+
         if value > vm.contracts[vm.contract].value {
             return Ok(5); // ReturnCode::TransferFailed
         }
 
-        let state = vm
-            .deploy(target, value, &salt, input)
-            .map_err(|_| Trap::from(TrapCode::UnreachableCodeReached))?
-            .into_data();
+        let ((flags, data), state) = match vm.deploy(target, value, &salt, input) {
+            Ok(state) => ((state.data().output.as_data()), state),
+            Err(_) => return Ok(1), // ReturnCode::CalleeTrapped
+        };
 
-        write_buf(mem, output_ptr, &vm.output);
-        let output_len = &(state.output.len() as u32).to_le_bytes();
-        write_buf(mem, output_len_ptr, output_len);
+        if output_len_ptr != u32::MAX {
+            write_buf(mem, output_ptr, &data);
+            let output_len = &(data.len() as u32).to_le_bytes();
+            write_buf(mem, output_len_ptr, output_len);
 
-        let address = state.contracts.last().unwrap().address;
-        write_buf(mem, address_ptr, &address);
-        write_buf(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
+            let address = state.data().contracts.last().unwrap().address;
+            write_buf(mem, address_ptr, &address);
+            write_buf(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
+        }
 
-        vm.accept_state(state, value);
+        if flags == 2 {
+            return Ok(2); // ReturnCode::CalleeReverted
+        }
 
+        vm.accept_state(state.into_data(), value);
         Ok(0)
     }
 
     #[seal(0)]
-    fn seal_transfer(account_ptr: u32, _: u32, value_ptr: u32, _: u32) -> Result<i32, Trap> {
+    fn seal_transfer(account_ptr: u32, _: u32, value_ptr: u32, _: u32) -> Result<u32, Trap> {
         let value = read_value(mem, value_ptr);
         if value > vm.contracts[vm.contract].value {
             return Ok(5); // ReturnCode::TransferFailed
@@ -579,10 +588,20 @@ pub struct MockSubstrate {
     pub value: u128,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 enum HostReturn {
+    #[default]
     Terminate,
     Data(u32, Vec<u8>),
+}
+
+impl HostReturn {
+    fn as_data(&self) -> (u32, Vec<u8>) {
+        match self {
+            HostReturn::Data(flags, data) => (*flags, data.to_vec()),
+            HostReturn::Terminate => (0, vec![]),
+        }
+    }
 }
 
 impl fmt::Display for HostReturn {
@@ -617,7 +636,10 @@ impl MockSubstrate {
     }
 
     pub fn output(&self) -> Vec<u8> {
-        self.state.data().output.clone()
+        if let HostReturn::Data(_, data) = &self.state.data().output {
+            return data.to_vec();
+        }
+        vec![]
     }
 
     pub fn caller(&self) -> Account {
