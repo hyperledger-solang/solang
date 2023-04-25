@@ -1,5 +1,5 @@
 [package]
-name = "wasm_host_derive"
+name = "wasm_host_attr"
 version = "0.1.0"
 edition = "2021"
 

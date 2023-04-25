@@ -15,7 +15,7 @@ use wasmi::{Engine, Error, Instance, Linker, Memory, MemoryType, Module, Store};
 use solang::file_resolver::FileResolver;
 use solang::{compile, Target};
 
-use wasm_host_derive::wasm_host;
+use wasm_host_attr::wasm_host;
 
 mod substrate_tests;
 
@@ -48,7 +48,7 @@ impl Contract {
             .constructors()
             .iter()
             .map(|f| f.selector().to_bytes().to_vec())
-            .collect::<Vec<_>>();
+            .collect();
 
         Self {
             messages,
@@ -274,10 +274,6 @@ impl Runtime {
     ) -> Result<u32, Trap> {
         let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
-        println!(
-            "get_storage value {:?}",
-            vm.contracts[vm.contract].storage.get(&key)
-        );
         let value = match vm.contracts[vm.contract].storage.get(&key) {
             Some(value) => value,
             _ => return Ok(3), // In pallet-contracts, ReturnCode::KeyNotFound == 3
@@ -581,13 +577,6 @@ impl Runtime {
     }
 }
 
-pub struct MockSubstrate {
-    state: Store<Runtime>,
-    pub current_program: usize,
-    pub account: Account,
-    pub value: u128,
-}
-
 #[derive(Default, Debug, Clone)]
 enum HostReturn {
     #[default]
@@ -615,10 +604,17 @@ impl fmt::Display for HostReturn {
 
 impl HostError for HostReturn {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Event {
     topics: Vec<Hash>,
     data: Vec<u8>,
+}
+
+pub struct MockSubstrate {
+    state: Store<Runtime>,
+    pub current_program: usize,
+    pub account: Account,
+    pub value: u128,
 }
 
 impl MockSubstrate {
@@ -658,7 +654,7 @@ impl MockSubstrate {
         &self.state.data().contracts
     }
 
-    pub fn storage(&self) -> &HashMap<[u8; 32], Vec<u8>> {
+    pub fn storage(&self) -> &HashMap<StorageKey, Vec<u8>> {
         &self.state.data().contracts[self.current_program].storage
     }
 

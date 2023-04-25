@@ -3,7 +3,6 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, ToTokens};
 use syn::{ImplItem, ItemImpl, LitInt, Type};
 
-#[derive(Debug)]
 struct HostFn {
     name: String,
     module: String,
