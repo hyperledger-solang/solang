@@ -1520,14 +1520,9 @@ impl Namespace {
             }
         }
 
-        match eval_const_number(&size_expr, self) {
-            Ok(n) => Ok(Some(n)),
-            Err(d) => {
-                diagnostics.push(d);
+        let n = eval_const_number(&size_expr, self, diagnostics)?;
 
-                Err(())
-            }
-        }
+        Ok(Some(n))
     }
 
     /// Generate the signature for the given name and parameters; can be used for events and functions.
