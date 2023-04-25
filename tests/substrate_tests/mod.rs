@@ -11,7 +11,7 @@ mod builtins;
 mod calls;
 mod contracts;
 mod debug_buffer_format;
-//mod errors;
+mod errors;
 mod events;
 mod first;
 mod format;

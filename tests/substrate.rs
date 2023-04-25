@@ -205,12 +205,7 @@ impl Runtime {
             .unwrap_or_else(|| panic!("code hash {} not found", hex::encode(code_hash)))
             .create_instance(salt);
 
-        if self
-            .contracts
-            .iter()
-            .find(|c| c.address == address)
-            .is_some()
-        {
+        if self.contracts.iter().any(|c| c.address == address) {
             return Err(Error::Trap(TrapCode::UnreachableCodeReached.into()));
         }
 
@@ -383,10 +378,10 @@ impl Runtime {
         let value = read_value(mem, value_ptr);
         assert!(value <= vm.contracts[vm.contract].value);
 
-        let state = vm
-            .call("call", callee, salt, value)
-            .map_err(|_| Trap::from(TrapCode::UnreachableCodeReached))?
-            .into_data();
+        let state = match vm.call("call", callee, salt, value) {
+            Err(_) => return Ok(1), // ReturnCode::CalleeTrapped (there are others, but we don't test it yet)
+            Ok(state) => state.into_data(),
+        };
 
         if output_len_ptr != u32::MAX {
             assert!(read_len(mem, output_len_ptr) >= state.output.len());
@@ -430,7 +425,9 @@ impl Runtime {
         let salt = read_buf(mem, salt_ptr, salt_len);
         let input = read_buf(mem, input_data_ptr, input_data_len);
         let value = read_value(mem, value_ptr);
-        assert!(value <= vm.contracts[vm.contract].value);
+        if value > vm.contracts[vm.contract].value {
+            return Ok(5); // ReturnCode::TransferFailed
+        }
 
         let state = vm
             .deploy(target, value, &salt, input)

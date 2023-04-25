@@ -155,6 +155,7 @@ fn errors() {
         true,
     );
 
+    runtime.constructor(0, vec![]);
     runtime.function_expect_failure("write_bytes_failure", 9u8.encode());
 
     assert_eq!(
@@ -218,16 +219,16 @@ fn errors() {
         "runtime_error: pop from empty storage array in test.sol:53:17-20,\n"
     );
 
-    runtime.vm.value = 3500;
+    runtime.value = 3500;
     runtime.constructor(0, Vec::new());
 
     runtime.debug_buffer().clear();
-    runtime.vm.value = 0;
+    runtime.value = 0;
     runtime.function_expect_failure("create_child", Vec::new());
 
     assert_eq!(
         runtime.debug_buffer(),
-        "runtime_error: contract creation failed in test.sol:65:18-52,\n"
+        "runtime_error: contract creation failed in test.sol:64:17-51,\n"
     );
 
     runtime.debug_buffer().clear();
@@ -295,7 +296,7 @@ fn errors() {
     );
 
     runtime.debug_buffer().clear();
-    runtime.vm.value = 1;
+    runtime.value = 1;
     runtime.function_expect_failure("dont_pay_me", Vec::new());
 
     assert_eq!(
