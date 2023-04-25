@@ -1671,64 +1671,60 @@ impl MockSubstrate {
     pub fn heap_verify(&mut self) {
         let mem = self.state.data().memory.unwrap().data(&mut self.state);
         let memsize = mem.len();
-        //let memsize = self.vm.memory.current_size().0 * 0x10000;
         println!("memory size:{memsize}");
-        //let mut buf = Vec::new();
-        //buf.resize(memsize, 0);
+        let mut buf = Vec::new();
+        buf.resize(memsize, 0);
 
-        //let mut current_elem = 0x10000;
-        //let mut last_elem = 0u32;
+        let mut current_elem = 0x10000;
+        let mut last_elem = 0u32;
 
-        //loop {
-        //    let next: u32 = self.vm.memory.get_value(current_elem).unwrap();
-        //    let prev: u32 = self.vm.memory.get_value(current_elem + 4).unwrap();
-        //    let length: u32 = self.vm.memory.get_value(current_elem + 8).unwrap();
-        //    let allocated: u32 = self.vm.memory.get_value(current_elem + 12).unwrap();
+        let read_u32 = |ptr| u32::from_le_bytes(mem[ptr..ptr + 4].try_into().unwrap()).try_into();
 
-        //    println!("next:{next:08x} prev:{prev:08x} length:{length} allocated:{allocated}");
+        loop {
+            let next: u32 = read_u32(current_elem).unwrap();
+            let prev: u32 = read_u32(current_elem + 4).unwrap();
+            let length: u32 = read_u32(current_elem + 8).unwrap();
+            let allocated: u32 = read_u32(current_elem + 12).unwrap();
 
-        //    let mut buf = vec![0u8; length as usize];
+            println!("next:{next:08x} prev:{prev:08x} length:{length} allocated:{allocated}");
 
-        //    self.vm
-        //        .memory
-        //        .get_into(current_elem + 16, &mut buf)
-        //        .unwrap();
+            let buf = read_buf(mem, current_elem as u32 + 16, length);
 
-        //    if allocated == 0 {
-        //        println!("{:08x} {} not allocated", current_elem + 16, length);
-        //    } else {
-        //        println!("{:08x} {} allocated", current_elem + 16, length);
+            if allocated == 0 {
+                println!("{:08x} {} not allocated", current_elem + 16, length);
+            } else {
+                println!("{:08x} {} allocated", current_elem + 16, length);
 
-        //        assert_eq!(allocated & 0xffff, 1);
+                assert_eq!(allocated & 0xffff, 1);
 
-        //        for offset in (0..buf.len()).step_by(16) {
-        //            let mut hex = "\t".to_string();
-        //            let mut chars = "\t".to_string();
-        //            for i in 0..16 {
-        //                if offset + i >= buf.len() {
-        //                    break;
-        //                }
-        //                let b = buf[offset + i];
-        //                write!(hex, " {b:02x}").unwrap();
-        //                if b.is_ascii() && !b.is_ascii_control() {
-        //                    write!(chars, "  {}", b as char).unwrap();
-        //                } else {
-        //                    chars.push_str("   ");
-        //                }
-        //            }
-        //            println!("{hex}\n{chars}");
-        //        }
-        //    }
+                for offset in (0..buf.len()).step_by(16) {
+                    let mut hex = "\t".to_string();
+                    let mut chars = "\t".to_string();
+                    for i in 0..16 {
+                        if offset + i >= buf.len() {
+                            break;
+                        }
+                        let b = buf[offset + i];
+                        write!(hex, " {b:02x}").unwrap();
+                        if b.is_ascii() && !b.is_ascii_control() {
+                            write!(chars, "  {}", b as char).unwrap();
+                        } else {
+                            chars.push_str("   ");
+                        }
+                    }
+                    println!("{hex}\n{chars}");
+                }
+            }
 
-        //    assert_eq!(last_elem, prev);
+            assert_eq!(last_elem, prev);
 
-        //    if next == 0 {
-        //        break;
-        //    }
+            if next == 0 {
+                break;
+            }
 
-        //    last_elem = current_elem;
-        //    current_elem = next;
-        //}
+            last_elem = current_elem as u32;
+            current_elem = next as usize;
+        }
     }
 }
 
