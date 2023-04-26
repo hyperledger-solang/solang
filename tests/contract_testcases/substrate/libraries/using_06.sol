@@ -14,3 +14,5 @@
                 return a > b ? a : b;
             }
         }
+// ----
+// error (219-234): using function expects 2 arguments, 3 provided (including self)

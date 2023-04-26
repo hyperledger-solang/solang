@@ -13,3 +13,5 @@
             }
         }
         
+// ----
+// warning (164-202): function can be declared 'view'

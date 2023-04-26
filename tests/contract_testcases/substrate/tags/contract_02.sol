@@ -8,3 +8,4 @@
          * a contract
          */
         abstract contract test {}
+// ----

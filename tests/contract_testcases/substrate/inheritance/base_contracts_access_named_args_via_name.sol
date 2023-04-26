@@ -17,3 +17,6 @@ contract B is Base {
         Base.set({val: 1});
     }
 }
+
+// ----
+// error (178-196): function calls via contract name are only valid for base contracts

@@ -5,3 +5,5 @@
                 //
             }
         }
+// ----
+// error (85-115): new cannot allocate type 'mapping(int256 => address)'

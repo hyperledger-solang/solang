@@ -7,3 +7,7 @@ contract c {
 	bool[C2] var22;
 }
 
+
+// ----
+// error (18-22): 'LEN1' not found
+// error (57-61): 'LEN1' not found

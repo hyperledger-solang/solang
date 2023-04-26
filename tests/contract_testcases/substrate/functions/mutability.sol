@@ -5,3 +5,5 @@ contract test {
                 return foo;
             }
         }
+// ----
+// error (123-133): function declared 'pure' but this expression reads from state

@@ -8,3 +8,6 @@
                 return b == a;
             }
         }
+// ----
+// warning (34-100): function can be declared 'pure'
+// warning (161-227): function can be declared 'pure'

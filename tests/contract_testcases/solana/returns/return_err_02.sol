@@ -9,3 +9,5 @@
                 return f();
             }
         }
+// ----
+// error (247-257): incorrect number of return values, expected 2 but got 3

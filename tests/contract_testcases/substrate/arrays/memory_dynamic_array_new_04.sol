@@ -6,3 +6,5 @@
                 assert(a.length == 5);
             }
         }
+// ----
+// error (96-107): new cannot allocate type 'bool'

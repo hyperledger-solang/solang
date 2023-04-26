@@ -16,3 +16,7 @@ contract spl {
 	}
 
 }
+
+// ----
+// warning (41-86): function can be declared 'pure'
+// warning (206-260): function can be declared 'pure'

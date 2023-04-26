@@ -6,3 +6,5 @@
                 bar.push(102);
             }
         }
+// ----
+// error (108-112): method 'push()' not allowed on fixed length array

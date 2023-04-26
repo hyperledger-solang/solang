@@ -28,3 +28,12 @@ contract c {
 	}
 }
 
+
+// ----
+// error (61-71): cannot use rational numbers with '!=' or '==' operator
+// error (125-135): cannot use rational numbers with '!=' or '==' operator
+// error (175-184): cannot use rational numbers with '<' operator
+// error (236-246): cannot use rational numbers with '<=' operator
+// error (289-296): cannot use rational numbers with '>' operator
+// error (359-366): cannot use rational numbers with '>' operator
+// error (407-416): cannot use rational numbers with '>=' operator

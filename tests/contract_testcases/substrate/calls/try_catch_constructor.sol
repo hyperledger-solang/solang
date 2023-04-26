@@ -16,3 +16,5 @@
             }
         }
         
+// ----
+// error (100-105): type 'int32' does not match return value of function 'contract other'

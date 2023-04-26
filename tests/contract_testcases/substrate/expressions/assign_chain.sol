@@ -27,3 +27,8 @@ contract c {
 contract d {
 	int64 public v;
 }
+
+// ----
+// warning (38-42): storage variable 'd1' has been assigned, but never read
+// warning (134-168): function can be declared 'pure'
+// warning (175-176): local variable 's' has been assigned, but never read

@@ -9,3 +9,6 @@
             }
         }
         
+// ----
+// error (139-185): visibility 'internal' of function 'foo' is not compatible with visibility 'external'
+// 	note (43-88): location of base function

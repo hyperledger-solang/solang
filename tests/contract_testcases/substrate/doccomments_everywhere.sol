@@ -97,3 +97,11 @@ contract Property {
     payable(msg.sender).transfer(shares_ * _pricePerShare);
   }
 }
+
+// ----
+// error (175-183): 'Counters' not found
+// error (195-203): 'Counters' not found
+// error (547-554): 'ERC1155' not found
+// error (858-867): '_tokenIds' not found
+// error (1771-1814): cannot find overloaded function which matches signature
+// error (3243-3274): cannot find overloaded function which matches signature

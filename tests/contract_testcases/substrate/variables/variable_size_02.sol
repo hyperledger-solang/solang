@@ -4,3 +4,5 @@ contract x {
             }
         }
         
+// ----
+// error (65-77): type is too large to fit into memory

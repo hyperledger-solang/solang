@@ -7,3 +7,6 @@ function foo() returns (int) {
 }
 
 
+
+// ----
+// warning (0-28): function can be declared 'pure'

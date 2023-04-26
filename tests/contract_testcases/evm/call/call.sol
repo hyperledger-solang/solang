@@ -5,3 +5,5 @@
             }
         }
         
+// ----
+// error (117-145): 'delegatecall' cannot have value specifed

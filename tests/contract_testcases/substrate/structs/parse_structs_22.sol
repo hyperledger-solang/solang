@@ -9,3 +9,6 @@ contract Test {
 	}
 }
 
+
+// ----
+// error (56-106): Recursive parameter not allowed for public or external functions.

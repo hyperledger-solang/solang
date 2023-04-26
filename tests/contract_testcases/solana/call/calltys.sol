@@ -6,3 +6,5 @@
                 x.staticcall(hex"1222");
             }
         }
+// ----
+// error (121-131): method 'staticcall' does not exist

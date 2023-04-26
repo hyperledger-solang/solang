@@ -10,3 +10,6 @@
             }
         }
         
+// ----
+// error (179-180): 'C' is a contract
+// error (179-189): function calls via contract name are only valid for base contracts

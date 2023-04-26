@@ -12,3 +12,7 @@
             function get_foo() public returns (int64) { return foo; }
             constructor(int64 z) { foo = z; }
         }
+// ----
+// error (9-84): missing arguments to base contract 'a' constructor
+// error (67-71): duplicate base contract 'b'
+// 	note (60-66): previous base contract 'b'

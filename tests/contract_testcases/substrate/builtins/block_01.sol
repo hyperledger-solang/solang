@@ -6,3 +6,5 @@
                 assert(b == 14_250_083_331_950_119_597);
             }
         }
+// ----
+// error (87-102): implicit conversion would change sign from uint64 to int64

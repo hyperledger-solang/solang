@@ -63,3 +63,30 @@ abstract contract c {
 	@annotation(with_no_body)
 	function method2() virtual public;
 }
+
+// ----
+// error (1-19): annotations not allowed on pragma
+// error (20-29): annotations not allowed on pragma
+// warning (30-48): unknown pragma 'version' with value '1.1' ignored
+// error (51-58): annotations not allowed on struct
+// error (81-95): annotations not allowed on event
+// error (113-126): annotations not allowed on enum
+// error (143-155): annotations not allowed on type
+// error (176-188): annotations not allowed on variable
+// error (210-239): annotations not allowed on function
+// error (306-321): annotations not allowed on using
+// error (345-372): unknown annotation 'program' on contract c
+// error (373-389): annotion takes an account, for example '@program_id("BBH7Xi5ddus5EoQhzJLgyodVxJJGkvBRCY5AhBA1jwUr")'
+// error (402-407): address literal 123 incorrect length of 2
+// error (421-470): address literal 5zMuDyvxCyss68EjbFgJZ22dxzHUZUW7ZV2v2Na4N9YWees incorrect length of 34
+// error (532-591): duplicate program_id annotation
+// 	note (472-531): location of previous program_id annotation
+// error (615-627): annotations not allowed on variable
+// error (642-669): annotations not allowed on using
+// error (695-702): annotations not allowed on struct
+// error (743-754): annotations not allowed on enum
+// error (772-784): annotations not allowed on event
+// error (799-807): annotations not allowed on type
+// error (830-842): unknown annotation method for constructor
+// error (877-906): unknown annotation fn for function
+// error (938-963): annotation '@annotation' not allowed on function with no body

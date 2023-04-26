@@ -33,3 +33,6 @@ contract testTypes {
         }
     }
 } 
+// ----
+// warning (528-529): yul variable 'x' has never been read
+// warning (841-842): yul variable 'x' has never been read

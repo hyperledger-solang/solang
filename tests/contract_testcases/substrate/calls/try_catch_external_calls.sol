@@ -18,3 +18,5 @@
             }
         }
         
+// ----
+// error (147-155): try returns list has 1 entries while function returns 2 values

@@ -6,3 +6,5 @@ contract c {
 		return vec[1][1];
 	}
 }
+
+// ----

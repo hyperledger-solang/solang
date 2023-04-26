@@ -10,3 +10,5 @@
                 address y = 102;
             }
         }
+// ----
+// error (226-229): expected 'address', found integer

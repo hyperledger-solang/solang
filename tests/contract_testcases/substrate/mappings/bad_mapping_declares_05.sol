@@ -4,3 +4,5 @@
                 //
             }
         }
+// ----
+// error (72-79): parameter of type 'storage' not allowed public or external functions

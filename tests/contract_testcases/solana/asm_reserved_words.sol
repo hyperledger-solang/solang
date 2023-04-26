@@ -4,3 +4,5 @@ contract default {
 		return !case;
 	}
 }
+
+// ----

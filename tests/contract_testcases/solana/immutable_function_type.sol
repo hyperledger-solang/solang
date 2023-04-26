@@ -25,3 +25,11 @@ contract a {
 	function() internal private immutable g;
     }
 }
+
+// ----
+// error (340-349): duplicate 'immutable' attribute
+// 	note (350-359): previous 'immutable' attribute
+// error (644-651): function type cannot have visibility 'private'
+// error (652-661): function type cannot be 'immutable'
+// error (718-725): function type cannot have visibility 'private'
+// error (726-735): function type cannot be 'immutable'

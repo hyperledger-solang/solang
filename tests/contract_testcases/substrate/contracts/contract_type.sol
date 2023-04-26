@@ -14,3 +14,5 @@
                 printer y = printer(x);
             }
         }
+// ----
+// error (226-227): implicit conversion to address from contract printer not allowed

@@ -11,3 +11,5 @@
             }
         }
         
+// ----
+// warning (173-217): function can be declared 'pure'

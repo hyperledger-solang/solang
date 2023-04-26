@@ -13,3 +13,6 @@
             }
         }
         
+// ----
+// warning (43-58): storage variable 'foo' has never been used
+// warning (183-221): function can be declared 'view'

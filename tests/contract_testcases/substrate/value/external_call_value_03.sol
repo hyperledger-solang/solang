@@ -12,3 +12,6 @@
                 a f = new a();
             }
         }
+// ----
+// error (95-103): 'value' specified multiple times
+// 	note (85-93): location of previous declaration of 'value'

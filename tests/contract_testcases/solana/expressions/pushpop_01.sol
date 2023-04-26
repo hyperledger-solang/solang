@@ -6,3 +6,5 @@
                 x.pop();
             }
         }
+// ----
+// warning (36-58): function can be declared 'pure'

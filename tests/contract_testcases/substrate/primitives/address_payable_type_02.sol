@@ -9,3 +9,5 @@
             function test() public {
             }
         }
+// ----
+// error (94-95): implicit conversion to contract other from address not allowed

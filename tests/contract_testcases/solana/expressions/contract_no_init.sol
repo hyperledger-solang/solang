@@ -14,3 +14,5 @@
                 return o.a();
             }
         }
+// ----
+// error (241-252): 'address' call argument required on solana

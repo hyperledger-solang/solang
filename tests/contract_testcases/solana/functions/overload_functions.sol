@@ -100,3 +100,8 @@ contract ManglingInvalid {
         }
     }
 }
+// ----
+// error (444-507): function 'multiply' with this signature already defined
+// 	note (861-924): previous definition of function 'multiply'
+// error (1756-1804): mangling the symbol of overloaded function 'foo' with signature 'foo(bool)' results in a new symbol 'foo_bool' but this symbol already exists
+// 	note (1643-1690): this function declaration conflicts with mangled name

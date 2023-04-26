@@ -9,3 +9,5 @@
                 Foo a = Foo(true, true, true);
             }
         }
+// ----
+// error (187-208): struct 'Foo' has 2 fields, not 3

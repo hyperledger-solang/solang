@@ -6,3 +6,5 @@ contract test {
                 (a , b) = (1, );
             }
         }
+// ----
+// error (137-137): stray comma

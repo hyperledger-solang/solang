@@ -6,3 +6,5 @@ contract x {
             }
         }
         
+// ----
+// error (106-107): cannot assign to immutable outside of constructor

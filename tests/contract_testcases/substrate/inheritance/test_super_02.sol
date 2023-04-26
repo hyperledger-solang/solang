@@ -8,3 +8,5 @@
                 super.f2();
             }
         }
+// ----
+// error (152-154): unknown function or type 'f2'

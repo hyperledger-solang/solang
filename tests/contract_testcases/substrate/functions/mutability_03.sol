@@ -5,3 +5,5 @@ contract test {
                 foo = 102;
             }
         }
+// ----
+// error (107-110): function declared 'view' but this expression writes to state

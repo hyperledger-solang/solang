@@ -9,3 +9,5 @@
                 return f();
             }
         }
+// ----
+// error (226-236): function has no return values

@@ -7,3 +7,5 @@ contract test {
                 return a * b;
             }
         }
+// ----
+// error (147-148): 'b' not found

@@ -5,3 +5,5 @@
                 delete data;
             }
         }
+// ----
+// error (115-126): 'delete' cannot be applied to mapping type

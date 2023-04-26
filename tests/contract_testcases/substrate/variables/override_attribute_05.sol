@@ -8,3 +8,4 @@ contract x is y {
             }
         }
         
+// ----

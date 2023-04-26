@@ -4,3 +4,5 @@
                 return tx.origin;
             }
         }
+// ----
+// error (107-109): builtin 'tx.origin' does not exist

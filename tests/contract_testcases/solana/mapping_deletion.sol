@@ -38,3 +38,5 @@ contract DeleteTest {
     }
 
 }
+// ----
+// error (515-531): 'address' call argument required on solana

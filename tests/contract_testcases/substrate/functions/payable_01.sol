@@ -8,3 +8,5 @@
                 i = 2;
             }
         }
+// ----
+// error (104-111): internal or private function cannot be payable

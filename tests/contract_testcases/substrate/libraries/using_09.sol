@@ -15,3 +15,7 @@ contract c {
 	}
 }
 
+
+// ----
+// warning (0-18): function can be declared 'pure'
+// warning (42-65): function can be declared 'pure'

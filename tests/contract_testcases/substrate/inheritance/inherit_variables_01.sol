@@ -9,3 +9,5 @@
             }
         }
         
+// ----
+// error (173-176): 'foo' not found

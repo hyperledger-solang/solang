@@ -5,3 +5,7 @@
             }
         }
         
+// ----
+// warning (34-70): function can be declared 'view'
+// warning (95-96): destructure variable 's' has never been used
+// warning (111-113): destructure variable 'bs' has never been used

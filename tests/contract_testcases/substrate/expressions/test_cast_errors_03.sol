@@ -4,3 +4,5 @@ contract test {
                 return false;
             }
         }
+// ----
+// error (113-116): implicit conversion would change sign from int16 to uint32

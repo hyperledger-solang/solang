@@ -17,3 +17,6 @@
             }
         }
         
+// ----
+// error (50-117): function 'foo' overrides functions which are not 'virtual'
+// 	note (212-260): function 'foo' is not specified 'virtual'

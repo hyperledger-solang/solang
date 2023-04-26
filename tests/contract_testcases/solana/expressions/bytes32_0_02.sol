@@ -12,3 +12,5 @@
                 r = bytes32(-1);
             }
         }
+// ----
+// error (367-378): negative number cannot be converted to type 'bytes32'

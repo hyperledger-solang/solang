@@ -12,3 +12,10 @@
             function get_foo() public returns (int64) { return foo; }
             constructor(int64 z) { foo = z; }
         }
+
+// ----
+// error (67-71): duplicate argument for base contract 'a'
+// 	note (117-121): previous argument for base contract 'a'
+// error (117-121): duplicate argument for base contract 'a'
+// 	note (117-121): previous argument for base contract 'a'
+// warning (154-155): function parameter 'y' has never been read

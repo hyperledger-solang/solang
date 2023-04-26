@@ -19,3 +19,11 @@ contract c {
 		return 1.2 != (a ^ b);
 	}
 }
+
+// ----
+// error (135-148): cannot use rational numbers with '>=' operator
+// error (221-230): cannot use rational numbers with '>' operator
+// error (303-312): cannot use rational numbers with '!=' or '==' operator
+// error (385-386): expression not allowed in constant rational number expression
+// error (467-483): cannot use rational numbers with '<=' operator
+// error (556-570): cannot use rational numbers with '!=' or '==' operator

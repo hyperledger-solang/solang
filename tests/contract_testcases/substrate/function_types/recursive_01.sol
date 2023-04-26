@@ -6,3 +6,6 @@ contract C {
 
 	function foo(S s) public {}
 }
+
+// ----
+// error (50-74): Recursive parameter not allowed for public or external functions.

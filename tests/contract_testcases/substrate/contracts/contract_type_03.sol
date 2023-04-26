@@ -10,3 +10,5 @@
                 printer y = 102;
             }
         }
+// ----
+// error (217-220): expected 'contract printer', found integer

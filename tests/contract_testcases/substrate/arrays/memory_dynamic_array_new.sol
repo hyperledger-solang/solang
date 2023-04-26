@@ -6,3 +6,5 @@
                 assert(a.length == 5);
             }
         }
+// ----
+// error (96-109): new dynamic array should have a single length argument

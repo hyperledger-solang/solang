@@ -26,3 +26,6 @@ contract foo {
                 set_x(uint32(b));
             }
         }
+// ----
+// warning (138-180): function can be declared 'view'
+// warning (418-458): function can be declared 'view'

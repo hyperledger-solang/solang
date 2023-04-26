@@ -6,3 +6,5 @@
                 return (val, val, val);
             }
         }
+// ----
+// error (132-154): incorrect number of return values, expected 2 but got 3

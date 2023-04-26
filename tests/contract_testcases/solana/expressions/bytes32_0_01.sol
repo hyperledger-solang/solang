@@ -4,3 +4,5 @@
                 r = bytes32(0xffee);
             }
         }
+// ----
+// error (105-120): number of 2 bytes cannot be converted to type 'bytes32'

@@ -17,3 +17,7 @@
             }
         }
         
+// ----
+// error (50-98): function 'foo' should specify override list 'override(bar2,bar)'
+// error (345-401): function 'foo' with this signature already defined
+// 	note (193-249): previous definition of function 'foo'

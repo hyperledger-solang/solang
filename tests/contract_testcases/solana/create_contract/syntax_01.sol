@@ -6,3 +6,5 @@
         }
         contract x {}
     
+// ----
+// error (84-93): 'salt' not permitted for external calls or constructors on solana

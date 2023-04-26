@@ -5,3 +5,5 @@
                 emit foo {};
             }
         }
+// ----
+// error (110-112): expected event arguments, found code block

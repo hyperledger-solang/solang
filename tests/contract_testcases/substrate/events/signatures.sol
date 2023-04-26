@@ -10,3 +10,6 @@
                 emit foo(true, 1);
             }
         }
+// ----
+// warning (49-52): event 'bar' has never been emitted
+// warning (139-142): event 'bar' has never been emitted

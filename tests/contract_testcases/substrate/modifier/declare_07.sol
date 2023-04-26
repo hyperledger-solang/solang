@@ -8,3 +8,5 @@
                 foo();
             }
         }
+// ----
+// error (137-140): unknown function or type 'foo'

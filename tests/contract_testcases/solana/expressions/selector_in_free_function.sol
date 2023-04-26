@@ -9,3 +9,5 @@
 
         contract foo {}
         
+// ----
+// warning (82-111): function can be declared 'pure'

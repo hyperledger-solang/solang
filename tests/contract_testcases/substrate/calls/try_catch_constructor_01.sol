@@ -16,3 +16,5 @@
             }
         }
         
+// ----
+// error (79-90): constructor returns single contract, not 2 values

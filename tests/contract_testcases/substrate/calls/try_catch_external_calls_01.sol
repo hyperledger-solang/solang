@@ -18,3 +18,5 @@
             }
         }
         
+// ----
+// error (172-178): type 'int256[2] storage' does not match return value of function 'bool'

@@ -10,3 +10,5 @@ contract c {
         return (x, y);
     }
 }
+
+// ----

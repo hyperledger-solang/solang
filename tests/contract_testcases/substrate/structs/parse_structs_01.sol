@@ -5,3 +5,5 @@
                 uint storage b;
             }
         }
+// ----
+// error (110-117): storage location 'storage' not allowed for struct field

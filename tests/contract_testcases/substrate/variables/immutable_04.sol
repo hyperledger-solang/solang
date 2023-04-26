@@ -8,3 +8,5 @@ contract x {
             }
         }
         
+// ----
+// error (127-128): cannot assign to immutable 'y' outside of constructor

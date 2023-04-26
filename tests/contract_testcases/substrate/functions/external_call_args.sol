@@ -48,3 +48,5 @@ contract Swap_ETH_TO_USDX{
   
  
 }
+// ----
+// warning (1596-1629): conversion truncates uint256 to uint128, as value is type uint128 on target substrate

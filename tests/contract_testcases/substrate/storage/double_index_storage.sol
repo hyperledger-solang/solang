@@ -26,3 +26,5 @@ contract BeeeefRegistry {
         }
     }
 }
+// ----
+// warning (430-436): conversion truncates uint256 to uint32, as memory size is type uint32 on target substrate

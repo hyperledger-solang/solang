@@ -4,3 +4,5 @@
                 //
             }
         }
+// ----
+// error (66-89): return type containing mapping must be of type 'storage'

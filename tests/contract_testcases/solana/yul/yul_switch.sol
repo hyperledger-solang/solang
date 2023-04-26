@@ -16,3 +16,4 @@ contract testTypes {
         return y;
     }
 } 
+// ----

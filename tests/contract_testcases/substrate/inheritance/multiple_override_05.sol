@@ -21,3 +21,5 @@
             }
         }
         
+// ----
+// error (50-106): function 'foo' should specify override list 'override(bar2,bar)'

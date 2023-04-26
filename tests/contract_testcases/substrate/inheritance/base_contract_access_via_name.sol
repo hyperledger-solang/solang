@@ -34,3 +34,6 @@ contract C is Base {
         something = val + 1024;
     }
 }
+
+// ----
+// error (363-374): function calls via contract name are only valid for base contracts

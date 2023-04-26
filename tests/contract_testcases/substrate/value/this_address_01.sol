@@ -4,3 +4,5 @@
                 return this;
             }
         }
+// ----
+// error (94-105): implicit conversion to address from contract b not allowed

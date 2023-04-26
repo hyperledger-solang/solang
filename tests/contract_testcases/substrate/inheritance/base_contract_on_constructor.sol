@@ -12,3 +12,6 @@
 
             }
         }
+// ----
+// warning (225-231): 'public': visibility for constructors is ignored
+// error (232-233): contract 'b' is not a base contract of 'apex'

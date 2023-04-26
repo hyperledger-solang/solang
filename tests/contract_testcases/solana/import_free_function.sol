@@ -9,3 +9,6 @@ function bar() {
 	x = X.foo();
 	x = X.foo({});
 }
+
+// ----
+// warning (0-28): function can be declared 'pure'

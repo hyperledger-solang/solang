@@ -39,3 +39,8 @@
                 return a / b;
             }
         }
+// ----
+// warning (596-658): function can be declared 'pure'
+// warning (718-780): function can be declared 'pure'
+// warning (884-946): function can be declared 'pure'
+// warning (1006-1068): function can be declared 'pure'

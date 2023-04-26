@@ -12,3 +12,5 @@
                 print("Baa!");
             }
         }
+// ----
+// error (125-132): conversion from bool to bytes not possible

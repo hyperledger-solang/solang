@@ -11,3 +11,5 @@
                 s = n;
             }
         }
+// ----
+// error (114-129): function 'other' is not 'public' or 'external'

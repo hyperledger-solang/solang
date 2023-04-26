@@ -6,3 +6,5 @@
                 s.format();
             }
         }
+// ----
+// error (109-119): format only allowed on string literals

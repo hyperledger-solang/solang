@@ -22,3 +22,11 @@ contract c {
 		emit LockRecord({a: address(this), n: now, m: 34});
 	}
 }
+
+// ----
+// error (84-87): 'now' not found
+// error (119-122): unknown function or type 'now'
+// error (176-179): 'now' not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.
+// error (231-234): 'now' not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.
+// error (419-422): 'now' not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.
+// error (469-472): 'now' not found. 'now' was an alias for 'block.timestamp' in older versions of the Solidity language. Please use 'block.timestamp' instead.

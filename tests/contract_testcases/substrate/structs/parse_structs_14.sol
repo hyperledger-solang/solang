@@ -9,3 +9,5 @@
                 Foo a = Foo({ x: true, y: 1, z: 2 });
             }
         }
+// ----
+// error (187-215): struct 'Foo' has 2 fields, not 3

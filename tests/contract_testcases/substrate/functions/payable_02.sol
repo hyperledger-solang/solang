@@ -8,3 +8,5 @@
                 i = 2;
             }
         }
+// ----
+// error (88-106): receive function must be declared payable

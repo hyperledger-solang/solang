@@ -4,3 +4,5 @@
                 return new printer();
             }
         }
+// ----
+// error (106-119): new cannot construct current contract 'printer'

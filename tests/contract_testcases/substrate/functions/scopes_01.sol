@@ -7,3 +7,5 @@
             return i;
         }
     }
+// ----
+// error (181-182): 'i' not found

@@ -4,3 +4,5 @@
                 return tx.gasprice;
             }
         }
+// ----
+// error (106-108): builtin 'tx.gasprice' does not exist

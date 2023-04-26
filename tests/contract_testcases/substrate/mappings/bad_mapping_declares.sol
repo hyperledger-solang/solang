@@ -11,3 +11,5 @@
                 x.data[1] = address(1);
             }
         }
+// ----
+// error (182-183): mapping only allowed in storage

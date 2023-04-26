@@ -6,3 +6,5 @@ contract test {
                 (c, b) = (1, 2);
             }
         }
+// ----
+// error (124-125): 'c' not found

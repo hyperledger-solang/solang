@@ -7,3 +7,7 @@
                 int64 dot = 1 dot;
             }
         }
+// ----
+// warning (85-92): ethereum currency unit used while targeting substrate
+// warning (122-127): solana currency unit used while targeting substrate
+// error (213-218): unknown unit 'dot'

@@ -9,3 +9,5 @@
                 Foo a = Foo({ x: true, z: 1 });
             }
         }
+// ----
+// error (202-203): struct 'Foo' has no field 'z'

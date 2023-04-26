@@ -12,3 +12,5 @@
                 print("Baa!");
             }
         }
+// ----
+// error (138-164): destucturing statement needed for function that returns multiple values

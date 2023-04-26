@@ -8,3 +8,5 @@
                 i = 2;
             }
         }
+// ----
+// error (88-115): fallback function must not be declare payable, use 'receive() external payable' instead

@@ -3,3 +3,4 @@ contract c {
                 (f, res) = a.call(hex"0102");
             }
         }
+// ----

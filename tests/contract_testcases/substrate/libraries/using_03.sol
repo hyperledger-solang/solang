@@ -8,3 +8,5 @@
         contract c {
             using x for x;
         }
+// ----
+// error (206-207): using for library 'x' type not permitted

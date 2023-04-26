@@ -6,3 +6,5 @@
                 assert(b == 93_603_701_976_053);
             }
         }
+// ----
+// error (87-89): builtin 'tx.origin' does not exist

@@ -5,3 +5,5 @@ abstract contract test {
                 return foo > address(0);
             }
         }
+// ----
+// warning (141-178): function can be declared 'view'

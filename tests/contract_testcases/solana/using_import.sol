@@ -9,3 +9,7 @@ contract c {
 		s.dec();
 	}
 }
+
+// ----
+// warning (121-154): function can be declared 'pure'
+// warning (33-34): error 'E' has never been used

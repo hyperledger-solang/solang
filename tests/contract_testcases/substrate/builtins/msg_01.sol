@@ -4,3 +4,5 @@
                 return msg.value > v;
             }
         }
+// ----
+// warning (36-82): function can be declared 'pure'

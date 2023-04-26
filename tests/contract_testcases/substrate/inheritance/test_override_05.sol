@@ -15,3 +15,6 @@
             uint64 public x;
         }
         
+// ----
+// error (73-87): function 'foo' override list does not contain 'bar'
+// 	note (208-264): previous definition of function 'foo'

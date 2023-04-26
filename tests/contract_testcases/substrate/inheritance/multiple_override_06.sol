@@ -21,3 +21,6 @@
             }
         }
         
+// ----
+// error (179-246): function 'foo' overrides function in same contract
+// 	note (50-117): previous definition of 'foo'

@@ -11,3 +11,8 @@
                 return 1;
             }
         }
+// ----
+// error (115-134): function expects 2 arguments, 1 provided
+// error (115-134): missing argument 't' to function 'get_x'
+// warning (223-224): declaration of 'b' shadows contract name
+// 	note (169-300): previous declaration of contract name

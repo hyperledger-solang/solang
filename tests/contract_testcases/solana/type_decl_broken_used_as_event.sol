@@ -5,3 +5,6 @@ contract c {
 		emit X();
 	}
 }
+
+// ----
+// error (59-60): 'X' is an user type

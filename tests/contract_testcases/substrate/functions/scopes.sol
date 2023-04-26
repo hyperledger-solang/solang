@@ -7,3 +7,5 @@
             return a;
         }
     }
+// ----
+// error (150-151): 'a' not found

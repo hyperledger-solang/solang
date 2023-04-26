@@ -17,3 +17,6 @@
             enum enum_x { x1, x2 }
         }
         
+// ----
+// warning (42-81): function can be declared 'pure'
+// warning (145-185): function can be declared 'pure'

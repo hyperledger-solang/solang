@@ -3,3 +3,5 @@ contract test {
                 function() private a;
             }
         }
+// ----
+// error (79-86): function type cannot have visibility 'private'

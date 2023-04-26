@@ -3,3 +3,5 @@ contract test {
                 function() public a;
             }
         }
+// ----
+// error (79-85): function type cannot have visibility 'public'

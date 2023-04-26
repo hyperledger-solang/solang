@@ -17,3 +17,8 @@ contract c {
 	}
 }
 
+
+// ----
+// error (69-86): using must be bound to specific type, '*' cannot be used on file scope
+// error (108-114): 'global' only permitted on user defined types
+// error (155-158): 'meh' not expected, did you mean 'global'?

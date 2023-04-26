@@ -3,3 +3,5 @@ contract test {
                 function() returns (bool x) a;
             }
         }
+// ----
+// error (93-94): function type returns cannot be named

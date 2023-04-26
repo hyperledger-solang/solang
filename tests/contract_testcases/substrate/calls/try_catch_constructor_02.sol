@@ -16,3 +16,5 @@
             }
         }
         
+// ----
+// error (79-93): try only supports external calls or constructor calls

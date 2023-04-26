@@ -13,3 +13,6 @@
                 }
         }
         
+// ----
+// warning (85-89): local variable 'code' has been assigned, but never read
+// error (255-262): circular reference creating contract 'a'

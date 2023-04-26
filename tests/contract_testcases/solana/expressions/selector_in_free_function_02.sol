@@ -9,3 +9,7 @@
             }
         }
         
+// ----
+// warning (34-55): function can be declared 'pure'
+// warning (105-144): function can be declared 'pure'
+// warning (118-119): function parameter 't' has never been read

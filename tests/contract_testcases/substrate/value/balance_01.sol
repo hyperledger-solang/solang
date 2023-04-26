@@ -4,3 +4,5 @@
                 return j.balance;
             }
         }
+// ----
+// error (106-113): contract 'b' has no public function 'balance'

@@ -8,3 +8,5 @@ contract test3 {
                 return 0;
             }
         }
+// ----
+// error (333-341): unreachable statement

@@ -12,3 +12,8 @@ contract testTypes {
         }
     }
 } 
+
+// ----
+// error (130-143): flag 'memory-safe' not supported
+// error (145-150): flag 'meh' not supported
+// error (222-268): unreachable statement

@@ -3,3 +3,5 @@ contract C {
 
 	function foo() public pure {}
 }
+
+// ----

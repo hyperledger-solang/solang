@@ -7,3 +7,5 @@
         }
 
         abstract contract b {}
+// ----
+// warning (157-162): storage variable 'y' has never been used

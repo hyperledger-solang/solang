@@ -5,3 +5,5 @@
             uint32 f1,
             uint32 f2
         );
+// ----
+// warning (69-70): event 'x' has never been emitted

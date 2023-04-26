@@ -14,3 +14,9 @@
             return result;
         }
     }
+// ----
+// warning (136-170): function can be declared 'pure'
+// warning (192-198): declaration of 'result' shadows state variable
+// 	note (29-42): previous declaration of state variable
+// warning (192-198): local variable 'result' has been assigned, but never read
+// warning (225-263): function can be declared 'view'

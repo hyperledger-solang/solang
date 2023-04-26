@@ -5,3 +5,5 @@
             }
         }
         
+// ----
+// error (117-143): 'staticcall' cannot have value specifed

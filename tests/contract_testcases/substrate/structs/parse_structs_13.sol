@@ -9,3 +9,5 @@
                 Foo a = Foo({ });
             }
         }
+// ----
+// error (187-195): struct 'Foo' has 2 fields, not 0

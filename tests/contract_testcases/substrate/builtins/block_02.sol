@@ -6,3 +6,5 @@
                 assert(b == 93_603_701_976_053);
             }
         }
+// ----
+// error (87-108): implicit conversion would change sign from uint128 to int64

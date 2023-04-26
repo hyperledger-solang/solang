@@ -3,3 +3,5 @@ contract test {
                 return base ** exp;
             }
        }
+// ----
+// error (114-125): exponation (**) is not allowed with signed types

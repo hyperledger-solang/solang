@@ -4,3 +4,5 @@ contract test {
             }
             uint constant y = foo() + 5;
         }
+// ----
+// error (144-149): cannot call function in constant expression

@@ -4,3 +4,5 @@
                 //
             }
         }
+// ----
+// error (48-71): parameter with mapping type must be of type 'storage'

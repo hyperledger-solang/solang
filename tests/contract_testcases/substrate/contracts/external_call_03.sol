@@ -18,3 +18,8 @@
                 return x * t;
             }
         }
+// ----
+// warning (65-71): 'public': visibility for constructors is ignored
+// error (94-115): duplicate argument name 'a'
+// 	note (105-106): location of previous argument
+// warning (327-333): 'public': visibility for constructors is ignored

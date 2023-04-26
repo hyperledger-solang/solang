@@ -8,3 +8,5 @@
                 foo y = x;
             }
         }
+// ----
+// error (214-215): implicit conversion not allowed since contract foo is not a base contract of contract IFoo

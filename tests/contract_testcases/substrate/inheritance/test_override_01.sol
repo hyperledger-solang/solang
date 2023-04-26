@@ -5,3 +5,6 @@
             }
         }
         
+// ----
+// error (37-98): 'foo' does not override anything
+// error (69-72): 'bar' not found

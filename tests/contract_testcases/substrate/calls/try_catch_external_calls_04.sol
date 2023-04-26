@@ -20,3 +20,5 @@
             }
         }
         
+// ----
+// error (237-240): only catch 'Error' or 'Panic' is supported, not 'Foo'

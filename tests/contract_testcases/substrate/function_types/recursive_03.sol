@@ -8,3 +8,6 @@ contract Test {
 		return S(f, ss);
 	}
 }
+
+// ----
+// error (53-100): Recursive parameter not allowed for public or external functions.

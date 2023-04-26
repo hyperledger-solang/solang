@@ -16,3 +16,5 @@ contract Array_bound_Test {
         return sum;
     }
 }
+
+// ----

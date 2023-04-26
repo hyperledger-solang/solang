@@ -15,3 +15,10 @@ contract c {
 		this.g({x: foo>1});
 	}
 }
+
+// ----
+// error (53-60): 'rubbish' not found
+// error (135-138): 'meh' not found
+// error (175-178): 'foo' not found
+// error (222-224): 'oo' not found
+// error (270-273): 'foo' not found

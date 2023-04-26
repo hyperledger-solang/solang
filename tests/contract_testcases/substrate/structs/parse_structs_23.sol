@@ -3,3 +3,5 @@ contract Fptr {
     function func(S memory) public pure {}
 }
 
+
+// ----

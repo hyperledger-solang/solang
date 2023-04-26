@@ -17,3 +17,5 @@
             }
         }
         
+// ----
+// error (73-86): function 'foo' missing overrides 'bar2', specify 'override(bar2,bar)'

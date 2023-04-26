@@ -7,3 +7,5 @@
             return;
         }
     }
+// ----
+// error (144-150): unreachable statement

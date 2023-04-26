@@ -5,3 +5,5 @@
             }
             bar[1 % 0] x;
         }
+// ----
+// error (113-118): divide by zero

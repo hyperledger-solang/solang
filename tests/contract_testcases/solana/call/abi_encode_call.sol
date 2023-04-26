@@ -11,3 +11,8 @@ contract abi_encode_call {
 contract other {
     function foo(int foo, int bar) public {}
 }
+// ----
+// error (76-104): function takes 2 arguments, 1 provided
+// error (191-195): conversion from bool to int256 not possible
+// warning (245-248): declaration of 'foo' shadows function
+// 	note (237-240): previous declaration of function

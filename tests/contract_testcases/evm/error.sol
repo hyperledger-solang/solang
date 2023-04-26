@@ -36,3 +36,23 @@ contract c is e {
 
 	}
 }
+
+// ----
+// error (205-207): error 'E1' has 1 unnamed fields
+// 	note (7-9): definition of 'E1'
+// error (217-220): error 'E1' has no field called 'foo'
+// 	note (7-9): definition of 'E1'
+// error (263-265): missing field 'foo'
+// 	note (32-34): definition of 'E2'
+// error (333-336): error 'E3' has no field called 'baz'
+// 	note (76-78): definition of 'E3'
+// error (405-408): duplicate argument with name 'foo'
+// error (440-442): missing field 'foo'
+// 	note (127-129): definition of 'E4'
+// error (452-455): error 'E4' has no field called 'baz'
+// 	note (127-129): definition of 'E4'
+// error (528-533): implicit conversion to int256 from bytes3 not allowed
+// error (576-578): error 'E2' has 2 fields, 1 provided
+// 	note (32-34): definition of 'E2'
+// error (616-620): error 'E2' has 2 fields, 3 provided
+// 	note (32-34): definition of 'E2'

@@ -6,3 +6,5 @@
                 bar.pop();
             }
         }
+// ----
+// error (108-111): method 'pop()' not allowed on fixed length array

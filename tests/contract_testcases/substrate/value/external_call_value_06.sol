@@ -12,3 +12,5 @@
                 a f = new a();
             }
         }
+// ----
+// error (94-96): missing call arguments

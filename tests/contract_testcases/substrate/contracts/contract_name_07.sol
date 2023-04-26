@@ -11,3 +11,6 @@
             }
         }
         
+// ----
+// warning (74-75): local variable 'y' has been assigned, but never read
+// error (189-196): circular reference creating contract 'a'

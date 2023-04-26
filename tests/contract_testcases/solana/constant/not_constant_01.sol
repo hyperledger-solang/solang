@@ -10,3 +10,5 @@
             }
         }
         
+// ----
+// error (176-190): need instance of contract 'C' to get variable value 'NOT_CONSTANT'

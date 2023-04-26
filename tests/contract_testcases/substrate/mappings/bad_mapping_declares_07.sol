@@ -4,3 +4,5 @@
                 //
             }
         }
+// ----
+// error (90-97): return type of type 'storage' not allowed public or external functions

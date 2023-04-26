@@ -11,3 +11,6 @@
             }
         }
         
+// ----
+// error (249-254): cannot call private function
+// 	note (46-85): declaration of function 'foo'

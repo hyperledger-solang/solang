@@ -21,3 +21,8 @@
                 return (102, true);
             }
         }
+
+// ----
+// error (243-248): catch Error(...) can only take 'string memory', not 'bytes'
+// error (320-327): catch Panic(...) can only take 'uint256', not 'uint128'
+// error (390-396): catch can only take 'bytes memory', not 'string'

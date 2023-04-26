@@ -23,3 +23,5 @@
             }
         }
         
+// ----
+// error (79-102): function 'foo' includes extraneous overrides 'bar3', specify 'override(bar2,bar)'

@@ -9,3 +9,6 @@
             }
         }
         
+// ----
+// error (139-184): visibility 'private' of function 'foo' is not compatible with visibility 'internal'
+// 	note (43-88): location of base function

@@ -10,3 +10,5 @@
                 s storage n = bar.push(s(-1, false));
             }
         }
+// ----
+// error (205-209): function or method does not return a value

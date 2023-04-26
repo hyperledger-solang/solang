@@ -5,3 +5,5 @@
                 emit foo (true);
             }
         }
+// ----
+// error (108-123): event type 'foo' has 2 fields, 1 provided

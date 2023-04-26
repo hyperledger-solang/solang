@@ -6,3 +6,5 @@
                     return bar[];
             }
         }
+// ----
+// error (159-164): expected expression before ']' token

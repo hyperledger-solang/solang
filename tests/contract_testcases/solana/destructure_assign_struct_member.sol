@@ -13,3 +13,6 @@ contract TestContract {
         (g.a1, g.a2) = (Hashes[id+1], Hashes[id+2]);
     }
 }
+
+// ----
+// warning (242-250): function parameter 'needHash' has never been read

@@ -6,3 +6,6 @@ contract c {
 		address(0) = tx.program_id;
 	}
 }
+
+// ----
+// error (191-201): expression is not assignable

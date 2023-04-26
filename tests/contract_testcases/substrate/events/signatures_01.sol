@@ -9,3 +9,5 @@
                 emit foo(true, 1);
             }
         }
+// ----
+// warning (49-52): event 'foo' has never been emitted

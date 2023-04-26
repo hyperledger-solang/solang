@@ -4,3 +4,5 @@
                 return payable(this);
             }
         }
+// ----
+// warning (34-83): function can be declared 'view'

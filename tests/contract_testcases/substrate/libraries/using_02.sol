@@ -8,3 +8,5 @@
         contract c {
             using x for asdf;
         }
+// ----
+// error (206-210): type 'asdf' not found

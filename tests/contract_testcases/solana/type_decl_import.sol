@@ -8,3 +8,6 @@ contract d {
 		c.f(a, b);
 	}
 }
+
+// ----
+// warning (69-100): function can be declared 'pure'

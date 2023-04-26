@@ -1,1 +1,3 @@
 struct B { bool foo; }
+
+// ----

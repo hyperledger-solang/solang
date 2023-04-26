@@ -8,3 +8,6 @@ contract x is y {
             }
         }
         
+// ----
+// error (90-133): function 'foo' with this signature already defined
+// 	note (41-44): previous definition of function 'foo'

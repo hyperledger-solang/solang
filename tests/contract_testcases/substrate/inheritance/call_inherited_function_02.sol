@@ -15,3 +15,6 @@
             }
         }
         
+// ----
+// error (37-83): function 'foo' with this signature already defined
+// 	note (187-233): previous definition of function 'foo'

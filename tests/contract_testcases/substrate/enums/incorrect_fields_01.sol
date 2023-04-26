@@ -27,3 +27,5 @@ enum bar {
         foo243, foo244, foo245, foo246, foo247, foo248, foo249, foo250, foo251,
         foo252, foo253, foo254, foo255, foo256
         }
+// ----
+// error (5-8): enum 'bar' has 257 fields, which is more than the 256 limit

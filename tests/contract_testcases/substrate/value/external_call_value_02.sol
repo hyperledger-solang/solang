@@ -12,3 +12,5 @@
                 a f = new a();
             }
         }
+// ----
+// error (85-92): 'salt' not valid for external calls

@@ -12,3 +12,6 @@
             function get_foo() public returns (int64) { return foo; }
             constructor(int64 z) { foo = z; }
         }
+// ----
+// error (9-79): missing arguments to base contract 'a' constructor
+// warning (146-147): function parameter 'y' has never been read

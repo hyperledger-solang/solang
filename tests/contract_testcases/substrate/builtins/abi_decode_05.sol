@@ -7,3 +7,7 @@ contract Foo {
 		abi.encode(S({ s: new S[](0) }));
 	}
 }
+
+// ----
+// error (78-96): Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded
+// error (147-167): Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded

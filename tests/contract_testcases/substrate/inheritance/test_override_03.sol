@@ -5,3 +5,5 @@
             }
         }
         
+// ----
+// error (37-93): 'foo' does not override anything

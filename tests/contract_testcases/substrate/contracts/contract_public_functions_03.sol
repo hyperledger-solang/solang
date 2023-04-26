@@ -9,3 +9,6 @@ contract b {
 contract c {
     uint256 private foo;
 }
+
+// ----
+// error (90-129): contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract c'
