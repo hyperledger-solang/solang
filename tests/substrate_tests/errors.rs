@@ -219,11 +219,11 @@ fn errors() {
         "runtime_error: pop from empty storage array in test.sol:53:17-20,\n"
     );
 
-    runtime.value = 3500;
+    runtime.value(3500);
     runtime.constructor(0, Vec::new());
 
     runtime.debug_buffer().clear();
-    runtime.value = 0;
+    runtime.value(0);
     runtime.function_expect_failure("create_child", Vec::new());
 
     assert_eq!(
@@ -296,7 +296,7 @@ fn errors() {
     );
 
     runtime.debug_buffer().clear();
-    runtime.value = 1;
+    runtime.value(1);
     runtime.function_expect_failure("dont_pay_me", Vec::new());
 
     assert_eq!(

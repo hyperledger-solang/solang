@@ -158,17 +158,18 @@ contract testing  {
     assert_eq!(b_vec, runtime.caller().to_vec());
 
     runtime.function("test_balance", Vec::new());
-    assert_eq!(runtime.output()[..16].to_vec(), runtime.value(0).encode());
+    assert_eq!(runtime.output()[..16].to_vec(), runtime.balance(0).encode());
 
     runtime.function("test_selfbalance", Vec::new());
-    assert_eq!(runtime.output()[..16].to_vec(), runtime.value(0).encode());
+    assert_eq!(runtime.output()[..16].to_vec(), runtime.balance(0).encode());
 
     runtime.function("test_caller", Vec::new());
     let mut b_vec = runtime.output().to_vec();
     b_vec.reverse();
     assert_eq!(b_vec, runtime.caller().to_vec());
 
-    runtime.raw_function(runtime.selector(0, "test_callvalue").to_vec(), 0xdeadcafe);
+    runtime.value(0xdeadcafe);
+    runtime.raw_function(runtime.selector(0, "test_callvalue").to_vec());
     let mut expected = 0xdeadcafeu32.to_le_bytes().to_vec();
     expected.resize(32, 0);
     assert_eq!(runtime.output(), expected);

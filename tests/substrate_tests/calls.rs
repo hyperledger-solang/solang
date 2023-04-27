@@ -454,7 +454,7 @@ fn payable_constructors() {
         }"##,
     );
 
-    runtime.value = 1;
+    runtime.value(1);
     runtime.constructor(0, Vec::new());
 
     // contructors w/o payable means can't send value
@@ -471,7 +471,7 @@ fn payable_constructors() {
         }"##,
     );
 
-    runtime.value = 1;
+    runtime.value(1);
     runtime.constructor(0, Vec::new());
 
     // contructors w/ payable means can send value
@@ -487,7 +487,7 @@ fn payable_constructors() {
         }"##,
     );
 
-    runtime.value = 1;
+    runtime.value(1);
     runtime.constructor(0, Vec::new());
 }
 
@@ -503,7 +503,7 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.value = 1;
+    runtime.value(1);
     runtime.function_expect_failure("test", Vec::new());
 
     // test both
@@ -518,9 +518,9 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.value = 1;
+    runtime.value(1);
     runtime.function_expect_failure("test2", Vec::new());
-    runtime.value = 1;
+    runtime.value(1);
     runtime.function("test", Vec::new());
 
     // test fallback and receive
@@ -551,12 +551,13 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.raw_function(b"abde".to_vec(), 1);
+    runtime.value(1);
+    runtime.raw_function(b"abde".to_vec());
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.output(), Ret(3).encode());
 
-    runtime.raw_function(b"abde".to_vec(), 0);
+    runtime.raw_function(b"abde".to_vec());
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.output(), Ret(2).encode());
@@ -581,12 +582,13 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.raw_function(b"abde".to_vec(), 1);
+    runtime.value(1);
+    runtime.raw_function(b"abde".to_vec());
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.output(), Ret(3).encode());
 
-    runtime.raw_function_failure(b"abde".to_vec(), 0);
+    runtime.raw_function_failure(b"abde".to_vec());
     let mut runtime = build_solidity(
         r##"
         contract c {
@@ -607,9 +609,11 @@ fn payable_functions() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.raw_function_failure(b"abde".to_vec(), 1);
+    runtime.value(1);
+    runtime.raw_function_failure(b"abde".to_vec());
 
-    runtime.raw_function(b"abde".to_vec(), 0);
+    runtime.value(0);
+    runtime.raw_function(b"abde".to_vec());
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.output(), Ret(2).encode());

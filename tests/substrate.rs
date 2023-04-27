@@ -502,13 +502,12 @@ impl Runtime {
 
         if output_len_ptr != u32::MAX {
             write_buf(mem, output_ptr, &data);
-            let output_len = &(data.len() as u32).to_le_bytes();
-            write_buf(mem, output_len_ptr, output_len);
-
-            let address = state.data().accounts.last().unwrap().address;
-            write_buf(mem, address_ptr, &address);
-            write_buf(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
+            write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
         }
+
+        let address = state.data().accounts.last().unwrap().address;
+        write_buf(mem, address_ptr, &address);
+        write_buf(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
 
         if flags == 2 {
             return Ok(2); // ReturnCode::CalleeReverted
@@ -658,47 +657,51 @@ impl Runtime {
     }
 }
 
-pub struct MockSubstrate {
-    state: Store<Runtime>,
-    pub account: usize,
-    pub value: u128,
-}
+pub struct MockSubstrate(Store<Runtime>);
 
 impl MockSubstrate {
-    fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) -> Result<(), Error> {
-        let runtime = self.state.data_mut();
-        runtime.caller_account = self.account;
+    fn invoke(&mut self, export: &str, input: Vec<u8>) -> Result<(), Error> {
+        let callee = self.0.data().account;
+        let value = self.0.data().transferred_value;
+        let runtime = self.0.data_mut();
+
         runtime.debug_buffer.clear();
         runtime.events.clear();
-        self.state = runtime.call(export, self.account, input, value).unwrap()?;
+        self.0 = runtime.call(export, callee, input, value).unwrap()?;
+        self.0.data_mut().transferred_value = 0;
+
         Ok(())
     }
 
     pub fn set_account(&mut self, index: usize) {
-        self.account = index;
+        self.0.data_mut().account = index;
     }
 
     pub fn output(&self) -> Vec<u8> {
-        if let HostReturn::Data(_, data) = &self.state.data().output {
+        if let HostReturn::Data(_, data) = &self.0.data().output {
             return data.to_vec();
         }
         vec![]
     }
 
+    pub fn value(&mut self, amount: u128) {
+        self.0.data_mut().transferred_value = amount;
+    }
+
     pub fn caller(&self) -> Address {
-        self.state.data().accounts[self.state.data().caller_account].address
+        self.0.data().accounts[self.0.data().caller_account].address
     }
 
     pub fn debug_buffer(&self) -> String {
-        self.state.data().debug_buffer.clone()
+        self.0.data().debug_buffer.clone()
     }
 
     pub fn events(&self) -> Vec<Event> {
-        self.state.data().events.clone()
+        self.0.data().events.clone()
     }
 
     pub fn contracts(&self) -> Vec<&Contract> {
-        self.state
+        self.0
             .data()
             .accounts
             .iter()
@@ -707,49 +710,50 @@ impl MockSubstrate {
     }
 
     pub fn storage(&self) -> &HashMap<StorageKey, Vec<u8>> {
-        &self.state.data().accounts[self.account]
+        &self.0.data().accounts[self.0.data().account]
             .contract
             .as_ref()
             .unwrap()
             .storage
     }
 
-    pub fn value(&self, account: usize) -> u128 {
-        self.state.data().accounts[account].value
+    pub fn balance(&self, account: usize) -> u128 {
+        self.0.data().accounts[account].value
     }
 
     pub fn selector(&self, contract: usize, function_name: &str) -> &[u8] {
-        &self.state.data().blobs[contract].messages[function_name]
+        &self.0.data().blobs[contract].messages[function_name]
     }
 
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
-        let mut input = self.state.data().blobs[self.account].constructors[index].clone();
+        let mut input = self.0.data().blobs[self.0.data().account].constructors[index].clone();
         input.append(&mut args);
         self.raw_constructor(input);
     }
 
     pub fn raw_constructor(&mut self, input: Vec<u8>) {
-        self.invoke("deploy", input, 20000).unwrap();
+        self.0.data_mut().transferred_value = 20000;
+        self.invoke("deploy", input).unwrap();
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.state.data().blobs[self.account].messages[name].clone();
+        let mut input = self.0.data().blobs[self.0.data().account].messages[name].clone();
         input.append(&mut args);
-        self.raw_function(input, self.value);
+        self.raw_function(input);
     }
 
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.state.data().blobs[self.account].messages[name].clone();
+        let mut input = self.0.data().blobs[self.0.data().account].messages[name].clone();
         input.append(&mut args);
-        self.raw_function_failure(input, self.value);
+        self.raw_function_failure(input);
     }
 
-    pub fn raw_function(&mut self, input: Vec<u8>, value: u128) {
-        self.invoke("call", input, value).unwrap();
+    pub fn raw_function(&mut self, input: Vec<u8>) {
+        self.invoke("call", input).unwrap();
     }
 
-    pub fn raw_function_failure(&mut self, input: Vec<u8>, value: u128) {
-        match self.invoke("call", input, value) {
+    pub fn raw_function_failure(&mut self, input: Vec<u8>) {
+        match self.invoke("call", input) {
             Err(wasmi::Error::Trap(trap)) => match trap.trap_code() {
                 Some(TrapCode::UnreachableCodeReached) => (),
                 _ => panic!("trap: {trap:?}"),
@@ -760,7 +764,7 @@ impl MockSubstrate {
     }
 
     pub fn heap_verify(&mut self) {
-        let mem = self.state.data().memory.unwrap().data(&mut self.state);
+        let mem = self.0.data().memory.unwrap().data(&mut self.0);
         let memsize = mem.len();
         println!("memory size:{memsize}");
         let mut buf = Vec::new();
@@ -829,11 +833,7 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
         .map(|(code, abi)| WasmCode::new(abi, code))
         .collect();
 
-    MockSubstrate {
-        state: Store::new(&Engine::default(), Runtime::new(blobs)),
-        account: 0,
-        value: 0,
-    }
+    MockSubstrate(Store::new(&Engine::default(), Runtime::new(blobs)))
 }
 
 fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {

@@ -238,13 +238,14 @@ fn call_inherited_function() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec(), 0);
+    runtime.value(0);
+    runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec());
     assert_eq!(runtime.output(), Val(1).encode());
 
-    runtime.raw_function([0x45, 0x55, 0x75, 0x78, 1].to_vec(), 0);
+    runtime.raw_function([0x45, 0x55, 0x75, 0x78, 1].to_vec());
     assert_eq!(runtime.output(), Val(2).encode());
 
-    runtime.raw_function([0x36, 0x8E, 0x4A, 0x7F, 1, 2, 3, 4, 5, 6, 7, 8].to_vec(), 0);
+    runtime.raw_function([0x36, 0x8E, 0x4A, 0x7F, 1, 2, 3, 4, 5, 6, 7, 8].to_vec());
     assert_eq!(runtime.output(), Val(3).encode());
 }
 
@@ -277,7 +278,8 @@ fn test_override() {
     let slot = [0u8; 32];
     assert_eq!(runtime.storage()[&slot], vec!(3));
 
-    runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec(), 1);
+    runtime.value(1);
+    runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec());
 
     let slot = [0u8; 32];
 
@@ -304,7 +306,8 @@ fn test_override() {
     let slot = [0u8; 32];
     assert_eq!(runtime.contracts()[0].storage[&slot], vec!(3));
 
-    runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec(), 0);
+    runtime.value(0);
+    runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec());
 
     let slot = [0u8; 32];
 
