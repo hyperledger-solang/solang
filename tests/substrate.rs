@@ -224,20 +224,28 @@ impl Runtime {
         }
     }
 
+    /// Create a suitable runtime context based on the current one.
+    ///
     /// Each contract execution must live within it's own runtime context.
-    /// This function forks off a suitable runtime context based on the current one.
+    /// When calling into another contract, we must:
+    /// * switch out the caller and callee account
+    /// * populate the input and the transferred balance
+    /// * clear the output
     fn new_context(&self, callee: usize, input: Vec<u8>, value: u128) -> Self {
         let mut runtime = self.clone();
         runtime.caller_account = self.account;
         runtime.account = callee;
         runtime.transferred_value = value;
+        runtime.accounts[callee].value += value;
         runtime.input = input;
         runtime.output = Default::default();
-        runtime.accounts[callee].value += value;
         runtime
     }
 
     /// After a succesfull contract execution, merge the runtime context of the callee back.
+    ///
+    /// We take over accounts (the callee might deploy new ones), debug buffer and emitted events.
+    /// The transferred balance will now be deducted from the caller.
     fn accept_state(&mut self, callee_state: Self, transferred_value: u128) {
         self.debug_buffer = callee_state.debug_buffer;
         self.events = callee_state.events;
