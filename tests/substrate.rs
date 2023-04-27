@@ -285,7 +285,9 @@ impl Runtime {
             .into()
     }
 
-    /// Add a new contract account and call the "deploy" function accordingly.
+    /// Add a new contract account and call its "deploy" function accordingly.
+    ///
+    /// Returns `None` if there is no contract corresponding to the given `code_hash`.
     fn deploy(
         &mut self,
         code_hash: [u8; 32],
@@ -303,9 +305,8 @@ impl Runtime {
             return Some(Err(Error::Trap(TrapCode::UnreachableCodeReached.into())));
         }
 
-        let callee = self.accounts.len();
         self.accounts.push(account);
-        self.call("deploy", callee, input, value)
+        self.call("deploy", self.accounts.len() - 1, input, value)
     }
 }
 
