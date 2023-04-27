@@ -380,7 +380,7 @@ fn msg() {
     );
 
     let value = 145_594_775_678_703_046_797_448_357_509_034_994_219;
-    runtime.value(value);
+    runtime.set_transferred_value(value);
     runtime.raw_function(runtime.contracts()[0].code.messages["test"].to_vec());
 
     let mut runtime = build_solidity(

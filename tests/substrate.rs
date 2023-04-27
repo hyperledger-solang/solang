@@ -22,10 +22,13 @@ mod substrate_tests;
 type StorageKey = [u8; 32];
 type Address = [u8; 32];
 
+/// Reason for halting execution. Same as in pallet contracts.
 #[derive(Default, Debug, Clone)]
 enum HostReturn {
+    /// The contract was terminated (deleted).
     #[default]
     Terminate,
+    /// Flags and data returned by the contract.
     Data(u32, Vec<u8>),
 }
 
@@ -49,12 +52,15 @@ impl fmt::Display for HostReturn {
 
 impl HostError for HostReturn {}
 
+/// Represents a contract code artifact.
 #[derive(Clone)]
-pub struct WasmCode {
-    pub messages: HashMap<String, Vec<u8>>,
-    pub constructors: Vec<Vec<u8>>,
-    pub hash: [u8; 32],
-    pub blob: Vec<u8>,
+struct WasmCode {
+    /// A mapping from function names to selectors.
+    messages: HashMap<String, Vec<u8>>,
+    /// A list of the selectors of the constructors.
+    constructors: Vec<Vec<u8>>,
+    hash: [u8; 32],
+    blob: Vec<u8>,
 }
 
 impl WasmCode {
@@ -82,6 +88,7 @@ impl WasmCode {
     }
 }
 
+/// A `Contract` represent deployed Wasm code with its storage which can be executed.
 #[derive(Clone)]
 pub struct Contract {
     code: WasmCode,
@@ -98,6 +105,7 @@ impl From<WasmCode> for Contract {
 }
 
 impl Contract {
+    /// Instantiate this contract as a Wasm module for execution.
     fn instantiate(&self, runtime: Runtime) -> Result<(Store<Runtime>, Instance), Error> {
         let engine = Engine::default();
         let mut store = Store::new(&engine, runtime);
@@ -116,6 +124,10 @@ impl Contract {
         Ok((store, instance))
     }
 
+    /// Execute this contract at the exportet function `name` in the given `runtime` context.
+    ///
+    /// On success, returns the Wasm store including the runtime state is returned.
+    /// On failure, returns the Wasm execution Error together with the debug buffer.
     #[allow(clippy::result_large_err)] // eDONTCARE
     fn execute(&self, name: &str, runtime: Runtime) -> Result<Store<Runtime>, (Error, String)> {
         let (mut store, instance) = self.instantiate(runtime).map_err(|e| (e, String::new()))?;
@@ -143,8 +155,9 @@ impl Contract {
     }
 }
 
+/// If contract is `Some`, this is considered to be a "contract account".
 #[derive(Default, Clone)]
-pub struct Account {
+struct Account {
     address: Address,
     value: u128,
     contract: Option<Contract>,
@@ -157,6 +170,8 @@ impl PartialEq for Account {
 }
 
 impl Account {
+    /// Create a new contract account.
+    /// The account address is derived based of the provided `salt`.
     fn with_contract(salt: &[u8], code: &WasmCode) -> Self {
         Self {
             address: Address::try_from(blake2b(32, &[], salt).as_bytes()).unwrap(),
@@ -172,17 +187,28 @@ pub struct Event {
     pub topics: Vec<Hash>,
 }
 
+/// The runtime provides the state of the mocked blockchain node during contract execution.
 #[derive(Default, Clone)]
 struct Runtime {
+    /// A list of "existing" accounts.
     accounts: Vec<Account>,
+    /// A list of known ("uploaded") Wasm contract blobs.
     blobs: Vec<WasmCode>,
+    /// Index into accounts pointing the account that is being executed.
     account: usize,
+    /// Index into accounts pointing to the calling account.
     caller_account: usize,
+    /// Will hold the memory reference after a successful execution.
     memory: Option<Memory>,
+    /// The input for the contract execution.
     input: Vec<u8>,
+    /// The output of the contract execution.
     output: HostReturn,
+    /// Descirbes how much value was given to the contract call.
     transferred_value: u128,
+    /// Combined ouptut of all `seal_debug_message` calls
     debug_buffer: String,
+    /// Stores all events emitted during contract execution.
     events: Vec<Event>,
 }
 
@@ -198,6 +224,8 @@ impl Runtime {
         }
     }
 
+    /// Each contract execution must live within it's own runtime context.
+    /// This function forks off a suitable runtime context based on the current one.
     fn new_context(&self, callee: usize, input: Vec<u8>, value: u128) -> Self {
         let mut runtime = self.clone();
         runtime.caller_account = self.account;
@@ -209,6 +237,7 @@ impl Runtime {
         runtime
     }
 
+    /// After a succesfull contract execution, merge the runtime context of the callee back.
     fn accept_state(&mut self, callee_state: Self, transferred_value: u128) {
         self.debug_buffer = callee_state.debug_buffer;
         self.events = callee_state.events;
@@ -216,10 +245,14 @@ impl Runtime {
         self.accounts[self.caller_account].value -= transferred_value;
     }
 
+    /// Access the contract that is currently being executed.
     fn contract(&mut self) -> &mut Contract {
         self.accounts[self.account].contract.as_mut().unwrap()
     }
 
+    /// Call an exported function under the account found at index `callee`.
+    ///
+    /// Returns `None` if the account has no contract.
     fn call(
         &mut self,
         export: &str,
@@ -244,6 +277,7 @@ impl Runtime {
             .into()
     }
 
+    /// Add a new contract account and call the "deploy" function accordingly.
     fn deploy(
         &mut self,
         code_hash: [u8; 32],
@@ -287,6 +321,11 @@ fn read_account(mem: &[u8], ptr: u32) -> Address {
     Address::try_from(&mem[ptr as usize..(ptr + 32) as usize]).unwrap()
 }
 
+/// Implement the required host functions from the contracts pallet.
+///
+/// They mock the original implementation, please refer to the [pallet docs][1] for more information.
+///
+/// [1]: https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/index.html
 #[wasm_host]
 impl Runtime {
     #[seal(0)]
@@ -657,6 +696,9 @@ impl Runtime {
     }
 }
 
+/// Provides a mock implementation of substrates [contracts pallet][1]
+///
+/// [1]: https://docs.rs/pallet-contracts/latest/pallet_contracts/index.html
 pub struct MockSubstrate(Store<Runtime>);
 
 impl MockSubstrate {
@@ -673,10 +715,27 @@ impl MockSubstrate {
         Ok(())
     }
 
+    /// Specify the caller account index for the next function or constructor call.
     pub fn set_account(&mut self, index: usize) {
         self.0.data_mut().account = index;
     }
 
+    /// Specify the balance for the next function or constructor call.
+    pub fn set_transferred_value(&mut self, amount: u128) {
+        self.0.data_mut().transferred_value = amount;
+    }
+
+    /// Get the balance of the given `account`.
+    pub fn balance(&self, account: usize) -> u128 {
+        self.0.data().accounts[account].value
+    }
+
+    /// Get the address of the calling account.
+    pub fn caller(&self) -> Address {
+        self.0.data().accounts[self.0.data().caller_account].address
+    }
+
+    /// Get the output of the last function or constructor call.
     pub fn output(&self) -> Vec<u8> {
         if let HostReturn::Data(_, data) = &self.0.data().output {
             return data.to_vec();
@@ -684,22 +743,17 @@ impl MockSubstrate {
         vec![]
     }
 
-    pub fn value(&mut self, amount: u128) {
-        self.0.data_mut().transferred_value = amount;
-    }
-
-    pub fn caller(&self) -> Address {
-        self.0.data().accounts[self.0.data().caller_account].address
-    }
-
+    /// Get the debug buffer contents of the last function or constructor call.
     pub fn debug_buffer(&self) -> String {
         self.0.data().debug_buffer.clone()
     }
 
+    /// Get the emitted events of the last function or constructor call.
     pub fn events(&self) -> Vec<Event> {
         self.0.data().events.clone()
     }
 
+    /// Get a list of all deployed contracts.
     pub fn contracts(&self) -> Vec<&Contract> {
         self.0
             .data()
@@ -709,6 +763,7 @@ impl MockSubstrate {
             .collect()
     }
 
+    /// Read the storage of the account that was (or is about to be) called.
     pub fn storage(&self) -> &HashMap<StorageKey, Vec<u8>> {
         &self.0.data().accounts[self.0.data().account]
             .contract
@@ -717,41 +772,54 @@ impl MockSubstrate {
             .storage
     }
 
-    pub fn balance(&self, account: usize) -> u128 {
-        self.0.data().accounts[account].value
-    }
-
+    /// Get the selector of the given `function_name` on the given `contract` index.
     pub fn selector(&self, contract: usize, function_name: &str) -> &[u8] {
         &self.0.data().blobs[contract].messages[function_name]
     }
 
+    /// Execute the constructor `index` with the given input `args`.
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
         let mut input = self.0.data().blobs[self.0.data().account].constructors[index].clone();
         input.append(&mut args);
         self.raw_constructor(input);
     }
 
+    /// Call the "deploy" function with the given `input`.
+    ///
+    /// `input` must contain the selector fo the constructor.
     pub fn raw_constructor(&mut self, input: Vec<u8>) {
         self.0.data_mut().transferred_value = 20000;
         self.invoke("deploy", input).unwrap();
     }
 
+    /// Call the contract function `name` with the given input `args`.
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.0.data().blobs[self.0.data().account].messages[name].clone();
         input.append(&mut args);
         self.raw_function(input);
     }
 
+    /// Call the contract function `name` with the given input `args` and expect the contract to trap.
+    ///
+    /// Only traps caused by an `unreachable` instruction are allowed. Other traps will panic instead.
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.0.data().blobs[self.0.data().account].messages[name].clone();
         input.append(&mut args);
         self.raw_function_failure(input);
     }
 
+    /// Call the "deploy" function with the given `input`.
+    ///
+    /// `input` must contain the selector fo the constructor.
     pub fn raw_function(&mut self, input: Vec<u8>) {
         self.invoke("call", input).unwrap();
     }
 
+    /// Call the "call" function with the given input and expect the contract to trap.
+    ///
+    /// `input` must contain the desired function selector.
+    ///
+    /// Only traps caused by an `unreachable` instruction are allowed. Other traps will panic instead.
     pub fn raw_function_failure(&mut self, input: Vec<u8>) {
         match self.invoke("call", input) {
             Err(wasmi::Error::Trap(trap)) => match trap.trap_code() {
@@ -823,10 +891,18 @@ impl MockSubstrate {
     }
 }
 
+/// Build all contracts foud in `src` and set up a mock runtime.
+///
+/// The mock runtime will contain a contract account for each contract in `src`:
+/// * Each account will have a balance of 20'000
+/// * However, constructors are _not_ called, therefor the storage will not be initialized
 pub fn build_solidity(src: &str) -> MockSubstrate {
     build_solidity_with_options(src, false, true)
 }
 
+/// A variant of `MockSubstrate::uild_solidity()` with the ability to specify compiler options:
+/// * log_ret: enable logging of host function return codes
+/// * log_err: enable logging of runtime errors
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
     let blobs = build_wasm(src, log_ret, log_err)
         .iter()

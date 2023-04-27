@@ -168,7 +168,7 @@ contract testing  {
     b_vec.reverse();
     assert_eq!(b_vec, runtime.caller().to_vec());
 
-    runtime.value(0xdeadcafe);
+    runtime.set_transferred_value(0xdeadcafe);
     runtime.raw_function(runtime.selector(0, "test_callvalue").to_vec());
     let mut expected = 0xdeadcafeu32.to_le_bytes().to_vec();
     expected.resize(32, 0);
