@@ -1,8 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/events/event_decl_01.sol" {
-	e [label="name: e\ntests/contract_testcases/substrate/events/event_decl_01.sol:2:9-22\nvalue: a1"]
-	diagnostic [label="e is already defined as an enum\nlevel Error\ntests/contract_testcases/substrate/events/event_decl_01.sol:3:15-16"]
-	note [label="location of previous definition\ntests/contract_testcases/substrate/events/event_decl_01.sol:2:14-15"]
-	enums -> e
-	diagnostics -> diagnostic [label="Error"]
-	diagnostic -> note [label="note"]
-}
