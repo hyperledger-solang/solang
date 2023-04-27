@@ -1,4 +1,4 @@
 strict digraph "tests/contract_testcases/substrate/events/emit.sol" {
-	diagnostic [label="unrecognised token '(', expected \"!=\", \"%\", \"%=\", \"&\", \"&&\", \"&=\", \")\", \"*\", \"**\", \"*=\", \"+\", \"++\", \"+=\", \",\", \"-\", \"--\", \"-=\", \".\", \"/\", \"/=\", \":\", \";\", \"<\", \"<<\", \"<<=\", \"<=\", \"=\", \"==\", \">\", \">=\", \">>\", \">>=\", \"?\", \"[\", \"]\", \"^\", \"^=\", \"case\", \"default\", \"leave\", \"switch\", \"|\", \"|=\", \"||\", \"}\", identifier\nlevel Error\ntests/contract_testcases/substrate/events/emit.sol:4:24-25"]
+	diagnostic [label="unrecognised token '(', expected \"++\", \"--\", \".\", \"[\", \"case\", \"default\", \"leave\", \"switch\", identifier\nlevel Error\ntests/contract_testcases/substrate/events/emit.sol:4:24-25"]
 	diagnostics -> diagnostic [label="Error"]
 }

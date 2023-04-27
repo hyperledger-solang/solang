@@ -11,7 +11,7 @@ keywords = [ "solidity", "parser" ]
 edition = "2021"
 
 [build-dependencies]
-lalrpop = "0.19"
+lalrpop = { version = "0.19", default-features = false }
 
 [dependencies]
 lalrpop-util = "0.19"
