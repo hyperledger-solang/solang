@@ -27,14 +27,11 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
+    assert_eq!(runtime.storage().get(&slot), None);
 
     runtime.function("bar", Vec::new());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.account, slot)).unwrap(),
-        &vec!(7, 0)
-    );
+    assert_eq!(runtime.storage().get(&slot).unwrap(), &vec!(7, 0));
 
     let mut runtime = build_solidity(
         r##"
@@ -58,14 +55,11 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
+    assert_eq!(runtime.storage().get(&slot), None);
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.account, slot)).unwrap(),
-        &vec!(5, 0)
-    );
+    assert_eq!(runtime.storage().get(&slot).unwrap(), &vec!(5, 0));
 
     // now test modifier with argument and test that function argument is passed on
     let mut runtime = build_solidity(
@@ -91,14 +85,11 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
+    assert_eq!(runtime.storage().get(&slot), None);
 
     runtime.function("test", 11u16.encode());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.account, slot)).unwrap(),
-        &vec!(5, 0)
-    );
+    assert_eq!(runtime.storage().get(&slot).unwrap(), &vec!(5, 0));
 
     // now test modifier with argument and test that function argument is passed on
     let mut runtime = build_solidity(
@@ -134,14 +125,11 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
+    assert_eq!(runtime.storage().get(&slot), None);
 
     runtime.function("test", 11u16.encode());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.account, slot)).unwrap(),
-        &vec!(5, 0)
-    );
+    assert_eq!(runtime.storage().get(&slot).unwrap(), &vec!(5, 0));
 
     // two placeholders means the following function is called twice.
     let mut runtime = build_solidity(
@@ -164,14 +152,11 @@ fn chain() {
 
     let slot = [0u8; 32];
 
-    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
+    assert_eq!(runtime.storage().get(&slot), None);
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.account, slot)).unwrap(),
-        &vec!(6, 0)
-    );
+    assert_eq!(runtime.storage().get(&slot).unwrap(), &vec!(6, 0));
 }
 
 #[test]
@@ -202,14 +187,11 @@ fn inherit_modifier() {
     let mut slot = [0u8; 32];
     slot[0] = 1;
 
-    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
+    assert_eq!(runtime.storage().get(&slot), None);
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.account, slot)).unwrap(),
-        &vec!(7, 0, 0, 0)
-    );
+    assert_eq!(runtime.storage().get(&slot).unwrap(), &vec!(7, 0, 0, 0));
 
     // now override it
     let mut runtime = build_solidity(
@@ -244,14 +226,11 @@ fn inherit_modifier() {
     let mut slot = [0u8; 32];
     slot[0] = 1;
 
-    assert_eq!(runtime.store.get(&(runtime.account, slot)), None);
+    assert_eq!(runtime.storage().get(&slot), None);
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.account, slot)).unwrap(),
-        &vec!(10, 0, 0, 0)
-    );
+    assert_eq!(runtime.storage().get(&slot).unwrap(), &vec!(10, 0, 0, 0));
 }
 
 #[test]

@@ -22,7 +22,7 @@ mod inheritance;
 mod libraries;
 mod loops;
 mod mappings;
-//mod modifier;
+mod modifier;
 mod primitives;
 mod statements;
 mod storage;
