@@ -820,9 +820,9 @@ fn selector() {
 
     runtime.function("g", vec![]);
 
-    runtime.contracts()[0].messages["f"]
+    runtime.contracts()[0].code.messages["f"]
         .iter()
-        .zip(&runtime.contracts()[0].messages["x"])
+        .zip(&runtime.contracts()[0].code.messages["x"])
         .map(|(f, x)| f ^ x)
         .zip(runtime.output())
         .for_each(|(actual, expected)| assert_eq!(actual, expected));

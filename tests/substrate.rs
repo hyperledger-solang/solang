@@ -22,109 +22,6 @@ mod substrate_tests;
 type StorageKey = [u8; 32];
 type Address = [u8; 32];
 
-#[derive(Default, Clone)]
-pub struct Account {
-    address: Address,
-    value: u128,
-    contract: Option<Contract>,
-}
-
-impl PartialEq for Account {
-    fn eq(&self, other: &Self) -> bool {
-        self.address == other.address
-    }
-}
-
-impl Account {
-    fn contract_account(salt: &[u8], mut contract: Contract) -> Self {
-        contract.storage.clear();
-        Self {
-            address: Address::try_from(blake2b(32, &[], salt).as_bytes()).unwrap(),
-            contract: Some(contract),
-            ..Default::default()
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Contract {
-    messages: HashMap<String, Vec<u8>>,
-    constructors: Vec<Vec<u8>>,
-    code_hash: [u8; 32],
-    code: Vec<u8>,
-    storage: HashMap<StorageKey, Vec<u8>>,
-}
-
-impl Contract {
-    fn new(abi: &str, code: &[u8]) -> Self {
-        let abi = load_abi(abi);
-        let messages = abi
-            .spec()
-            .messages()
-            .iter()
-            .map(|f| (f.label().to_string(), f.selector().to_bytes().to_vec()))
-            .collect();
-        let constructors = abi
-            .spec()
-            .constructors()
-            .iter()
-            .map(|f| f.selector().to_bytes().to_vec())
-            .collect();
-
-        Self {
-            messages,
-            constructors,
-            code_hash: blake2b(32, &[], code).as_bytes().try_into().unwrap(),
-            code: code.to_vec(),
-            storage: HashMap::new(),
-        }
-    }
-
-    fn instantiate(&self, vm: Runtime) -> Result<(Store<Runtime>, Instance), Error> {
-        let engine = Engine::default();
-        let mut store = Store::new(&engine, vm);
-
-        let mut linker = <Linker<Runtime>>::new(&engine);
-        Runtime::define(&mut store, &mut linker);
-        let memory = Memory::new(&mut store, MemoryType::new(16, Some(16)).unwrap()).unwrap();
-        linker.define("env", "memory", memory).unwrap();
-        store.data_mut().memory = Some(memory);
-
-        let instance = linker
-            .instantiate(&mut store, &Module::new(&engine, &mut &self.code[..])?)?
-            .ensure_no_start(&mut store)
-            .expect("we never emit a start function");
-
-        Ok((store, instance))
-    }
-
-    #[allow(clippy::result_large_err)] // eDONTCARE
-    fn execute(&self, name: &str, vm: Runtime) -> Result<Store<Runtime>, (Error, String)> {
-        let (mut store, instance) = self.instantiate(vm).map_err(|e| (e, String::new()))?;
-
-        match instance
-            .get_export(&store, name)
-            .and_then(|export| export.into_func())
-            .expect("contract does not export '{function}'")
-            .call(&mut store, &[], &mut [])
-        {
-            Err(Error::Trap(trap)) if trap.trap_code().is_some() => {
-                Err((Error::Trap(trap), store.data().debug_buffer.clone()))
-            }
-            Err(Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
-                Some(HostReturn::Data(flags, data)) => {
-                    store.data_mut().output = HostReturn::Data(flags, data);
-                    Ok(store)
-                }
-                Some(HostReturn::Terminate) => Ok(store),
-                _ => panic!("contract execution stopped by unexpected trap"),
-            },
-            Err(e) => panic!("unexpected error during contract execution: {e}"),
-            Ok(_) => Ok(store),
-        }
-    }
-}
-
 #[derive(Default, Debug, Clone)]
 enum HostReturn {
     #[default]
@@ -152,10 +49,133 @@ impl fmt::Display for HostReturn {
 
 impl HostError for HostReturn {}
 
+#[derive(Clone)]
+pub struct WasmCode {
+    pub messages: HashMap<String, Vec<u8>>,
+    pub constructors: Vec<Vec<u8>>,
+    pub hash: [u8; 32],
+    pub blob: Vec<u8>,
+}
+
+impl WasmCode {
+    fn new(abi: &str, code: &[u8]) -> Self {
+        let abi = load_abi(abi);
+        let messages = abi
+            .spec()
+            .messages()
+            .iter()
+            .map(|f| (f.label().to_string(), f.selector().to_bytes().to_vec()))
+            .collect();
+        let constructors = abi
+            .spec()
+            .constructors()
+            .iter()
+            .map(|f| f.selector().to_bytes().to_vec())
+            .collect();
+
+        Self {
+            messages,
+            constructors,
+            hash: blake2b(32, &[], code).as_bytes().try_into().unwrap(),
+            blob: code.to_vec(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Contract {
+    code: WasmCode,
+    storage: HashMap<StorageKey, Vec<u8>>,
+}
+
+impl From<WasmCode> for Contract {
+    fn from(code: WasmCode) -> Self {
+        Self {
+            code,
+            storage: HashMap::new(),
+        }
+    }
+}
+
+impl Contract {
+    fn instantiate(&self, runtime: Runtime) -> Result<(Store<Runtime>, Instance), Error> {
+        let engine = Engine::default();
+        let mut store = Store::new(&engine, runtime);
+
+        let mut linker = <Linker<Runtime>>::new(&engine);
+        Runtime::define(&mut store, &mut linker);
+        let memory = Memory::new(&mut store, MemoryType::new(16, Some(16)).unwrap()).unwrap();
+        linker.define("env", "memory", memory).unwrap();
+        store.data_mut().memory = Some(memory);
+
+        let instance = linker
+            .instantiate(&mut store, &Module::new(&engine, &mut &self.code.blob[..])?)?
+            .ensure_no_start(&mut store)
+            .expect("we never emit a start function");
+
+        Ok((store, instance))
+    }
+
+    #[allow(clippy::result_large_err)] // eDONTCARE
+    fn execute(&self, name: &str, runtime: Runtime) -> Result<Store<Runtime>, (Error, String)> {
+        let (mut store, instance) = self.instantiate(runtime).map_err(|e| (e, String::new()))?;
+
+        match instance
+            .get_export(&store, name)
+            .and_then(|export| export.into_func())
+            .expect("contract does not export '{function}'")
+            .call(&mut store, &[], &mut [])
+        {
+            Err(Error::Trap(trap)) if trap.trap_code().is_some() => {
+                Err((Error::Trap(trap), store.data().debug_buffer.clone()))
+            }
+            Err(Error::Trap(trap)) => match trap.downcast::<HostReturn>() {
+                Some(HostReturn::Data(flags, data)) => {
+                    store.data_mut().output = HostReturn::Data(flags, data);
+                    Ok(store)
+                }
+                Some(HostReturn::Terminate) => Ok(store),
+                _ => panic!("contract execution stopped by unexpected trap"),
+            },
+            Err(e) => panic!("unexpected error during contract execution: {e}"),
+            Ok(_) => Ok(store),
+        }
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct Account {
+    address: Address,
+    value: u128,
+    contract: Option<Contract>,
+}
+
+impl PartialEq for Account {
+    fn eq(&self, other: &Self) -> bool {
+        self.address == other.address
+    }
+}
+
+impl Account {
+    fn with_contract(salt: &[u8], code: &WasmCode) -> Self {
+        Self {
+            address: Address::try_from(blake2b(32, &[], salt).as_bytes()).unwrap(),
+            contract: Some(code.clone().into()),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Event {
+    pub data: Vec<u8>,
+    pub topics: Vec<Hash>,
+}
+
 #[derive(Default, Clone)]
 struct Runtime {
     accounts: Vec<Account>,
-    contracts: Vec<Contract>,
+    blobs: Vec<WasmCode>,
     account: usize,
     caller_account: usize,
     memory: Option<Memory>,
@@ -167,19 +187,26 @@ struct Runtime {
 }
 
 impl Runtime {
-    fn new(contracts: Vec<Contract>) -> Self {
+    fn new(blobs: Vec<WasmCode>) -> Self {
         Self {
-            accounts: contracts
+            accounts: blobs
                 .iter()
-                .map(|contract| Account::contract_account(&contract.code_hash, contract.clone()))
+                .map(|blob| Account::with_contract(&blob.hash, blob))
                 .collect(),
-            contracts,
+            blobs,
             ..Default::default()
         }
     }
 
-    fn contract(&mut self) -> &mut Contract {
-        self.accounts[self.account].contract.as_mut().unwrap()
+    fn new_context(&self, callee: usize, input: Vec<u8>, value: u128) -> Self {
+        let mut runtime = self.clone();
+        runtime.caller_account = self.account;
+        runtime.account = callee;
+        runtime.transferred_value = value;
+        runtime.input = input;
+        runtime.output = Default::default();
+        runtime.accounts[callee].value += value;
+        runtime
     }
 
     fn accept_state(&mut self, callee_state: Self, transferred_value: u128) {
@@ -189,15 +216,8 @@ impl Runtime {
         self.accounts[self.caller_account].value -= transferred_value;
     }
 
-    fn prepare_call_context(&self, callee: usize, input: Vec<u8>, value: u128) -> Self {
-        let mut runtime = self.clone();
-        runtime.caller_account = self.account;
-        runtime.account = callee;
-        runtime.transferred_value = value;
-        runtime.input = input;
-        runtime.output = Default::default();
-        runtime.accounts[callee].value += value;
-        runtime
+    fn contract(&mut self) -> &mut Contract {
+        self.accounts[self.account].contract.as_mut().unwrap()
     }
 
     fn call(
@@ -216,7 +236,7 @@ impl Runtime {
         self.accounts[callee]
             .contract
             .as_ref()?
-            .execute(export, self.prepare_call_context(callee, input, value))
+            .execute(export, self.new_context(callee, input, value))
             .map_err(|(err, debug_buffer)| {
                 self.debug_buffer = debug_buffer;
                 err
@@ -232,10 +252,10 @@ impl Runtime {
         input: Vec<u8>,
     ) -> Option<Result<Store<Runtime>, Error>> {
         let account = self
-            .contracts
+            .blobs
             .iter()
-            .find(|contract| contract.code_hash == code_hash)
-            .map(|contract| Account::contract_account(salt, contract.clone()))?;
+            .find(|code| code.hash == code_hash)
+            .map(|code| Account::with_contract(salt, code))?;
 
         if self.accounts.contains(&account) {
             return Some(Err(Error::Trap(TrapCode::UnreachableCodeReached.into())));
@@ -626,40 +646,36 @@ impl Runtime {
             vec![]
         };
 
-        println!("seal_deposit_event data: {}", hex::encode(&data));
-        println!("seal_deposit_event topics: {topics:?}");
-        vm.events.push(Event { topics, data });
+        println!(
+            "seal_deposit_event data: {} topics: {:?}",
+            hex::encode(&data),
+            topics.iter().map(hex::encode).collect::<Vec<_>>()
+        );
+
+        vm.events.push(Event { data, topics });
 
         Ok(())
     }
 }
 
-#[derive(Clone)]
-pub struct Event {
-    topics: Vec<Hash>,
-    data: Vec<u8>,
-}
-
 pub struct MockSubstrate {
     state: Store<Runtime>,
-    pub current_account: usize,
+    pub account: usize,
     pub value: u128,
 }
 
 impl MockSubstrate {
     fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) -> Result<(), Error> {
         let runtime = self.state.data_mut();
-        runtime.caller_account = self.current_account;
+        runtime.caller_account = self.account;
         runtime.debug_buffer.clear();
         runtime.events.clear();
-        self.state = runtime
-            .call(export, self.current_account, input, value)
-            .unwrap_or_else(|| panic!("account {} had no contract", self.current_account))?;
+        self.state = runtime.call(export, self.account, input, value).unwrap()?;
         Ok(())
     }
 
     pub fn set_account(&mut self, index: usize) {
-        self.current_account = index;
+        self.account = index;
     }
 
     pub fn output(&self) -> Vec<u8> {
@@ -691,7 +707,7 @@ impl MockSubstrate {
     }
 
     pub fn storage(&self) -> &HashMap<StorageKey, Vec<u8>> {
-        &self.state.data().accounts[self.current_account]
+        &self.state.data().accounts[self.account]
             .contract
             .as_ref()
             .unwrap()
@@ -703,12 +719,11 @@ impl MockSubstrate {
     }
 
     pub fn selector(&self, contract: usize, function_name: &str) -> &[u8] {
-        &self.state.data().contracts[contract].messages[function_name]
+        &self.state.data().blobs[contract].messages[function_name]
     }
 
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
-        let mut input =
-            self.state.data().contracts[self.current_account].constructors[index].clone();
+        let mut input = self.state.data().blobs[self.account].constructors[index].clone();
         input.append(&mut args);
         self.raw_constructor(input);
     }
@@ -718,13 +733,13 @@ impl MockSubstrate {
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.state.data().contracts[self.current_account].messages[name].clone();
+        let mut input = self.state.data().blobs[self.account].messages[name].clone();
         input.append(&mut args);
         self.raw_function(input, self.value);
     }
 
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.state.data().contracts[self.current_account].messages[name].clone();
+        let mut input = self.state.data().blobs[self.account].messages[name].clone();
         input.append(&mut args);
         self.raw_function_failure(input, self.value);
     }
@@ -809,14 +824,14 @@ pub fn build_solidity(src: &str) -> MockSubstrate {
 }
 
 pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> MockSubstrate {
-    let contracts = build_wasm(src, log_ret, log_err)
+    let blobs = build_wasm(src, log_ret, log_err)
         .iter()
-        .map(|(code, abi)| Contract::new(abi, code))
+        .map(|(code, abi)| WasmCode::new(abi, code))
         .collect();
 
     MockSubstrate {
-        state: Store::new(&Engine::default(), Runtime::new(contracts)),
-        current_account: 0,
+        state: Store::new(&Engine::default(), Runtime::new(blobs)),
+        account: 0,
         value: 0,
     }
 }

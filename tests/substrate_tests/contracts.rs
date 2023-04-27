@@ -188,7 +188,7 @@ fn creation_code() {
     );
 
     runtime.function("test", Vec::new());
-    assert_eq!(runtime.output(), runtime.contracts()[1].code.encode());
+    assert_eq!(runtime.output(), runtime.contracts()[1].code.blob.encode());
 }
 
 #[test]
@@ -248,10 +248,10 @@ fn mangle_function_names_in_abi() {
         }"##,
     );
 
-    let _ = runtime.contracts()[0].messages["foo_"];
-    let _ = runtime.contracts()[0].messages["foo_uint256_addressArray2Array"];
-    let _ = runtime.contracts()[0].messages["foo_uint8Array2__int256_bool_address"];
-    assert!(runtime.contracts()[0].messages.get("foo").is_none());
+    let _ = runtime.contracts()[0].code.messages["foo_"];
+    let _ = runtime.contracts()[0].code.messages["foo_uint256_addressArray2Array"];
+    let _ = runtime.contracts()[0].code.messages["foo_uint8Array2__int256_bool_address"];
+    assert!(runtime.contracts()[0].code.messages.get("foo").is_none());
 }
 
 #[test]
@@ -267,9 +267,13 @@ fn mangle_overloaded_function_names_in_abi() {
         }"##,
     );
 
-    let _ = runtime.contracts()[0].messages["foo"];
-    assert!(runtime.contracts()[0].messages.get("foo_bool").is_none());
+    let _ = runtime.contracts()[0].code.messages["foo"];
+    assert!(runtime.contracts()[0]
+        .code
+        .messages
+        .get("foo_bool")
+        .is_none());
 
-    let _ = runtime.contracts()[1].messages["foo_bool"];
-    assert!(runtime.contracts()[1].messages.get("foo").is_none());
+    let _ = runtime.contracts()[1].code.messages["foo_bool"];
+    assert!(runtime.contracts()[1].code.messages.get("foo").is_none());
 }
