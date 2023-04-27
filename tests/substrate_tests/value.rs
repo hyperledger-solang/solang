@@ -247,7 +247,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.output(), runtime.account);
+    assert_eq!(runtime.output(), runtime.caller());
 
     let mut runtime = build_solidity(
         r##"
@@ -262,7 +262,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.output(), runtime.account);
+    assert_eq!(runtime.output(), runtime.caller());
 
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
@@ -302,7 +302,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.output(), runtime.account);
+    assert_eq!(runtime.output(), runtime.caller());
 }
 
 #[test]

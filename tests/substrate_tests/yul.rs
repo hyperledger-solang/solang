@@ -155,7 +155,7 @@ contract testing  {
     runtime.function("test_address", Vec::new());
     let mut b_vec = runtime.output().to_vec();
     b_vec.reverse();
-    assert_eq!(b_vec, runtime.account.to_vec());
+    assert_eq!(b_vec, runtime.caller().to_vec());
 
     runtime.function("test_balance", Vec::new());
     assert_eq!(runtime.output()[..16].to_vec(), runtime.value(0).encode());

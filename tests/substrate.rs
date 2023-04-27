@@ -20,18 +20,39 @@ use wasm_host_attr::wasm_host;
 mod substrate_tests;
 
 type StorageKey = [u8; 32];
-type Account = [u8; 32];
-type Storage = HashMap<StorageKey, Vec<u8>>;
+type Address = [u8; 32];
+
+#[derive(Default, Clone)]
+pub struct Account {
+    address: Address,
+    value: u128,
+    contract: Option<Contract>,
+}
+
+impl PartialEq for Account {
+    fn eq(&self, other: &Self) -> bool {
+        self.address == other.address
+    }
+}
+
+impl Account {
+    fn contract_account(salt: &[u8], mut contract: Contract) -> Self {
+        contract.storage.clear();
+        Self {
+            address: Address::try_from(blake2b(32, &[], salt).as_bytes()).unwrap(),
+            contract: Some(contract),
+            ..Default::default()
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct Contract {
     messages: HashMap<String, Vec<u8>>,
     constructors: Vec<Vec<u8>>,
     code_hash: [u8; 32],
-    address: Account,
     code: Vec<u8>,
-    storage: Storage,
-    value: u128,
+    storage: HashMap<StorageKey, Vec<u8>>,
 }
 
 impl Contract {
@@ -54,18 +75,9 @@ impl Contract {
             messages,
             constructors,
             code_hash: blake2b(32, &[], code).as_bytes().try_into().unwrap(),
-            address: rand::random(),
             code: code.to_vec(),
             storage: HashMap::new(),
-            value: 0,
         }
-    }
-
-    fn create_instance(&self, salt: &[u8]) -> (Account, Self) {
-        let mut instance = self.clone();
-        instance.address = Account::try_from(blake2b(32, &[], salt).as_bytes()).unwrap();
-        instance.storage.clear();
-        (instance.address, instance)
     }
 
     fn instantiate(&self, vm: Runtime) -> Result<(Store<Runtime>, Instance), Error> {
@@ -87,11 +99,11 @@ impl Contract {
     }
 
     #[allow(clippy::result_large_err)] // eDONTCARE
-    fn execute(&self, function: &str, vm: Runtime) -> Result<Store<Runtime>, (Error, String)> {
+    fn execute(&self, name: &str, vm: Runtime) -> Result<Store<Runtime>, (Error, String)> {
         let (mut store, instance) = self.instantiate(vm).map_err(|e| (e, String::new()))?;
 
         match instance
-            .get_export(&store, function)
+            .get_export(&store, name)
             .and_then(|export| export.into_func())
             .expect("contract does not export '{function}'")
             .call(&mut store, &[], &mut [])
@@ -113,72 +125,103 @@ impl Contract {
     }
 }
 
+#[derive(Default, Debug, Clone)]
+enum HostReturn {
+    #[default]
+    Terminate,
+    Data(u32, Vec<u8>),
+}
+
+impl HostReturn {
+    fn as_data(&self) -> (u32, Vec<u8>) {
+        match self {
+            HostReturn::Data(flags, data) => (*flags, data.to_vec()),
+            HostReturn::Terminate => (0, vec![]),
+        }
+    }
+}
+
+impl fmt::Display for HostReturn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            Self::Terminate => write!(f, "return: terminate"),
+            Self::Data(flags, data) => write!(f, "return {flags} {data:?}"),
+        }
+    }
+}
+
+impl HostError for HostReturn {}
+
 #[derive(Default, Clone)]
 struct Runtime {
+    accounts: Vec<Account>,
     contracts: Vec<Contract>,
-    debug_buffer: String,
-    events: Vec<Event>,
-    caller: Account,
-    contract: usize,
+    account: usize,
+    caller_account: usize,
     memory: Option<Memory>,
     input: Vec<u8>,
     output: HostReturn,
-    value: u128,
+    transferred_value: u128,
+    debug_buffer: String,
+    events: Vec<Event>,
 }
 
 impl Runtime {
     fn new(contracts: Vec<Contract>) -> Self {
         Self {
+            accounts: contracts
+                .iter()
+                .map(|contract| Account::contract_account(&contract.code_hash, contract.clone()))
+                .collect(),
             contracts,
-            caller: rand::random(),
             ..Default::default()
         }
+    }
+
+    fn contract(&mut self) -> &mut Contract {
+        self.accounts[self.account].contract.as_mut().unwrap()
     }
 
     fn accept_state(&mut self, callee_state: Self, transferred_value: u128) {
         self.debug_buffer = callee_state.debug_buffer;
         self.events = callee_state.events;
-        self.contracts = callee_state.contracts;
-        self.contracts[self.contract].value -= transferred_value;
+        self.accounts = callee_state.accounts;
+        self.accounts[self.caller_account].value -= transferred_value;
     }
 
     fn prepare_call_context(&self, callee: usize, input: Vec<u8>, value: u128) -> Self {
         let mut runtime = self.clone();
-        runtime.caller = runtime.contracts[runtime.contract].address;
-        runtime.contract = callee;
-        runtime.value = value;
+        runtime.caller_account = self.account;
+        runtime.account = callee;
+        runtime.transferred_value = value;
         runtime.input = input;
         runtime.output = Default::default();
-        runtime.contracts[callee].value += value;
+        runtime.accounts[callee].value += value;
         runtime
     }
 
     fn call(
         &mut self,
         export: &str,
-        callee: Account,
+        callee: usize,
         input: Vec<u8>,
         value: u128,
-    ) -> Result<Store<Runtime>, Error> {
+    ) -> Option<Result<Store<Runtime>, Error>> {
         println!(
             "{export}: account={} input={} value={value}",
-            hex::encode(callee),
+            hex::encode(self.accounts[callee].address),
             hex::encode(&input)
         );
 
-        let (index, _) = self
-            .contracts
-            .iter()
-            .enumerate()
-            .find(|(_, contract)| contract.address == callee)
-            .ok_or(Error::Trap(Trap::from(TrapCode::UnreachableCodeReached)))?; // TODO this should return 7 (CodeNotFound)
-
-        self.contracts[index]
-            .execute(export, self.prepare_call_context(index, input, value))
+        self.accounts[callee]
+            .contract
+            .as_ref()?
+            .execute(export, self.prepare_call_context(callee, input, value))
             .map_err(|(err, debug_buffer)| {
                 self.debug_buffer = debug_buffer;
                 err
             })
+            .into()
     }
 
     fn deploy(
@@ -187,20 +230,20 @@ impl Runtime {
         value: u128,
         salt: &[u8],
         input: Vec<u8>,
-    ) -> Result<Store<Runtime>, Error> {
-        let (address, contract) = self
+    ) -> Option<Result<Store<Runtime>, Error>> {
+        let account = self
             .contracts
             .iter()
             .find(|contract| contract.code_hash == code_hash)
-            .unwrap_or_else(|| panic!("code hash {} not found", hex::encode(code_hash)))
-            .create_instance(salt);
+            .map(|contract| Account::contract_account(salt, contract.clone()))?;
 
-        if self.contracts.iter().any(|c| c.address == address) {
-            return Err(Error::Trap(TrapCode::UnreachableCodeReached.into()));
+        if self.accounts.contains(&account) {
+            return Some(Err(Error::Trap(TrapCode::UnreachableCodeReached.into())));
         }
 
-        self.contracts.push(contract);
-        self.call("deploy", address, input, value)
+        let callee = self.accounts.len();
+        self.accounts.push(account);
+        self.call("deploy", callee, input, value)
     }
 }
 
@@ -220,8 +263,8 @@ fn read_value(mem: &[u8], ptr: u32) -> u128 {
     u128::from_le_bytes(read_buf(mem, ptr, 16).try_into().unwrap())
 }
 
-fn read_account(mem: &[u8], ptr: u32) -> Account {
-    Account::try_from(&mem[ptr as usize..(ptr + 32) as usize]).unwrap()
+fn read_account(mem: &[u8], ptr: u32) -> Address {
+    Address::try_from(&mem[ptr as usize..(ptr + 32) as usize]).unwrap()
 }
 
 #[wasm_host]
@@ -246,9 +289,9 @@ impl Runtime {
 
     #[seal(0)]
     fn seal_value_transferred(dest_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
-        let value = vm.value.to_le_bytes();
+        let value = vm.transferred_value.to_le_bytes();
         assert!(read_len(mem, out_len_ptr) >= value.len());
-        println!("seal_value_transferred: {}", vm.value);
+        println!("seal_value_transferred: {}", vm.transferred_value);
 
         write_buf(mem, dest_ptr, &value);
         write_buf(mem, out_len_ptr, &(value.len() as u32).to_le_bytes());
@@ -274,7 +317,7 @@ impl Runtime {
     ) -> Result<u32, Trap> {
         let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
-        let value = match vm.contracts[vm.contract].storage.get(&key) {
+        let value = match vm.contract().storage.get(&key) {
             Some(value) => value,
             _ => return Ok(3), // In pallet-contracts, ReturnCode::KeyNotFound == 3
         };
@@ -298,7 +341,7 @@ impl Runtime {
         let value = mem[value_ptr as usize..(value_ptr + value_len) as usize].to_vec();
         println!("set_storage: {}={}", hex::encode(key), hex::encode(&value));
 
-        match vm.contracts[vm.contract].storage.insert(key, value) {
+        match vm.contract().storage.insert(key, value) {
             Some(value) => Ok(value.len() as u32),
             _ => Ok(u32::MAX), // In pallets contract, u32::MAX is the "none sentinel"
         }
@@ -310,7 +353,7 @@ impl Runtime {
             .expect("storage key size must be 32 bytes");
         println!("clear_storage: {}", hex::encode(key));
 
-        match vm.contracts[vm.contract].storage.remove(&key) {
+        match vm.contract().storage.remove(&key) {
             Some(value) => Ok(value.len() as u32),
             _ => Ok(u32::MAX), // In pallets contract, u32::MAX is the "none sentinel"
         }
@@ -357,17 +400,29 @@ impl Runtime {
         output_ptr: u32,
         output_len_ptr: u32,
     ) -> Result<u32, Trap> {
-        let callee = read_account(mem, callee_ptr);
         let input = read_buf(mem, input_ptr, input_len);
         let value = read_value(mem, value_ptr);
+        let callee_address = read_account(mem, callee_ptr);
 
-        if value > vm.contracts[vm.contract].value {
+        let callee = match vm
+            .accounts
+            .iter()
+            .enumerate()
+            .find(|(_, account)| account.address == callee_address)
+            .map(|(index, _)| index)
+        {
+            Some(index) => index,
+            None => return Ok(8), // ReturnCode::NotCallable
+        };
+
+        if value > vm.accounts[vm.account].value {
             return Ok(5); // ReturnCode::TransferFailed
         }
 
         let ((flags, data), state) = match vm.call("call", callee, input, value) {
-            Ok(state) => ((state.data().output.as_data()), state),
-            Err(_) => return Ok(1), // ReturnCode::CalleeTrapped
+            Some(Ok(state)) => ((state.data().output.as_data()), state),
+            Some(Err(_)) => return Ok(1), // ReturnCode::CalleeTrapped
+            None => return Ok(8),
         };
 
         if output_len_ptr != u32::MAX {
@@ -386,7 +441,7 @@ impl Runtime {
 
     #[seal(0)]
     fn instantiation_nonce() -> Result<u64, Trap> {
-        Ok(vm.contracts.len() as u64)
+        Ok(vm.accounts.len() as u64)
     }
 
     #[seal(0)]
@@ -410,18 +465,19 @@ impl Runtime {
         salt_ptr: u32,
         salt_len: u32,
     ) -> Result<u32, Trap> {
-        let target = read_account(mem, code_hash_ptr);
+        let code_hash = read_account(mem, code_hash_ptr);
         let salt = read_buf(mem, salt_ptr, salt_len);
         let input = read_buf(mem, input_data_ptr, input_data_len);
         let value = read_value(mem, value_ptr);
 
-        if value > vm.contracts[vm.contract].value {
+        if value > vm.accounts[vm.account].value {
             return Ok(5); // ReturnCode::TransferFailed
         }
 
-        let ((flags, data), state) = match vm.deploy(target, value, &salt, input) {
-            Ok(state) => ((state.data().output.as_data()), state),
-            Err(_) => return Ok(1), // ReturnCode::CalleeTrapped
+        let ((flags, data), state) = match vm.deploy(code_hash, value, &salt, input) {
+            Some(Ok(state)) => ((state.data().output.as_data()), state),
+            Some(Err(_)) => return Ok(1), // ReturnCode::CalleeTrapped
+            None => return Ok(7),         // ReturnCode::CodeNotFound
         };
 
         if output_len_ptr != u32::MAX {
@@ -429,7 +485,7 @@ impl Runtime {
             let output_len = &(data.len() as u32).to_le_bytes();
             write_buf(mem, output_len_ptr, output_len);
 
-            let address = state.data().contracts.last().unwrap().address;
+            let address = state.data().accounts.last().unwrap().address;
             write_buf(mem, address_ptr, &address);
             write_buf(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
         }
@@ -445,14 +501,14 @@ impl Runtime {
     #[seal(0)]
     fn seal_transfer(account_ptr: u32, _: u32, value_ptr: u32, _: u32) -> Result<u32, Trap> {
         let value = read_value(mem, value_ptr);
-        if value > vm.contracts[vm.contract].value {
+        if value > vm.accounts[vm.account].value {
             return Ok(5); // ReturnCode::TransferFailed
         }
 
         let accout = read_account(mem, account_ptr);
-        if let Some(to) = vm.contracts.iter_mut().find(|c| c.address == accout) {
+        if let Some(to) = vm.accounts.iter_mut().find(|c| c.address == accout) {
             to.value += value;
-            vm.contracts[vm.contract].value -= value;
+            vm.accounts[vm.account].value -= value;
             return Ok(0);
         }
 
@@ -461,7 +517,7 @@ impl Runtime {
 
     #[seal(0)]
     fn seal_address(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
-        let address = vm.contracts[vm.contract].address;
+        let address = vm.accounts[vm.account].address;
         let out_len = read_len(mem, out_len_ptr);
         assert!(out_len >= address.len());
 
@@ -474,17 +530,18 @@ impl Runtime {
     #[seal(0)]
     fn seal_caller(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let out_len = read_len(mem, out_len_ptr);
-        assert!(out_len >= vm.caller.len());
+        let address = vm.accounts[vm.caller_account].address;
+        assert!(out_len >= address.len());
 
-        write_buf(mem, out_ptr, &vm.caller);
-        write_buf(mem, out_len_ptr, &(vm.caller.len() as u32).to_le_bytes());
+        write_buf(mem, out_ptr, &address);
+        write_buf(mem, out_len_ptr, &(address.len() as u32).to_le_bytes());
 
         Ok(())
     }
 
     #[seal(0)]
     fn seal_balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
-        let balance = vm.contracts[vm.contract].value.to_le_bytes();
+        let balance = vm.accounts[vm.account].value.to_le_bytes();
         let out_len = read_len(mem, out_len_ptr);
         assert!(out_len >= balance.len());
 
@@ -544,11 +601,11 @@ impl Runtime {
 
     #[seal(1)]
     fn seal_terminate(beneficiary_ptr: u32) -> Result<(), Trap> {
-        let free = vm.contracts.remove(vm.contract).value;
+        let free = vm.accounts.remove(vm.account).value;
         let address = read_account(mem, beneficiary_ptr);
         println!("seal_terminate: {} gets {free}", hex::encode(address));
 
-        if let Some(to) = vm.contracts.iter_mut().find(|c| c.address == address) {
+        if let Some(to) = vm.accounts.iter_mut().find(|a| a.address == address) {
             to.value += free;
         }
 
@@ -577,33 +634,6 @@ impl Runtime {
     }
 }
 
-#[derive(Default, Debug, Clone)]
-enum HostReturn {
-    #[default]
-    Terminate,
-    Data(u32, Vec<u8>),
-}
-
-impl HostReturn {
-    fn as_data(&self) -> (u32, Vec<u8>) {
-        match self {
-            HostReturn::Data(flags, data) => (*flags, data.to_vec()),
-            HostReturn::Terminate => (0, vec![]),
-        }
-    }
-}
-
-impl fmt::Display for HostReturn {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match self {
-            Self::Terminate => write!(f, "return: terminate"),
-            Self::Data(flags, data) => write!(f, "return {flags} {data:?}"),
-        }
-    }
-}
-
-impl HostError for HostReturn {}
-
 #[derive(Clone)]
 pub struct Event {
     topics: Vec<Hash>,
@@ -612,23 +642,24 @@ pub struct Event {
 
 pub struct MockSubstrate {
     state: Store<Runtime>,
-    pub current_program: usize,
-    pub account: Account,
+    pub current_account: usize,
     pub value: u128,
 }
 
 impl MockSubstrate {
     fn invoke(&mut self, export: &str, input: Vec<u8>, value: u128) -> Result<(), Error> {
-        let callee = self.state.data().contracts[self.current_program].address;
-        self.account = callee;
-        self.state.data_mut().debug_buffer.clear();
-        self.state.data_mut().events.clear();
-        self.state = self.state.data_mut().call(export, callee, input, value)?;
+        let runtime = self.state.data_mut();
+        runtime.caller_account = self.current_account;
+        runtime.debug_buffer.clear();
+        runtime.events.clear();
+        self.state = runtime
+            .call(export, self.current_account, input, value)
+            .unwrap_or_else(|| panic!("account {} had no contract", self.current_account))?;
         Ok(())
     }
 
-    pub fn set_program(&mut self, index: usize) {
-        self.current_program = index;
+    pub fn set_account(&mut self, index: usize) {
+        self.current_account = index;
     }
 
     pub fn output(&self) -> Vec<u8> {
@@ -638,8 +669,8 @@ impl MockSubstrate {
         vec![]
     }
 
-    pub fn caller(&self) -> Account {
-        self.state.data().caller
+    pub fn caller(&self) -> Address {
+        self.state.data().accounts[self.state.data().caller_account].address
     }
 
     pub fn debug_buffer(&self) -> String {
@@ -650,16 +681,25 @@ impl MockSubstrate {
         self.state.data().events.clone()
     }
 
-    pub fn contracts(&self) -> &[Contract] {
-        &self.state.data().contracts
+    pub fn contracts(&self) -> Vec<&Contract> {
+        self.state
+            .data()
+            .accounts
+            .iter()
+            .map(|a| a.contract.as_ref().unwrap())
+            .collect()
     }
 
     pub fn storage(&self) -> &HashMap<StorageKey, Vec<u8>> {
-        &self.state.data().contracts[self.current_program].storage
+        &self.state.data().accounts[self.current_account]
+            .contract
+            .as_ref()
+            .unwrap()
+            .storage
     }
 
-    pub fn value(&self, contract: usize) -> u128 {
-        self.state.data().contracts[contract].value
+    pub fn value(&self, account: usize) -> u128 {
+        self.state.data().accounts[account].value
     }
 
     pub fn selector(&self, contract: usize, function_name: &str) -> &[u8] {
@@ -668,7 +708,7 @@ impl MockSubstrate {
 
     pub fn constructor(&mut self, index: usize, mut args: Vec<u8>) {
         let mut input =
-            self.state.data().contracts[self.current_program].constructors[index].clone();
+            self.state.data().contracts[self.current_account].constructors[index].clone();
         input.append(&mut args);
         self.raw_constructor(input);
     }
@@ -678,13 +718,13 @@ impl MockSubstrate {
     }
 
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.state.data().contracts[self.current_program].messages[name].clone();
+        let mut input = self.state.data().contracts[self.current_account].messages[name].clone();
         input.append(&mut args);
         self.raw_function(input, self.value);
     }
 
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
-        let mut input = self.state.data().contracts[self.current_program].messages[name].clone();
+        let mut input = self.state.data().contracts[self.current_account].messages[name].clone();
         input.append(&mut args);
         self.raw_function_failure(input, self.value);
     }
@@ -776,8 +816,7 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
 
     MockSubstrate {
         state: Store::new(&Engine::default(), Runtime::new(contracts)),
-        account: Default::default(),
-        current_program: 0,
+        current_account: 0,
         value: 0,
     }
 }

@@ -216,11 +216,11 @@ fn issue666() {
 
     runtime.constructor(0, Vec::new());
 
-    let flipper_address = runtime.account;
+    let flipper_address = runtime.caller();
 
     println!("flipper_address={}", hex::encode(flipper_address));
 
-    runtime.set_program(1);
+    runtime.set_account(1);
 
     runtime.constructor(0, flipper_address.to_vec());
 

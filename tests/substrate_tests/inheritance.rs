@@ -275,7 +275,7 @@ fn test_override() {
     runtime.constructor(0, Vec::new());
 
     let slot = [0u8; 32];
-    assert_eq!(runtime.contracts()[0].storage[&slot], vec!(3));
+    assert_eq!(runtime.storage()[&slot], vec!(3));
 
     runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec(), 1);
 

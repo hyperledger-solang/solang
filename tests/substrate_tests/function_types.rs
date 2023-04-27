@@ -368,7 +368,7 @@ fn encode_decode_ext_func() {
     runtime.function("it", vec![]);
     let mut address_of_a = runtime.output();
 
-    runtime.set_program(1);
+    runtime.set_account(1);
     runtime.function("encode_decode_call", address_of_a.clone());
     assert_eq!(runtime.output(), 127u8.encode());
 

@@ -73,7 +73,7 @@ fn output() {
         runtime.debug_buffer(),
         format!(
             "print: bar:ladida address:{},\n",
-            hex::encode(runtime.account)
+            hex::encode(runtime.caller())
         )
     );
 
