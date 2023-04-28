@@ -1520,7 +1520,9 @@ impl Dot {
                     if let Some(cond) = cond {
                         self.add_expression(cond, Some(func), ns, parent, String::from("cond"));
                     }
-                    self.add_statement(next, func, ns, parent, String::from("next"));
+                    if let Some(next) = next {
+                        self.add_expression(next, Some(func), ns, parent, String::from("next"));
+                    }
                     self.add_statement(body, func, ns, parent, String::from("body"));
                 }
                 Statement::DoWhile(loc, _, body, cond) => {
