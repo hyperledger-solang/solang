@@ -20,7 +20,6 @@ impl HostFn {
             _ => return None, // Only care about functions
         };
 
-        // Only care about functions annoated with the "link" attribute
         let module = item
             .attrs
             .iter()
@@ -68,7 +67,7 @@ impl HostFn {
 ///
 /// Additionally, a function `T::define(mut store: &mut wasmi::Store<T>, linker: &mut wasmi::Linker<T>)`
 /// will be created, which defines all host functions on the linker.
-
+///
 /// [1]: https://docs.rs/wasmi/latest/wasmi/struct.Func.html#method.wrap
 #[proc_macro_attribute]
 pub fn wasm_host(_attr: TokenStream, item: TokenStream) -> TokenStream {
