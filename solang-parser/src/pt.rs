@@ -1446,7 +1446,7 @@ pub enum Statement {
         Loc,
         Option<Box<Statement>>,
         Option<Box<Expression>>,
-        Option<Box<Statement>>,
+        Option<Box<Expression>>,
         Option<Box<Statement>>,
     ),
     /// `do <1> while ({2});`

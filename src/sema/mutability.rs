@@ -188,7 +188,9 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
                 if let Some(cond) = cond {
                     cond.recurse(state, read_expression);
                 }
-                recurse_statements(next, ns, state);
+                if let Some(next) = next {
+                    next.recurse(state, read_expression);
+                }
                 recurse_statements(body, ns, state);
             }
             Statement::Expression(_, _, expr) => {
