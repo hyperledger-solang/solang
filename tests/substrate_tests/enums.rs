@@ -44,11 +44,11 @@ fn weekdays() {
 
     runtime.function("is_weekend", Val(4).encode());
 
-    assert_eq!(runtime.vm.output, Val(0).encode());
+    assert_eq!(runtime.output(), Val(0).encode());
 
     runtime.function("is_weekend", Val(5).encode());
 
-    assert_eq!(runtime.vm.output, Val(1).encode());
+    assert_eq!(runtime.output(), Val(1).encode());
 
     runtime.function("test_values", Vec::new());
 }

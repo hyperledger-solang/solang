@@ -155,151 +155,152 @@ fn errors() {
         true,
     );
 
+    runtime.constructor(0, vec![]);
     runtime.function_expect_failure("write_bytes_failure", 9u8.encode());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: data does not fit into buffer in test.sol:95:22-32,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("math_overflow", 10u8.encode());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: math overflow in test.sol:16:24-33,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("require_test", 9u8.encode());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: sesa require condition failed in test.sol:21:31-37,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("assert_test", 9u8.encode());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: assert failure in test.sol:27:20-28,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("set_storage_bytes", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: storage index out of bounds in test.sol:34:15-16,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("get_storage_bytes", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: storage array index out of bounds in test.sol:41:23-27,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("transfer_abort", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: value transfer failure in test.sol:48:33-35,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("pop_empty_storage", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: pop from empty storage array in test.sol:53:17-20,\n"
     );
 
-    runtime.vm.value = 3500;
+    runtime.set_transferred_value(3500);
     runtime.constructor(0, Vec::new());
 
-    runtime.printbuf.clear();
-    runtime.vm.value = 0;
+    runtime.debug_buffer().clear();
+    runtime.set_transferred_value(0);
     runtime.function_expect_failure("create_child", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
-        "runtime_error: contract creation failed in test.sol:65:18-52,\n"
+        runtime.debug_buffer(),
+        "runtime_error: contract creation failed in test.sol:64:17-51,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("i_will_revert", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: revert encountered in test.sol:84:13-21,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("write_integer_failure", 1u8.encode());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: integer too large to write in buffer in test.sol:89:22-35,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("invalid_instruction", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: reached invalid instruction in test.sol:116:17-26,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("out_of_bounds", 19u8.encode());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: array index out of bounds in test.sol:111:20-25,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("trunc_failure", u128::MAX.encode());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: truncated type overflows in test.sol:105:41-46,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("byte_cast_failure", 33u8.encode());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: bytes cast error in test.sol:124:27-44,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("read_integer_failure", 2u32.encode());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: read integer out of bounds in test.sol:100:22-34,\n"
     );
 
-    runtime.printbuf.clear();
+    runtime.debug_buffer().clear();
     runtime.function_expect_failure("call_ext", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: external call failed in test.sol:59:13-41,\n"
     );
 
-    runtime.printbuf.clear();
-    runtime.vm.value = 1;
+    runtime.debug_buffer().clear();
+    runtime.set_transferred_value(1);
     runtime.function_expect_failure("dont_pay_me", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "runtime_error: non payable function dont_pay_me received value,\n"
     );
 }
