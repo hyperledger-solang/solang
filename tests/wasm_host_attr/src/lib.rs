@@ -57,6 +57,19 @@ impl HostFn {
     }
 }
 
+/// Helper macro for creating wasmi host function wrappers.
+/// Should be used on a dedicated impl block on the host state type.
+///
+/// Wraps functions with the `[seal(n)]` attribute, where n is the version number, into a wasmi host function.
+/// The function signature should match exactly the signature of the closure going into [`Func::wrap`][1]
+/// There will be two local variables brought into scope:
+/// * `mem` for accessing the memory
+/// * `vm` is a mutable reference to the host state
+///
+/// Additionally, a function `T::define(mut store: &mut wasmi::Store<T>, linker: &mut wasmi::Linker<T>)`
+/// will be created, which defines all host functions on the linker.
+
+/// [1]: https://docs.rs/wasmi/latest/wasmi/struct.Func.html#method.wrap
 #[proc_macro_attribute]
 pub fn wasm_host(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = syn::parse_macro_input!(item as ItemImpl);

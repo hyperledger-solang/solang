@@ -330,9 +330,7 @@ fn read_account(mem: &[u8], ptr: u32) -> Address {
     Address::try_from(&mem[ptr as usize..(ptr + 32) as usize]).unwrap()
 }
 
-/// Implement the required host functions from the contracts pallet.
-///
-/// They mock the original implementation, please refer to the [pallet docs][1] for more information.
+/// Host functions mock the original implementation, refer to the [pallet docs][1] for more information.
 ///
 /// [1]: https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/index.html
 #[wasm_host]
