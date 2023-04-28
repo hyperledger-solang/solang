@@ -457,7 +457,7 @@ impl Runtime {
 
     #[seal(1)]
     fn seal_call(
-        _flags: u32,
+        flags: u32,
         callee_ptr: u32,
         _gas: u64,
         value_ptr: u32,
@@ -466,6 +466,8 @@ impl Runtime {
         output_ptr: u32,
         output_len_ptr: u32,
     ) -> Result<u32, Trap> {
+        assert_eq!(flags, 0); // At the time, we never set call flags
+
         let input = read_buf(mem, input_ptr, input_len);
         let value = read_value(mem, value_ptr);
         let callee_address = read_account(mem, callee_ptr);
@@ -564,14 +566,22 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_transfer(account_ptr: u32, _: u32, value_ptr: u32, _: u32) -> Result<u32, Trap> {
+    fn seal_transfer(
+        account_ptr: u32,
+        account_len: u32,
+        value_ptr: u32,
+        value_len: u32,
+    ) -> Result<u32, Trap> {
+        assert_eq!(account_len, 32);
+        assert_eq!(value_len, 16);
+
         let value = read_value(mem, value_ptr);
         if value > vm.accounts[vm.account].value {
             return Ok(5); // ReturnCode::TransferFailed
         }
 
-        let accout = read_account(mem, account_ptr);
-        if let Some(to) = vm.accounts.iter_mut().find(|c| c.address == accout) {
+        let account = read_account(mem, account_ptr);
+        if let Some(to) = vm.accounts.iter_mut().find(|c| c.address == account) {
             to.value += value;
             vm.accounts[vm.account].value -= value;
             return Ok(0);
