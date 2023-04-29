@@ -231,6 +231,7 @@ fn call() {
         }"##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test1", Vec::new());
     runtime.function("test2", Vec::new());
 
@@ -289,6 +290,7 @@ fn call() {
         }"##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test1", Vec::new());
     runtime.function("test2", Vec::new());
 }
@@ -377,8 +379,9 @@ fn msg() {
         }"##,
     );
 
-    runtime.vm.value = 145_594_775_678_703_046_797_448_357_509_034_994_219;
-    runtime.function("test", Vec::new());
+    let value = 145_594_775_678_703_046_797_448_357_509_034_994_219;
+    runtime.set_transferred_value(value);
+    runtime.raw_function(runtime.contracts()[0].code.messages["test"].to_vec());
 
     let mut runtime = build_solidity(
         r##"
@@ -399,6 +402,7 @@ fn msg() {
         "##,
     );
 
+    runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 }
 
@@ -688,22 +692,22 @@ fn my_token() {
         0x31, 0x32,
     ];
     runtime.function("test", TokenTest(addr, true).encode());
-    assert_eq!(&runtime.vm.caller[..], &runtime.vm.output[..]);
+    assert_eq!(&runtime.caller()[..], &runtime.output()[..]);
 
     runtime.function("test", TokenTest(addr, false).encode());
-    assert_eq!(&runtime.vm.output[..], &addr[..]);
+    assert_eq!(&runtime.output()[..], &addr[..]);
 
     runtime.function(
         "test",
-        TokenTest(<[u8; 32]>::try_from(&runtime.vm.caller[..]).unwrap(), true).encode(),
+        TokenTest(<[u8; 32]>::try_from(&runtime.caller()[..]).unwrap(), true).encode(),
     );
-    assert_eq!(&runtime.vm.caller[..], &runtime.vm.output[..]);
+    assert_eq!(&runtime.caller()[..], &runtime.output()[..]);
 
     runtime.function(
         "test",
-        TokenTest(<[u8; 32]>::try_from(&runtime.vm.caller[..]).unwrap(), false).encode(),
+        TokenTest(<[u8; 32]>::try_from(&runtime.caller()[..]).unwrap(), false).encode(),
     );
-    assert_eq!(&runtime.vm.caller[..], &runtime.vm.output[..]);
+    assert_eq!(&runtime.caller()[..], &runtime.output()[..]);
 }
 
 #[test]
@@ -744,10 +748,10 @@ fn hash() {
     ]);
 
     runtime.function("set", h.encode());
-    assert_eq!(&runtime.vm.output[..], &h.0[..]);
+    assert_eq!(&runtime.output()[..], &h.0[..]);
 
     runtime.function("get", vec![]);
-    assert_eq!(&runtime.vm.output[..], &h.0[..]);
+    assert_eq!(&runtime.output()[..], &h.0[..]);
 
     runtime.function("test_encoding", vec![]);
 }

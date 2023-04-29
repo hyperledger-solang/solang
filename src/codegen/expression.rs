@@ -705,7 +705,8 @@ pub fn expression(
             expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         },
         ast::Expression::Cast { loc, to, expr } if matches!(to, Type::Address(_)) => {
-            if let Ok((_, address)) = eval_const_number(expr, ns) {
+            let mut diagnostics = Diagnostics::default();
+            if let Ok((_, address)) = eval_const_number(expr, ns, &mut diagnostics) {
                 Expression::NumberLiteral {
                     loc: *loc,
                     ty: to.clone(),

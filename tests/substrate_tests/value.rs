@@ -31,13 +31,8 @@ fn external_call_value() {
     runtime.function("step1", Vec::new());
     runtime.function("step2", Vec::new());
 
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 1523);
-    }
+    // Minimum balance + transferred value = 500 + 1023
+    assert_eq!(runtime.balance(2), 1523);
 
     let mut runtime = build_solidity(
         r##"
@@ -63,13 +58,8 @@ fn external_call_value() {
 
     runtime.function("step1", Vec::new());
 
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 1523);
-    }
+    // Minimum balance + transferred value = 500 + 1023
+    assert_eq!(runtime.balance(2), 1523);
 }
 
 #[test]
@@ -92,13 +82,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 500);
-    }
+    assert_eq!(runtime.balance(2), 500);
 
     let mut runtime = build_solidity(
         r##"
@@ -118,13 +102,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 0);
-    }
+    assert_eq!(runtime.balance(2), 0);
 
     let mut runtime = build_solidity(
         r##"
@@ -144,13 +122,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 499);
-    }
+    assert_eq!(runtime.balance(2), 499);
 
     let mut runtime = build_solidity(
         r##"
@@ -175,13 +147,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 511);
-    }
+    assert_eq!(runtime.balance(2), 511);
 
     let mut runtime = build_solidity(
         r##"
@@ -206,13 +172,7 @@ fn constructor_value() {
 
     runtime.function("step1", Vec::new());
 
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 511);
-    }
+    assert_eq!(runtime.balance(2), 511)
 }
 
 #[test]
@@ -287,7 +247,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.output, runtime.vm.account);
+    assert_eq!(runtime.output(), runtime.caller());
 
     let mut runtime = build_solidity(
         r##"
@@ -302,7 +262,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.output, runtime.vm.account);
+    assert_eq!(runtime.output(), runtime.caller());
 
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
@@ -327,7 +287,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret(102).encode());
+    assert_eq!(runtime.output(), Ret(102).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -342,7 +302,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.output, runtime.vm.account);
+    assert_eq!(runtime.output(), runtime.caller());
 }
 
 #[test]
@@ -373,16 +333,13 @@ fn balance() {
     );
 
     runtime.constructor(0, Vec::new());
-
-    runtime.accounts.get_mut(&runtime.vm.account).unwrap().1 = 315;
-
     runtime.function("step1", Vec::new());
-
-    assert_eq!(runtime.vm.output, 315u128.to_le_bytes());
+    // Constructor received 20000 by default, however 500 were sent to "o"
+    assert_eq!(runtime.output(), 19500u128.to_le_bytes());
 
     runtime.function("step2", Vec::new());
 
-    assert_eq!(runtime.vm.output, 500u128.to_le_bytes());
+    assert_eq!(runtime.output(), 500u128.to_le_bytes());
 }
 
 #[test]
@@ -409,13 +366,10 @@ fn selfdestruct() {
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
-    assert_eq!(runtime.accounts.get_mut(&runtime.vm.account).unwrap().1, 0);
+    assert_eq!(runtime.balance(0), 20000 - 511);
 
-    runtime.function_expect_failure("step2", Vec::new());
-    assert_eq!(
-        runtime.accounts.get_mut(&runtime.vm.account).unwrap().1,
-        511
-    );
+    runtime.function("step2", Vec::new());
+    assert_eq!(runtime.balance(0), 20000);
 }
 
 #[test]
@@ -445,15 +399,8 @@ fn send_and_transfer() {
     runtime.function("step1", Vec::new());
 
     // no receive() required for send/transfer
-    assert_eq!(runtime.vm.output, true.encode());
-
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 1011);
-    }
+    assert_eq!(runtime.output(), true.encode());
+    assert_eq!(runtime.balance(2), 1011);
 
     let mut runtime = build_solidity(
         r##"
@@ -479,15 +426,8 @@ fn send_and_transfer() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.output, true.encode());
-
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 1011);
-    }
+    assert_eq!(runtime.output(), true.encode());
+    assert_eq!(runtime.balance(2), 1011);
 
     let mut runtime = build_solidity(
         r##"
@@ -512,14 +452,7 @@ fn send_and_transfer() {
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
-
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 1011);
-    }
+    assert_eq!(runtime.balance(2), 1011);
 
     let mut runtime = build_solidity(
         r##"
@@ -545,11 +478,5 @@ fn send_and_transfer() {
 
     runtime.function("step1", Vec::new());
 
-    for (address, account) in runtime.accounts {
-        if address == runtime.vm.account {
-            continue;
-        }
-
-        assert_eq!(account.1, 1011);
-    }
+    assert_eq!(runtime.balance(2), 1011);
 }

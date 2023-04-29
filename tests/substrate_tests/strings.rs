@@ -191,7 +191,7 @@ fn string_abi_encode() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val("foobar".to_string()).encode());
+    assert_eq!(runtime.output(), Val("foobar".to_string()).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -205,7 +205,7 @@ fn string_abi_encode() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
+    assert_eq!(runtime.output(), Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -225,7 +225,7 @@ fn string_abi_encode() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
+    assert_eq!(runtime.output(), Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -245,7 +245,7 @@ fn string_abi_encode() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output(),
         RetStringArray(vec!(
             "abc".to_string(),
             "dl".to_string(),
@@ -286,12 +286,12 @@ fn string_abi_decode() {
     let moby_dick_first_para = "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.";
 
     runtime.function("test", Val("foobar".to_string()).encode());
-    assert_eq!(runtime.vm.output, Val(" foobar ".to_string()).encode());
+    assert_eq!(runtime.output(), Val(" foobar ".to_string()).encode());
 
     runtime.function("test", Val(moby_dick_first_para.to_string()).encode());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output(),
         Val(format!(" {moby_dick_first_para} ")).encode()
     );
 
@@ -321,7 +321,7 @@ fn string_abi_decode() {
 
         let ret = ValB(s).encode();
 
-        assert_eq!(runtime.vm.output, ret);
+        assert_eq!(runtime.output(), ret);
     }
 }
 
@@ -348,14 +348,11 @@ fn string_storage() {
 
     runtime.function("set_bar", Vec::new());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
-        b"foobar"
-    );
+    assert_eq!(runtime.storage()[&[0; 32]], b"foobar");
 
     runtime.function("get_bar", Vec::new());
 
-    assert_eq!(runtime.vm.output, Val("foobar".to_string()).encode());
+    assert_eq!(runtime.output(), Val("foobar".to_string()).encode());
 }
 
 #[test]
@@ -391,14 +388,14 @@ fn bytes_storage() {
 
     runtime.function("get_index", Arg(1).encode());
 
-    assert_eq!(runtime.vm.output, Ret(0xbb).encode());
+    assert_eq!(runtime.output(), Ret(0xbb).encode());
 
     for i in 0..6 {
         runtime.function("get_index64", Arg64(i).encode());
 
         let vals = [0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff];
 
-        assert_eq!(runtime.vm.output, [Ret(vals[i as usize])].encode());
+        assert_eq!(runtime.output(), [Ret(vals[i as usize])].encode());
     }
 
     let mut runtime = build_solidity(
@@ -429,21 +426,21 @@ fn bytes_storage() {
 
     runtime.function("get_bar", Vec::new());
 
-    assert_eq!(runtime.vm.output, vec!(0u8).encode());
+    assert_eq!(runtime.output(), vec!(0u8).encode());
 
     runtime.function("push", 0xe8u8.encode());
 
     runtime.function("get_bar", Vec::new());
 
-    assert_eq!(runtime.vm.output, vec!(0u8, 0xe8u8).encode());
+    assert_eq!(runtime.output(), vec!(0u8, 0xe8u8).encode());
 
     runtime.function("pop", Vec::new());
 
-    assert_eq!(runtime.vm.output, 0xe8u8.encode());
+    assert_eq!(runtime.output(), 0xe8u8.encode());
 
     runtime.function("get_bar", Vec::new());
 
-    assert_eq!(runtime.vm.output, vec!(0u8).encode());
+    assert_eq!(runtime.output(), vec!(0u8).encode());
 }
 
 #[test]
@@ -471,8 +468,8 @@ fn bytes_storage_subscript() {
     runtime.function("set_index", Arg(1, 0x33).encode());
 
     assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
-        &vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)
+        runtime.storage()[&[0; 32]],
+        vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)
     );
 
     let mut runtime = build_solidity(
@@ -502,24 +499,15 @@ fn bytes_storage_subscript() {
 
     runtime.function("or", Arg(1, 0x50).encode());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
-        &vec!(0xde, 0xfd, 0xca, 0xfe)
-    );
+    assert_eq!(runtime.storage()[&[0; 32]], vec!(0xde, 0xfd, 0xca, 0xfe));
 
     runtime.function("and", Arg(3, 0x7f).encode());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
-        &vec!(0xde, 0xfd, 0xca, 0x7e)
-    );
+    assert_eq!(runtime.storage()[&[0; 32]], vec!(0xde, 0xfd, 0xca, 0x7e));
 
     runtime.function("xor", Arg(2, 0xff).encode());
 
-    assert_eq!(
-        runtime.store.get(&(runtime.vm.account, [0u8; 32])).unwrap(),
-        &vec!(0xde, 0xfd, 0x35, 0x7e)
-    );
+    assert_eq!(runtime.storage()[&[0; 32]], vec!(0xde, 0xfd, 0x35, 0x7e));
 }
 
 #[test]
@@ -548,7 +536,7 @@ fn bytes_memory_subscript() {
     runtime.function("set_index", Arg(1, 0x33).encode());
 
     assert_eq!(
-        runtime.vm.output,
+        runtime.output(),
         Ret(vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)).encode()
     );
 
@@ -585,24 +573,15 @@ fn bytes_memory_subscript() {
 
     runtime.function("or", Arg(1, 0x50).encode());
 
-    assert_eq!(
-        runtime.vm.output,
-        Ret(vec!(0xde, 0xfd, 0xca, 0xfe)).encode()
-    );
+    assert_eq!(runtime.output(), Ret(vec!(0xde, 0xfd, 0xca, 0xfe)).encode());
 
     runtime.function("and", Arg(3, 0x7f).encode());
 
-    assert_eq!(
-        runtime.vm.output,
-        Ret(vec!(0xde, 0xad, 0xca, 0x7e)).encode()
-    );
+    assert_eq!(runtime.output(), Ret(vec!(0xde, 0xad, 0xca, 0x7e)).encode());
 
     runtime.function("xor", Arg(2, 0xff).encode());
 
-    assert_eq!(
-        runtime.vm.output,
-        Ret(vec!(0xde, 0xad, 0x35, 0xfe)).encode()
-    );
+    assert_eq!(runtime.output(), Ret(vec!(0xde, 0xad, 0x35, 0xfe)).encode());
 }
 
 #[test]
@@ -621,7 +600,7 @@ fn string_escape() {
     runtime.function("カラス$", Vec::new());
 
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         "print:  € A \u{c}\u{8}\r\n\u{b}\\'\"\t,\n"
     );
 }

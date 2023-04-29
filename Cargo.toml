@@ -64,7 +64,7 @@ wasm-encoder = "0.25"
 [dev-dependencies]
 num-derive = "0.3"
 primitive-types = { version = "0.12", features = ["codec"] }
-wasmi = "0.11"
+wasmi = "0.29"
 # rand version 0.7 is needed for ed25519_dalek::keypair::generate, used in solana_tests/signature_verify.rs
 rand_07 = { package = "rand", version = "0.7" }
 sha2 = "0.10"
@@ -82,6 +82,7 @@ tempfile = "3.3"
 rayon = "1"
 walkdir = "2.3.3"
 ink_primitives = "=4.1.0"
+wasm_host_attr = { path = "tests/wasm_host_attr" }
 
 [package.metadata.docs.rs]
 no-default-features = true
@@ -94,4 +95,4 @@ default = ["llvm"]
 llvm = ["inkwell", "libc"]
 
 [workspace]
-members = ["solang-parser"]
+members = ["solang-parser", "tests/wasm_host_attr"]

@@ -768,7 +768,7 @@ OpenStatement: Statement = {
     <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> <r:@R> => {
         Statement::If(Loc::File(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
     },
-    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:OpenStatement> <r:@R> => {
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <block:OpenStatement> <r:@R> => {
         Statement::For(Loc::File(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), Some(Box::new(block)))
     },
     <l:@L> "while" "(" <e:Expression> ")" <b:OpenStatement> <r:@R> => {
@@ -784,10 +784,10 @@ ClosedStatement: Statement = {
     <l:@L> "while" "(" <e:Expression> ")" <b:ClosedStatement> <r:@R> => {
         Statement::While(Loc::File(file_no, l, r), e, Box::new(b))
     },
-    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:ClosedStatement> <r:@R> => {
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <block:ClosedStatement> <r:@R> => {
         Statement::For(Loc::File(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), Some(Box::new(block)))
     },
-    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <r:@R> ";" => {
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <r:@R> ";" => {
         Statement::For(Loc::File(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), None)
     }
 }

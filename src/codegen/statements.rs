@@ -384,7 +384,7 @@ pub(crate) fn statement(
 
             loops.new_scope(
                 end_block,
-                if next.is_empty() {
+                if next.is_none() {
                     body_block
                 } else {
                     next_block
@@ -421,22 +421,10 @@ pub(crate) fn statement(
             if body_reachable {
                 cfg.set_basic_block(next_block);
 
-                if !next.is_empty() {
-                    for stmt in next {
-                        statement(
-                            stmt,
-                            func,
-                            cfg,
-                            contract_no,
-                            ns,
-                            vartab,
-                            loops,
-                            placeholder,
-                            return_override,
-                            opt,
-                        );
-                        body_reachable = stmt.reachable();
-                    }
+                if let Some(next) = next {
+                    expression(next, cfg, contract_no, Some(func), ns, vartab, opt);
+
+                    body_reachable = next.ty() != Type::Unreachable;
                 }
 
                 if body_reachable {
@@ -530,21 +518,10 @@ pub(crate) fn statement(
 
             let mut next_reachable = true;
 
-            for stmt in next {
-                statement(
-                    stmt,
-                    func,
-                    cfg,
-                    contract_no,
-                    ns,
-                    vartab,
-                    loops,
-                    placeholder,
-                    return_override,
-                    opt,
-                );
+            if let Some(next) = next {
+                expression(next, cfg, contract_no, Some(func), ns, vartab, opt);
 
-                next_reachable = stmt.reachable();
+                next_reachable = next.ty() != Type::Unreachable;
             }
 
             if next_reachable {

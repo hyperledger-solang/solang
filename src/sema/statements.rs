@@ -555,7 +555,7 @@ fn statement(
             ));
             Err(())
         }
-        pt::Statement::For(loc, init_stmt, None, next_stmt, body_stmt) => {
+        pt::Statement::For(loc, init_stmt, None, next_expr, body_stmt) => {
             symtable.new_scope();
 
             let mut init = Vec::new();
@@ -590,18 +590,17 @@ fn statement(
 
             let control = loops.leave_scope();
             let reachable = control.no_breaks > 0;
-            let mut next = Vec::new();
+            let mut next = None;
 
-            if let Some(next_stmt) = next_stmt {
-                statement(
-                    next_stmt,
-                    &mut next,
+            if let Some(next_expr) = next_expr {
+                next = Some(expression(
+                    next_expr,
                     context,
-                    symtable,
-                    loops,
                     ns,
+                    symtable,
                     diagnostics,
-                )?;
+                    ResolveTo::Type(&Type::Bool),
+                )?);
             }
 
             symtable.leave_scope();
@@ -617,12 +616,12 @@ fn statement(
 
             Ok(reachable)
         }
-        pt::Statement::For(loc, init_stmt, Some(cond_expr), next_stmt, body_stmt) => {
+        pt::Statement::For(loc, init_stmt, Some(cond_expr), next_expr, body_stmt) => {
             symtable.new_scope();
 
             let mut init = Vec::new();
             let mut body = Vec::new();
-            let mut next = Vec::new();
+            let mut next = None;
 
             if let Some(init_stmt) = init_stmt {
                 statement(
@@ -636,7 +635,7 @@ fn statement(
                 )?;
             }
 
-            let expr = expression(
+            let cond = expression(
                 cond_expr,
                 context,
                 ns,
@@ -645,7 +644,7 @@ fn statement(
                 ResolveTo::Type(&Type::Bool),
             )?;
 
-            let cond = expr.cast(&cond_expr.loc(), &Type::Bool, true, ns, diagnostics)?;
+            let cond = cond.cast(&cond_expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
             // continue goes to next, and if that does exist, cond
             loops.new_scope();
@@ -669,17 +668,16 @@ fn statement(
                 body_reachable = true;
             }
 
-            if body_reachable {
-                if let Some(next_stmt) = next_stmt {
-                    statement(
-                        next_stmt,
-                        &mut next,
+            if let Some(next_expr) = next_expr {
+                if body_reachable {
+                    next = Some(expression(
+                        next_expr,
                         context,
-                        symtable,
-                        loops,
                         ns,
+                        symtable,
                         diagnostics,
-                    )?;
+                        ResolveTo::Type(&Type::Bool),
+                    )?);
                 }
             }
 

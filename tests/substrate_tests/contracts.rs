@@ -38,7 +38,7 @@ fn external_call() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret(1020).encode());
+    assert_eq!(runtime.output(), Ret(1020).encode());
 }
 
 #[test]
@@ -102,7 +102,7 @@ fn revert_constructor() {
 
     runtime.function_expect_failure("test", Vec::new());
 
-    assert_eq!(runtime.vm.output.len(), 0);
+    assert_eq!(runtime.output().len(), 0);
 }
 
 #[test]
@@ -154,7 +154,7 @@ fn external_datatypes() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.output, Ret(1020).encode());
+    assert_eq!(runtime.output(), Ret(1020).encode());
 }
 
 #[test]
@@ -187,18 +187,8 @@ fn creation_code() {
         }"##,
     );
 
-    runtime.constructor(0, Vec::new());
-
     runtime.function("test", Vec::new());
-
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Ret(Vec<u8>);
-
-    // return value should be the code for the second contract
-    assert_eq!(
-        runtime.vm.output,
-        Ret(runtime.programs[1].code.clone()).encode()
-    );
+    assert_eq!(runtime.output(), runtime.contracts()[1].code.blob.encode());
 }
 
 #[test]
@@ -226,17 +216,17 @@ fn issue666() {
 
     runtime.constructor(0, Vec::new());
 
-    let flipper_address = runtime.vm.account;
+    let flipper_address = runtime.caller();
 
     println!("flipper_address={}", hex::encode(flipper_address));
 
-    runtime.set_program(1);
+    runtime.set_account(1);
 
     runtime.constructor(0, flipper_address.to_vec());
 
     runtime.function("superFlip", Vec::new());
 
-    assert!(runtime.vm.output.is_empty());
+    assert!(runtime.output().is_empty());
 }
 
 #[test]
@@ -258,21 +248,10 @@ fn mangle_function_names_in_abi() {
         }"##,
     );
 
-    let messages: Vec<String> = runtime
-        .programs
-        .get(0)
-        .unwrap()
-        .abi
-        .spec()
-        .messages()
-        .iter()
-        .map(|m| m.label().clone())
-        .collect();
-
-    assert!(!messages.contains(&"foo".to_string()));
-    assert!(messages.contains(&"foo_".to_string()));
-    assert!(messages.contains(&"foo_uint256_addressArray2Array".to_string()));
-    assert!(messages.contains(&"foo_uint8Array2__int256_bool_address".to_string()));
+    let _ = runtime.contracts()[0].code.messages["foo_"];
+    let _ = runtime.contracts()[0].code.messages["foo_uint256_addressArray2Array"];
+    let _ = runtime.contracts()[0].code.messages["foo_uint8Array2__int256_bool_address"];
+    assert!(runtime.contracts()[0].code.messages.get("foo").is_none());
 }
 
 #[test]
@@ -288,31 +267,13 @@ fn mangle_overloaded_function_names_in_abi() {
         }"##,
     );
 
-    let messages_a: Vec<String> = runtime
-        .programs
-        .get(0)
-        .unwrap()
-        .abi
-        .spec()
-        .messages()
-        .iter()
-        .map(|m| m.label().clone())
-        .collect();
+    let _ = runtime.contracts()[0].code.messages["foo"];
+    assert!(runtime.contracts()[0]
+        .code
+        .messages
+        .get("foo_bool")
+        .is_none());
 
-    assert!(messages_a.contains(&"foo".to_string()));
-    assert!(!messages_a.contains(&"foo_bool".to_string()));
-
-    let messages_b: Vec<String> = runtime
-        .programs
-        .get(1)
-        .unwrap()
-        .abi
-        .spec()
-        .messages()
-        .iter()
-        .map(|m| m.label().clone())
-        .collect();
-
-    assert!(!messages_b.contains(&"foo".to_string()));
-    assert!(messages_b.contains(&"foo_bool".to_string()));
+    let _ = runtime.contracts()[1].code.messages["foo_bool"];
+    assert!(runtime.contracts()[1].code.messages.get("foo").is_none());
 }

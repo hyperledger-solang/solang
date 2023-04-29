@@ -35,7 +35,7 @@ fn simple_test() {
 
     runtime.function("test", Args(true, 100, 10).encode());
 
-    assert_eq!(runtime.vm.output, 1000u32.encode());
+    assert_eq!(runtime.output(), 1000u32.encode());
 }
 
 #[test]
@@ -74,7 +74,7 @@ fn internal_function_type_in_contract_storage() {
 
     runtime.function("test", Args(100, 10).encode());
 
-    assert_eq!(runtime.vm.output, 110u32.encode());
+    assert_eq!(runtime.output(), 110u32.encode());
 }
 
 #[test]
@@ -150,7 +150,7 @@ fn base_contract_function() {
 
     runtime.function("test", Args(true, 100, 10).encode());
 
-    assert_eq!(runtime.vm.output, 1000u32.encode());
+    assert_eq!(runtime.output(), 1000u32.encode());
 }
 
 #[test]
@@ -196,7 +196,7 @@ fn virtual_contract_function() {
 
     runtime.function("test", Args(true, 100, 10).encode());
 
-    assert_eq!(runtime.vm.output, 10000u32.encode());
+    assert_eq!(runtime.output(), 10000u32.encode());
 }
 
 // external function types tests
@@ -366,13 +366,13 @@ fn encode_decode_ext_func() {
     );
 
     runtime.function("it", vec![]);
-    let mut address_of_a = runtime.vm.output.clone();
+    let mut address_of_a = runtime.output();
 
-    runtime.set_program(1);
+    runtime.set_account(1);
     runtime.function("encode_decode_call", address_of_a.clone());
-    assert_eq!(runtime.vm.output, 127u8.encode());
+    assert_eq!(runtime.output(), 127u8.encode());
 
     address_of_a.extend([0, 0, 0, 0].iter());
     runtime.function("decode_call", address_of_a);
-    assert_eq!(runtime.vm.output, 127u8.encode());
+    assert_eq!(runtime.output(), 127u8.encode());
 }

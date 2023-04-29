@@ -24,7 +24,7 @@ fn debug_buffer_format() {
 
     runtime.function("multiple_prints", [].to_vec());
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         r#"print: Hello!,
 call: seal_debug_message=0,
 print: I call seal_debug_message under the hood!,
@@ -32,10 +32,9 @@ call: seal_debug_message=0,
 "#
     );
 
-    runtime.printbuf.clear();
     runtime.function_expect_failure("multiple_prints_then_revert", [].to_vec());
     assert_eq!(
-        runtime.printbuf,
+        runtime.debug_buffer(),
         r#"print: Hello!,
 call: seal_debug_message=0,
 print: I call seal_debug_message under the hood!,
