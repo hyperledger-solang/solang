@@ -1184,6 +1184,18 @@ fn emit_event(
     diagnostics: &mut Diagnostics,
 ) -> Result<Statement, ()> {
     let function_no = context.function_no.unwrap();
+    let to_stmt =
+        |ns: &mut Namespace, event_no: usize, event_loc: pt::Loc, cast_args: Vec<Expression>| {
+            if !ns.functions[function_no].emits_events.contains(&event_no) {
+                ns.functions[function_no].emits_events.push(event_no);
+            }
+            Statement::Emit {
+                loc: *loc,
+                event_no,
+                event_loc,
+                args: cast_args,
+            }
+        };
 
     match ty {
         pt::Expression::FunctionCall(_, ty, args) => {
@@ -1264,16 +1276,7 @@ fn emit_event(
                 }
 
                 if matches {
-                    if !ns.functions[function_no].emits_events.contains(event_no) {
-                        ns.functions[function_no].emits_events.push(*event_no);
-                    }
-
-                    return Ok(Statement::Emit {
-                        loc: *loc,
-                        event_no: *event_no,
-                        event_loc,
-                        args: cast_args,
-                    });
+                    return Ok(to_stmt(ns, *event_no, event_loc, cast_args));
                 } else if event_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
                     return Err(());
                 }
@@ -1416,16 +1419,7 @@ fn emit_event(
                 }
 
                 if matches {
-                    if !ns.functions[function_no].emits_events.contains(event_no) {
-                        ns.functions[function_no].emits_events.push(*event_no);
-                    }
-
-                    return Ok(Statement::Emit {
-                        loc: *loc,
-                        event_no: *event_no,
-                        event_loc,
-                        args: cast_args,
-                    });
+                    return Ok(to_stmt(ns, *event_no, event_loc, cast_args));
                 } else if event_nos.len() > 1 && diagnostics.extend_non_casting(&temp_diagnostics) {
                     return Err(());
                 }
