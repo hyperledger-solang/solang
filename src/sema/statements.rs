@@ -210,9 +210,9 @@ pub fn resolve_function_body(
         ns.functions[function_no].modifiers = modifiers;
     }
 
-    // If there is no return statement, then any unnamed return types will
+    // If there is no return statement, any unnamed return types will
     // implicitly be 0. If there is a return type which is a storage
-    // reference (e.g. int[] storage), then a value must be given via
+    // reference (e.g. int[] storage), a value must be given via
     // a return statement, else the value will not refer to valid storage,
     // as 0 is almost certainly an invalid storage key.
     let mut return_required = false;
