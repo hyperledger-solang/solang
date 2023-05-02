@@ -1344,7 +1344,7 @@ fn try_type_method(
                 if ty != CallTy::Regular && call_args.value.is_some() {
                     diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("'{}' cannot have value specifed", func.name,),
+                        format!("'{}' cannot have value specified", func.name,),
                     ));
 
                     return Err(());
