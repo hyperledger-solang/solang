@@ -4,5 +4,5 @@
                 this = other;
             }
         }
-// ----
-// error (83-87): expression is not assignable
+// ---- Expect: diagnostics ----
+// error: 4:17-21: expression is not assignable

@@ -9,5 +9,5 @@ contract d {
 	}
 }
 
-// ----
-// warning (69-100): function can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 7:2-33: function can be declared 'pure'

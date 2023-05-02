@@ -17,4 +17,4 @@ contract Array_bound_Test {
     }
 }
 
-// ----
+// ---- Expect: diagnostics ----

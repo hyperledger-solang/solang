@@ -4,6 +4,6 @@
                 string s = "{}" "{:x}s".format(1, 0xcafe);
             }
         }
-// ----
-// warning (34-55): function can be declared 'pure'
-// warning (81-82): local variable 's' has been assigned, but never read
+// ---- Expect: diagnostics ----
+// warning: 3:13-34: function can be declared 'pure'
+// warning: 4:24-25: local variable 's' has been assigned, but never read

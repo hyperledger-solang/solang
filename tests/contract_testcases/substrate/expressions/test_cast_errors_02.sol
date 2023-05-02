@@ -4,6 +4,6 @@ contract test {
                 return false;
             }
         }
-// ----
-// warning (28-88): function can be declared 'pure'
-// warning (50-53): function parameter 'foo' has never been read
+// ---- Expect: diagnostics ----
+// warning: 2:13-73: function can be declared 'pure'
+// warning: 2:35-38: function parameter 'foo' has never been read

@@ -12,6 +12,6 @@
                 a f = new a();
             }
         }
-// ----
-// error (85-93): 'value' specified multiple times
-// 	note (95-103): location of previous declaration of 'value'
+// ---- Expect: diagnostics ----
+// error: 4:24-32: 'value' specified multiple times
+// 	note 4:34-42: location of previous declaration of 'value'

@@ -4,5 +4,5 @@
                 _;
             }
         }
-// ----
-// error (74-75): '_' not found
+// ---- Expect: diagnostics ----
+// error: 4:17-18: '_' not found

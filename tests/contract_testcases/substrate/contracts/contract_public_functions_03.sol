@@ -10,5 +10,5 @@ contract c {
     uint256 private foo;
 }
 
-// ----
-// error (90-129): contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract c'
+// ---- Expect: diagnostics ----
+// error: 9:1-11:2: contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract c'

@@ -8,8 +8,8 @@
             }
         }
 
-// ----
-// error (22-25): 'foo' not found
-// warning (62-68): 'public': visibility for constructors is ignored
-// error (118-121): 'bar' not found
-// warning (162-168): 'public': visibility for constructors is ignored
+// ---- Expect: diagnostics ----
+// error: 1:23-26: 'foo' not found
+// warning: 2:35-41: 'public': visibility for constructors is ignored
+// error: 6:23-26: 'bar' not found
+// warning: 7:35-41: 'public': visibility for constructors is ignored

@@ -4,5 +4,5 @@
                     bytes code = type(a).runtimeCode;
             }
         }
-// ----
-// error (92-111): containing our own contract code for 'a' would generate infinite size contract
+// ---- Expect: diagnostics ----
+// error: 4:34-53: containing our own contract code for 'a' would generate infinite size contract

@@ -4,5 +4,5 @@
                 (int a) = abi.decode(hex"00", feh);
             }
         }
-// ----
-// error (111-114): type 'feh' not found
+// ---- Expect: diagnostics ----
+// error: 4:47-50: type 'feh' not found

@@ -6,5 +6,5 @@
                     f[0] = 102;
             }
         }
-// ----
-// error (125-126): array subscript is not permitted on string
+// ---- Expect: diagnostics ----
+// error: 6:21-22: array subscript is not permitted on string

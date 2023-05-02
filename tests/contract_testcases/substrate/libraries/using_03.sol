@@ -8,5 +8,5 @@
         contract c {
             using x for x;
         }
-// ----
-// error (206-207): using for library 'x' type not permitted
+// ---- Expect: diagnostics ----
+// error: 9:25-26: using for library 'x' type not permitted

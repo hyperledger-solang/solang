@@ -3,6 +3,6 @@
         abstract contract c {
             event e();
         }
-// ----
-// warning (71-72): e is already defined as an enum
-// 	note (14-15): location of previous definition
+// ---- Expect: diagnostics ----
+// warning: 4:19-20: e is already defined as an enum
+// 	note 2:14-15: location of previous definition

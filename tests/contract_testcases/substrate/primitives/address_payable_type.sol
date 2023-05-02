@@ -4,6 +4,6 @@
                 address b = a;
             }
         }
-// ----
-// warning (34-73): function can be declared 'pure'
-// warning (100-101): local variable 'b' has been assigned, but never read
+// ---- Expect: diagnostics ----
+// warning: 3:13-52: function can be declared 'pure'
+// warning: 4:25-26: local variable 'b' has been assigned, but never read

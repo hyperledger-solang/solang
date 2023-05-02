@@ -1,3 +1,3 @@
 enum state { }
-// ----
-// error (5-10): enum 'state' has no fields
+// ---- Expect: diagnostics ----
+// error: 1:6-11: enum 'state' has no fields

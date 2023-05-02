@@ -1,3 +1,3 @@
 abstract contract x { struct a { uint32 f1; }; }
-// ----
-// error (45-46): stray semicolon
+// ---- Expect: diagnostics ----
+// error: 1:46-47: stray semicolon

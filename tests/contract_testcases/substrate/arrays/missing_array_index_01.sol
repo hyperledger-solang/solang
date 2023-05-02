@@ -6,5 +6,5 @@
                     return bar[0];
             }
         }
-// ----
-// error (116-133): conversion from uint8[5] to uint8[4] not possible
+// ---- Expect: diagnostics ----
+// error: 4:43-60: conversion from uint8[5] to uint8[4] not possible

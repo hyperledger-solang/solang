@@ -2,5 +2,5 @@
         abstract contract c {
             modifier foo() {}
         }
-// ----
-// error (60-60): missing '_' in modifier
+// ---- Expect: diagnostics ----
+// error: 3:30: missing '_' in modifier

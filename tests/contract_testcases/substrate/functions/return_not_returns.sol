@@ -3,5 +3,5 @@ contract test {
                 return 1;
             }
         }
-// ----
-// error (55-61): 'return' unexpected. Did you mean 'returns'?
+// ---- Expect: diagnostics ----
+// error: 2:40-46: 'return' unexpected. Did you mean 'returns'?

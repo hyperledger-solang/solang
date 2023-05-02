@@ -34,4 +34,4 @@ contract Splitter {
 //         God Bless        Never Crash
 ***//*************************//**************//**/
 
-// ----
+// ---- Expect: diagnostics ----

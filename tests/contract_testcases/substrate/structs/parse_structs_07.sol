@@ -13,8 +13,8 @@
             bytes4 selector;
             s foo;
         }
-// ----
-// error (65-66): struct 's' has infinite size
-// 	note (124-129): recursive field 'f3'
-// error (157-159): struct 's2' has infinite size
-// 	note (203-208): recursive field 'foo'
+// ---- Expect: diagnostics ----
+// error: 6:16-17: struct 's' has infinite size
+// 	note 9:13-18: recursive field 'f3'
+// error: 12:16-18: struct 's2' has infinite size
+// 	note 14:13-18: recursive field 'foo'

@@ -6,5 +6,5 @@ contract Foo {
 	}
 }
 
-// ----
-// error (127-135): hex literal 0x00bffc must be 4 digits for type 'bytes2'
+// ---- Expect: diagnostics ----
+// error: 5:14-22: hex literal 0x00bffc must be 4 digits for type 'bytes2'

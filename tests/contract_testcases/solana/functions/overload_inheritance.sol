@@ -62,4 +62,4 @@ contract H is F, G {
         return uint32(d);
     }
 }
-// ----
+// ---- Expect: diagnostics ----

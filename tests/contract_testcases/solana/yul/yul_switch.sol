@@ -16,4 +16,4 @@ contract testTypes {
         return y;
     }
 } 
-// ----
+// ---- Expect: diagnostics ----

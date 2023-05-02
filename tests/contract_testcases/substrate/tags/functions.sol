@@ -3,5 +3,5 @@
             /// @param
             function foo() public {}
         }
-// ----
-// error (39-44): tag '@param' missing parameter name
+// ---- Expect: diagnostics ----
+// error: 3:18-23: tag '@param' missing parameter name

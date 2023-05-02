@@ -12,5 +12,5 @@
                 print("Baa!");
             }
         }
-// ----
-// error (125-132): conversion from bool to bytes not possible
+// ---- Expect: diagnostics ----
+// error: 6:14-21: conversion from bool to bytes not possible

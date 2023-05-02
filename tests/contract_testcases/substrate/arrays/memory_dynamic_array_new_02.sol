@@ -6,5 +6,5 @@
                 assert(a.length == 5);
             }
         }
-// ----
-// error (108-115): new dynamic array should have an unsigned length argument
+// ---- Expect: diagnostics ----
+// error: 4:48-55: new dynamic array should have an unsigned length argument

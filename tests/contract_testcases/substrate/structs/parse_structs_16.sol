@@ -10,6 +10,6 @@ abstract contract AddressTree {
     }
 }
 
-// ----
-// error (193-207): struct 'ArrayTreeFixed' has infinite size
-// 	note (218-239): recursive field 'Arr'
+// ---- Expect: diagnostics ----
+// error: 8:12-26: struct 'ArrayTreeFixed' has infinite size
+// 	note 9:9-30: recursive field 'Arr'

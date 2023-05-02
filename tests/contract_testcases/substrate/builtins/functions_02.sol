@@ -4,5 +4,5 @@
                 bytes32 b = blockhash(1);
             }
         }
-// ----
-// error (89-98): unknown function or type 'blockhash'
+// ---- Expect: diagnostics ----
+// error: 4:29-38: unknown function or type 'blockhash'

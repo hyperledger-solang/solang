@@ -2,5 +2,5 @@
         contract c {
             modifier foo() pure {}
         }
-// ----
-// error (49-53): modifier cannot have mutability specifier
+// ---- Expect: diagnostics ----
+// error: 3:28-32: modifier cannot have mutability specifier

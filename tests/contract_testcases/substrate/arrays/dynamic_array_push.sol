@@ -6,5 +6,5 @@
                 bar.push(102, 20);
             }
         }
-// ----
-// error (164-168): method 'push()' takes at most 1 argument
+// ---- Expect: diagnostics ----
+// error: 6:21-25: method 'push()' takes at most 1 argument

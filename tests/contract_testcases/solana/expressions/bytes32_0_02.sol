@@ -12,5 +12,5 @@
                 r = bytes32(-1);
             }
         }
-// ----
-// error (367-378): negative number cannot be converted to type 'bytes32'
+// ---- Expect: diagnostics ----
+// error: 12:21-32: negative number cannot be converted to type 'bytes32'

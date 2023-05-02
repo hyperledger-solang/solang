@@ -5,5 +5,5 @@ abstract contract test {
                 return foo + address(1);
             }
         }
-// ----
-// error (207-210): expression of type address not allowed
+// ---- Expect: diagnostics ----
+// error: 5:24-27: expression of type address not allowed

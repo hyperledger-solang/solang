@@ -13,7 +13,7 @@ contract c {
 contract d {}
 contract e {}
 
-// ----
-// error (97-148): function 'cmp' overrides function in same contract
-// 	note (15-66): previous definition of 'cmp'
-// error (160-164): expression of type contract d not allowed
+// ---- Expect: diagnostics ----
+// error: 7:2-53: function 'cmp' overrides function in same contract
+// 	note 3:2-53: previous definition of 'cmp'
+// error: 8:10-14: expression of type contract d not allowed

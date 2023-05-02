@@ -6,5 +6,5 @@ contract test {
                 (c, b) = (1, 2);
             }
         }
-// ----
-// error (124-125): 'c' not found
+// ---- Expect: diagnostics ----
+// error: 6:18-19: 'c' not found

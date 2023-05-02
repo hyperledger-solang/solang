@@ -3,5 +3,5 @@ contract test {
                 function() returns (bool) internal a;
             }
         }
-// ----
-// error (94-102): function type cannot have visibility 'internal'
+// ---- Expect: diagnostics ----
+// error: 3:43-51: function type cannot have visibility 'internal'

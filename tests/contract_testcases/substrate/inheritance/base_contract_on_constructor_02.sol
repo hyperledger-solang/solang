@@ -4,6 +4,6 @@
 
             }
         }
-// ----
-// warning (60-66): 'public': visibility for constructors is ignored
-// error (67-71): contract 'apex' is not a base contract of 'apex'
+// ---- Expect: diagnostics ----
+// warning: 3:27-33: 'public': visibility for constructors is ignored
+// error: 3:34-38: contract 'apex' is not a base contract of 'apex'

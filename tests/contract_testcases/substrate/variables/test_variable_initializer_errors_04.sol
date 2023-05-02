@@ -3,4 +3,4 @@ abstract contract test {
     uint x = x + 102;
 }
 
-// ----
+// ---- Expect: diagnostics ----

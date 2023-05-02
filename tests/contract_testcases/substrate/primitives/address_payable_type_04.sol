@@ -9,7 +9,7 @@
             function test() public {
             }
         }
-// ----
-// warning (34-73): function can be declared 'pure'
-// warning (98-99): local variable 'b' has been assigned, but never read
-// warning (174-196): function can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 3:13-52: function can be declared 'pure'
+// warning: 4:23-24: local variable 'b' has been assigned, but never read
+// warning: 9:13-35: function can be declared 'pure'

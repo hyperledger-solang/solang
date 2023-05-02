@@ -20,4 +20,4 @@ library FixedPoint {
     }
 }
 
-// ----
+// ---- Expect: diagnostics ----

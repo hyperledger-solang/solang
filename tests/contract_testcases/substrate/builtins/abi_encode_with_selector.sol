@@ -4,5 +4,5 @@
                 bytes x = abi.encodeWithSelector();
             }
         }
-// ----
-// error (91-115): function requires one 'bytes4' selector argument
+// ---- Expect: diagnostics ----
+// error: 4:27-51: function requires one 'bytes4' selector argument

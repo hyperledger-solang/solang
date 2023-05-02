@@ -9,4 +9,4 @@
                 emit foo(true, 1);
             }
         }
-// ----
+// ---- Expect: diagnostics ----

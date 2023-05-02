@@ -2,7 +2,7 @@ contract x {
             int override override y = 1;
         }
         
-// ----
-// error (38-46): duplicate 'override' attribute
-// 	note (29-37): previous 'override' attribute
-// error (38-46): only public variable can be declared 'override'
+// ---- Expect: diagnostics ----
+// error: 2:26-34: duplicate 'override' attribute
+// 	note 2:17-25: previous 'override' attribute
+// error: 2:26-34: only public variable can be declared 'override'

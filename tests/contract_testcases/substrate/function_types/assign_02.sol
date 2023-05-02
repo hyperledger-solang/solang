@@ -5,6 +5,6 @@ contract test {
                 function(int32) a = x;
             }
         }
-// ----
-// warning (45-49): function parameter 'arg1' has never been read
-// error (142-143): function mutability not compatible in conversion from 'function(int32) internal payable' to 'function(int32) internal'
+// ---- Expect: diagnostics ----
+// warning: 2:30-34: function parameter 'arg1' has never been read
+// error: 5:37-38: function mutability not compatible in conversion from 'function(int32) internal payable' to 'function(int32) internal'

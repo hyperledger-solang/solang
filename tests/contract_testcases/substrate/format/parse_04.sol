@@ -4,5 +4,5 @@
                 string s = "foo{:}s".format();
             }
         }
-// ----
-// error (88-94): missing argument to format
+// ---- Expect: diagnostics ----
+// error: 4:31-37: missing argument to format

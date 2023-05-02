@@ -1,6 +1,6 @@
 abstract contract test {
             struct test { bool a; }
         }
-// ----
-// warning (44-48): test is already defined as a contract name
-// 	note (0-70): location of previous definition
+// ---- Expect: diagnostics ----
+// warning: 2:20-24: test is already defined as a contract name
+// 	note 1:1-3:10: location of previous definition

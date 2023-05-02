@@ -16,5 +16,5 @@
             }
         }
         
-// ----
-// error (79-90): constructor returns single contract, not 2 values
+// ---- Expect: diagnostics ----
+// error: 4:21-32: constructor returns single contract, not 2 values

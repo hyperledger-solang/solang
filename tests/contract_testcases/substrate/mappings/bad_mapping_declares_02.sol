@@ -5,5 +5,5 @@
             }
             mapping(foo => address) data;
         }
-// ----
-// error (104-107): key of mapping cannot be struct type
+// ---- Expect: diagnostics ----
+// error: 6:21-24: key of mapping cannot be struct type

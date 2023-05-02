@@ -2,5 +2,5 @@ abstract contract test {
             uint x = 102;
             uint constant y = x + 5;
         }
-// ----
-// error (81-82): cannot read contract variable 'x' in constant expression
+// ---- Expect: diagnostics ----
+// error: 3:31-32: cannot read contract variable 'x' in constant expression

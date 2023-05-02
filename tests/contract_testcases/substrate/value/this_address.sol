@@ -4,5 +4,5 @@
                 return payable(this);
             }
         }
-// ----
-// warning (34-83): function can be declared 'view'
+// ---- Expect: diagnostics ----
+// warning: 3:13-62: function can be declared 'view'

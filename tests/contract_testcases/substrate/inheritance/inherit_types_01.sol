@@ -17,6 +17,6 @@
             enum enum_x { x1, x2 }
         }
         
-// ----
-// warning (39-78): function can be declared 'pure'
-// warning (142-182): function can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 3:13-52: function can be declared 'pure'
+// warning: 7:13-53: function can be declared 'pure'

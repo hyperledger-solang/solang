@@ -9,5 +9,5 @@
                 Foo a = Foo({ });
             }
         }
-// ----
-// error (187-195): struct 'Foo' has 2 fields, not 0
+// ---- Expect: diagnostics ----
+// error: 9:25-33: struct 'Foo' has 2 fields, not 0

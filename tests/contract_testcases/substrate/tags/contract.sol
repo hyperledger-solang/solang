@@ -1,5 +1,5 @@
 
         /// @barf
         abstract contract test {}
-// ----
-// error (14-19): tag '@barf' is not valid for contract
+// ---- Expect: diagnostics ----
+// error: 2:14-3:1: tag '@barf' is not valid for contract

@@ -12,5 +12,5 @@
                 a f = new a();
             }
         }
-// ----
-// error (85-91): 'foo' not a valid call parameter
+// ---- Expect: diagnostics ----
+// error: 4:24-30: 'foo' not a valid call parameter

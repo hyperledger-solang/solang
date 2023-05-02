@@ -5,5 +5,5 @@
                 uint storage b;
             }
         }
-// ----
-// error (110-117): storage location 'storage' not allowed for struct field
+// ---- Expect: diagnostics ----
+// error: 5:22-29: storage location 'storage' not allowed for struct field

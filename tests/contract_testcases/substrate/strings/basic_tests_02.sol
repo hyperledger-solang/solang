@@ -4,5 +4,5 @@
                     string f = new bytes(2);
             }
         }
-// ----
-// error (89-101): conversion from bytes to string not possible
+// ---- Expect: diagnostics ----
+// error: 4:32-44: conversion from bytes to string not possible

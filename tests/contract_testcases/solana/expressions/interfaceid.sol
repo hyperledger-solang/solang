@@ -4,5 +4,5 @@
                 return type(foo).interfaceId;
             }
         }
-// ----
-// error (100-121): type(…).interfaceId is permitted on interface, not contract foo
+// ---- Expect: diagnostics ----
+// error: 4:24-45: type(…).interfaceId is permitted on interface, not contract foo

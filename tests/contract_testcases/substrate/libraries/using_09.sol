@@ -16,6 +16,6 @@ contract c {
 }
 
 
-// ----
-// warning (0-18): function can be declared 'pure'
-// warning (42-65): function can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 1:1-19: function can be declared 'pure'
+// warning: 3:1-24: function can be declared 'pure'

@@ -2,5 +2,5 @@
         abstract contract foo {
             bool[-10 + 10] x;
         }
-// ----
-// error (50-58): zero size array not permitted
+// ---- Expect: diagnostics ----
+// error: 3:18-26: zero size array not permitted

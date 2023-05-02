@@ -4,5 +4,5 @@
                 string s = "foo{:".format();
             }
         }
-// ----
-// error (88-92): missing format specifier
+// ---- Expect: diagnostics ----
+// error: 4:31-35: missing format specifier

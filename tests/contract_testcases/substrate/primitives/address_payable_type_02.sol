@@ -9,5 +9,5 @@
             function test() public {
             }
         }
-// ----
-// error (94-95): implicit conversion to contract other from address not allowed
+// ---- Expect: diagnostics ----
+// error: 4:27-28: implicit conversion to contract other from address not allowed

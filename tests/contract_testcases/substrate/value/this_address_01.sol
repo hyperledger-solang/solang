@@ -4,5 +4,5 @@
                 return this;
             }
         }
-// ----
-// error (94-105): implicit conversion to address from contract b not allowed
+// ---- Expect: diagnostics ----
+// error: 4:17-28: implicit conversion to address from contract b not allowed

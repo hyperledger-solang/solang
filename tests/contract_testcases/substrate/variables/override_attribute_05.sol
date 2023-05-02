@@ -8,4 +8,4 @@ contract x is y {
             }
         }
         
-// ----
+// ---- Expect: diagnostics ----

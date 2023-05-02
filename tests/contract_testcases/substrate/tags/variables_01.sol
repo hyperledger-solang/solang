@@ -7,5 +7,5 @@
         }
 
         abstract contract b {}
-// ----
-// warning (157-162): storage variable 'y' has never been used
+// ---- Expect: diagnostics ----
+// warning: 6:13-18: storage variable 'y' has never been used

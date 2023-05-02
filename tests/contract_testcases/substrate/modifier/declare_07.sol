@@ -8,5 +8,5 @@
                 foo();
             }
         }
-// ----
-// error (137-140): unknown function or type 'foo'
+// ---- Expect: diagnostics ----
+// error: 8:17-20: unknown function or type 'foo'

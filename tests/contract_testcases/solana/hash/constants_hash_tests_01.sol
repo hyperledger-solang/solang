@@ -6,5 +6,5 @@
                 assert(hash == hex"527a6a4b9a6da75607546842e0e00105350b1aaf");
             }
         }
-// ----
-// error (95-105): unknown function or type 'blake2_128'
+// ---- Expect: diagnostics ----
+// error: 4:32-42: unknown function or type 'blake2_128'

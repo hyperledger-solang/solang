@@ -6,5 +6,5 @@
                 return val;
             }
         }
-// ----
-// error (111-121): function has no return values
+// ---- Expect: diagnostics ----
+// error: 6:17-27: function has no return values

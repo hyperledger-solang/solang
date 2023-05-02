@@ -18,5 +18,5 @@ contract B is Base {
     }
 }
 
-// ----
-// error (178-196): function calls via contract name are only valid for base contracts
+// ---- Expect: diagnostics ----
+// error: 11:9-27: function calls via contract name are only valid for base contracts

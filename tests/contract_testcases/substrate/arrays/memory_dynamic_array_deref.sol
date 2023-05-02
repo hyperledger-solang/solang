@@ -6,5 +6,5 @@
                 a[-1] = 5;
             }
         }
-// ----
-// error (131-133): negative value -1 does not fit into type uint32. Cannot implicitly convert signed literal to unsigned type.
+// ---- Expect: diagnostics ----
+// error: 6:19-21: negative value -1 does not fit into type uint32. Cannot implicitly convert signed literal to unsigned type.

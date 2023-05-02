@@ -7,5 +7,5 @@
             return i;
         }
     }
-// ----
-// error (181-182): 'i' not found
+// ---- Expect: diagnostics ----
+// error: 7:20-21: 'i' not found

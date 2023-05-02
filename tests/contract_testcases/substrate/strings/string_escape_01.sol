@@ -4,5 +4,5 @@
                     string f = "\x9k";
             }
         }
-// ----
-// error (90-93): \x escape should be followed by two hex digits
+// ---- Expect: diagnostics ----
+// error: 4:33-36: \x escape should be followed by two hex digits

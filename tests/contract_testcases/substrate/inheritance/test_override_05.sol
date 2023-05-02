@@ -15,6 +15,6 @@
             uint64 public x;
         }
         
-// ----
-// error (73-87): function 'foo' override list does not contain 'bar'
-// 	note (208-264): previous definition of function 'foo'
+// ---- Expect: diagnostics ----
+// error: 3:36-50: function 'foo' override list does not contain 'bar'
+// 	note 9:13-69: previous definition of function 'foo'

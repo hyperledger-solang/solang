@@ -7,6 +7,6 @@ contract fixed_bytes_subscript_not_assign {
         y[1] = 2;
     }
 }
-// ----
-// error (104-108): expression is not assignable
-// error (173-177): expression is not assignable
+// ---- Expect: diagnostics ----
+// error: 4:9-13: expression is not assignable
+// error: 7:9-13: expression is not assignable

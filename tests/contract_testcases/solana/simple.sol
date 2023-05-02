@@ -8,5 +8,5 @@ struct S {
 function inc(S s) pure { s.f1 += 1; }
 using {inc} for S global;
 
-// ----
-// warning (33-34): error 'E' has never been used
+// ---- Expect: diagnostics ----
+// warning: 3:7-8: error 'E' has never been used

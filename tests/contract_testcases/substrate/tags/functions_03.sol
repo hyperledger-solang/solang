@@ -3,5 +3,5 @@
             /// @return so here we are
             function foo() public {}
         }
-// ----
-// error (39-46): tag '@return' for function with no return values
+// ---- Expect: diagnostics ----
+// error: 3:18-25: tag '@return' for function with no return values

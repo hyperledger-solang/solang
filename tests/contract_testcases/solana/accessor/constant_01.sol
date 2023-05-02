@@ -3,5 +3,5 @@
             bytes foo;
             bytes32 public constant z = keccak256(foo);
         }
-// ----
-// error (95-98): cannot read contract variable 'foo' in constant expression
+// ---- Expect: diagnostics ----
+// error: 4:51-54: cannot read contract variable 'foo' in constant expression

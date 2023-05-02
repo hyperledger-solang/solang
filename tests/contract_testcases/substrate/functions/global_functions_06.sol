@@ -3,5 +3,5 @@
 
         function x() pure { emit foo(true); }
         
-// ----
-// error (55-69): function declared 'pure' but this expression writes to state
+// ---- Expect: diagnostics ----
+// error: 4:29-43: function declared 'pure' but this expression writes to state

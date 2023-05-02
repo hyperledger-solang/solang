@@ -11,8 +11,8 @@
                 return 1;
             }
         }
-// ----
-// error (115-134): function expects 2 arguments, 1 provided
-// error (115-134): missing argument 't' to function 'get_x'
-// warning (223-224): declaration of 'b' shadows contract name
-// 	note (169-300): previous declaration of contract name
+// ---- Expect: diagnostics ----
+// error: 5:24-43: function expects 2 arguments, 1 provided
+// error: 5:24-43: missing argument 't' to function 'get_x'
+// warning: 10:42-43: declaration of 'b' shadows contract name
+// 	note 9:9-13:10: previous declaration of contract name

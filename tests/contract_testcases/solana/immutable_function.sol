@@ -3,6 +3,6 @@ contract t {
     function y() immutable public { }
 }
 
-// ----
-// error (13-22): function cannot be declared 'immutable'
-// error (56-65): function cannot be declared 'immutable'
+// ---- Expect: diagnostics ----
+// error: 1:14-23: function cannot be declared 'immutable'
+// error: 3:18-27: function cannot be declared 'immutable'

@@ -15,8 +15,8 @@
             function f2(address a) public {}
         }
         
-// ----
-// warning (202-231): function can be declared 'pure'
-// warning (222-223): function parameter 'a' has never been read
-// warning (290-319): function can be declared 'pure'
-// warning (310-311): function parameter 'a' has never been read
+// ---- Expect: diagnostics ----
+// warning: 11:13-42: function can be declared 'pure'
+// warning: 11:33-34: function parameter 'a' has never been read
+// warning: 15:13-42: function can be declared 'pure'
+// warning: 15:33-34: function parameter 'a' has never been read

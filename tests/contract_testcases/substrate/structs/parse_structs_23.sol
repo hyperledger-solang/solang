@@ -4,4 +4,4 @@ contract Fptr {
 }
 
 
-// ----
+// ---- Expect: diagnostics ----

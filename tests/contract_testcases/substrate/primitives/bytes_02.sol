@@ -5,5 +5,5 @@ contract Foo {
     }
 }
 
-// ----
-// error (85-101): number of 1 bytes cannot be converted to type 'bytes3'
+// ---- Expect: diagnostics ----
+// error: 4:9-25: number of 1 bytes cannot be converted to type 'bytes3'

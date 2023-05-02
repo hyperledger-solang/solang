@@ -6,5 +6,5 @@ contract foo {
     A[] public map;
 }
 
-// ----
-// error (72-75): variable of type internal function cannot be 'public'
+// ---- Expect: diagnostics ----
+// error: 6:5-8: variable of type internal function cannot be 'public'

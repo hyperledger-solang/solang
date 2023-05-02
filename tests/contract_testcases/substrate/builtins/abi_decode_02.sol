@@ -4,5 +4,5 @@
                 (int a) = abi.decode(hex"00", (int feh));
             }
         }
-// ----
-// error (116-119): unexpected identifier 'feh' in type
+// ---- Expect: diagnostics ----
+// error: 4:52-55: unexpected identifier 'feh' in type

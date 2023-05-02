@@ -6,5 +6,5 @@ contract x {
             }
         }
         
-// ----
-// error (104-112): cannot call method on immutable array outside of constructor
+// ---- Expect: diagnostics ----
+// error: 5:17-25: cannot call method on immutable array outside of constructor

@@ -8,5 +8,5 @@
         contract c {
             using x for asdf;
         }
-// ----
-// error (206-210): type 'asdf' not found
+// ---- Expect: diagnostics ----
+// error: 9:25-29: type 'asdf' not found

@@ -5,5 +5,5 @@
                 emit foo (true);
             }
         }
-// ----
-// error (108-123): event type 'foo' has 2 fields, 1 provided
+// ---- Expect: diagnostics ----
+// error: 5:17-32: event type 'foo' has 2 fields, 1 provided

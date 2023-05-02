@@ -7,6 +7,6 @@ contract test {
                 function(int32) a = x;
             }
         }
-// ----
-// warning (45-49): function parameter 'arg1' has never been read
-// error (194-195): function returns do not match in conversion from 'function(int32) internal' to 'function(int32) internal returns (bool)'
+// ---- Expect: diagnostics ----
+// warning: 2:30-34: function parameter 'arg1' has never been read
+// error: 7:37-38: function returns do not match in conversion from 'function(int32) internal' to 'function(int32) internal returns (bool)'

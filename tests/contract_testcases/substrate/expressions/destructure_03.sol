@@ -6,5 +6,5 @@ contract test {
                 (a , b) = (1, );
             }
         }
-// ----
-// error (137-137): stray comma
+// ---- Expect: diagnostics ----
+// error: 6:31: stray comma

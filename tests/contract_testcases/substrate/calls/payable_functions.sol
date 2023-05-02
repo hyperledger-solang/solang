@@ -5,5 +5,5 @@
             }
         }
         
-// ----
-// error (34-50): receive function must be declared external
+// ---- Expect: diagnostics ----
+// error: 3:13-29: receive function must be declared external

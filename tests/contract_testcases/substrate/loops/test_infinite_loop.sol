@@ -8,5 +8,5 @@ contract test3 {
                 return 0;
             }
         }
-// ----
-// error (333-341): unreachable statement
+// ---- Expect: diagnostics ----
+// error: 8:17-25: unreachable statement

@@ -7,5 +7,5 @@ contract test {
                 return a * b;
             }
         }
-// ----
-// error (147-148): 'b' not found
+// ---- Expect: diagnostics ----
+// error: 4:27-28: 'b' not found

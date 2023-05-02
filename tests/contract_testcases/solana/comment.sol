@@ -4,4 +4,4 @@ contract Hello {
 }
 
 
-// ----
+// ---- Expect: diagnostics ----

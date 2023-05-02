@@ -4,5 +4,5 @@
                 return tx.gasprice;
             }
         }
-// ----
-// error (106-108): builtin 'tx.gasprice' does not exist
+// ---- Expect: diagnostics ----
+// error: 4:24-26: builtin 'tx.gasprice' does not exist

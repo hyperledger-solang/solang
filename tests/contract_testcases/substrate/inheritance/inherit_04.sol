@@ -14,13 +14,13 @@
             }
         }
         
-// ----
-// error (9-93): missing arguments to base contract 'b' constructor
-// error (9-93): missing arguments to base contract 'c' constructor
-// error (39-67): missing arguments to contract 'b' constructor
-// warning (61-67): 'public': visibility for constructors is ignored
-// error (103-187): missing arguments to base contract 'c' constructor
-// error (133-161): missing arguments to contract 'c' constructor
-// warning (155-161): 'public': visibility for constructors is ignored
-// error (211-212): base 'a' from contract 'c' is cyclic
-// warning (249-255): 'public': visibility for constructors is ignored
+// ---- Expect: diagnostics ----
+// error: 2:9-5:10: missing arguments to base contract 'b' constructor
+// error: 2:9-5:10: missing arguments to base contract 'c' constructor
+// error: 3:13-41: missing arguments to contract 'b' constructor
+// warning: 3:35-41: 'public': visibility for constructors is ignored
+// error: 7:9-10:10: missing arguments to base contract 'c' constructor
+// error: 8:13-41: missing arguments to contract 'c' constructor
+// warning: 8:35-41: 'public': visibility for constructors is ignored
+// error: 12:23-24: base 'a' from contract 'c' is cyclic
+// warning: 13:35-41: 'public': visibility for constructors is ignored

@@ -3,6 +3,6 @@
             enum e { a1 }
             event e();
         }
-// ----
-// error (66-67): e is already defined as an enum
-// 	note (39-40): location of previous definition
+// ---- Expect: diagnostics ----
+// error: 4:19-20: e is already defined as an enum
+// 	note 3:18-19: location of previous definition

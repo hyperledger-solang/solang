@@ -13,5 +13,5 @@
             }
         }
         
-// ----
-// warning (164-202): function can be declared 'view'
+// ---- Expect: diagnostics ----
+// warning: 11:13-51: function can be declared 'view'

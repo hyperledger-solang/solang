@@ -9,5 +9,5 @@
                 return f();
             }
         }
-// ----
-// error (226-236): function has no return values
+// ---- Expect: diagnostics ----
+// error: 9:17-27: function has no return values

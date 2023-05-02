@@ -8,7 +8,7 @@
                 return a + 102;
             }
         }
-// ----
-// warning (59-65): 'public': visibility for constructors is ignored
-// error (88-244): missing arguments to base contract 'base' constructor
-// error (110-114): conversion from bool to uint64 not possible
+// ---- Expect: diagnostics ----
+// warning: 3:35-41: 'public': visibility for constructors is ignored
+// error: 6:9-10:10: missing arguments to base contract 'base' constructor
+// error: 6:31-35: conversion from bool to uint64 not possible

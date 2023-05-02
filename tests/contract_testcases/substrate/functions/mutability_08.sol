@@ -5,4 +5,4 @@ contract test {
                 return foo;
             }
         }
-// ----
+// ---- Expect: diagnostics ----

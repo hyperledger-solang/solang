@@ -28,7 +28,7 @@ contract d {
 	int64 public v;
 }
 
-// ----
-// warning (38-42): storage variable 'd1' has been assigned, but never read
-// warning (134-168): function can be declared 'pure'
-// warning (175-176): local variable 's' has been assigned, but never read
+// ---- Expect: diagnostics ----
+// warning: 5:2-6: storage variable 'd1' has been assigned, but never read
+// warning: 13:2-36: function can be declared 'pure'
+// warning: 14:5-6: local variable 's' has been assigned, but never read

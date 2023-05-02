@@ -6,5 +6,5 @@
         }
         contract x {}
     
-// ----
-// error (84-93): 'salt' not permitted for external calls or constructors on solana
+// ---- Expect: diagnostics ----
+// error: 4:29-38: 'salt' not permitted for external calls or constructors on solana

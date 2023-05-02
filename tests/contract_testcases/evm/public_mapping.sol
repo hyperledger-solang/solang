@@ -5,5 +5,5 @@ contract foo {
 
     A[] public map;
 }
-// ----
-// error (78-92): mapping in a struct variable cannot be public
+// ---- Expect: diagnostics ----
+// error: 6:5-19: mapping in a struct variable cannot be public

@@ -2,8 +2,8 @@ contract test {
             function f(int test) public {
             }
         }
-// ----
-// warning (28-55): function can be declared 'pure'
-// warning (43-47): declaration of 'test' shadows contract name
-// 	note (0-81): previous declaration of contract name
-// warning (43-47): function parameter 'test' has never been read
+// ---- Expect: diagnostics ----
+// warning: 2:13-40: function can be declared 'pure'
+// warning: 2:28-32: declaration of 'test' shadows contract name
+// 	note 1:1-4:10: previous declaration of contract name
+// warning: 2:28-32: function parameter 'test' has never been read

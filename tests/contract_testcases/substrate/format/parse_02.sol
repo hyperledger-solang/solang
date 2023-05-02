@@ -4,5 +4,5 @@
                 string s = "foo{d".format();
             }
         }
-// ----
-// error (89-92): unexpected format char 'd'
+// ---- Expect: diagnostics ----
+// error: 4:32-35: unexpected format char 'd'

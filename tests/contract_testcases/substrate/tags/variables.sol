@@ -3,5 +3,5 @@
             /// @param
             int x;
         }
-// ----
-// error (39-45): tag '@param' is not valid for state variable
+// ---- Expect: diagnostics ----
+// error: 3:18-4:1: tag '@param' is not valid for state variable

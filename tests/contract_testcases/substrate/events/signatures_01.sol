@@ -9,5 +9,5 @@
                 emit foo(true, 1);
             }
         }
-// ----
-// warning (49-52): event 'foo' has never been emitted
+// ---- Expect: diagnostics ----
+// warning: 3:15-18: event 'foo' has never been emitted

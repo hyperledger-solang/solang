@@ -5,5 +5,5 @@ contract test {
                 return foo;
             }
         }
-// ----
-// error (123-133): function declared 'pure' but this expression reads from state
+// ---- Expect: diagnostics ----
+// error: 5:17-27: function declared 'pure' but this expression reads from state

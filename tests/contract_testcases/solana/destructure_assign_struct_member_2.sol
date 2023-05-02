@@ -24,6 +24,6 @@ contract Contract {
     }
 }
 
-// ----
-// warning (463-471): local variable 'struct_1' has been assigned, but never read
-// warning (488-492): conversion truncates uint256 to uint32, as memory size is type uint32 on target solana
+// ---- Expect: diagnostics ----
+// warning: 20:26-34: local variable 'struct_1' has been assigned, but never read
+// warning: 20:51-55: conversion truncates uint256 to uint32, as memory size is type uint32 on target solana

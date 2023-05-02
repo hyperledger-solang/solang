@@ -5,5 +5,5 @@
                 emit foo (true, "ab");
             }
         }
-// ----
-// error (124-128): implicit conversion to uint32 from bytes2 not allowed
+// ---- Expect: diagnostics ----
+// error: 5:33-37: implicit conversion to uint32 from bytes2 not allowed

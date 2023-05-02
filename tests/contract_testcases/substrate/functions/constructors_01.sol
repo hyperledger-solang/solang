@@ -2,5 +2,5 @@
         contract test {
             constructor() virtual {}
         }
-// ----
-// error (37-58): constructors cannot be declared 'virtual'
+// ---- Expect: diagnostics ----
+// error: 3:13-34: constructors cannot be declared 'virtual'

@@ -55,4 +55,4 @@ contract Shares {
     }
 }
 
-// ----
+// ---- Expect: diagnostics ----

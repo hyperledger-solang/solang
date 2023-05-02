@@ -4,5 +4,5 @@ abstract contract C {
     constructor foo(uint256 foo) {}
 }
 
-// ----
-// warning (76-79): function parameter 'foo' has never been read
+// ---- Expect: diagnostics ----
+// warning: 4:29-32: function parameter 'foo' has never been read

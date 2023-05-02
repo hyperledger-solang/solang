@@ -10,8 +10,8 @@ contract C is IMP.A {
 	}
 }
 
-// ----
-// error (98-112): revert with custom errors not supported on solana
-// error (105-110): error 'E' has 1 fields, 0 provided
-// 	note (33-34): definition of 'E'
-// error (144-166): revert with custom errors not supported on solana
+// ---- Expect: diagnostics ----
+// error: 6:3-17: revert with custom errors not supported on solana
+// error: 6:10-15: error 'E' has 1 fields, 0 provided
+// 	note 3:7-8: definition of 'E'
+// error: 9:3-25: revert with custom errors not supported on solana

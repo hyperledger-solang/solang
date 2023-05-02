@@ -6,5 +6,5 @@
                 assert(a.length == 5);
             }
         }
-// ----
-// error (108-110): negative value -1 does not fit into type uint32. Cannot implicitly convert signed literal to unsigned type.
+// ---- Expect: diagnostics ----
+// error: 4:48-50: negative value -1 does not fit into type uint32. Cannot implicitly convert signed literal to unsigned type.

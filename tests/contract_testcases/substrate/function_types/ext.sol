@@ -7,5 +7,5 @@ contract test {
                 return false;
             }
         }
-// ----
-// error (137-140): conversion from function(int32) internal returns (bool) to function(int32) external returns (bool) not possible
+// ---- Expect: diagnostics ----
+// error: 3:61-64: conversion from function(int32) internal returns (bool) to function(int32) external returns (bool) not possible

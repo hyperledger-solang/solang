@@ -9,5 +9,5 @@
             }
         }
         
-// ----
-// warning (117-155): function can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 7:13-51: function can be declared 'pure'

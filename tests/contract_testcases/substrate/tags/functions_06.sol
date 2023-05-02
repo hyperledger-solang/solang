@@ -4,5 +4,5 @@
             /// @return a barf
             function foo() public returns (int a, bool b) {}
         }
-// ----
-// error (70-77): duplicate tag '@return' for 'a'
+// ---- Expect: diagnostics ----
+// error: 4:18-25: duplicate tag '@return' for 'a'

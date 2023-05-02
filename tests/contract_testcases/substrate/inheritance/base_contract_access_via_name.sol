@@ -35,5 +35,5 @@ contract C is Base {
     }
 }
 
-// ----
-// error (363-374): function calls via contract name are only valid for base contracts
+// ---- Expect: diagnostics ----
+// error: 22:9-20: function calls via contract name are only valid for base contracts

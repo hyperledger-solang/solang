@@ -23,10 +23,10 @@ contract c {
 	}
 }
 
-// ----
-// error (32-43): variable cannot be of builtin type 'struct AccountInfo'
-// error (63-74): parameter of type 'struct AccountInfo' not alowed in public or external functions
-// error (92-103): return type 'struct AccountInfo' not allowed in public or external functions
-// error (157-185): builtin struct 'AccountInfo' cannot be created using struct literal
-// error (240-254): builtin struct 'AccountInfo' cannot be created using struct literal
-// error (362-365): struct 'AccountInfo' field 'key' is readonly
+// ---- Expect: diagnostics ----
+// error: 4:2-13: variable cannot be of builtin type 'struct AccountInfo'
+// error: 6:15-26: parameter of type 'struct AccountInfo' not alowed in public or external functions
+// error: 6:44-55: return type 'struct AccountInfo' not allowed in public or external functions
+// error: 10:8-36: builtin struct 'AccountInfo' cannot be created using struct literal
+// error: 15:8-22: builtin struct 'AccountInfo' cannot be created using struct literal
+// error: 20:6-9: struct 'AccountInfo' field 'key' is readonly

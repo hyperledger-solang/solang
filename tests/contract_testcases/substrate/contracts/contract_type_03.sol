@@ -10,5 +10,5 @@
                 printer y = 102;
             }
         }
-// ----
-// error (217-220): expected 'contract printer', found integer
+// ---- Expect: diagnostics ----
+// error: 10:29-32: expected 'contract printer', found integer

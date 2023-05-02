@@ -14,5 +14,5 @@ contract TestContract {
     }
 }
 
-// ----
-// warning (242-250): function parameter 'needHash' has never been read
+// ---- Expect: diagnostics ----
+// warning: 12:39-47: function parameter 'needHash' has never been read

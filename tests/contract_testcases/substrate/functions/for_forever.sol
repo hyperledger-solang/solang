@@ -7,5 +7,5 @@
             return;
         }
     }
-// ----
-// error (144-150): unreachable statement
+// ---- Expect: diagnostics ----
+// error: 7:13-19: unreachable statement

@@ -4,6 +4,6 @@
 
             function bar(bool x) foo(x) public {}
         }
-// ----
-// warning (53-54): function parameter 'f' has never been read
-// error (101-102): conversion from bool to int32 not possible
+// ---- Expect: diagnostics ----
+// warning: 3:32-33: function parameter 'f' has never been read
+// error: 5:38-39: conversion from bool to int32 not possible

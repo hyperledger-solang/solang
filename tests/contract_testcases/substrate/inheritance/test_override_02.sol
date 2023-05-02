@@ -9,6 +9,6 @@
             function f() private {}
         }
         
-// ----
-// error (37-98): 'foo' does not override anything
-// error (69-72): override 'bar' is not a base contract of 'base'
+// ---- Expect: diagnostics ----
+// error: 3:13-74: 'foo' does not override anything
+// error: 3:45-48: override 'bar' is not a base contract of 'base'

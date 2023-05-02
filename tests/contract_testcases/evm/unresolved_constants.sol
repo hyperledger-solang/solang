@@ -8,6 +8,6 @@ contract c {
 }
 
 
-// ----
-// error (18-22): 'LEN1' not found
-// error (57-61): 'LEN1' not found
+// ---- Expect: diagnostics ----
+// error: 1:19-23: 'LEN1' not found
+// error: 4:20-24: 'LEN1' not found

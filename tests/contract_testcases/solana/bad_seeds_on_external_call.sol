@@ -24,12 +24,12 @@ contract c {
 	}
 }
 
-// ----
-// error (226-229): type bytes1 found where array of slices expected
-// error (271-272): expected 'bytes[]', found integer
-// error (296-297): type string found where array of slices expected
-// error (321-330): type bytes2 found where array of slices expected
-// error (354-355): type bytes found where array of slices expected
-// error (394-395): expected 'bytes', found integer
-// error (412-417): conversion from struct AccountMeta[1] to bytes not possible
-// error (433-444): type bytes found where array bytes expected
+// ---- Expect: diagnostics ----
+// error: 13:4-7: type bytes1 found where array of slices expected
+// error: 15:4-5: expected 'bytes[]', found integer
+// error: 16:4-5: type string found where array of slices expected
+// error: 17:4-13: type bytes2 found where array of slices expected
+// error: 18:4-5: type bytes found where array of slices expected
+// error: 20:5-6: expected 'bytes', found integer
+// error: 21:5-10: conversion from struct AccountMeta[1] to bytes not possible
+// error: 22:4-15: type bytes found where array bytes expected

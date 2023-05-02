@@ -4,5 +4,5 @@
 
             function bar() foo(1) public {}
         }
-// ----
-// error (84-90): modifier expects 0 arguments, 1 provided
+// ---- Expect: diagnostics ----
+// error: 5:28-34: modifier expects 0 arguments, 1 provided

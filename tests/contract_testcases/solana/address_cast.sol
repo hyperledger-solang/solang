@@ -7,5 +7,5 @@ contract c {
 	}
 }
 
-// ----
-// error (191-201): expression is not assignable
+// ---- Expect: diagnostics ----
+// error: 6:3-13: expression is not assignable

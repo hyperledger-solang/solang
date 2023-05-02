@@ -3,5 +3,5 @@
             function foo() virtual external;
         }
         
-// ----
-// warning (52-59): functions in an interface are implicitly virtual
+// ---- Expect: diagnostics ----
+// warning: 3:28-35: functions in an interface are implicitly virtual

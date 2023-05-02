@@ -7,7 +7,7 @@
             constructor() base(true) base(false) {}
             function foo() pure public {}
         }
-// ----
-// warning (63-64): function parameter 'x' has never been read
-// error (149-160): duplicate base contract 'base'
-// 	note (138-148): previous base contract 'base'
+// ---- Expect: diagnostics ----
+// warning: 3:30-31: function parameter 'x' has never been read
+// error: 7:38-49: duplicate base contract 'base'
+// 	note 7:27-37: previous base contract 'base'

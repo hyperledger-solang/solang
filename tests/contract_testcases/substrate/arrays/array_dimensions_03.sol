@@ -3,5 +3,5 @@
             enum e { e1, e2, e3 }
             e[1 / 0] x;
         }
-// ----
-// error (81-86): divide by zero
+// ---- Expect: diagnostics ----
+// error: 4:15-20: divide by zero

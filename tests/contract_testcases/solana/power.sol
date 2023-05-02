@@ -6,4 +6,4 @@ contract AstExample {
     }
 }
 
-// ----
+// ---- Expect: diagnostics ----

@@ -31,7 +31,7 @@ contract Y2 is X2 {
 }
 
 
-// ----
-// error (45-53): global variable has no bases contracts to override
-// error (113-116): 'meh' does not override anything
-// error (549-561): function 'foo' missing overrides 'B2', specify 'override(B2,A2)'
+// ---- Expect: diagnostics ----
+// error: 3:14-22: global variable has no bases contracts to override
+// error: 6:29-32: 'meh' does not override anything
+// error: 28:21-33: function 'foo' missing overrides 'B2', specify 'override(B2,A2)'

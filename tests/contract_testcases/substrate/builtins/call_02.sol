@@ -12,5 +12,5 @@
                 print("Baa!");
             }
         }
-// ----
-// error (138-164): destucturing statement needed for function that returns multiple values
+// ---- Expect: diagnostics ----
+// error: 6:27-53: destucturing statement needed for function that returns multiple values

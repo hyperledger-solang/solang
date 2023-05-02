@@ -4,5 +4,5 @@
                 boolean x;
             }
         }
-// ----
-// error (81-88): type 'boolean' not found
+// ---- Expect: diagnostics ----
+// error: 4:17-24: type 'boolean' not found

@@ -155,6 +155,6 @@
          }
  }
 
-// ----
-// warning (2323-2335): local variable 'payoutToSend' has been assigned, but never read
-// warning (6079-6086): return variable 'Address' has never been assigned
+// ---- Expect: diagnostics ----
+// warning: 67:31-43: local variable 'payoutToSend' has been assigned, but never read
+// warning: 150:87-94: return variable 'Address' has never been assigned

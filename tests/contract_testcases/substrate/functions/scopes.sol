@@ -7,5 +7,5 @@
             return a;
         }
     }
-// ----
-// error (150-151): 'a' not found
+// ---- Expect: diagnostics ----
+// error: 7:20-21: 'a' not found

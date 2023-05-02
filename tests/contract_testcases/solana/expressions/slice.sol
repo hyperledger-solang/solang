@@ -7,7 +7,7 @@ contract slice {
         bytes x4 = foo[:];
     }
 }
-// ----
-// warning (41-44): declaration of 'foo' shadows function
-// 	note (31-34): previous declaration of function
-// error (74-81): slice not supported yet
+// ---- Expect: diagnostics ----
+// warning: 3:24-27: declaration of 'foo' shadows function
+// 	note 3:14-17: previous declaration of function
+// error: 4:20-27: slice not supported yet

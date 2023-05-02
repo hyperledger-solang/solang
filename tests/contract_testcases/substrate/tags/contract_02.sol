@@ -8,4 +8,4 @@
          * a contract
          */
         abstract contract test {}
-// ----
+// ---- Expect: diagnostics ----

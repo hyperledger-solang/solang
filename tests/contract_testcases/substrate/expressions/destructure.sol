@@ -6,5 +6,5 @@ contract test {
                 (a, b) = (1, 2, 3);
             }
         }
-// ----
-// error (123-141): destructuring assignment has 2 elements on the left and 3 on the right
+// ---- Expect: diagnostics ----
+// error: 6:17-35: destructuring assignment has 2 elements on the left and 3 on the right

@@ -5,5 +5,5 @@
             }
         }
         
-// ----
-// error (117-145): 'delegatecall' cannot have value specifed
+// ---- Expect: diagnostics ----
+// error: 4:45-73: 'delegatecall' cannot have value specifed

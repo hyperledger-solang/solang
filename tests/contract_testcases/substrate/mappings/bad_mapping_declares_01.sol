@@ -2,5 +2,5 @@
         contract c {
             mapping(uint[] => address) data;
         }
-// ----
-// error (42-48): key of mapping cannot be array type
+// ---- Expect: diagnostics ----
+// error: 3:21-27: key of mapping cannot be array type

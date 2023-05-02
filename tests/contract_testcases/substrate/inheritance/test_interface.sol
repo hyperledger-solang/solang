@@ -4,6 +4,6 @@
             }
         }
         
-// ----
-// error (37-65): constructor not allowed in an interface
-// warning (59-65): 'public': visibility for constructors is ignored
+// ---- Expect: diagnostics ----
+// error: 3:13-41: constructor not allowed in an interface
+// warning: 3:35-41: 'public': visibility for constructors is ignored

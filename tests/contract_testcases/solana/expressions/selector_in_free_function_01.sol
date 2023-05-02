@@ -8,7 +8,7 @@
                 return I.X.selector;
             }
         }
-// ----
-// warning (44-45): X is already defined as a contract name
-// 	note (82-206): location of previous definition
-// warning (107-143): function can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 3:22-23: X is already defined as a contract name
+// 	note 6:9-10:10: location of previous definition
+// warning: 7:13-49: function can be declared 'pure'

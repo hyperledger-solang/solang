@@ -5,6 +5,6 @@
                 Foo y;
             }
         }
-// ----
-// error (59-62): struct 'Foo' has infinite size
-// 	note (105-110): recursive field 'y'
+// ---- Expect: diagnostics ----
+// error: 3:20-23: struct 'Foo' has infinite size
+// 	note 5:17-22: recursive field 'y'

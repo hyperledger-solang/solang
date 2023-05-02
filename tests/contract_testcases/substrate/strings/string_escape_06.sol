@@ -3,4 +3,4 @@ contract foo {
         return "ABC\xff";
     }
 }
-// ----
+// ---- Expect: diagnostics ----

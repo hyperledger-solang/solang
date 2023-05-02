@@ -2,5 +2,5 @@
         library c {
             fallback() internal {}
         }
-// ----
-// error (33-52): fallback not allowed in a library
+// ---- Expect: diagnostics ----
+// error: 3:13-32: fallback not allowed in a library

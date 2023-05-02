@@ -6,5 +6,5 @@
         contract a is c {
             function bar() public { }
         }
-// ----
-// error (92-93): library 'c' cannot be used as base contract for contract 'a'
+// ---- Expect: diagnostics ----
+// error: 6:23-24: library 'c' cannot be used as base contract for contract 'a'

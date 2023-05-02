@@ -3,5 +3,5 @@ contract test {
                 bool is_nonzero = bar;
             }
         }
-// ----
-// error (94-97): conversion from uint256 to bool not possible
+// ---- Expect: diagnostics ----
+// error: 3:35-38: conversion from uint256 to bool not possible

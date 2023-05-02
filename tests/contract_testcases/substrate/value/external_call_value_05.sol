@@ -12,5 +12,5 @@
                 a f = new a();
             }
         }
-// ----
-// error (94-106): code block found where list of call arguments expected, like '{gas: 5000}'
+// ---- Expect: diagnostics ----
+// error: 4:33-45: code block found where list of call arguments expected, like '{gas: 5000}'

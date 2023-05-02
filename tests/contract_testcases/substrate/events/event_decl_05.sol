@@ -6,5 +6,5 @@
         contract c {
             event foo (s x);
         }
-// ----
-// error (114-117): mapping type is not permitted as event field
+// ---- Expect: diagnostics ----
+// error: 7:24-27: mapping type is not permitted as event field

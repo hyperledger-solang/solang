@@ -4,6 +4,6 @@
                 address payable b = address payable(a);
             }
         }
-// ----
-// warning (34-65): function can be declared 'pure'
-// warning (100-101): local variable 'b' has been assigned, but never read
+// ---- Expect: diagnostics ----
+// warning: 3:13-44: function can be declared 'pure'
+// warning: 4:33-34: local variable 'b' has been assigned, but never read

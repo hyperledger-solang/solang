@@ -24,12 +24,12 @@ contract C {
 	}
 }
 
-// ----
-// warning (74-97): function can be declared 'pure'
-// warning (123-126): local variable 'iPj' has been assigned, but never read
-// warning (153-178): function can be declared 'pure'
-// warning (203-206): local variable 'iPj' has been assigned, but never read
-// warning (306-336): function can be declared 'pure'
-// warning (348-351): local variable 'iPj' has been assigned, but never read
-// warning (378-410): function can be declared 'pure'
-// warning (424-427): local variable 'iPj' has been assigned, but never read
+// ---- Expect: diagnostics ----
+// warning: 3:2-25: function can be declared 'pure'
+// warning: 4:24-27: local variable 'iPj' has been assigned, but never read
+// warning: 8:2-27: function can be declared 'pure'
+// warning: 9:23-26: local variable 'iPj' has been assigned, but never read
+// warning: 16:2-32: function can be declared 'pure'
+// warning: 17:10-13: local variable 'iPj' has been assigned, but never read
+// warning: 21:2-34: function can be declared 'pure'
+// warning: 22:12-15: local variable 'iPj' has been assigned, but never read

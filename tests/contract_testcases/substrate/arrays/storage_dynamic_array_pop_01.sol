@@ -6,5 +6,5 @@
                 bar.pop();
             }
         }
-// ----
-// error (108-111): method 'pop()' not allowed on fixed length array
+// ---- Expect: diagnostics ----
+// error: 6:21-24: method 'pop()' not allowed on fixed length array

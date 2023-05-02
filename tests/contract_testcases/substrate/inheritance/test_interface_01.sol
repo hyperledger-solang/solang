@@ -3,5 +3,5 @@
             function bar() external {}
         }
         
-// ----
-// error (37-60): function in an interface cannot have a body
+// ---- Expect: diagnostics ----
+// error: 3:13-36: function in an interface cannot have a body

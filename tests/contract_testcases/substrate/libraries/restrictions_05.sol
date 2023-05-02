@@ -2,5 +2,5 @@
         library c {
             function foo() override public {}
         }
-// ----
-// error (48-56): function in a library cannot override
+// ---- Expect: diagnostics ----
+// error: 3:28-36: function in a library cannot override

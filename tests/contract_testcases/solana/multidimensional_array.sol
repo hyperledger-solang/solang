@@ -6,4 +6,4 @@ contract Testing {
         return arr2[1][1][1];
     }
 }
-// ----
+// ---- Expect: diagnostics ----

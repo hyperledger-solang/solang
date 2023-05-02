@@ -4,6 +4,6 @@ contract test {
                 return state.foo;
             }
         }
-// ----
-// error (33-38): enum 'state' has no fields
-// error (130-133): enum test.state does not have value foo
+// ---- Expect: diagnostics ----
+// error: 2:18-23: enum 'state' has no fields
+// error: 4:30-33: enum test.state does not have value foo

@@ -29,11 +29,11 @@ contract c {
 }
 
 
-// ----
-// error (61-71): cannot use rational numbers with '!=' or '==' operator
-// error (125-135): cannot use rational numbers with '!=' or '==' operator
-// error (175-184): cannot use rational numbers with '<' operator
-// error (236-246): cannot use rational numbers with '<=' operator
-// error (289-296): cannot use rational numbers with '>' operator
-// error (359-366): cannot use rational numbers with '>' operator
-// error (407-416): cannot use rational numbers with '>=' operator
+// ---- Expect: diagnostics ----
+// error: 3:10-20: cannot use rational numbers with '!=' or '==' operator
+// error: 7:10-20: cannot use rational numbers with '!=' or '==' operator
+// error: 11:11-20: cannot use rational numbers with '<' operator
+// error: 15:16-26: cannot use rational numbers with '<=' operator
+// error: 19:7-14: cannot use rational numbers with '>' operator
+// error: 23:10-17: cannot use rational numbers with '>' operator
+// error: 27:6-15: cannot use rational numbers with '>=' operator

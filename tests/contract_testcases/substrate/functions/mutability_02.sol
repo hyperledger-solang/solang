@@ -3,5 +3,5 @@ abstract contract test {
                 return foo[0];
             }
         }
-// ----
-// error (118-131): function declared 'pure' but this expression reads from state
+// ---- Expect: diagnostics ----
+// error: 3:17-30: function declared 'pure' but this expression reads from state

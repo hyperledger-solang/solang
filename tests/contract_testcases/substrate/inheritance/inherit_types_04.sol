@@ -10,4 +10,4 @@
             }
         }
         
-// ----
+// ---- Expect: diagnostics ----

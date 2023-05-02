@@ -4,5 +4,5 @@
                     string f = "\xたこ";
             }
         }
-// ----
-// error (90-94): \x escape should be followed by two hex digits
+// ---- Expect: diagnostics ----
+// error: 4:33-37: \x escape should be followed by two hex digits

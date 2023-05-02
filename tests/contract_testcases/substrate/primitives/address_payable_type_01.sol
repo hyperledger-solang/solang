@@ -8,6 +8,6 @@
                 return b == a;
             }
         }
-// ----
-// warning (34-100): function can be declared 'pure'
-// warning (161-227): function can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 3:13-79: function can be declared 'pure'
+// warning: 7:13-79: function can be declared 'pure'

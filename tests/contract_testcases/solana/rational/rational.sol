@@ -12,5 +12,5 @@ contract foo {
         uint256 a2 = 1e18- b;
     }
 }
-// ----
-// error (76-79): conversion to uint256 from rational not allowed
+// ---- Expect: diagnostics ----
+// error: 3:18-21: conversion to uint256 from rational not allowed

@@ -25,7 +25,7 @@ pub mod diagnostics;
 mod dotgraphviz;
 pub(crate) mod eval;
 pub(crate) mod expression;
-mod file;
+pub mod file;
 mod format;
 mod function_annotation;
 mod functions;

@@ -4,5 +4,5 @@
                 return tx.origin;
             }
         }
-// ----
-// error (107-109): builtin 'tx.origin' does not exist
+// ---- Expect: diagnostics ----
+// error: 4:24-26: builtin 'tx.origin' does not exist

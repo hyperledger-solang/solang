@@ -18,14 +18,14 @@ contract c {
 	}
 }
 
-// ----
-// error (79-82): foo is already defined as a struct
-// 	note (57-60): location of previous definition
-// error (86-92): 'int256[2]' is not an elementary value type
-// error (100-103): foo is already defined as a struct
-// 	note (57-60): location of previous definition
-// warning (120-129): GlobalFoo is already defined as an user type
-// 	note (5-14): location of previous definition
-// error (175-180): Value is already defined as an user type
-// 	note (149-154): location of previous definition
-// error (272-277): implicit conversion would change sign from int136 to uint128
+// ---- Expect: diagnostics ----
+// error: 5:7-10: foo is already defined as a struct
+// 	note 4:9-12: location of previous definition
+// error: 5:14-20: 'int256[2]' is not an elementary value type
+// error: 6:7-10: foo is already defined as a struct
+// 	note 4:9-12: location of previous definition
+// warning: 7:9-18: GlobalFoo is already defined as an user type
+// 	note 1:6-15: location of previous definition
+// error: 10:9-14: Value is already defined as an user type
+// 	note 9:7-12: location of previous definition
+// error: 13:21-26: implicit conversion would change sign from int136 to uint128

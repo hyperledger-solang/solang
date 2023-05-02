@@ -42,4 +42,4 @@ contract  Ownable  is  Context  {
         }
 }
 
-// ----
+// ---- Expect: diagnostics ----

@@ -16,9 +16,9 @@ contract c {
 	}
 }
 
-// ----
-// error (53-60): 'rubbish' not found
-// error (135-138): 'meh' not found
-// error (175-178): 'foo' not found
-// error (222-224): 'oo' not found
-// error (270-273): 'foo' not found
+// ---- Expect: diagnostics ----
+// error: 3:11-18: 'rubbish' not found
+// error: 6:15-18: 'meh' not found
+// error: 9:9-12: 'foo' not found
+// error: 12:10-12: 'oo' not found
+// error: 15:14-17: 'foo' not found

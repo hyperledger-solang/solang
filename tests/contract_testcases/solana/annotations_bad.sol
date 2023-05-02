@@ -64,29 +64,29 @@ abstract contract c {
 	function method2() virtual public;
 }
 
-// ----
-// error (1-19): annotations not allowed on pragma
-// error (20-29): annotations not allowed on pragma
-// warning (30-48): unknown pragma 'version' with value '1.1' ignored
-// error (51-58): annotations not allowed on struct
-// error (81-95): annotations not allowed on event
-// error (113-126): annotations not allowed on enum
-// error (143-155): annotations not allowed on type
-// error (176-188): annotations not allowed on variable
-// error (210-239): annotations not allowed on function
-// error (306-321): annotations not allowed on using
-// error (345-372): unknown annotation 'program' on contract c
-// error (373-389): annotion takes an account, for example '@program_id("BBH7Xi5ddus5EoQhzJLgyodVxJJGkvBRCY5AhBA1jwUr")'
-// error (402-407): address literal 123 incorrect length of 2
-// error (421-470): address literal 5zMuDyvxCyss68EjbFgJZ22dxzHUZUW7ZV2v2Na4N9YWees incorrect length of 34
-// error (532-591): duplicate program_id annotation
-// 	note (472-531): location of previous program_id annotation
-// error (615-627): annotations not allowed on variable
-// error (642-669): annotations not allowed on using
-// error (695-702): annotations not allowed on struct
-// error (743-754): annotations not allowed on enum
-// error (772-784): annotations not allowed on event
-// error (799-807): annotations not allowed on type
-// error (830-842): unknown annotation method for constructor
-// error (877-906): unknown annotation fn for function
-// error (938-963): annotation '@annotation' not allowed on function with no body
+// ---- Expect: diagnostics ----
+// error: 2:1-19: annotations not allowed on pragma
+// error: 3:1-10: annotations not allowed on pragma
+// warning: 4:1-19: unknown pragma 'version' with value '1.1' ignored
+// error: 6:1-8: annotations not allowed on struct
+// error: 9:1-15: annotations not allowed on event
+// error: 12:1-14: annotations not allowed on enum
+// error: 15:1-13: annotations not allowed on type
+// error: 18:1-13: annotations not allowed on variable
+// error: 21:1-30: annotations not allowed on function
+// error: 26:1-16: annotations not allowed on using
+// error: 29:1-28: unknown annotation 'program' on contract c
+// error: 30:1-17: annotion takes an account, for example '@program_id("BBH7Xi5ddus5EoQhzJLgyodVxJJGkvBRCY5AhBA1jwUr")'
+// error: 31:13-18: address literal 123 incorrect length of 2
+// error: 32:13-62: address literal 5zMuDyvxCyss68EjbFgJZ22dxzHUZUW7ZV2v2Na4N9YWees incorrect length of 34
+// error: 34:1-60: duplicate program_id annotation
+// 	note 33:1-60: location of previous program_id annotation
+// error: 36:2-14: annotations not allowed on variable
+// error: 39:2-29: annotations not allowed on using
+// error: 42:2-9: annotations not allowed on struct
+// error: 47:2-13: annotations not allowed on enum
+// error: 50:2-14: annotations not allowed on event
+// error: 53:2-10: annotations not allowed on type
+// error: 56:2-14: unknown annotation method for constructor
+// error: 60:2-31: unknown annotation fn for function
+// error: 63:2-27: annotation '@annotation' not allowed on function with no body

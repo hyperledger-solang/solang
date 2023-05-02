@@ -13,6 +13,6 @@
                 }
         }
         
-// ----
-// warning (85-89): local variable 'code' has been assigned, but never read
-// error (255-262): circular reference creating contract 'a'
+// ---- Expect: diagnostics ----
+// warning: 4:27-31: local variable 'code' has been assigned, but never read
+// error: 12:31-38: circular reference creating contract 'a'

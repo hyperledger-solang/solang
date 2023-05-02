@@ -5,5 +5,5 @@
             }
         }
         
-// ----
-// error (37-93): 'foo' does not override anything
+// ---- Expect: diagnostics ----
+// error: 3:13-69: 'foo' does not override anything

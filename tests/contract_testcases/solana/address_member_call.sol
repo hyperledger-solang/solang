@@ -45,4 +45,4 @@ contract MyContract {
 }
 
 
-// ----
+// ---- Expect: diagnostics ----

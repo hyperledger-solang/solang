@@ -2,6 +2,6 @@
         contract c {
             modifier foo() public {}
         }
-// ----
-// error (49-55): 'public': modifiers can not have visibility
-// error (58-58): missing '_' in modifier
+// ---- Expect: diagnostics ----
+// error: 3:28-34: 'public': modifiers can not have visibility
+// error: 3:37: missing '_' in modifier

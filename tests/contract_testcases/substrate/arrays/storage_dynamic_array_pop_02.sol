@@ -10,5 +10,5 @@
                 s storage x = bar.pop();
             }
         }
-// ----
-// error (205-208): conversion from struct foo.s to struct foo.s storage not possible
+// ---- Expect: diagnostics ----
+// error: 10:35-38: conversion from struct foo.s to struct foo.s storage not possible

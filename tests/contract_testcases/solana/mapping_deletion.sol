@@ -38,5 +38,5 @@ contract DeleteTest {
     }
 
 }
-// ----
-// error (515-531): 'address' call argument required on solana
+// ---- Expect: diagnostics ----
+// error: 25:24-40: 'address' call argument required on solana

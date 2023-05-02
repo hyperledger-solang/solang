@@ -4,4 +4,4 @@ struct C { B b; D d; }
 struct D { uint e; }
 abstract contract Foo {}
 
-// ----
+// ---- Expect: diagnostics ----

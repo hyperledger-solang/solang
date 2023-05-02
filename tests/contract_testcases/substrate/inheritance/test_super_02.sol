@@ -8,5 +8,5 @@
                 super.f2();
             }
         }
-// ----
-// error (152-154): unknown function or type 'f2'
+// ---- Expect: diagnostics ----
+// error: 8:23-25: unknown function or type 'f2'

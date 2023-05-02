@@ -2,5 +2,5 @@
         library c {
             constructor() {}
         }
-// ----
-// error (33-47): constructor not allowed in a library
+// ---- Expect: diagnostics ----
+// error: 3:13-27: constructor not allowed in a library

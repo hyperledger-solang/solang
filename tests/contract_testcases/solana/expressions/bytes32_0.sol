@@ -12,4 +12,4 @@
                 r = bytes3(0x012233);
             }
         }
-// ----
+// ---- Expect: diagnostics ----

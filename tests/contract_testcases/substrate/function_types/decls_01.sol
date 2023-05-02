@@ -3,5 +3,5 @@ contract test {
                 function() private a;
             }
         }
-// ----
-// error (79-86): function type cannot have visibility 'private'
+// ---- Expect: diagnostics ----
+// error: 3:28-35: function type cannot have visibility 'private'

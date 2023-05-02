@@ -7,4 +7,4 @@
         /// @dev this is
         ///  a contract
         abstract contract test {}
-// ----
+// ---- Expect: diagnostics ----

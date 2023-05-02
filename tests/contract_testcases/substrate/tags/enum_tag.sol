@@ -3,5 +3,5 @@
         enum x {
             foo1
         }
-// ----
-// error (14-20): tag '@param' is not valid for enum
+// ---- Expect: diagnostics ----
+// error: 2:14-3:1: tag '@param' is not valid for enum

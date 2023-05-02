@@ -15,4 +15,4 @@ contract c {
 	}
 }
 
-// ----
+// ---- Expect: diagnostics ----

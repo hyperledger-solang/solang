@@ -1,5 +1,5 @@
 
         function x();
         
-// ----
-// error (9-21): missing function body
+// ---- Expect: diagnostics ----
+// error: 2:9-21: missing function body

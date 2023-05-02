@@ -15,7 +15,7 @@ contract bar {
             }
         }
         
-// ----
-// warning (187-207): function can be declared 'view'
-// warning (274-282): local variable 'variable' has been assigned, but never read
-// warning (391-400): local variable 'func_type' has been assigned, but never read
+// ---- Expect: diagnostics ----
+// warning: 10:13-33: function can be declared 'view'
+// warning: 12:21-29: local variable 'variable' has been assigned, but never read
+// warning: 14:51-60: local variable 'func_type' has been assigned, but never read

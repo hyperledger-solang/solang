@@ -6,5 +6,5 @@
                 x.pop();
             }
         }
-// ----
-// warning (36-58): function can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 3:13-35: function can be declared 'pure'

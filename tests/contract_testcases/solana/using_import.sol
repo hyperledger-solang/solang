@@ -10,6 +10,6 @@ contract c {
 	}
 }
 
-// ----
-// warning (121-154): function can be declared 'pure'
-// warning (33-34): error 'E' has never been used
+// ---- Expect: diagnostics ----
+// warning: 7:2-35: function can be declared 'pure'
+// warning: 3:7-8: error 'E' has never been used

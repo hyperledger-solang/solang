@@ -9,5 +9,5 @@ contract Test {
 	}
 }
 
-// ----
-// error (53-100): Recursive parameter not allowed for public or external functions.
+// ---- Expect: diagnostics ----
+// error: 7:2-49: Recursive parameter not allowed for public or external functions.

@@ -11,5 +11,5 @@
                 return 1;
             }
         }
-// ----
-// error (115-124): function expects 1 arguments, 0 provided
+// ---- Expect: diagnostics ----
+// error: 5:24-33: function expects 1 arguments, 0 provided

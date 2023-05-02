@@ -1,3 +1,3 @@
 uint constant x;
-// ----
-// error (0-15): missing initializer for constant
+// ---- Expect: diagnostics ----
+// error: 1:1-16: missing initializer for constant

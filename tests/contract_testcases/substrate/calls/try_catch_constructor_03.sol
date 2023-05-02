@@ -4,5 +4,5 @@
                 x : 1
             }
         }
-// ----
-// error (54-91): expected code block, not list of named arguments
+// ---- Expect: diagnostics ----
+// error: 3:33-5:14: expected code block, not list of named arguments

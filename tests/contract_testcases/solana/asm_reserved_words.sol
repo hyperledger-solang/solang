@@ -5,4 +5,4 @@ contract default {
 	}
 }
 
-// ----
+// ---- Expect: diagnostics ----

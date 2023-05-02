@@ -8,5 +8,5 @@
                 i = 2;
             }
         }
-// ----
-// error (88-115): fallback function must not be declare payable, use 'receive() external payable' instead
+// ---- Expect: diagnostics ----
+// error: 7:13-40: fallback function must not be declare payable, use 'receive() external payable' instead

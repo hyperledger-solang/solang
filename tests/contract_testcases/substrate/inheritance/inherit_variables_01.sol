@@ -9,5 +9,5 @@
             }
         }
         
-// ----
-// error (173-176): 'foo' not found
+// ---- Expect: diagnostics ----
+// error: 8:24-27: 'foo' not found

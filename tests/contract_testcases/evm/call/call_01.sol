@@ -5,5 +5,5 @@
             }
         }
         
-// ----
-// error (117-143): 'staticcall' cannot have value specifed
+// ---- Expect: diagnostics ----
+// error: 4:45-71: 'staticcall' cannot have value specifed

@@ -4,5 +4,5 @@
             function bar(foo2 memory x) public returns () {
             }
         }
-// ----
-// error (91-97): data location 'memory' can only be specified for array, struct or mapping
+// ---- Expect: diagnostics ----
+// error: 4:31-37: data location 'memory' can only be specified for array, struct or mapping

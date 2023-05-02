@@ -14,5 +14,5 @@
             }
         }
         
-// ----
-// error (79-79): code block missing for no catch
+// ---- Expect: diagnostics ----
+// error: 4:21: code block missing for no catch

@@ -3,7 +3,7 @@ contract C {
     function foo() public pure {}
 }
 
-// ----
-// warning (32-38): 'public': visibility for constructors is ignored
-// error (46-72): Non unique function or constructor name 'foo'
-// 	note (14-38): previous declaration of 'foo'
+// ---- Expect: diagnostics ----
+// warning: 2:20-26: 'public': visibility for constructors is ignored
+// error: 3:5-31: Non unique function or constructor name 'foo'
+// 	note 2:2-26: previous declaration of 'foo'

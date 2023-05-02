@@ -3,7 +3,11 @@
 use path_slash::PathExt;
 use rayon::prelude::*;
 use solang::{
-    codegen, file_resolver::FileResolver, parse_and_resolve, sema::ast::Namespace, Target,
+    codegen,
+    file_resolver::FileResolver,
+    parse_and_resolve,
+    sema::{ast::Namespace, file::PathDisplay},
+    Target,
 };
 use solang_parser::diagnostics::Level;
 use std::{
@@ -138,23 +142,21 @@ fn add_file(cache: &mut FileResolver, path: &Path, target: Target) -> io::Result
 }
 
 fn check_diagnostics(path: &Path, ns: &Namespace) {
-    let mut expected = "// ----\n".to_owned();
+    let mut expected = "// ---- Expect: diagnostics ----\n".to_owned();
 
     for diag in ns.diagnostics.iter() {
         if diag.level == Level::Warning || diag.level == Level::Error {
             expected.push_str(&format!(
-                "// {} ({}-{}): {}\n",
+                "// {}: {}: {}\n",
                 diag.level,
-                diag.loc.start(),
-                diag.loc.end(),
+                ns.loc_to_string(PathDisplay::None, &diag.loc),
                 diag.message
             ));
 
             for note in &diag.notes {
                 expected.push_str(&format!(
-                    "// \tnote ({}-{}): {}\n",
-                    note.loc.start(),
-                    note.loc.end(),
+                    "// \tnote {}: {}\n",
+                    ns.loc_to_string(PathDisplay::None, &note.loc),
                     note.message
                 ));
             }
@@ -168,7 +170,7 @@ fn check_diagnostics(path: &Path, ns: &Namespace) {
     for line in BufReader::new(file).lines() {
         let line = line.unwrap();
 
-        if found.is_empty() && !line.starts_with("// ----") {
+        if found.is_empty() && !line.starts_with("// ---- Expect: diagnostics ----") {
             continue;
         }
 

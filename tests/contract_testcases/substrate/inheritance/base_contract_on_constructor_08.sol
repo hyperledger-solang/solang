@@ -13,9 +13,9 @@
             constructor(int64 z) { foo = z; }
         }
 
-// ----
-// error (67-71): duplicate argument for base contract 'a'
-// 	note (117-121): previous argument for base contract 'a'
-// error (117-121): duplicate argument for base contract 'a'
-// 	note (117-121): previous argument for base contract 'a'
-// warning (154-155): function parameter 'y' has never been read
+// ---- Expect: diagnostics ----
+// error: 3:41-45: duplicate argument for base contract 'a'
+// 	note 6:32-36: previous argument for base contract 'a'
+// error: 6:32-36: duplicate argument for base contract 'a'
+// 	note 6:32-36: previous argument for base contract 'a'
+// warning: 7:31-32: function parameter 'y' has never been read

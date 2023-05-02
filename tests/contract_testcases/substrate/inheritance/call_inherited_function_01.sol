@@ -11,6 +11,6 @@
             }
         }
         
-// ----
-// error (261-272): cannot call private function
-// 	note (46-93): declaration of function 'foo'
+// ---- Expect: diagnostics ----
+// error: 10:24-35: cannot call private function
+// 	note 3:13-60: declaration of function 'foo'

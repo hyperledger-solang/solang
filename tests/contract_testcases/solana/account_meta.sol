@@ -17,6 +17,6 @@ contract spl {
 
 }
 
-// ----
-// warning (41-86): function can be declared 'pure'
-// warning (206-260): function can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 4:2-47: function can be declared 'pure'
+// warning: 9:2-56: function can be declared 'pure'

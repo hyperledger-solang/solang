@@ -3,6 +3,6 @@ abstract contract Recursive {
     struct C { B[] b; C c; }
 }
 
-// ----
-// error (65-66): struct 'C' has infinite size
-// 	note (76-79): recursive field 'c'
+// ---- Expect: diagnostics ----
+// error: 3:12-13: struct 'C' has infinite size
+// 	note 3:23-26: recursive field 'c'

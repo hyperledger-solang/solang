@@ -20,5 +20,5 @@
             }
         }
         
-// ----
-// error (237-240): only catch 'Error' or 'Panic' is supported, not 'Foo'
+// ---- Expect: diagnostics ----
+// error: 8:25-28: only catch 'Error' or 'Panic' is supported, not 'Foo'

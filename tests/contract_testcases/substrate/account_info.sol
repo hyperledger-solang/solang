@@ -5,9 +5,9 @@ contract c {
 	function notpub(AccountInfo) private returns (AccountInfo) {}
 }
 
-// ----
-// error (14-25): type 'AccountInfo' not found
-// error (45-56): type 'AccountInfo' not found
-// error (74-85): type 'AccountInfo' not found
-// error (107-118): type 'AccountInfo' not found
-// error (137-148): type 'AccountInfo' not found
+// ---- Expect: diagnostics ----
+// error: 2:2-13: type 'AccountInfo' not found
+// error: 4:15-26: type 'AccountInfo' not found
+// error: 4:44-55: type 'AccountInfo' not found
+// error: 5:18-29: type 'AccountInfo' not found
+// error: 5:48-59: type 'AccountInfo' not found

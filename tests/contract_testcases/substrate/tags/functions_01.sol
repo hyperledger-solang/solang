@@ -4,5 +4,5 @@
             /// @param g
             function foo(int f) public {}
         }
-// ----
-// error (70-71): tag '@param' no field 'g'
+// ---- Expect: diagnostics ----
+// error: 4:24-25: tag '@param' no field 'g'

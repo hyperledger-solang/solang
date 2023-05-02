@@ -6,5 +6,5 @@ contract c {
 	}
 }
 
-// ----
-// error (59-60): 'X' is an user type
+// ---- Expect: diagnostics ----
+// error: 5:8-9: 'X' is an user type

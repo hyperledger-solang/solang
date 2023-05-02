@@ -4,5 +4,5 @@
                 string s = "foo{".format();
             }
         }
-// ----
-// error (88-91): missing closing '}'
+// ---- Expect: diagnostics ----
+// error: 4:31-34: missing closing '}'

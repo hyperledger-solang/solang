@@ -4,5 +4,5 @@
                 string s = "f{{oo}s".format();
             }
         }
-// ----
-// error (90-94): unmatched '}'
+// ---- Expect: diagnostics ----
+// error: 4:33-37: unmatched '}'

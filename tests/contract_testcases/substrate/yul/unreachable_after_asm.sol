@@ -13,7 +13,7 @@ contract testTypes {
     }
 } 
 
-// ----
-// error (130-143): flag 'memory-safe' not supported
-// error (145-150): flag 'meh' not supported
-// error (222-268): unreachable statement
+// ---- Expect: diagnostics ----
+// error: 5:19-32: flag 'memory-safe' not supported
+// error: 5:34-39: flag 'meh' not supported
+// error: 10:9-12:10: unreachable statement

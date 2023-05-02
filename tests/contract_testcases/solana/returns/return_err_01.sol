@@ -6,5 +6,5 @@
                 return (val, val, val);
             }
         }
-// ----
-// error (132-154): incorrect number of return values, expected 2 but got 3
+// ---- Expect: diagnostics ----
+// error: 6:17-39: incorrect number of return values, expected 2 but got 3

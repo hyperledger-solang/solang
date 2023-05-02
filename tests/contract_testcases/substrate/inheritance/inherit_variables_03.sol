@@ -13,6 +13,6 @@
             }
         }
         
-// ----
-// warning (43-58): storage variable 'foo' has never been used
-// warning (183-221): function can be declared 'view'
+// ---- Expect: diagnostics ----
+// warning: 3:13-28: storage variable 'foo' has never been used
+// warning: 11:13-51: function can be declared 'view'

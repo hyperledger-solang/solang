@@ -3,5 +3,5 @@ contract test {
                 return 102;
             }
         }
-// ----
-// warning (28-70): function declared 'view' can be declared 'pure'
+// ---- Expect: diagnostics ----
+// warning: 2:13-55: function declared 'view' can be declared 'pure'

@@ -21,5 +21,5 @@
             }
         }
         
-// ----
-// error (50-106): function 'foo' should specify override list 'override(bar2,bar)'
+// ---- Expect: diagnostics ----
+// error: 3:13-69: function 'foo' should specify override list 'override(bar2,bar)'

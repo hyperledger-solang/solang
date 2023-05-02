@@ -11,4 +11,4 @@
             }
         }
     
-// ----
+// ---- Expect: diagnostics ----

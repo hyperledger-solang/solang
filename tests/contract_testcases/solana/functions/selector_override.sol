@@ -25,13 +25,13 @@ contract TooLarge {
     }
 }
 
-// ----
-// error (21-44): overriding selector not permitted on constructor
-// error (64-78): overriding selector not permitted on modifier
-// error (99-113): overriding selector not permitted on receive
-// error (115-141): target solana does not support receive() functions, see https://solang.readthedocs.io/en/latest/language/functions.html#fallback-and-receive-function
-// error (146-164): overriding selector not permitted on fallback
-// error (190-213): overriding selector only permitted on 'public' or 'external' function, not 'internal'
-// error (241-264): overriding selector only permitted on 'public' or 'external' function, not 'private'
-// error (337-340): value 256 does not fit into type uint8.
-// error (454-459): value 2744 does not fit into type uint8.
+// ---- Expect: diagnostics ----
+// error: 2:2-25: overriding selector not permitted on constructor
+// error: 4:2-16: overriding selector not permitted on modifier
+// error: 6:2-16: overriding selector not permitted on receive
+// error: 7:2-28: target solana does not support receive() functions, see https://solang.readthedocs.io/en/latest/language/functions.html#fallback-and-receive-function
+// error: 8:2-20: overriding selector not permitted on fallback
+// error: 10:2-25: overriding selector only permitted on 'public' or 'external' function, not 'internal'
+// error: 12:2-25: overriding selector only permitted on 'public' or 'external' function, not 'private'
+// error: 17:25-28: value 256 does not fit into type uint8.
+// error: 22:34-39: value 2744 does not fit into type uint8.

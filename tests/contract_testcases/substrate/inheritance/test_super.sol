@@ -1,3 +1,3 @@
 contract super {}
-// ----
-// error (9-14): 'super' shadows name of a builtin
+// ---- Expect: diagnostics ----
+// error: 1:10-15: 'super' shadows name of a builtin

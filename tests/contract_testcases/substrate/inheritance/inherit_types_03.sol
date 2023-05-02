@@ -9,5 +9,5 @@
             enum enum_x { x1, x2 }
         }
         
-// ----
-// error (66-72): type 'enum_x' not found
+// ---- Expect: diagnostics ----
+// error: 3:45-51: type 'enum_x' not found

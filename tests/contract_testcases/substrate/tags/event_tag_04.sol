@@ -8,4 +8,4 @@
                 uint32 f2
             );
         }
-// ----
+// ---- Expect: diagnostics ----

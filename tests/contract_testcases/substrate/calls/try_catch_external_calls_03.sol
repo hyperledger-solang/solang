@@ -18,7 +18,7 @@
             }
         }
         
-// ----
-// error (171-172): x is already declared
-// 	note (120-121): location of previous declaration
-// error (234-240): catch can only take 'bytes memory', not 'string'
+// ---- Expect: diagnostics ----
+// error: 6:45-46: x is already declared
+// 	note 5:23-24: location of previous declaration
+// error: 8:26-32: catch can only take 'bytes memory', not 'string'

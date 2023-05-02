@@ -7,7 +7,7 @@
             foo({ arg1: false, arg2: true });
         }
     }
-// ----
-// warning (47-51): function parameter 'arg1' has never been read
-// warning (58-62): function parameter 'arg2' has never been read
-// error (154-158): conversion from bool to uint256 not possible
+// ---- Expect: diagnostics ----
+// warning: 3:27-31: function parameter 'arg1' has never been read
+// warning: 3:38-42: function parameter 'arg2' has never been read
+// error: 7:38-42: conversion from bool to uint256 not possible

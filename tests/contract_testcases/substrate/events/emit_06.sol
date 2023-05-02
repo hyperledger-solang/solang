@@ -5,5 +5,5 @@
                 emit foo (true, 102);
             }
         }
-// ----
-// error (113-133): function declared 'view' but this expression writes to state
+// ---- Expect: diagnostics ----
+// error: 5:17-37: function declared 'view' but this expression writes to state

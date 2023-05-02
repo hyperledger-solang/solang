@@ -7,7 +7,7 @@ contract error {
 	}
 }
 
-// ----
-// warning (25-26): error 'X' has never been used
-// warning (32-60): function can be declared 'pure'
-// warning (51-52): function parameter 'x' has never been read
+// ---- Expect: diagnostics ----
+// warning: 3:8-9: error 'X' has never been used
+// warning: 5:2-30: function can be declared 'pure'
+// warning: 5:21-22: function parameter 'x' has never been read

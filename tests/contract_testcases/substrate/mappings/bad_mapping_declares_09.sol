@@ -5,5 +5,5 @@
                 delete data;
             }
         }
-// ----
-// error (115-126): 'delete' cannot be applied to mapping type
+// ---- Expect: diagnostics ----
+// error: 5:17-28: 'delete' cannot be applied to mapping type

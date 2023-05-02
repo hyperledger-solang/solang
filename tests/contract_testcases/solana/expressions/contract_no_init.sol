@@ -14,5 +14,5 @@
                 return o.a();
             }
         }
-// ----
-// error (241-252): 'address' call argument required on solana
+// ---- Expect: diagnostics ----
+// error: 11:25-36: 'address' call argument required on solana

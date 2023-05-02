@@ -4,5 +4,5 @@
                     string f = "\u9kff";
             }
         }
-// ----
-// error (90-93): \u escape should be followed by four hex digits
+// ---- Expect: diagnostics ----
+// error: 4:33-36: \u escape should be followed by four hex digits

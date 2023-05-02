@@ -30,7 +30,7 @@ contract C {
     function f5() pure public returns (int, int b) { return (1, 2); }
 }
 
-// ----
-// error (409-412): tag '@return' no matching return value 'feh'
-// error (427-430): tag '@return' no matching return value 'foo'
-// error (551-554): tag '@return' no matching return value 'foo'
+// ---- Expect: diagnostics ----
+// error: 21:15-18: tag '@return' no matching return value 'feh'
+// error: 22:15-18: tag '@return' no matching return value 'foo'
+// error: 28:15-18: tag '@return' no matching return value 'foo'

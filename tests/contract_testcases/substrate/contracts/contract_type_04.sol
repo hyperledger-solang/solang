@@ -4,5 +4,5 @@
                 return new printer();
             }
         }
-// ----
-// error (106-119): new cannot construct current contract 'printer'
+// ---- Expect: diagnostics ----
+// error: 4:24-37: new cannot construct current contract 'printer'

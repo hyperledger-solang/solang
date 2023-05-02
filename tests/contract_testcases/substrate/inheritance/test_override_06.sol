@@ -9,6 +9,6 @@
                 x = 2;
             }
         }
-// ----
-// error (156-194): function 'f' overrides function in same contract
-// 	note (66-103): previous definition of 'f'
+// ---- Expect: diagnostics ----
+// error: 8:13-51: function 'f' overrides function in same contract
+// 	note 4:13-50: previous definition of 'f'

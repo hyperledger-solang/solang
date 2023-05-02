@@ -18,5 +18,5 @@
             }
         }
         
-// ----
-// error (95-141): unexpected code block
+// ---- Expect: diagnostics ----
+// error: 4:30-6:18: unexpected code block

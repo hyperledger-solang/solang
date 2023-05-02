@@ -19,9 +19,9 @@ contract c1 {
 	constructor(bytes foo, string bar, bytes baz, uint8 b) {}
 }
 
-// ----
-// error (71-72): 'x' not found
-// error (81-84): 'foo' not found
-// error (167-170): duplicate @bump annotation for constructor
-// 	note (149-159): previous @bump
-// error (234-237): conversion from string to bytes not possible
+// ---- Expect: diagnostics ----
+// error: 4:8-9: 'x' not found
+// error: 5:8-11: 'foo' not found
+// error: 11:8-11: duplicate @bump annotation for constructor
+// 	note 10:2-12: previous @bump
+// error: 16:8-11: conversion from string to bytes not possible

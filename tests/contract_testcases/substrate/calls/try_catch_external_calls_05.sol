@@ -22,7 +22,7 @@
             }
         }
 
-// ----
-// error (243-248): catch Error(...) can only take 'string memory', not 'bytes'
-// error (320-327): catch Panic(...) can only take 'uint256', not 'uint128'
-// error (390-396): catch can only take 'bytes memory', not 'string'
+// ---- Expect: diagnostics ----
+// error: 8:31-36: catch Error(...) can only take 'string memory', not 'bytes'
+// error: 10:31-38: catch Panic(...) can only take 'uint256', not 'uint128'
+// error: 12:26-32: catch can only take 'bytes memory', not 'string'

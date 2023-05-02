@@ -6,5 +6,5 @@ contract x {
             }
         }
         
-// ----
-// error (106-107): cannot assign to immutable 'y' outside of constructor
+// ---- Expect: diagnostics ----
+// error: 5:17-18: cannot assign to immutable 'y' outside of constructor

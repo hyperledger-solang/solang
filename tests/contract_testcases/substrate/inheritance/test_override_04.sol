@@ -11,6 +11,6 @@
             }
         }
         
-// ----
-// error (44-105): function 'foo' overrides function which is not virtual
-// 	note (200-247): previous definition of function 'foo'
+// ---- Expect: diagnostics ----
+// error: 3:13-74: function 'foo' overrides function which is not virtual
+// 	note 9:13-60: previous definition of function 'foo'

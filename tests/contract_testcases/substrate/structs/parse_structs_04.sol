@@ -3,5 +3,5 @@
             struct Foo {
             }
         }
-// ----
-// error (59-62): struct definition for 'Foo' has no fields
+// ---- Expect: diagnostics ----
+// error: 3:20-23: struct definition for 'Foo' has no fields

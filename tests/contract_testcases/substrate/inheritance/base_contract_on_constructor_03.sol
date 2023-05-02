@@ -4,6 +4,6 @@
 
             }
         }
-// ----
-// error (60-65): 'oosda' not found
-// warning (66-72): 'public': visibility for constructors is ignored
+// ---- Expect: diagnostics ----
+// error: 3:27-32: 'oosda' not found
+// warning: 3:33-39: 'public': visibility for constructors is ignored

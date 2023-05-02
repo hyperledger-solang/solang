@@ -11,12 +11,12 @@ contract C is A {
 	constructor foo(string s) public {}
 }
 
-// ----
-// warning (41-47): 'public': visibility for constructors is ignored
-// warning (110-111): function parameter 'b' has never been read
-// warning (113-119): 'public': visibility for constructors is ignored
-// warning (145-146): function parameter 'b' has never been read
-// warning (148-154): 'public': visibility for constructors is ignored
-// warning (217-218): function parameter 'i' has never been read
-// warning (259-260): function parameter 's' has never been read
-// warning (262-268): 'public': visibility for constructors is ignored
+// ---- Expect: diagnostics ----
+// warning: 2:20-26: 'public': visibility for constructors is ignored
+// warning: 7:20-21: function parameter 'b' has never been read
+// warning: 7:23-29: 'public': visibility for constructors is ignored
+// warning: 8:23-24: function parameter 'b' has never been read
+// warning: 8:26-32: 'public': visibility for constructors is ignored
+// warning: 10:26-27: function parameter 'i' has never been read
+// warning: 11:25-26: function parameter 's' has never been read
+// warning: 11:28-34: 'public': visibility for constructors is ignored

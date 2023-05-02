@@ -1,3 +1,3 @@
 uint constant external x = 102;
-// ----
-// error (14-22): 'external': global variable cannot have visibility specifier
+// ---- Expect: diagnostics ----
+// error: 1:15-23: 'external': global variable cannot have visibility specifier

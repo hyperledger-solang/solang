@@ -1,5 +1,5 @@
 contract test {
             function test() public {}
         }
-// ----
-// error (28-50): function cannot have same name as the contract
+// ---- Expect: diagnostics ----
+// error: 2:13-35: function cannot have same name as the contract

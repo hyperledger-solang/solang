@@ -8,6 +8,6 @@ contract Foo {
 	}
 }
 
-// ----
-// error (78-96): Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded
-// error (147-167): Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded
+// ---- Expect: diagnostics ----
+// error: 4:3-21: Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded
+// error: 7:14-34: Invalid type 'struct Foo.S': mappings and recursive types cannot be abi decoded or encoded

@@ -5,5 +5,5 @@
                 bar.pop(102);
             }
         }
-// ----
-// error (123-126): method 'pop()' does not take any arguments
+// ---- Expect: diagnostics ----
+// error: 5:21-24: method 'pop()' does not take any arguments

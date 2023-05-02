@@ -12,5 +12,5 @@
                 a f = new a();
             }
         }
-// ----
-// error (94-96): missing call arguments
+// ---- Expect: diagnostics ----
+// error: 4:33-35: missing call arguments

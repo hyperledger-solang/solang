@@ -6,5 +6,5 @@
              */
             function foo(int f) public {}
         }
-// ----
-// error (77-83): duplicate tag '@param' for 'f'
+// ---- Expect: diagnostics ----
+// error: 5:15-21: duplicate tag '@param' for 'f'

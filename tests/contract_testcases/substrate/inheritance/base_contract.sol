@@ -9,7 +9,7 @@
                 return a + 102;
             }
         }
-// ----
-// warning (65-66): function parameter 'a' has never been read
-// error (90-269): missing arguments to base contract 'base' constructor
-// error (126-140): missing arguments to contract 'base' constructor
+// ---- Expect: diagnostics ----
+// warning: 3:32-33: function parameter 'a' has never been read
+// error: 6:9-11:10: missing arguments to base contract 'base' constructor
+// error: 7:13-27: missing arguments to contract 'base' constructor

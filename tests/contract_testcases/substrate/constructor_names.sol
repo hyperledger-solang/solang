@@ -4,4 +4,4 @@ contract C {
 	function foo() public pure {}
 }
 
-// ----
+// ---- Expect: diagnostics ----

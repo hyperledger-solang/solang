@@ -3,5 +3,5 @@ contract test {
                 function(address tre) returns (bool) a;
             }
         }
-// ----
-// error (85-88): function type parameters cannot be named
+// ---- Expect: diagnostics ----
+// error: 3:34-37: function type parameters cannot be named

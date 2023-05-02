@@ -2,6 +2,6 @@
         contract c {
             event foo (bool x, uint32 y, address x);
         }
-// ----
-// error (71-72): event 'foo' has duplicate field name 'x'
-// 	note (45-51): location of previous declaration of 'x'
+// ---- Expect: diagnostics ----
+// error: 3:50-51: event 'foo' has duplicate field name 'x'
+// 	note 3:24-30: location of previous declaration of 'x'

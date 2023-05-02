@@ -12,5 +12,5 @@ contract DeleteTest {
 
 }
 
-// ----
-// error (216-219): conversion from int256[4] to int256[] not possible
+// ---- Expect: diagnostics ----
+// error: 9:36-39: conversion from int256[4] to int256[] not possible

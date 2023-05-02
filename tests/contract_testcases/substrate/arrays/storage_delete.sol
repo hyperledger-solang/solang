@@ -6,5 +6,5 @@
                 delete 102;
             }
         }
-// ----
-// error (103-113): argument to 'delete' should be storage reference
+// ---- Expect: diagnostics ----
+// error: 6:17-27: argument to 'delete' should be storage reference

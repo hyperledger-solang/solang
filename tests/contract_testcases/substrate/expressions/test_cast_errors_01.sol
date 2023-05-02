@@ -3,5 +3,5 @@ contract test {
                 return (foo < bar);
             }
         }
-// ----
-// error (111-114): implicit conversion would change sign from uint256 to int256
+// ---- Expect: diagnostics ----
+// error: 3:25-28: implicit conversion would change sign from uint256 to int256

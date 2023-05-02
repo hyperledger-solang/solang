@@ -5,5 +5,5 @@
                 uint calldata b;
             }
         }
-// ----
-// error (110-118): storage location 'calldata' not allowed for struct field
+// ---- Expect: diagnostics ----
+// error: 5:22-30: storage location 'calldata' not allowed for struct field

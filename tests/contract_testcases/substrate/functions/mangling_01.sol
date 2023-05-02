@@ -5,6 +5,6 @@ contract Foo {
 	function f(uint foo) public pure {}
 }
 
-// ----
-// error (51-83): mangling the symbol of overloaded function 'f' with signature 'f(bool)' results in a new symbol 'f_bool' but this symbol already exists
-// 	note (16-45): this function declaration conflicts with mangled name
+// ---- Expect: diagnostics ----
+// error: 4:2-34: mangling the symbol of overloaded function 'f' with signature 'f(bool)' results in a new symbol 'f_bool' but this symbol already exists
+// 	note 2:2-31: this function declaration conflicts with mangled name

@@ -16,13 +16,13 @@ contract c1 {
 	function func() public {}
 }
 
-// ----
-// error (58-116): unknown annotation 'program_id' on contract c1
-// error (133-145): unknown annotation seed for constructor
-// error (147-155): unknown annotation bump for constructor
-// error (157-167): unknown annotation seed for constructor
-// error (169-184): unknown annotation space for constructor
-// error (246-258): unknown annotation seed for function
-// error (260-268): unknown annotation bump for function
-// error (270-330): unknown annotation payer for function
-// error (332-341): unknown annotation space for function
+// ---- Expect: diagnostics ----
+// error: 3:1-59: unknown annotation 'program_id' on contract c1
+// error: 6:2-14: unknown annotation seed for constructor
+// error: 7:2-10: unknown annotation bump for constructor
+// error: 8:2-12: unknown annotation seed for constructor
+// error: 9:2-17: unknown annotation space for constructor
+// error: 12:2-14: unknown annotation seed for function
+// error: 13:2-10: unknown annotation bump for function
+// error: 14:2-62: unknown annotation payer for function
+// error: 15:2-11: unknown annotation space for function

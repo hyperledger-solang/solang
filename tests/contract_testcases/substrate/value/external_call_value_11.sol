@@ -12,7 +12,7 @@
                 f.test{value: 0*10}(501);
             }
         }
-// ----
-// warning (34-63): function can be declared 'pure'
-// warning (54-55): function parameter 'l' has never been read
-// warning (124-129): storage variable 'x' has never been used
+// ---- Expect: diagnostics ----
+// warning: 3:13-42: function can be declared 'pure'
+// warning: 3:33-34: function parameter 'l' has never been read
+// warning: 8:13-18: storage variable 'x' has never been used

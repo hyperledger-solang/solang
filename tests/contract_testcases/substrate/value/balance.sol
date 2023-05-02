@@ -4,5 +4,5 @@
                 return j.balance;
             }
         }
-// ----
-// error (110-111): substrate can only retrieve balance of this, like 'address(this).balance'
+// ---- Expect: diagnostics ----
+// error: 4:24-25: substrate can only retrieve balance of this, like 'address(this).balance'

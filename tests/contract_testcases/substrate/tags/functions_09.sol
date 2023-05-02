@@ -7,7 +7,7 @@
         }
 
         abstract contract b {}
-// ----
-// warning (156-157): function parameter 'x' has never been read
-// warning (184-185): return variable 'a' has never been assigned
-// warning (192-193): return variable 'k' has never been assigned
+// ---- Expect: diagnostics ----
+// warning: 6:30-31: function parameter 'x' has never been read
+// warning: 6:58-59: return variable 'a' has never been assigned
+// warning: 6:66-67: return variable 'k' has never been assigned

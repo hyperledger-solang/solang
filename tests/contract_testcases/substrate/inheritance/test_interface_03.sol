@@ -3,5 +3,5 @@
             function bar() internal;
         }
         
-// ----
-// error (37-60): functions must be declared 'external' in an interface
+// ---- Expect: diagnostics ----
+// error: 3:13-36: functions must be declared 'external' in an interface

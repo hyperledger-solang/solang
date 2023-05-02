@@ -6,5 +6,5 @@
         }
         contract x {}
     
-// ----
-// error (84-92): 'gas' not permitted for external calls or constructors on solana
+// ---- Expect: diagnostics ----
+// error: 4:29-37: 'gas' not permitted for external calls or constructors on solana
