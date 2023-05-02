@@ -1059,7 +1059,7 @@ contract testTypes {
 
     let ns = parse(file);
     assert!(ns.diagnostics.contains_message(
-        r#"unrecognised token ':=', expected "address", "bool", "break", "byte", "continue", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
+        r#"unrecognised token ':=', expected ")", ",", "address", "bool", "break", "byte", "case", "continue", "default", "for", "function", "if", "leave", "let", "return", "revert", "switch", "{", "}", identifier"#
     ));
 
     let file = r#"

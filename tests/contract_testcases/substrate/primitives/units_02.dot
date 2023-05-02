@@ -1,4 +1,4 @@
 strict digraph "tests/contract_testcases/substrate/primitives/units_02.sol" {
-	diagnostic [label="unrecognised token 'days', expected \"!=\", \"%\", \"%=\", \"&\", \"&&\", \"&=\", \"*\", \"**\", \"*=\", \"+\", \"++\", \"+=\", \"-\", \"--\", \"-=\", \".\", \"/\", \"/=\", \";\", \"<\", \"<<\", \"<<=\", \"<=\", \"=\", \"==\", \">\", \">=\", \">>\", \">>=\", \"?\", \"[\", \"^\", \"^=\", \"|\", \"|=\", \"||\"\nlevel Error\ntests/contract_testcases/substrate/primitives/units_02.sol:4:35-39"]
+	diagnostic [label="unrecognised token 'days', expected \"!=\", \"%\", \"%=\", \"&\", \"&&\", \"&=\", \")\", \"*\", \"**\", \"*=\", \"+\", \"++\", \"+=\", \",\", \"-\", \"--\", \"-=\", \".\", \"/\", \"/=\", \":\", \";\", \"<\", \"<<\", \"<<=\", \"<=\", \"=\", \"==\", \">\", \">=\", \">>\", \">>=\", \"?\", \"[\", \"]\", \"^\", \"^=\", \"|\", \"|=\", \"||\", \"}\"\nlevel Error\ntests/contract_testcases/substrate/primitives/units_02.sol:4:35-39"]
 	diagnostics -> diagnostic [label="Error"]
 }
