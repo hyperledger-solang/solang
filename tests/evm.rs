@@ -193,18 +193,10 @@ fn ethereum_solidity_tests() {
             let file_name = entry.file_name().to_string_lossy();
 
             // FIXME: max_depth_reached_4.sol causes a stack overflow in resolve_expression.rs
-            // FIXNE: others listed explicitly cause panics and need fixing
+            // FIXME: others listed explicitly cause panics and need fixing
             if !file_name.ends_with("max_depth_reached_4.sol")
                 && !file_name.ends_with("invalid_utf8_sequence.sol")
-                && !file_name.ends_with("basefee_berlin_function.sol")
-                && !file_name.ends_with("inline_assembly_embedded_function_call.sol")
-                && !file_name.ends_with("linkersymbol_function.sol")
                 && !file_name.ends_with("370_shift_constant_left_excessive_rvalue.sol")
-                && !file_name.ends_with("use_msize_with_optimizer.sol")
-                && !file_name.ends_with("two_stack_slots.sol")
-                && !file_name.ends_with("two_stack_slot_access.sol")
-                && !file_name.ends_with("difficulty_disallowed_function_pre_paris.sol")
-                && !file_name.ends_with("difficulty_reserved_post_paris.sol")
                 && file_name.ends_with(".sol")
             {
                 Some(entry)
@@ -254,7 +246,7 @@ fn ethereum_solidity_tests() {
         })
         .sum();
 
-    assert_eq!(errors, 1093);
+    assert_eq!(errors, 1097);
 }
 
 fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
