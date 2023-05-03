@@ -361,14 +361,20 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.position_at_end(retrieve_block);
 
-        let offset = unsafe {
-            binary.builder.build_gep(
-                binary.context.i8_type().array_type(SCRATCH_SIZE),
-                binary.scratch.unwrap().as_pointer_value(),
-                &[i32_zero!(), index],
-                "data_offset",
+        fn function_to_get_pointer(binary: &Binary, index: &IntValue)-> PointerValue{
+            unsafe {
+               binary.builder.build_gep(
+               &binary.context.i8_type().array_type(SCRATCH_SIZE),
+               &binary.scratch.unwrap().as_pointer_value(),
+               &[i32_zero!(),index],
+               "data_offset",
             )
-        };
+
+            }
+        }
+        let offset = function_to_get_pointer(&binary, &index);
+
+       
 
         binary
             .builder
@@ -448,15 +454,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
         binary.builder.position_at_end(retrieve_block);
-
-        let offset = unsafe {
-            binary.builder.build_gep(
-                binary.context.i8_type().array_type(SCRATCH_SIZE),
-                binary.scratch.unwrap().as_pointer_value(),
-                &[i32_zero!(), index],
-                "data_offset",
-            )
-        };
+        
+        let offset = function_to_get_pointer(&binary, &index);
 
         // set the result
         binary.builder.build_store(offset, val);
@@ -525,14 +524,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .into_int_value();
 
         // set the result
-        let offset = unsafe {
-            binary.builder.build_gep(
-                binary.context.i8_type().array_type(SCRATCH_SIZE),
-                binary.scratch.unwrap().as_pointer_value(),
-                &[i32_zero!(), length],
-                "data_offset",
-            )
-        };
+        let offset = function_to_get_pointer(&binary, &length);
 
         binary.builder.build_store(offset, val);
 
@@ -635,14 +627,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_int_sub(length, i32_const!(1), "new_length");
 
         let val = if load {
-            let offset = unsafe {
-                binary.builder.build_gep(
-                    binary.context.i8_type().array_type(SCRATCH_SIZE),
-                    binary.scratch.unwrap().as_pointer_value(),
-                    &[i32_zero!(), new_length],
-                    "data_offset",
-                )
-            };
+            let offset = function_to_generate_pointer(&binary, &new_length);
 
             Some(
                 binary
