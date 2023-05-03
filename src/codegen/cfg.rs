@@ -181,6 +181,12 @@ pub enum Instr {
     },
     /// Return a code at the end of a function
     ReturnCode { code: ReturnCode },
+    /// For unimplemented code, e.g. unsupported yul builtins. This instruction should
+    /// only occur for the evm target, for which no emit is implemented yet. Once evm emit
+    /// is implemented and all yul builtins are supported, this instruction should
+    /// be removed. We only have this so we can pass evm code through sema/codegen, which is used
+    /// by the language server and the ethereum solidity tests.
+    Unimplemented { reachable: bool },
 }
 
 /// This struct defined the return codes that we send to the execution environment when we return
@@ -340,7 +346,8 @@ impl Instr {
             | Instr::Nop
             | Instr::ReturnCode { .. }
             | Instr::Branch { .. }
-            | Instr::PopMemory { .. } => {}
+            | Instr::PopMemory { .. }
+            | Instr::Unimplemented { .. } => {}
         }
     }
 }
@@ -440,7 +447,8 @@ impl BasicBlock {
                 | Instr::SelfDestruct { .. }
                 | Instr::ReturnCode { .. }
                 | Instr::ReturnData { .. }
-                | Instr::Return { .. } => {
+                | Instr::Return { .. }
+                | Instr::Unimplemented { reachable: false } => {
                     assert_eq!(i, 0, "instruction should be last in block");
                 }
 
@@ -1329,6 +1337,10 @@ impl ControlFlowGraph {
 
             Instr::ReturnCode { code } => {
                 format!("return code: {code}")
+            }
+
+            Instr::Unimplemented { .. } => {
+                "unimplemented".into()
             }
         }
     }

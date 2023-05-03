@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::expression::{assert_failure, log_runtime_error};
-use crate::codegen::{
-    cfg::{ControlFlowGraph, Instr},
-    vartable::Vartable,
-    yul::expression::expression,
-    {Builtin, Expression, Options},
-};
-use crate::sema::ast::{Namespace, RetrieveType, Type};
-use crate::sema::{
-    diagnostics::Diagnostics,
-    expression::integers::coerce_number,
-    yul::{ast, builtin::YulBuiltInFunction},
+use crate::{
+    codegen::{
+        cfg::{ControlFlowGraph, Instr},
+        expression::{assert_failure, log_runtime_error},
+        vartable::Vartable,
+        yul::expression::expression,
+        {Builtin, Expression, Options},
+    },
+    sema::{
+        ast::{Namespace, RetrieveType, Type},
+        diagnostics::Diagnostics,
+        expression::integers::coerce_number,
+        yul::{ast, builtin::YulBuiltInFunction},
+    },
+    Target,
 };
 use num_bigint::BigInt;
 use num_traits::{FromPrimitive, Zero};
@@ -135,8 +138,14 @@ pub(crate) fn process_builtin(
         // origin is the same as tx.origin and is not implemented
         | YulBuiltInFunction::Origin
         => {
-            let function_ty = builtin_ty.get_prototype_info();
-            unreachable!("{} yul builtin not implemented", function_ty.name);
+            if ns.target != Target::EVM {
+                let function_ty = builtin_ty.get_prototype_info();
+                unreachable!("{} yul builtin not implemented", function_ty.name);
+            }
+
+            // Sema will only allow this for EVM. This is a placeholder until correct codegen is in place
+            cfg.add(vartab, Instr::Unimplemented { reachable: !matches!(builtin_ty, YulBuiltInFunction::Return | YulBuiltInFunction::Revert | YulBuiltInFunction::Stop) });
+            Expression::Poison
         }
 
         YulBuiltInFunction::Gas => {

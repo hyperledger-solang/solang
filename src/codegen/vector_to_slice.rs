@@ -117,7 +117,8 @@ fn find_writable_vectors(
             | Instr::Print { .. }
             | Instr::AssertFailure { .. }
             | Instr::ReturnData { .. }
-            | Instr::ValueTransfer { .. } => {
+            | Instr::ValueTransfer { .. }
+            | Instr::Unimplemented { .. } => {
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }
         }
