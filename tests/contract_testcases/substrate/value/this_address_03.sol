@@ -11,3 +11,5 @@
                 s = n;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 6:17-32: function 'other' is not 'public' or 'external'

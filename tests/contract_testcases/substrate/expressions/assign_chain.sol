@@ -27,3 +27,8 @@ contract c {
 contract d {
 	int64 public v;
 }
+
+// ---- Expect: diagnostics ----
+// warning: 5:2-6: storage variable 'd1' has been assigned, but never read
+// warning: 13:2-36: function can be declared 'pure'
+// warning: 14:5-6: local variable 's' has been assigned, but never read

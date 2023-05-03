@@ -4,3 +4,5 @@ contract C {
 		S[] f2;
 	}
 }
+
+// ---- Expect: diagnostics ----

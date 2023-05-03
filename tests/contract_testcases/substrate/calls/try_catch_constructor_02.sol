@@ -16,3 +16,5 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 4:21-35: try only supports external calls or constructor calls

@@ -6,3 +6,5 @@ contract c {
 		return s_vec[1][1];
 	}
 }
+
+// ---- Expect: diagnostics ----

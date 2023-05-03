@@ -12,3 +12,5 @@
                 a f = new a();
             }
         }
+// ---- Expect: diagnostics ----
+// error: 4:33-45: code block found where list of call arguments expected, like '{gas: 5000}'

@@ -9,3 +9,5 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 8:24-27: 'foo' not found

@@ -18,3 +18,5 @@ contract C {
     using {id, zero} for uint;
 }
 
+
+// ---- Expect: diagnostics ----

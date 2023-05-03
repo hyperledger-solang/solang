@@ -18,3 +18,8 @@
                 return x * t;
             }
         }
+// ---- Expect: diagnostics ----
+// warning: 4:27-33: 'public': visibility for constructors is ignored
+// error: 5:21-42: duplicate argument name 'a'
+// 	note 5:32-33: location of previous argument
+// warning: 14:34-40: 'public': visibility for constructors is ignored

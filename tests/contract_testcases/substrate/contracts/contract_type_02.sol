@@ -10,3 +10,5 @@
                 address y = 102;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 10:29-32: expected 'address', found integer

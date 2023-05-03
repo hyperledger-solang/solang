@@ -12,3 +12,7 @@
                 f.test{value: 2-2}({l: 501});
             }
         }
+// ---- Expect: diagnostics ----
+// warning: 3:13-42: function can be declared 'pure'
+// warning: 3:33-34: function parameter 'l' has never been read
+// warning: 8:13-18: storage variable 'x' has never been used

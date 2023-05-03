@@ -39,3 +39,8 @@
                 return a / b;
             }
         }
+// ---- Expect: diagnostics ----
+// warning: 24:13-75: function can be declared 'pure'
+// warning: 28:13-75: function can be declared 'pure'
+// warning: 34:13-75: function can be declared 'pure'
+// warning: 38:13-75: function can be declared 'pure'

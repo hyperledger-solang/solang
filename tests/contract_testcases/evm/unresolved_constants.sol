@@ -7,3 +7,7 @@ contract c {
 	bool[C2] var22;
 }
 
+
+// ---- Expect: diagnostics ----
+// error: 1:19-23: 'LEN1' not found
+// error: 4:20-24: 'LEN1' not found

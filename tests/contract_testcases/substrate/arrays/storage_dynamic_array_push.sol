@@ -7,3 +7,5 @@
                 bar.push(102, 20);
             }
         }
+// ---- Expect: diagnostics ----
+// error: 7:21-25: method 'push()' takes at most 1 argument

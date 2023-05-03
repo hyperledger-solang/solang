@@ -1,6 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/enums/incorrect_fields.sol" {
-	state [label="name: state\ntests/contract_testcases/substrate/enums/incorrect_fields.sol:1:1-15"]
-	diagnostic [label="enum 'state' has no fields\nlevel Error\ntests/contract_testcases/substrate/enums/incorrect_fields.sol:1:6-11"]
-	enums -> state
-	diagnostics -> diagnostic [label="Error"]
-}

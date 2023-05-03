@@ -21,3 +21,6 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 7:13-80: function 'foo' overrides function in same contract
+// 	note 3:13-80: previous definition of 'foo'

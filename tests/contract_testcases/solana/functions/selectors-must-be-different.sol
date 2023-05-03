@@ -38,3 +38,17 @@ contract g {
 	@selector([0x1b, 0x49, 0x4c, 0xee, 0x9c, 0x54, 0x1e, 0x94])
 	function f3() public {}
 }
+// ---- Expect: diagnostics ----
+// error: 6:2-22: function 'f2' selector is the same as function 'f1'
+// 	note 3:2-22: definition of function 'f1'
+// error: 9:2-22: function 'f3' selector is the same as function 'f1'
+// 	note 3:2-22: definition of function 'f1'
+// warning: 13:13-14: c is already defined as a contract name
+// 	note 1:1-10:2: location of previous definition
+// error: 17:2-22: function 'f1' selector is the same as function 'c'
+// 	note 13:13-14: definition of function 'c'
+// error: 22:2-16: function 'f1' selector must be 8 bytes rather than 1 bytes
+// error: 31:2-22: function 'f2' selector is the same as function 'f1'
+// 	note 29:2-22: definition of function 'f1'
+// error: 39:2-22: function 'f3' selector is the same as function 'f1'
+// 	note 36:2-22: definition of function 'f1'

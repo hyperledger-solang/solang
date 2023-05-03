@@ -6,3 +6,5 @@ contract test {
                 (a , b) = (1, );
             }
         }
+// ---- Expect: diagnostics ----
+// error: 6:31: stray comma

@@ -5,3 +5,5 @@ contract a {
 contract b {
     receive() external payable {}
 }
+
+// ---- Expect: diagnostics ----

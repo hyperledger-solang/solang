@@ -6,3 +6,5 @@
                     return bar[];
             }
         }
+// ---- Expect: diagnostics ----
+// error: 6:28-33: expected expression before ']' token

@@ -7,3 +7,5 @@
                 a[i] = 5;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 7:17-21: array subscript must be an unsigned integer, not 'int32'

@@ -4,3 +4,5 @@
 
             constructor(bytes32[Y] memory foo) {}
         }
+// ---- Expect: diagnostics ----
+// warning: 5:43-46: function parameter 'foo' has never been read

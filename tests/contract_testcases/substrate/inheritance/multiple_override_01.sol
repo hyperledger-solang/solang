@@ -17,3 +17,5 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 3:36-49: function 'foo' missing overrides 'bar2', specify 'override(bar2,bar)'
