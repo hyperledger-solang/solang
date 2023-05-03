@@ -143,7 +143,7 @@ pub(crate) fn process_builtin(
                 unreachable!("{} yul builtin not implemented", function_ty.name);
             }
 
-            // Sema will only allow this for EVM, this is a placeholder until correct codegen is in place
+            // Sema will only allow this for EVM. This is a placeholder until correct codegen is in place
             cfg.add(vartab, Instr::Unimplemented { reachable: !matches!(builtin_ty, YulBuiltInFunction::Return | YulBuiltInFunction::Revert | YulBuiltInFunction::Stop) });
             Expression::Poison
         }
