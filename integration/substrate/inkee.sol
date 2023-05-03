@@ -11,14 +11,14 @@ struct InkResult {
 }
 
 // Helper function to convert the result value into an ink! compatible result type.
-function ink_result(uint32 _value) returns (InkResult) {
+function ink_result(uint32 _value) pure returns (InkResult) {
     return InkResult({ok: 0, value: _value});
 }
 
 contract Inkee {
     // We use this selector just for convenience
     @selector([1, 2, 3, 4])
-    function echo(uint32 v) public returns (InkResult) {
+    function echo(uint32 v) public pure returns (InkResult) {
         return ink_result(v);
     }
 }
