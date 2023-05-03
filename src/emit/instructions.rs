@@ -1075,6 +1075,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         Instr::ReturnCode { code } => {
             target.return_code(bin, bin.return_values[code]);
         }
+
+        Instr::Unimplemented { .. } => unimplemented!(),
     }
 }
 

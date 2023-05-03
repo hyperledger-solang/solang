@@ -1474,7 +1474,8 @@ impl CodeLocation for Instr {
             | Instr::ReturnCode { .. }
             | Instr::Nop
             | Instr::AssertFailure { .. }
-            | Instr::PopMemory { .. } => pt::Loc::Codegen,
+            | Instr::PopMemory { .. }
+            | Instr::Unimplemented { .. } => pt::Loc::Codegen,
         }
     }
 }

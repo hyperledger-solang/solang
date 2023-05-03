@@ -125,6 +125,10 @@ pub(crate) fn process_builtin(
         | YulBuiltInFunction::CallCode
         | YulBuiltInFunction::DelegateCall
         | YulBuiltInFunction::StaticCall
+        // Return and revert also load from memory, so we first need to solve mload and mstore builtins
+        | YulBuiltInFunction::Return
+        | YulBuiltInFunction::Stop // Stop is the same as return(0, 0)
+        | YulBuiltInFunction::Revert
         // Log functions
         | YulBuiltInFunction::Log0
         | YulBuiltInFunction::Log1
@@ -132,33 +136,15 @@ pub(crate) fn process_builtin(
         | YulBuiltInFunction::Log3
         | YulBuiltInFunction::Log4
         // origin is the same as tx.origin and is not implemented
-        | YulBuiltInFunction::Origin => {
-            let function_ty = builtin_ty.get_prototype_info();
-            unreachable!("{} yul builtin not implemented", function_ty.name);
-        }
-
-        // Return and revert also load from memory, so we first need to solve mload and mstore builtins
-        YulBuiltInFunction::Return => {
+        | YulBuiltInFunction::Origin
+        => {
             if ns.target != Target::EVM {
                 let function_ty = builtin_ty.get_prototype_info();
                 unreachable!("{} yul builtin not implemented", function_ty.name);
             }
 
-            let addr = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Ref(Type::Uint(256).into()), ns);
-            let length = expression(&args[0], contract_no, ns, vartab, cfg, opt).cast(&Type::Uint(256), ns);
-
-            cfg.add(vartab, Instr::Return { value: vec![addr, length] });
-            Expression::Poison
-        }
-        YulBuiltInFunction::Stop // Stop is the same as return(0, 0)
-        | YulBuiltInFunction::Revert => {
-            if ns.target != Target::EVM {
-                let function_ty = builtin_ty.get_prototype_info();
-                unreachable!("{} yul builtin not implemented", function_ty.name);
-            }
-
-            cfg.add(vartab, Instr::Return { value: vec![] });
-
+            // Sema will only allow this for EVM, this is a placeholder until correct codegen is in place
+            cfg.add(vartab, Instr::Unimplemented { reachable: !matches!(builtin_ty, YulBuiltInFunction::Return | YulBuiltInFunction::Revert | YulBuiltInFunction::Stop) });
             Expression::Poison
         }
 
