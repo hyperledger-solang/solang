@@ -5,6 +5,7 @@ use super::reaching_definitions::{Def, Transfer};
 use crate::codegen::cfg::ASTFunction;
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, Type};
+use codespan_reporting::diagnostic;
 use indexmap::IndexMap;
 use std::collections::HashSet;
 
@@ -30,7 +31,13 @@ pub fn vector_to_slice(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
     // walk the cfg and expressions and update the type of vectors
     update_vectors_to_slice(&writable, cfg, ns);
 }
-
+fn extend_writable_vars(arg: &Expression, vars: HashMap<usize, HashMap<String, Option<usize>>>, writable: &mut Vec<String>, diagnostics: &mut Diagnostics) {
+    if let Expression::Variable { var_no, .. } = arg {
+        if let Some(entry) = vars.get_mut(var_no) {
+            writable.extend(entry.keys());
+        }
+    }
+}
 fn find_writable_vectors(
     block: &BasicBlock,
     vars: &mut IndexMap<usize, IndexMap<Def, bool>>,
@@ -54,14 +61,13 @@ fn find_writable_vectors(
                     apply_transfers(&block.transfers[instr_no], vars, writable);
                 }
             }
+            
+            
             // Call and return do not take slices
             Instr::Return { value: args } | Instr::Call { args, .. } => {
                 for arg in args {
-                    if let Expression::Variable { var_no, .. } = arg {
-                        if let Some(entry) = vars.get_mut(var_no) {
-                            writable.extend(entry.keys());
-                        }
-                    }
+                   
+                    extend_writable_vars(arg, vars, writable, diagnostics );
                 }
 
                 apply_transfers(&block.transfers[instr_no], vars, writable);
@@ -76,11 +82,7 @@ fn find_writable_vectors(
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }
             Instr::Store { data, .. } => {
-                if let Expression::Variable { var_no, .. } = data {
-                    if let Some(entry) = vars.get_mut(var_no) {
-                        writable.extend(entry.keys());
-                    }
-                }
+                extend_writable_vars(data, vars, writable, diagnostics );
 
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }
@@ -88,11 +90,7 @@ fn find_writable_vectors(
                 destination: buf, ..
             }
             | Instr::WriteBuffer { buf, .. } => {
-                if let Expression::Variable { var_no, .. } = buf {
-                    if let Some(entry) = vars.get_mut(var_no) {
-                        writable.extend(entry.keys());
-                    }
-                }
+                extend_writable_vars(buf, vars, writable, diagnostics );
 
                 apply_transfers(&block.transfers[instr_no], vars, writable);
             }
