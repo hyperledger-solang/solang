@@ -1,4 +1,4 @@
-// ink! contracts are expected to return a value of type `Result<T, LangError>` (rusts "Result" type).
+// ink! contracts are expected to return a value of type `Result<T, LangError>` (Rust's "Result" type).
 // The ink! call builder only supports decoding the result into this `Result` type.
 // This works fine for ink! because ink! contracts are supposed to always return this type.
 // 
