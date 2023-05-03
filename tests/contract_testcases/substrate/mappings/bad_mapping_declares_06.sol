@@ -4,3 +4,5 @@
                 //
             }
         }
+// ---- Expect: diagnostics ----
+// error: 3:45-68: return type containing mapping must be of type 'storage'

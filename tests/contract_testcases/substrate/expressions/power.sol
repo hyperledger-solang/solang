@@ -3,3 +3,5 @@ contract test {
                 return base ** exp;
             }
        }
+// ---- Expect: diagnostics ----
+// error: 3:24-35: exponation (**) is not allowed with signed types

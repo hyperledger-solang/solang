@@ -18,3 +18,8 @@
                 return x * t;
             }
         }
+// ---- Expect: diagnostics ----
+// warning: 4:27-33: 'public': visibility for constructors is ignored
+// error: 8:24-52: function expects 1 arguments, 2 provided
+// error: 8:41-42: duplicate argument with name 't'
+// warning: 14:34-40: 'public': visibility for constructors is ignored

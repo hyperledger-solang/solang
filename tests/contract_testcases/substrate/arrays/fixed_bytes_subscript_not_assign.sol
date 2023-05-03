@@ -7,3 +7,6 @@ contract fixed_bytes_subscript_not_assign {
         y[1] = 2;
     }
 }
+// ---- Expect: diagnostics ----
+// error: 4:9-13: expression is not assignable
+// error: 7:9-13: expression is not assignable

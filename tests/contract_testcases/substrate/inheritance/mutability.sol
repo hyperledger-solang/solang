@@ -11,3 +11,6 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 9:13-59: mutability 'nonpayable' of function 'foo' is not compatible with mutability 'pure'
+// 	note 3:13-63: location of base function

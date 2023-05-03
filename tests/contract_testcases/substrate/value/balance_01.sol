@@ -4,3 +4,5 @@
                 return j.balance;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 4:26-33: contract 'b' has no public function 'balance'

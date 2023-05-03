@@ -24,6 +24,7 @@ use crate::sema::{
     eval::{eval_const_number, eval_const_rational},
     expression::integers::bigint_to_expression,
     expression::ResolveTo,
+    file::PathDisplay,
 };
 use crate::Target;
 use num_bigint::BigInt;
@@ -1538,7 +1539,7 @@ fn require(
                     let prefix = b"runtime_error: ";
                     let error_string = format!(
                         " require condition failed in {},\n",
-                        ns.loc_to_string(false, &expr.loc())
+                        ns.loc_to_string(PathDisplay::Filename, &expr.loc())
                     );
                     let print_expr = Expression::FormatString {
                         loc: Loc::Codegen,

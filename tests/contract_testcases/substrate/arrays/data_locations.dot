@@ -1,8 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/arrays/data_locations.sol" {
-	contract [label="contract foo\ntests/contract_testcases/substrate/arrays/data_locations.sol:2:9-5:10"]
-	diagnostic [label="found abstract contract 'foo'\nlevel Debug\ntests/contract_testcases/substrate/arrays/data_locations.sol:2:9-5:10"]
-	diagnostic_4 [label="data location 'storage' can only be specified for array, struct or mapping\nlevel Error\ntests/contract_testcases/substrate/arrays/data_locations.sol:3:31-38"]
-	contracts -> contract
-	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_4 [label="Error"]
-}

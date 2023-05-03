@@ -4,3 +4,5 @@ contract x {
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 3:17-29: type is too large to fit into memory

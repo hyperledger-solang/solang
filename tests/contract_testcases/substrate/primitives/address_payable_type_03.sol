@@ -9,3 +9,5 @@
             function test() public {
             }
         }
+// ---- Expect: diagnostics ----
+// error: 4:27-28: implicit conversion to contract other from address payable not allowed

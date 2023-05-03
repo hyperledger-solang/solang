@@ -4,3 +4,5 @@
             function bar(int[10] storage x) public returns (int) {
             }
         }
+// ---- Expect: diagnostics ----
+// error: 4:34-41: parameter of type 'storage' not allowed public or external functions

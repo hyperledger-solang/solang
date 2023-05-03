@@ -1,8 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/inheritance/test_virtual_01.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/inheritance/test_virtual_01.sol:2:9-4:10"]
-	test [label="function test\ncontract: c\ntests/contract_testcases/substrate/inheritance/test_virtual_01.sol:3:13-43\nsignature test()\nvisibility public\nmutability nonpayable\nvirtual"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_virtual_01.sol:2:9-4:10"]
-	contracts -> contract
-	contract -> test [label="function"]
-	diagnostics -> diagnostic [label="Debug"]
-}

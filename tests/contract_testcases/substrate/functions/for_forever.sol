@@ -7,3 +7,5 @@
             return;
         }
     }
+// ---- Expect: diagnostics ----
+// error: 7:13-19: unreachable statement

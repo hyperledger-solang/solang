@@ -4,6 +4,12 @@ use super::ast::{File, Namespace};
 use solang_parser::pt::Loc;
 use std::{fmt, path};
 
+pub enum PathDisplay {
+    None,
+    Filename,
+    FullPath,
+}
+
 impl File {
     pub fn new(path: path::PathBuf, contents: &str, cache_no: usize) -> Self {
         let mut line_starts = Vec::new();
@@ -22,20 +28,21 @@ impl File {
     }
 
     /// Give a position as a human readable position
-    pub fn loc_to_string(&self, full_path: bool, start: usize, end: usize) -> String {
+    pub fn loc_to_string(&self, display: PathDisplay, start: usize, end: usize) -> String {
         let (from_line, from_column) = self.offset_to_line_column(start);
         let (to_line, to_column) = self.offset_to_line_column(end);
 
-        let path = if full_path {
-            format!("{self}")
-        } else {
-            self.file_name()
+        let path = match display {
+            PathDisplay::None => "".to_owned(),
+            PathDisplay::Filename => format!("{}:", self.file_name()),
+            PathDisplay::FullPath => format!("{self}:"),
         };
+
         if from_line == to_line && from_column == to_column {
-            format!("{}:{}:{}", path, from_line + 1, from_column + 1)
+            format!("{}{}:{}", path, from_line + 1, from_column + 1)
         } else if from_line == to_line {
             format!(
-                "{}:{}:{}-{}",
+                "{}{}:{}-{}",
                 path,
                 from_line + 1,
                 from_column + 1,
@@ -43,7 +50,7 @@ impl File {
             )
         } else {
             format!(
-                "{}:{}:{}-{}:{}",
+                "{}{}:{}-{}:{}",
                 path,
                 from_line + 1,
                 from_column + 1,
@@ -96,10 +103,10 @@ impl fmt::Display for File {
 
 impl Namespace {
     /// Give a position as a human readable position
-    pub fn loc_to_string(&self, full_path: bool, loc: &Loc) -> String {
+    pub fn loc_to_string(&self, display: PathDisplay, loc: &Loc) -> String {
         match loc {
             Loc::File(file_no, start, end) => {
-                self.files[*file_no].loc_to_string(full_path, *start, *end)
+                self.files[*file_no].loc_to_string(display, *start, *end)
             }
             Loc::Builtin => String::from("builtin"),
             Loc::Codegen => String::from("codegen"),

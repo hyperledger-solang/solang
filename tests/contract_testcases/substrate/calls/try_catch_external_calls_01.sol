@@ -18,3 +18,5 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 6:46-52: type 'int256[2] storage' does not match return value of function 'bool'

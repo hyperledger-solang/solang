@@ -14,3 +14,5 @@
                 printer y = printer(x);
             }
         }
+// ---- Expect: diagnostics ----
+// error: 10:29-30: implicit conversion to address from contract printer not allowed

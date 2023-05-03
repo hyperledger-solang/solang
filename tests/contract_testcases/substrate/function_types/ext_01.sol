@@ -8,3 +8,5 @@
                 return false;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 4:66-69: contract 'ft' has no public function 'foo'

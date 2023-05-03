@@ -9,3 +9,6 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 7:13-58: visibility 'private' of function 'foo' is not compatible with visibility 'internal'
+// 	note 3:13-58: location of base function

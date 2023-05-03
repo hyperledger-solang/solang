@@ -17,3 +17,6 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 3:13-80: function 'foo' overrides functions which are not 'virtual'
+// 	note 9:13-61: function 'foo' is not specified 'virtual'

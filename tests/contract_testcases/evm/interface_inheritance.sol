@@ -47,3 +47,4 @@ contract BABYLINK {
         }
     }
 }
+// ---- Expect: diagnostics ----

@@ -17,3 +17,7 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 3:13-61: function 'foo' should specify override list 'override(bar2,bar)'
+// error: 15:13-69: function 'foo' with this signature already defined
+// 	note 9:13-69: previous definition of function 'foo'

@@ -6,3 +6,5 @@
                 assert(a.length == 5);
             }
         }
+// ---- Expect: diagnostics ----
+// error: 4:36-47: new cannot allocate type 'bool'

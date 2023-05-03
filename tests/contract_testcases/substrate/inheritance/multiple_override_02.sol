@@ -23,3 +23,5 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 3:36-59: function 'foo' includes extraneous overrides 'bar3', specify 'override(bar2,bar)'

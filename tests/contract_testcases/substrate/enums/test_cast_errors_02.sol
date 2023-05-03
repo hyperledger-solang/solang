@@ -4,3 +4,4 @@ contract test {
                 return uint8(state.foo);
             }
         }
+// ---- Expect: diagnostics ----

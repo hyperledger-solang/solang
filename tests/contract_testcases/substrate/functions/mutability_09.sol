@@ -3,3 +3,4 @@ contract test {
                 return 102;
             }
         }
+// ---- Expect: diagnostics ----

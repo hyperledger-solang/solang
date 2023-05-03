@@ -18,3 +18,5 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 4:33-6:18: unexpected code block

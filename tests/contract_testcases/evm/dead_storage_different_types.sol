@@ -8,3 +8,5 @@ contract C {
         return (referralsKey,length);
     }
 }
+
+// ---- Expect: diagnostics ----

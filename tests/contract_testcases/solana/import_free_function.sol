@@ -9,3 +9,6 @@ function bar() {
 	x = X.foo();
 	x = X.foo({});
 }
+
+// ---- Expect: diagnostics ----
+// warning: 1:1-29: function can be declared 'pure'

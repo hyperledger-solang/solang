@@ -10,3 +10,5 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 8:26-40: need instance of contract 'C' to get variable value 'NOT_CONSTANT'

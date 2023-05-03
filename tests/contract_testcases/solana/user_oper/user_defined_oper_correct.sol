@@ -97,3 +97,4 @@ contract C {
         return true;
     }
 }
+// ---- Expect: diagnostics ----

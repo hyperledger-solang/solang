@@ -5,3 +5,5 @@
                 //
             }
         }
+// ---- Expect: diagnostics ----
+// error: 4:27-57: new cannot allocate type 'mapping(int256 => address)'

@@ -1,8 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/inheritance/test_interface_08.sol" {
-	contract [label="contract bar\ntests/contract_testcases/substrate/inheritance/test_interface_08.sol:2:9-4:10"]
-	diagnostic [label="found interface 'bar'\nlevel Debug\ntests/contract_testcases/substrate/inheritance/test_interface_08.sol:2:9-4:10"]
-	diagnostic_4 [label="interface 'bar' is not allowed to have contract variable 'x'\nlevel Error\ntests/contract_testcases/substrate/inheritance/test_interface_08.sol:3:13-31"]
-	contracts -> contract
-	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_4 [label="Error"]
-}

@@ -8,3 +8,5 @@ contract test3 {
                 return 0;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 8:17-25: unreachable statement

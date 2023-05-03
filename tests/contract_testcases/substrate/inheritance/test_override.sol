@@ -5,3 +5,6 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 3:45-53: function redeclared 'override'
+// 	note 3:36-44: location of previous declaration of 'override'

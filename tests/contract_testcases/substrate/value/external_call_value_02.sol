@@ -12,3 +12,5 @@
                 a f = new a();
             }
         }
+// ---- Expect: diagnostics ----
+// error: 4:24-31: 'salt' not valid for external calls

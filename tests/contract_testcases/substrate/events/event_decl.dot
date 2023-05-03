@@ -1,8 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/events/event_decl.sol" {
-	foo [label="name:foo\ncontract: 0\ntests/contract_testcases/substrate/events/event_decl.sol:3:19-22"]
-	contract [label="contract c\ntests/contract_testcases/substrate/events/event_decl.sol:2:9-4:10"]
-	diagnostic [label="found abstract contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/events/event_decl.sol:2:9-4:10"]
-	events -> foo
-	contracts -> contract
-	diagnostics -> diagnostic [label="Debug"]
-}
