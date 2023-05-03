@@ -8,3 +8,5 @@
         contract c {
             using x for x;
         }
+// ---- Expect: diagnostics ----
+// error: 9:25-26: using for library 'x' type not permitted

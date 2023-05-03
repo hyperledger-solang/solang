@@ -12,3 +12,4 @@
                 return a > b ? a : b;
             }
         }
+// ---- Expect: diagnostics ----

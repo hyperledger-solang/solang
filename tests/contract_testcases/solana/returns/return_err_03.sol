@@ -9,3 +9,5 @@
                 return f();
             }
         }
+// ---- Expect: diagnostics ----
+// error: 9:17-27: function has no return values

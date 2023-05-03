@@ -9,3 +9,6 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 7:13-67: mutability 'payable' of function 'foo' is not compatible with mutability 'view'
+// 	note 3:13-63: location of base function

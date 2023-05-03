@@ -8,3 +8,6 @@ contract d {
 		c.f(a, b);
 	}
 }
+
+// ---- Expect: diagnostics ----
+// warning: 7:2-33: function can be declared 'pure'

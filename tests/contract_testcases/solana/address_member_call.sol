@@ -44,3 +44,5 @@ contract MyContract {
     }
 }
 
+
+// ---- Expect: diagnostics ----

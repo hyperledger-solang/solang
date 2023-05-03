@@ -254,13 +254,23 @@ pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diag
 
         VariableUsage::ReturnVariable => {
             if !variable.assigned {
-                return Some(Diagnostic::warning(
-                    variable.id.loc,
-                    format!(
-                        "return variable '{}' has never been assigned",
-                        variable.id.name
-                    ),
-                ));
+                if variable.ty.is_contract_storage() {
+                    return Some(Diagnostic::error(
+                        variable.id.loc,
+                        format!(
+                            "storage reference '{}' must be assigned a value",
+                            variable.id.name
+                        ),
+                    ));
+                } else {
+                    return Some(Diagnostic::warning(
+                        variable.id.loc,
+                        format!(
+                            "return variable '{}' has never been assigned",
+                            variable.id.name
+                        ),
+                    ));
+                }
             }
             None
         }

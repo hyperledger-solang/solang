@@ -8,3 +8,4 @@
                 return a * 2;
             }
         }
+// ---- Expect: diagnostics ----

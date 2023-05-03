@@ -677,3 +677,17 @@ function _approve(
     }//
     //
 }/**//**//**//**//**//**//**///
+// ---- Expect: diagnostics ----
+// warning: 188:5-75: function can be declared 'view'
+// warning: 195:50-56: conversion truncates uint256 to uint128, as value is type uint128 on target evm
+// warning: 264:5-270:37: function can be declared 'view'
+// warning: 268:17-25: function parameter 'weiValue' has never been read
+// warning: 269:23-35: function parameter 'errorMessage' has never been read
+// warning: 276:70-78: conversion truncates uint256 to uint128, as value is type uint128 on target evm
+// warning: 321:9-17: 'internal': visibility for constructors is ignored
+// warning: 386:9-61: storage variable '_isExcluded' has never been used
+// warning: 390:9-51: storage variable 'MAX' has been assigned, but never read
+// warning: 408:5-44: storage variable 'burnrepeat' has been assigned, but never read
+// warning: 410:5-31: storage variable '_tFeeTotal' has never been used
+// warning: 417:5-11: 'public': visibility for constructors is ignored
+// warning: 522:5-27: storage variable 'damada' has been assigned, but never read

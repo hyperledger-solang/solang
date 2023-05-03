@@ -10,3 +10,4 @@
 
             function _ext() public pure {}
         }
+// ---- Expect: diagnostics ----

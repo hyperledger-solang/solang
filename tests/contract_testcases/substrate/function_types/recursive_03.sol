@@ -8,3 +8,6 @@ contract Test {
 		return S(f, ss);
 	}
 }
+
+// ---- Expect: diagnostics ----
+// error: 7:2-49: Recursive parameter not allowed for public or external functions.

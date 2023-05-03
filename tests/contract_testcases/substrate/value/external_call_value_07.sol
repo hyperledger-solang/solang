@@ -12,3 +12,6 @@
                 f.test{value: 1023}(501);
             }
         }
+// ---- Expect: diagnostics ----
+// warning: 3:33-34: function parameter 'l' has never been read
+// error: 12:17-41: sending value to function 'test' which is not payable

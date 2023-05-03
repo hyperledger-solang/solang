@@ -210,8 +210,12 @@ pub fn resolve_function_body(
         ns.functions[function_no].modifiers = modifiers;
     }
 
-    // a function with no return values does not need a return statement
-    let mut return_required = !def.returns.is_empty();
+    // If there is no return statement, any unnamed return types will
+    // implicitly be 0. If there is a return type which is a storage
+    // reference (e.g. int[] storage), a value must be given via
+    // a return statement, else the value will not refer to valid storage,
+    // as 0 is almost certainly an invalid storage key.
+    let mut return_required = false;
 
     // If any of the return values are named, then the return statement can be omitted at
     // the end of the function, and return values may be omitted too. Create variables to
@@ -220,8 +224,6 @@ pub fn resolve_function_body(
         let ret = &ns.functions[function_no].returns[i];
 
         if let Some(ref name) = p.1.as_ref().unwrap().name {
-            return_required = false;
-
             if let Some(pos) = symtable.add(
                 name,
                 ret.ty.clone(),
@@ -234,6 +236,10 @@ pub fn resolve_function_body(
                 symtable.returns.push(pos);
             }
         } else {
+            if ret.ty.is_contract_storage() {
+                return_required = true;
+            }
+
             // anonymous return
             let id = pt::Identifier {
                 loc: p.0,
@@ -275,11 +281,14 @@ pub fn resolve_function_body(
     ns.diagnostics.extend(diagnostics);
 
     if reachable? && return_required {
-        ns.diagnostics.push(Diagnostic::error(
-            body.loc().end_range(),
-            "missing return statement".to_string(),
-        ));
-        return Err(());
+        for param in ns.functions[function_no].returns.iter() {
+            if param.id.is_none() && param.ty.is_contract_storage() {
+                ns.diagnostics.push(Diagnostic::error(
+                    param.loc,
+                    "storage reference must be given value with a return statement".to_string(),
+                ));
+            }
+        }
     }
 
     if def.ty == pt::FunctionTy::Modifier {

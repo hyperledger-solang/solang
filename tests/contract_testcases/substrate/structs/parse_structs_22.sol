@@ -9,3 +9,6 @@ contract Test {
 	}
 }
 
+
+// ---- Expect: diagnostics ----
+// error: 7:2-52: Recursive parameter not allowed for public or external functions.

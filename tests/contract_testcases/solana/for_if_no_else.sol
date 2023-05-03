@@ -7,3 +7,6 @@ function foo() returns (int) {
 }
 
 
+
+// ---- Expect: diagnostics ----
+// warning: 1:1-29: function can be declared 'pure'

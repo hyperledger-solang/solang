@@ -16,3 +16,4 @@
             }
         }
     }
+// ---- Expect: diagnostics ----

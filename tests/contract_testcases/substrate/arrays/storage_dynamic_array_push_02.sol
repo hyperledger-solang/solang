@@ -10,3 +10,5 @@
                 s storage n = bar.push(s(-1, false));
             }
         }
+// ---- Expect: diagnostics ----
+// error: 10:35-39: function or method does not return a value

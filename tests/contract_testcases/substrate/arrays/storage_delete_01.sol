@@ -6,3 +6,5 @@
                 int32 x = delete bar;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 6:27-37: delete not allowed in expression

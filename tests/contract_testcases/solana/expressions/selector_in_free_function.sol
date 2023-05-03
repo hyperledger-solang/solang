@@ -9,3 +9,5 @@
 
         contract foo {}
         
+// ---- Expect: diagnostics ----
+// warning: 6:9-38: function can be declared 'pure'

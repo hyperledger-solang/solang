@@ -20,3 +20,5 @@ contract Test {
         }
     }
     
+// ---- Expect: diagnostics ----
+// warning: 3:9-21: storage variable 'baRR' has been assigned, but never read

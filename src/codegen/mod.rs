@@ -34,7 +34,10 @@ use self::{
 use crate::sema::ast::{
     FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
 };
-use crate::{sema::ast, Target};
+use crate::{
+    sema::{ast, file::PathDisplay},
+    Target,
+};
 use std::cmp::Ordering;
 
 use crate::codegen::cfg::ASTFunction;
@@ -1810,7 +1813,7 @@ pub(super) fn error_msg_with_loc(ns: &Namespace, error: &str, loc: Option<Loc>) 
     if let Some(loc) = loc {
         match loc {
             Loc::File(..) => {
-                let loc_from_file = ns.loc_to_string(false, &loc);
+                let loc_from_file = ns.loc_to_string(PathDisplay::Filename, &loc);
                 format!("runtime_error: {error} in {loc_from_file}")
             }
             _ => error.to_string(),

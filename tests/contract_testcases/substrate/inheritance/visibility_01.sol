@@ -9,3 +9,6 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 7:13-59: visibility 'internal' of function 'foo' is not compatible with visibility 'external'
+// 	note 3:13-58: location of base function

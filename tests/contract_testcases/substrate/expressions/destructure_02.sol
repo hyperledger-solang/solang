@@ -6,3 +6,9 @@ contract test {
                 (a, b) = (1, 2);
             }
         }
+
+// ---- Expect: diagnostics ----
+// warning: 2:13-42: function can be declared 'pure'
+// warning: 2:31-34: function parameter 'bar' has never been read
+// warning: 3:21-22: local variable 'a' has been assigned, but never read
+// warning: 4:21-22: local variable 'b' has been assigned, but never read

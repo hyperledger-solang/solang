@@ -1,4 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/variables/global_constants_01.sol" {
-	diagnostic [label="'public': global variable cannot have visibility specifier\nlevel Error\ntests/contract_testcases/substrate/variables/global_constants_01.sol:1:15-21"]
-	diagnostics -> diagnostic [label="Error"]
-}

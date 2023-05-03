@@ -1,4 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/builtins/abi_decode_01.sol" {
-	diagnostic [label="unrecognised token ')', expected \"case\", \"default\", \"leave\", \"revert\", \"switch\", identifier\nlevel Error\ntests/contract_testcases/substrate/builtins/abi_decode_01.sol:4:59-60"]
-	diagnostics -> diagnostic [label="Error"]
-}

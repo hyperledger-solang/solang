@@ -18,3 +18,5 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 6:21-29: try returns list has 1 entries while function returns 2 values

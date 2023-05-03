@@ -1,4 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/variables/global_constants.sol" {
-	diagnostic [label="global variable must be constant\nlevel Error\ntests/contract_testcases/substrate/variables/global_constants.sol:1:1-5"]
-	diagnostics -> diagnostic [label="Error"]
-}

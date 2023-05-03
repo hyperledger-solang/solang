@@ -1,4 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/functions/global_functions_02.sol" {
-	diagnostic [label="only functions in contracts can be virtual\nlevel Error\ntests/contract_testcases/substrate/functions/global_functions_02.sol:2:22-29"]
-	diagnostics -> diagnostic [label="Error"]
-}

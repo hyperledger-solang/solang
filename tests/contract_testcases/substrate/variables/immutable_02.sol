@@ -6,3 +6,5 @@ contract x {
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 5:17-18: cannot assign to immutable outside of constructor

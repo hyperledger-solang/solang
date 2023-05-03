@@ -12,3 +12,5 @@ function foo(S memory s) pure {}
 //		foo(s);
 //	}
 // }
+
+// ---- Expect: diagnostics ----

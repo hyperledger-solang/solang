@@ -4,3 +4,5 @@ contract test {
             }
             uint constant y = foo() + 5;
         }
+// ---- Expect: diagnostics ----
+// error: 5:31-36: cannot call function in constant expression

@@ -18,3 +18,5 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 8:26-32: catch can only take 'bytes memory', not 'string'

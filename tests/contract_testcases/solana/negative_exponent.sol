@@ -9,3 +9,7 @@ contract c {
 	return 5e-2 + 1.96;
     }
 }
+
+// ---- Expect: diagnostics ----
+// warning: 6:16-26: ethereum currency unit used while targeting solana
+// error: 9:2-20: conversion to uint256 from rational not allowed

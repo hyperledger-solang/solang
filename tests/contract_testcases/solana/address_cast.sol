@@ -6,3 +6,6 @@ contract c {
 		address(0) = tx.program_id;
 	}
 }
+
+// ---- Expect: diagnostics ----
+// error: 6:3-13: expression is not assignable

@@ -15,3 +15,7 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 2:9-7:10: contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract b'
+// error: 3:20-23: already defined 'foo'
+// 	note 10:18-21: previous definition of 'foo'

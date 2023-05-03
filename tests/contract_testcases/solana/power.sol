@@ -5,3 +5,5 @@ contract AstExample {
         1 ** 2 ** 3;
     }
 }
+
+// ---- Expect: diagnostics ----

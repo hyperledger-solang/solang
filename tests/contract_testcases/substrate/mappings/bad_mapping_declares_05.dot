@@ -1,8 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/mappings/bad_mapping_declares_05.sol" {
-	contract [label="contract c\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_05.sol:2:9-6:10"]
-	diagnostic [label="found contract 'c'\nlevel Debug\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_05.sol:2:9-6:10"]
-	diagnostic_4 [label="parameter of type 'storage' not allowed public or external functions\nlevel Error\ntests/contract_testcases/substrate/mappings/bad_mapping_declares_05.sol:3:51-58"]
-	contracts -> contract
-	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_4 [label="Error"]
-}
