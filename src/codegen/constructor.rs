@@ -52,6 +52,10 @@ pub(super) fn call_constructor(
         .seeds
         .as_ref()
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
+    let accounts = call_args
+        .accounts
+        .as_ref()
+        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
 
     let mut constructor_args = constructor_args
         .iter()
@@ -76,7 +80,7 @@ pub(super) fn call_constructor(
 
     args.append(&mut constructor_args);
 
-    let (encoded_args, encoded_args_len) = abi_encode(loc, args, ns, vartab, cfg, false);
+    let (encoded_args, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
     cfg.add(
         vartab,
@@ -85,13 +89,13 @@ pub(super) fn call_constructor(
             res: address_res,
             contract_no,
             encoded_args,
-            encoded_args_len,
             value,
             gas,
             salt,
             address,
             seeds,
             loc: *loc,
+            accounts,
         },
     );
 }

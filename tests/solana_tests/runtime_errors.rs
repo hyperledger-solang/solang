@@ -321,9 +321,6 @@ contract calle_contract {
 
     _res = vm.function_must_fail("create_child", &[]);
 
-    assert_eq!(
-        vm.logs,
-        "runtime_error: contract creation failed in test.sol:61:13-36,\n"
-    );
+    assert_eq!(vm.logs, "new account needed");
     vm.logs.clear();
 }

@@ -8,7 +8,7 @@ use crate::emit::expression::{expression, string_to_basic_value};
 use crate::emit::loop_builder::LoopBuilder;
 use crate::emit::solana::SolanaTarget;
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
-use crate::sema::ast::{self, Namespace, Type};
+use crate::sema::ast::{self, Namespace};
 use inkwell::types::{BasicType, BasicTypeEnum, IntType};
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
@@ -1247,95 +1247,29 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         &mut self,
         binary: &Binary<'b>,
         function: FunctionValue<'b>,
-        success: Option<&mut BasicValueEnum<'b>>,
+        _success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
         address: PointerValue<'b>,
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
-        contract_args: ContractArgs<'b>,
+        mut contract_args: ContractArgs<'b>,
         ns: &ast::Namespace,
-        loc: Loc,
+        _loc: Loc,
     ) {
         let const_program_id = binary.emit_global_string(
             "const_program_id",
             ns.contracts[contract_no].program_id.as_ref().unwrap(),
             true,
         );
+        contract_args.program_id = Some(const_program_id);
 
-        let sol_params = function.get_last_param().unwrap().into_pointer_value();
+        let payload = binary.vector_bytes(encoded_args);
+        let payload_len = encoded_args_len.into_int_value();
 
-        let external_call_func = binary.module.get_function("external_call").unwrap();
-
-        let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = contract_args.seeds {
-            (
-                seeds,
-                binary.builder.build_int_cast(
-                    len,
-                    external_call_func.get_type().get_param_types()[5].into_int_type(),
-                    "len",
-                ),
-            )
+        if contract_args.accounts.is_some() {
+            self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args);
         } else {
-            (
-                external_call_func.get_type().get_param_types()[4]
-                    .const_zero()
-                    .into_pointer_value(),
-                external_call_func.get_type().get_param_types()[5]
-                    .const_zero()
-                    .into_int_value(),
-            )
-        };
-
-        let ret = binary
-            .builder
-            .build_call(
-                external_call_func,
-                &[
-                    binary.vector_bytes(encoded_args).into(),
-                    encoded_args_len.into(),
-                    address.into(),
-                    const_program_id.into(),
-                    signer_seeds.into(),
-                    signer_seeds_len.into(),
-                    sol_params.into(),
-                ],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-        let is_success = binary.builder.build_int_compare(
-            IntPredicate::EQ,
-            ret,
-            binary.context.i64_type().const_zero(),
-            "success",
-        );
-
-        if let Some(success) = success {
-            // we're in a try statement. This means:
-            // do not abort execution; return success or not in success variable
-            *success = is_success.into();
-        } else {
-            let success_block = binary.context.append_basic_block(function, "success");
-            let bail_block = binary.context.append_basic_block(function, "bail");
-
-            binary
-                .builder
-                .build_conditional_branch(is_success, success_block, bail_block);
-
-            binary.builder.position_at_end(bail_block);
-            self.log_runtime_error(
-                binary,
-                "contract creation failed".to_string(),
-                Some(loc),
-                ns,
-            );
-
-            binary.builder.build_return(Some(&ret));
-
-            binary.builder.position_at_end(success_block);
+            self.build_external_call(binary, address, payload, payload_len, contract_args, ns);
         }
     }
 
@@ -1425,222 +1359,22 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         &self,
         binary: &Binary<'b>,
         function: FunctionValue<'b>,
-        success: Option<&mut BasicValueEnum<'b>>,
+        _success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
-        contract_args: ContractArgs<'b>,
+        mut contract_args: ContractArgs<'b>,
         _ty: ast::CallTy,
         ns: &ast::Namespace,
         _loc: Loc,
     ) {
         let address = address.unwrap();
 
-        let ret = if let Some((accounts, accounts_len)) = contract_args.accounts {
-            // build instruction
-            let instruction_ty: BasicTypeEnum = binary
-                .module
-                .get_struct_type("struct.SolInstruction")
-                .unwrap()
-                .into();
-
-            let instruction = binary.build_alloca(function, instruction_ty, "instruction");
-
-            binary.builder.build_store(
-                binary
-                    .builder
-                    .build_struct_gep(instruction_ty, instruction, 0, "program_id")
-                    .unwrap(),
-                address,
-            );
-
-            binary.builder.build_store(
-                binary
-                    .builder
-                    .build_struct_gep(instruction_ty, instruction, 1, "accounts")
-                    .unwrap(),
-                accounts,
-            );
-
-            binary.builder.build_store(
-                binary
-                    .builder
-                    .build_struct_gep(instruction_ty, instruction, 2, "accounts_len")
-                    .unwrap(),
-                binary.builder.build_int_z_extend(
-                    accounts_len,
-                    binary.context.i64_type(),
-                    "accounts_len",
-                ),
-            );
-
-            binary.builder.build_store(
-                binary
-                    .builder
-                    .build_struct_gep(instruction_ty, instruction, 3, "data")
-                    .unwrap(),
-                payload,
-            );
-
-            binary.builder.build_store(
-                binary
-                    .builder
-                    .build_struct_gep(instruction_ty, instruction, 4, "data_len")
-                    .unwrap(),
-                binary.builder.build_int_z_extend(
-                    payload_len,
-                    binary.context.i64_type(),
-                    "payload_len",
-                ),
-            );
-
-            let parameters = self.sol_parameters(binary);
-
-            let account_infos = binary
-                .builder
-                .build_struct_gep(
-                    binary
-                        .module
-                        .get_struct_type("struct.SolParameters")
-                        .unwrap(),
-                    parameters,
-                    0,
-                    "ka",
-                )
-                .unwrap();
-
-            let account_infos_len = binary.builder.build_int_truncate(
-                binary
-                    .builder
-                    .build_load(
-                        binary.context.i64_type(),
-                        binary
-                            .builder
-                            .build_struct_gep(
-                                binary
-                                    .module
-                                    .get_struct_type("struct.SolParameters")
-                                    .unwrap(),
-                                parameters,
-                                1,
-                                "ka_num",
-                            )
-                            .unwrap(),
-                        "ka_num",
-                    )
-                    .into_int_value(),
-                binary.context.i32_type(),
-                "ka_num",
-            );
-
-            let external_call = binary.module.get_function("sol_invoke_signed_c").unwrap();
-
-            let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = contract_args.seeds {
-                (
-                    seeds,
-                    binary.builder.build_int_cast(
-                        len,
-                        external_call.get_type().get_param_types()[4].into_int_type(),
-                        "len",
-                    ),
-                )
-            } else {
-                (
-                    external_call.get_type().get_param_types()[3]
-                        .const_zero()
-                        .into_pointer_value(),
-                    external_call.get_type().get_param_types()[4]
-                        .const_zero()
-                        .into_int_value(),
-                )
-            };
-
-            binary
-                .builder
-                .build_call(
-                    external_call,
-                    &[
-                        instruction.into(),
-                        account_infos.into(),
-                        account_infos_len.into(),
-                        signer_seeds.into(),
-                        signer_seeds_len.into(),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value()
+        if contract_args.accounts.is_some() {
+            contract_args.program_id = Some(address);
+            self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args);
         } else {
-            let parameters = self.sol_parameters(binary);
-
-            let external_call = binary.module.get_function("external_call").unwrap();
-
-            binary
-                .builder
-                .build_call(
-                    external_call,
-                    &[
-                        payload.into(),
-                        payload_len.into(),
-                        address.into(),
-                        binary
-                            .llvm_type(&Type::Address(false), ns)
-                            .ptr_type(AddressSpace::default())
-                            .const_null()
-                            .into(),
-                        external_call.get_type().get_param_types()[4]
-                            .ptr_type(AddressSpace::default())
-                            .const_null()
-                            .into(),
-                        external_call.get_type().get_param_types()[5]
-                            .into_int_type()
-                            .const_zero()
-                            .into(),
-                        parameters.into(),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value()
-        };
-
-        let is_success = binary.builder.build_int_compare(
-            IntPredicate::EQ,
-            ret,
-            binary.context.i64_type().const_zero(),
-            "success",
-        );
-
-        if let Some(success) = success {
-            // we're in a try statement. This means:
-            // do not abort execution; return success or not in success variable
-            *success = is_success.into();
-        } else {
-            let success_block = binary.context.append_basic_block(function, "success");
-            let bail_block = binary.context.append_basic_block(function, "bail");
-
-            binary
-                .builder
-                .build_conditional_branch(is_success, success_block, bail_block);
-
-            binary.builder.position_at_end(bail_block);
-
-            // We can inform the programmer about where the call failed using _loc. This can be done in all sol_log() in stdlib/solana.c.
-            self.assert_failure(
-                binary,
-                binary
-                    .context
-                    .i8_type()
-                    .ptr_type(AddressSpace::default())
-                    .const_null(),
-                binary.context.i32_type().const_zero(),
-            );
-
-            binary.builder.position_at_end(success_block);
+            self.build_external_call(binary, address, payload, payload_len, contract_args, ns);
         }
     }
 

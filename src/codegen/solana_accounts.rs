@@ -362,16 +362,15 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
         }
         Instr::Constructor {
             encoded_args,
-            encoded_args_len,
             value,
             gas,
             salt,
             address,
             seeds,
+            accounts,
             ..
         } => {
             encoded_args.recurse(data, check_expression);
-            encoded_args_len.recurse(data, check_expression);
             if let Some(value) = value {
                 value.recurse(data, check_expression);
             }
@@ -384,6 +383,9 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
             }
             if let Some(seeds) = seeds {
                 seeds.recurse(data, check_expression);
+            }
+            if let Some(accounts) = accounts {
+                accounts.recurse(data, check_expression);
             }
 
             data.add_system_account();

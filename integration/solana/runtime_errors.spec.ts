@@ -149,8 +149,7 @@ describe('Runtime Errors', function () {
                 .signers([payer]).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs
-            expect(logs).toContain(`Program log: runtime_error: contract creation failed in runtime_errors.sol:71:13-62,
-`)
+            expect(logs).toContain("Program log: new account needed");
         }
 
     });

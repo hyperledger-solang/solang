@@ -575,13 +575,49 @@ contract Child {
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
     let errors = ns.diagnostics.errors();
-    assert_eq!(errors.len(), 2);
+    assert_eq!(errors.len(), 1);
     assert_eq!(
         errors[0].message,
-        "'address' call argument required on solana"
-    );
-    assert_eq!(
-        errors[1].message,
         "dynamic array is not supported for the 'accounts' argument"
+    );
+}
+
+#[test]
+fn no_address_and_no_metas() {
+    let src = r#"
+    import 'solana';
+
+contract creator {
+    Child public c;
+    function create_child_with_meta(address child, address payer) public {
+
+        c = new Child(payer);
+
+        c.say_hello();
+    }
+}
+
+contract Child {
+    @payer(payer)
+    @space(511 + 7)
+    constructor(address payer) {
+        print("In child constructor");
+    }
+
+    function say_hello() pure public {
+        print("Hello there");
+    }
+}
+    "#;
+    let mut cache = FileResolver::new();
+    cache.set_file_contents("test.sol", src.to_string());
+
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
+
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(
+        errors[0].message,
+        "either 'address' or 'accounts' call argument is required on solana"
     );
 }
