@@ -10,7 +10,6 @@ use crate::codegen::Expression;
 use crate::sema::ast::{StringLocation, Type};
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
-use num_traits::Zero;
 use solang_parser::pt::Loc;
 
 #[test]
@@ -425,17 +424,13 @@ fn string() {
         res: 0,
         contract_no: 0,
         encoded_args: concat.clone(),
-        encoded_args_len: Expression::NumberLiteral {
-            loc: Loc::Codegen,
-            ty: Type::Uint(32),
-            value: BigInt::zero(),
-        },
         value: Some(compare.clone()),
         gas: concat2.clone(),
         salt: Some(compare2.clone()),
         address: None,
         seeds: None,
         loc: Loc::Codegen,
+        accounts: None,
     };
 
     let mut ave = AvailableExpression::default();

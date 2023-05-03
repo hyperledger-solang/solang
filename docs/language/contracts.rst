@@ -90,11 +90,31 @@ can use. gas is a ``uint64``.
 .. include:: ../examples/substrate/contract_gas_limit.sol
   :code: solidity
 
-When creating a contract on Solana, the address of the new account must be
-specified using ```address:``.
+.. _solana_constructor:
+
+Instantiating a contract on Solana
+__________________________________
+
+On Solana, contracts are deployed to a program account, which holds only the contract's executable binary.
+When calling a constructor, one needs to provide an address that will serve as the contract's data account,
+by using the call argument ``address``:
 
 .. include:: ../examples/solana/contract_address.sol
   :code: solidity
+
+Alternatively, the data account to be initialized can be provided using the ``accounts`` call argument. In this case,
+one needs to instantiate a fixed length array of type ``AccountMeta`` to pass to the call. The array must contain all
+the accounts the transaction is going to need, in addition to the data account to be initialized.
+
+For the creation of a contract, the data account must the **first** element in such a vector and the system account
+``11111111111111111111111111111111`` must also be present. If the constructor one is calling has the
+:ref:`@payer annotation <payer_seeds_bump>`, the payer account should appear in the array as well. Moreover, the
+``is_signer`` and ``is_writable`` bool flags need to be properly set, according to the following example:
+
+
+.. include:: ../examples/solana/create_contract_with_metas.sol
+  :code: solidity
+
 
 Base contracts, abstract contracts and interfaces
 -------------------------------------------------

@@ -120,12 +120,12 @@ pub enum Instr {
         res: usize,
         contract_no: usize,
         encoded_args: Expression,
-        encoded_args_len: Expression,
         value: Option<Expression>,
         gas: Expression,
         salt: Option<Expression>,
         address: Option<Expression>,
         seeds: Option<Expression>,
+        accounts: Option<Expression>,
         loc: Loc,
     },
     /// Call external functions. If the call fails, set the success failure
@@ -267,15 +267,14 @@ impl Instr {
 
             Instr::Constructor {
                 encoded_args,
-                encoded_args_len,
                 value,
                 gas,
                 salt,
                 address,
+                accounts,
                 ..
             } => {
                 encoded_args.recurse(cx, f);
-                encoded_args_len.recurse(cx, f);
                 if let Some(expr) = value {
                     expr.recurse(cx, f);
                 }
@@ -286,6 +285,10 @@ impl Instr {
                 }
 
                 if let Some(expr) = address {
+                    expr.recurse(cx, f);
+                }
+
+                if let Some(expr) = accounts {
                     expr.recurse(cx, f);
                 }
             }
@@ -1226,15 +1229,14 @@ impl ControlFlowGraph {
                 res,
                 contract_no,
                 encoded_args,
-                encoded_args_len,
                 gas,
                 salt,
                 value,
                 address,seeds,
+                accounts,
                 loc:_
-
             } => format!(
-                "%{}, {} = constructor salt:{} value:{} gas:{} address:{} seeds:{} {} (encoded buffer: {}, buffer len: {})",
+                "%{}, {} = constructor salt:{} value:{} gas:{} address:{} seeds:{} {} encoded buffer: {} accounts: {}",
                 self.vars[res].id.name,
                 match success {
                     Some(i) => format!("%{}", self.vars[i].id.name),
@@ -1260,7 +1262,11 @@ impl ControlFlowGraph {
                 },
                 ns.contracts[*contract_no].name,
                 self.expr_to_string(contract, ns, encoded_args),
-                self.expr_to_string(contract, ns, encoded_args_len)
+                if let Some(accounts) = accounts {
+                    self.expr_to_string(contract, ns, accounts)
+                } else {
+                    String::new()
+                }
             ),
             Instr::SelfDestruct { recipient } => format!(
                 "selfdestruct {}",

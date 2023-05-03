@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_new, build_solidity, create_program_address, Account, AccountState, BorshToken,
+    account_new, build_solidity, create_program_address, Account, AccountMeta, AccountState,
+    BorshToken, Pubkey,
 };
 use base58::{FromBase58, ToBase58};
 
@@ -245,8 +246,9 @@ fn missing_contract() {
 
     let missing = account_new();
 
-    let res = vm.function_must_fail("test_other", &[BorshToken::Address(missing)]);
-    assert_eq!(res.unwrap(), 64424509440);
+    vm.logs.clear();
+    let _ = vm.function_must_fail("test_other", &[BorshToken::Address(missing)]);
+    assert_eq!(vm.logs, "new account needed");
 }
 
 #[test]
@@ -513,6 +515,94 @@ fn create_child() {
 
     vm.function(
         "create_child",
+        &[BorshToken::Address(seed.0), BorshToken::Address(payer)],
+    );
+
+    assert_eq!(
+        vm.logs,
+        "Going to create childIn child constructorHello there"
+    );
+}
+
+#[test]
+fn create_child_with_meta() {
+    let mut vm = build_solidity(
+        r#"
+        import 'solana';
+
+contract creator {
+    Child public c;
+    function create_child_with_meta(address child, address payer) public {
+        print("Going to create child");
+        AccountMeta[2] metas = [
+            AccountMeta({pubkey: child, is_signer: true, is_writable: true}),
+            AccountMeta({pubkey: payer, is_signer: true, is_writable: true})
+            // Passing the system account here crashes the VM, even if I add it to vm.account_data
+            // AccountMeta({pubkey: address"11111111111111111111111111111111", is_writable: false, is_signer: false})
+        ];
+        c = new Child{accounts: metas}(payer);
+        c.say_hello();
+    }
+}
+
+@program_id("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT")
+contract Child {
+    @payer(payer)
+    @space(511 + 7)
+    constructor(address payer) {
+        print("In child constructor");
+    }
+
+    function say_hello() pure public {
+        print("Hello there");
+    }
+}
+        "#,
+    );
+
+    vm.set_program(0);
+
+    vm.constructor(&[]);
+
+    let payer = account_new();
+
+    let program_id = vm.stack[0].program;
+
+    let seed = vm.create_pda(&program_id);
+
+    vm.account_data.insert(
+        seed.0,
+        AccountState {
+            data: vec![],
+            owner: None,
+            lamports: 0,
+        },
+    );
+
+    vm.account_data.insert(
+        payer,
+        AccountState {
+            data: vec![],
+            owner: None,
+            lamports: 0,
+        },
+    );
+
+    let mut metas = vm.default_metas();
+    metas.push(AccountMeta {
+        pubkey: Pubkey(seed.0),
+        is_signer: false,
+        is_writable: false,
+    });
+    metas.push(AccountMeta {
+        pubkey: Pubkey(payer),
+        is_signer: true,
+        is_writable: false,
+    });
+
+    vm.function_metas(
+        "create_child_with_meta",
+        &metas,
         &[BorshToken::Address(seed.0), BorshToken::Address(payer)],
     );
 

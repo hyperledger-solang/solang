@@ -15,4 +15,4 @@
             }
         }
 // ---- Expect: diagnostics ----
-// error: 11:25-36: 'address' call argument required on solana
+// error: 11:25-36: either 'address' or 'accounts' call argument is required on solana

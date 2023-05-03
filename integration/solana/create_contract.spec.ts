@@ -110,4 +110,28 @@ describe('ChildContract', function () {
 
         expect(res.raw.toString()).toContain('I am PDA.');
     });
+
+    it('Create Contract with account metas vector', async function () {
+        let child = Keypair.generate();
+        let child_program = new PublicKey("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT");
+
+        const signature = await program.methods.createChildWithMetas(child.publicKey, payer.publicKey)
+            .accounts({ dataAccount: storage.publicKey })
+            .remainingAccounts([
+                { pubkey: child_program, isSigner: false, isWritable: false },
+                { pubkey: child.publicKey, isSigner: true, isWritable: true },
+                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+            ])
+            .signers([payer, child])
+            .rpc({ commitment: 'confirmed' });
+
+        const tx = await provider.connection.getTransaction(signature, { commitment: 'confirmed' });
+
+        expect(tx?.meta?.logMessages!.toString()).toContain('In child constructor');
+        expect(tx?.meta?.logMessages!.toString()).toContain('I am using metas');
+
+        const info = await provider.connection.getAccountInfo(child.publicKey);
+
+        expect(info?.data.length).toEqual(518);
+    });
 });
