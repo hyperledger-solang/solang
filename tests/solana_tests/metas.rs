@@ -38,7 +38,7 @@ fn use_authority() {
         meta.is_signer = true;
     }
 
-    vm.function_metas(&metas, "inc", &[]);
+    vm.function_metas("inc", &metas, &[]);
 
     let res = vm.function("get", &[]).unwrap();
     assert_eq!(

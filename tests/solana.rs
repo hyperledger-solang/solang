@@ -1483,13 +1483,13 @@ impl VirtualMachine {
     fn function(&mut self, name: &str, args: &[BorshToken]) -> Option<BorshToken> {
         let default_metas = self.default_metas();
 
-        self.function_metas(&default_metas, name, args)
+        self.function_metas(name, &default_metas, args)
     }
 
     fn function_metas(
         &mut self,
-        metas: &[AccountMeta],
         name: &str,
+        metas: &[AccountMeta],
         args: &[BorshToken],
     ) -> Option<BorshToken> {
         self.return_data = None;

@@ -7,11 +7,13 @@ use crate::codegen::{
 use crate::emit::binary::Binary;
 use crate::emit::cfg::{create_block, BasicBlock, Work};
 use crate::emit::expression::expression;
-use crate::emit::{ContractArgs, TargetRuntime};
+use crate::emit::{ContractArgs, TargetRuntime, Variable};
 use crate::sema::ast::{Contract, Namespace, RetrieveType, Type};
 use crate::Target;
 use inkwell::types::BasicType;
-use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue};
+use inkwell::values::{
+    BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+};
 use inkwell::{AddressSpace, IntPredicate};
 use num_traits::ToPrimitive;
 use solang_parser::pt::CodeLocation;
@@ -661,16 +663,16 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             res,
             contract_no,
             encoded_args,
-            encoded_args_len,
             value,
             gas,
             salt,
             address,
             seeds,
             loc,
+            accounts,
         } => {
             let encoded_args = expression(target, bin, encoded_args, &w.vars, function, ns);
-            let encoded_args_len = expression(target, bin, encoded_args_len, &w.vars, function, ns);
+            let encoded_args_len = bin.vector_len(encoded_args).as_basic_value_enum();
 
             let address_stack = bin.build_alloca(function, bin.address_type(ns), "address");
 
@@ -682,11 +684,43 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .as_ref()
                 .map(|v| expression(target, bin, v, &w.vars, function, ns).into_int_value());
 
+            let llvm_accounts = process_account_metas(target, accounts, bin, &w.vars, function, ns);
+
             if let Some(address) = address {
                 let address =
                     expression(target, bin, address, &w.vars, function, ns).into_array_value();
 
                 bin.builder.build_store(address_stack, address);
+            } else if let Some((account_metas, _)) = llvm_accounts {
+                // On Solana, we must return the address of a contract after instantiating it with
+                // 'new'. When the 'address' parameter is not provided to the call argument,
+                // we fetch the address from the AccountMeta array provided in the 'accounts'
+                // call argument. We assume the data account will always be the first element in
+                // the array.
+                let vector_ty = bin.llvm_type(&accounts.as_ref().unwrap().ty(), ns);
+                let elem_ptr = unsafe {
+                    bin.builder.build_gep(
+                        vector_ty,
+                        account_metas,
+                        &[
+                            bin.context.i32_type().const_zero(),
+                            bin.context.i32_type().const_zero(),
+                            bin.context.i32_type().const_zero(),
+                        ],
+                        "contract_account",
+                    )
+                };
+                let loaded_ptr = bin.builder.build_load(
+                    bin.address_type(ns).ptr_type(AddressSpace::default()),
+                    elem_ptr,
+                    "",
+                );
+                let loaded_address = bin.builder.build_load(
+                    bin.address_type(ns),
+                    loaded_ptr.into_pointer_value(),
+                    "",
+                );
+                bin.builder.build_store(address_stack, loaded_address);
             }
 
             let seeds = if let Some(seeds) = seeds {
@@ -767,7 +801,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 encoded_args,
                 encoded_args_len,
                 ContractArgs {
-                    accounts: None,
+                    program_id: None,
+                    accounts: llvm_accounts,
                     gas: Some(gas),
                     value,
                     salt,
@@ -817,24 +852,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 None
             };
 
-            let accounts = if let Some(accounts) = accounts {
-                let ty = accounts.ty();
-
-                let expr = expression(target, bin, accounts, &w.vars, function, ns);
-
-                if let Some(n) = ty.array_length() {
-                    let accounts = expr.into_pointer_value();
-                    let len = bin.context.i32_type().const_int(n.to_u64().unwrap(), false);
-
-                    Some((accounts, len))
-                } else {
-                    let addr = bin.vector_bytes(expr);
-                    let len = bin.vector_len(expr);
-                    Some((addr, len))
-                }
-            } else {
-                None
-            };
+            let accounts = process_account_metas(target, accounts, bin, &w.vars, function, ns);
 
             let (payload_ptr, payload_len) = if payload_ty == Type::DynamicBytes {
                 (bin.vector_bytes(payload), bin.vector_len(payload))
@@ -922,6 +940,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 payload_len,
                 address,
                 ContractArgs {
+                    program_id: None,
                     value: Some(value),
                     gas: Some(gas),
                     salt: None,
@@ -1105,4 +1124,31 @@ fn add_or_retrieve_block<'a>(
     }
 
     bb.bb
+}
+
+/// If the AccountMeta array has been provided in an external call or contract creation,
+/// we process its codegen representation here and return the pointer to it and its size.
+fn process_account_metas<'a, T: TargetRuntime<'a> + ?Sized>(
+    target: &T,
+    accounts: &Option<Expression>,
+    bin: &Binary<'a>,
+    vartab: &HashMap<usize, Variable<'a>>,
+    function: FunctionValue<'a>,
+    ns: &Namespace,
+) -> Option<(PointerValue<'a>, IntValue<'a>)> {
+    if let Some(accounts) = accounts {
+        let ty = accounts.ty();
+        let expr = expression(target, bin, accounts, vartab, function, ns);
+
+        if let Some(n) = ty.array_length() {
+            let accounts = expr.into_pointer_value();
+            let len = bin.context.i32_type().const_int(n.to_u64().unwrap(), false);
+
+            Some((accounts, len))
+        } else {
+            unreachable!("dynamic array not allowed for the 'accounts' parameter");
+        }
+    } else {
+        None
+    }
 }

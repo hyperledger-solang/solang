@@ -16,7 +16,7 @@ use num_traits::ToPrimitive;
 
 use crate::emit::functions::emit_functions;
 use crate::emit::loop_builder::LoopBuilder;
-use crate::emit::{Binary, TargetRuntime};
+use crate::emit::{Binary, ContractArgs, TargetRuntime};
 
 pub struct SolanaTarget();
 
@@ -1126,5 +1126,200 @@ impl SolanaTarget {
                     .into()
             }
         }
+    }
+
+    /// Construct the LLVM-IR to call 'external_call' from solana.c
+    fn build_external_call<'b>(
+        &self,
+        binary: &Binary,
+        address: PointerValue<'b>,
+        payload: PointerValue<'b>,
+        payload_len: IntValue<'b>,
+        contract_args: ContractArgs<'b>,
+        ns: &ast::Namespace,
+    ) {
+        let parameters = self.sol_parameters(binary);
+        let external_call = binary.module.get_function("external_call").unwrap();
+
+        let program_id = contract_args.program_id.unwrap_or_else(|| {
+            binary
+                .llvm_type(&Type::Address(false), ns)
+                .ptr_type(AddressSpace::default())
+                .const_null()
+        });
+
+        let (seeds, seeds_len) = contract_args
+            .seeds
+            .map(|(seeds, len)| {
+                (
+                    seeds,
+                    binary.builder.build_int_cast(
+                        len,
+                        external_call.get_type().get_param_types()[5].into_int_type(),
+                        "len",
+                    ),
+                )
+            })
+            .unwrap_or((
+                external_call.get_type().get_param_types()[4]
+                    .ptr_type(AddressSpace::default())
+                    .const_null(),
+                external_call.get_type().get_param_types()[5]
+                    .into_int_type()
+                    .const_zero(),
+            ));
+
+        binary.builder.build_call(
+            external_call,
+            &[
+                payload.into(),
+                payload_len.into(),
+                address.into(),
+                program_id.into(),
+                seeds.into(),
+                seeds_len.into(),
+                parameters.into(),
+            ],
+            "",
+        );
+    }
+
+    /// Construct the LLVM-IR to call 'sol_invoke_signed_c'.
+    fn build_invoke_signed_c<'b>(
+        &self,
+        binary: &Binary<'b>,
+        function: FunctionValue<'b>,
+        payload: PointerValue<'b>,
+        payload_len: IntValue<'b>,
+        contract_args: ContractArgs<'b>,
+    ) {
+        let instruction_ty: BasicTypeEnum = binary
+            .module
+            .get_struct_type("struct.SolInstruction")
+            .unwrap()
+            .into();
+
+        let instruction = binary.build_alloca(function, instruction_ty, "instruction");
+
+        binary.builder.build_store(
+            binary
+                .builder
+                .build_struct_gep(instruction_ty, instruction, 0, "program_id")
+                .unwrap(),
+            contract_args.program_id.unwrap(),
+        );
+
+        binary.builder.build_store(
+            binary
+                .builder
+                .build_struct_gep(instruction_ty, instruction, 1, "accounts")
+                .unwrap(),
+            contract_args.accounts.unwrap().0,
+        );
+
+        binary.builder.build_store(
+            binary
+                .builder
+                .build_struct_gep(instruction_ty, instruction, 2, "accounts_len")
+                .unwrap(),
+            binary.builder.build_int_z_extend(
+                contract_args.accounts.unwrap().1,
+                binary.context.i64_type(),
+                "accounts_len",
+            ),
+        );
+
+        binary.builder.build_store(
+            binary
+                .builder
+                .build_struct_gep(instruction_ty, instruction, 3, "data")
+                .unwrap(),
+            payload,
+        );
+
+        binary.builder.build_store(
+            binary
+                .builder
+                .build_struct_gep(instruction_ty, instruction, 4, "data_len")
+                .unwrap(),
+            binary.builder.build_int_z_extend(
+                payload_len,
+                binary.context.i64_type(),
+                "payload_len",
+            ),
+        );
+
+        let parameters = self.sol_parameters(binary);
+
+        let account_infos = binary
+            .builder
+            .build_struct_gep(
+                binary
+                    .module
+                    .get_struct_type("struct.SolParameters")
+                    .unwrap(),
+                parameters,
+                0,
+                "ka",
+            )
+            .unwrap();
+
+        let account_infos_len = binary.builder.build_int_truncate(
+            binary
+                .builder
+                .build_load(
+                    binary.context.i64_type(),
+                    binary
+                        .builder
+                        .build_struct_gep(
+                            binary
+                                .module
+                                .get_struct_type("struct.SolParameters")
+                                .unwrap(),
+                            parameters,
+                            1,
+                            "ka_num",
+                        )
+                        .unwrap(),
+                    "ka_num",
+                )
+                .into_int_value(),
+            binary.context.i32_type(),
+            "ka_num",
+        );
+
+        let external_call = binary.module.get_function("sol_invoke_signed_c").unwrap();
+
+        let (signer_seeds, signer_seeds_len) = if let Some((seeds, len)) = contract_args.seeds {
+            (
+                seeds,
+                binary.builder.build_int_cast(
+                    len,
+                    external_call.get_type().get_param_types()[4].into_int_type(),
+                    "len",
+                ),
+            )
+        } else {
+            (
+                external_call.get_type().get_param_types()[3]
+                    .const_zero()
+                    .into_pointer_value(),
+                external_call.get_type().get_param_types()[4]
+                    .const_zero()
+                    .into_int_value(),
+            )
+        };
+
+        binary.builder.build_call(
+            external_call,
+            &[
+                instruction.into(),
+                account_infos.into(),
+                account_infos_len.into(),
+                signer_seeds.into(),
+                signer_seeds_len.into(),
+            ],
+            "",
+        );
     }
 }

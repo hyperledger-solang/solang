@@ -36,6 +36,7 @@ pub struct Variable<'a> {
 }
 
 pub struct ContractArgs<'b> {
+    program_id: Option<PointerValue<'b>>,
     value: Option<IntValue<'b>>,
     gas: Option<IntValue<'b>>,
     salt: Option<IntValue<'b>>,

@@ -104,15 +104,14 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
 
             Instr::Constructor {
                 encoded_args,
-                encoded_args_len,
                 value,
                 gas,
                 salt,
                 address,
+                accounts,
                 ..
             } => {
                 let _ = self.gen_expression(encoded_args, ave, cst);
-                let _ = self.gen_expression(encoded_args_len, ave, cst);
                 if let Some(expr) = value {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
@@ -124,6 +123,10 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 }
 
                 if let Some(expr) = address {
+                    let _ = self.gen_expression(expr, ave, cst);
+                }
+
+                if let Some(expr) = accounts {
                     let _ = self.gen_expression(expr, ave, cst);
                 }
             }
@@ -325,13 +328,13 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 res,
                 contract_no,
                 encoded_args,
-                encoded_args_len,
                 value,
                 gas,
                 salt,
                 address,
                 seeds,
                 loc,
+                accounts,
             } => {
                 let new_value = value
                     .as_ref()
@@ -349,18 +352,22 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     .as_ref()
                     .map(|expr| self.regenerate_expression(expr, ave, cst).1);
 
+                let new_accounts = accounts
+                    .as_ref()
+                    .map(|expr| self.regenerate_expression(expr, ave, cst).1);
+
                 Instr::Constructor {
                     success: *success,
                     res: *res,
                     contract_no: *contract_no,
                     encoded_args: self.regenerate_expression(encoded_args, ave, cst).1,
-                    encoded_args_len: self.regenerate_expression(encoded_args_len, ave, cst).1,
                     value: new_value,
                     gas: self.regenerate_expression(gas, ave, cst).1,
                     salt: new_salt,
                     address: new_address,
                     seeds: new_seeds,
                     loc: *loc,
+                    accounts: new_accounts,
                 }
             }
 
