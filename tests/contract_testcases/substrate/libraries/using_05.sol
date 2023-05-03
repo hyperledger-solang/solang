@@ -12,3 +12,5 @@
                 return a > b ? a : b;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 6:24-39: using function expects 2 arguments, 3 provided (including self)

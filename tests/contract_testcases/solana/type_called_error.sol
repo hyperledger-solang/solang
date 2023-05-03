@@ -14,3 +14,5 @@ contract c {
 		return e;
 	}
 }
+
+// ---- Expect: diagnostics ----

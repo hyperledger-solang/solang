@@ -19,3 +19,5 @@ library FixedPoint {
         return uint144(self._x >> 112);
     }
 }
+
+// ---- Expect: diagnostics ----

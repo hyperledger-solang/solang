@@ -6,3 +6,5 @@
                 bar.push(102);
             }
         }
+// ---- Expect: diagnostics ----
+// error: 6:21-25: method 'push()' not allowed on fixed length array

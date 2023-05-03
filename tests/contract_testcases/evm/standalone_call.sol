@@ -56,3 +56,4 @@ contract BABYLINK {
         return b;
     }
 }
+// ---- Expect: diagnostics ----

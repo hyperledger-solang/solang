@@ -210,8 +210,12 @@ pub fn resolve_function_body(
         ns.functions[function_no].modifiers = modifiers;
     }
 
-    // a function with no return values does not need a return statement
-    let mut return_required = !def.returns.is_empty();
+    // If there is no return statement, any unnamed return types will
+    // implicitly be 0. If there is a return type which is a storage
+    // reference (e.g. int[] storage), a value must be given via
+    // a return statement, else the value will not refer to valid storage,
+    // as 0 is almost certainly an invalid storage key.
+    let mut return_required = false;
 
     // If any of the return values are named, then the return statement can be omitted at
     // the end of the function, and return values may be omitted too. Create variables to
@@ -220,8 +224,6 @@ pub fn resolve_function_body(
         let ret = &ns.functions[function_no].returns[i];
 
         if let Some(ref name) = p.1.as_ref().unwrap().name {
-            return_required = false;
-
             if let Some(pos) = symtable.add(
                 name,
                 ret.ty.clone(),
@@ -234,6 +236,10 @@ pub fn resolve_function_body(
                 symtable.returns.push(pos);
             }
         } else {
+            if ret.ty.is_contract_storage() {
+                return_required = true;
+            }
+
             // anonymous return
             let id = pt::Identifier {
                 loc: p.0,
@@ -275,11 +281,14 @@ pub fn resolve_function_body(
     ns.diagnostics.extend(diagnostics);
 
     if reachable? && return_required {
-        ns.diagnostics.push(Diagnostic::error(
-            body.loc().end_range(),
-            "missing return statement".to_string(),
-        ));
-        return Err(());
+        for param in ns.functions[function_no].returns.iter() {
+            if param.id.is_none() && param.ty.is_contract_storage() {
+                ns.diagnostics.push(Diagnostic::error(
+                    param.loc,
+                    "storage reference must be given value with a return statement".to_string(),
+                ));
+            }
+        }
     }
 
     if def.ty == pt::FunctionTy::Modifier {
@@ -555,7 +564,7 @@ fn statement(
             ));
             Err(())
         }
-        pt::Statement::For(loc, init_stmt, None, next_stmt, body_stmt) => {
+        pt::Statement::For(loc, init_stmt, None, next_expr, body_stmt) => {
             symtable.new_scope();
 
             let mut init = Vec::new();
@@ -590,18 +599,17 @@ fn statement(
 
             let control = loops.leave_scope();
             let reachable = control.no_breaks > 0;
-            let mut next = Vec::new();
+            let mut next = None;
 
-            if let Some(next_stmt) = next_stmt {
-                statement(
-                    next_stmt,
-                    &mut next,
+            if let Some(next_expr) = next_expr {
+                next = Some(expression(
+                    next_expr,
                     context,
-                    symtable,
-                    loops,
                     ns,
+                    symtable,
                     diagnostics,
-                )?;
+                    ResolveTo::Type(&Type::Bool),
+                )?);
             }
 
             symtable.leave_scope();
@@ -617,12 +625,12 @@ fn statement(
 
             Ok(reachable)
         }
-        pt::Statement::For(loc, init_stmt, Some(cond_expr), next_stmt, body_stmt) => {
+        pt::Statement::For(loc, init_stmt, Some(cond_expr), next_expr, body_stmt) => {
             symtable.new_scope();
 
             let mut init = Vec::new();
             let mut body = Vec::new();
-            let mut next = Vec::new();
+            let mut next = None;
 
             if let Some(init_stmt) = init_stmt {
                 statement(
@@ -636,7 +644,7 @@ fn statement(
                 )?;
             }
 
-            let expr = expression(
+            let cond = expression(
                 cond_expr,
                 context,
                 ns,
@@ -645,7 +653,7 @@ fn statement(
                 ResolveTo::Type(&Type::Bool),
             )?;
 
-            let cond = expr.cast(&cond_expr.loc(), &Type::Bool, true, ns, diagnostics)?;
+            let cond = cond.cast(&cond_expr.loc(), &Type::Bool, true, ns, diagnostics)?;
 
             // continue goes to next, and if that does exist, cond
             loops.new_scope();
@@ -669,17 +677,16 @@ fn statement(
                 body_reachable = true;
             }
 
-            if body_reachable {
-                if let Some(next_stmt) = next_stmt {
-                    statement(
-                        next_stmt,
-                        &mut next,
+            if let Some(next_expr) = next_expr {
+                if body_reachable {
+                    next = Some(expression(
+                        next_expr,
                         context,
-                        symtable,
-                        loops,
                         ns,
+                        symtable,
                         diagnostics,
-                    )?;
+                        ResolveTo::Type(&Type::Bool),
+                    )?);
                 }
             }
 
@@ -1184,6 +1191,18 @@ fn emit_event(
     diagnostics: &mut Diagnostics,
 ) -> Result<Statement, ()> {
     let function_no = context.function_no.unwrap();
+    let to_stmt =
+        |ns: &mut Namespace, event_no: usize, event_loc: pt::Loc, cast_args: Vec<Expression>| {
+            if !ns.functions[function_no].emits_events.contains(&event_no) {
+                ns.functions[function_no].emits_events.push(event_no);
+            }
+            Statement::Emit {
+                loc: *loc,
+                event_no,
+                event_loc,
+                args: cast_args,
+            }
+        };
 
     match ty {
         pt::Expression::FunctionCall(_, ty, args) => {
@@ -1264,16 +1283,7 @@ fn emit_event(
                 }
 
                 if matches {
-                    if !ns.functions[function_no].emits_events.contains(event_no) {
-                        ns.functions[function_no].emits_events.push(*event_no);
-                    }
-
-                    return Ok(Statement::Emit {
-                        loc: *loc,
-                        event_no: *event_no,
-                        event_loc,
-                        args: cast_args,
-                    });
+                    return Ok(to_stmt(ns, *event_no, event_loc, cast_args));
                 } else if event_nos.len() > 1 && diagnostics.extend_non_casting(&errors) {
                     return Err(());
                 }
@@ -1416,16 +1426,7 @@ fn emit_event(
                 }
 
                 if matches {
-                    if !ns.functions[function_no].emits_events.contains(event_no) {
-                        ns.functions[function_no].emits_events.push(*event_no);
-                    }
-
-                    return Ok(Statement::Emit {
-                        loc: *loc,
-                        event_no: *event_no,
-                        event_loc,
-                        args: cast_args,
-                    });
+                    return Ok(to_stmt(ns, *event_no, event_loc, cast_args));
                 } else if event_nos.len() > 1 && diagnostics.extend_non_casting(&temp_diagnostics) {
                     return Err(());
                 }

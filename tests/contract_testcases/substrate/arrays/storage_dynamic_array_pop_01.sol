@@ -6,3 +6,5 @@
                 bar.pop();
             }
         }
+// ---- Expect: diagnostics ----
+// error: 6:21-24: method 'pop()' not allowed on fixed length array

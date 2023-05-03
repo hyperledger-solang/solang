@@ -2,11 +2,18 @@
 
 use path_slash::PathExt;
 use rayon::prelude::*;
-use solang::{codegen, file_resolver::FileResolver, parse_and_resolve, Target};
+use solang::{
+    codegen,
+    file_resolver::FileResolver,
+    parse_and_resolve,
+    sema::{ast::Namespace, file::PathDisplay},
+    Target,
+};
+use solang_parser::diagnostics::Level;
 use std::{
     ffi::OsStr,
     fs::{read_dir, File},
-    io::{self, Read},
+    io::{self, BufRead, BufReader, Read},
     path::{Path, PathBuf},
 };
 
@@ -81,6 +88,8 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
         }
     }
 
+    check_diagnostics(&path, &ns);
+
     if !ns.diagnostics.any_errors() {
         // let's try and emit
         match ns.target {
@@ -96,28 +105,6 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
             }
         }
     }
-
-    let mut path = path;
-
-    path.set_extension("dot");
-
-    let generated_dot = ns.dotgraphviz();
-
-    // uncomment the next three lines to regenerate the test data
-    // use std::io::Write;
-    // let mut file = File::create(&path)?;
-    // file.write_all(generated_dot.as_bytes())?;
-
-    let mut file = File::open(&path)?;
-
-    let mut test_dot = String::new();
-
-    file.read_to_string(&mut test_dot)?;
-
-    // The dot files may have had their end of lines mangled on Windows
-    let test_dot = test_dot.replace("\r\n", "\n");
-
-    pretty_assertions::assert_eq!(generated_dot, test_dot);
 
     Ok(())
 }
@@ -152,4 +139,46 @@ fn add_file(cache: &mut FileResolver, path: &Path, target: Target) -> io::Result
     }
 
     Ok(filename.to_string())
+}
+
+fn check_diagnostics(path: &Path, ns: &Namespace) {
+    let mut expected = "// ---- Expect: diagnostics ----\n".to_owned();
+
+    for diag in ns.diagnostics.iter() {
+        if diag.level == Level::Warning || diag.level == Level::Error {
+            expected.push_str(&format!(
+                "// {}: {}: {}\n",
+                diag.level,
+                ns.loc_to_string(PathDisplay::None, &diag.loc),
+                diag.message
+            ));
+
+            for note in &diag.notes {
+                expected.push_str(&format!(
+                    "// \tnote {}: {}\n",
+                    ns.loc_to_string(PathDisplay::None, &note.loc),
+                    note.message
+                ));
+            }
+        }
+    }
+
+    let mut found = String::new();
+
+    let file = File::open(path).unwrap();
+
+    for line in BufReader::new(file).lines() {
+        let line = line.unwrap();
+
+        if found.is_empty() && !line.starts_with("// ---- Expect: diagnostics ----") {
+            continue;
+        }
+
+        found.push_str(&line);
+        found.push('\n');
+    }
+
+    assert!(!found.is_empty());
+
+    assert_eq!(found, expected);
 }

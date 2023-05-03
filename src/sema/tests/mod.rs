@@ -100,7 +100,7 @@ fn test_statement_reachable() {
                 reachable: false,
                 init: vec![],
                 cond: None,
-                next: vec![],
+                next: None,
                 body: vec![],
             },
             false,

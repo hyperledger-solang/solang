@@ -1,8 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/variables/variable_size_01.sol" {
-	contract [label="contract x\ntests/contract_testcases/substrate/variables/variable_size_01.sol:1:1-3:10"]
-	diagnostic [label="found contract 'x'\nlevel Debug\ntests/contract_testcases/substrate/variables/variable_size_01.sol:1:1-3:10"]
-	diagnostic_4 [label="array dimension of 12131231313213 exceeds the maximum of 4294967295 on Substrate\nlevel Error\ntests/contract_testcases/substrate/variables/variable_size_01.sol:2:48-62"]
-	contracts -> contract
-	diagnostics -> diagnostic [label="Debug"]
-	diagnostics -> diagnostic_4 [label="Error"]
-}

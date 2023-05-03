@@ -1,6 +1,0 @@
-strict digraph "tests/contract_testcases/substrate/tags/struct_tag_03.sol" {
-	x [label="name:x\ntests/contract_testcases/substrate/tags/struct_tag_03.sol:4:16-17\nfield name:f1 ty:uint32\nfield name:f2 ty:uint32"]
-	tags [label="param: asdad\nparam: bar"]
-	structs -> x
-	x -> tags [label="tags"]
-}

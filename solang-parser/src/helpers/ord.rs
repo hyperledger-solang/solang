@@ -13,7 +13,7 @@ macro_rules! impl_with_cast {
         $(
             impl $t {
                 #[inline]
-                const fn as_discriminant<'a>(&'a self) -> &'a u8 {
+                const fn as_discriminant(&self) -> &u8 {
                     // SAFETY: See <https://doc.rust-lang.org/stable/std/mem/fn.discriminant.html#accessing-the-numeric-value-of-the-discriminant>
                     // and <https://doc.rust-lang.org/reference/items/enumerations.html#pointer-casting>
                     //

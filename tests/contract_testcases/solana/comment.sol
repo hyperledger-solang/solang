@@ -3,3 +3,5 @@ contract Hello {
     // xxx 。
 }
 
+
+// ---- Expect: diagnostics ----

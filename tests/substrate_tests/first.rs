@@ -25,7 +25,7 @@ fn simple_solidiy_compile_and_run() {
 
     let ret = FooReturn { value: 2 };
 
-    assert_eq!(runtime.vm.output, ret.encode());
+    assert_eq!(runtime.output(), ret.encode());
 }
 
 #[test]
@@ -51,20 +51,14 @@ fn flipper() {
         ",
     );
 
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct GetReturn(bool);
-
     runtime.function("get", Vec::new());
-
-    assert_eq!(runtime.vm.output, GetReturn(false).encode());
+    assert_eq!(runtime.output(), false.encode());
 
     runtime.function("flip", Vec::new());
     runtime.function("flip", Vec::new());
     runtime.function("flip", Vec::new());
-
     runtime.function("get", Vec::new());
-
-    assert_eq!(runtime.vm.output, GetReturn(true).encode());
+    assert_eq!(runtime.output(), true.encode());
 }
 
 #[test]
@@ -97,7 +91,7 @@ fn contract_storage_initializers() {
 
     let ret = FooReturn { value: 400 };
 
-    assert_eq!(runtime.vm.output, ret.encode());
+    assert_eq!(runtime.output(), ret.encode());
 }
 
 #[test]
@@ -126,7 +120,7 @@ fn contract_constants() {
 
     let ret = FooReturn { value: 400 };
 
-    assert_eq!(runtime.vm.output, ret.encode());
+    assert_eq!(runtime.output(), ret.encode());
 }
 
 #[test]
@@ -150,7 +144,7 @@ fn large_contract_variables() {
 
     runtime.function("foo", Vec::new());
 
-    assert_eq!(runtime.vm.output, b"\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f");
+    assert_eq!(runtime.output(), b"\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f");
 }
 
 #[test]

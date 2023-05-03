@@ -4,3 +4,5 @@
                 return msg.value > v;
             }
         }
+// ---- Expect: diagnostics ----
+// warning: 3:13-59: function can be declared 'pure'

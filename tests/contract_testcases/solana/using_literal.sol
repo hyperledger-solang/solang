@@ -7,3 +7,5 @@ contract C {
 		return 42.double();
 	}
 }
+
+// ---- Expect: diagnostics ----

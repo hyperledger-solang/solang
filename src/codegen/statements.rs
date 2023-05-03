@@ -18,11 +18,14 @@ use crate::codegen::unused_variable::{
 };
 use crate::codegen::yul::inline_assembly_cfg;
 use crate::codegen::Expression;
-use crate::sema::ast::{
-    self, ArrayLength, CallTy, DestructureField, FormatArg, Function, Namespace, RetrieveType,
-    Statement, TryCatch, Type, Type::Uint,
-};
 use crate::sema::Recurse;
+use crate::sema::{
+    ast::{
+        self, ArrayLength, CallTy, DestructureField, FormatArg, Function, Namespace, RetrieveType,
+        Statement, TryCatch, Type, Type::Uint,
+    },
+    file::PathDisplay,
+};
 use num_traits::Zero;
 use solang_parser::pt::{self, CodeLocation, Loc::Codegen};
 
@@ -384,7 +387,7 @@ pub(crate) fn statement(
 
             loops.new_scope(
                 end_block,
-                if next.is_empty() {
+                if next.is_none() {
                     body_block
                 } else {
                     next_block
@@ -421,22 +424,10 @@ pub(crate) fn statement(
             if body_reachable {
                 cfg.set_basic_block(next_block);
 
-                if !next.is_empty() {
-                    for stmt in next {
-                        statement(
-                            stmt,
-                            func,
-                            cfg,
-                            contract_no,
-                            ns,
-                            vartab,
-                            loops,
-                            placeholder,
-                            return_override,
-                            opt,
-                        );
-                        body_reachable = stmt.reachable();
-                    }
+                if let Some(next) = next {
+                    expression(next, cfg, contract_no, Some(func), ns, vartab, opt);
+
+                    body_reachable = next.ty() != Type::Unreachable;
                 }
 
                 if body_reachable {
@@ -530,21 +521,10 @@ pub(crate) fn statement(
 
             let mut next_reachable = true;
 
-            for stmt in next {
-                statement(
-                    stmt,
-                    func,
-                    cfg,
-                    contract_no,
-                    ns,
-                    vartab,
-                    loops,
-                    placeholder,
-                    return_override,
-                    opt,
-                );
+            if let Some(next) = next {
+                expression(next, cfg, contract_no, Some(func), ns, vartab, opt);
 
-                next_reachable = stmt.reachable();
+                next_reachable = next.ty() != Type::Unreachable;
             }
 
             if next_reachable {
@@ -627,8 +607,10 @@ fn revert(
     if opt.log_runtime_errors {
         if expr.is_some() {
             let prefix = b"runtime_error: ";
-            let error_string =
-                format!(" revert encountered in {},\n", ns.loc_to_string(false, loc));
+            let error_string = format!(
+                " revert encountered in {},\n",
+                ns.loc_to_string(PathDisplay::Filename, loc)
+            );
             let print_expr = Expression::FormatString {
                 loc: Codegen,
                 args: vec![

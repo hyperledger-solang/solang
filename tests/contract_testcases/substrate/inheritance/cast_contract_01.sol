@@ -8,3 +8,5 @@
                 foo y = x;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 8:25-26: implicit conversion not allowed since contract foo is not a base contract of contract IFoo

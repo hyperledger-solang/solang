@@ -10,7 +10,7 @@ use crate::codegen::expression::expression;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression, Options};
 use crate::sema::ast::{self, Function, Namespace, RetrieveType, StringLocation, Type};
-use ink::env::hash::{Blake2x256, CryptoHash};
+use ink_env::hash::{Blake2x256, CryptoHash};
 use parity_scale_codec::Encode;
 use solang_parser::pt;
 

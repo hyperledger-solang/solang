@@ -8,3 +8,5 @@
                 super.f2();
             }
         }
+// ---- Expect: diagnostics ----
+// error: 8:23-25: unknown function or type 'f2'

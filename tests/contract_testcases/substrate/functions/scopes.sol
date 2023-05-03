@@ -7,3 +7,5 @@
             return a;
         }
     }
+// ---- Expect: diagnostics ----
+// error: 7:20-21: 'a' not found

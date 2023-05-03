@@ -15,3 +15,6 @@
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 3:13-59: function 'foo' with this signature already defined
+// 	note 9:13-59: previous definition of function 'foo'

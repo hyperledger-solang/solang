@@ -8,3 +8,6 @@ contract x is y {
             }
         }
         
+// ---- Expect: diagnostics ----
+// error: 6:13-56: function 'foo' with this signature already defined
+// 	note 2:24-27: previous definition of function 'foo'

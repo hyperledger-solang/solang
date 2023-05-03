@@ -4,3 +4,6 @@
                     bytes f = bytes(new string(2));
             }
         }
+// ---- Expect: diagnostics ----
+// warning: 3:13-34: function can be declared 'pure'
+// warning: 4:27-28: local variable 'f' has been assigned, but never read

@@ -4,3 +4,5 @@ contract test {
                 return state.foo;
             }
         }
+// ---- Expect: diagnostics ----
+// error: 4:17-33: implicit conversion from enum test.state to uint8 not allowed

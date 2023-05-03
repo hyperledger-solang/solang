@@ -41,3 +41,5 @@ contract  Ownable  is  Context  {
                 return  block.timestamp;
         }
 }
+
+// ---- Expect: diagnostics ----

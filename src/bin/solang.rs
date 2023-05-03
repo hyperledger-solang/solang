@@ -12,7 +12,7 @@ use solang::{
     codegen::{codegen, OptimizationLevel, Options},
     emit::Generate,
     file_resolver::FileResolver,
-    sema::ast::Namespace,
+    sema::{ast::Namespace, file::PathDisplay},
     standard_json::{EwasmContract, JsonContract, JsonResult},
     Target,
 };
@@ -611,7 +611,7 @@ fn contract_results(
         return;
     }
 
-    let loc = ns.loc_to_string(true, &resolved_contract.loc);
+    let loc = ns.loc_to_string(PathDisplay::FullPath, &resolved_contract.loc);
 
     if let Some(other_loc) = seen_contracts.get(&resolved_contract.name) {
         eprintln!(

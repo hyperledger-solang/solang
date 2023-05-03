@@ -4,3 +4,5 @@ contract c {
 	}
 	function _() private pure {}
 }
+
+// ---- Expect: diagnostics ----

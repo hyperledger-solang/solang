@@ -9,3 +9,5 @@
             enum enum_x { x1, x2 }
         }
         
+// ---- Expect: diagnostics ----
+// warning: 3:13-52: function can be declared 'pure'
