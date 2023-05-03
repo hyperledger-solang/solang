@@ -2,7 +2,7 @@
 // The ink! call builder only supports decoding the result into this `Result` type.
 // This works fine for ink! because ink! contracts are supposed to always return this type.
 // 
-// In solidity, nor does this type exist, neither does the concept of a "LangError".
+// In Solidity, not only does this type not exist, but also the concept of a "LangError" is inexistent.
 // Hence we mock it, so we can (ab)use the ink! call builder for setting up the call to our contract.
 // In SCALE, a preceding null-byte will decode to the `Ok` variant.
 struct InkResult {
