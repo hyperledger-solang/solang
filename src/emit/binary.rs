@@ -53,6 +53,8 @@ pub struct Binary<'a> {
     pub(crate) scratch: Option<GlobalValue<'a>>,
     pub(crate) parameters: Option<PointerValue<'a>>,
     pub(crate) return_values: HashMap<ReturnCode, IntValue<'a>>,
+    /// No initializer for vector_new
+    pub(crate) vector_init_empty: PointerValue<'a>,
 }
 
 impl<'a> Binary<'a> {
@@ -278,6 +280,10 @@ impl<'a> Binary<'a> {
             scratch_len: None,
             parameters: None,
             return_values,
+            vector_init_empty: context
+                .i8_type()
+                .ptr_type(AddressSpace::default())
+                .const_null(),
         }
     }
 
@@ -856,11 +862,7 @@ impl<'a> Binary<'a> {
         }
 
         let init = match init {
-            None => self.builder.build_int_to_ptr(
-                self.context.i32_type().const_all_ones(),
-                self.context.i8_type().ptr_type(AddressSpace::default()),
-                "invalid",
-            ),
+            None => self.vector_init_empty,
             Some(s) => self.emit_global_string("const_string", s, true),
         };
 
