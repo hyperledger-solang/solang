@@ -1625,5 +1625,64 @@ impl Namespace {
         };
         let symbol = Symbol::UserType(pt::Loc::Builtin, type_no);
         assert!(self.add_symbol(file_no, None, &id, symbol));
+
+        // Chain extensions
+        let mut func = Function::new(
+            pt::Loc::Builtin,
+            "chain_extension".to_string(),
+            None,
+            Vec::new(),
+            pt::FunctionTy::Function,
+            None,
+            pt::Visibility::Public(Some(pt::Loc::Builtin)),
+            vec![
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::Uint(32),
+                    ty_loc: Some(pt::Loc::Builtin),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                },
+                Parameter {
+                    loc: pt::Loc::Builtin,
+                    id: None,
+                    ty: Type::DynamicBytes,
+                    ty_loc: Some(pt::Loc::Builtin),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                },
+            ],
+            vec![Parameter {
+                loc: pt::Loc::Builtin,
+                id: None,
+                ty: Type::DynamicBytes,
+                ty_loc: Some(pt::Loc::Builtin),
+                readonly: false,
+                indexed: false,
+                infinite_size: false,
+                recursive: false,
+            }],
+            self,
+        );
+
+        func.has_body = true;
+        let func_no = self.functions.len();
+        let id = Identifier {
+            name: func.name.to_owned(),
+            loc: pt::Loc::Builtin,
+        };
+        self.functions.push(func);
+
+        assert!(self.add_symbol(
+            file_no,
+            None,
+            &id,
+            Symbol::Function(vec![(pt::Loc::Builtin, func_no)])
+        ));
     }
 }
