@@ -205,7 +205,6 @@ fn ethereum_solidity_tests() {
                 && !file_name.ends_with("two_stack_slot_access.sol")
                 && !file_name.ends_with("difficulty_disallowed_function_pre_paris.sol")
                 && !file_name.ends_with("difficulty_reserved_post_paris.sol")
-                && !file_name.ends_with("mapping_with_names_nested_7.sol")
                 && file_name.ends_with(".sol")
             {
                 Some(entry)
