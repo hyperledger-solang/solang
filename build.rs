@@ -5,6 +5,16 @@ use std::process::Command;
 fn main() {
     #[cfg(feature = "llvm")]
     {
+        Command::new("make")
+            .args(["-C", "stdlib", "solana_stdlib"])
+            .output()
+            .expect("Could not build Solana stdlib");
+
+        Command::new("make")
+            .args(["-C", "stdlib", "substrate_stdlib"])
+            .output()
+            .expect("Could not build Substrate stdlib");
+
         // compile our linker
         let cxxflags = Command::new("llvm-config")
             .args(["--cxxflags"])

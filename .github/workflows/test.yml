@@ -366,3 +366,21 @@ jobs:
       working-directory: ./vscode
     - run: vsce package
       working-directory: ./vscode
+
+  std-lib-tests:
+    name: STDLIB
+    runs-on: solang-ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Lints for stdlib
+        run: |
+          clang-format *.c *.h --style=file --dry-run -Werror
+        working-directory: ./stdlib
+      - name: Stdlib tests
+        run: |
+          clang -DTEST -DSOL_TEST -O3 -Wall solana.c stdlib.c -o test
+          ./test
+        working-directory: ./stdlib

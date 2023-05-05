@@ -120,8 +120,7 @@ bool __mul32_with_builtin_ovf(uint32_t left[], uint32_t right[], uint32_t out[],
 // Some compiler runtime builtins we need.
 
 // 128 bit shift left.
-typedef union
-{
+typedef union {
     __uint128_t all;
     struct
     {
@@ -131,8 +130,7 @@ typedef union
 } two64;
 
 // 128 bit shift left.
-typedef union
-{
+typedef union {
     __int128_t all;
     struct
     {

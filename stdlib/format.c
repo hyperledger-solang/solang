@@ -109,7 +109,8 @@ char *uint2dec(char *output, uint64_t val)
     return output;
 }
 
-extern int udivmod128(const __uint128_t *dividend, const __uint128_t *divisor, __uint128_t *remainder, __uint128_t *quotient);
+extern int udivmod128(const __uint128_t *dividend, const __uint128_t *divisor, __uint128_t *remainder,
+                      __uint128_t *quotient);
 
 char *uint128dec(char *output, __uint128_t val128)
 {
@@ -183,8 +184,7 @@ typedef unsigned _BitInt(256) uint256_t;
 
 extern int udivmod256(const uint256_t *dividend, const uint256_t *divisor, uint256_t *remainder, uint256_t *quotient);
 
-char *
-uint256dec(char *output, uint256_t *val256)
+char *uint256dec(char *output, uint256_t *val256)
 {
     // we want 1e19, how to declare such a constant in clang?
     const uint256_t n1e10 = 10000000000;

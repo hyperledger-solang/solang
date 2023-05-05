@@ -54,25 +54,25 @@
 #define RIPEMD160_DIGEST_SIZE 20
 #define BLOCK_SIZE 64
 
-typedef struct {
-    uint32_t h[5];      /* The current hash state */
-    uint64_t length;    /* Total number of _bits_ (not bytes) added to the
+typedef struct
+{
+    uint32_t h[5];   /* The current hash state */
+    uint64_t length; /* Total number of _bits_ (not bytes) added to the
                            hash.  This includes bits that have been buffered
                            but not not fed through the compression function yet. */
     union {
         uint32_t w[16];
         uint8_t b[64];
     } buf;
-    uint8_t bufpos;     /* number of bytes currently in the buffer */
+    uint8_t bufpos; /* number of bytes currently in the buffer */
 } ripemd160_state;
 
-
 /* cyclic left-shift the 32-bit word n left by s bits */
-#define ROL(s, n) (((n) << (s)) | ((n) >> (32-(s))))
+#define ROL(s, n) (((n) << (s)) | ((n) >> (32 - (s))))
 
 /* Initial values for the chaining variables.
  * This is just 0123456789ABCDEFFEDCBA9876543210F0E1D2C3 in little-endian. */
-static const uint32_t initial_h[5] = { 0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u };
+static const uint32_t initial_h[5] = {0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u};
 
 /* Ordering of message words.  Based on the permutations rho(i) and pi(i), defined as follows:
  *
@@ -88,20 +88,20 @@ static const uint32_t initial_h[5] = { 0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x
 
 /* Left line */
 static const uint8_t RL[5][16] = {
-    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },   /* Round 1: id */
-    { 7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8 },   /* Round 2: rho */
-    { 3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12 },   /* Round 3: rho^2 */
-    { 1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2 },   /* Round 4: rho^3 */
-    { 4, 0, 5, 9, 7, 12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13 }    /* Round 5: rho^4 */
+    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, /* Round 1: id */
+    {7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8}, /* Round 2: rho */
+    {3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12}, /* Round 3: rho^2 */
+    {1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2}, /* Round 4: rho^3 */
+    {4, 0, 5, 9, 7, 12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13}  /* Round 5: rho^4 */
 };
 
 /* Right line */
 static const uint8_t RR[5][16] = {
-    { 5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12 },   /* Round 1: pi */
-    { 6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2 },   /* Round 2: rho pi */
-    { 15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13 },   /* Round 3: rho^2 pi */
-    { 8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14 },   /* Round 4: rho^3 pi */
-    { 12, 15, 10, 4, 1, 5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11 }    /* Round 5: rho^4 pi */
+    {5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12}, /* Round 1: pi */
+    {6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2}, /* Round 2: rho pi */
+    {15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13}, /* Round 3: rho^2 pi */
+    {8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14}, /* Round 4: rho^3 pi */
+    {12, 15, 10, 4, 1, 5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11}  /* Round 5: rho^4 pi */
 };
 
 /*
@@ -112,20 +112,20 @@ static const uint8_t RR[5][16] = {
 
 /* Shifts, left line */
 static const uint8_t SL[5][16] = {
-    { 11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8 }, /* Round 1 */
-    { 7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12 }, /* Round 2 */
-    { 11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5 }, /* Round 3 */
-    { 11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12 }, /* Round 4 */
-    { 9, 15, 5, 11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6 }  /* Round 5 */
+    {11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8}, /* Round 1 */
+    {7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12}, /* Round 2 */
+    {11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5}, /* Round 3 */
+    {11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12}, /* Round 4 */
+    {9, 15, 5, 11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6}  /* Round 5 */
 };
 
 /* Shifts, right line */
 static const uint8_t SR[5][16] = {
-    { 8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6 }, /* Round 1 */
-    { 9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11 }, /* Round 2 */
-    { 9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5 }, /* Round 3 */
-    { 15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8 }, /* Round 4 */
-    { 8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11 }  /* Round 5 */
+    {8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6}, /* Round 1 */
+    {9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11}, /* Round 2 */
+    {9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5}, /* Round 3 */
+    {15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8}, /* Round 4 */
+    {8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11}  /* Round 5 */
 };
 
 /* Boolean functions */
@@ -138,20 +138,20 @@ static const uint8_t SR[5][16] = {
 
 /* Round constants, left line */
 static const uint32_t KL[5] = {
-    0x00000000u,    /* Round 1: 0 */
-    0x5A827999u,    /* Round 2: floor(2**30 * sqrt(2)) */
-    0x6ED9EBA1u,    /* Round 3: floor(2**30 * sqrt(3)) */
-    0x8F1BBCDCu,    /* Round 4: floor(2**30 * sqrt(5)) */
-    0xA953FD4Eu     /* Round 5: floor(2**30 * sqrt(7)) */
+    0x00000000u, /* Round 1: 0 */
+    0x5A827999u, /* Round 2: floor(2**30 * sqrt(2)) */
+    0x6ED9EBA1u, /* Round 3: floor(2**30 * sqrt(3)) */
+    0x8F1BBCDCu, /* Round 4: floor(2**30 * sqrt(5)) */
+    0xA953FD4Eu  /* Round 5: floor(2**30 * sqrt(7)) */
 };
 
 /* Round constants, right line */
 static const uint32_t KR[5] = {
-    0x50A28BE6u,    /* Round 1: floor(2**30 * cubert(2)) */
-    0x5C4DD124u,    /* Round 2: floor(2**30 * cubert(3)) */
-    0x6D703EF3u,    /* Round 3: floor(2**30 * cubert(5)) */
-    0x7A6D76E9u,    /* Round 4: floor(2**30 * cubert(7)) */
-    0x00000000u     /* Round 5: 0 */
+    0x50A28BE6u, /* Round 1: floor(2**30 * cubert(2)) */
+    0x5C4DD124u, /* Round 2: floor(2**30 * cubert(3)) */
+    0x6D703EF3u, /* Round 3: floor(2**30 * cubert(5)) */
+    0x7A6D76E9u, /* Round 4: floor(2**30 * cubert(7)) */
+    0x00000000u  /* Round 5: 0 */
 };
 
 /* The RIPEMD160 compression function.  Operates on self->buf */
@@ -159,8 +159,8 @@ static void ripemd160_compress(ripemd160_state *self)
 {
     uint8_t w, round;
     uint32_t T;
-    uint32_t AL, BL, CL, DL, EL;    /* left line */
-    uint32_t AR, BR, CR, DR, ER;    /* right line */
+    uint32_t AL, BL, CL, DL, EL; /* left line */
+    uint32_t AR, BR, CR, DR, ER; /* right line */
 
     /* Load the left and right lines with the initial state */
     AL = AR = self->h[0];
@@ -171,57 +171,107 @@ static void ripemd160_compress(ripemd160_state *self)
 
     /* Round 1 */
     round = 0;
-    for (w = 0; w < 16; w++) { /* left line */
+    for (w = 0; w < 16; w++)
+    { /* left line */
         T = ROL(SL[round][w], AL + F1(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
-        AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
+        AL = EL;
+        EL = DL;
+        DL = ROL(10, CL);
+        CL = BL;
+        BL = T;
     }
-    for (w = 0; w < 16; w++) { /* right line */
+    for (w = 0; w < 16; w++)
+    { /* right line */
         T = ROL(SR[round][w], AR + F5(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
-        AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
+        AR = ER;
+        ER = DR;
+        DR = ROL(10, CR);
+        CR = BR;
+        BR = T;
     }
 
     /* Round 2 */
     round++;
-    for (w = 0; w < 16; w++) { /* left line */
+    for (w = 0; w < 16; w++)
+    { /* left line */
         T = ROL(SL[round][w], AL + F2(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
-        AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
+        AL = EL;
+        EL = DL;
+        DL = ROL(10, CL);
+        CL = BL;
+        BL = T;
     }
-    for (w = 0; w < 16; w++) { /* right line */
+    for (w = 0; w < 16; w++)
+    { /* right line */
         T = ROL(SR[round][w], AR + F4(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
-        AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
+        AR = ER;
+        ER = DR;
+        DR = ROL(10, CR);
+        CR = BR;
+        BR = T;
     }
 
     /* Round 3 */
     round++;
-    for (w = 0; w < 16; w++) { /* left line */
+    for (w = 0; w < 16; w++)
+    { /* left line */
         T = ROL(SL[round][w], AL + F3(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
-        AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
+        AL = EL;
+        EL = DL;
+        DL = ROL(10, CL);
+        CL = BL;
+        BL = T;
     }
-    for (w = 0; w < 16; w++) { /* right line */
+    for (w = 0; w < 16; w++)
+    { /* right line */
         T = ROL(SR[round][w], AR + F3(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
-        AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
+        AR = ER;
+        ER = DR;
+        DR = ROL(10, CR);
+        CR = BR;
+        BR = T;
     }
 
     /* Round 4 */
     round++;
-    for (w = 0; w < 16; w++) { /* left line */
+    for (w = 0; w < 16; w++)
+    { /* left line */
         T = ROL(SL[round][w], AL + F4(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
-        AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
+        AL = EL;
+        EL = DL;
+        DL = ROL(10, CL);
+        CL = BL;
+        BL = T;
     }
-    for (w = 0; w < 16; w++) { /* right line */
+    for (w = 0; w < 16; w++)
+    { /* right line */
         T = ROL(SR[round][w], AR + F2(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
-        AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
+        AR = ER;
+        ER = DR;
+        DR = ROL(10, CR);
+        CR = BR;
+        BR = T;
     }
 
     /* Round 5 */
     round++;
-    for (w = 0; w < 16; w++) { /* left line */
+    for (w = 0; w < 16; w++)
+    { /* left line */
         T = ROL(SL[round][w], AL + F5(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
-        AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
+        AL = EL;
+        EL = DL;
+        DL = ROL(10, CL);
+        CL = BL;
+        BL = T;
     }
-    for (w = 0; w < 16; w++) { /* right line */
+    for (w = 0; w < 16; w++)
+    { /* right line */
         T = ROL(SR[round][w], AR + F1(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
-        AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
+        AR = ER;
+        ER = DR;
+        DR = ROL(10, CR);
+        CR = BR;
+        BR = T;
     }
 
     /* Final mixing stage */
@@ -242,16 +292,18 @@ static void ripemd160_update(ripemd160_state *self, const unsigned char *p, int 
 {
     unsigned int bytes_needed;
 
-    while (length > 0) {
+    while (length > 0)
+    {
         /* Figure out how many bytes we need to fill the internal buffer. */
         bytes_needed = 64 - self->bufpos;
 
-        if ((unsigned int) length >= bytes_needed) {
+        if ((unsigned int)length >= bytes_needed)
+        {
             /* We have enough bytes, so copy them into the internal buffer and run
              * the compression function. */
             __memcpy(&self->buf.b[self->bufpos], p, bytes_needed);
             self->bufpos += bytes_needed;
-            self->length += bytes_needed << 3;    /* length is in bits */
+            self->length += bytes_needed << 3; /* length is in bits */
             p += bytes_needed;
             ripemd160_compress(self);
             length -= bytes_needed;
@@ -262,7 +314,7 @@ static void ripemd160_update(ripemd160_state *self, const unsigned char *p, int 
          * Copy what's there and return. */
         __memcpy(&self->buf.b[self->bufpos], p, length);
         self->bufpos += length;
-        self->length += length << 3;    /* length is in bits */
+        self->length += length << 3; /* length is in bits */
         return;
     }
 }
@@ -272,21 +324,21 @@ static void ripemd160_digest(ripemd160_state *self, unsigned char *out)
     /* Append the padding */
     self->buf.b[self->bufpos++] = 0x80;
 
-    if (self->bufpos > 56) {
+    if (self->bufpos > 56)
+    {
         self->bufpos = 64;
         ripemd160_compress(self);
     }
 
     /* Append the length */
-    self->buf.w[14] = (uint32_t) (self->length & 0xFFFFffffu);
-    self->buf.w[15] = (uint32_t) ((self->length >> 32) & 0xFFFFffffu);
+    self->buf.w[14] = (uint32_t)(self->length & 0xFFFFffffu);
+    self->buf.w[15] = (uint32_t)((self->length >> 32) & 0xFFFFffffu);
     self->bufpos = 64;
     ripemd160_compress(self);
 
     /* Copy the final state into the output buffer */
     __memcpy(out, &self->h, RIPEMD160_DIGEST_SIZE);
 }
-
 
 void ripemd160(void *in, int inlen, void *out)
 {
