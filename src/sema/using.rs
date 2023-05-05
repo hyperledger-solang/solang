@@ -23,6 +23,16 @@ pub(crate) fn using_decl(
 ) -> Result<Using, ()> {
     let mut diagnostics = Diagnostics::default();
 
+    if let Some(contract_no) = contract_no {
+        if ns.contracts[contract_no].is_interface() {
+            ns.diagnostics.push(Diagnostic::error(
+                using.loc,
+                "using for not permitted in interface".into(),
+            ));
+            return Err(());
+        }
+    }
+
     let ty = if let Some(expr) = &using.ty {
         match ns.resolve_type(file_no, contract_no, false, expr, &mut diagnostics) {
             Ok(Type::Contract(contract_no)) if ns.contracts[contract_no].is_library() => {

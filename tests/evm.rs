@@ -171,7 +171,7 @@ contract testing  {
 
 #[test]
 fn ethereum_solidity_tests() {
-    let error_matcher = regex::Regex::new(r"// ----\r?\n// \w+Error( \d+)?:").unwrap();
+    let error_matcher = regex::Regex::new(r"// ----\r?\n// \w+Error( \d+)?: (.*)").unwrap();
 
     let entries = WalkDir::new(
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -209,7 +209,9 @@ fn ethereum_solidity_tests() {
 
             let source = fs::read_to_string(entry.path()).unwrap();
 
-            let expect_error = error_matcher.is_match(&source);
+            let expect_error = error_matcher
+                .captures(&source)
+                .map(|captures| captures.get(2).unwrap().as_str());
 
             let (mut cache, names) = set_file_contents(&source, path);
 
@@ -221,7 +223,7 @@ fn ethereum_solidity_tests() {
                     let ns = parse_and_resolve(OsStr::new(&name), &mut cache, Target::EVM);
 
                     if ns.diagnostics.any_errors() {
-                        if !expect_error {
+                        if expect_error.is_none() {
                             println!("file: {}", entry.path().display());
 
                             ns.print_diagnostics_in_plain(&cache, false);
@@ -230,10 +232,10 @@ fn ethereum_solidity_tests() {
                         } else {
                             0
                         }
-                    } else if expect_error {
+                    } else if let Some(error) = expect_error {
                         println!("file: {}", entry.path().display());
 
-                        println!("expecting error, none found");
+                        println!("expecting error {error}");
 
                         1
                     } else {
@@ -246,7 +248,7 @@ fn ethereum_solidity_tests() {
         })
         .sum();
 
-    assert_eq!(errors, 1085);
+    assert_eq!(errors, 1084);
 }
 
 fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
