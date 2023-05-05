@@ -137,7 +137,7 @@ jobs:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.65.0
     - name: Get LLVM
-      run: curl -L --output llvm15.0-mac-arm.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-arm.tar.xz
+      run: curl -sSL --output llvm15.0-mac-arm.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-arm.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm15.0-mac-arm.tar.xz
     - name: Add LLVM to Path

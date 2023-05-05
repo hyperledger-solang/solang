@@ -93,7 +93,7 @@ jobs:
         submodules: recursive
     - uses: dtolnay/rust-toolchain@1.65.0
     - name: Get LLVM
-      run: curl -L --output llvm15.0-mac-arm.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-arm.tar.xz
+      run: curl -sSL --output llvm15.0-mac-arm.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-arm.tar.xz
     - name: Extract LLVM
       run: tar Jxf llvm15.0-mac-arm.tar.xz
     - name: Add LLVM to Path
@@ -146,8 +146,8 @@ jobs:
     needs: [mac-arm, mac-intel]
     steps:
     - run: |
-        curl -L --output solang-mac-intel https://github.com/hyperledger/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-intel
-        curl -L --output solang-mac-arm https://github.com/hyperledger/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-arm
+        curl -sSL --output solang-mac-intel https://github.com/hyperledger/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-intel
+        curl -sSL --output solang-mac-arm https://github.com/hyperledger/solang/releases/download/${GITHUB_REF/refs\/tags\//}/solang-mac-arm
         lipo -create -output solang-mac solang-mac-intel solang-mac-arm
     - name: Upload binary
       uses: svenstaro/upload-release-action@v2
