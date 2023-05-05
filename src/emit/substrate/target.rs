@@ -1580,14 +1580,53 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn builtin_function(
         &self,
-        _binary: &Binary<'a>,
-        _function: FunctionValue<'a>,
-        _builtin_func: &Function,
-        _args: &[BasicMetadataValueEnum<'a>],
+        binary: &Binary<'a>,
+        function: FunctionValue<'a>,
+        builtin_func: &Function,
+        args: &[BasicMetadataValueEnum<'a>],
         _first_arg_type: BasicTypeEnum,
         _ns: &Namespace,
     ) -> BasicValueEnum<'a> {
-        unimplemented!()
+        emit_context!(binary);
+
+        assert_eq!(builtin_func.name, "chain_extension", "unimplemented");
+
+        let (i8, i32) = (binary.context.i8_type(), binary.context.i32_type());
+
+        let input_ptr = binary.vector_bytes(args[1].into_pointer_value().into());
+        let input_len = binary.vector_len(args[1].into_pointer_value().into());
+
+        let buf_len = i32_const!(16384);
+        //let output_ptr = binary.build_array_alloca(function, i8, buf_len, "output_ptr");
+        //let output_len_ptr = binary.build_alloca(function, i32, "len_ptr_out");
+        let output_ptr = args[2].into_pointer_value();
+        let output_len_ptr = args[3].into_pointer_value();
+        binary.builder.build_store(output_len_ptr, buf_len);
+
+        let ret = call!(
+            "call_chain_extension",
+            &[
+                args[0].into_int_value().into(),
+                input_ptr.into(),
+                input_len.into(),
+                output_ptr.into(),
+                output_len_ptr.into()
+            ]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap();
+
+        log_return_code(binary, "call_chain_extension", ret.into_int_value());
+
+        //let len = binary
+        //    .builder
+        //    .build_load(i32, output_len_ptr, "len_ptr_in")
+        //    .into_int_value();
+        //let result = binary.build_array_alloca(function, i8, len, "result");
+        //call!("__memcpy", &[result.into(), output_ptr.into(), len.into(),]);
+
+        ret
     }
 
     fn storage_subscript(

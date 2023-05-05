@@ -151,6 +151,7 @@ impl SubstrateTarget {
         binary.internalize(&[
             "deploy",
             "call",
+            "call_chain_extension",
             "seal_input",
             "seal_set_storage",
             "seal_get_storage",
@@ -245,6 +246,15 @@ impl SubstrateTarget {
             };
         }
 
+        external!(
+            "call_chain_extension",
+            i32_type,
+            u32_val,
+            u8_ptr,
+            u32_val,
+            u8_ptr,
+            u32_ptr
+        );
         external!("seal_input", void_type, u8_ptr, u32_ptr);
         external!("seal_hash_keccak_256", void_type, u8_ptr, u32_val, u8_ptr);
         external!("seal_hash_sha2_256", void_type, u8_ptr, u32_val, u8_ptr);
