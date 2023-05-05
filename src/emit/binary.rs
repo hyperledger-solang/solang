@@ -195,7 +195,22 @@ impl<'a> Binary<'a> {
     ) -> Self {
         LLVM_INIT.get_or_init(|| {
             inkwell::targets::Target::initialize_webassembly(&Default::default());
-            inkwell::targets::Target::initialize_bpf(&Default::default());
+
+            extern "C" {
+                fn LLVMInitializeSBFTarget();
+                fn LLVMInitializeSBFTargetInfo();
+                fn LLVMInitializeSBFAsmPrinter();
+                fn LLVMInitializeSBFDisassembler();
+                fn LLVMInitializeSBFTargetMC();
+            }
+
+            unsafe {
+                LLVMInitializeSBFTarget();
+                LLVMInitializeSBFTargetInfo();
+                LLVMInitializeSBFAsmPrinter();
+                LLVMInitializeSBFDisassembler();
+                LLVMInitializeSBFTargetMC();
+            }
         });
 
         let triple = target.llvm_target_triple();
