@@ -3,7 +3,7 @@ Using Solang on the command line
 
 The Solang compiler is run on the command line. The solidity source file
 names are provided as command line arguments; the output is an optimized
-wasm or bpf file which is ready for deployment on a chain, and an metadata
+WebAssembly or Solana SBF file which is ready for deployment on a chain, and an metadata
 file (also known as the abi).
 
 The following targets are supported right now:

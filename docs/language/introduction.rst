@@ -17,8 +17,8 @@ As with any new project, bugs are possible. Please report any issues you may fin
 Differences:
 
 - libraries are always statically linked into the contract code
-- Solang generates WebAssembly or BPF rather than EVM.
-- Packed encoded uses little endian encoding, as WASM and BPF are little endian
+- Solang generates WebAssembly or Solana SBF rather than EVM.
+- Packed encoded uses little endian encoding, as WASM and SBF are little endian
   virtual machines.
 
 Unique features to Solang:

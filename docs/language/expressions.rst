@@ -143,7 +143,7 @@ an bitwise XOR of all function selectors in the interface. This makes it possibl
 an interface at runtime, which can be used to write a `supportsInterface()` function as described
 in the EIP.
 
-The contract code for a contract, i.e. the binary WebAssembly or BPF, can be retrieved using the
+The contract code for a contract, i.e. the binary WebAssembly or Solana SBF, can be retrieved using the
 ``type(c).creationCode`` and ``type(c).runtimeCode`` fields, as ``bytes``. On EVM,
 the constructor code is in the ``creationCode`` and all the functions are in
 the ``runtimeCode``. Parity Substrate and Solana use the same
