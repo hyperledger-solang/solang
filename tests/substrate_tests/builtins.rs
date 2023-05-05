@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use parity_scale_codec::{Decode, Encode};
+use rayon::vec;
 
 use crate::build_solidity;
 
@@ -754,4 +755,31 @@ fn hash() {
     assert_eq!(&runtime.output()[..], &h.0[..]);
 
     runtime.function("test_encoding", vec![]);
+}
+
+#[test]
+fn call_chain_extension() {
+    let mut runtime = build_solidity(
+        r##"
+        import "substrate";
+
+        contract Foo {
+            function call_chain_ext() public returns (bytes, uint32) {
+                return chain_extension(123, hex"deadbeef");
+            }
+        }
+        "##,
+    );
+
+    #[derive(Decode)]
+    struct Output {
+        data: Vec<u8>,
+        len: u32,
+    }
+
+    runtime.function("call_chain_ext", vec![]);
+    dbg!(runtime.output());
+    let out = Output::decode(&mut &runtime.output()[..]).unwrap();
+    assert_eq!(out.data, vec![0xde, 0xad, 0xbe, 0xef]);
+    assert_eq!(out.len, 4);
 }

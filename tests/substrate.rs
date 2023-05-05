@@ -711,6 +711,27 @@ impl Runtime {
 
         Ok(())
     }
+
+    #[seal(0)]
+    fn call_chain_extension(
+        id: u32,
+        input_ptr: u32,
+        input_len: u32,
+        output_ptr: u32,
+        output_len_ptr: u32,
+    ) -> Result<u32, Trap> {
+        assert_eq!(id, 123, "unkown chain extension");
+
+        let data = read_buf(mem, input_ptr, input_len);
+        let out_len = read_len(mem, output_len_ptr);
+        dbg!(out_len);
+        assert!(out_len >= data.len(), "output buffer too small");
+
+        write_buf(mem, output_ptr, &data);
+        write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
+
+        Ok(0)
+    }
 }
 
 /// Provides a mock implementation of substrates [contracts pallet][1]
