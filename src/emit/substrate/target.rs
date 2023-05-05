@@ -1581,7 +1581,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn builtin_function(
         &self,
         binary: &Binary<'a>,
-        function: FunctionValue<'a>,
+        _function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
         _first_arg_type: BasicTypeEnum,
@@ -1593,12 +1593,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let input_ptr = binary.vector_bytes(args[1].into_pointer_value().into());
         let input_len = binary.vector_len(args[1].into_pointer_value().into());
+        let (output_ptr, output_len_ptr) = scratch_buf!();
 
-        let output_ptr = binary.vector_bytes(args[2].into_pointer_value().into());
-        let output_len_ptr = args[3].into_pointer_value();
-        binary.builder.build_store(output_len_ptr, i32_const!(8192));
-
-        let ret = call!(
+        let ret_code = call!(
             "call_chain_extension",
             &[
                 args[0].into_int_value().into(),
@@ -1611,10 +1608,25 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .try_as_basic_value()
         .left()
         .unwrap();
+        log_return_code(binary, "call_chain_extension", ret_code.into_int_value());
 
-        log_return_code(binary, "call_chain_extension", ret.into_int_value());
+        let buf_len = binary
+            .builder
+            .build_load(binary.context.i32_type(), output_len_ptr, "buf_len")
+            .into_int_value();
+        let buf = call!(
+            "vector_new",
+            &[buf_len.into(), i32_const!(1).into(), output_ptr.into(),]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap();
 
-        ret
+        binary
+            .builder
+            .build_store(args[2].into_pointer_value(), buf.into_pointer_value());
+
+        ret_code
     }
 
     fn storage_subscript(

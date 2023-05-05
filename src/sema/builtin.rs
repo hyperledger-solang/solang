@@ -1657,28 +1657,16 @@ impl Namespace {
                     recursive: false,
                 },
             ],
-            vec![
-                Parameter {
-                    loc: pt::Loc::Builtin,
-                    id: None,
-                    ty: Type::DynamicBytes,
-                    ty_loc: Some(pt::Loc::Builtin),
-                    readonly: false,
-                    indexed: false,
-                    infinite_size: false,
-                    recursive: false,
-                },
-                Parameter {
-                    loc: pt::Loc::Builtin,
-                    id: None,
-                    ty: Type::Ref(Type::Uint(32).into()),
-                    ty_loc: Some(pt::Loc::Builtin),
-                    readonly: false,
-                    indexed: false,
-                    infinite_size: false,
-                    recursive: false,
-                },
-            ],
+            vec![Parameter {
+                loc: pt::Loc::Builtin,
+                id: None,
+                ty: Type::DynamicBytes,
+                ty_loc: Some(pt::Loc::Builtin),
+                readonly: false,
+                indexed: false,
+                infinite_size: false,
+                recursive: false,
+            }],
             self,
         );
 
