@@ -41,14 +41,14 @@ jobs:
   docs:
     name: Docs
     runs-on: solang-ubuntu-latest
-    container: ubuntu:20.04
+    container: ubuntu:22.04
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
       - name: Install Python and git
         run: |
           apt-get update
-          apt-get install -y python3-pip git
+          apt-get install -y python3-pip git pkg-config libcairo-dev
       - name: Install Docs requirements.txt
         run : |
           pip install -r requirements.txt
