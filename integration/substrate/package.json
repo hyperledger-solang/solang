@@ -6,7 +6,7 @@
   "scripts": {
     "test": "tsc; ts-mocha -t 20000 *.spec.ts",
     "build": "./build.sh",
-    "build-ink": "docker run --rm -v $(pwd)/ink/caller:/opt/contract paritytech/contracts-ci-linux@sha256:52b9324054778e6de0ddf210b821014daa8c8ac0468644fcc4141040f0c8d1df cargo contract build --manifest-path /opt/contract/Cargo.toml"
+    "build-ink": "docker run --rm -v $(pwd)/ink/caller:/opt/contract paritytech/contracts-ci-linux@sha256:dbfd21eb3b023a8cd00be74308a77b624fcc798001889247642b18a8f414e90f cargo install --force --locked cargo-contract --version 2.2.1 && cargo contract build --manifest-path /opt/contract/Cargo.toml"
   },
   "contributors": [
     {
