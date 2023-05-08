@@ -724,7 +724,6 @@ impl Runtime {
 
         let data = read_buf(mem, input_ptr, input_len);
         let out_len = read_len(mem, output_len_ptr);
-        dbg!(out_len);
         assert!(out_len >= data.len(), "output buffer too small");
 
         write_buf(mem, output_ptr, &data);

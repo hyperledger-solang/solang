@@ -1581,7 +1581,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn builtin_function(
         &self,
         binary: &Binary<'a>,
-        _function: FunctionValue<'a>,
+        function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
         _first_arg_type: BasicTypeEnum,
@@ -1594,8 +1594,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let input_ptr = binary.vector_bytes(args[1].into_pointer_value().into());
         let input_len = binary.vector_len(args[1].into_pointer_value().into());
         let (output_ptr, output_len_ptr) = scratch_buf!();
-
-        let ret_code = call!(
+        let ret = call!(
             "call_chain_extension",
             &[
                 args[0].into_int_value().into(),
@@ -1607,9 +1606,20 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         )
         .try_as_basic_value()
         .left()
-        .unwrap();
-        log_return_code(binary, "call_chain_extension", ret_code.into_int_value());
+        .unwrap()
+        .into_int_value();
 
+        log_return_code(binary, "call_chain_extension", ret);
+
+        let ok = binary.context.append_basic_block(function, "ok_block");
+        let err = binary.context.append_basic_block(function, "err_block");
+        let done = binary.context.append_basic_block(function, "done_block");
+        let success = binary
+            .builder
+            .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "ret");
+        binary.builder.build_conditional_branch(success, ok, err);
+
+        binary.builder.position_at_end(ok);
         let buf_len = binary
             .builder
             .build_load(binary.context.i32_type(), output_len_ptr, "buf_len")
@@ -1621,12 +1631,19 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .try_as_basic_value()
         .left()
         .unwrap();
-
         binary
             .builder
             .build_store(args[2].into_pointer_value(), buf.into_pointer_value());
+        binary.builder.build_unconditional_branch(done);
 
-        ret_code
+        binary.builder.position_at_end(err);
+        binary
+            .builder
+            .build_store(args[2].into_pointer_value(), byte_ptr!().const_zero());
+        binary.builder.build_conditional_branch(success, ok, err);
+
+        binary.builder.position_at_end(done);
+        ret.into()
     }
 
     fn storage_subscript(
