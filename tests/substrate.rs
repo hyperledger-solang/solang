@@ -7,6 +7,7 @@ use ink_metadata::InkProject;
 use ink_primitives::Hash;
 use parity_scale_codec::Decode;
 use sha2::{Digest, Sha256};
+use solang::emit::substrate::SCRATCH_SIZE;
 use std::{collections::HashMap, ffi::OsStr, fmt, fmt::Write};
 use tiny_keccak::{Hasher, Keccak};
 use wasmi::core::{HostError, Trap, TrapCode};
@@ -712,6 +713,7 @@ impl Runtime {
         Ok(())
     }
 
+    /// Mocks a chain extension with ID 123 that does just echo back the input.
     #[seal(0)]
     fn call_chain_extension(
         id: u32,
@@ -721,11 +723,9 @@ impl Runtime {
         output_len_ptr: u32,
     ) -> Result<u32, Trap> {
         assert_eq!(id, 123, "unkown chain extension");
+        assert_eq!(read_len(mem, output_len_ptr), SCRATCH_SIZE as usize);
 
         let data = read_buf(mem, input_ptr, input_len);
-        let out_len = read_len(mem, output_len_ptr);
-        assert!(out_len >= data.len(), "output buffer too small");
-
         write_buf(mem, output_ptr, &data);
         write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
 

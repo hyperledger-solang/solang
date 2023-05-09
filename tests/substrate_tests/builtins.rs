@@ -766,8 +766,7 @@ fn call_chain_extension() {
             function call_chain_ext() public returns (bytes) {
                 return chain_extension(123, hex"deadbeef");
             }
-        }
-        "##,
+        }"##,
     );
 
     runtime.function("call_chain_ext", vec![]);
