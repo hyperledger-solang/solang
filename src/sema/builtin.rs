@@ -309,7 +309,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins variables
-static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
+static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::BlockCoinbase,
@@ -400,6 +400,39 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             constant: false,
         },
         Prototype {
+            builtin: Builtin::ChainId,
+            namespace: Some("block"),
+            method: None,
+            name: "chainid",
+            params: vec![],
+            ret: vec![Type::Uint(256)],
+            target: vec![Target::EVM],
+            doc: "Current chain id",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::BaseFee,
+            namespace: Some("block"),
+            method: None,
+            name: "basefee",
+            params: vec![],
+            ret: vec![Type::Uint(256)],
+            target: vec![Target::EVM],
+            doc: "Current block's base fee",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::PrevRandao,
+            namespace: Some("block"),
+            method: None,
+            name: "prevrandao",
+            params: vec![],
+            ret: vec![Type::Uint(256)],
+            target: vec![Target::EVM],
+            doc: "Random number provided by the beacon chain",
+            constant: false,
+        },
+        Prototype {
             builtin: Builtin::Calldata,
             namespace: Some("msg"),
             method: None,
@@ -460,7 +493,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 15]> = Lazy::new(|| {
             method: None,
             name: "origin",
             params: vec![],
-            ret: vec![Type::Address(true)],
+            ret: vec![Type::Address(false)],
             target: vec![Target::EVM],
             doc: "Original address of sender current transaction",
             constant: false,
