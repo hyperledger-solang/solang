@@ -368,7 +368,7 @@ jobs:
       working-directory: ./vscode
 
   std-lib-tests:
-    name: STDLIB
+    name: Stdlib
     runs-on: solang-ubuntu-latest
     steps:
       - name: Checkout sources
