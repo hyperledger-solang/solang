@@ -304,7 +304,7 @@ jobs:
       # We can't run substrate as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
-      run: echo id=$(docker run -d -p 9944:9944 paritytech/contracts-ci-linux@sha256:52b9324054778e6de0ddf210b821014daa8c8ac0468644fcc4141040f0c8d1df substrate-contracts-node --dev --ws-external) >> $GITHUB_OUTPUT
+      run: echo id=$(docker run -d -p 9944:9944 paritytech/contracts-ci-linux@sha256:dbfd21eb3b023a8cd00be74308a77b624fcc798001889247642b18a8f414e90f substrate-contracts-node --dev --ws-external) >> $GITHUB_OUTPUT
       id: substrate
     - uses: actions/setup-node@v3
       with:
