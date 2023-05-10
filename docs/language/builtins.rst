@@ -312,7 +312,7 @@ Its underlying type is ``bytes32``, but it will be reported correctly as the ``H
   :code: solidity
 
 chain_extension(uint32 ID, bytes input) returns (bytes)
-++++
++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Only available on Substrate. Call the chain extension with the given ``ID``.
 
