@@ -53,6 +53,8 @@ pub struct Binary<'a> {
     pub(crate) scratch: Option<GlobalValue<'a>>,
     pub(crate) parameters: Option<PointerValue<'a>>,
     pub(crate) return_values: HashMap<ReturnCode, IntValue<'a>>,
+    /// No initializer for vector_new
+    pub(crate) vector_init_empty: PointerValue<'a>,
 }
 
 impl<'a> Binary<'a> {
@@ -193,7 +195,22 @@ impl<'a> Binary<'a> {
     ) -> Self {
         LLVM_INIT.get_or_init(|| {
             inkwell::targets::Target::initialize_webassembly(&Default::default());
-            inkwell::targets::Target::initialize_bpf(&Default::default());
+
+            extern "C" {
+                fn LLVMInitializeSBFTarget();
+                fn LLVMInitializeSBFTargetInfo();
+                fn LLVMInitializeSBFAsmPrinter();
+                fn LLVMInitializeSBFDisassembler();
+                fn LLVMInitializeSBFTargetMC();
+            }
+
+            unsafe {
+                LLVMInitializeSBFTarget();
+                LLVMInitializeSBFTargetInfo();
+                LLVMInitializeSBFAsmPrinter();
+                LLVMInitializeSBFDisassembler();
+                LLVMInitializeSBFTargetMC();
+            }
         });
 
         let triple = target.llvm_target_triple();
@@ -278,6 +295,10 @@ impl<'a> Binary<'a> {
             scratch_len: None,
             parameters: None,
             return_values,
+            vector_init_empty: context
+                .i8_type()
+                .ptr_type(AddressSpace::default())
+                .const_null(),
         }
     }
 
@@ -856,11 +877,7 @@ impl<'a> Binary<'a> {
         }
 
         let init = match init {
-            None => self.builder.build_int_to_ptr(
-                self.context.i32_type().const_all_ones(),
-                self.context.i8_type().ptr_type(AddressSpace::default()),
-                "invalid",
-            ),
+            None => self.vector_init_empty,
             Some(s) => self.emit_global_string("const_string", s, true),
         };
 

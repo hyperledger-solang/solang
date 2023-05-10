@@ -171,7 +171,7 @@ contract testing  {
 
 #[test]
 fn ethereum_solidity_tests() {
-    let error_matcher = regex::Regex::new(r"// ----\r?\n// \w+Error( \d+)?:").unwrap();
+    let error_matcher = regex::Regex::new(r"// ----\r?\n// \w+Error( \d+)?: (.*)").unwrap();
 
     let entries = WalkDir::new(
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -193,18 +193,10 @@ fn ethereum_solidity_tests() {
             let file_name = entry.file_name().to_string_lossy();
 
             // FIXME: max_depth_reached_4.sol causes a stack overflow in resolve_expression.rs
-            // FIXNE: others listed explicitly cause panics and need fixing
+            // FIXME: others listed explicitly cause panics and need fixing
             if !file_name.ends_with("max_depth_reached_4.sol")
                 && !file_name.ends_with("invalid_utf8_sequence.sol")
-                && !file_name.ends_with("basefee_berlin_function.sol")
-                && !file_name.ends_with("inline_assembly_embedded_function_call.sol")
-                && !file_name.ends_with("linkersymbol_function.sol")
                 && !file_name.ends_with("370_shift_constant_left_excessive_rvalue.sol")
-                && !file_name.ends_with("use_msize_with_optimizer.sol")
-                && !file_name.ends_with("two_stack_slots.sol")
-                && !file_name.ends_with("two_stack_slot_access.sol")
-                && !file_name.ends_with("difficulty_disallowed_function_pre_paris.sol")
-                && !file_name.ends_with("difficulty_reserved_post_paris.sol")
                 && file_name.ends_with(".sol")
             {
                 Some(entry)
@@ -217,7 +209,9 @@ fn ethereum_solidity_tests() {
 
             let source = fs::read_to_string(entry.path()).unwrap();
 
-            let expect_error = error_matcher.is_match(&source);
+            let expect_error = error_matcher
+                .captures(&source)
+                .map(|captures| captures.get(2).unwrap().as_str());
 
             let (mut cache, names) = set_file_contents(&source, path);
 
@@ -229,7 +223,7 @@ fn ethereum_solidity_tests() {
                     let ns = parse_and_resolve(OsStr::new(&name), &mut cache, Target::EVM);
 
                     if ns.diagnostics.any_errors() {
-                        if !expect_error {
+                        if expect_error.is_none() {
                             println!("file: {}", entry.path().display());
 
                             ns.print_diagnostics_in_plain(&cache, false);
@@ -238,10 +232,10 @@ fn ethereum_solidity_tests() {
                         } else {
                             0
                         }
-                    } else if expect_error {
+                    } else if let Some(error) = expect_error {
                         println!("file: {}", entry.path().display());
 
-                        println!("expecting error, none found");
+                        println!("expecting error {error}");
 
                         1
                     } else {
@@ -254,7 +248,7 @@ fn ethereum_solidity_tests() {
         })
         .sum();
 
-    assert_eq!(errors, 1093);
+    assert_eq!(errors, 1084);
 }
 
 fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {

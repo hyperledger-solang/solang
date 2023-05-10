@@ -1,4 +1,4 @@
-FROM ghcr.io/hyperledger/solang-llvm:ci as builder
+FROM ghcr.io/hyperledger/solang-llvm:ci-2 as builder
 
 COPY . src
 WORKDIR /src/stdlib/
