@@ -101,7 +101,6 @@ jobs:
     name: Windows
     runs-on: solang-windows-latest
     steps:
-<<<<<<< HEAD
       - name: Checkout sources
         uses: actions/checkout@v3
         with:
@@ -126,39 +125,12 @@ jobs:
         with:
           name: solang.exe
           path: ./target/debug/solang.exe
-=======
-    - name: Checkout sources
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
-    - name: Download LLVM
-      run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-win.zip
-    - name: Extract LLVM
-      run: unzip c:\llvm.zip -d c:/
-    - name: Add LLVM to Path
-      run: echo "c:\llvm15.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
-    - uses: dtolnay/rust-toolchain@1.65.0
-      with:
-        components: clippy
-    # We run clippy on Linux in the lint job above, but this does not check #[cfg(windows)] items
-    - name: Run cargo clippy
-      run: cargo clippy --workspace --tests --bins -- -D warnings -D clippy::inconsistent-struct-constructor
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v3.1.0
-      with:
-        name: solang.exe
-        path: ./target/debug/solang.exe
->>>>>>> main
 
   mac-arm:
     name: Mac Arm
     runs-on: [self-hosted, macOS, ARM64, MacStadium]
     if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
-<<<<<<< HEAD
       - name: Checkout sources
         uses: actions/checkout@v3
         with:
@@ -178,33 +150,11 @@ jobs:
         with:
           name: solang-mac-arm
           path: ./target/debug/solang
-=======
-    - name: Checkout sources
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
-    - uses: dtolnay/rust-toolchain@1.65.0
-    - name: Get LLVM
-      run: curl -sSL --output llvm15.0-mac-arm.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-arm.tar.xz
-    - name: Extract LLVM
-      run: tar Jxf llvm15.0-mac-arm.tar.xz
-    - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm15.0/bin" >> $GITHUB_PATH
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v3.1.0
-      with:
-        name: solang-mac-arm
-        path: ./target/debug/solang
->>>>>>> main
 
   mac-intel:
     name: Mac Intel
     runs-on: macos-11
     steps:
-<<<<<<< HEAD
       - name: Checkout sources
         uses: actions/checkout@v3
         with:
@@ -224,27 +174,6 @@ jobs:
         with:
           name: solang-mac-intel
           path: ./target/debug/solang
-=======
-    - name: Checkout sources
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
-    - uses: dtolnay/rust-toolchain@1.65.0
-    - name: Get LLVM
-      run: wget -q -O llvm15.0-mac-intel.tar.xz https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-mac-intel.tar.xz
-    - name: Extract LLVM
-      run: tar Jxf llvm15.0-mac-intel.tar.xz
-    - name: Add LLVM to Path
-      run: echo "$(pwd)/llvm15.0/bin" >> $GITHUB_PATH
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose --workspace
-    - uses: actions/upload-artifact@v3.1.0
-      with:
-        name: solang-mac-intel
-        path: ./target/debug/solang
->>>>>>> main
 
   mac-universal:
     name: Mac Universal Binary
@@ -290,7 +219,6 @@ jobs:
     container: ghcr.io/hyperledger/solang-llvm:ci-2
     needs: linux-x86-64
     steps:
-<<<<<<< HEAD
       - name: Checkout sources
         uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -331,48 +259,6 @@ jobs:
       - name: Test Anchor
         run: anchor test --skip-local-validator
         working-directory: ./integration/anchor
-=======
-    - name: Checkout sources
-      uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
-      with:
-        node-version: '16'
-    - name: Rust Stable
-      run: rustup default stable
-    - name: Setup yarn
-      run: npm install -g yarn
-    - uses: actions/download-artifact@v3
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - name: Solang Compiler
-      run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    # Ensure nohup writes output to a file, not the terminal.
-    # If we don't, solana-test-validator might not be able to write its
-    # output and exit
-    - run: nohup solana-test-validator -q > validator.out &
-    - name: Build Anchor test program
-      run: |
-        yarn install
-        anchor build
-      working-directory: ./integration/anchor
-    - name: Deploy Anchor program
-      run: |
-        solana -ul airdrop -k id.json 10
-        anchor deploy
-      working-directory: ./integration/anchor
-    - name: Create Solidity interface file for Anchor
-      run: yarn parse-idl
-      working-directory: ./integration/anchor
-    - name: Build Solang contracts
-      run: yarn build
-      working-directory: ./integration/anchor
-    - name: Test Anchor
-      run: anchor test --skip-local-validator
-      working-directory: ./integration/anchor
->>>>>>> main
 
   solana:
     name: Solana Integration test
@@ -380,7 +266,6 @@ jobs:
     container: ghcr.io/hyperledger/solang-llvm:ci-2
     needs: linux-x86-64
     steps:
-<<<<<<< HEAD
       - name: Checkout sources
         uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -408,42 +293,12 @@ jobs:
       - name: Deploy and test contracts
         run: npm run test
         working-directory: ./integration/solana
-=======
-    - name: Checkout sources
-      uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
-      with:
-        node-version: '16'
-    - name: Rust Stable
-      run: rustup default stable
-    - uses: actions/download-artifact@v3
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - name: Solang Compiler
-      run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    # Ensure nohup writes output to a file, not the terminal.
-    # If we don't, solana-test-validator might not be able to write its
-    # output and exit
-    - run: nohup solana-test-validator -q > validator.out &
-    - run: npm install
-      working-directory: ./integration/solana
-    - name: Build Solang contracts
-      run: npm run build
-      working-directory: ./integration/solana
-    - name: Deploy and test contracts
-      run: npm run test
-      working-directory: ./integration/solana
->>>>>>> main
 
   substrate:
     name: Substrate Integration test
     runs-on: solang-ubuntu-latest
     needs: linux-x86-64
     steps:
-<<<<<<< HEAD
       - name: Checkout sources
         uses: actions/checkout@v3
         # We can't run substrate as a github actions service, since it requires
@@ -475,46 +330,12 @@ jobs:
       - name: cleanup
         if: always()
         run: docker kill ${{steps.substrate.outputs.id}}
-=======
-    - name: Checkout sources
-      uses: actions/checkout@v3
-      # We can't run substrate as a github actions service, since it requires
-      # command line arguments. See https://github.com/actions/runner/pull/1152
-    - name: Start substrate
-      run: echo id=$(docker run -d -p 9944:9944 paritytech/contracts-ci-linux@sha256:52b9324054778e6de0ddf210b821014daa8c8ac0468644fcc4141040f0c8d1df substrate-contracts-node --dev --ws-external) >> $GITHUB_OUTPUT
-      id: substrate
-    - uses: actions/setup-node@v3
-      with:
-        node-version: '16'
-    - uses: actions/download-artifact@v3
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    - run: npm install
-      working-directory: ./integration/substrate
-    - name: Build ink! contracts
-      run: npm run build-ink
-      working-directory: ./integration/substrate
-    - name: Build Solang contracts
-      run: npm run build
-      working-directory: ./integration/substrate
-    - name: Deploy and test contracts
-      run: npm run test
-      working-directory: ./integration/substrate
-    - name: cleanup
-      if: always()
-      run: docker kill ${{steps.substrate.outputs.id}}
->>>>>>> main
 
   vscode:
     name: Visual Code Extension
     runs-on: solang-ubuntu-latest
     needs: linux-x86-64
     steps:
-<<<<<<< HEAD
       - name: Checkout
         uses: actions/checkout@v3
       - uses: actions/download-artifact@v3
@@ -539,29 +360,3 @@ jobs:
         working-directory: ./vscode
       - run: vsce package
         working-directory: ./vscode
-=======
-    - name: Checkout
-      uses: actions/checkout@v3
-    - uses: actions/download-artifact@v3
-      with:
-        name: solang-linux-x86-64
-        path: bin
-    - run: |
-        chmod 755 ./bin/solang
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-    - name: Install Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16'
-    - run: npm install
-      working-directory: ./vscode
-    - run: npm run compile
-      working-directory: ./vscode
-    - name: Run headless test
-      run: xvfb-run npm test
-      working-directory: ./vscode
-    - run: npm install -g vsce
-      working-directory: ./vscode
-    - run: vsce package
-      working-directory: ./vscode
->>>>>>> main
