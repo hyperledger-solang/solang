@@ -104,6 +104,7 @@ pub enum YulBuiltInFunction {
     Number = 73,
     Difficulty = 74,
     GasLimit = 75,
+    PrevRandao = 76,
 }
 
 // These are functions that do high level stuff in a contract and are not yet implemented.
@@ -194,6 +195,7 @@ static BUILTIN_YUL_FUNCTIONS: phf::Map<&'static str, YulBuiltInFunction> = phf_m
     "number" => YulBuiltInFunction::Number,
     "difficulty" => YulBuiltInFunction::Difficulty,
     "gaslimit" => YulBuiltInFunction::GasLimit,
+    "prevrandao" => YulBuiltInFunction::PrevRandao,
 };
 
 /// Retrieved the builtin function type from an identifier name
@@ -237,6 +239,7 @@ impl YulBuiltInFunction {
                 | YulBuiltInFunction::CallValue
                 | YulBuiltInFunction::ChainId
                 | YulBuiltInFunction::BaseFee
+                | YulBuiltInFunction::PrevRandao
                 | YulBuiltInFunction::Gas
                 | YulBuiltInFunction::GasPrice
                 | YulBuiltInFunction::ExtCodeSize
@@ -263,7 +266,7 @@ impl ToString for YulBuiltInFunction {
 
 // Yul built-in functions.
 // Descriptions copied and slightly modified from: https://docs.soliditylang.org/en/v0.8.12/yul.html
-static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
+static YUL_BUILTIN: [YulBuiltinPrototype; 77] =
     [
         YulBuiltinPrototype {
             name: "stop",
@@ -946,6 +949,15 @@ static YUL_BUILTIN: [YulBuiltinPrototype; 76] =
             no_returns: 1,
             doc: "Returns the current block's gas limit",
             ty: YulBuiltInFunction::GasLimit,
+            stops_execution: false,
+            availability: [true, false, false],
+        },
+        YulBuiltinPrototype {
+            name: "prevrandao",
+            no_args: 0,
+            no_returns: 1,
+            doc: "Random number provided by the beacon chain",
+            ty: YulBuiltInFunction::PrevRandao,
             stops_execution: false,
             availability: [true, false, false],
         },

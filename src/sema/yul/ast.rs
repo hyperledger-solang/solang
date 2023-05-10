@@ -17,7 +17,7 @@ pub struct InlineAssembly {
     pub functions: std::ops::Range<usize>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct YulBlock {
     pub loc: pt::Loc,
     pub reachable: bool,
@@ -119,7 +119,7 @@ impl CodeLocation for YulExpression {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct YulFunction {
     pub loc: pt::Loc,
     pub name: String,

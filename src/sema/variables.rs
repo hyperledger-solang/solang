@@ -457,7 +457,7 @@ pub fn variable_decl<'a>(
             let mut symtable = Symtable::new();
             let mut params = Vec::new();
             let param =
-                collect_parameters(&ty, &def.name, &mut symtable, &mut params, &mut expr, ns);
+                collect_parameters(&ty, &def.name, &mut symtable, &mut params, &mut expr, ns)?;
             let ty = param.ty.clone();
 
             if ty.contains_mapping(ns) {
@@ -532,7 +532,7 @@ fn collect_parameters(
     params: &mut Vec<Parameter>,
     expr: &mut Expression,
     ns: &mut Namespace,
-) -> Parameter {
+) -> Option<Parameter> {
     match ty {
         Type::Mapping(Mapping {
             key,
@@ -552,16 +552,14 @@ fn collect_parameters(
             };
             let arg_ty = key.as_ref().clone();
 
-            let arg_no = symtable
-                .add(
-                    &id,
-                    arg_ty.clone(),
-                    ns,
-                    VariableInitializer::Solidity(None),
-                    VariableUsage::Parameter,
-                    None,
-                )
-                .unwrap();
+            let arg_no = symtable.add(
+                &id,
+                arg_ty.clone(),
+                ns,
+                VariableInitializer::Solidity(None),
+                VariableUsage::Parameter,
+                None,
+            )?;
 
             symtable.arguments.push(Some(arg_no));
 
@@ -642,7 +640,7 @@ fn collect_parameters(
 
             collect_parameters(elem_ty, &None, symtable, params, expr, ns)
         }
-        _ => Parameter {
+        _ => Some(Parameter {
             id: name.clone(),
             loc: if let Some(name) = name {
                 name.loc
@@ -655,7 +653,7 @@ fn collect_parameters(
             readonly: false,
             infinite_size: false,
             recursive: false,
-        },
+        }),
     }
 }
 

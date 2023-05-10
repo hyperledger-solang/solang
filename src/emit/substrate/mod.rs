@@ -117,6 +117,11 @@ impl SubstrateTarget {
             None,
         );
 
+        binary.vector_init_empty = binary.builder.build_int_to_ptr(
+            binary.context.i32_type().const_all_ones(),
+            binary.context.i8_type().ptr_type(AddressSpace::default()),
+            "empty_vector",
+        );
         binary.set_early_value_aborts(contract, ns);
 
         let scratch_len = binary.module.add_global(
