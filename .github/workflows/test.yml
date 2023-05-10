@@ -43,18 +43,24 @@ jobs:
     runs-on: solang-ubuntu-latest
     container: ubuntu:22.04
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v3
       - name: Install Python and git
         run: |
           apt-get update
-          apt-get install -y python3-pip git pkg-config libcairo-dev
-      - name: Install Docs requirements.txt
-        run : |
-          pip install -r requirements.txt
+          apt-get install -y python3-pip git pkg-config libcairo-dev latexmk
+      - name: Checkout sources
+        uses: actions/checkout@v3.1.0
+        with:
+          # docs/conf.py uses `git describe --tags` which requires full history
+          fetch-depth: 0
       - name: Build docs
-        run: make html
-        working-directory: docs
+        working-directory: ./docs
+        run: |
+          # Without the --add safe.directory we get the following error:
+          # fatal: detected dubious ownership in repository at '/__w/solang/solang'
+          # actions/checkout@v3.1.0 is supposed to fix this, but it does not work
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          pip install -r requirements.txt
+          make html epub
 
   linux-x86-64:
     name: Linux x86-64
