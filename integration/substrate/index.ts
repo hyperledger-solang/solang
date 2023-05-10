@@ -32,7 +32,7 @@ export function deploy(api: ApiPromise, pair: KeyringPair, file: PathLike, value
 
   const code = new CodePromise(api, contractJson, null);
 
-  const gasLimit = api.registry.createType('WeightV2', convertWeight(200000n * 1000000n).v2Weight);
+  const gasLimit = api.registry.createType('WeightV2', { refTime: 100000n * 1000000n, proofSize: 100000n });
   const tx = code.tx.new({ gasLimit, value }, ...params);
 
   return new Promise(async (resolve, reject) => {

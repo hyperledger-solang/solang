@@ -69,36 +69,36 @@ describe('Deploy primitives contract and test', () => {
 
         // // now for 256 bit operations
         res = await query(conn, alice, contract, "opI256", [0, 1000, 4100]);
-        expect(res.output?.toJSON()).toEqual(5100);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(5100n);
         res = await query(conn, alice, contract, "opI256", [1, 1000, 4100]);
-        expect(res.output?.toJSON()).toEqual(-3100);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(-3100n);
         res = await query(conn, alice, contract, "opI256", [2, 1000, 4100]);
-        expect(res.output?.toJSON()).toEqual(4100000);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(4100000n);
         res = await query(conn, alice, contract, "opI256", [3, 1000, 10]);
-        expect(res.output?.toJSON()).toEqual(100);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(100n);
         res = await query(conn, alice, contract, "opI256", [4, 1000, 99]);
-        expect(res.output?.toJSON()).toEqual(10);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(10n);
         res = await query(conn, alice, contract, "opI256", [6, - 10000000000000, 8]);
-        expect(res.output?.toJSON()).toEqual(-2560000000000000);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(-2560000000000000n);
         res = await query(conn, alice, contract, "opI256", [7, - 10000000000000, 8]);
-        expect(res.output?.toJSON()).toEqual(-39062500000);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(-39062500000n);
 
         res = await query(conn, alice, contract, "opU256", [0, 1000, 4100]);
-        expect(res.output?.toJSON()).toEqual(5100);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(5100n);
         res = await query(conn, alice, contract, "opU256", [1, 1000, 4100]);
         expect(res.output?.toString()).toEqual('115792089237316195423570985008687907853269984665640564039457584007913129636836'); // (2^64)-18446744073709548516 = 3100
         res = await query(conn, alice, contract, "opU256", [2, 123456789, 123456789]);
         expect(res.output?.toString()).toEqual('15241578750190521');
         res = await query(conn, alice, contract, "opU256", [3, 123456789, 100]);
-        expect(res.output?.toJSON()).toEqual(1234567);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(1234567n);
         res = await query(conn, alice, contract, "opU256", [4, 123456789, 100]);
-        expect(res.output?.toJSON()).toEqual(89);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(89n);
         res = await query(conn, alice, contract, "opU256", [5, 123456789, 9]);
         expect(res.output?.toString()).toEqual('6662462759719942007440037531362779472290810125440036903063319585255179509');
         res = await query(conn, alice, contract, "opI256", [6, 10000000000000, 8]);
-        expect(res.output?.toJSON()).toEqual(2560000000000000);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(2560000000000000n);
         res = await query(conn, alice, contract, "opI256", [7, 10000000000000, 8]);
-        expect(res.output?.toJSON()).toEqual(39062500000);
+        expect(BigInt(res.output?.toString() ?? "")).toEqual(39062500000n);
 
         // TEST bytesN
         res = await query(conn, alice, contract, "returnU86");
