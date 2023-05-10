@@ -1594,9 +1594,16 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let input_ptr = binary.vector_bytes(args[1].into_pointer_value().into());
         let input_len = binary.vector_len(args[1].into_pointer_value().into());
         let (output_ptr, output_len_ptr) = scratch_buf!();
-        binary
-            .builder
-            .build_store(output_len_ptr, i32_const!(SCRATCH_SIZE as u64));
+        let len = 16384;
+        binary.builder.build_store(output_len_ptr, i32_const!(len));
+        call!(
+            "__memset8",
+            &[
+                output_ptr.into(),
+                binary.context.i64_type().const_zero().into(),
+                i32_const!(len / 8).into()
+            ]
+        );
         let ret = call!(
             "call_chain_extension",
             &[
@@ -1621,7 +1628,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "ret");
         binary.builder.build_conditional_branch(success, ok, done);
 
-        // On success store the output into a new vector and return that to the caller.
         binary.builder.position_at_end(ok);
         let buf_len = binary
             .builder

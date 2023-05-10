@@ -14,7 +14,7 @@ mod storage;
 pub(super) mod target;
 
 // When using the seal api, we use our own scratch buffer.
-pub const SCRATCH_SIZE: u32 = 32 * 1024;
+const SCRATCH_SIZE: u32 = 32 * 1024;
 
 #[macro_export]
 macro_rules! emit_context {
