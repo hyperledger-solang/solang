@@ -63,7 +63,7 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
   for such large types, and any EVM virtual machine implementation has to do bigint
   calculations, which are expensive.
 
-  WebAssembly or BPF do not support this. As a result that Solang has to emulate larger types with
+  WebAssembly or Solana SBF do not support this. As a result that Solang has to emulate larger types with
   many instructions, resulting in larger contract code and higher gas cost or compute units.
 
 Fixed Length byte arrays

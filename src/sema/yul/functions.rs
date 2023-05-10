@@ -7,6 +7,7 @@ use crate::sema::yul::ast::YulFunction;
 use crate::sema::yul::block::resolve_yul_block;
 use crate::sema::yul::builtin::{parse_builtin_keyword, yul_unsupported_builtin};
 use crate::sema::yul::types::get_type_from_string;
+use indexmap::IndexMap;
 use solang_parser::diagnostics::{ErrorType, Level, Note};
 use solang_parser::pt::YulFunctionDefinition;
 use solang_parser::{diagnostics::Diagnostic, pt};
@@ -26,7 +27,7 @@ pub struct FunctionHeader {
 /// Keeps track of declared functions and their scope
 pub struct FunctionsTable {
     scopes: Vec<HashMap<String, usize>>,
-    lookup: Vec<FunctionHeader>,
+    lookup: IndexMap<String, FunctionHeader>,
     counter: usize,
     offset: usize,
     pub resolved_functions: Vec<YulFunction>,
@@ -36,7 +37,7 @@ impl FunctionsTable {
     pub fn new(offset: usize) -> FunctionsTable {
         FunctionsTable {
             scopes: vec![],
-            lookup: vec![],
+            lookup: IndexMap::new(),
             offset,
             counter: 0,
             resolved_functions: vec![],
@@ -65,7 +66,7 @@ impl FunctionsTable {
     pub fn find(&self, name: &str) -> Option<&FunctionHeader> {
         for scope in self.scopes.iter().rev() {
             if let Some(func_idx) = scope.get(name) {
-                return Some(self.lookup.get(*func_idx - self.offset).unwrap());
+                return Some(self.lookup.get_index(*func_idx - self.offset).unwrap().1);
             }
         }
         None
@@ -84,7 +85,11 @@ impl FunctionsTable {
     }
 
     pub fn get(&self, index: usize) -> Option<&FunctionHeader> {
-        self.lookup.get(index - self.offset)
+        if let Some(func_data) = self.lookup.get_index(index - self.offset) {
+            Some(func_data.1)
+        } else {
+            None
+        }
     }
 
     pub fn add_function_header(
@@ -111,20 +116,38 @@ impl FunctionsTable {
             .unwrap()
             .insert(id.name.clone(), self.counter + self.offset);
 
-        self.lookup.push(FunctionHeader {
-            id: id.clone(),
-            params: Arc::new(params),
-            returns: Arc::new(returns),
-            function_no: self.counter + self.offset,
-            called: false,
-        });
+        self.lookup.insert(
+            id.name.clone(),
+            FunctionHeader {
+                id: id.clone(),
+                params: Arc::new(params),
+                returns: Arc::new(returns),
+                function_no: self.counter + self.offset,
+                called: false,
+            },
+        );
+
+        // Create the space for the function in the vector, so we can assign later.
+        self.resolved_functions.push(YulFunction::default());
+
         self.counter += 1;
 
         None
     }
 
     pub fn function_called(&mut self, func_no: usize) {
-        self.lookup.get_mut(func_no - self.offset).unwrap().called = true;
+        self.lookup
+            .get_index_mut(func_no - self.offset)
+            .unwrap()
+            .1
+            .called = true;
+    }
+
+    /// This function returns a yul function's index in the resolved_functions vector
+    pub fn function_index(&self, name: &String) -> Option<usize> {
+        self.lookup
+            .get(name)
+            .map(|header| header.function_no - self.offset)
     }
 }
 

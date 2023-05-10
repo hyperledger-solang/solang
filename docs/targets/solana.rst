@@ -91,7 +91,7 @@ ______________________________
   solang compile --target solana flipper.sol -v
 
 This will produce two files called ``flipper.json`` and ``flipper.so``. The former is an Anchor style IDL file and the latter is
-the ELF BPF shared object containing the program. For each contract in the source code, Solang will create both an IDL file
+the Solana ELF shared object containing the program. For each contract in the source code, Solang will create both an IDL file
 and a binary file.
 
 Each program will need to be deployed to a program_id. Usually, the program_id is a well-known account which is specified

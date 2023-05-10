@@ -75,10 +75,18 @@ pub(crate) fn process_statements(
 
     for item in statements {
         if let pt::YulStatement::FunctionDefinition(func_def) = item {
+            // If an error was generate while processing the function header, it is not added to the
+            // functions table, so we do not resolve its body.
+            let index = if let Some(index) = functions_table.function_index(&func_def.id.name) {
+                index
+            } else {
+                continue;
+            };
+
             if let Ok(resolved_func) =
                 resolve_function_definition(func_def, functions_table, context, ns)
             {
-                functions_table.resolved_functions.push(resolved_func);
+                functions_table.resolved_functions[index] = resolved_func;
             }
         }
     }

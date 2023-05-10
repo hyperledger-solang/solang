@@ -126,6 +126,12 @@ void __leNtobeN(uint8_t *from, uint8_t *to, uint32_t length)
 	} while (--length);
 }
 
+#ifdef __wasm__
+#define VECTOR_EMPTY ((uint8_t *)~0l)
+#else
+#define VECTOR_EMPTY ((uint8_t *)0l)
+#endif
+
 // Create a new vector. If initial is -1 then clear the data. This is done since a null pointer valid in wasm
 struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 {
@@ -138,7 +144,7 @@ struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 
 	uint8_t *data = v->data;
 
-	if ((int)initial != -1)
+	if (initial != VECTOR_EMPTY)
 	{
 		while (size_array--)
 		{

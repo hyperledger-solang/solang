@@ -137,6 +137,7 @@ pub(crate) fn process_builtin(
         | YulBuiltInFunction::Log4
         // origin is the same as tx.origin and is not implemented
         | YulBuiltInFunction::Origin
+        | YulBuiltInFunction::PrevRandao
         => {
             if ns.target != Target::EVM {
                 let function_ty = builtin_ty.get_prototype_info();

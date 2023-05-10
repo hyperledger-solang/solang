@@ -10,7 +10,7 @@ WASM=$(addprefix wasm/,ripemd160.bc stdlib.bc bigint.bc format.bc heap.bc)
 
 all: $(SOLANA) $(WASM)
 
-$(SOLANA): TARGET_FLAGS=--target=sbf -march=bpfel+solana
+$(SOLANA): TARGET_FLAGS=--target=sbf
 $(WASM): TARGET_FLAGS=--target=wasm32
 
 bpf/solana.bc: solana.c solana_sdk.h

@@ -58,7 +58,7 @@ impl SolanaTarget {
         );
         binary.return_values.insert(
             ReturnCode::InvalidDataError,
-            context.i32_type().const_int(2, false),
+            context.i64_type().const_int(2, false),
         );
         binary.return_values.insert(
             ReturnCode::AccountDataTooSmall,

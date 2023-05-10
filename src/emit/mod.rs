@@ -343,7 +343,7 @@ impl Target {
     /// LLVM Target name
     fn llvm_target_name(&self) -> &'static str {
         if *self == Target::Solana {
-            "bpfel"
+            "sbf"
         } else {
             "wasm32"
         }
@@ -352,7 +352,7 @@ impl Target {
     /// LLVM Target triple
     fn llvm_target_triple(&self) -> TargetTriple {
         TargetTriple::create(if *self == Target::Solana {
-            "bpfel-unknown-unknown"
+            "sbf-unknown-unknown"
         } else {
             "wasm32-unknown-unknown-wasm"
         })
