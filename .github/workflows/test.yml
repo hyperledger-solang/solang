@@ -360,3 +360,4 @@ jobs:
       working-directory: ./vscode
     - run: vsce package
       working-directory: ./vscode
+      
