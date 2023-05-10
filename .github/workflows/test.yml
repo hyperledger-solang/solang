@@ -223,7 +223,7 @@ jobs:
       uses: actions/checkout@v3
     - uses: actions/setup-node@v3
       with:
-        node-version: '14'
+        node-version: '16'
     - name: Rust Stable
       run: rustup default stable
     - name: Setup yarn
@@ -270,7 +270,7 @@ jobs:
       uses: actions/checkout@v3
     - uses: actions/setup-node@v3
       with:
-        node-version: '14'
+        node-version: '16'
     - name: Rust Stable
       run: rustup default stable
     - uses: actions/download-artifact@v3
@@ -308,7 +308,7 @@ jobs:
       id: substrate
     - uses: actions/setup-node@v3
       with:
-        node-version: '14'
+        node-version: '16'
     - uses: actions/download-artifact@v3
       with:
         name: solang-linux-x86-64
@@ -348,7 +348,7 @@ jobs:
     - name: Install Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '14'
+        node-version: '16'
     - run: npm install
       working-directory: ./vscode
     - run: npm run compile
