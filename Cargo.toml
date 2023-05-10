@@ -58,8 +58,8 @@ ink_env = "=4.1.0"
 ink_metadata = "=4.1.0"
 scale-info = "2.4"
 petgraph = "0.6.3"
-wasmparser = "0.102.0"
-wasm-encoder = "0.25"
+wasmparser = "0.104.0"
+wasm-encoder = "0.26"
 
 [dev-dependencies]
 num-derive = "0.3"
