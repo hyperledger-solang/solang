@@ -7,6 +7,7 @@ mod accessor;
 mod account_info;
 mod arrays;
 mod balance;
+mod base58_encoding;
 mod builtin;
 mod call;
 mod constant;

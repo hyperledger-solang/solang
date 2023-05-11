@@ -5,6 +5,7 @@ use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::{TargetRuntime, Variable};
 use crate::sema::ast::{FormatArg, Namespace, RetrieveType, StringLocation, Type};
+use crate::Target;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::IntPredicate;
 use std::collections::HashMap;
@@ -37,10 +38,14 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                 // bool: "true" or "false"
                 Type::Bool => bin.context.i32_type().const_int(5, false),
                 // hex encode bytes
-                Type::Contract(_) | Type::Address(_) => bin
-                    .context
-                    .i32_type()
-                    .const_int(ns.address_length as u64 * 2, false),
+                Type::Contract(_) | Type::Address(_) => {
+                    let len = if ns.target == Target::Solana && *spec != FormatArg::Hex {
+                        base58_size(ns.address_length)
+                    } else {
+                        2 * ns.address_length
+                    };
+                    bin.context.i32_type().const_int(len as u64, false)
+                }
                 Type::Bytes(size) => bin.context.i32_type().const_int(size as u64 * 2, false),
                 Type::String => {
                     let val = expression(target, bin, arg, vartab, function, ns);
@@ -183,9 +188,8 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     };
                 }
                 Type::Address(_) | Type::Contract(_) => {
-                    // for Solana/Substrate, we should encode in base58
+                    // FIXME: For substrate we should encode in the SS58 format
                     let buf = bin.build_alloca(function, bin.address_type(ns), "address");
-
                     bin.builder.build_store(buf, val.into_array_value());
 
                     let len = bin
@@ -193,17 +197,35 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                         .i32_type()
                         .const_int(ns.address_length as u64, false);
 
-                    bin.builder.build_call(
-                        bin.module.get_function("hex_encode").unwrap(),
-                        &[output.into(), buf.into(), len.into()],
-                        "",
-                    );
+                    let written_len = if ns.target == Target::Solana && *spec != FormatArg::Hex {
+                        let calculated_len = base58_size(ns.address_length);
+                        let base58_len = bin
+                            .context
+                            .i32_type()
+                            .const_int(calculated_len as u64, false);
+                        bin.builder.build_call(
+                            bin.module
+                                .get_function("base58_encode_solana_address")
+                                .unwrap(),
+                            &[buf.into(), len.into(), output.into(), base58_len.into()],
+                            "",
+                        );
+                        base58_len
+                    } else {
+                        bin.builder.build_call(
+                            bin.module.get_function("hex_encode").unwrap(),
+                            &[output.into(), buf.into(), len.into()],
+                            "",
+                        );
 
-                    let hex_len = bin.builder.build_int_add(len, len, "hex_len");
+                        bin.context
+                            .i32_type()
+                            .const_int(2 * ns.address_length as u64, false)
+                    };
 
                     output = unsafe {
                         bin.builder
-                            .build_gep(bin.context.i8_type(), output, &[hex_len], "")
+                            .build_gep(bin.context.i8_type(), output, &[written_len], "")
                     };
                 }
                 Type::Bytes(size) => {
@@ -549,4 +571,8 @@ pub(super) fn string_location<'a, T: TargetRuntime<'a> + ?Sized>(
             (bin.vector_bytes(v), bin.vector_len(v))
         }
     }
+}
+
+fn base58_size(length: usize) -> usize {
+    length * 138 / 100
 }
