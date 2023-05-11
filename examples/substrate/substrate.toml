@@ -1,0 +1,33 @@
+[package]
+name = "flipper"
+author = "john doe"
+import_paths = []
+import_maps = []
+files = ["flipper.sol"]
+contracts = ["flipper"]
+
+[target]
+name = "substrate"
+address_length = 32
+value_length = 16
+
+
+[debug-features]
+prints = true
+log-runtime-errors = true
+log-api-return-codes = true
+llvm-IR-debug-info = false
+
+[optimizations]
+dead_storage= true
+constant_folding = true
+strength_reduce = true
+vector_to_slice = true
+common_subexpression_elimination = true
+llvm-IR_optimization_level = "default"
+
+[compiler-output]
+verbose = false
+#emit = ""
+#output_directory = ""
+#metadata_output_directory= ""

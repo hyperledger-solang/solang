@@ -20,7 +20,7 @@ use solang_parser::pt;
 use std::{ffi::OsStr, fmt};
 
 /// The target chain you want to compile Solidity for.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Target {
     /// Solana, see <https://solana.com/>
     Solana,

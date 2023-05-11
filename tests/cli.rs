@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use assert_cmd::Command;
-use std::fs::File;
+use std::{env::set_current_dir, fs::File};
 use tempfile::TempDir;
 
 #[test]
@@ -82,3 +82,49 @@ fn create_output_dir() {
     // nothing should have been created because flapper does not exist
     assert!(!test3.exists());
 }
+
+#[test]
+fn basic_compilation_from_toml() {
+    let mut new_cmd = Command::cargo_bin("solang").unwrap();
+    let tmp = TempDir::new_in("tests").unwrap();
+
+    let solana_test = tmp.path().join("solana_test");
+
+    println!("path:  =>> {}", solana_test.display());
+    //solang new --target solana
+    new_cmd
+        .arg("new")
+        .arg(solana_test.clone())
+        .args(["--target", "solana"])
+        .assert()
+        .success();
+
+    let flipper_file = File::open(solana_test.join("flipper.sol")).expect("should exist");
+    let config_file = File::open(solana_test.join("Solang.toml")).expect("should exist");
+
+    // compile flipper using config file
+    let mut compile_cmd = Command::cargo_bin("solang").unwrap();
+
+    //assert!(set_current_dir(solana_test).is_ok());
+
+    compile_cmd
+        .args(["compile", "--configuration-file"])
+        .current_dir(solana_test)
+        .assert()
+        .success();
+
+    let substrate_test = tmp.path().join("substrate_test");
+    let new_cmd = Command::cargo_bin("solang")
+        .unwrap()
+        .arg("new")
+        .arg(substrate_test.clone())
+        .args(["--target", "solana"])
+        .assert()
+        .success();
+
+    //assert!(set_current_dir(substrate_test).is_ok());
+
+    compile_cmd.current_dir(substrate_test).assert().success();
+}
+
+fn incorrect_toml_error_handling() {}

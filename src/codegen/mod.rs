@@ -114,6 +114,21 @@ impl Default for Options {
     }
 }
 
+impl PartialEq for Options {
+    fn eq(&self, other: &Self) -> bool {
+        self.dead_storage == other.dead_storage
+            && self.constant_folding == other.constant_folding
+            && self.strength_reduce == other.strength_reduce
+            && self.vector_to_slice == other.vector_to_slice
+            && self.common_subexpression_elimination == other.common_subexpression_elimination
+            && self.generate_debug_information == other.generate_debug_information
+            && self.opt_level == other.opt_level
+            && self.log_api_return_codes == other.log_api_return_codes
+            && self.log_runtime_errors == other.log_runtime_errors
+            && self.log_prints == other.log_prints
+    }
+}
+
 /// The contracts are fully resolved but they do not have any CFGs which is needed for
 /// the llvm code emitter. This will also do additional code checks.
 pub fn codegen(ns: &mut Namespace, opt: &Options) {

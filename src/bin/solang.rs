@@ -2,32 +2,35 @@
 
 use clap::{
     builder::{ArgAction, ValueParser},
-    parser::ValueSource,
     value_parser, Arg, ArgMatches, Command,
 };
 use clap_complete::{generate, Shell};
 use itertools::Itertools;
 use solang::{
     abi,
-    codegen::{codegen, OptimizationLevel, Options},
+    codegen::codegen,
     emit::Generate,
     file_resolver::FileResolver,
     sema::{ast::Namespace, file::PathDisplay},
     standard_json::{EwasmContract, JsonContract, JsonResult},
-    Target,
 };
+
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
+    env,
     ffi::{OsStr, OsString},
-    fs::{create_dir_all, File},
+    fs::{create_dir, create_dir_all, File},
     io::prelude::*,
     path::{Path, PathBuf},
     process::exit,
 };
 
+#[macro_use]
+mod configurations;
 mod doc;
 mod idl;
 mod languageserver;
+use crate::configurations::Configurations;
 
 fn main() {
     let version: &'static str = concat!("version ", env!("SOLANG_VERSION"));
@@ -44,9 +47,18 @@ fn main() {
                     .arg(
                         Arg::new("INPUT")
                             .help("Solidity input files")
-                            .required(true)
                             .value_parser(ValueParser::os_string())
-                            .num_args(1..),
+                            .num_args(1..)
+                            .required_unless_present("CONF-FILE")
+                    ).arg(
+                        Arg::new("CONF-FILE")
+                            .help("Take arguments from configuration file")
+                            .long("configuration-file")
+                            .num_args(0..=1)
+                            .exclusive(true)
+                            .value_parser(ValueParser::os_string())
+                            .default_missing_value_os("Solang.toml")
+                            .required_unless_present("INPUT")
                     )
                     .arg(
                         Arg::new("EMIT")
@@ -79,7 +91,7 @@ fn main() {
                             .num_args(1)
                             .value_parser(["solana", "substrate", "evm"])
                             .hide_possible_values(true)
-                            .required(true),
+                            .required_unless_present("CONF-FILE"),
                     )
                     .arg(
                         Arg::new("ADDRESS_LENGTH")
@@ -141,7 +153,7 @@ fn main() {
                             .short('m')
                             .long("importmap")
                             .num_args(1)
-                            .value_parser(ValueParser::new(parse_import_map))
+                            .value_parser(ValueParser::new(Configurations::parse_import_map))
                             .action(ArgAction::Append),
                     )
                     .arg(
@@ -259,7 +271,7 @@ fn main() {
                             .short('m')
                             .long("importmap")
                             .num_args(1)
-                            .value_parser(ValueParser::new(parse_import_map))
+                            .value_parser(ValueParser::new(Configurations::parse_import_map))
                             .action(ArgAction::Append),
                     ),
             )
@@ -305,7 +317,7 @@ fn main() {
                             .short('m')
                             .long("importmap")
                             .num_args(1)
-                            .value_parser(ValueParser::new(parse_import_map))
+                            .value_parser(ValueParser::new(Configurations::parse_import_map))
                             .action(ArgAction::Append),
                     ),
             )
@@ -337,13 +349,31 @@ fn main() {
                             .required(true)
                             .value_parser(value_parser!(Shell)),
                     ),
+            ).subcommand(
+                Command::new("new")
+                    .about("Creates a new project with default configuations")
+                    .arg(
+                        Arg::new("TARGET")
+                            .help("Target to build for [possible values: solana, substrate]")
+                            .long("target")
+                            .num_args(1)
+                            .value_parser(["solana", "substrate", "evm"])
+                            .hide_possible_values(true)
+                            .required(true),
+                    ).arg(
+                        Arg::new("INPUT")
+                            .help("project name")
+                            .value_parser(ValueParser::os_string())
+                            .num_args(1),
+                    ),
             )
     };
+
     let matches = app().get_matches();
 
     match matches.subcommand() {
         Some(("language-server", matches)) => {
-            let target = target_arg(matches);
+            let target = Configurations::target_arg(matches);
 
             languageserver::start_server(target, matches);
         }
@@ -351,22 +381,55 @@ fn main() {
         Some(("doc", matches)) => doc(matches),
         Some(("idl", matches)) => idl::idl(matches),
         Some(("shell-complete", matches)) => shell_complete(app(), matches),
+        Some(("new", matches)) => solang_new(matches),
         _ => unreachable!(),
     }
 }
 
+fn solang_new(matches: &ArgMatches) {
+    let target = matches.get_one::<String>("TARGET").unwrap().as_str();
+
+    // Default project name is "solana_project" or "substrate_project"
+    let default_path = &OsString::from(format!("{target}_project"));
+
+    let dir_path = matches.get_one::<OsString>("INPUT").unwrap_or(default_path);
+
+    match create_dir(dir_path) {
+        Ok(_) => (),
+        Err(error) => panic!("couldn't create project directory, reason: {error}"),
+    };
+
+    let flipper = match target {
+        "solana" => include_str!("../../examples/solana/flipper.sol"),
+        "substrate" => include_str!("../../examples/substrate/flipper.sol"),
+        _ => panic!("Unsupported target"),
+    };
+
+    let mut flipper_file = create_file(&Path::new(dir_path).join("flipper.sol"));
+    let _res = flipper_file.write_all(flipper.to_string().as_bytes());
+
+    let mut toml_file = create_file(&Path::new(dir_path).join("Solang.toml"));
+
+    let toml_content = match target {
+        "solana" => include_str!("../../examples/solana/solana.toml"),
+        "substrate" => include_str!("../../examples/substrate/substrate.toml"),
+        _ => panic!("Unsupported target"),
+    };
+    let _res = toml_file.write_all(toml_content.to_string().as_bytes());
+}
+
 fn doc(matches: &ArgMatches) {
-    let target = target_arg(matches);
-    let mut resolver = imports_arg(matches);
+    let target = Configurations::target_arg(matches);
+    let mut resolver = Configurations::imports_arg(Some(matches), None);
 
     let verbose = *matches.get_one("VERBOSE").unwrap();
     let mut success = true;
     let mut files = Vec::new();
 
     for filename in matches.get_many::<&OsString>("INPUT").unwrap() {
-        let ns = solang::parse_and_resolve(filename, &mut resolver, target);
+        let ns = solang::parse_and_resolve(filename, resolver.as_mut().unwrap(), target);
 
-        ns.print_diagnostics(&resolver, verbose);
+        ns.print_diagnostics(resolver.as_ref().unwrap(), verbose);
 
         if ns.contracts.is_empty() {
             eprintln!("{}: error: no contracts found", filename.to_string_lossy());
@@ -391,84 +454,50 @@ fn doc(matches: &ArgMatches) {
 }
 
 fn compile(matches: &ArgMatches) {
-    let target = target_arg(matches);
+    let conf_file = matches.contains_id("CONF-FILE");
 
-    let verbose = *matches.get_one("VERBOSE").unwrap();
+    let mut configurations = if conf_file {
+        let path = matches.get_one::<OsString>("CONF-FILE").unwrap();
+
+        match Configurations::config_from_toml(&PathBuf::from(path)) {
+            Ok(config) => config,
+            Err(err) => {
+                eprintln!("{err}");
+                exit(1);
+            }
+        }
+    } else {
+        Configurations::config_from_matches(matches)
+    };
+
     let mut json = JsonResult {
         errors: Vec::new(),
-        target: target.to_string(),
+        target: configurations.target.to_string(),
         program: String::new(),
         contracts: HashMap::new(),
     };
 
-    if verbose {
+    if configurations.verbose {
         eprintln!("info: Solang version {}", env!("SOLANG_VERSION"));
     }
-
-    let generate_debug_info = *matches.get_one("GENERATEDEBUGINFORMATION").unwrap();
-
-    let release = *matches.get_one::<bool>("RELEASE").unwrap();
-
-    let log_api_return_codes = *matches.get_one::<bool>("NOLOGAPIRETURNS").unwrap() & !release;
-
-    let log_runtime_errors = *matches.get_one::<bool>("NOLOGRUNTIMEERRORS").unwrap() & !release;
-
-    let log_prints = *matches.get_one::<bool>("NOPRINT").unwrap() & !release;
-
-    let mut resolver = imports_arg(matches);
-
-    let opt_level = match matches.get_one::<String>("OPT").unwrap().as_str() {
-        "none" => OptimizationLevel::None,
-        "less" => OptimizationLevel::Less,
-        "default" => OptimizationLevel::Default,
-        "aggressive" => OptimizationLevel::Aggressive,
-        _ => unreachable!(),
-    };
-
-    let opt = Options {
-        dead_storage: *matches.get_one("DEADSTORAGE").unwrap(),
-        constant_folding: *matches.get_one("CONSTANTFOLDING").unwrap(),
-        strength_reduce: *matches.get_one("STRENGTHREDUCE").unwrap(),
-        vector_to_slice: *matches.get_one("VECTORTOSLICE").unwrap(),
-        generate_debug_information: generate_debug_info,
-        common_subexpression_elimination: *matches
-            .get_one("COMMONSUBEXPRESSIONELIMINATION")
-            .unwrap(),
-        opt_level,
-        log_api_return_codes,
-        log_runtime_errors,
-        log_prints,
-    };
 
     let mut namespaces = Vec::new();
 
     let mut errors = false;
 
-    // Build a map of requested contract names, and a flag specifying whether it was found or not
-    let contract_names: HashSet<&str> = if let Some(values) = matches.get_many::<String>("CONTRACT")
-    {
-        values.map(String::as_str).collect()
-    } else {
-        HashSet::new()
-    };
-
-    for filename in matches.get_many::<OsString>("INPUT").unwrap() {
-        // TODO: this could be parallelized using e.g. rayon
-        let ns = process_file(filename, &mut resolver, target, matches, &opt);
-
-        namespaces.push(ns);
+    for filename in configurations.filenames.clone() {
+        let ns = process_file(&filename, &mut configurations);
+        namespaces.push(ns)
     }
 
     let mut json_contracts = HashMap::new();
 
-    let std_json = *matches.get_one("STD-JSON").unwrap();
-
     for ns in &namespaces {
-        if std_json {
-            let mut out = ns.diagnostics_as_json(&resolver);
+        if configurations.std_json_output {
+            let mut out = ns.diagnostics_as_json(&configurations.imports);
             json.errors.append(&mut out);
         } else {
-            ns.print_diagnostics(&resolver, verbose);
+            ns.print_diagnostics(&configurations.imports, configurations.verbose);
         }
 
         if ns.diagnostics.any_errors() {
@@ -476,18 +505,19 @@ fn compile(matches: &ArgMatches) {
         }
     }
 
-    if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(String::as_str) {
+    if let Some("ast-dot") = configurations.emit.as_deref() {
         exit(0);
     }
 
     // Ensure we have at least one contract
     if !errors && namespaces.iter().all(|ns| ns.contracts.is_empty()) {
-        eprintln!("error: no contacts found");
+        eprintln!("error: no contracts found");
         errors = true;
     }
 
     // Ensure we have all the requested contracts
-    let not_found: Vec<_> = contract_names
+    let not_found: Vec<_> = configurations
+        .contract_names
         .iter()
         .filter(|name| {
             !namespaces
@@ -509,17 +539,16 @@ fn compile(matches: &ArgMatches) {
             for contract_no in 0..ns.contracts.len() {
                 contract_results(
                     contract_no,
-                    matches,
+                    &configurations,
                     ns,
                     &mut json_contracts,
                     &mut seen_contracts,
-                    &opt,
                 );
             }
         }
     }
 
-    if std_json {
+    if configurations.std_json_output {
         println!("{}", serde_json::to_string(&json).unwrap());
         exit(0);
     }
@@ -538,38 +567,32 @@ fn shell_complete(mut app: Command, matches: &ArgMatches) {
     }
 }
 
-fn output_file(matches: &ArgMatches, stem: &str, ext: &str, meta: bool) -> PathBuf {
+fn output_file(config: &Configurations, stem: &str, ext: &str, meta: bool) -> PathBuf {
     let dir = if meta {
-        matches
-            .get_one::<OsString>("OUTPUTMETA")
-            .or_else(|| matches.get_one::<OsString>("OUTPUT"))
+        config
+            .output_meta
+            .as_deref()
+            .or(config.output_directory.as_deref())
     } else {
-        matches.get_one::<OsString>("OUTPUT")
+        config.output_directory.as_deref()
     };
-    Path::new(dir.unwrap_or(&OsString::from("."))).join(format!("{stem}.{ext}"))
+
+    Path::new(&dir.unwrap_or(&OsString::from("."))).join(format!("{stem}.{ext}"))
 }
 
-fn process_file(
-    filename: &OsStr,
-    resolver: &mut FileResolver,
-    target: solang::Target,
-    matches: &ArgMatches,
-    opt: &Options,
-) -> Namespace {
-    let verbose = *matches.get_one("VERBOSE").unwrap();
-
+fn process_file(filename: &OsStr, config: &mut Configurations) -> Namespace {
     // resolve phase
-    let mut ns = solang::parse_and_resolve(filename, resolver, target);
+    let mut ns = solang::parse_and_resolve(filename, &mut config.imports, config.target);
 
     // codegen all the contracts; some additional errors/warnings will be detected here
-    codegen(&mut ns, opt);
+    codegen(&mut ns, &config.options);
 
-    if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(String::as_str) {
+    if let Some("ast-dot") = config.emit.as_deref() {
         let filepath = PathBuf::from(filename);
         let stem = filepath.file_stem().unwrap().to_string_lossy();
-        let dot_filename = output_file(matches, &stem, "dot", false);
+        let dot_filename = output_file(config, &stem, "dot", false);
 
-        if verbose {
+        if config.verbose {
             eprintln!("info: Saving graphviz dot {}", dot_filename.display());
         }
 
@@ -588,15 +611,11 @@ fn process_file(
 
 fn contract_results(
     contract_no: usize,
-    matches: &ArgMatches,
+    config: &Configurations,
     ns: &mut Namespace,
     json_contracts: &mut HashMap<String, JsonContract>,
     seen_contracts: &mut HashMap<String, String>,
-    opt: &Options,
 ) {
-    let verbose = *matches.get_one("VERBOSE").unwrap();
-    let std_json = *matches.get_one("STD-JSON").unwrap();
-
     let resolved_contract = &ns.contracts[contract_no];
 
     if !resolved_contract.instantiable {
@@ -623,12 +642,12 @@ fn contract_results(
 
     seen_contracts.insert(resolved_contract.name.to_string(), loc);
 
-    if let Some("cfg") = matches.get_one::<String>("EMIT").map(String::as_str) {
+    if let Some("cfg") = config.emit.as_deref() {
         println!("{}", resolved_contract.print_cfg(ns));
         return;
     }
 
-    if verbose {
+    if config.verbose {
         if ns.target == solang::Target::Solana {
             eprintln!(
                 "info: contract {} uses at least {} bytes account data",
@@ -644,15 +663,15 @@ fn contract_results(
 
     let context = inkwell::context::Context::create();
 
-    let binary = resolved_contract.binary(ns, &context, opt);
+    let binary = resolved_contract.binary(ns, &context, &config.options);
 
-    if save_intermediates(&binary, matches) {
+    if save_intermediates(&binary, config) {
         return;
     }
 
     let code = binary.code(Generate::Linked).expect("llvm build");
 
-    if std_json {
+    if config.std_json_output {
         json_contracts.insert(
             binary.name,
             JsonContract {
@@ -664,9 +683,9 @@ fn contract_results(
             },
         );
     } else {
-        let bin_filename = output_file(matches, &binary.name, ns.target.file_extension(), false);
+        let bin_filename = output_file(config, &binary.name, ns.target.file_extension(), false);
 
-        if verbose {
+        if config.verbose {
             eprintln!(
                 "info: Saving binary {} for contract {}",
                 bin_filename.display(),
@@ -678,10 +697,10 @@ fn contract_results(
 
         file.write_all(&code).unwrap();
 
-        let (metadata, meta_ext) = abi::generate_abi(contract_no, ns, &code, verbose);
-        let meta_filename = output_file(matches, &binary.name, meta_ext, true);
+        let (metadata, meta_ext) = abi::generate_abi(contract_no, ns, &code, config.verbose);
+        let meta_filename = output_file(config, &binary.name, meta_ext, true);
 
-        if verbose {
+        if config.verbose {
             eprintln!(
                 "info: Saving metadata {} for contract {}",
                 meta_filename.display(),
@@ -694,14 +713,12 @@ fn contract_results(
     }
 }
 
-fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatches) -> bool {
-    let verbose = *matches.get_one("VERBOSE").unwrap();
-
-    match matches.get_one::<String>("EMIT").map(String::as_str) {
+fn save_intermediates(binary: &solang::emit::binary::Binary, config: &Configurations) -> bool {
+    match config.emit.as_deref() {
         Some("llvm-ir") => {
-            let llvm_filename = output_file(matches, &binary.name, "ll", false);
+            let llvm_filename = output_file(config, &binary.name, "ll", false);
 
-            if verbose {
+            if config.verbose {
                 eprintln!(
                     "info: Saving LLVM IR {} for contract {}",
                     llvm_filename.display(),
@@ -715,9 +732,9 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
         }
 
         Some("llvm-bc") => {
-            let bc_filename = output_file(matches, &binary.name, "bc", false);
+            let bc_filename = output_file(config, &binary.name, "bc", false);
 
-            if verbose {
+            if config.verbose {
                 eprintln!(
                     "info: Saving LLVM BC {} for contract {}",
                     bc_filename.display(),
@@ -739,9 +756,9 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
                 }
             };
 
-            let obj_filename = output_file(matches, &binary.name, "o", false);
+            let obj_filename = output_file(config, &binary.name, "o", false);
 
-            if verbose {
+            if config.verbose {
                 eprintln!(
                     "info: Saving Object {} for contract {}",
                     obj_filename.display(),
@@ -762,9 +779,9 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
                 }
             };
 
-            let obj_filename = output_file(matches, &binary.name, "asm", false);
+            let obj_filename = output_file(config, &binary.name, "asm", false);
 
-            if verbose {
+            if config.verbose {
                 eprintln!(
                     "info: Saving Assembly {} for contract {}",
                     obj_filename.display(),
@@ -800,83 +817,5 @@ fn create_file(path: &Path) -> File {
             eprintln!("error: cannot create file '{}': {}", path.display(), err,);
             exit(1);
         }
-    }
-}
-
-fn target_arg(matches: &ArgMatches) -> Target {
-    let address_length = matches.get_one::<u64>("ADDRESS_LENGTH").unwrap();
-
-    let value_length = matches.get_one::<u64>("VALUE_LENGTH").unwrap();
-
-    let target = match matches.get_one::<String>("TARGET").unwrap().as_str() {
-        "solana" => solang::Target::Solana,
-        "substrate" => solang::Target::Substrate {
-            address_length: *address_length as usize,
-            value_length: *value_length as usize,
-        },
-        "evm" => solang::Target::EVM,
-        _ => unreachable!(),
-    };
-
-    if !target.is_substrate()
-        && matches.value_source("ADDRESS_LENGTH") == Some(ValueSource::CommandLine)
-    {
-        eprintln!("error: address length cannot be modified for target '{target}'");
-        exit(1);
-    }
-
-    if !target.is_substrate()
-        && matches.value_source("VALUE_LENGTH") == Some(ValueSource::CommandLine)
-    {
-        eprintln!("error: value length cannot be modified for target '{target}'");
-        exit(1);
-    }
-
-    target
-}
-
-fn imports_arg(matches: &ArgMatches) -> FileResolver {
-    let mut resolver = FileResolver::new();
-
-    for filename in matches.get_many::<OsString>("INPUT").unwrap() {
-        if let Ok(path) = PathBuf::from(filename).canonicalize() {
-            let _ = resolver.add_import_path(path.parent().unwrap());
-        }
-    }
-
-    if let Err(e) = resolver.add_import_path(&PathBuf::from(".")) {
-        eprintln!("error: cannot add current directory to import path: {e}");
-        exit(1);
-    }
-
-    if let Some(paths) = matches.get_many::<PathBuf>("IMPORTPATH") {
-        for path in paths {
-            if let Err(e) = resolver.add_import_path(path) {
-                eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
-                exit(1);
-            }
-        }
-    }
-
-    if let Some(maps) = matches.get_many::<(String, PathBuf)>("IMPORTMAP") {
-        for (map, path) in maps {
-            if let Err(e) = resolver.add_import_map(OsString::from(map), path.clone()) {
-                eprintln!("error: import path '{}': {}", path.display(), e);
-                exit(1);
-            }
-        }
-    }
-
-    resolver
-}
-
-// Parse the import map argument. This takes the form
-/// --import-map openzeppelin=/opt/openzeppelin-contracts/contract,
-/// and returns the name of the map and the path.
-fn parse_import_map(map: &str) -> Result<(String, PathBuf), String> {
-    if let Some((var, value)) = map.split_once('=') {
-        Ok((var.to_owned(), PathBuf::from(value)))
-    } else {
-        Err("contains no '='".to_owned())
     }
 }
