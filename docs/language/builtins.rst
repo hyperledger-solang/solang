@@ -330,8 +330,8 @@ We expect parachain authors to write their own higher level libraries on top.
 	- write the amount of bytes written to ``output_ptr`` into the buffer at ``output_len_ptr``
 	
 	Unlike with other runtime API calls, the contracts pallet can not guarantee this behaviour.
-	Instead, it's specific to each chain extension. Hence, when using this builtin,
-	you must be sure that the chain extension being called is compatible.
+	Instead, it's specific to the targeted chain runtime. Hence, when using this builtin,
+	you must be sure that the implementation being called underneath is compatible.
 
 The following example demonstrates the usage of this builtin function.
 It shows how the chain extension example from the <ink! documentation https://use.ink/macros-attributes/chain-extension/>
