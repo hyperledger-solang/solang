@@ -317,7 +317,7 @@ chain_extension(uint32 ID, bytes input) returns (uint32, bytes)
 Only available on Substrate. Call the chain extension with the given ``ID`` and ``input`` data.
 Returns the return value from the chain extension and the output data.
 
-This function is a low level interface; the input and return values are just ``bytes``.
+This function is a low level interface; the input and output data buffers are just ``bytes``.
 The caller is responsible for encoding the input and decoding the output correctly.
 We expect parachain authors to write their own higher level libraries on top.
 
@@ -325,9 +325,9 @@ We expect parachain authors to write their own higher level libraries on top.
     This function calls the runtime API `call_chain_extension <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.call_chain_extension>`.
 	It assumes that the implementation of the chain extension does
 	- read the input from the ``input_ptr`` parameter, used as a buffer pointer
-	- write potential output into the ``output_ptr`` buffer
-	- read the output buffer length from ``output_len_ptr`` to prevent OOB writes. The output buffer is 16KB in size.
-	- write the amount of bytes written into ``output_ptr`` into ``output_len_ptr``
+	- write potential output into the buffer found at the ``output_ptr`` pointer
+	- respect the output buffer length in ``output_len_ptr`` to prevent OOB writes. The output buffer is 16KB in size.
+	- write the amount of bytes written to ``output_ptr`` into the buffer at ``output_len_ptr``
 	
 	Unlike with other runtime API calls, the contracts pallet can not guarantee this behaviour.
 	Instead, it's specific to each chain extension. Hence, before using this builtin,
