@@ -323,11 +323,11 @@ We expect parachain authors to write their own higher level libraries on top.
 
 .. warning::
     This function calls the runtime API `call_chain_extension <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.call_chain_extension>`.
-	It assumes that the implementation of the chain extension does
-	- read the input from the ``input_ptr`` parameter, used as a buffer pointer
-	- write potential output into the buffer found at the ``output_ptr`` pointer
-	- respect the output buffer length in ``output_len_ptr`` to prevent OOB writes. The output buffer is 16KB in size.
-	- write the amount of bytes written to ``output_ptr`` into the buffer at ``output_len_ptr``
+	It assumes that the implementation of the chain extension
+	- reads the input from the ``input_ptr`` parameter, used as a buffer pointer
+	- writes potential output into the buffer found at the ``output_ptr`` pointer
+	- respects the output buffer length in ``output_len_ptr`` to prevent OOB writes. The output buffer is 16KB in size.
+	- writes the amount of bytes written to ``output_ptr`` into the buffer at ``output_len_ptr``
 	
 	Unlike with other runtime API calls, the contracts pallet can not guarantee this behaviour.
 	Instead, it's specific to the targeted chain runtime. Hence, when using this builtin,
