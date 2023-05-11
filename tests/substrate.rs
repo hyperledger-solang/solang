@@ -731,7 +731,7 @@ impl Runtime {
         write_buf(mem, output_ptr, &data);
         write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
 
-        Ok(data.iter().map(|n| *n as u32).sum())
+        Ok(data.iter().map(|i| *i as u32).sum())
     }
 }
 
