@@ -763,15 +763,15 @@ fn call_chain_extension() {
         import "substrate";
 
         contract Foo {
-            function call_chain_ext() public returns (uint32, bytes) {
-                return chain_extension(123, hex"deadbeef");
+            function call_chain_ext(bytes input) public returns (uint32, bytes) {
+                return chain_extension(123, input);
             }
         }"##,
     );
 
-    runtime.function("call_chain_ext", vec![]);
+    let data = 0xdeadbeefu32.to_be_bytes().to_vec();
+    runtime.function("call_chain_ext", data.encode());
     let ret = <(u32, Vec<u8>)>::decode(&mut &runtime.output()[..]).unwrap();
-    let expected_out = vec![0xde, 0xad, 0xbe, 0xef];
-    assert_eq!(ret.0, expected_out.iter().map(|n| *n as u32).sum::<u32>());
-    assert_eq!(ret.1, expected_out);
+    assert_eq!(ret.0, data.iter().map(|i| *i as u32).sum::<u32>());
+    assert_eq!(ret.1, data.iter().cloned().rev().collect::<Vec<_>>());
 }

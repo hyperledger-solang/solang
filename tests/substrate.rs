@@ -712,7 +712,7 @@ impl Runtime {
         Ok(())
     }
 
-    /// Mocks a chain extension with ID 123 that does echo back the input.
+    /// Mock chain extension with ID 123 that writes the reversed input to the output buf.
     /// Returns the sum of the input data.
     #[seal(0)]
     fn call_chain_extension(
@@ -725,11 +725,13 @@ impl Runtime {
         assert_eq!(id, 123, "unkown chain extension");
         assert_eq!(read_len(mem, output_len_ptr), 16384);
 
-        let data = read_buf(mem, input_ptr, input_len);
+        let mut data = read_buf(mem, input_ptr, input_len);
+        data.reverse();
+
         write_buf(mem, output_ptr, &data);
         write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
 
-        Ok(data.iter().map(|i| *i as u32).sum())
+        Ok(data.iter().map(|n| *n as u32).sum())
     }
 }
 
