@@ -770,8 +770,8 @@ fn call_chain_extension() {
     );
 
     runtime.function("call_chain_ext", vec![]);
-    let out = <(u32, Vec<u8>)>::decode(&mut &runtime.output()[..]).unwrap();
-    assert_eq!(out.0, 824);
-    assert_eq!(out.1, vec![0xde, 0xad, 0xbe, 0xef]);
-    assert_eq!(out.1.len(), 4);
+    let ret = <(u32, Vec<u8>)>::decode(&mut &runtime.output()[..]).unwrap();
+    let expected_out = vec![0xde, 0xad, 0xbe, 0xef];
+    assert_eq!(ret.0, expected_out.iter().map(|n| *n as u32).sum::<u32>());
+    assert_eq!(ret.1, expected_out);
 }
