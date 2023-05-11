@@ -395,26 +395,33 @@ fn solang_new(matches: &ArgMatches) {
 
     match create_dir(dir_path) {
         Ok(_) => (),
-        Err(error) => {eprintln!("couldn't create project directory, reason: {error}"); exit(1)},
+        Err(error) => {
+            eprintln!("couldn't create project directory, reason: {error}");
+            exit(1)
+        }
     };
 
     let flipper = match target {
         "solana" => include_str!("../../examples/solana/flipper.sol"),
         "substrate" => include_str!("../../examples/substrate/flipper.sol"),
-        _ => unreachable!()
+        _ => unreachable!(),
     };
 
     let mut flipper_file = create_file(&Path::new(dir_path).join("flipper.sol"));
-    flipper_file.write_all(flipper.to_string().as_bytes()).expect("failed to write flipper example");
+    flipper_file
+        .write_all(flipper.to_string().as_bytes())
+        .expect("failed to write flipper example");
 
     let mut toml_file = create_file(&Path::new(dir_path).join("Solang.toml"));
 
     let toml_content = match target {
         "solana" => include_str!("../../examples/solana/solana.toml"),
         "substrate" => include_str!("../../examples/substrate/substrate.toml"),
-        _ => unreachable!()
+        _ => unreachable!(),
     };
-    toml_file.write_all(toml_content.to_string().as_bytes()).expect("failed to write example toml configuration file");
+    toml_file
+        .write_all(toml_content.to_string().as_bytes())
+        .expect("failed to write example toml configuration file");
 }
 
 fn doc(matches: &ArgMatches) {
