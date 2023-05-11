@@ -167,6 +167,8 @@ fn convert_diagnostic(
                 diagnostic::Label::secondary(file_id[&file_no], start..end)
                     .with_message(note.message.to_owned()),
             );
+        } else {
+            unreachable!("note without file position");
         }
     }
 
