@@ -326,6 +326,7 @@ We expect parachain authors to write their own higher level libraries on top.
 	It assumes that the implementation of the chain extension does
 	- read the input from the ``input_ptr`` parameter, used as a buffer pointer
 	- write potential output into the ``output_ptr`` buffer
+    - read the output buffer length from ``output_len_ptr`` to prevent OOB writes. The output buffer is 16KB in size.
 	- write the amount of bytes written into ``output_ptr`` into ``output_len_ptr``
 	
 	Unlike with other runtime API calls, the contracts pallet can not guarantee this behaviour.
