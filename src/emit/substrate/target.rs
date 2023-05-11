@@ -1580,14 +1580,58 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn builtin_function(
         &self,
-        _binary: &Binary<'a>,
+        binary: &Binary<'a>,
         _function: FunctionValue<'a>,
-        _builtin_func: &Function,
-        _args: &[BasicMetadataValueEnum<'a>],
+        builtin_func: &Function,
+        args: &[BasicMetadataValueEnum<'a>],
         _first_arg_type: BasicTypeEnum,
         _ns: &Namespace,
-    ) -> BasicValueEnum<'a> {
-        unimplemented!()
+    ) -> Option<BasicValueEnum<'a>> {
+        emit_context!(binary);
+
+        assert_eq!(builtin_func.name, "chain_extension", "unimplemented");
+
+        let input_ptr = binary.vector_bytes(args[1].into_pointer_value().into());
+        let input_len = binary.vector_len(args[1].into_pointer_value().into());
+        let (output_ptr, output_len_ptr) = scratch_buf!();
+        let len = 16384; // 16KB for the output buffer should be enough for virtually any case.
+        binary.builder.build_store(output_len_ptr, i32_const!(len));
+        call!("__bzero8", &[output_ptr.into(), i32_const!(len / 8).into()]);
+        let ret_val = call!(
+            "call_chain_extension",
+            &[
+                args[0].into_int_value().into(),
+                input_ptr.into(),
+                input_len.into(),
+                output_ptr.into(),
+                output_len_ptr.into()
+            ]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap()
+        .into_int_value();
+
+        let buf_len = binary
+            .builder
+            .build_load(binary.context.i32_type(), output_len_ptr, "buf_len")
+            .into_int_value();
+        let buf = call!(
+            "vector_new",
+            &[buf_len.into(), i32_const!(1).into(), output_ptr.into(),]
+        )
+        .try_as_basic_value()
+        .left()
+        .unwrap();
+
+        binary
+            .builder
+            .build_store(args[2].into_pointer_value(), ret_val);
+        binary
+            .builder
+            .build_store(args[3].into_pointer_value(), buf.into_pointer_value());
+
+        None
     }
 
     fn storage_subscript(

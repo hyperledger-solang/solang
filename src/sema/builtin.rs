@@ -1630,6 +1630,12 @@ impl Namespace {
     }
 
     pub fn add_substrate_builtins(&mut self) {
+        let loc = pt::Loc::Builtin;
+        let id = |name: &str| Identifier {
+            name: name.into(),
+            loc,
+        };
+
         let file_no = self.files.len();
         self.files.push(File {
             path: PathBuf::from("substrate"),
@@ -1641,22 +1647,81 @@ impl Namespace {
         let type_no = self.user_types.len();
         self.user_types.push(UserTypeDecl {
             tags: vec![Tag {
-                loc: pt::Loc::Builtin,
+                loc,
                 tag: "notice".into(),
                 no: 0,
                 value: "The Hash type from ink primitives".into(),
             }],
-            loc: pt::Loc::Builtin,
+            loc,
             name: "Hash".into(),
             ty: Type::Bytes(32),
             contract: None,
         });
 
-        let id = pt::Identifier {
-            loc: pt::Loc::Builtin,
-            name: "Hash".into(),
-        };
-        let symbol = Symbol::UserType(pt::Loc::Builtin, type_no);
-        assert!(self.add_symbol(file_no, None, &id, symbol));
+        let symbol = Symbol::UserType(loc, type_no);
+        assert!(self.add_symbol(file_no, None, &id("Hash"), symbol));
+
+        // Chain extensions
+        let mut func = Function::new(
+            loc,
+            "chain_extension".to_string(),
+            None,
+            Vec::new(),
+            pt::FunctionTy::Function,
+            None,
+            pt::Visibility::Public(Some(loc)),
+            vec![
+                Parameter {
+                    loc,
+                    id: Some(id("id")),
+                    ty: Type::Uint(32),
+                    ty_loc: Some(loc),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                },
+                Parameter {
+                    loc,
+                    id: Some(id("input")),
+                    ty: Type::DynamicBytes,
+                    ty_loc: Some(loc),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                },
+            ],
+            vec![
+                Parameter {
+                    loc,
+                    id: Some(id("return_value")),
+                    ty: Type::Uint(32),
+                    ty_loc: Some(loc),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                },
+                Parameter {
+                    loc,
+                    id: Some(id("output")),
+                    ty: Type::DynamicBytes,
+                    ty_loc: Some(loc),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                },
+            ],
+            self,
+        );
+
+        func.has_body = true;
+        let func_no = self.functions.len();
+        let id = id(&func.name);
+        self.functions.push(func);
+
+        assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
     }
 }

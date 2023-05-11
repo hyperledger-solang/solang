@@ -529,24 +529,25 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             }
 
             let first_arg_type = bin.llvm_type(&args[0].ty(), ns);
-            let ret = target.builtin_function(bin, function, callee, &parms, first_arg_type, ns);
+            if let Some(ret) =
+                target.builtin_function(bin, function, callee, &parms, first_arg_type, ns)
+            {
+                let success = bin.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    ret.into_int_value(),
+                    bin.return_values[&ReturnCode::Success],
+                    "success",
+                );
+                let success_block = bin.context.append_basic_block(function, "success");
+                let bail_block = bin.context.append_basic_block(function, "bail");
+                bin.builder
+                    .build_conditional_branch(success, success_block, bail_block);
 
-            let success = bin.builder.build_int_compare(
-                IntPredicate::EQ,
-                ret.into_int_value(),
-                bin.return_values[&ReturnCode::Success],
-                "success",
-            );
+                bin.builder.position_at_end(bail_block);
+                bin.builder.build_return(Some(&ret));
 
-            let success_block = bin.context.append_basic_block(function, "success");
-            let bail_block = bin.context.append_basic_block(function, "bail");
-            bin.builder
-                .build_conditional_branch(success, success_block, bail_block);
-
-            bin.builder.position_at_end(bail_block);
-
-            bin.builder.build_return(Some(&ret));
-            bin.builder.position_at_end(success_block);
+                bin.builder.position_at_end(success_block);
+            }
 
             if !res.is_empty() {
                 for (i, v) in callee.returns.iter().enumerate() {
