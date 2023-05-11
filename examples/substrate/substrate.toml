@@ -1,22 +1,21 @@
 [package]
-name = "flipper"
-author = "john doe"
-import_paths = []
-import_maps = []
-files = ["flipper.sol"]
-contracts = ["flipper"]
+input_files = ["flipper.sol"]   # Files to be compiled. You can define multiple files as : input_files = ["file1", "file2", ..]
+contracts = ["flipper"] # Contracts to include from the compiled files
+import_paths = []   
+import_maps = []    # Maps to import. Define as : import_paths = ["map=path/to/map", "map2=path/to/map2", ..]
+
 
 [target]
-name = "substrate"
+name = "substrate"  # Valid targets are "solana" and "substrate"
 address_length = 32
 value_length = 16
 
 
 [debug-features]
-prints = true
-log-runtime-errors = true
-log-api-return-codes = true
-llvm-IR-debug-info = false
+log-api-return-codes = true # Log API return codes to the environment.
+prints = true   # Log debug prints to the environment.
+log-runtime-errors = true   # Log runtime errors to the environment.
+llvm-IR-debug-info = false  # Add debug info to the generated llvm IR.
 
 [optimizations]
 dead_storage= true
@@ -24,10 +23,10 @@ constant_folding = true
 strength_reduce = true
 vector_to_slice = true
 common_subexpression_elimination = true
-llvm-IR_optimization_level = "default"
+llvm-IR_optimization_level = "default"  # Set llvm optimizer level. Valid options are "none", "less", "default", "aggressive"
 
 [compiler-output]
-verbose = false
-#emit = ""
-#output_directory = ""
-#metadata_output_directory= ""
+#verbose = false    # show debug messages
+#emit = "llvm-ir"   # Emit compiler state at early stage. Valid options are: "ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm".
+#output_directory = "path/to/dir"   
+#metadata_output_directory = "path/to/dir"  # output directory for metadata

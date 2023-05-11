@@ -10,7 +10,6 @@ use solang::{
     abi,
     codegen::codegen,
     emit::Generate,
-    file_resolver::FileResolver,
     sema::{ast::Namespace, file::PathDisplay},
     standard_json::{EwasmContract, JsonContract, JsonResult},
 };
