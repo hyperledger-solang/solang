@@ -712,7 +712,8 @@ impl Runtime {
         Ok(())
     }
 
-    /// Mocks a chain extension with ID 123 that does just echo back the input.
+    /// Mocks a chain extension with ID 123 that does echo back the input.
+    /// Returns the sum of the input data.
     #[seal(0)]
     fn call_chain_extension(
         id: u32,
@@ -728,7 +729,7 @@ impl Runtime {
         write_buf(mem, output_ptr, &data);
         write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
 
-        Ok(0)
+        Ok(data.iter().map(|i| *i as u32).sum())
     }
 }
 

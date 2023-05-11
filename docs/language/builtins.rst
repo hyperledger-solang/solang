@@ -311,10 +311,11 @@ Its underlying type is ``bytes32``, but it will be reported correctly as the ``H
 .. include:: ../examples/substrate/hash_type.sol
   :code: solidity
 
-chain_extension(uint32 ID, bytes input) returns (bytes)
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+chain_extension(uint32 ID, bytes input) returns (uint32, bytes)
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Only available on Substrate. Call the chain extension with the given ``ID``.
+Only available on Substrate. Call the chain extension with the given ``ID`` and ``input`` data.
+Returns the return value from the chain extension and the output data.
 
 This function is a low level interface; the input and return values are just ``bytes``.
 The caller is responsible for encoding the input and decoding the output correctly.
@@ -331,7 +332,7 @@ We expect parachain authors to write their own higher level libraries on top.
 	Instead, it's specific to each chain extension. Hence, before using this builtin,
 	you must make sure that the chain extension being called is compatible.
 
-The following example demonstrates the usage of this builtin.
+The following example demonstrates the usage of this builtin function.
 It shows how the chain extension example from the <ink! documentation https://use.ink/macros-attributes/chain-extension/>
 looks like in a solidity contract:
 

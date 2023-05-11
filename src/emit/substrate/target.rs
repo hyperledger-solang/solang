@@ -1581,12 +1581,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn builtin_function(
         &self,
         binary: &Binary<'a>,
-        function: FunctionValue<'a>,
+        _function: FunctionValue<'a>,
         builtin_func: &Function,
         args: &[BasicMetadataValueEnum<'a>],
         _first_arg_type: BasicTypeEnum,
         _ns: &Namespace,
-    ) -> BasicValueEnum<'a> {
+    ) -> Option<BasicValueEnum<'a>> {
         emit_context!(binary);
 
         assert_eq!(builtin_func.name, "chain_extension", "unimplemented");
@@ -1604,7 +1604,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 i32_const!(len / 8).into()
             ]
         );
-        let ret = call!(
+        let ret_val = call!(
             "call_chain_extension",
             &[
                 args[0].into_int_value().into(),
@@ -1619,16 +1619,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .unwrap()
         .into_int_value();
 
-        log_return_code(binary, "call_chain_extension", ret);
-
-        let ok = binary.context.append_basic_block(function, "ok_block");
-        let done = binary.context.append_basic_block(function, "done_block");
-        let success = binary
-            .builder
-            .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "ret");
-        binary.builder.build_conditional_branch(success, ok, done);
-
-        binary.builder.position_at_end(ok);
         let buf_len = binary
             .builder
             .build_load(binary.context.i32_type(), output_len_ptr, "buf_len")
@@ -1640,13 +1630,15 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .try_as_basic_value()
         .left()
         .unwrap();
+
         binary
             .builder
-            .build_store(args[2].into_pointer_value(), buf.into_pointer_value());
-        binary.builder.build_unconditional_branch(done);
+            .build_store(args[2].into_pointer_value(), ret_val);
+        binary
+            .builder
+            .build_store(args[3].into_pointer_value(), buf.into_pointer_value());
 
-        binary.builder.position_at_end(done);
-        ret.into()
+        None
     }
 
     fn storage_subscript(

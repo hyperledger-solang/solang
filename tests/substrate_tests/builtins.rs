@@ -763,14 +763,15 @@ fn call_chain_extension() {
         import "substrate";
 
         contract Foo {
-            function call_chain_ext() public returns (bytes) {
+            function call_chain_ext() public returns (uint32, bytes) {
                 return chain_extension(123, hex"deadbeef");
             }
         }"##,
     );
 
     runtime.function("call_chain_ext", vec![]);
-    let out = <Vec<u8>>::decode(&mut &runtime.output()[..]).unwrap();
-    assert_eq!(out, vec![0xde, 0xad, 0xbe, 0xef]);
-    assert_eq!(out.len(), 4);
+    let out = <(u32, Vec<u8>)>::decode(&mut &runtime.output()[..]).unwrap();
+    assert_eq!(out.0, 824);
+    assert_eq!(out.1, vec![0xde, 0xad, 0xbe, 0xef]);
+    assert_eq!(out.1.len(), 4);
 }
