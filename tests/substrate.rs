@@ -711,6 +711,28 @@ impl Runtime {
 
         Ok(())
     }
+
+    /// Mock chain extension with ID 123 that writes the reversed input to the output buf.
+    /// Returns the sum of the input data.
+    #[seal(0)]
+    fn call_chain_extension(
+        id: u32,
+        input_ptr: u32,
+        input_len: u32,
+        output_ptr: u32,
+        output_len_ptr: u32,
+    ) -> Result<u32, Trap> {
+        assert_eq!(id, 123, "unkown chain extension");
+        assert!(read_len(mem, output_len_ptr) == 16384 && input_len <= 16384);
+
+        let mut data = read_buf(mem, input_ptr, input_len);
+        data.reverse();
+
+        write_buf(mem, output_ptr, &data);
+        write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
+
+        Ok(data.iter().map(|i| *i as u32).sum())
+    }
 }
 
 /// Provides a mock implementation of substrates [contracts pallet][1]

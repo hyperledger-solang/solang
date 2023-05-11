@@ -240,7 +240,7 @@ pub trait TargetRuntime<'a> {
         args: &[BasicMetadataValueEnum<'a>],
         first_arg_type: BasicTypeEnum,
         ns: &Namespace,
-    ) -> BasicValueEnum<'a>;
+    ) -> Option<BasicValueEnum<'a>>;
 
     /// Calls constructor
     fn create_contract<'b>(

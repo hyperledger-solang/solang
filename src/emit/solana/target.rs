@@ -1281,7 +1281,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         args: &[BasicMetadataValueEnum<'a>],
         first_arg_type: BasicTypeEnum,
         ns: &ast::Namespace,
-    ) -> BasicValueEnum<'a> {
+    ) -> Option<BasicValueEnum<'a>> {
         if builtin_func.name == "create_program_address" {
             let func = binary
                 .module
@@ -1300,7 +1300,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .builder
                 .build_store(address, args[1].into_array_value());
 
-            binary
+            let ret = binary
                 .builder
                 .build_call(
                     func,
@@ -1314,7 +1314,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 )
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap();
+            Some(ret)
         } else if builtin_func.name == "try_find_program_address" {
             let func = binary
                 .module
@@ -1333,7 +1334,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 .builder
                 .build_store(address, args[1].into_array_value());
 
-            binary
+            let ret = binary
                 .builder
                 .build_call(
                     func,
@@ -1348,7 +1349,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 )
                 .try_as_basic_value()
                 .left()
-                .unwrap()
+                .unwrap();
+            Some(ret)
         } else {
             unreachable!();
         }
