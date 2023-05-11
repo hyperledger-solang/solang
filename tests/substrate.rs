@@ -723,7 +723,7 @@ impl Runtime {
         output_len_ptr: u32,
     ) -> Result<u32, Trap> {
         assert_eq!(id, 123, "unkown chain extension");
-        assert_eq!(read_len(mem, output_len_ptr), 16384);
+        assert!(read_len(mem, output_len_ptr) == 16384 && input_len <= 16384);
 
         let mut data = read_buf(mem, input_ptr, input_len);
         data.reverse();
