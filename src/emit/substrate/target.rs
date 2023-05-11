@@ -1594,7 +1594,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let input_ptr = binary.vector_bytes(args[1].into_pointer_value().into());
         let input_len = binary.vector_len(args[1].into_pointer_value().into());
         let (output_ptr, output_len_ptr) = scratch_buf!();
-        let len = 16384;
+        let len = 16384; // 16KB for the output buffer should be enough for virtually any case.
         binary.builder.build_store(output_len_ptr, i32_const!(len));
         call!("__bzero8", &[output_ptr.into(), i32_const!(len / 8).into()]);
         let ret_val = call!(

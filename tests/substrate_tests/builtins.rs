@@ -760,17 +760,17 @@ fn hash() {
 fn call_chain_extension() {
     let mut runtime = build_solidity(
         r##"
-        import "substrate";
+        import {chain_extension as ChainExtension} from "substrate";
 
         contract Foo {
-            function call_chain_ext(bytes input) public returns (uint32, bytes) {
-                return chain_extension(123, input);
+            function chain_extension(bytes input) public returns (uint32, bytes) {
+                return ChainExtension(123, input);
             }
         }"##,
     );
 
     let data = 0xdeadbeefu32.to_be_bytes().to_vec();
-    runtime.function("call_chain_ext", data.encode());
+    runtime.function("chain_extension", data.encode());
     let ret = <(u32, Vec<u8>)>::decode(&mut &runtime.output()[..]).unwrap();
     assert_eq!(ret.0, data.iter().map(|i| *i as u32).sum::<u32>());
     assert_eq!(ret.1, data.iter().cloned().rev().collect::<Vec<_>>());
