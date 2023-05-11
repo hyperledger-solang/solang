@@ -9,6 +9,7 @@ use solang::{
 
 use std::{collections::HashSet, ffi::OsString, fs, path::PathBuf, process::exit};
 use toml::Table;
+mod unit_tests;
 
 // A macro for error handling.
 macro_rules! match_err {

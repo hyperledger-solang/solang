@@ -1,14 +1,9 @@
-
-
-
-
+// SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
 mod tests {
-
-    use clap::{parser::ValueSource, ArgMatches};
 use solang::{
-    codegen::{OptimizationLevel, Options},
+    codegen:: Options,
     Target,
 };
 
