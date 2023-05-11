@@ -1719,17 +1719,9 @@ impl Namespace {
 
         func.has_body = true;
         let func_no = self.functions.len();
-        let id = Identifier {
-            name: func.name.to_owned(),
-            loc,
-        };
+        let id = id(&func.name);
         self.functions.push(func);
 
-        assert!(self.add_symbol(
-            file_no,
-            None,
-            &id,
-            Symbol::Function(vec![(pt::Loc::Builtin, func_no)])
-        ));
+        assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
     }
 }
