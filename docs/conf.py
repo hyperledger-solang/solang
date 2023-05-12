@@ -26,10 +26,11 @@ def setup(sphinx):
 # -- Project information -----------------------------------------------------
 
 project = 'Solang Solidity Compiler'
-copyright = '2019 - 2022 Solang Maintainers'
+copyright = '2019 - 2023 Solang Maintainers'
 author = 'Sean Young <sean@mess.org>, Cyrill Leutwiler <bigcyrill@hotmail.com>, Lucas Steuernagel <lucas.tnagel@gmail.com>'
 
 # The full version, including alpha/beta/rc tags
+version = os.popen('git describe --tags --abbrev=0').readline().strip()
 release = os.popen('git describe --tags').readline().strip()
 
 # -- General configuration ---------------------------------------------------
