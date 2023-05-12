@@ -161,7 +161,7 @@ bool __memcmp(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_l
 #define VECTOR_EMPTY ((uint8_t *)0l)
 #endif
 
-// Create a new vector. If initial is -1 then clear the data. This is done since a null pointer valid in wasm
+// Create a new vector. If initial is -1 then clear the data. This is done since a null pointer is valid in Wasm
 struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 {
     struct vector *v;
