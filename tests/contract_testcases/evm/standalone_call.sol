@@ -14,7 +14,7 @@ contract BABYLINK {
         return (1, c + 2, 3);
     }
 
-    function singleReturn() private pure returns (int) {
+    function singleReturn() private pure returns (uint) {
         return 3;
     }
 
@@ -57,3 +57,5 @@ contract BABYLINK {
     }
 }
 // ---- Expect: diagnostics ----
+// error: 39:9-24: unary plus not permitted
+// error: 40:9-24: negate not allowed on unsigned

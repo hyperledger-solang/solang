@@ -3,7 +3,7 @@
 This crate is part of [Hyperledger Solang](https://solang.readthedocs.io/). It contains the
 parser for Solidity, including the dialects used by Solang for Solana and Substrate.
 
-This parser is compatible with Ethereum Solidity v0.8.19.
+This parser is compatible with Ethereum Solidity v0.8.20.
 
 `solang-parser` is still `0.*.*`, so breaking changes [may occur at any time](https://semver.org/#spec-item-4). If you must depend on `solang-parser`, we recommend pinning to a specific version, i.e., `=0.y.z`.
 

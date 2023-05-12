@@ -439,6 +439,13 @@ pub fn expression(
                 } else {
                     get_int_length(&expr_type, loc, false, ns, diagnostics)?;
 
+                    if !expr_type.is_signed_int(ns) {
+                        diagnostics.push(Diagnostic::error(
+                            *loc,
+                            "negate not allowed on unsigned".to_string(),
+                        ));
+                    }
+
                     Ok(Expression::Negate {
                         loc: *loc,
                         ty: expr_type,
@@ -453,6 +460,11 @@ pub fn expression(
             let expr_type = expr.ty();
 
             get_int_length(&expr_type, loc, false, ns, diagnostics)?;
+
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "unary plus not permitted".to_string(),
+            ));
 
             Ok(expr)
         }
