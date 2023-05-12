@@ -366,3 +366,19 @@ jobs:
       working-directory: ./vscode
     - run: vsce package
       working-directory: ./vscode
+
+  std-lib-tests:
+    name: Stdlib
+    runs-on: solang-ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Lints for stdlib
+        run: |
+          make lint
+        working-directory: ./stdlib
+      - name: Stdlib tests
+        run: |
+          make test
+          ./test
+        working-directory: ./stdlib

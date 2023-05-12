@@ -79,7 +79,7 @@ void sol_log_64_(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
  */
 typedef struct
 {
-  uint8_t x[SIZE_PUBKEY];
+    uint8_t x[SIZE_PUBKEY];
 } SolPubkey;
 
 /**
@@ -91,14 +91,14 @@ typedef struct
  */
 static bool SolPubkey_same(const SolPubkey *one, const SolPubkey *two)
 {
-  for (int i = 0; i < sizeof(*one); i++)
-  {
-    if (one->x[i] != two->x[i])
+    for (int i = 0; i < sizeof(*one); i++)
     {
-      return false;
+        if (one->x[i] != two->x[i])
+        {
+            return false;
+        }
     }
-  }
-  return true;
+    return true;
 }
 
 /**
@@ -106,15 +106,15 @@ static bool SolPubkey_same(const SolPubkey *one, const SolPubkey *two)
  */
 typedef struct
 {
-  SolPubkey *key;      /** Public key of the account */
-  uint64_t *lamports;  /** Number of lamports owned by this account */
-  uint64_t data_len;   /** Length of data in bytes */
-  uint8_t *data;       /** On-chain data within this account */
-  SolPubkey *owner;    /** Program that owns this account */
-  uint64_t rent_epoch; /** The epoch at which this account will next owe rent */
-  bool is_signer;      /** Transaction was signed by this account's key? */
-  bool is_writable;    /** Is the account writable? */
-  bool executable;     /** This account's data contains a loaded program (and is now read-only) */
+    SolPubkey *key;      /** Public key of the account */
+    uint64_t *lamports;  /** Number of lamports owned by this account */
+    uint64_t data_len;   /** Length of data in bytes */
+    uint8_t *data;       /** On-chain data within this account */
+    SolPubkey *owner;    /** Program that owns this account */
+    uint64_t rent_epoch; /** The epoch at which this account will next owe rent */
+    bool is_signer;      /** Transaction was signed by this account's key? */
+    bool is_writable;    /** Is the account writable? */
+    bool executable;     /** This account's data contains a loaded program (and is now read-only) */
 } SolAccountInfo;
 
 /**
@@ -122,10 +122,10 @@ typedef struct
  */
 static void sol_memcpy(void *dst, const void *src, int len)
 {
-  for (int i = 0; i < len; i++)
-  {
-    *((uint8_t *)dst + i) = *((const uint8_t *)src + i);
-  }
+    for (int i = 0; i < len; i++)
+    {
+        *((uint8_t *)dst + i) = *((const uint8_t *)src + i);
+    }
 }
 
 /**
@@ -133,15 +133,15 @@ static void sol_memcpy(void *dst, const void *src, int len)
  */
 static int sol_memcmp(const void *s1, const void *s2, int n)
 {
-  for (int i = 0; i < n; i++)
-  {
-    uint8_t diff = *((uint8_t *)s1 + i) - *((const uint8_t *)s2 + i);
-    if (diff)
+    for (int i = 0; i < n; i++)
     {
-      return diff;
+        uint8_t diff = *((uint8_t *)s1 + i) - *((const uint8_t *)s2 + i);
+        if (diff)
+        {
+            return diff;
+        }
     }
-  }
-  return 0;
+    return 0;
 }
 
 /**
@@ -149,13 +149,13 @@ static int sol_memcmp(const void *s1, const void *s2, int n)
  */
 static void sol_memset(void *b, int c, size_t len)
 {
-  uint8_t *a = (uint8_t *)b;
-  while (len > 0)
-  {
-    *a = c;
-    a++;
-    len--;
-  }
+    uint8_t *a = (uint8_t *)b;
+    while (len > 0)
+    {
+        *a = c;
+        a++;
+        len--;
+    }
 }
 
 /**
@@ -163,13 +163,13 @@ static void sol_memset(void *b, int c, size_t len)
  */
 static size_t sol_strlen(const char *s)
 {
-  size_t len = 0;
-  while (*s)
-  {
-    len++;
-    s++;
-  }
-  return len;
+    size_t len = 0;
+    while (*s)
+    {
+        len++;
+        s++;
+    }
+    return len;
 }
 
 /**
@@ -189,19 +189,19 @@ void sol_panic_(const char *, uint64_t, uint64_t, uint64_t);
 /**
  * Asserts
  */
-#define sol_assert(expr) \
-  if (!(expr))           \
-  {                      \
-    sol_panic();         \
-  }
+#define sol_assert(expr)                                                                                               \
+    if (!(expr))                                                                                                       \
+    {                                                                                                                  \
+        sol_panic();                                                                                                   \
+    }
 
 /**
  * Seed used to create a program address or passed to sol_invoke_signed
  */
 typedef struct
 {
-  const uint8_t *addr; /** Seed bytes */
-  uint64_t len;        /** Length of the seed bytes */
+    const uint8_t *addr; /** Seed bytes */
+    uint64_t len;        /** Length of the seed bytes */
 } SolSignerSeed;
 
 /**
@@ -209,14 +209,14 @@ typedef struct
  */
 typedef struct
 {
-  SolAccountInfo ka[10]; /** Pointer to an array of SolAccountInfo, must already
+    SolAccountInfo ka[10]; /** Pointer to an array of SolAccountInfo, must already
                           point to an array of SolAccountInfos */
-  uint64_t ka_num;       /** Number of SolAccountInfo entries in `ka` */
-  const uint8_t *input;  /** pointer to the instruction data */
-  uint64_t input_len;    /** Length in bytes of the instruction data */
-  SolPubkey *program_id; /** program_id of the currently executing program */
-  const SolAccountInfo *ka_clock;
-  const SolAccountInfo *ka_instructions;
+    uint64_t ka_num;       /** Number of SolAccountInfo entries in `ka` */
+    const uint8_t *input;  /** pointer to the instruction data */
+    uint64_t input_len;    /** Length in bytes of the instruction data */
+    SolPubkey *program_id; /** program_id of the currently executing program */
+    const SolAccountInfo *ka_clock;
+    const SolAccountInfo *ka_instructions;
 } SolParameters;
 
 /**
@@ -238,108 +238,106 @@ typedef struct
  * @param params Pointer to a SolParameters structure
  * @return Boolean true if successful.
  */
-static uint64_t sol_deserialize(
-    const uint8_t *input,
-    SolParameters *params)
+static uint64_t sol_deserialize(const uint8_t *input, SolParameters *params)
 {
-  if (NULL == input || NULL == params)
-  {
-    return ERROR_INVALID_ARGUMENT;
-  }
-  params->ka_num = *(uint64_t *)input;
-  input += sizeof(uint64_t);
-
-  for (int i = 0; i < params->ka_num; i++)
-  {
-    uint8_t dup_info = input[0];
-    input += sizeof(uint8_t);
-
-    if (i >= SOL_ARRAY_SIZE(params->ka))
+    if (NULL == input || NULL == params)
     {
-      if (dup_info == UINT8_MAX)
-      {
-        input += sizeof(uint8_t);
-        input += sizeof(uint8_t);
-        input += sizeof(uint8_t);
-        input += 4; // padding
-        input += sizeof(SolPubkey);
-        input += sizeof(SolPubkey);
-        input += sizeof(uint64_t);
-        uint64_t data_len = *(uint64_t *)input;
-        input += sizeof(uint64_t);
-        input += data_len;
-        input += MAX_PERMITTED_DATA_INCREASE;
-        input = (uint8_t *)(((uint64_t)input + 8 - 1) & ~(8 - 1)); // padding
-        input += sizeof(uint64_t);
-      }
-      continue;
+        return ERROR_INVALID_ARGUMENT;
     }
-    if (dup_info == UINT8_MAX)
+    params->ka_num = *(uint64_t *)input;
+    input += sizeof(uint64_t);
+
+    for (int i = 0; i < params->ka_num; i++)
     {
-      // is signer?
-      params->ka[i].is_signer = *(uint8_t *)input != 0;
-      input += sizeof(uint8_t);
+        uint8_t dup_info = input[0];
+        input += sizeof(uint8_t);
 
-      // is writable?
-      params->ka[i].is_writable = *(uint8_t *)input != 0;
-      input += sizeof(uint8_t);
+        if (i >= SOL_ARRAY_SIZE(params->ka))
+        {
+            if (dup_info == UINT8_MAX)
+            {
+                input += sizeof(uint8_t);
+                input += sizeof(uint8_t);
+                input += sizeof(uint8_t);
+                input += 4; // padding
+                input += sizeof(SolPubkey);
+                input += sizeof(SolPubkey);
+                input += sizeof(uint64_t);
+                uint64_t data_len = *(uint64_t *)input;
+                input += sizeof(uint64_t);
+                input += data_len;
+                input += MAX_PERMITTED_DATA_INCREASE;
+                input = (uint8_t *)(((uint64_t)input + 8 - 1) & ~(8 - 1)); // padding
+                input += sizeof(uint64_t);
+            }
+            continue;
+        }
+        if (dup_info == UINT8_MAX)
+        {
+            // is signer?
+            params->ka[i].is_signer = *(uint8_t *)input != 0;
+            input += sizeof(uint8_t);
 
-      // executable?
-      params->ka[i].executable = *(uint8_t *)input;
-      input += sizeof(uint8_t);
+            // is writable?
+            params->ka[i].is_writable = *(uint8_t *)input != 0;
+            input += sizeof(uint8_t);
 
-      input += 4; // padding
+            // executable?
+            params->ka[i].executable = *(uint8_t *)input;
+            input += sizeof(uint8_t);
 
-      // key
-      params->ka[i].key = (SolPubkey *)input;
-      input += sizeof(SolPubkey);
+            input += 4; // padding
 
-      // owner
-      params->ka[i].owner = (SolPubkey *)input;
-      input += sizeof(SolPubkey);
+            // key
+            params->ka[i].key = (SolPubkey *)input;
+            input += sizeof(SolPubkey);
 
-      // lamports
-      params->ka[i].lamports = (uint64_t *)input;
-      input += sizeof(uint64_t);
+            // owner
+            params->ka[i].owner = (SolPubkey *)input;
+            input += sizeof(SolPubkey);
 
-      // account data
-      params->ka[i].data_len = *(uint64_t *)input;
-      input += sizeof(uint64_t);
-      params->ka[i].data = (uint8_t *)input;
-      input += params->ka[i].data_len;
-      input += MAX_PERMITTED_DATA_INCREASE;
-      input = (uint8_t *)(((uint64_t)input + 8 - 1) & ~(8 - 1)); // padding
+            // lamports
+            params->ka[i].lamports = (uint64_t *)input;
+            input += sizeof(uint64_t);
 
-      // rent epoch
-      params->ka[i].rent_epoch = *(uint64_t *)input;
-      input += sizeof(uint64_t);
+            // account data
+            params->ka[i].data_len = *(uint64_t *)input;
+            input += sizeof(uint64_t);
+            params->ka[i].data = (uint8_t *)input;
+            input += params->ka[i].data_len;
+            input += MAX_PERMITTED_DATA_INCREASE;
+            input = (uint8_t *)(((uint64_t)input + 8 - 1) & ~(8 - 1)); // padding
+
+            // rent epoch
+            params->ka[i].rent_epoch = *(uint64_t *)input;
+            input += sizeof(uint64_t);
+        }
+        else
+        {
+            params->ka[i].is_signer = params->ka[dup_info].is_signer;
+            params->ka[i].is_writable = params->ka[dup_info].is_writable;
+            params->ka[i].executable = params->ka[dup_info].executable;
+            params->ka[i].key = params->ka[dup_info].key;
+            params->ka[i].owner = params->ka[dup_info].owner;
+            params->ka[i].lamports = params->ka[dup_info].lamports;
+            params->ka[i].data_len = params->ka[dup_info].data_len;
+            params->ka[i].data = params->ka[dup_info].data;
+            params->ka[i].rent_epoch = params->ka[dup_info].rent_epoch;
+            input += 7; // padding
+        }
     }
-    else
-    {
-      params->ka[i].is_signer = params->ka[dup_info].is_signer;
-      params->ka[i].is_writable = params->ka[dup_info].is_writable;
-      params->ka[i].executable = params->ka[dup_info].executable;
-      params->ka[i].key = params->ka[dup_info].key;
-      params->ka[i].owner = params->ka[dup_info].owner;
-      params->ka[i].lamports = params->ka[dup_info].lamports;
-      params->ka[i].data_len = params->ka[dup_info].data_len;
-      params->ka[i].data = params->ka[dup_info].data;
-      params->ka[i].rent_epoch = params->ka[dup_info].rent_epoch;
-      input += 7; // padding
-    }
-  }
 
-  uint64_t data_len = *(uint64_t *)input;
-  input += sizeof(uint64_t);
+    uint64_t data_len = *(uint64_t *)input;
+    input += sizeof(uint64_t);
 
-  params->input_len = data_len;
-  params->input = input;
-  input += data_len;
+    params->input_len = data_len;
+    params->input = input;
+    input += data_len;
 
-  params->program_id = (SolPubkey *)input;
-  input += sizeof(SolPubkey);
+    params->program_id = (SolPubkey *)input;
+    input += sizeof(SolPubkey);
 
-  return 0;
+    return 0;
 }
 
 /**
@@ -347,8 +345,8 @@ static uint64_t sol_deserialize(
  */
 typedef struct
 {
-  const uint8_t *addr; /** bytes */
-  uint64_t len;        /** number of bytes*/
+    const uint8_t *addr; /** bytes */
+    uint64_t len;        /** number of bytes*/
 } SolBytes;
 
 /**
@@ -363,19 +361,16 @@ typedef struct
  * @param bytes_len Number of byte arrays
  * @param result 32 byte array to hold the result
  */
-static uint64_t sol_sha256(
-    const SolBytes *bytes,
-    int bytes_len,
-    const uint8_t *result);
+static uint64_t sol_sha256(const SolBytes *bytes, int bytes_len, const uint8_t *result);
 
 /**
  * Account Meta
  */
 typedef struct
 {
-  SolPubkey *pubkey; /** An account's public key */
-  bool is_writable;  /** True if the `pubkey` can be loaded as a read-write account */
-  bool is_signer;    /** True if an Instruction requires a Transaction signature matching `pubkey` */
+    SolPubkey *pubkey; /** An account's public key */
+    bool is_writable;  /** True if the `pubkey` can be loaded as a read-write account */
+    bool is_signer;    /** True if an Instruction requires a Transaction signature matching `pubkey` */
 } SolAccountMeta;
 
 /**
@@ -383,11 +378,11 @@ typedef struct
  */
 typedef struct
 {
-  SolPubkey *program_id;    /** Pubkey of the instruction processor that executes this instruction */
-  SolAccountMeta *accounts; /** Metadata for what accounts should be passed to the instruction processor */
-  uint64_t account_len;     /** Number of SolAccountMetas */
-  uint8_t *data;            /** Opaque data passed to the instruction processor */
-  uint64_t data_len;        /** Length of the data in bytes */
+    SolPubkey *program_id;    /** Pubkey of the instruction processor that executes this instruction */
+    SolAccountMeta *accounts; /** Metadata for what accounts should be passed to the instruction processor */
+    uint64_t account_len;     /** Number of SolAccountMetas */
+    uint8_t *data;            /** Opaque data passed to the instruction processor */
+    uint64_t data_len;        /** Length of the data in bytes */
 } SolInstruction;
 
 /**
@@ -396,8 +391,8 @@ typedef struct
  */
 typedef struct
 {
-  const SolSignerSeed *addr; /** An arry of a signer's seeds */
-  uint64_t len;              /** Number of seeds */
+    const SolSignerSeed *addr; /** An arry of a signer's seeds */
+    uint64_t len;              /** Number of seeds */
 } SolSignerSeeds;
 
 /**
@@ -408,11 +403,8 @@ typedef struct
  * @param Progam id of the signer
  * @param Program address created, filled on return
  */
-static uint64_t sol_create_program_address(
-    const SolSignerSeed *seeds,
-    int seeds_len,
-    const SolPubkey *program_id,
-    const SolPubkey *address);
+static uint64_t sol_create_program_address(const SolSignerSeed *seeds, int seeds_len, const SolPubkey *program_id,
+                                           const SolPubkey *address);
 
 /**
  * Cross-program invocation
@@ -428,26 +420,13 @@ static uint64_t sol_create_program_address(
  * @param seeds Seed bytes used to sign program accounts
  * @param seeds_len Length of the seeds array
  */
-static uint64_t sol_invoke_signed(
-    const SolInstruction *instruction,
-    const SolAccountInfo *account_infos,
-    int account_infos_len,
-    const SolSignerSeeds *signers_seeds,
-    int signers_seeds_len)
+static uint64_t sol_invoke_signed(const SolInstruction *instruction, const SolAccountInfo *account_infos,
+                                  int account_infos_len, const SolSignerSeeds *signers_seeds, int signers_seeds_len)
 {
-  uint64_t sol_invoke_signed_c(
-      const SolInstruction *instruction,
-      const SolAccountInfo *account_infos,
-      int account_infos_len,
-      const SolSignerSeeds *signers_seeds,
-      int signers_seeds_len);
+    uint64_t sol_invoke_signed_c(const SolInstruction *instruction, const SolAccountInfo *account_infos,
+                                 int account_infos_len, const SolSignerSeeds *signers_seeds, int signers_seeds_len);
 
-  return sol_invoke_signed_c(
-      instruction,
-      account_infos,
-      account_infos_len,
-      signers_seeds,
-      signers_seeds_len);
+    return sol_invoke_signed_c(instruction, account_infos, account_infos_len, signers_seeds, signers_seeds_len);
 }
 /**
  * Invoke another program
@@ -456,18 +435,11 @@ static uint64_t sol_invoke_signed(
  * @param account_infos Accounts used by instruction
  * @param account_infos_len Length of account_infos array
  */
-static uint64_t sol_invoke(
-    const SolInstruction *instruction,
-    const SolAccountInfo *account_infos,
-    int account_infos_len)
+static uint64_t sol_invoke(const SolInstruction *instruction, const SolAccountInfo *account_infos,
+                           int account_infos_len)
 {
-  const SolSignerSeeds signers_seeds[] = {{}};
-  return sol_invoke_signed(
-      instruction,
-      account_infos,
-      account_infos_len,
-      signers_seeds,
-      0);
+    const SolSignerSeeds signers_seeds[] = {{}};
+    return sol_invoke_signed(instruction, account_infos, account_infos_len, signers_seeds, 0);
 }
 
 /**@}*/
@@ -482,8 +454,7 @@ static uint64_t sol_invoke(
  *
  * @param key The public key to print
  */
-void sol_log_pubkey(
-    const SolPubkey *pubkey);
+void sol_log_pubkey(const SolPubkey *pubkey);
 
 /**
  * Prints the hexadecimal representation of an array
@@ -492,10 +463,10 @@ void sol_log_pubkey(
  */
 static void sol_log_array(const uint8_t *array, int len)
 {
-  for (int j = 0; j < len; j++)
-  {
-    sol_log_64(0, 0, 0, j, array[j]);
-  }
+    for (int j = 0; j < len; j++)
+    {
+        sol_log_64(0, 0, 0, j, array[j]);
+    }
 }
 
 /**
@@ -505,32 +476,32 @@ static void sol_log_array(const uint8_t *array, int len)
  */
 static void sol_log_params(const SolParameters *params)
 {
-  sol_log("- Program identifier:");
-  sol_log_pubkey(params->program_id);
+    sol_log("- Program identifier:");
+    sol_log_pubkey(params->program_id);
 
-  sol_log("- Number of KeyedAccounts");
-  sol_log_64(0, 0, 0, 0, params->ka_num);
-  for (int i = 0; i < params->ka_num; i++)
-  {
-    sol_log("  - Is signer");
-    sol_log_64(0, 0, 0, 0, params->ka[i].is_signer);
-    sol_log("  - Is writable");
-    sol_log_64(0, 0, 0, 0, params->ka[i].is_writable);
-    sol_log("  - Key");
-    sol_log_pubkey(params->ka[i].key);
-    sol_log("  - Lamports");
-    sol_log_64(0, 0, 0, 0, *params->ka[i].lamports);
-    sol_log("  - data");
-    sol_log_array(params->ka[i].data, params->ka[i].data_len);
-    sol_log("  - Owner");
-    sol_log_pubkey(params->ka[i].owner);
-    sol_log("  - Executable");
-    sol_log_64(0, 0, 0, 0, params->ka[i].executable);
-    sol_log("  - Rent Epoch");
-    sol_log_64(0, 0, 0, 0, params->ka[i].rent_epoch);
-  }
-  sol_log("- Eth abi Instruction data\0");
-  sol_log_array(params->input, params->input_len);
+    sol_log("- Number of KeyedAccounts");
+    sol_log_64(0, 0, 0, 0, params->ka_num);
+    for (int i = 0; i < params->ka_num; i++)
+    {
+        sol_log("  - Is signer");
+        sol_log_64(0, 0, 0, 0, params->ka[i].is_signer);
+        sol_log("  - Is writable");
+        sol_log_64(0, 0, 0, 0, params->ka[i].is_writable);
+        sol_log("  - Key");
+        sol_log_pubkey(params->ka[i].key);
+        sol_log("  - Lamports");
+        sol_log_64(0, 0, 0, 0, *params->ka[i].lamports);
+        sol_log("  - data");
+        sol_log_array(params->ka[i].data, params->ka[i].data_len);
+        sol_log("  - Owner");
+        sol_log_pubkey(params->ka[i].owner);
+        sol_log("  - Executable");
+        sol_log_64(0, 0, 0, 0, params->ka[i].executable);
+        sol_log("  - Rent Epoch");
+        sol_log_64(0, 0, 0, 0, params->ka[i].rent_epoch);
+    }
+    sol_log("- Eth abi Instruction data\0");
+    sol_log_array(params->input, params->input_len);
 }
 
 /**@}*/
@@ -550,11 +521,11 @@ uint64_t entrypoint(const uint8_t *input);
 #include <stdio.h>
 void sol_log_(const char *s, uint64_t len)
 {
-  printf("sol_log: %s\n", s);
+    printf("sol_log: %s\n", s);
 }
 void sol_log_64(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5)
 {
-  printf("sol_log_64: %llu, %llu, %llu, %llu, %llu\n", arg1, arg2, arg3, arg4, arg5);
+    printf("sol_log_64: %llu, %llu, %llu, %llu, %llu\n", arg1, arg2, arg3, arg4, arg5);
 }
 #endif
 

@@ -197,7 +197,7 @@ And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 Step 2: Build Solang
 ____________________
 
-Once you have the correct LLVM version in your path, simply run:
+Once you have the correct LLVM version in your path, ensure you have GNU make installed and simply run:
 
 .. code-block:: bash
 
@@ -213,7 +213,7 @@ Alternative step 2: Build Solang from crates.io
 _______________________________________________
 
 The latest Solang release is  on `crates.io <https://crates.io/crates/solang>`_. Once you have the
-correct LLVM version in your path, simply run:
+correct LLVM version in your path, ensure you have GNU make installed and simply run:
 
 .. code-block:: bash
 

@@ -9,14 +9,21 @@ extern uint64_t solang_dispatch(SolParameters *param);
 extern void __init_heap();
 
 // The address 'SysvarC1ock11111111111111111111111111111111' base58 decoded
-static const SolPubkey clock_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0xc7, 0x74, 0xc9, 0x28, 0x56, 0x63, 0x98, 0x69, 0x1d, 0x5e, 0xb6, 0x8b, 0x5e, 0xb8, 0xa3, 0x9b, 0x4b, 0x6d, 0x5c, 0x73, 0x55, 0x5b, 0x21, 0x00, 0x00, 0x00, 0x00};
+static const SolPubkey clock_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0xc7, 0x74, 0xc9, 0x28, 0x56, 0x63,
+                                        0x98, 0x69, 0x1d, 0x5e, 0xb6, 0x8b, 0x5e, 0xb8, 0xa3, 0x9b, 0x4b,
+                                        0x6d, 0x5c, 0x73, 0x55, 0x5b, 0x21, 0x00, 0x00, 0x00, 0x00};
 // The address 'Sysvar1nstructions1111111111111111111111111' base58 decoded
-static const SolPubkey instructions_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0x7b, 0xd1, 0x66, 0x35, 0xda, 0xd4, 0x04, 0x55, 0xfd, 0xc2, 0xc0, 0xc1, 0x24, 0xc6, 0x8f, 0x21, 0x56, 0x75, 0xa5, 0xdb, 0xba, 0xcb, 0x5f, 0x08, 0x00, 0x00, 0x00};
+static const SolPubkey instructions_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0x7b, 0xd1, 0x66, 0x35, 0xda, 0xd4,
+                                               0x04, 0x55, 0xfd, 0xc2, 0xc0, 0xc1, 0x24, 0xc6, 0x8f, 0x21, 0x56,
+                                               0x75, 0xa5, 0xdb, 0xba, 0xcb, 0x5f, 0x08, 0x00, 0x00, 0x00};
 // The address 'Ed25519SigVerify111111111111111111111111111' base58 decoded
-static const SolPubkey ed25519_address = {0x03, 0x7d, 0x46, 0xd6, 0x7c, 0x93, 0xfb, 0xbe, 0x12, 0xf9, 0x42, 0x8f, 0x83, 0x8d, 0x40, 0xff, 0x05, 0x70, 0x74, 0x49, 0x27, 0xf4, 0x8a, 0x64, 0xfc, 0xca, 0x70, 0x44, 0x80, 0x00, 0x00, 0x00};
+static const SolPubkey ed25519_address = {0x03, 0x7d, 0x46, 0xd6, 0x7c, 0x93, 0xfb, 0xbe, 0x12, 0xf9, 0x42,
+                                          0x8f, 0x83, 0x8d, 0x40, 0xff, 0x05, 0x70, 0x74, 0x49, 0x27, 0xf4,
+                                          0x8a, 0x64, 0xfc, 0xca, 0x70, 0x44, 0x80, 0x00, 0x00, 0x00};
 
-uint64_t
-entrypoint(const uint8_t *input)
+#ifndef TEST
+
+uint64_t entrypoint(const uint8_t *input)
 {
     SolParameters params;
 
@@ -48,19 +55,13 @@ entrypoint(const uint8_t *input)
     return solang_dispatch(&params);
 }
 
-uint64_t sol_invoke_signed_c(
-    const SolInstruction *instruction,
-    const SolAccountInfo *account_infos,
-    int account_infos_len,
-    const SolSignerSeeds *signers_seeds,
-    int signers_seeds_len);
-
+uint64_t sol_invoke_signed_c(const SolInstruction *instruction, const SolAccountInfo *account_infos,
+                             int account_infos_len, const SolSignerSeeds *signers_seeds, int signers_seeds_len);
 
 // Calls an external function when 'program_id' is NULL or
 // creates a new contract and calls its constructor.
-uint64_t external_call(uint8_t *input, uint32_t input_len, SolPubkey *address,
-                         SolPubkey *program_id, const SolSignerSeeds *seeds,
-                         int seeds_len, SolParameters *params)
+uint64_t external_call(uint8_t *input, uint32_t input_len, SolPubkey *address, SolPubkey *program_id,
+                       const SolSignerSeeds *seeds, int seeds_len, SolParameters *params)
 {
     SolAccountMeta metas[10];
     SolInstruction instruction = {
@@ -129,9 +130,7 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolPubkey *address,
     }
 }
 
-uint64_t *sol_account_lamport(
-    uint8_t *address,
-    SolParameters *params)
+uint64_t *sol_account_lamport(uint8_t *address, SolParameters *params)
 {
     SolPubkey *pubkey = (SolPubkey *)address;
 
@@ -191,6 +190,8 @@ bool sol_try_transfer(uint8_t *to_address, uint64_t lamports, SolParameters *par
 
     return true;
 }
+
+#endif
 
 uint64_t address_hash(uint8_t data[32])
 {
@@ -274,8 +275,7 @@ uint64_t signature_verify(uint8_t *public_key, struct vector *message, struct ve
             {
                 struct ed25519_instruction_sig *sig = &ed25519->sig[sig_no];
 
-                if (sig->public_key_instruction_index != instr_no ||
-                    sig->signature_instruction_index != instr_no ||
+                if (sig->public_key_instruction_index != instr_no || sig->signature_instruction_index != instr_no ||
                     sig->message_instruction_index != instr_no)
                     continue;
 
@@ -693,10 +693,14 @@ uint64_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size
 // To run the test:
 // clang -DTEST -DSOL_TEST -O3 -Wall solana.c stdlib.c -o test && ./test
 #include <assert.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
 
 void validate_heap(void *data, uint32_t offs[100], uint32_t lens[100])
 {
-    uint32_t offset = ((uint32_t *)data)[1];
+    struct account_data_header *hdr = data;
+    uint32_t offset = hdr->heap_offset;
 
     uint32_t last_offset = 0;
 
@@ -764,14 +768,18 @@ int main()
     uint32_t allocs = 0;
 
     memset(data, 0, sizeof(data));
-    ((uint32_t *)data)[0] = 0x41424344;
-    ((uint32_t *)data)[1] = 0x20;
+    struct account_data_header *hdr = data;
+    hdr->magic = 0x41424344;
+    hdr->heap_offset = 0x20;
 
     memset(offs, 0, sizeof(offs));
 
     int seed = time(NULL);
     printf("seed: %d\n", seed);
     srand(seed);
+
+    uint32_t new_offset;
+    uint64_t status;
 
     for (;;)
     {
@@ -781,24 +789,35 @@ int main()
         if (offs[n] == 0)
         {
             // printf("STEP: alloc %d\n", n);
-            offs[n] = account_data_alloc(&ai, 100);
+            status = account_data_alloc(&ai, 100, &new_offset);
+            assert(status == 0);
+            offs[n] = new_offset;
             memset(data + offs[n], n, 100);
             lens[n] = 100;
         }
         else if (rand() % 2)
         {
             // printf("STEP: free %d (0x%x)\n", n, offs[n]);
-            account_data_free(&ai, offs[n]);
+            account_data_free(ai.data, offs[n]);
             offs[n] = 0;
         }
         else
         {
+            // printf("STEP: realloc %d (0x%x)\n", n, offs[n]);
             int size = (rand() % 200) + 10;
-            int old_size = account_data_len(&ai, offs[n]);
-            offs[n] = account_data_realloc(&ai, offs[n], size);
+            int old_size = account_data_len(ai.data, offs[n]);
+            status = account_data_realloc(&ai, offs[n], size, &new_offset);
+            assert(status == 0);
+            offs[n] = new_offset;
             if (size > old_size)
                 memset(data + offs[n] + old_size, n, size - old_size);
             lens[n] = size;
+        }
+
+        if (time(NULL) - seed > 120)
+        {
+            printf("No error found after running for two minutes\n");
+            break;
         }
     }
 }
@@ -807,6 +826,4 @@ void sol_panic_(const char *s, uint64_t len, uint64_t line, uint64_t column)
 {
     printf("panic: %s line %lld", s, line);
 }
-
-int solang_dispatch(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka) {}
 #endif

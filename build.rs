@@ -5,6 +5,11 @@ use std::process::Command;
 fn main() {
     #[cfg(feature = "llvm")]
     {
+        Command::new("make")
+            .args(["-C", "stdlib"])
+            .output()
+            .expect("Could not build stdlib");
+
         // compile our linker
         let cxxflags = Command::new("llvm-config")
             .args(["--cxxflags"])
