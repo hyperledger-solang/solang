@@ -322,19 +322,20 @@ The caller is responsible for encoding the input and decoding the output correct
 We expect parachain authors to write their own higher level libraries on top.
 
 .. warning::
-    This function calls the runtime API `call_chain_extension <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.call_chain_extension>`.
+    This function calls the runtime API `call_chain_extension <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.call_chain_extension>`_.
+
 	It assumes that the implementation of the chain extension
-	- reads the input from the ``input_ptr`` parameter, used as a buffer pointer
-	- writes potential output into the buffer found at the ``output_ptr`` pointer
-	- respects the output buffer length in ``output_len_ptr`` to prevent OOB writes. The output buffer is 16KB in size.
-	- writes the amount of bytes written to ``output_ptr`` into the buffer at ``output_len_ptr``
-	
+	    - reads the input from the ``input_ptr`` parameter, used as a buffer pointer
+	    - writes potential output into the buffer found at the ``output_ptr`` pointer
+	    - respects the output buffer length in ``output_len_ptr`` to prevent OOB writes. The output buffer is 16KB in size.
+	    - writes the amount of bytes written to ``output_ptr`` into the buffer at ``output_len_ptr``
+
 	Unlike with other runtime API calls, the contracts pallet can not guarantee this behaviour.
 	Instead, it's specific to the targeted chain runtime. Hence, when using this builtin,
 	you must be sure that the implementation being called underneath is compatible.
 
 The following example demonstrates the usage of this builtin function.
-It shows how the chain extension example from the <ink! documentation https://use.ink/macros-attributes/chain-extension/>
+It shows how the chain extension example from the `ink! documentation <https://use.ink/macros-attributes/chain-extension/>`_
 looks like in a solidity contract:
 
 .. include:: ../examples/substrate/call_chain_extension.sol
