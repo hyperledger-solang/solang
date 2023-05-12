@@ -35,6 +35,7 @@ can be imported via the special import file ``substrate``.
 .. code-block:: solidity
 
     import {Hash} from 'substrate';
+    import {chain_extension} from 'substrate';
 
 Note that ``{Hash}`` can be omitted, renamed or imported via
 import object.
