@@ -25,3 +25,9 @@ outputs_dirs:
 
 clean:
 	rm -rf bpf wasm
+
+test:
+	clang -DTEST -DSOL_TEST -O3 -Wall solana.c stdlib.c -o test
+
+lint:
+	clang-format *.c *.h --style=file --dry-run -Werror

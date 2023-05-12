@@ -243,14 +243,14 @@ char *uint256dec(char *output, uint256_t *val256)
 static const char b58digits[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 // https://github.com/bitcoin/libbase58/blob/b1dd03fa8d1be4be076bb6152325c6b5cf64f678/base58.c inspired this code.
-void base58_encode_solana_address(uint8_t * data, uint32_t data_len, uint8_t * output, uint32_t output_len)
+void base58_encode_solana_address(uint8_t *data, uint32_t data_len, uint8_t *output, uint32_t output_len)
 {
     uint32_t j, carry, zero_count = 0;
 
     while (zero_count < data_len && !data[zero_count])
         ++zero_count;
 
-    for (uint32_t i=zero_count, high = output_len - 1; i < data_len; i++, high = j)
+    for (uint32_t i = zero_count, high = output_len - 1; i < data_len; i++, high = j)
     {
         for (carry = data[i], j = output_len - 1; (j > high) || carry; --j)
         {
@@ -264,7 +264,7 @@ void base58_encode_solana_address(uint8_t * data, uint32_t data_len, uint8_t * o
         }
     }
 
-    for (j=0; j < output_len; j++)
+    for (j = 0; j < output_len; j++)
     {
         output[j] = b58digits[output[j]];
     }

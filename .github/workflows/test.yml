@@ -373,14 +373,12 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
-        with:
-          submodules: recursive
       - name: Lints for stdlib
         run: |
-          clang-format *.c *.h --style=file --dry-run -Werror
+          make lint
         working-directory: ./stdlib
       - name: Stdlib tests
         run: |
-          clang -DTEST -DSOL_TEST -O3 -Wall solana.c stdlib.c -o test
+          make test
           ./test
         working-directory: ./stdlib

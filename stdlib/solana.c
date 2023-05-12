@@ -699,7 +699,8 @@ uint64_t account_data_realloc(SolAccountInfo *ai, uint32_t offset, uint32_t size
 
 void validate_heap(void *data, uint32_t offs[100], uint32_t lens[100])
 {
-    uint32_t offset = ((uint32_t *)data)[1];
+    struct account_data_header *hdr = data;
+    uint32_t offset = hdr->heap_offset;
 
     uint32_t last_offset = 0;
 
@@ -767,8 +768,9 @@ int main()
     uint32_t allocs = 0;
 
     memset(data, 0, sizeof(data));
-    ((uint32_t *)data)[0] = 0x41424344;
-    ((uint32_t *)data)[1] = 0x20;
+    struct account_data_header *hdr = data;
+    hdr->magic = 0x41424344;
+    hdr->heap_offset = 0x20;
 
     memset(offs, 0, sizeof(offs));
 
@@ -801,6 +803,7 @@ int main()
         }
         else
         {
+            // printf("STEP: realloc %d (0x%x)\n", n, offs[n]);
             int size = (rand() % 200) + 10;
             int old_size = account_data_len(ai.data, offs[n]);
             status = account_data_realloc(&ai, offs[n], size, &new_offset);
