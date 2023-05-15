@@ -1496,9 +1496,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
                 call!(
-                    "seal_address",
+                    "address",
                     &[scratch_buf.into(), scratch_len.into()],
-                    "address"
+                    "seal_address"
                 );
 
                 binary
@@ -1516,9 +1516,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
                 call!(
-                    "seal_balance",
+                    "balance",
                     &[scratch_buf.into(), scratch_len.into()],
-                    "balance"
+                    "seal_balance"
                 );
 
                 binary

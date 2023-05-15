@@ -167,8 +167,8 @@ impl SubstrateTarget {
             "minimum_balance",
             "seal_weight_to_fee",
             "instantiation_nonce",
-            "seal_address",
-            "seal_balance",
+            "address",
+            "balance",
             "block_number",
             "seal_now",
             "seal_gas_price",
@@ -294,8 +294,8 @@ impl SubstrateTarget {
         );
         external!("seal_transfer", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
         external!("value_transferred", void_type, u8_ptr, u32_ptr);
-        external!("seal_address", void_type, u8_ptr, u32_ptr);
-        external!("seal_balance", void_type, u8_ptr, u32_ptr);
+        external!("address", void_type, u8_ptr, u32_ptr);
+        external!("balance", void_type, u8_ptr, u32_ptr);
         external!("minimum_balance", void_type, u8_ptr, u32_ptr);
         external!("block_number", void_type, u8_ptr, u32_ptr);
         external!("seal_now", void_type, u8_ptr, u32_ptr);

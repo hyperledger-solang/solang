@@ -591,7 +591,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_address(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn address(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let address = vm.accounts[vm.account].address;
         let out_len = read_len(mem, out_len_ptr);
         assert!(out_len >= address.len());
@@ -615,7 +615,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let balance = vm.accounts[vm.account].value.to_le_bytes();
         let out_len = read_len(mem, out_len_ptr);
         assert!(out_len >= balance.len());
