@@ -174,7 +174,7 @@ impl SubstrateTarget {
             "seal_gas_price",
             "seal_gas_left",
             "seal_caller",
-            "seal_terminate",
+            "terminate",
             "seal_deposit_event",
             "seal_transfer",
         ]);
@@ -302,7 +302,7 @@ impl SubstrateTarget {
         external!("seal_weight_to_fee", void_type, u64_val, u8_ptr, u32_ptr);
         external!("seal_gas_left", void_type, u8_ptr, u32_ptr);
         external!("seal_caller", void_type, u8_ptr, u32_ptr);
-        external!("seal_terminate", void_type, u8_ptr);
+        external!("terminate", void_type, u8_ptr);
         external!(
             "seal_deposit_event",
             void_type,

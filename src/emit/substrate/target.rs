@@ -1161,7 +1161,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.build_store(address, addr);
 
-        call!("seal_terminate", &[address.into()], "terminated");
+        call!("terminate", &[address.into()], "terminated");
 
         binary.builder.build_unreachable();
     }

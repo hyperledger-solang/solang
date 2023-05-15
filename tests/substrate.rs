@@ -135,7 +135,7 @@ impl Contract {
         match instance
             .get_export(&store, name)
             .and_then(|export| export.into_func())
-            .expect("contract does not export '{function}'")
+            .expect(&format!("contract does not export '{name}'"))
             .call(&mut store, &[], &mut [])
         {
             Err(Error::Trap(trap)) if trap.trap_code().is_some() => {
@@ -675,7 +675,7 @@ impl Runtime {
     }
 
     #[seal(1)]
-    fn seal_terminate(beneficiary_ptr: u32) -> Result<(), Trap> {
+    fn terminate(beneficiary_ptr: u32) -> Result<(), Trap> {
         let free = vm.accounts.remove(vm.account).value;
         let address = read_account(mem, beneficiary_ptr);
         println!("seal_terminate: {} gets {free}", hex::encode(address));
