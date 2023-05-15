@@ -747,10 +747,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ) {
         emit_context!(binary);
 
-        call!(
-            "seal_hash_keccak_256",
-            &[src.into(), length.into(), dest.into()]
-        );
+        call!("hash_keccak_256", &[src.into(), length.into(), dest.into()]);
     }
 
     fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
@@ -1180,11 +1177,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         let (fname, hashlen) = match hash {
-            HashTy::Keccak256 => ("seal_hash_keccak_256", 32),
+            HashTy::Keccak256 => ("hash_keccak_256", 32),
             HashTy::Ripemd160 => ("ripemd160", 20),
-            HashTy::Sha256 => ("seal_hash_sha2_256", 32),
-            HashTy::Blake2_128 => ("seal_hash_blake2_128", 16),
-            HashTy::Blake2_256 => ("seal_hash_blake2_256", 32),
+            HashTy::Sha256 => ("hash_sha2_256", 32),
+            HashTy::Blake2_128 => ("hash_blake2_128", 16),
+            HashTy::Blake2_256 => ("hash_blake2_256", 32),
         };
 
         let res =
@@ -1381,7 +1378,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
                 // retrieve the data
-                call!("seal_input", &[data.into(), scratch_len.into()], "data");
+                call!("input", &[data.into(), scratch_len.into()], "data");
 
                 v
             }

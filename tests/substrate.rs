@@ -336,7 +336,7 @@ fn read_account(mem: &[u8], ptr: u32) -> Address {
 #[wasm_host]
 impl Runtime {
     #[seal(0)]
-    fn seal_input(dest_ptr: u32, len_ptr: u32) -> Result<(), Trap> {
+    fn input(dest_ptr: u32, len_ptr: u32) -> Result<(), Trap> {
         assert!(read_len(mem, len_ptr) >= vm.input.len());
         println!("seal_input: {}", hex::encode(&vm.input));
 
@@ -426,7 +426,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_hash_keccak_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
+    fn hash_keccak_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let mut hasher = Keccak::v256();
         hasher.update(&read_buf(mem, input_ptr, input_len));
         hasher.finalize(&mut mem[output_ptr as usize..(output_ptr + 32) as usize]);
@@ -434,7 +434,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_hash_sha2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
+    fn hash_sha2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let mut hasher = Sha256::new();
         hasher.update(read_buf(mem, input_ptr, input_len));
         write_buf(mem, output_ptr, &hasher.finalize());
@@ -442,14 +442,14 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_hash_blake2_128(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
+    fn hash_blake2_128(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let data = read_buf(mem, input_ptr, input_len);
         write_buf(mem, output_ptr, blake2b(16, &[], &data).as_bytes());
         Ok(())
     }
 
     #[seal(0)]
-    fn seal_hash_blake2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
+    fn hash_blake2_256(input_ptr: u32, input_len: u32, output_ptr: u32) -> Result<(), Trap> {
         let data = read_buf(mem, input_ptr, input_len);
         write_buf(mem, output_ptr, blake2b(32, &[], &data).as_bytes());
         Ok(())

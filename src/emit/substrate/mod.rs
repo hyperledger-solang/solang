@@ -151,14 +151,14 @@ impl SubstrateTarget {
             "deploy",
             "call",
             "call_chain_extension",
-            "seal_input",
+            "input",
             "set_storage",
             "get_storage",
             "clear_storage",
-            "seal_hash_keccak_256",
-            "seal_hash_sha2_256",
-            "seal_hash_blake2_128",
-            "seal_hash_blake2_256",
+            "hash_keccak_256",
+            "hash_sha2_256",
+            "hash_blake2_128",
+            "hash_blake2_256",
             "seal_return",
             "seal_debug_message",
             "instantiate",
@@ -209,7 +209,7 @@ impl SubstrateTarget {
         );
 
         binary.builder.build_call(
-            binary.module.get_function("seal_input").unwrap(),
+            binary.module.get_function("input").unwrap(),
             &[scratch_buf.into(), scratch_len.into()],
             "",
         );
@@ -254,11 +254,11 @@ impl SubstrateTarget {
             u8_ptr,
             u32_ptr
         );
-        external!("seal_input", void_type, u8_ptr, u32_ptr);
-        external!("seal_hash_keccak_256", void_type, u8_ptr, u32_val, u8_ptr);
-        external!("seal_hash_sha2_256", void_type, u8_ptr, u32_val, u8_ptr);
-        external!("seal_hash_blake2_128", void_type, u8_ptr, u32_val, u8_ptr);
-        external!("seal_hash_blake2_256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("input", void_type, u8_ptr, u32_ptr);
+        external!("hash_keccak_256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("hash_sha2_256", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("hash_blake2_128", void_type, u8_ptr, u32_val, u8_ptr);
+        external!("hash_blake2_256", void_type, u8_ptr, u32_val, u8_ptr);
         external!("instantiation_nonce", i64_type,);
         external!("set_storage", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
         external!("seal_debug_message", i32_type, u8_ptr, u32_val);
