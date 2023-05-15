@@ -135,7 +135,7 @@ impl Contract {
         match instance
             .get_export(&store, name)
             .and_then(|export| export.into_func())
-            .expect(&format!("contract does not export '{name}'"))
+            .unwrap_or_else(|| panic!("contract does not export '{name}'"))
             .call(&mut store, &[], &mut [])
         {
             Err(Error::Trap(trap)) if trap.trap_code().is_some() => {
