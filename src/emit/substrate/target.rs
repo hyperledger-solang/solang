@@ -870,7 +870,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
             call!(
-                "seal_minimum_balance",
+                "minimum_balance",
                 &[value_ptr.into(), scratch_len.into()],
                 "minimum_balance"
             );
@@ -1481,7 +1481,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             } => {
                 get_seal_value!(
                     "minimum_balance",
-                    "seal_minimum_balance",
+                    "minimum_balance",
                     ns.value_length as u32 * 8
                 )
             }

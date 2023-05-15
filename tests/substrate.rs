@@ -354,7 +354,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_value_transferred(dest_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn value_transferred(dest_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let value = vm.transferred_value.to_le_bytes();
         assert!(read_len(mem, out_len_ptr) >= value.len());
         println!("seal_value_transferred: {}", vm.transferred_value);
@@ -513,7 +513,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_minimum_balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn minimum_balance(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         assert!(read_len(mem, out_len_ptr) >= 16);
         write_buf(mem, out_ptr, &500u128.to_le_bytes());
         Ok(())
