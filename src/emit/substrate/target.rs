@@ -1384,7 +1384,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 ..
             } => {
                 let block_number =
-                    get_seal_value!("block_number", "seal_block_number", 32).into_int_value();
+                    get_seal_value!("seal_block_number", "block_number", 32).into_int_value();
 
                 // Cast to 64 bit
                 binary
@@ -1480,7 +1480,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 ..
             } => {
                 get_seal_value!(
-                    "minimum_balance",
+                    "seal_minimum_balance",
                     "minimum_balance",
                     ns.value_length as u32 * 8
                 )

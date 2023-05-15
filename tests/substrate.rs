@@ -627,7 +627,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_block_number(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn block_number(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let block = 950_119_597u32.to_le_bytes();
         let out_len = read_len(mem, out_len_ptr);
         assert!(out_len >= block.len());
