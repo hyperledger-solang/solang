@@ -131,7 +131,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.position_at_end(delete_block);
 
-        let ret = call!("seal_clear_storage", &[slot.into(), i32_const!(32).into()])
+        let ret = call!("clear_storage", &[slot.into(), i32_const!(32).into()])
             .try_as_basic_value()
             .left()
             .unwrap()
@@ -902,7 +902,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64 * 32));
 
         let ret = call!(
-            "seal_instantiate",
+            "instantiate",
             &[
                 codehash.into(),
                 contract_args.gas.unwrap().into(),

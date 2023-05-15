@@ -154,14 +154,14 @@ impl SubstrateTarget {
             "seal_input",
             "set_storage",
             "get_storage",
-            "seal_clear_storage",
+            "clear_storage",
             "seal_hash_keccak_256",
             "seal_hash_sha2_256",
             "seal_hash_blake2_128",
             "seal_hash_blake2_256",
             "seal_return",
             "seal_debug_message",
-            "seal_instantiate",
+            "instantiate",
             "seal_call",
             "seal_value_transferred",
             "seal_minimum_balance",
@@ -262,11 +262,11 @@ impl SubstrateTarget {
         external!("instantiation_nonce", i64_type,);
         external!("set_storage", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
         external!("seal_debug_message", i32_type, u8_ptr, u32_val);
-        external!("seal_clear_storage", i32_type, u8_ptr, u32_val);
+        external!("clear_storage", i32_type, u8_ptr, u32_val);
         external!("get_storage", i32_type, u8_ptr, u32_val, u8_ptr, u32_ptr);
         external!("seal_return", void_type, u32_val, u8_ptr, u32_val);
         external!(
-            "seal_instantiate",
+            "instantiate",
             i32_type,
             u8_ptr,
             u64_val,

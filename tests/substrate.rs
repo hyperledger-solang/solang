@@ -414,7 +414,7 @@ impl Runtime {
     }
 
     #[seal(1)]
-    fn seal_clear_storage(key_ptr: u32, key_len: u32) -> Result<u32, Trap> {
+    fn clear_storage(key_ptr: u32, key_len: u32) -> Result<u32, Trap> {
         let key = StorageKey::try_from(read_buf(mem, key_ptr, key_len))
             .expect("storage key size must be 32 bytes");
         println!("clear_storage: {}", hex::encode(key));
@@ -520,7 +520,7 @@ impl Runtime {
     }
 
     #[seal(1)]
-    fn seal_instantiate(
+    fn instantiate(
         code_hash_ptr: u32,
         _gas: u64,
         value_ptr: u32,
