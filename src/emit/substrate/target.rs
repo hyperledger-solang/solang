@@ -75,7 +75,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         let ret = call!(
-            "seal_get_storage",
+            "get_storage",
             &[
                 slot.into(),
                 i32_const!(32).into(),

@@ -375,7 +375,7 @@ impl Runtime {
     }
 
     #[seal(1)]
-    fn seal_get_storage(
+    fn get_storage(
         key_ptr: u32,
         key_len: u32,
         out_ptr: u32,
