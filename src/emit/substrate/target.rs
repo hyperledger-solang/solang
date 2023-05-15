@@ -804,14 +804,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
         emit_context!(binary);
 
-        let ret = call!(
-            "seal_debug_message",
-            &[string_ptr.into(), string_len.into()]
-        )
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value();
+        let ret = call!("debug_message", &[string_ptr.into(), string_len.into()])
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         log_return_code(binary, "seal_debug_message", ret);
     }
@@ -1658,7 +1655,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let error_with_loc = error_msg_with_loc(ns, &reason_string, reason_loc);
         let custom_error = string_to_basic_value(bin, ns, error_with_loc + ",\n");
         call!(
-            "seal_debug_message",
+            "debug_message",
             &[
                 bin.vector_bytes(custom_error).into(),
                 bin.vector_len(custom_error).into()

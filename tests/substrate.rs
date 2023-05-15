@@ -366,7 +366,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_debug_message(data_ptr: u32, len: u32) -> Result<u32, Trap> {
+    fn debug_message(data_ptr: u32, len: u32) -> Result<u32, Trap> {
         let buf = read_buf(mem, data_ptr, len);
         let msg = std::str::from_utf8(&buf).expect("seal_debug_message: Invalid UFT8");
         println!("seal_debug_message: {msg}");

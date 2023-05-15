@@ -160,7 +160,7 @@ impl SubstrateTarget {
             "hash_blake2_128",
             "hash_blake2_256",
             "seal_return",
-            "seal_debug_message",
+            "debug_message",
             "instantiate",
             "seal_call",
             "seal_value_transferred",
@@ -261,7 +261,7 @@ impl SubstrateTarget {
         external!("hash_blake2_256", void_type, u8_ptr, u32_val, u8_ptr);
         external!("instantiation_nonce", i64_type,);
         external!("set_storage", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
-        external!("seal_debug_message", i32_type, u8_ptr, u32_val);
+        external!("debug_message", i32_type, u8_ptr, u32_val);
         external!("clear_storage", i32_type, u8_ptr, u32_val);
         external!("get_storage", i32_type, u8_ptr, u32_val, u8_ptr, u32_ptr);
         external!("seal_return", void_type, u32_val, u8_ptr, u32_val);
@@ -402,5 +402,5 @@ fn log_return_code(binary: &Binary, api: &'static str, code: IntValue) {
             .build_ptr_to_int(out_buf, binary.context.i32_type(), "out_buf_ptr"),
         "msg_len",
     );
-    call!("seal_debug_message", &[out_buf.into(), msg_len.into()]);
+    call!("debug_message", &[out_buf.into(), msg_len.into()]);
 }
