@@ -1134,7 +1134,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_store(value_len, i32_const!(ns.value_length as u64));
 
         call!(
-            "seal_value_transferred",
+            "value_transferred",
             &[value.into(), value_len.into()],
             "value_transferred"
         );
