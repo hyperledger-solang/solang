@@ -17,7 +17,7 @@ use crate::sema::{builtin, using};
 use crate::Target;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{CodeLocation, Visibility};
 use std::collections::HashMap;
 
 /// Resolve a function call via function type
@@ -320,6 +320,12 @@ pub fn function_call_pos_args(
             ));
 
             continue;
+        } else if matches!(func.visibility, Visibility::External(_)) {
+            errors.push(Diagnostic::error(
+                *loc,
+                "external functions can only be invoked outside the contract".to_string(),
+            ));
+            continue;
         }
 
         let returns = function_returns(func, resolve_to);
@@ -505,6 +511,12 @@ pub(super) fn function_call_named_args(
                 format!("declaration of function '{}'", func.name),
             ));
 
+            continue;
+        } else if matches!(func.visibility, Visibility::External(_)) {
+            errors.push(Diagnostic::error(
+                *loc,
+                "external functions can only be invoked outside the contract".to_string(),
+            ));
             continue;
         }
 
