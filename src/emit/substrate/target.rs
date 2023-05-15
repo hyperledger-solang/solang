@@ -1061,7 +1061,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         // do the actual call
         let ret = call!(
-            "seal_transfer",
+            "transfer",
             &[
                 address.into(),
                 i32_const!(ns.address_length as u64).into(),
@@ -1283,7 +1283,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         };
 
         call!(
-            "seal_deposit_event",
+            "deposit_event",
             &[
                 topic_buf.into(),
                 topic_size.into(),
@@ -1400,7 +1400,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 kind: codegen::Builtin::Timestamp,
                 ..
             } => {
-                let milliseconds = get_seal_value!("timestamp", "seal_now", 64).into_int_value();
+                let milliseconds = get_seal_value!("timestamp", "now", 64).into_int_value();
 
                 // Solidity expects the timestamp in seconds, not milliseconds
                 binary
@@ -1416,7 +1416,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 kind: codegen::Builtin::Gasleft,
                 ..
             } => {
-                get_seal_value!("gas_left", "seal_gas_left", 64)
+                get_seal_value!("gas_left", "gas_left", 64)
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Gasprice,
@@ -1438,7 +1438,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
                 call!(
-                    "seal_weight_to_fee",
+                    "weight_to_fee",
                     &[gas.into(), scratch_buf.into(), scratch_len.into()],
                     "gas_price"
                 );
@@ -1462,9 +1462,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
                 call!(
-                    "seal_caller",
+                    "caller",
                     &[scratch_buf.into(), scratch_len.into()],
-                    "caller"
+                    "seal_caller"
                 );
 
                 binary

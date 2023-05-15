@@ -566,7 +566,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_transfer(
+    fn transfer(
         account_ptr: u32,
         account_len: u32,
         value_ptr: u32,
@@ -603,7 +603,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_caller(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn caller(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let out_len = read_len(mem, out_len_ptr);
         let address = vm.accounts[vm.caller_account].address;
         assert!(out_len >= address.len());
@@ -639,7 +639,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_now(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn now(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let now = 1594035638000u64.to_le_bytes();
         let out_len = read_len(mem, out_len_ptr);
         assert!(out_len >= now.len());
@@ -651,7 +651,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_gas_left(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn gas_left(out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let gas = 2_224_097_461u64.to_le_bytes();
         let out_len = read_len(mem, out_len_ptr);
         assert!(out_len >= gas.len());
@@ -663,7 +663,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_weight_to_fee(gas: u64, out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
+    fn weight_to_fee(gas: u64, out_ptr: u32, out_len_ptr: u32) -> Result<(), Trap> {
         let price = (59_541_253_813_967 * gas as u128).to_le_bytes();
         let out_len = read_len(mem, out_len_ptr);
         assert!(out_len >= price.len());
@@ -688,7 +688,7 @@ impl Runtime {
     }
 
     #[seal(0)]
-    fn seal_deposit_event(
+    fn deposit_event(
         topics_ptr: u32,
         topics_len: u32,
         data_ptr: u32,

@@ -165,18 +165,17 @@ impl SubstrateTarget {
             "seal_call",
             "value_transferred",
             "minimum_balance",
-            "seal_weight_to_fee",
+            "weight_to_fee",
             "instantiation_nonce",
             "address",
             "balance",
             "block_number",
-            "seal_now",
-            "seal_gas_price",
-            "seal_gas_left",
-            "seal_caller",
+            "now",
+            "gas_left",
+            "caller",
             "terminate",
-            "seal_deposit_event",
-            "seal_transfer",
+            "deposit_event",
+            "transfer",
         ]);
 
         binary
@@ -292,25 +291,18 @@ impl SubstrateTarget {
             u8_ptr,
             u32_ptr
         );
-        external!("seal_transfer", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
+        external!("transfer", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
         external!("value_transferred", void_type, u8_ptr, u32_ptr);
         external!("address", void_type, u8_ptr, u32_ptr);
         external!("balance", void_type, u8_ptr, u32_ptr);
         external!("minimum_balance", void_type, u8_ptr, u32_ptr);
         external!("block_number", void_type, u8_ptr, u32_ptr);
-        external!("seal_now", void_type, u8_ptr, u32_ptr);
-        external!("seal_weight_to_fee", void_type, u64_val, u8_ptr, u32_ptr);
-        external!("seal_gas_left", void_type, u8_ptr, u32_ptr);
-        external!("seal_caller", void_type, u8_ptr, u32_ptr);
+        external!("now", void_type, u8_ptr, u32_ptr);
+        external!("weight_to_fee", void_type, u64_val, u8_ptr, u32_ptr);
+        external!("gas_left", void_type, u8_ptr, u32_ptr);
+        external!("caller", void_type, u8_ptr, u32_ptr);
         external!("terminate", void_type, u8_ptr);
-        external!(
-            "seal_deposit_event",
-            void_type,
-            u8_ptr,
-            u32_val,
-            u8_ptr,
-            u32_val
-        );
+        external!("deposit_event", void_type, u8_ptr, u32_val, u8_ptr, u32_val);
     }
 
     /// Emits the "deploy" function if `init` is `Some`, otherwise emits the "call" function.
