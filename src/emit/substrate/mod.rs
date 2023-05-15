@@ -73,14 +73,11 @@ macro_rules! emit_context {
         #[allow(unused_macros)]
         macro_rules! seal_set_storage {
             ($key_ptr:expr, $key_len:expr, $value_ptr:expr, $value_len:expr) => {
-                call!(
-                    "seal_set_storage",
-                    &[$key_ptr, $key_len, $value_ptr, $value_len]
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value()
+                call!("set_storage", &[$key_ptr, $key_len, $value_ptr, $value_len])
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value()
             };
         }
 
@@ -158,7 +155,7 @@ impl SubstrateTarget {
             "call",
             "call_chain_extension",
             "seal_input",
-            "seal_set_storage",
+            "set_storage",
             "seal_get_storage",
             "seal_clear_storage",
             "seal_hash_keccak_256",
@@ -266,14 +263,7 @@ impl SubstrateTarget {
         external!("seal_hash_blake2_128", void_type, u8_ptr, u32_val, u8_ptr);
         external!("seal_hash_blake2_256", void_type, u8_ptr, u32_val, u8_ptr);
         external!("instantiation_nonce", i64_type,);
-        external!(
-            "seal_set_storage",
-            i32_type,
-            u8_ptr,
-            u32_val,
-            u8_ptr,
-            u32_val
-        );
+        external!("set_storage", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
         external!("seal_debug_message", i32_type, u8_ptr, u32_val);
         external!("seal_clear_storage", i32_type, u8_ptr, u32_val);
         external!(

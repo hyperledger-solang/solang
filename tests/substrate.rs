@@ -396,7 +396,7 @@ impl Runtime {
     }
 
     #[seal(2)]
-    fn seal_set_storage(
+    fn set_storage(
         key_ptr: u32,
         key_len: u32,
         value_ptr: u32,
