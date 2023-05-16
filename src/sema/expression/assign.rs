@@ -13,6 +13,22 @@ use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 
+/// Helper function
+fn check_immutable(context: &Context, ns: &Namespace, loc: &ast::Loc, immutable: &bool, diagnostics: &mut Vec<Diagnostic>) -> Result<(), ()> {
+    if *immutable {
+        if let Some(function_no) = context.function_no {
+            if !ns.functions[function_no].is_constructor() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot assign to immutable outside of constructor".to_string(),
+                ));
+                return Err(());
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Resolve an assignment
 pub(super) fn assign_single(
     loc: &pt::Loc,
@@ -123,17 +139,7 @@ pub(super) fn assign_single(
                 right: Box::new(val.cast(&right.loc(), r_ty, true, ns, diagnostics)?),
             }),
             Type::StorageRef(immutable, r_ty) => {
-                if *immutable {
-                    if let Some(function_no) = context.function_no {
-                        if !ns.functions[function_no].is_constructor() {
-                            diagnostics.push(Diagnostic::error(
-                                *loc,
-                                "cannot assign to immutable outside of constructor".to_string(),
-                            ));
-                            return Err(());
-                        }
-                    }
-                }
+                check_immutable(&context, ns, loc, &immutable, diagnostics)?;
 
                 Ok(Expression::Assign {
                     loc: *loc,
@@ -368,17 +374,7 @@ pub(super) fn assign_expr(
                 }
             },
             Type::StorageRef(immutable, r_ty) => {
-                if *immutable {
-                    if let Some(function_no) = context.function_no {
-                        if !ns.functions[function_no].is_constructor() {
-                            diagnostics.push(Diagnostic::error(
-                                *loc,
-                                "cannot assign to immutable outside of constructor".to_string(),
-                            ));
-                            return Err(());
-                        }
-                    }
-                }
+                check_immutable(&context, ns, loc, &immutable, diagnostics)?;
 
                 match r_ty.as_ref() {
                     Type::Bytes(_) | Type::Int(_) | Type::Uint(_) => Ok(Expression::Assign {
