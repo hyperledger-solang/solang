@@ -32,11 +32,17 @@ Functions can be declared public, private, internal or external with the followi
       present in the contract's ABI or IDL.
     - ``private`` functions can only be called inside the contract they are declared.
     - ``internal`` functions can only be called internally within the contract or by any contract
-      that inherits that one where the function is declared.
-    - ``external`` function can exclusively be invoked by other contracts or directly by an RPC. They
+      inherited contract.
+    - ``external`` functions can exclusively be invoked by other contracts or directly by an RPC. They
       are also present in the contract's ABI or IDL.
 
-If a function is defined outside a contract,  it cannot have a visibility specifier (e.g. ``public``).
+Both internal and external functions can be called using the syntax ``this.func()``. In this case, the
+arguments are ABI encoded for the call, as it is treated like an external call. This is the only way to
+call an external function from inside the same contract it is defined. This method, however, should be avoided
+for public functions, as it will be more costly to call them than simply using ``func()``.
+
+If a function is defined outside a contract, it cannot have a visibility specifier (e.g. ``public``).
+
 
 Arguments passing and return values
 ___________________________________

@@ -2558,22 +2558,14 @@ fn evaluate_argument(
     errors: &mut Diagnostics,
     cast_args: &mut Vec<Expression>,
 ) -> bool {
-    let arg = match expression(arg, context, ns, symtable, errors, ResolveTo::Type(arg_ty)) {
-        Ok(e) => e,
-        Err(_) => {
-            return false;
-        }
-    };
-
-    match arg.cast(&arg.loc(), arg_ty, true, ns, errors) {
-        Ok(expr) => cast_args.push(expr),
-        Err(_) => return false,
-    }
-
-    true
+    expression(arg, context, ns, symtable, errors, ResolveTo::Type(arg_ty))
+        .and_then(|arg| arg.cast(&arg.loc(), arg_ty, true, ns, errors))
+        .map(|expr| cast_args.push(expr))
+        .is_ok()
 }
 
-/// This function finishes resolving internal function calls
+/// This function finishes resolving internal function calls. It returns None if it is not
+/// possible to resolve the function.
 fn resolve_internal_call(
     loc: &Loc,
     function_no: usize,
@@ -2595,14 +2587,16 @@ fn resolve_internal_call(
         ));
 
         return None;
-    } else if func.contract_no == context.contract_no
-        && matches!(func.visibility, Visibility::External(_))
-    {
-        errors.push(Diagnostic::error(
-            *loc,
-            "external functions can only be invoked outside the contract".to_string(),
-        ));
-        return None;
+    } else if let (Some(base_no), Some(derived_no)) = (func.contract_no, context.contract_no) {
+        if is_base(base_no, derived_no, ns) && matches!(func.visibility, Visibility::External(_)) {
+            errors.push(Diagnostic::error_with_note(
+                *loc,
+                "external functions can only be invoked outside the contract".to_string(),
+                func.loc,
+                "function defined here".to_string(),
+            ));
+            return None;
+        }
     }
 
     let returns = function_returns(func, resolve_to);
