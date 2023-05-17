@@ -103,12 +103,8 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
         };
         let module_name = match import.name {
             "memory" => import.module,
-            "seal_set_storage" => "seal2",
-            "seal_clear_storage"
-            | "seal_contains_storage"
-            | "seal_get_storage"
-            | "seal_instantiate"
-            | "seal_terminate"
+            "set_storage" => "seal2",
+            "clear_storage" | "contains_storage" | "get_storage" | "instantiate" | "terminate"
             | "seal_call" => "seal1",
             _ => "seal0",
         };

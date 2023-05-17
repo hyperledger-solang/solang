@@ -75,7 +75,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         let ret = call!(
-            "seal_get_storage",
+            "get_storage",
             &[
                 slot.into(),
                 i32_const!(32).into(),
@@ -131,7 +131,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.position_at_end(delete_block);
 
-        let ret = call!("seal_clear_storage", &[slot.into(), i32_const!(32).into()])
+        let ret = call!("clear_storage", &[slot.into(), i32_const!(32).into()])
             .try_as_basic_value()
             .left()
             .unwrap()
@@ -747,10 +747,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ) {
         emit_context!(binary);
 
-        call!(
-            "seal_hash_keccak_256",
-            &[src.into(), length.into(), dest.into()]
-        );
+        call!("hash_keccak_256", &[src.into(), length.into(), dest.into()]);
     }
 
     fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
@@ -807,14 +804,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn print(&self, binary: &Binary, string_ptr: PointerValue, string_len: IntValue) {
         emit_context!(binary);
 
-        let ret = call!(
-            "seal_debug_message",
-            &[string_ptr.into(), string_len.into()]
-        )
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value();
+        let ret = call!("debug_message", &[string_ptr.into(), string_len.into()])
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         log_return_code(binary, "seal_debug_message", ret);
     }
@@ -876,7 +870,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
             call!(
-                "seal_minimum_balance",
+                "minimum_balance",
                 &[value_ptr.into(), scratch_len.into()],
                 "minimum_balance"
             );
@@ -902,7 +896,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64 * 32));
 
         let ret = call!(
-            "seal_instantiate",
+            "instantiate",
             &[
                 codehash.into(),
                 contract_args.gas.unwrap().into(),
@@ -1067,7 +1061,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         // do the actual call
         let ret = call!(
-            "seal_transfer",
+            "transfer",
             &[
                 address.into(),
                 i32_const!(ns.address_length as u64).into(),
@@ -1140,7 +1134,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_store(value_len, i32_const!(ns.value_length as u64));
 
         call!(
-            "seal_value_transferred",
+            "value_transferred",
             &[value.into(), value_len.into()],
             "value_transferred"
         );
@@ -1161,7 +1155,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.build_store(address, addr);
 
-        call!("seal_terminate", &[address.into()], "terminated");
+        call!("terminate", &[address.into()], "terminated");
 
         binary.builder.build_unreachable();
     }
@@ -1180,11 +1174,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         emit_context!(binary);
 
         let (fname, hashlen) = match hash {
-            HashTy::Keccak256 => ("seal_hash_keccak_256", 32),
+            HashTy::Keccak256 => ("hash_keccak_256", 32),
             HashTy::Ripemd160 => ("ripemd160", 20),
-            HashTy::Sha256 => ("seal_hash_sha2_256", 32),
-            HashTy::Blake2_128 => ("seal_hash_blake2_128", 16),
-            HashTy::Blake2_256 => ("seal_hash_blake2_256", 32),
+            HashTy::Sha256 => ("hash_sha2_256", 32),
+            HashTy::Blake2_128 => ("hash_blake2_128", 16),
+            HashTy::Blake2_256 => ("hash_blake2_256", 32),
         };
 
         let res =
@@ -1289,7 +1283,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         };
 
         call!(
-            "seal_deposit_event",
+            "deposit_event",
             &[
                 topic_buf.into(),
                 topic_size.into(),
@@ -1381,7 +1375,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
                 // retrieve the data
-                call!("seal_input", &[data.into(), scratch_len.into()], "data");
+                call!("input", &[data.into(), scratch_len.into()], "data");
 
                 v
             }
@@ -1390,7 +1384,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 ..
             } => {
                 let block_number =
-                    get_seal_value!("block_number", "seal_block_number", 32).into_int_value();
+                    get_seal_value!("seal_block_number", "block_number", 32).into_int_value();
 
                 // Cast to 64 bit
                 binary
@@ -1406,7 +1400,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 kind: codegen::Builtin::Timestamp,
                 ..
             } => {
-                let milliseconds = get_seal_value!("timestamp", "seal_now", 64).into_int_value();
+                let milliseconds = get_seal_value!("timestamp", "now", 64).into_int_value();
 
                 // Solidity expects the timestamp in seconds, not milliseconds
                 binary
@@ -1422,7 +1416,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 kind: codegen::Builtin::Gasleft,
                 ..
             } => {
-                get_seal_value!("gas_left", "seal_gas_left", 64)
+                get_seal_value!("gas_left", "gas_left", 64)
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Gasprice,
@@ -1444,7 +1438,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
                 call!(
-                    "seal_weight_to_fee",
+                    "weight_to_fee",
                     &[gas.into(), scratch_buf.into(), scratch_len.into()],
                     "gas_price"
                 );
@@ -1468,9 +1462,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
                 call!(
-                    "seal_caller",
+                    "caller",
                     &[scratch_buf.into(), scratch_len.into()],
-                    "caller"
+                    "seal_caller"
                 );
 
                 binary
@@ -1486,8 +1480,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 ..
             } => {
                 get_seal_value!(
-                    "minimum_balance",
                     "seal_minimum_balance",
+                    "minimum_balance",
                     ns.value_length as u32 * 8
                 )
             }
@@ -1502,9 +1496,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.address_length as u64));
 
                 call!(
-                    "seal_address",
+                    "address",
                     &[scratch_buf.into(), scratch_len.into()],
-                    "address"
+                    "seal_address"
                 );
 
                 binary
@@ -1522,9 +1516,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(scratch_len, i32_const!(ns.value_length as u64));
 
                 call!(
-                    "seal_balance",
+                    "balance",
                     &[scratch_buf.into(), scratch_len.into()],
-                    "balance"
+                    "seal_balance"
                 );
 
                 binary
@@ -1661,7 +1655,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let error_with_loc = error_msg_with_loc(ns, &reason_string, reason_loc);
         let custom_error = string_to_basic_value(bin, ns, error_with_loc + ",\n");
         call!(
-            "seal_debug_message",
+            "debug_message",
             &[
                 bin.vector_bytes(custom_error).into(),
                 bin.vector_len(custom_error).into()
