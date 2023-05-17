@@ -244,6 +244,8 @@ static uint64_t sol_deserialize(const uint8_t *input, SolParameters *params)
     {
         return ERROR_INVALID_ARGUMENT;
     }
+
+    uint64_t max_accounts = SOL_ARRAY_SIZE(params->ka);
     params->ka_num = *(uint64_t *)input;
     input += sizeof(uint64_t);
 
@@ -252,7 +254,7 @@ static uint64_t sol_deserialize(const uint8_t *input, SolParameters *params)
         uint8_t dup_info = input[0];
         input += sizeof(uint8_t);
 
-        if (i >= SOL_ARRAY_SIZE(params->ka))
+        if (i >= max_accounts)
         {
             if (dup_info == UINT8_MAX)
             {
@@ -269,6 +271,10 @@ static uint64_t sol_deserialize(const uint8_t *input, SolParameters *params)
                 input += MAX_PERMITTED_DATA_INCREASE;
                 input = (uint8_t *)(((uint64_t)input + 8 - 1) & ~(8 - 1)); // padding
                 input += sizeof(uint64_t);
+            }
+            else
+            {
+                input += 7; // padding for the 64-bit alignment
             }
             continue;
         }
@@ -336,6 +342,9 @@ static uint64_t sol_deserialize(const uint8_t *input, SolParameters *params)
 
     params->program_id = (SolPubkey *)input;
     input += sizeof(SolPubkey);
+
+    if (params->ka_num > max_accounts)
+        params->ka_num = max_accounts;
 
     return 0;
 }
