@@ -256,6 +256,26 @@ struct AccountRef {
     length: usize,
 }
 
+enum SerializableAccount {
+    Unique(AccountMeta),
+    Duplicate(usize),
+}
+
+fn remove_duplicates(metas: &[AccountMeta]) -> Vec<SerializableAccount> {
+    let mut serializable_format: Vec<SerializableAccount> = Vec::new();
+    let mut inserted: HashMap<AccountMeta, usize> = HashMap::new();
+
+    for (idx, account) in metas.iter().enumerate() {
+        if let Some(idx) = inserted.get(account) {
+            serializable_format.push(SerializableAccount::Duplicate(*idx));
+        } else {
+            serializable_format.push(SerializableAccount::Unique(account.clone()));
+            inserted.insert(account.clone(), idx);
+        }
+    }
+    serializable_format
+}
+
 fn serialize_parameters(
     input: &[u8],
     metas: &[AccountMeta],
@@ -313,16 +333,25 @@ fn serialize_parameters(
         v.write_u64::<LittleEndian>(0).unwrap();
     }
 
+    let no_duplicates_meta = remove_duplicates(metas);
     // ka_num
-    v.write_u64::<LittleEndian>(metas.len() as u64).unwrap();
+    v.write_u64::<LittleEndian>(no_duplicates_meta.len() as u64)
+        .unwrap();
 
-    for account in metas {
-        serialize_account(
-            &mut v,
-            &mut refs,
-            account,
-            &vm.account_data[&account.pubkey.0],
-        );
+    for account_item in &no_duplicates_meta {
+        match account_item {
+            SerializableAccount::Unique(account) => {
+                serialize_account(
+                    &mut v,
+                    &mut refs,
+                    account,
+                    &vm.account_data[&account.pubkey.0],
+                );
+            }
+            SerializableAccount::Duplicate(idx) => {
+                v.write_u64::<LittleEndian>(*idx as u64).unwrap();
+            }
+        }
     }
 
     // calldata
@@ -970,7 +999,7 @@ impl Pubkey {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct AccountMeta {
     /// An account's public key
     pub pubkey: Pubkey,

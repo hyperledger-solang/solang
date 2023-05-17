@@ -5,6 +5,7 @@ mod abi_decode;
 mod abi_encode;
 mod accessor;
 mod account_info;
+mod account_serialization;
 mod arrays;
 mod balance;
 mod base58_encoding;
