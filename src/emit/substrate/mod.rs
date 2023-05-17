@@ -279,7 +279,7 @@ impl SubstrateTarget {
             u8_ptr,
             u32_val
         );
-        // We still use prefixed seal_call because it would collide with the expored call function.
+        // We still use prefixed seal_call because it would collide with the exported call function.
         // TODO: Refactor emit to use a dedicated module for the externals to avoid any collisions.
         external!(
             "seal_call",
