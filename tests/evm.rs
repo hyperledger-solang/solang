@@ -171,7 +171,8 @@ contract testing  {
 
 #[test]
 fn ethereum_solidity_tests() {
-    let error_matcher = regex::Regex::new(r"// ----\r?\n// \w+Error( \d+)?: (.*)").unwrap();
+    let error_matcher =
+        regex::Regex::new(r"// ----\r?\n(// Warning \d+: .*\n)*// \w+Error( \d+)?: (.*)").unwrap();
 
     let entries = WalkDir::new(
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -211,7 +212,7 @@ fn ethereum_solidity_tests() {
 
             let expect_error = error_matcher
                 .captures(&source)
-                .map(|captures| captures.get(2).unwrap().as_str());
+                .map(|captures| captures.get(3).unwrap().as_str());
 
             let (mut cache, names) = set_file_contents(&source, path);
 
