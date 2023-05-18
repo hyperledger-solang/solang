@@ -188,8 +188,9 @@ pub fn available_functions(
             ns.contracts[contract_no]
                 .all_functions
                 .keys()
+                .filter(|func_no| ns.functions[**func_no].name == name)
                 .filter_map(|func_no| {
-                    if ns.functions[*func_no].name == name && ns.functions[*func_no].has_body {
+                    if ns.functions[*func_no].has_body || ns.functions[*func_no].is_virtual {
                         Some(*func_no)
                     } else {
                         None
