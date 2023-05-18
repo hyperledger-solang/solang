@@ -2591,9 +2591,10 @@ fn resolve_internal_call(
         if is_base(base_no, derived_no, ns) && matches!(func.visibility, Visibility::External(_)) {
             errors.push(Diagnostic::error_with_note(
                 *loc,
-                "external functions can only be invoked outside the contract".to_string(),
+                "functions declared external cannot be called via an internal function call"
+                    .to_string(),
                 func.loc,
-                "function defined here".to_string(),
+                format!("declaration of {} '{}'", func.ty, func.name),
             ));
             return None;
         }

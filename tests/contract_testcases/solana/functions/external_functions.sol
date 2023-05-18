@@ -42,9 +42,9 @@ contract bar2 is bar1 {
 }
 
 // ---- Expect: diagnostics ----
-// error: 25:16-27: external functions can only be invoked outside the contract
-// 	note 19:5-61: function defined here
-// error: 30:16-35: external functions can only be invoked outside the contract
-// 	note 19:5-61: function defined here
-// error: 40:16-38: external functions can only be invoked outside the contract
-// 	note 10:5-72: function defined here
+// error: 25:16-27: functions declared external cannot be called via an internal function call
+// 	note 19:5-61: declaration of function 'hello'
+// error: 30:16-35: functions declared external cannot be called via an internal function call
+// 	note 19:5-61: declaration of function 'hello'
+// error: 40:16-38: functions declared external cannot be called via an internal function call
+// 	note 10:5-72: declaration of function 'this_is_external'

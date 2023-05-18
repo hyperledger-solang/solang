@@ -28,15 +28,15 @@ ___________________
 Solidity functions have a visibility specifier that restricts the scope in which they can be called.
 Functions can be declared public, private, internal or external with the following definitions:
 
-    - ``public`` functions can be invoked inside and outside a contract (e.g. by an RPC). They are
+    - ``public`` functions can be called inside and outside a contract (e.g. by an RPC). They are
       present in the contract's ABI or IDL.
     - ``private`` functions can only be called inside the contract they are declared.
     - ``internal`` functions can only be called internally within the contract or by any contract
       inherited contract.
-    - ``external`` functions can exclusively be invoked by other contracts or directly by an RPC. They
+    - ``external`` functions can exclusively be called by other contracts or directly by an RPC. They
       are also present in the contract's ABI or IDL.
 
-Both internal and external functions can be called using the syntax ``this.func()``. In this case, the
+Both public and external functions can be called using the syntax ``this.func()``. In this case, the
 arguments are ABI encoded for the call, as it is treated like an external call. This is the only way to
 call an external function from inside the same contract it is defined. This method, however, should be avoided
 for public functions, as it will be more costly to call them than simply using ``func()``.
