@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use clap::{
-    builder::{ArgAction, ValueParser},
-    parser::ValueSource,
-    value_parser, Arg, ArgMatches, Command,
-};
-use clap_complete::{generate, Shell};
+use clap::{Command, CommandFactory, Parser};
+
+use clap_complete::generate;
 use itertools::Itertools;
 use solang::{
     abi,
-    codegen::{codegen, OptimizationLevel, Options},
+    codegen::{codegen, Options},
     emit::Generate,
     file_resolver::FileResolver,
     sema::{ast::Namespace, file::PathDisplay},
     standard_json::{EwasmContract, JsonContract, JsonResult},
-    Target,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -25,346 +21,38 @@ use std::{
     process::exit,
 };
 
+use crate::cli::{
+    imports_arg, options_arg, target_arg, Cli, Commands, Compile, CompilerOutput, Doc,
+    ShellComplete,
+};
+
+mod cli;
 mod doc;
 mod idl;
 mod languageserver;
 
 fn main() {
-    let version: &'static str = concat!("version ", env!("SOLANG_VERSION"));
+    let cli = Cli::parse();
 
-    let app = || {
-        Command::new("solang")
-            .version(version)
-            .author(env!("CARGO_PKG_AUTHORS"))
-            .about(env!("CARGO_PKG_DESCRIPTION"))
-            .subcommand_required(true)
-            .subcommand(
-                Command::new("compile")
-                    .about("Compile Solidity source files")
-                    .arg(
-                        Arg::new("INPUT")
-                            .help("Solidity input files")
-                            .required(true)
-                            .value_parser(ValueParser::os_string())
-                            .num_args(1..),
-                    )
-                    .arg(
-                        Arg::new("EMIT")
-                            .help("Emit compiler state at early stage")
-                            .long("emit")
-                            .num_args(1)
-                            .value_parser([
-                                "ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm",
-                            ]),
-                    )
-                    .arg(
-                        Arg::new("CONTRACT")
-                            .help("Contract names to compile (defaults to all)")
-                            .value_delimiter(',')
-                            .action(ArgAction::Append)
-                            .long("contract"),
-                    )
-                    .arg(
-                        Arg::new("OPT")
-                            .help("Set llvm optimizer level")
-                            .short('O')
-                            .num_args(1)
-                            .value_parser(["none", "less", "default", "aggressive"])
-                            .default_value("default"),
-                    )
-                    .arg(
-                        Arg::new("TARGET")
-                            .help("Target to build for [possible values: solana, substrate]")
-                            .long("target")
-                            .num_args(1)
-                            .value_parser(["solana", "substrate", "evm"])
-                            .hide_possible_values(true)
-                            .required(true),
-                    )
-                    .arg(
-                        Arg::new("ADDRESS_LENGTH")
-                            .help("Address length on Substrate")
-                            .long("address-length")
-                            .num_args(1)
-                            .value_parser(value_parser!(u64).range(4..1024))
-                            .default_value("32"),
-                    )
-                    .arg(
-                        Arg::new("VALUE_LENGTH")
-                            .help("Value length on Substrate")
-                            .long("value-length")
-                            .value_parser(value_parser!(u64).range(4..1024))
-                            .num_args(1)
-                            .default_value("16"),
-                    )
-                    .arg(
-                        Arg::new("STD-JSON")
-                            .help("mimic solidity json output on stdout")
-                            .conflicts_with_all(["VERBOSE", "OUTPUT", "EMIT"])
-                            .action(ArgAction::SetTrue)
-                            .long("standard-json"),
-                    )
-                    .arg(
-                        Arg::new("VERBOSE")
-                            .help("show debug messages")
-                            .short('v')
-                            .action(ArgAction::SetTrue)
-                            .long("verbose"),
-                    )
-                    .arg(
-                        Arg::new("OUTPUT")
-                            .help("output directory")
-                            .short('o')
-                            .long("output")
-                            .num_args(1)
-                            .value_parser(ValueParser::os_string()),
-                    )
-                    .arg(
-                        Arg::new("OUTPUTMETA")
-                            .help("output directory for metadata")
-                            .long("output-meta")
-                            .num_args(1)
-                            .value_parser(ValueParser::os_string()),
-                    )
-                    .arg(
-                        Arg::new("IMPORTPATH")
-                            .help("Directory to search for solidity files")
-                            .short('I')
-                            .long("importpath")
-                            .num_args(1)
-                            .value_parser(ValueParser::path_buf())
-                            .action(ArgAction::Append),
-                    )
-                    .arg(
-                        Arg::new("IMPORTMAP")
-                            .help("Map directory to search for solidity files [format: map=path]")
-                            .short('m')
-                            .long("importmap")
-                            .num_args(1)
-                            .value_parser(ValueParser::new(parse_import_map))
-                            .action(ArgAction::Append),
-                    )
-                    .arg(
-                        Arg::new("CONSTANTFOLDING")
-                            .help("Disable constant folding codegen optimization")
-                            .long("no-constant-folding")
-                            .action(ArgAction::SetFalse)
-                            .display_order(1),
-                    )
-                    .arg(
-                        Arg::new("STRENGTHREDUCE")
-                            .help("Disable strength reduce codegen optimization")
-                            .long("no-strength-reduce")
-                            .action(ArgAction::SetFalse)
-                            .display_order(2),
-                    )
-                    .arg(
-                        Arg::new("DEADSTORAGE")
-                            .help("Disable dead storage codegen optimization")
-                            .long("no-dead-storage")
-                            .action(ArgAction::SetFalse)
-                            .display_order(3),
-                    )
-                    .arg(
-                        Arg::new("VECTORTOSLICE")
-                            .help("Disable vector to slice codegen optimization")
-                            .long("no-vector-to-slice")
-                            .action(ArgAction::SetFalse)
-                            .display_order(4),
-                    )
-                    .arg(
-                        Arg::new("COMMONSUBEXPRESSIONELIMINATION")
-                            .help("Disable common subexpression elimination")
-                            .long("no-cse")
-                            .action(ArgAction::SetFalse)
-                            .display_order(5),
-                    )
-                    .arg(
-                        Arg::new("NOLOGAPIRETURNS")
-                            .help("Disable logging the return codes of runtime API calls in the environment")
-                            .long("no-log-api-return-codes")
-                            .action(ArgAction::SetFalse)
-                    )
-                    .arg(
-                        Arg::new("GENERATEDEBUGINFORMATION")
-                            .help("Enable generating debug information for LLVM IR")
-                            .short('g')
-                            .long("generate-debug-info")
-                            .action(ArgAction::SetTrue)
-                            .hide(true),
-                    )
-                    .arg(
-                        Arg::new("NOLOGRUNTIMEERRORS")
-                            .help("Disable logging runtime errors in the environment")
-                            .long("no-log-runtime-errors")
-                            .action(ArgAction::SetFalse),
-                    ).arg(
-                        Arg::new("NOPRINT")
-                            .help("Disable logging prints in the environment")
-                            .long("no-print")
-                            .action(ArgAction::SetFalse),
-                    ).arg(
-                        Arg::new("RELEASE")
-                            .help("Disable all debugging features such as prints, logging runtime errors, and logging api return codes")
-                            .long("release")
-                            .action(ArgAction::SetTrue),
-                    ),
-            )
-            .subcommand(
-                Command::new("doc")
-                    .about("Generate documention for contracts using doc comments")
-                    .arg(
-                        Arg::new("INPUT")
-                            .help("Solidity input files")
-                            .required(true)
-                            .value_parser(ValueParser::os_string())
-                            .num_args(1..),
-                    )
-                    .arg(
-                        Arg::new("TARGET")
-                            .help("Target to build for")
-                            .long("target")
-                            .num_args(1)
-                            .value_parser(["solana", "substrate", "evm"])
-                            .required(true),
-                    )
-                    .arg(
-                        Arg::new("ADDRESS_LENGTH")
-                            .help("Address length on Substrate")
-                            .long("address-length")
-                            .num_args(1)
-                            .value_parser(value_parser!(u64).range(4..1024))
-                            .default_value("32"),
-                    )
-                    .arg(
-                        Arg::new("VALUE_LENGTH")
-                            .help("Value length on Substrate")
-                            .long("value-length")
-                            .value_parser(value_parser!(u64).range(4..1024))
-                            .num_args(1)
-                            .default_value("16"),
-                    )
-                    .arg(
-                        Arg::new("IMPORTPATH")
-                            .help("Directory to search for solidity files")
-                            .short('I')
-                            .long("importpath")
-                            .num_args(1)
-                            .value_parser(ValueParser::path_buf())
-                            .action(ArgAction::Append),
-                    )
-                    .arg(
-                        Arg::new("IMPORTMAP")
-                            .help("Map directory to search for solidity files [format: map=path]")
-                            .short('m')
-                            .long("importmap")
-                            .num_args(1)
-                            .value_parser(ValueParser::new(parse_import_map))
-                            .action(ArgAction::Append),
-                    ),
-            )
-            .subcommand(
-                Command::new("language-server")
-                    .about("Start LSP language server on stdin/stdout")
-                    .arg(
-                        Arg::new("TARGET")
-                            .help("Target to build for")
-                            .long("target")
-                            .num_args(1)
-                            .value_parser(["solana", "substrate", "evm"])
-                            .required(true),
-                    )
-                    .arg(
-                        Arg::new("ADDRESS_LENGTH")
-                            .help("Address length on Substrate")
-                            .long("address-length")
-                            .num_args(1)
-                            .value_parser(value_parser!(u64).range(4..1024))
-                            .default_value("32"),
-                    )
-                    .arg(
-                        Arg::new("VALUE_LENGTH")
-                            .help("Value length on Substrate")
-                            .long("value-length")
-                            .value_parser(value_parser!(u64).range(4..1024))
-                            .num_args(1)
-                            .default_value("16"),
-                    )
-                    .arg(
-                        Arg::new("IMPORTPATH")
-                            .help("Directory to search for solidity files")
-                            .short('I')
-                            .long("importpath")
-                            .num_args(1)
-                            .value_parser(ValueParser::path_buf())
-                            .action(ArgAction::Append),
-                    )
-                    .arg(
-                        Arg::new("IMPORTMAP")
-                            .help("Map directory to search for solidity files [format: map=path]")
-                            .short('m')
-                            .long("importmap")
-                            .num_args(1)
-                            .value_parser(ValueParser::new(parse_import_map))
-                            .action(ArgAction::Append),
-                    ),
-            )
-            .subcommand(
-                Command::new("idl")
-                    .about("Generate Solidity interface files from Anchor IDL files")
-                    .arg(
-                        Arg::new("INPUT")
-                            .help("Convert IDL files")
-                            .required(true)
-                            .value_parser(ValueParser::os_string())
-                            .num_args(1..),
-                    )
-                    .arg(
-                        Arg::new("OUTPUT")
-                            .help("output file")
-                            .short('o')
-                            .long("output")
-                            .num_args(1)
-                            .value_parser(ValueParser::os_string()),
-                    ),
-            )
-            .subcommand(
-                Command::new("shell-complete")
-                    .about("Print shell completion for various shells to STDOUT")
-                    .arg(
-                        Arg::new("SHELL")
-                            .help("Name of a supported shell")
-                            .required(true)
-                            .value_parser(value_parser!(Shell)),
-                    ),
-            )
-    };
-    let matches = app().get_matches();
-
-    match matches.subcommand() {
-        Some(("language-server", matches)) => {
-            let target = target_arg(matches);
-
-            languageserver::start_server(target, matches);
-        }
-        Some(("compile", matches)) => compile(matches),
-        Some(("doc", matches)) => doc(matches),
-        Some(("idl", matches)) => idl::idl(matches),
-        Some(("shell-complete", matches)) => shell_complete(app(), matches),
-        _ => unreachable!(),
+    match cli.command {
+        Commands::Doc(doc_args) => doc(doc_args),
+        Commands::Compile(compile_args) => compile(&compile_args),
+        Commands::ShellComplete(shell_args) => shell_complete(Cli::command(), shell_args),
+        Commands::LanguageServer(server_args) => languageserver::start_server(&server_args),
+        Commands::Idl(idl_args) => idl::idl(&idl_args),
     }
 }
 
-fn doc(matches: &ArgMatches) {
-    let target = target_arg(matches);
-    let mut resolver = imports_arg(matches);
+fn doc(doc_args: Doc) {
+    let target = target_arg(&doc_args.target);
+    let mut resolver = imports_arg(&doc_args.package);
 
-    let verbose = *matches.get_one("VERBOSE").unwrap();
+    let verbose = doc_args.verbose;
     let mut success = true;
     let mut files = Vec::new();
 
-    for filename in matches.get_many::<&OsString>("INPUT").unwrap() {
-        let ns = solang::parse_and_resolve(filename, &mut resolver, target);
+    for filename in doc_args.package.input {
+        let ns = solang::parse_and_resolve(&filename, &mut resolver, target);
 
         ns.print_diagnostics(&resolver, verbose);
 
@@ -381,94 +69,65 @@ fn doc(matches: &ArgMatches) {
     if success {
         // generate docs
         doc::generate_docs(
-            matches
-                .get_one::<OsString>("OUTPUT")
-                .unwrap_or(&OsString::from(".")),
+            &doc_args.output_directory.unwrap_or(OsString::from(".")),
             &files,
             verbose,
         );
     }
 }
 
-fn compile(matches: &ArgMatches) {
-    let target = target_arg(matches);
-
-    let verbose = *matches.get_one("VERBOSE").unwrap();
+fn compile(compile_args: &Compile) {
     let mut json = JsonResult {
         errors: Vec::new(),
-        target: target.to_string(),
+        target: compile_args.target_arg.name.clone(),
         program: String::new(),
         contracts: HashMap::new(),
     };
 
-    if verbose {
+    if compile_args.compiler_output.verbose {
         eprintln!("info: Solang version {}", env!("SOLANG_VERSION"));
     }
 
-    let generate_debug_info = *matches.get_one("GENERATEDEBUGINFORMATION").unwrap();
+    let mut resolver = imports_arg(&compile_args.package);
 
-    let release = *matches.get_one::<bool>("RELEASE").unwrap();
+    let opt = options_arg(&compile_args.debug_features, &compile_args.optimizations);
 
-    let log_api_return_codes = *matches.get_one::<bool>("NOLOGAPIRETURNS").unwrap() & !release;
-
-    let log_runtime_errors = *matches.get_one::<bool>("NOLOGRUNTIMEERRORS").unwrap() & !release;
-
-    let log_prints = *matches.get_one::<bool>("NOPRINT").unwrap() & !release;
-
-    let mut resolver = imports_arg(matches);
-
-    let opt_level = match matches.get_one::<String>("OPT").unwrap().as_str() {
-        "none" => OptimizationLevel::None,
-        "less" => OptimizationLevel::Less,
-        "default" => OptimizationLevel::Default,
-        "aggressive" => OptimizationLevel::Aggressive,
-        _ => unreachable!(),
-    };
-
-    let opt = Options {
-        dead_storage: *matches.get_one("DEADSTORAGE").unwrap(),
-        constant_folding: *matches.get_one("CONSTANTFOLDING").unwrap(),
-        strength_reduce: *matches.get_one("STRENGTHREDUCE").unwrap(),
-        vector_to_slice: *matches.get_one("VECTORTOSLICE").unwrap(),
-        generate_debug_information: generate_debug_info,
-        common_subexpression_elimination: *matches
-            .get_one("COMMONSUBEXPRESSIONELIMINATION")
-            .unwrap(),
-        opt_level,
-        log_api_return_codes,
-        log_runtime_errors,
-        log_prints,
-    };
+    let target = target_arg(&compile_args.target_arg);
 
     let mut namespaces = Vec::new();
 
     let mut errors = false;
 
     // Build a map of requested contract names, and a flag specifying whether it was found or not
-    let contract_names: HashSet<&str> = if let Some(values) = matches.get_many::<String>("CONTRACT")
-    {
-        values.map(String::as_str).collect()
+    let contract_names: HashSet<&str> = if let Some(values) = &compile_args.package.contracts {
+        values.iter().map(String::as_str).collect()
     } else {
         HashSet::new()
     };
 
-    for filename in matches.get_many::<OsString>("INPUT").unwrap() {
+    for filename in &compile_args.package.input {
         // TODO: this could be parallelized using e.g. rayon
-        let ns = process_file(filename, &mut resolver, target, matches, &opt);
+        let ns = process_file(
+            filename,
+            &mut resolver,
+            target,
+            &compile_args.compiler_output,
+            &opt,
+        );
 
         namespaces.push(ns);
     }
 
     let mut json_contracts = HashMap::new();
 
-    let std_json = *matches.get_one("STD-JSON").unwrap();
+    let std_json = compile_args.compiler_output.std_json_output;
 
     for ns in &namespaces {
         if std_json {
             let mut out = ns.diagnostics_as_json(&resolver);
             json.errors.append(&mut out);
         } else {
-            ns.print_diagnostics(&resolver, verbose);
+            ns.print_diagnostics(&resolver, compile_args.compiler_output.verbose);
         }
 
         if ns.diagnostics.any_errors() {
@@ -476,7 +135,7 @@ fn compile(matches: &ArgMatches) {
         }
     }
 
-    if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(String::as_str) {
+    if let Some("ast-dot") = compile_args.compiler_output.emit.as_deref() {
         exit(0);
     }
 
@@ -509,7 +168,7 @@ fn compile(matches: &ArgMatches) {
             for contract_no in 0..ns.contracts.len() {
                 contract_results(
                     contract_no,
-                    matches,
+                    &compile_args.compiler_output,
                     ns,
                     &mut json_contracts,
                     &mut seen_contracts,
@@ -529,34 +188,31 @@ fn compile(matches: &ArgMatches) {
     }
 }
 
-fn shell_complete(mut app: Command, matches: &ArgMatches) {
-    if let Some(generator) = matches.get_one::<Shell>("SHELL").copied() {
-        let name = app.get_name().to_string();
-        generate(generator, &mut app, name, &mut std::io::stdout());
-    } else {
-        eprintln!("Your shell is not supported...");
-    }
+fn shell_complete(mut app: Command, args: ShellComplete) {
+    let name = app.get_name().to_string();
+    generate(args.shell_complete, &mut app, name, &mut std::io::stdout());
 }
 
-fn output_file(matches: &ArgMatches, stem: &str, ext: &str, meta: bool) -> PathBuf {
+fn output_file(compiler_output: &CompilerOutput, stem: &str, ext: &str, meta: bool) -> PathBuf {
     let dir = if meta {
-        matches
-            .get_one::<OsString>("OUTPUTMETA")
-            .or_else(|| matches.get_one::<OsString>("OUTPUT"))
+        compiler_output
+            .output_meta
+            .as_ref()
+            .or(compiler_output.output_directory.as_ref())
     } else {
-        matches.get_one::<OsString>("OUTPUT")
+        compiler_output.output_directory.as_ref()
     };
-    Path::new(dir.unwrap_or(&OsString::from("."))).join(format!("{stem}.{ext}"))
+    Path::new(&dir.unwrap_or(&String::from("."))).join(format!("{stem}.{ext}"))
 }
 
 fn process_file(
     filename: &OsStr,
     resolver: &mut FileResolver,
     target: solang::Target,
-    matches: &ArgMatches,
+    compiler_output: &CompilerOutput,
     opt: &Options,
 ) -> Namespace {
-    let verbose = *matches.get_one("VERBOSE").unwrap();
+    let verbose = compiler_output.verbose;
 
     // resolve phase
     let mut ns = solang::parse_and_resolve(filename, resolver, target);
@@ -564,10 +220,10 @@ fn process_file(
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, opt);
 
-    if let Some("ast-dot") = matches.get_one::<String>("EMIT").map(String::as_str) {
+    if let Some("ast-dot") = compiler_output.emit.as_deref() {
         let filepath = PathBuf::from(filename);
         let stem = filepath.file_stem().unwrap().to_string_lossy();
-        let dot_filename = output_file(matches, &stem, "dot", false);
+        let dot_filename = output_file(compiler_output, &stem, "dot", false);
 
         if verbose {
             eprintln!("info: Saving graphviz dot {}", dot_filename.display());
@@ -588,14 +244,14 @@ fn process_file(
 
 fn contract_results(
     contract_no: usize,
-    matches: &ArgMatches,
+    compiler_output: &CompilerOutput,
     ns: &mut Namespace,
     json_contracts: &mut HashMap<String, JsonContract>,
     seen_contracts: &mut HashMap<String, String>,
     opt: &Options,
 ) {
-    let verbose = *matches.get_one("VERBOSE").unwrap();
-    let std_json = *matches.get_one("STD-JSON").unwrap();
+    let verbose = compiler_output.verbose;
+    let std_json = compiler_output.std_json_output;
 
     let resolved_contract = &ns.contracts[contract_no];
 
@@ -623,7 +279,7 @@ fn contract_results(
 
     seen_contracts.insert(resolved_contract.name.to_string(), loc);
 
-    if let Some("cfg") = matches.get_one::<String>("EMIT").map(String::as_str) {
+    if let Some("cfg") = compiler_output.emit.as_deref() {
         println!("{}", resolved_contract.print_cfg(ns));
         return;
     }
@@ -646,7 +302,7 @@ fn contract_results(
 
     let binary = resolved_contract.binary(ns, &context, opt);
 
-    if save_intermediates(&binary, matches) {
+    if save_intermediates(&binary, compiler_output) {
         return;
     }
 
@@ -664,7 +320,12 @@ fn contract_results(
             },
         );
     } else {
-        let bin_filename = output_file(matches, &binary.name, ns.target.file_extension(), false);
+        let bin_filename = output_file(
+            compiler_output,
+            &binary.name,
+            ns.target.file_extension(),
+            false,
+        );
 
         if verbose {
             eprintln!(
@@ -679,7 +340,7 @@ fn contract_results(
         file.write_all(&code).unwrap();
 
         let (metadata, meta_ext) = abi::generate_abi(contract_no, ns, &code, verbose);
-        let meta_filename = output_file(matches, &binary.name, meta_ext, true);
+        let meta_filename = output_file(compiler_output, &binary.name, meta_ext, true);
 
         if verbose {
             eprintln!(
@@ -694,12 +355,15 @@ fn contract_results(
     }
 }
 
-fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatches) -> bool {
-    let verbose = *matches.get_one("VERBOSE").unwrap();
+fn save_intermediates(
+    binary: &solang::emit::binary::Binary,
+    compiler_output: &CompilerOutput,
+) -> bool {
+    let verbose = compiler_output.verbose;
 
-    match matches.get_one::<String>("EMIT").map(String::as_str) {
+    match compiler_output.emit.as_deref() {
         Some("llvm-ir") => {
-            let llvm_filename = output_file(matches, &binary.name, "ll", false);
+            let llvm_filename = output_file(compiler_output, &binary.name, "ll", false);
 
             if verbose {
                 eprintln!(
@@ -715,7 +379,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
         }
 
         Some("llvm-bc") => {
-            let bc_filename = output_file(matches, &binary.name, "bc", false);
+            let bc_filename = output_file(compiler_output, &binary.name, "bc", false);
 
             if verbose {
                 eprintln!(
@@ -739,7 +403,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
                 }
             };
 
-            let obj_filename = output_file(matches, &binary.name, "o", false);
+            let obj_filename = output_file(compiler_output, &binary.name, "o", false);
 
             if verbose {
                 eprintln!(
@@ -762,7 +426,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
                 }
             };
 
-            let obj_filename = output_file(matches, &binary.name, "asm", false);
+            let obj_filename = output_file(compiler_output, &binary.name, "asm", false);
 
             if verbose {
                 eprintln!(
@@ -800,83 +464,5 @@ fn create_file(path: &Path) -> File {
             eprintln!("error: cannot create file '{}': {}", path.display(), err,);
             exit(1);
         }
-    }
-}
-
-fn target_arg(matches: &ArgMatches) -> Target {
-    let address_length = matches.get_one::<u64>("ADDRESS_LENGTH").unwrap();
-
-    let value_length = matches.get_one::<u64>("VALUE_LENGTH").unwrap();
-
-    let target = match matches.get_one::<String>("TARGET").unwrap().as_str() {
-        "solana" => solang::Target::Solana,
-        "substrate" => solang::Target::Substrate {
-            address_length: *address_length as usize,
-            value_length: *value_length as usize,
-        },
-        "evm" => solang::Target::EVM,
-        _ => unreachable!(),
-    };
-
-    if !target.is_substrate()
-        && matches.value_source("ADDRESS_LENGTH") == Some(ValueSource::CommandLine)
-    {
-        eprintln!("error: address length cannot be modified for target '{target}'");
-        exit(1);
-    }
-
-    if !target.is_substrate()
-        && matches.value_source("VALUE_LENGTH") == Some(ValueSource::CommandLine)
-    {
-        eprintln!("error: value length cannot be modified for target '{target}'");
-        exit(1);
-    }
-
-    target
-}
-
-fn imports_arg(matches: &ArgMatches) -> FileResolver {
-    let mut resolver = FileResolver::new();
-
-    for filename in matches.get_many::<OsString>("INPUT").unwrap() {
-        if let Ok(path) = PathBuf::from(filename).canonicalize() {
-            let _ = resolver.add_import_path(path.parent().unwrap());
-        }
-    }
-
-    if let Err(e) = resolver.add_import_path(&PathBuf::from(".")) {
-        eprintln!("error: cannot add current directory to import path: {e}");
-        exit(1);
-    }
-
-    if let Some(paths) = matches.get_many::<PathBuf>("IMPORTPATH") {
-        for path in paths {
-            if let Err(e) = resolver.add_import_path(path) {
-                eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
-                exit(1);
-            }
-        }
-    }
-
-    if let Some(maps) = matches.get_many::<(String, PathBuf)>("IMPORTMAP") {
-        for (map, path) in maps {
-            if let Err(e) = resolver.add_import_map(OsString::from(map), path.clone()) {
-                eprintln!("error: import path '{}': {}", path.display(), e);
-                exit(1);
-            }
-        }
-    }
-
-    resolver
-}
-
-// Parse the import map argument. This takes the form
-/// --import-map openzeppelin=/opt/openzeppelin-contracts/contract,
-/// and returns the name of the map and the path.
-fn parse_import_map(map: &str) -> Result<(String, PathBuf), String> {
-    if let Some((var, value)) = map.split_once('=') {
-        Ok((var.to_owned(), PathBuf::from(value)))
-    } else {
-        Err("contains no '='".to_owned())
     }
 }

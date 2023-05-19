@@ -1,29 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::cli::IdlCommand;
 use anchor_syn::idl::{Idl, IdlAccountItem, IdlInstruction, IdlType, IdlTypeDefinitionTy};
-use clap::ArgMatches;
 use itertools::Itertools;
 use serde_json::Value as JsonValue;
 use solang::abi::anchor::discriminator;
 use solang_parser::lexer::is_keyword;
-use std::{
-    ffi::{OsStr, OsString},
-    fs::File,
-    io::Write,
-    path::PathBuf,
-    process::exit,
-};
+use std::{ffi::OsStr, fs::File, io::Write, path::PathBuf, process::exit};
 
 /// This subcommand generates a Solidity interface file from Anchor IDL file.
 /// The IDL file is json and lists all the instructions, events, structs, enums,
 /// etc. We have to avoid the numerous Solidity keywords, and retain any documentation.
-pub fn idl(matches: &ArgMatches) {
-    let files = matches.get_many::<OsString>("INPUT").unwrap();
-
-    let output = matches.get_one::<OsString>("OUTPUT").map(PathBuf::from);
-
-    for file in files {
-        idl_file(file, &output);
+pub fn idl(idl_args: &IdlCommand) {
+    for file in &idl_args.input {
+        idl_file(file, &idl_args.output);
     }
 }
 
