@@ -17,7 +17,7 @@ use crate::sema::{builtin, using};
 use crate::Target;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{CodeLocation, Loc, Visibility};
 use std::collections::HashMap;
 
 /// Resolve a function call via function type
@@ -278,27 +278,8 @@ pub fn function_call_pos_args(
         for (i, arg) in args.iter().enumerate() {
             let ty = ns.functions[*function_no].params[i].ty.clone();
 
-            let arg = match expression(
-                arg,
-                context,
-                ns,
-                symtable,
-                &mut errors,
-                ResolveTo::Type(&ty),
-            ) {
-                Ok(e) => e,
-                Err(_) => {
-                    matches = false;
-                    continue;
-                }
-            };
-
-            match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
-                Ok(expr) => cast_args.push(expr),
-                Err(_) => {
-                    matches = false;
-                }
-            }
+            matches &=
+                evaluate_argument(arg, context, ns, symtable, &ty, &mut errors, &mut cast_args);
         }
 
         if !matches {
@@ -309,37 +290,19 @@ pub fn function_call_pos_args(
             continue;
         }
 
-        let func = &ns.functions[*function_no];
-
-        if func.contract_no != context.contract_no && func.is_private() {
-            errors.push(Diagnostic::error_with_note(
-                *loc,
-                format!("cannot call private {}", func.ty),
-                func.loc,
-                format!("declaration of {} '{}'", func.ty, func.name),
-            ));
-
-            continue;
+        match resolve_internal_call(
+            loc,
+            *function_no,
+            context,
+            resolve_to,
+            virtual_call,
+            cast_args,
+            ns,
+            &mut errors,
+        ) {
+            Some(resolved_call) => return Ok(resolved_call),
+            None => continue,
         }
-
-        let returns = function_returns(func, resolve_to);
-        let ty = function_type(func, false, resolve_to);
-
-        return Ok(Expression::InternalFunctionCall {
-            loc: *loc,
-            returns,
-            function: Box::new(Expression::InternalFunction {
-                loc: *loc,
-                ty,
-                function_no: *function_no,
-                signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
-                    Some(func.signature.clone())
-                } else {
-                    None
-                },
-            }),
-            args: cast_args,
-        });
     }
 
     match name_matches {
@@ -465,27 +428,8 @@ pub(super) fn function_call_named_args(
 
             let ty = param.ty.clone();
 
-            let arg = match expression(
-                arg,
-                context,
-                ns,
-                symtable,
-                &mut errors,
-                ResolveTo::Type(&ty),
-            ) {
-                Ok(e) => e,
-                Err(()) => {
-                    matches = false;
-                    continue;
-                }
-            };
-
-            match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
-                Ok(expr) => cast_args.push(expr),
-                Err(_) => {
-                    matches = false;
-                }
-            }
+            matches &=
+                evaluate_argument(arg, context, ns, symtable, &ty, &mut errors, &mut cast_args);
         }
 
         if !matches {
@@ -495,37 +439,19 @@ pub(super) fn function_call_named_args(
             continue;
         }
 
-        let func = &ns.functions[*function_no];
-
-        if func.contract_no != context.contract_no && func.is_private() {
-            errors.push(Diagnostic::error_with_note(
-                *loc,
-                "cannot call private function".to_string(),
-                func.loc,
-                format!("declaration of function '{}'", func.name),
-            ));
-
-            continue;
+        match resolve_internal_call(
+            loc,
+            *function_no,
+            context,
+            resolve_to,
+            virtual_call,
+            cast_args,
+            ns,
+            &mut errors,
+        ) {
+            Some(resolved_call) => return Ok(resolved_call),
+            None => continue,
         }
-
-        let returns = function_returns(func, resolve_to);
-        let ty = function_type(func, false, resolve_to);
-
-        return Ok(Expression::InternalFunctionCall {
-            loc: *loc,
-            returns,
-            function: Box::new(Expression::InternalFunction {
-                loc: *loc,
-                ty,
-                function_no: *function_no,
-                signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
-                    Some(func.signature.clone())
-                } else {
-                    None
-                },
-            }),
-            args: cast_args,
-        });
     }
 
     match function_nos.len() {
@@ -2619,4 +2545,77 @@ pub(crate) fn function_type(func: &Function, external: bool, resolve_to: Resolve
             returns,
         }
     }
+}
+
+/// This function evaluates the arguments of a function call with either positional arguments or
+/// named arguments.
+fn evaluate_argument(
+    arg: &pt::Expression,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    arg_ty: &Type,
+    errors: &mut Diagnostics,
+    cast_args: &mut Vec<Expression>,
+) -> bool {
+    expression(arg, context, ns, symtable, errors, ResolveTo::Type(arg_ty))
+        .and_then(|arg| arg.cast(&arg.loc(), arg_ty, true, ns, errors))
+        .map(|expr| cast_args.push(expr))
+        .is_ok()
+}
+
+/// This function finishes resolving internal function calls. It returns None if it is not
+/// possible to resolve the function.
+fn resolve_internal_call(
+    loc: &Loc,
+    function_no: usize,
+    context: &ExprContext,
+    resolve_to: ResolveTo,
+    virtual_call: bool,
+    cast_args: Vec<Expression>,
+    ns: &Namespace,
+    errors: &mut Diagnostics,
+) -> Option<Expression> {
+    let func = &ns.functions[function_no];
+
+    if func.contract_no != context.contract_no && func.is_private() {
+        errors.push(Diagnostic::error_with_note(
+            *loc,
+            format!("cannot call private {}", func.ty),
+            func.loc,
+            format!("declaration of {} '{}'", func.ty, func.name),
+        ));
+
+        return None;
+    } else if let (Some(base_no), Some(derived_no)) = (func.contract_no, context.contract_no) {
+        if is_base(base_no, derived_no, ns) && matches!(func.visibility, Visibility::External(_)) {
+            errors.push(Diagnostic::error_with_note(
+                *loc,
+                "functions declared external cannot be called via an internal function call"
+                    .to_string(),
+                func.loc,
+                format!("declaration of {} '{}'", func.ty, func.name),
+            ));
+            return None;
+        }
+    }
+
+    let returns = function_returns(func, resolve_to);
+    let ty = function_type(func, false, resolve_to);
+
+    Some(Expression::InternalFunctionCall {
+        loc: *loc,
+        returns,
+        function: Box::new(Expression::InternalFunction {
+            loc: *loc,
+            ty,
+            function_no,
+            signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
+                Some(func.signature.clone())
+            } else {
+                None
+            },
+        }),
+        args: cast_args,
+    })
 }
