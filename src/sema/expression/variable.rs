@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sema::ast::{Expression, Namespace, Symbol, Type};
+use crate::sema::ast::{Builtin, Expression, Namespace, Symbol, Type};
 use crate::sema::builtin;
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::function_call::available_functions;
@@ -151,6 +151,21 @@ pub(super) fn variable(
                     ));
             Err(())
         }
+        None if id.name == "this" => match context.contract_no {
+            Some(contract_no) => Ok(Expression::Builtin {
+                loc: id.loc,
+                tys: vec![Type::Contract(contract_no)],
+                kind: Builtin::GetAddress,
+                args: Vec::new(),
+            }),
+            None => {
+                diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    "this not allowed outside contract".to_owned(),
+                ));
+                Err(())
+            }
+        },
         sym => {
             diagnostics.push(Namespace::wrong_symbol(sym, id));
             Err(())

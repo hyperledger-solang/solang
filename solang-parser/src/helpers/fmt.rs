@@ -428,8 +428,6 @@ impl pt::ContractTy {
 impl Display for pt::Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::This(_) => f.write_str("this"),
-
             Self::New(_, expr) => {
                 f.write_str("new ")?;
                 expr.fmt(f)
@@ -678,7 +676,6 @@ impl pt::Expression {
             | Variable(..)
             | List(..)
             | ArrayLiteral(..)
-            | This(..)
             | Parenthesis(..) => return None,
         };
         Some(operator)
@@ -2032,8 +2029,6 @@ mod tests {
             }
 
             pt::Expression: {
-                pt::Expression::This(loc!()) => "this",
-
                 pt::Expression::New(loc!(), Box::new(expr_ty!(uint256))) => "new uint256",
                 pt::Expression::Delete(loc!(), Box::new(expr_ty!(uint256))) => "delete uint256",
 
