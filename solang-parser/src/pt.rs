@@ -1075,8 +1075,6 @@ pub enum Expression {
     List(Loc, ParameterList),
     /// `\[ <1>.* \]`
     ArrayLiteral(Loc, Vec<Expression>),
-    /// The `this` keyword.
-    This(Loc),
 }
 
 /// See `Expression::components`.
@@ -1147,8 +1145,7 @@ macro_rules! expr_components {
             | AddressLiteral(..)
             | Variable(..)
             | List(..)
-            | ArrayLiteral(..)
-            | This(..) => (None, None),
+            | ArrayLiteral(..) => (None, None),
         }
     };
 }
@@ -1226,7 +1223,6 @@ impl Expression {
                 | HexLiteral(..)
                 | AddressLiteral(..)
                 | Variable(..)
-                | This(..)
         )
     }
 

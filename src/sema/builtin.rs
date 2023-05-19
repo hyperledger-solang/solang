@@ -890,7 +890,7 @@ pub fn builtin_namespace(namespace: &str) -> bool {
 
 /// Is name reserved for builtins
 pub fn is_reserved(fname: &str) -> bool {
-    if fname == "type" || fname == "super" {
+    if fname == "type" || fname == "super" || fname == "this" {
         return true;
     }
 
