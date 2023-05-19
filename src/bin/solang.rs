@@ -69,7 +69,9 @@ fn doc(doc_args: Doc) {
     if success {
         // generate docs
         doc::generate_docs(
-            &doc_args.output_directory.unwrap_or_else(|| OsString::from(".")),
+            &doc_args
+                .output_directory
+                .unwrap_or_else(|| OsString::from(".")),
             &files,
             verbose,
         );

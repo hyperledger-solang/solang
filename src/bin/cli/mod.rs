@@ -11,6 +11,7 @@ use solang::{
     Target,
 };
 
+mod test;
 #[derive(Parser)]
 #[command(author = env!("CARGO_PKG_AUTHORS"), version = concat!("version ", env!("SOLANG_VERSION")), about = env!("CARGO_PKG_DESCRIPTION"), subcommand_required = true)]
 pub struct Cli {
