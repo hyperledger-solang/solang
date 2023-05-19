@@ -60,7 +60,6 @@ scale-info = "2.4"
 petgraph = "0.6.3"
 wasmparser = "0.104.0"
 wasm-encoder = "0.26"
-toml = "0.7.3"
 
 
 [dev-dependencies]
