@@ -16,7 +16,6 @@
 - Merge the PR
 - Apply tag to merged commit on main branch
 - Push tag to origin
-- When changing LLVM version, regenerate the CI image using GitHub's manual actions trigger
 - Wait for build to succeed
 - `cargo publish`
 - Release new version of vscode plugin if needed
