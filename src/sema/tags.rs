@@ -19,7 +19,7 @@ pub fn resolve_tags(
     for c in tags.iter().flat_map(DocComment::comments) {
         let tag_loc = pt::Loc::File(file_no, c.tag_offset, c.tag_offset + c.tag.len() + 1);
         let value_loc = pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len());
-        let loc = pt::Loc::File(file_no, c.tag_offset, c.value_offset + c.value.len());
+        let loc = pt::Loc::File(file_no, c.tag_offset - 1, c.value_offset + c.value.len());
 
         match c.tag.as_str() {
             "notice" | "author" | "title" | "dev" => {
@@ -49,10 +49,13 @@ pub fn resolve_tags(
                 let value = v.get(1).unwrap_or(&"").to_string();
 
                 if let Some(no) = params.unwrap().iter().position(|p| p.name_as_str() == name) {
-                    if res.iter().any(|e| e.tag == "param" && e.no == no) {
-                        ns.diagnostics.push(Diagnostic::error(
-                            tag_loc,
+                    if let Some(other) = res.iter().find(|e| e.tag == "param" && e.no == no) {
+                        // Note: solc does not detect this problem
+                        ns.diagnostics.push(Diagnostic::warning_with_note(
+                            loc,
                             format!("duplicate tag '@param' for '{name}'"),
+                            other.loc,
+                            format!("previous tag '@param' for '{name}'"),
                         ));
                     } else {
                         res.push(Tag {
