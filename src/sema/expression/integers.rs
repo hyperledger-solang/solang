@@ -4,6 +4,7 @@ use crate::sema::ast::{Expression, Namespace, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::ResolveTo;
 use num_bigint::{BigInt, Sign};
+use num_traits::Zero;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 
@@ -189,19 +190,19 @@ pub fn bigint_to_expression(
 
     if let ResolveTo::Type(resolve_to) = resolve_to {
         if *resolve_to != Type::Unresolved {
-            if !resolve_to.is_integer(ns) {
+            if !(resolve_to.is_integer(ns) || matches!(resolve_to, Type::Bytes(_)) && n.is_zero()) {
                 diagnostics.push(Diagnostic::cast_error(
                     *loc,
                     format!("expected '{}', found integer", resolve_to.to_string(ns)),
                 ));
                 return Err(());
-            } else {
-                return Ok(Expression::NumberLiteral {
-                    loc: *loc,
-                    ty: resolve_to.clone(),
-                    value: n.clone(),
-                });
             }
+
+            return Ok(Expression::NumberLiteral {
+                loc: *loc,
+                ty: resolve_to.clone(),
+                value: n.clone(),
+            });
         }
     }
 

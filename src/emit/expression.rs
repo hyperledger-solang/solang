@@ -785,12 +785,41 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             }
         }
         Expression::NotEqual { left, right, .. } => {
-            let left = expression(target, bin, left, vartab, function, ns).into_int_value();
-            let right = expression(target, bin, right, vartab, function, ns).into_int_value();
+            if left.ty().is_address() {
+                let mut res = bin.context.bool_type().const_int(0, false);
+                let left = expression(target, bin, left, vartab, function, ns).into_array_value();
+                let right = expression(target, bin, right, vartab, function, ns).into_array_value();
 
-            bin.builder
-                .build_int_compare(IntPredicate::NE, left, right, "")
-                .into()
+                // TODO: Address should be passed around as pointer. Once this is done, we can replace
+                // this with a call to address_equal()
+                for index in 0..ns.address_length {
+                    let l = bin
+                        .builder
+                        .build_extract_value(left, index as u32, "left")
+                        .unwrap()
+                        .into_int_value();
+                    let r = bin
+                        .builder
+                        .build_extract_value(right, index as u32, "right")
+                        .unwrap()
+                        .into_int_value();
+
+                    res = bin.builder.build_or(
+                        res,
+                        bin.builder.build_int_compare(IntPredicate::NE, l, r, ""),
+                        "cmp",
+                    );
+                }
+
+                res.into()
+            } else {
+                let left = expression(target, bin, left, vartab, function, ns).into_int_value();
+                let right = expression(target, bin, right, vartab, function, ns).into_int_value();
+
+                bin.builder
+                    .build_int_compare(IntPredicate::NE, left, right, "")
+                    .into()
+            }
         }
         Expression::More {
             signed,

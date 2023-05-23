@@ -521,11 +521,28 @@ pub(super) fn power(
 /// Test for equality; first check string equality, then integer equality
 pub(super) fn equal(
     loc: &pt::Loc,
-    left: Expression,
-    right: Expression,
+    l: &pt::Expression,
+    r: &pt::Expression,
+    context: &ExprContext,
     ns: &mut Namespace,
+    symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+
+    check_var_usage_expression(ns, &left, &right, symtable);
+
+    if let Some(expr) = user_defined_operator(
+        loc,
+        &[&left, &right],
+        pt::UserDefinedOperator::Equal,
+        diagnostics,
+        ns,
+    ) {
+        return Ok(expr);
+    }
+
     // Comparing stringliteral against stringliteral
     if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
         (&left, &right)
@@ -539,11 +556,130 @@ pub(super) fn equal(
     let left_type = left.ty();
     let right_type = right.ty();
 
+    if let Some(expr) =
+        is_string_equal(loc, &left, &left_type, &right, &right_type, ns, diagnostics)?
+    {
+        return Ok(expr);
+    }
+
+    let ty = coerce(
+        &left_type,
+        &left.loc(),
+        &right_type,
+        &right.loc(),
+        ns,
+        diagnostics,
+    )?;
+
+    if ty.is_rational() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot use rational numbers with '==' operator".into(),
+        ));
+        return Err(());
+    }
+
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+
+    let expr = Expression::Equal {
+        loc: *loc,
+        left: Box::new(left.cast(&left.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&right.loc(), &ty, true, ns, diagnostics)?),
+    };
+
+    Ok(expr)
+}
+
+pub(super) fn not_equal(
+    loc: &pt::Loc,
+    l: &pt::Expression,
+    r: &pt::Expression,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+) -> Result<Expression, ()> {
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+
+    check_var_usage_expression(ns, &left, &right, symtable);
+
+    if let Some(expr) = user_defined_operator(
+        loc,
+        &[&left, &right],
+        pt::UserDefinedOperator::NotEqual,
+        diagnostics,
+        ns,
+    ) {
+        return Ok(expr);
+    }
+
+    // Comparing stringliteral against stringliteral
+    if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
+        (&left, &right)
+    {
+        return Ok(Expression::BoolLiteral {
+            loc: *loc,
+            value: l != r,
+        });
+    }
+
+    let left_type = left.ty();
+    let right_type = right.ty();
+
+    if let Some(expr) =
+        is_string_equal(loc, &left, &left_type, &right, &right_type, ns, diagnostics)?
+    {
+        return Ok(Expression::Not {
+            loc: *loc,
+            expr: expr.into(),
+        });
+    }
+
+    let ty = coerce(
+        &left_type,
+        &left.loc(),
+        &right_type,
+        &right.loc(),
+        ns,
+        diagnostics,
+    )?;
+
+    if ty.is_rational() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot use rational numbers with '!=' operator".into(),
+        ));
+        return Err(());
+    }
+
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+
+    let expr = Expression::NotEqual {
+        loc: *loc,
+        left: Box::new(left.cast(&left.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&right.loc(), &ty, true, ns, diagnostics)?),
+    };
+
+    Ok(expr)
+}
+
+fn is_string_equal(
+    loc: &pt::Loc,
+    left: &Expression,
+    left_type: &Type,
+    right: &Expression,
+    right_type: &Type,
+    ns: &Namespace,
+    diagnostics: &mut Diagnostics,
+) -> Result<Option<Expression>, ()> {
     // compare string against literal
     match (&left, &right_type.deref_any()) {
         (Expression::BytesLiteral { value: l, .. }, Type::String)
         | (Expression::BytesLiteral { value: l, .. }, Type::DynamicBytes) => {
-            return Ok(Expression::StringCompare {
+            return Ok(Some(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(right.cast(
                     &right.loc(),
@@ -553,7 +689,7 @@ pub(super) fn equal(
                     diagnostics,
                 )?)),
                 right: StringLocation::CompileTime(l.clone()),
-            });
+            }));
         }
         _ => {}
     }
@@ -561,7 +697,7 @@ pub(super) fn equal(
     match (&right, &left_type.deref_any()) {
         (Expression::BytesLiteral { value, .. }, Type::String)
         | (Expression::BytesLiteral { value, .. }, Type::DynamicBytes) => {
-            return Ok(Expression::StringCompare {
+            return Ok(Some(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(left.cast(
                     &left.loc(),
@@ -571,7 +707,7 @@ pub(super) fn equal(
                     diagnostics,
                 )?)),
                 right: StringLocation::CompileTime(value.clone()),
-            });
+            }));
         }
         _ => {}
     }
@@ -579,7 +715,7 @@ pub(super) fn equal(
     // compare string
     match (&left_type.deref_any(), &right_type.deref_any()) {
         (Type::String, Type::String) | (Type::DynamicBytes, Type::DynamicBytes) => {
-            return Ok(Expression::StringCompare {
+            return Ok(Some(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(left.cast(
                     &left.loc(),
@@ -595,35 +731,12 @@ pub(super) fn equal(
                     ns,
                     diagnostics,
                 )?)),
-            });
+            }));
         }
         _ => {}
     }
 
-    let ty = coerce(
-        &left_type,
-        &left.loc(),
-        &right_type,
-        &right.loc(),
-        ns,
-        diagnostics,
-    )?;
-
-    let expr = Expression::Equal {
-        loc: *loc,
-        left: Box::new(left.cast(&left.loc(), &ty, true, ns, diagnostics)?),
-        right: Box::new(right.cast(&right.loc(), &ty, true, ns, diagnostics)?),
-    };
-
-    if ty.is_rational() {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            "cannot use rational numbers with '!=' or '==' operator".into(),
-        ));
-        return Err(());
-    }
-
-    Ok(expr)
+    Ok(None)
 }
 
 /// Try string concatenation

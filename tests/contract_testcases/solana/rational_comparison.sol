@@ -23,7 +23,7 @@ contract c {
 // ---- Expect: diagnostics ----
 // error: 4:10-23: cannot use rational numbers with '>=' operator
 // error: 7:10-19: cannot use rational numbers with '>' operator
-// error: 10:10-19: cannot use rational numbers with '!=' or '==' operator
+// error: 10:10-19: cannot use rational numbers with '==' operator
 // error: 13:10-11: expression not allowed in constant rational number expression
 // error: 16:10-26: cannot use rational numbers with '<=' operator
-// error: 19:10-24: cannot use rational numbers with '!=' or '==' operator
+// error: 19:10-24: cannot use rational numbers with '!=' operator

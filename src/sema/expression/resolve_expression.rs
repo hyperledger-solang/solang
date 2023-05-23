@@ -3,7 +3,7 @@
 use crate::sema::expression::{
     arithmetic::{
         addition, bitwise_and, bitwise_or, bitwise_xor, divide, equal, incr_decr, modulo, multiply,
-        power, shift_left, shift_right, subtract,
+        not_equal, power, shift_left, shift_right, subtract,
     },
     assign::{assign_expr, assign_single},
     constructor::{constructor_named_args, new},
@@ -131,215 +131,22 @@ pub fn expression(
             power(loc, b, e, context, ns, symtable, diagnostics, resolve_to)
         }
         // compare
-        pt::Expression::More(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-
-            check_var_usage_expression(ns, &left, &right, symtable);
-
-            if let Some(expr) = user_defined_operator(
-                loc,
-                &[&left, &right],
-                pt::UserDefinedOperator::More,
-                diagnostics,
-                ns,
-            ) {
-                return Ok(expr);
-            }
-
-            let ty = coerce_number(
-                &left.ty(),
-                &l.loc(),
-                &right.ty(),
-                &r.loc(),
-                true,
-                true,
-                ns,
-                diagnostics,
-            )?;
-
-            let expr = Expression::More {
-                loc: *loc,
-                left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-                right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            };
-
-            if ty.is_rational() {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot use rational numbers with '>' operator".into(),
-                ));
-                return Err(());
-            }
-
-            Ok(expr)
+        pt::Expression::More(loc, left, right) => {
+            more(left, right, context, ns, symtable, diagnostics, loc)
         }
-        pt::Expression::Less(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-
-            check_var_usage_expression(ns, &left, &right, symtable);
-
-            if let Some(expr) = user_defined_operator(
-                loc,
-                &[&left, &right],
-                pt::UserDefinedOperator::Less,
-                diagnostics,
-                ns,
-            ) {
-                return Ok(expr);
-            }
-
-            let ty = coerce_number(
-                &left.ty(),
-                &l.loc(),
-                &right.ty(),
-                &r.loc(),
-                true,
-                true,
-                ns,
-                diagnostics,
-            )?;
-
-            let expr = Expression::Less {
-                loc: *loc,
-                left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-                right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            };
-
-            if ty.is_rational() {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot use rational numbers with '<' operator".into(),
-                ));
-                return Err(());
-            }
-
-            Ok(expr)
+        pt::Expression::Less(loc, left, right) => {
+            less(left, right, context, ns, symtable, diagnostics, loc)
         }
-        pt::Expression::MoreEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-            check_var_usage_expression(ns, &left, &right, symtable);
-
-            if let Some(expr) = user_defined_operator(
-                loc,
-                &[&left, &right],
-                pt::UserDefinedOperator::MoreEqual,
-                diagnostics,
-                ns,
-            ) {
-                return Ok(expr);
-            }
-
-            let ty = coerce_number(
-                &left.ty(),
-                &l.loc(),
-                &right.ty(),
-                &r.loc(),
-                true,
-                true,
-                ns,
-                diagnostics,
-            )?;
-
-            let expr = Expression::MoreEqual {
-                loc: *loc,
-                left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-                right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            };
-
-            if ty.is_rational() {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot use rational numbers with '>=' operator".into(),
-                ));
-                return Err(());
-            }
-
-            Ok(expr)
+        pt::Expression::MoreEqual(loc, left, right) => {
+            more_equal(left, right, context, ns, symtable, diagnostics, loc)
         }
-        pt::Expression::LessEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-            check_var_usage_expression(ns, &left, &right, symtable);
-
-            if let Some(expr) = user_defined_operator(
-                loc,
-                &[&left, &right],
-                pt::UserDefinedOperator::LessEqual,
-                diagnostics,
-                ns,
-            ) {
-                return Ok(expr);
-            }
-
-            let ty = coerce_number(
-                &left.ty(),
-                &l.loc(),
-                &right.ty(),
-                &r.loc(),
-                true,
-                true,
-                ns,
-                diagnostics,
-            )?;
-
-            let expr = Expression::LessEqual {
-                loc: *loc,
-                left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
-                right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
-            };
-
-            if ty.is_rational() {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot use rational numbers with '<=' operator".into(),
-                ));
-                return Err(());
-            }
-
-            Ok(expr)
+        pt::Expression::LessEqual(loc, left, right) => {
+            less_equal(left, right, context, ns, symtable, diagnostics, loc)
         }
-        pt::Expression::Equal(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-
-            check_var_usage_expression(ns, &left, &right, symtable);
-
-            if let Some(expr) = user_defined_operator(
-                loc,
-                &[&left, &right],
-                pt::UserDefinedOperator::Equal,
-                diagnostics,
-                ns,
-            ) {
-                return Ok(expr);
-            }
-
-            equal(loc, left, right, ns, diagnostics)
-        }
+        pt::Expression::Equal(loc, l, r) => equal(loc, l, r, context, ns, symtable, diagnostics),
 
         pt::Expression::NotEqual(loc, l, r) => {
-            let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-            let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
-
-            check_var_usage_expression(ns, &left, &right, symtable);
-
-            if let Some(expr) = user_defined_operator(
-                loc,
-                &[&left, &right],
-                pt::UserDefinedOperator::NotEqual,
-                diagnostics,
-                ns,
-            ) {
-                return Ok(expr);
-            }
-
-            Ok(Expression::Not {
-                loc: *loc,
-                expr: equal(loc, left, right, ns, diagnostics)?.into(),
-            })
+            not_equal(loc, l, r, context, ns, symtable, diagnostics)
         }
         // unary expressions
         pt::Expression::Not(loc, e) => {
@@ -352,108 +159,11 @@ pub fn expression(
             })
         }
         pt::Expression::BitwiseNot(loc, e) => {
-            let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
-
-            used_variable(ns, &expr, symtable);
-
-            if let Some(expr) = user_defined_operator(
-                loc,
-                &[&expr],
-                pt::UserDefinedOperator::BitwiseNot,
-                diagnostics,
-                ns,
-            ) {
-                return Ok(expr);
-            }
-
-            let expr_ty = expr.ty();
-
-            get_int_length(&expr_ty, loc, true, ns, diagnostics)?;
-
-            Ok(Expression::BitwiseNot {
-                loc: *loc,
-                ty: expr_ty,
-                expr: Box::new(expr),
-            })
+            bitwise_not(e, context, ns, symtable, diagnostics, resolve_to, loc)
         }
-        pt::Expression::Negate(loc, e) => match e.as_ref() {
-            pt::Expression::NumberLiteral(_, integer, exp, unit) => {
-                let unit = unit_literal(loc, unit, ns, diagnostics);
-
-                number_literal(loc, integer, exp, ns, &-unit, diagnostics, resolve_to)
-            }
-            pt::Expression::HexNumberLiteral(_, v, unit) => {
-                if unit.is_some() {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        "hexadecimal numbers cannot be used with unit denominations".into(),
-                    ));
-                }
-
-                // a hex literal with a minus before it cannot be an address literal or a bytesN value
-                let s: String = v.chars().skip(2).filter(|v| *v != '_').collect();
-
-                let n = BigInt::from_str_radix(&s, 16).unwrap();
-
-                bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to, Some(s.len()))
-            }
-            pt::Expression::RationalNumberLiteral(loc, integer, fraction, exp, unit) => {
-                let unit = unit_literal(loc, unit, ns, diagnostics);
-
-                rational_number_literal(
-                    loc,
-                    integer,
-                    fraction,
-                    exp,
-                    &-unit,
-                    ns,
-                    diagnostics,
-                    resolve_to,
-                )
-            }
-            e => {
-                let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
-
-                used_variable(ns, &expr, symtable);
-
-                if let Some(expr) = user_defined_operator(
-                    loc,
-                    &[&expr],
-                    pt::UserDefinedOperator::Negate,
-                    diagnostics,
-                    ns,
-                ) {
-                    return Ok(expr);
-                }
-
-                let expr_type = expr.ty();
-
-                if let Expression::NumberLiteral { value, .. } = expr {
-                    bigint_to_expression(loc, &-value, ns, diagnostics, resolve_to, None)
-                } else if let Expression::RationalNumberLiteral { ty, value: r, .. } = expr {
-                    Ok(Expression::RationalNumberLiteral {
-                        loc: *loc,
-                        ty,
-                        value: -r,
-                    })
-                } else {
-                    get_int_length(&expr_type, loc, false, ns, diagnostics)?;
-
-                    if !expr_type.is_signed_int(ns) {
-                        diagnostics.push(Diagnostic::error(
-                            *loc,
-                            "negate not allowed on unsigned".to_string(),
-                        ));
-                    }
-
-                    Ok(Expression::Negate {
-                        loc: *loc,
-                        ty: expr_type,
-                        expr: Box::new(expr),
-                    })
-                }
-            }
-        },
+        pt::Expression::Negate(loc, e) => {
+            negate(e, loc, ns, diagnostics, resolve_to, context, symtable)
+        }
         pt::Expression::UnaryPlus(loc, e) => {
             let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
             used_variable(ns, &expr, symtable);
@@ -721,4 +431,345 @@ pub fn expression(
             Err(())
         }
     }
+}
+
+fn bitwise_not(
+    expr: &pt::Expression,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    resolve_to: ResolveTo,
+    loc: &pt::Loc,
+) -> Result<Expression, ()> {
+    let expr = expression(expr, context, ns, symtable, diagnostics, resolve_to)?;
+
+    used_variable(ns, &expr, symtable);
+
+    if let Some(expr) = user_defined_operator(
+        loc,
+        &[&expr],
+        pt::UserDefinedOperator::BitwiseNot,
+        diagnostics,
+        ns,
+    ) {
+        return Ok(expr);
+    }
+
+    let expr_ty = expr.ty();
+
+    get_int_length(&expr_ty, loc, true, ns, diagnostics)?;
+
+    Ok(Expression::BitwiseNot {
+        loc: *loc,
+        ty: expr_ty,
+        expr: Box::new(expr),
+    })
+}
+
+fn negate(
+    expr: &pt::Expression,
+    loc: &pt::Loc,
+    ns: &mut Namespace,
+    diagnostics: &mut Diagnostics,
+    resolve_to: ResolveTo,
+    context: &ExprContext,
+    symtable: &mut Symtable,
+) -> Result<Expression, ()> {
+    match expr {
+        pt::Expression::NumberLiteral(_, integer, exp, unit) => {
+            let unit = unit_literal(loc, unit, ns, diagnostics);
+
+            number_literal(loc, integer, exp, ns, &-unit, diagnostics, resolve_to)
+        }
+        pt::Expression::HexNumberLiteral(_, v, unit) => {
+            if unit.is_some() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "hexadecimal numbers cannot be used with unit denominations".into(),
+                ));
+            }
+
+            // a hex literal with a minus before it cannot be an address literal or a bytesN value
+            let s: String = v.chars().skip(2).filter(|v| *v != '_').collect();
+
+            let n = BigInt::from_str_radix(&s, 16).unwrap();
+
+            bigint_to_expression(loc, &-n, ns, diagnostics, resolve_to, Some(s.len()))
+        }
+        pt::Expression::RationalNumberLiteral(loc, integer, fraction, exp, unit) => {
+            let unit = unit_literal(loc, unit, ns, diagnostics);
+
+            rational_number_literal(
+                loc,
+                integer,
+                fraction,
+                exp,
+                &-unit,
+                ns,
+                diagnostics,
+                resolve_to,
+            )
+        }
+        e => {
+            let expr = expression(e, context, ns, symtable, diagnostics, resolve_to)?;
+
+            used_variable(ns, &expr, symtable);
+
+            if let Some(expr) = user_defined_operator(
+                loc,
+                &[&expr],
+                pt::UserDefinedOperator::Negate,
+                diagnostics,
+                ns,
+            ) {
+                return Ok(expr);
+            }
+
+            let expr_type = expr.ty();
+
+            if let Expression::NumberLiteral { value, .. } = expr {
+                bigint_to_expression(loc, &-value, ns, diagnostics, resolve_to, None)
+            } else if let Expression::RationalNumberLiteral { ty, value: r, .. } = expr {
+                Ok(Expression::RationalNumberLiteral {
+                    loc: *loc,
+                    ty,
+                    value: -r,
+                })
+            } else {
+                get_int_length(&expr_type, loc, false, ns, diagnostics)?;
+
+                if !expr_type.is_signed_int(ns) {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "negate not allowed on unsigned".to_string(),
+                    ));
+                }
+
+                Ok(Expression::Negate {
+                    loc: *loc,
+                    ty: expr_type,
+                    expr: Box::new(expr),
+                })
+            }
+        }
+    }
+}
+
+fn less_equal(
+    l: &pt::Expression,
+    r: &pt::Expression,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    loc: &pt::Loc,
+) -> Result<Expression, ()> {
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    check_var_usage_expression(ns, &left, &right, symtable);
+
+    if let Some(expr) = user_defined_operator(
+        loc,
+        &[&left, &right],
+        pt::UserDefinedOperator::LessEqual,
+        diagnostics,
+        ns,
+    ) {
+        return Ok(expr);
+    }
+
+    let ty = coerce_number(
+        &left.ty(),
+        &l.loc(),
+        &right.ty(),
+        &r.loc(),
+        true,
+        true,
+        ns,
+        diagnostics,
+    )?;
+
+    if ty.is_rational() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot use rational numbers with '<=' operator".into(),
+        ));
+        return Err(());
+    }
+
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+
+    let expr = Expression::LessEqual {
+        loc: *loc,
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    };
+
+    Ok(expr)
+}
+
+fn more_equal(
+    l: &pt::Expression,
+    r: &pt::Expression,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    loc: &pt::Loc,
+) -> Result<Expression, ()> {
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    check_var_usage_expression(ns, &left, &right, symtable);
+
+    if let Some(expr) = user_defined_operator(
+        loc,
+        &[&left, &right],
+        pt::UserDefinedOperator::MoreEqual,
+        diagnostics,
+        ns,
+    ) {
+        return Ok(expr);
+    }
+
+    let ty = coerce_number(
+        &left.ty(),
+        &l.loc(),
+        &right.ty(),
+        &r.loc(),
+        true,
+        true,
+        ns,
+        diagnostics,
+    )?;
+
+    if ty.is_rational() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot use rational numbers with '>=' operator".into(),
+        ));
+        return Err(());
+    }
+
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+
+    let expr = Expression::MoreEqual {
+        loc: *loc,
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    };
+
+    Ok(expr)
+}
+
+fn less(
+    l: &pt::Expression,
+    r: &pt::Expression,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    loc: &pt::Loc,
+) -> Result<Expression, ()> {
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+
+    check_var_usage_expression(ns, &left, &right, symtable);
+
+    if let Some(expr) = user_defined_operator(
+        loc,
+        &[&left, &right],
+        pt::UserDefinedOperator::Less,
+        diagnostics,
+        ns,
+    ) {
+        return Ok(expr);
+    }
+
+    let ty = coerce_number(
+        &left.ty(),
+        &l.loc(),
+        &right.ty(),
+        &r.loc(),
+        true,
+        true,
+        ns,
+        diagnostics,
+    )?;
+
+    if ty.is_rational() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot use rational numbers with '<' operator".into(),
+        ));
+        return Err(());
+    }
+
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+
+    let expr = Expression::Less {
+        loc: *loc,
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    };
+
+    Ok(expr)
+}
+
+fn more(
+    l: &pt::Expression,
+    r: &pt::Expression,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    loc: &pt::Loc,
+) -> Result<Expression, ()> {
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+
+    check_var_usage_expression(ns, &left, &right, symtable);
+
+    if let Some(expr) = user_defined_operator(
+        loc,
+        &[&left, &right],
+        pt::UserDefinedOperator::More,
+        diagnostics,
+        ns,
+    ) {
+        return Ok(expr);
+    }
+
+    let ty = coerce_number(
+        &left.ty(),
+        &l.loc(),
+        &right.ty(),
+        &r.loc(),
+        true,
+        true,
+        ns,
+        diagnostics,
+    )?;
+
+    if ty.is_rational() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot use rational numbers with '>' operator".into(),
+        ));
+        return Err(());
+    }
+
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+
+    let expr = Expression::More {
+        loc: *loc,
+        left: Box::new(left.cast(&l.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&r.loc(), &ty, true, ns, diagnostics)?),
+    };
+
+    Ok(expr)
 }
