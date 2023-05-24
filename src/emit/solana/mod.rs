@@ -4,12 +4,15 @@ pub(super) mod target;
 
 use crate::sema::ast;
 use crate::Target;
+use std::cmp::Ordering;
 
 use crate::codegen::{cfg::ReturnCode, Options};
 use crate::sema::ast::Type;
 use inkwell::module::{Linkage, Module};
 use inkwell::types::BasicType;
-use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress};
+use inkwell::values::{
+    BasicValue, BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress,
+};
 use inkwell::{context::Context, types::BasicTypeEnum};
 use inkwell::{AddressSpace, IntPredicate};
 use num_traits::ToPrimitive;
@@ -978,40 +981,12 @@ impl SolanaTarget {
             .module
             .get_struct_type("struct.SolAccountInfo")
             .unwrap();
-        match member {
-            // key
-            0 => {
-                let key = binary
-                    .builder
-                    .build_load(
-                        binary
-                            .module
-                            .get_struct_type("struct.SolPubkey")
-                            .unwrap()
-                            .ptr_type(AddressSpace::default()),
-                        binary
-                            .builder
-                            .build_struct_gep(account_info_ty, account_info, 0, "key")
-                            .unwrap(),
-                        "key",
-                    )
-                    .into_pointer_value();
 
-                binary
-                    .builder
-                    .build_load(binary.address_type(ns), key, "key")
-            }
-            // lamports
-            1 => binary.builder.build_load(
-                binary.context.i64_type().ptr_type(AddressSpace::default()),
-                binary
-                    .builder
-                    .build_struct_gep(account_info_ty, account_info, 1, "lamports")
-                    .unwrap(),
-                "lamports",
-            ),
-            // data
-            2 => {
+        let gep_no = match member.cmp(&2) {
+            Ordering::Less => member as u32,
+            Ordering::Greater => (member + 1) as u32,
+            Ordering::Equal => {
+                // The data field is transformed into a slice, so we do not return it directly.
                 let data_len = binary
                     .builder
                     .build_load(
@@ -1059,73 +1034,20 @@ impl SolanaTarget {
                     .unwrap();
                 binary.builder.build_store(data_len_elem, data_len);
 
-                binary.builder.build_load(
-                    binary.llvm_type(&ast::Type::Slice(Box::new(Type::Bytes(1))), ns),
-                    slice_alloca,
-                    "data_slice",
-                )
+                return slice_alloca.as_basic_value_enum();
             }
-            // owner
-            3 => {
-                let owner = binary
-                    .builder
-                    .build_load(
-                        binary
-                            .module
-                            .get_struct_type("struct.SolPubkey")
-                            .unwrap()
-                            .ptr_type(AddressSpace::default()),
-                        binary
-                            .builder
-                            .build_struct_gep(account_info_ty, account_info, 4, "owner")
-                            .unwrap(),
-                        "owner",
-                    )
-                    .into_pointer_value();
+        };
 
-                binary
-                    .builder
-                    .build_load(binary.address_type(ns), owner, "owner")
-            }
-            // rent epoch
-            4 => {
-                let rent_epoch = binary
-                    .builder
-                    .build_struct_gep(account_info_ty, account_info, 5, "rent_epoch")
-                    .unwrap();
-
-                binary
-                    .builder
-                    .build_load(binary.context.i64_type(), rent_epoch, "rent_epoch")
-            }
-            // remaining fields are bool
-            _ => {
-                let bool_field = binary
-                    .builder
-                    .build_struct_gep(
-                        account_info_ty,
-                        account_info,
-                        member as u32 + 1,
-                        "bool_field",
-                    )
-                    .unwrap();
-
-                let value = binary
-                    .builder
-                    .build_load(binary.context.i8_type(), bool_field, "bool_field")
-                    .into_int_value();
-
-                binary
-                    .builder
-                    .build_int_compare(
-                        IntPredicate::NE,
-                        value,
-                        value.get_type().const_zero(),
-                        "is_non_zero",
-                    )
-                    .into()
-            }
-        }
+        binary
+            .builder
+            .build_struct_gep(
+                account_info_ty,
+                account_info,
+                gep_no,
+                format!("AccountInfo_member_{}", member).as_str(),
+            )
+            .unwrap()
+            .as_basic_value_enum()
     }
 
     /// Construct the LLVM-IR to call 'external_call' from solana.c

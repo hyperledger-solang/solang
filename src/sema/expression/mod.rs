@@ -377,6 +377,9 @@ impl Expression {
                     expr: Box::new(self.clone()),
                 })
             }
+            (Type::Bytes(1), Type::Enum(_)) if !implicit => {
+                self.cast_types(loc, &Type::Uint(8), to, implicit, ns, diagnostics)
+            }
             (Type::Uint(from_width), Type::Enum(enum_no))
             | (Type::Int(from_width), Type::Enum(enum_no)) => {
                 if implicit {
