@@ -1,5 +1,7 @@
 # Release Checklist
 
+- For next release, fix:
+  https://github.com/hyperledger/solang/issues/1321
 - Update the version in `Cargo.toml`, `solang-parser/Cargo.toml`, the binary
   links in `docs/installing.rst`, and `CHANGELOG.md`. Remember to match the
   solang-parser version in the top level `Cargo.toml`.
@@ -19,6 +21,9 @@
 - Wait for build to succeed
 - `cargo publish`
 - Release new version of vscode plugin if needed
-- Mention release in Discord (Solana, Hyperledger) and Hyperledger /dev/weekly
+- Mention release in Discord (Solana, Hyperledger)
+- Update solana installer to use latest solang,
+  e.g. https://github.com/solana-labs/solana/pull/31756
 - Update the version number and the MacOS binaries' sha256 hash in `Casks/solang.rb` under
-  the repository `hyperledger/homebrew-solang`.
+  the repository `hyperledger/homebrew-solang`,
+  e.g. https://github.com/hyperledger/homebrew-solang/pull/11
