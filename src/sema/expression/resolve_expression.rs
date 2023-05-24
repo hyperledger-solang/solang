@@ -8,7 +8,7 @@ use crate::sema::expression::{
     assign::{assign_expr, assign_single},
     constructor::{constructor_named_args, new},
     function_call::{call_expr, named_call_expr},
-    integers::{bigint_to_expression, coerce, coerce_number, get_int_length},
+    integers::{bigint_to_expression, coerce, coerce_number, type_bits_and_sign},
     literals::{
         address_literal, array_literal, hex_literal, hex_number_literal, number_literal,
         rational_number_literal, string_literal, unit_literal,
@@ -169,7 +169,7 @@ pub fn expression(
             used_variable(ns, &expr, symtable);
             let expr_type = expr.ty();
 
-            get_int_length(&expr_type, loc, false, ns, diagnostics)?;
+            type_bits_and_sign(&expr_type, loc, false, ns, diagnostics)?;
 
             diagnostics.push(Diagnostic::error(
                 *loc,
@@ -458,7 +458,8 @@ fn bitwise_not(
 
     let expr_ty = expr.ty();
 
-    get_int_length(&expr_ty, loc, true, ns, diagnostics)?;
+    // Ensure that the argument is an integer or fixed bytes type
+    type_bits_and_sign(&expr_ty, loc, true, ns, diagnostics)?;
 
     Ok(Expression::BitwiseNot {
         loc: *loc,
@@ -537,7 +538,7 @@ fn negate(
                     value: -r,
                 })
             } else {
-                get_int_length(&expr_type, loc, false, ns, diagnostics)?;
+                type_bits_and_sign(&expr_type, loc, false, ns, diagnostics)?;
 
                 if !expr_type.is_signed_int(ns) {
                     diagnostics.push(Diagnostic::error(

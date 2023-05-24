@@ -3,7 +3,7 @@
 use crate::sema::ast::{Expression, Namespace, RetrieveType, StringLocation, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::eval::eval_const_rational;
-use crate::sema::expression::integers::{coerce, coerce_number, get_int_length};
+use crate::sema::expression::integers::{coerce, coerce_number, type_bits_and_sign};
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{user_defined_operator, ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
@@ -223,8 +223,8 @@ pub(super) fn shift_left(
     check_var_usage_expression(ns, &left, &right, symtable);
     // left hand side may be bytes/int/uint
     // right hand size may be int/uint
-    let _ = get_int_length(&left.ty(), &l.loc(), true, ns, diagnostics)?;
-    let (right_length, _) = get_int_length(&right.ty(), &r.loc(), false, ns, diagnostics)?;
+    let _ = type_bits_and_sign(&left.ty(), &l.loc(), true, ns, diagnostics)?;
+    let (right_length, _) = type_bits_and_sign(&right.ty(), &r.loc(), false, ns, diagnostics)?;
 
     let left_type = left.ty().deref_any().clone();
 
@@ -254,8 +254,8 @@ pub(super) fn shift_right(
     let left_type = left.ty().deref_any().clone();
     // left hand side may be bytes/int/uint
     // right hand size may be int/uint
-    let _ = get_int_length(&left_type, &l.loc(), true, ns, diagnostics)?;
-    let (right_length, _) = get_int_length(&right.ty(), &r.loc(), false, ns, diagnostics)?;
+    let _ = type_bits_and_sign(&left_type, &l.loc(), true, ns, diagnostics)?;
+    let (right_length, _) = type_bits_and_sign(&right.ty(), &r.loc(), false, ns, diagnostics)?;
 
     Ok(Expression::ShiftRight {
         loc: *loc,
@@ -543,16 +543,6 @@ pub(super) fn equal(
         return Ok(expr);
     }
 
-    // Comparing stringliteral against stringliteral
-    if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
-        (&left, &right)
-    {
-        return Ok(Expression::BoolLiteral {
-            loc: *loc,
-            value: l == r,
-        });
-    }
-
     let left_type = left.ty();
     let right_type = right.ty();
 
@@ -615,16 +605,6 @@ pub(super) fn not_equal(
         return Ok(expr);
     }
 
-    // Comparing stringliteral against stringliteral
-    if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
-        (&left, &right)
-    {
-        return Ok(Expression::BoolLiteral {
-            loc: *loc,
-            value: l != r,
-        });
-    }
-
     let left_type = left.ty();
     let right_type = right.ty();
 
@@ -666,6 +646,8 @@ pub(super) fn not_equal(
     Ok(expr)
 }
 
+/// If the left and right arguments are part of string comparison, return
+/// a string comparision expression, else None.
 fn is_string_equal(
     loc: &pt::Loc,
     left: &Expression,

@@ -566,9 +566,16 @@ pub(super) fn string_location<'a, T: TargetRuntime<'a> + ?Sized>(
                 .const_int(literal.len() as u64, false),
         ),
         StringLocation::RunTime(e) => {
-            let v = expression(target, bin, e, vartab, function, ns);
+            if let Expression::BytesLiteral { value, .. } = e.as_ref() {
+                (
+                    bin.emit_global_string("const_string", value, true),
+                    bin.context.i32_type().const_int(value.len() as u64, false),
+                )
+            } else {
+                let v = expression(target, bin, e, vartab, function, ns);
 
-            (bin.vector_bytes(v), bin.vector_len(v))
+                (bin.vector_bytes(v), bin.vector_len(v))
+            }
         }
     }
 }
