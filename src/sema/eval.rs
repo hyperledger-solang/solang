@@ -719,39 +719,80 @@ fn eval_constants_in_expression(
 
 /// Function that takes a BigInt and an expected type. If the number of bits in the type required to represent the BigInt is not suffiecient, it will return a diagnostic.
 pub(super) fn overflow_check(result: &BigInt, ty: &Type, loc: &Loc) -> Option<Diagnostic> {
-    if let Type::Uint(bits) = ty {
-        // If the result sign is minus, throw an error.
-        if let Sign::Minus = result.sign() {
-            return Some(Diagnostic::error(
+    if result.bits() > 1024 {
+        // Do not try to print large values. For example:
+        // uint x = 80 ** 0x100000;
+        // is an enormous value, and having all those decimals in the diagnostic does not help. Also,
+        // printing all those decimals will take a long time
+        if let Type::Uint(bits) = ty {
+            // If the result sign is minus, throw an error.
+            if let Sign::Minus = result.sign() {
+                return Some(Diagnostic::error(
+                    *loc,
+                    format!( "large negative value does not fit into type uint{}. Cannot implicitly convert signed literal to unsigned type.",
+                    ty.get_type_size()),
+                ));
+            }
+
+            // If bits of the result is more than bits of the type, throw and error.
+            if result.bits() > *bits as u64 {
+                return Some(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "value is too large to fit into type uint{}",
+                        ty.get_type_size(),
+                    ),
+                ));
+            }
+        }
+
+        if let Type::Int(bits) = ty {
+            // If number of bits is more than what the type can hold. BigInt.bits() is not used here since it disregards the sign.
+            if result.to_signed_bytes_be().len() * 8 > (*bits as usize) {
+                return Some(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "value is too large to fit into type int{}",
+                        ty.get_type_size(),
+                    ),
+                ));
+            }
+        }
+    } else {
+        if let Type::Uint(bits) = ty {
+            // If the result sign is minus, throw an error.
+            if let Sign::Minus = result.sign() {
+                return Some(Diagnostic::error(
                 *loc,
             format!( "negative value {} does not fit into type uint{}. Cannot implicitly convert signed literal to unsigned type.",result,ty.get_type_size()),
             ));
+            }
+
+            // If bits of the result is more than bits of the type, throw and error.
+            if result.bits() > *bits as u64 {
+                return Some(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "value {} does not fit into type uint{}.",
+                        result,
+                        ty.get_type_size(),
+                    ),
+                ));
+            }
         }
 
-        // If bits of the result is more than bits of the type, throw and error.
-        if result.bits() > *bits as u64 {
-            return Some(Diagnostic::error(
-                *loc,
-                format!(
-                    "value {} does not fit into type uint{}.",
-                    result,
-                    ty.get_type_size(),
-                ),
-            ));
-        }
-    }
-
-    if let Type::Int(bits) = ty {
-        // If number of bits is more than what the type can hold. BigInt.bits() is not used here since it disregards the sign.
-        if result.to_signed_bytes_be().len() * 8 > (*bits as usize) {
-            return Some(Diagnostic::error(
-                *loc,
-                format!(
-                    "value {} does not fit into type int{}.",
-                    result,
-                    ty.get_type_size(),
-                ),
-            ));
+        if let Type::Int(bits) = ty {
+            // If number of bits is more than what the type can hold. BigInt.bits() is not used here since it disregards the sign.
+            if result.to_signed_bytes_be().len() * 8 > (*bits as usize) {
+                return Some(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "value {} does not fit into type int{}.",
+                        result,
+                        ty.get_type_size(),
+                    ),
+                ));
+            }
         }
     }
     None
