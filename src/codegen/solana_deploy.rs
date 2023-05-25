@@ -273,15 +273,11 @@ pub(super) fn solana_deploy(
                             loc: Loc::Codegen,
                             ty: Type::Struct(StructType::AccountMeta),
                             values: vec![
-                                Expression::GetRef {
+                                Expression::Builtin {
                                     loc: Loc::Codegen,
-                                    ty: Type::Address(false),
-                                    expr: Box::new(Expression::Builtin {
-                                        loc: Loc::Codegen,
-                                        tys: vec![Type::Address(false)],
-                                        kind: Builtin::GetAddress,
-                                        args: vec![],
-                                    }),
+                                    tys: vec![Type::Ref(Box::new(Type::Address(false)))],
+                                    kind: Builtin::GetAddress,
+                                    args: vec![],
                                 },
                                 Expression::BoolLiteral {
                                     loc: Loc::Codegen,

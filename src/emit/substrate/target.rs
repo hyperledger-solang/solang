@@ -11,6 +11,7 @@ use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, Type};
 use crate::{codegen, emit_context};
 use inkwell::types::{BasicType, BasicTypeEnum, IntType};
+use inkwell::values::BasicValue;
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
@@ -1501,9 +1502,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "seal_address"
                 );
 
-                binary
-                    .builder
-                    .build_load(binary.address_type(ns), scratch_buf, "self_address")
+                scratch_buf.as_basic_value_enum()
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Balance,
