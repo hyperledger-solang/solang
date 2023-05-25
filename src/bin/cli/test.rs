@@ -13,10 +13,10 @@ mod tests {
 
     #[test]
     fn parse_compile_options() {
-        let mut command_vec: Vec<&str> = "solang compile flipper.sol --target substrate --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ').collect();
-        let mut sesa = Cli::parse_from(command_vec);
+        let mut command: Vec<&str> = "solang compile flipper.sol --target substrate --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ').collect();
+        let mut cli = Cli::parse_from(command);
 
-        if let Commands::Compile(compile_args) = sesa.command {
+        if let Commands::Compile(compile_args) = cli.command {
             assert_eq!(compile_args.package.input, vec!["flipper.sol"]);
             assert_eq!(compile_args.target_arg.name, "substrate");
             assert_eq!(compile_args.target_arg.address_length.unwrap(), 33_u64);
@@ -29,10 +29,10 @@ mod tests {
             assert_eq!(compile_args.optimizations.opt_level, "aggressive");
         }
 
-        command_vec = "solang compile flipper.sol --target substrate --no-log-runtime-errors --no-prints --no-log-api-return-codes -g --release".split(' ').collect();
-        sesa = Cli::parse_from(command_vec);
+        command = "solang compile flipper.sol --target substrate --no-log-runtime-errors --no-prints --no-log-api-return-codes -g --release".split(' ').collect();
+        cli = Cli::parse_from(command);
 
-        if let Commands::Compile(compile_args) = sesa.command {
+        if let Commands::Compile(compile_args) = cli.command {
             assert!(compile_args.debug_features.generate_debug_info);
             assert!(!compile_args.debug_features.log_api_return_codes);
             assert!(!compile_args.debug_features.log_prints);
