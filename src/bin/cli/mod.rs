@@ -258,9 +258,9 @@ pub fn options_arg(debug: &DebugFeatures, optimizations: &Optimizations) -> Opti
         common_subexpression_elimination: optimizations.common_subexpression_elimination,
         generate_debug_information: debug.generate_debug_info,
         opt_level,
-        log_api_return_codes: debug.log_api_return_codes,
-        log_runtime_errors: debug.log_runtime_errors,
-        log_prints: debug.log_prints,
+        log_api_return_codes: debug.log_api_return_codes & !debug.release,
+        log_runtime_errors: debug.log_runtime_errors & !debug.release,
+        log_prints: debug.log_prints & !debug.release,
     }
 }
 
