@@ -20,7 +20,7 @@ or compute units.
 Solang aims for source file compatibility with the Ethereum EVM Solidity compiler,
 version 0.8. Where differences exist, this is noted in the language documentation.
 The source code repository can be found on `github <https://github.com/hyperledger/solang>`_
-and we have a `channel #solang on Hyperledger Discord <https://discord.gg/jhn4rkqNsT>`_.
+and we have a `channel #solang <https://discord.com/channels/905194001349627914/905834552965103638> on Hyperledger Discord <https://discord.gg/hyperledger>`_.
 
 Contents
 ========
