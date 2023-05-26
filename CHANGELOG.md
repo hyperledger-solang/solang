@@ -2,6 +2,36 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## v0.3.0 Venice
+
+The parser and semantic analysis stage of Solang have gone through
+[a security audit](https://github.com/solana-labs/security-audits/blob/master/solang/Trail_of_Bits_Solang_Final_report.pdf). All security issues have been fixed.
+
+### Added
+- The CLI now has a `--release` option, which disables printing of errors [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- **Substrate**: chain extensions can be now used.
+  [xermicus](https://github.com/xermicus)
+
+### Fixed
+- Solidity error definitions are now parsed.
+  [seanyoung](https://github.com/seanyoung)
+- The Ethereum Solidity parser and semantic analysis tests are now run on Solang sema during
+  `cargo test`.
+  [seanyoung](https://github.com/seanyoung)
+- If a function returns a `storage` reference, then not returning a value explicitly is an error, since
+  the reference must refer to an existing storage variable.
+  [seanyoung](https://github.com/seanyoung)
+- Many small improvements have been made to the parser and semantic analysis, improving compatibility
+  with Ethereum Solidity.
+  [seanyoung](https://github.com/seanyoung)
+  [xermicus](https://github.com/xermicus)
+  [LucasSte](https://github.com/LucasSte)
+
+### Changed
+- **Solana**: Addresses are now base58 encoded when formated with `"address:{}".format(address)`.
+  [LucasSte](https://github.com/LucasSte)
+- **Substrate**: No longer use the prefixed names for seal runtime API calls, which grants small improvements in contract sizes. [xermicus](https://github.com/xermicus)
+
 ## v0.2.3 Geneva
 
 ### Added
@@ -11,7 +41,7 @@ will be documented here.
   [seanyoung](https://github.com/seanyoung)
 - **Solana**: if a contract uses the `SystemAccount`, `ClockAccount`, or other standard builtin
   accounts, then this is automatically added to the IDL. [LucasSte](https://github.com/LucasSte)
-- **Substrate**: The content of the debug buffer is formatted in a human readable way. This vastly improves it's readability, allowing to spot API runtime return codes, runtime errors and debug prints much easier. [salaheldinsoliman](https://github.com/salaheldinsoliman) 
+- **Substrate**: The content of the debug buffer is formatted in a human readable way. This vastly improves its readability, allowing to spot API runtime return codes, runtime errors and debug prints much easier. [salaheldinsoliman](https://github.com/salaheldinsoliman)
 
 ### Fixed
 - Solana: contracts with a seed for the constructor do not require a signer in the Anchor IDL

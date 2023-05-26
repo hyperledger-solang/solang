@@ -161,7 +161,6 @@ pub enum Token<'input> {
     Receive,
     Fallback,
 
-    This,
     As,
     Is,
     Abstract,
@@ -299,7 +298,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Catch => write!(f, "catch"),
             Token::Receive => write!(f, "receive"),
             Token::Fallback => write!(f, "fallback"),
-            Token::This => write!(f, "this"),
             Token::As => write!(f, "as"),
             Token::Is => write!(f, "is"),
             Token::Abstract => write!(f, "abstract"),
@@ -541,7 +539,6 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "catch" => Token::Catch,
     "receive" => Token::Receive,
     "fallback" => Token::Fallback,
-    "this" => Token::This,
     "as" => Token::As,
     "is" => Token::Is,
     "abstract" => Token::Abstract,

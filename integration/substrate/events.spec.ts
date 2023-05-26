@@ -30,7 +30,7 @@ describe('Deploy events contract and test event data, docs and topics', () => {
         expect(events.length).toEqual(4);
 
         expect(events[0].event.identifier).toBe("foo1");
-        expect(events[0].event.docs).toEqual(["Ladida tada\n\n"]);
+        expect(events[0].event.docs).toEqual(["Ladida tada"]);
         expect(events[0].args.map(a => a.toJSON())).toEqual([254, "hello there"]);
 
         expect(events[1].event.identifier).toBe("foo2");

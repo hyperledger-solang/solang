@@ -5,4 +5,5 @@
             uint32 f;
         }
 // ---- Expect: diagnostics ----
-// error: 3:14-20: duplicate tag '@param' for 'f'
+// warning: 3:13-25: duplicate tag '@param' for 'f'
+// 	note 2:13-27: previous tag '@param' for 'f'

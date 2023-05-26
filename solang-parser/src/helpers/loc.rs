@@ -355,7 +355,6 @@ impl_for_enums! {
         | Self::ArrayLiteral(l, ..)
         | Self::List(l, ..)
         | Self::Type(l, ..)
-        | Self::This(l, ..)
         | Self::AddressLiteral(l, ..) => l,
     }
 

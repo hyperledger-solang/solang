@@ -19,13 +19,30 @@ which are provided in the return statement, the values of the return variables a
 of the function is returned. It is still possible to explicitly return some values
 with a return statement.
 
-Functions which are declared ``public`` will be present in the ABI and are callable
-externally. If a function is declared ``private`` then it is not callable externally,
-but it can be called from within the contract. If a function is defined outside a
-contract, then it cannot have a visibility specifier (e.g. ``public``).
-
 Any DocComment before a function will be include in the ABI. Currently only Substrate
 supports documentation in the ABI.
+
+Function visibility
+___________________
+
+Solidity functions have a visibility specifier that restricts the scope in which they can be called.
+Functions can be declared public, private, internal or external with the following definitions:
+
+    - ``public`` functions can be called inside and outside a contract (e.g. by an RPC). They are
+      present in the contract's ABI or IDL.
+    - ``private`` functions can only be called inside the contract they are declared.
+    - ``internal`` functions can only be called internally within the contract or by any contract
+      inherited contract.
+    - ``external`` functions can exclusively be called by other contracts or directly by an RPC. They
+      are also present in the contract's ABI or IDL.
+
+Both public and external functions can be called using the syntax ``this.func()``. In this case, the
+arguments are ABI encoded for the call, as it is treated like an external call. This is the only way to
+call an external function from inside the same contract it is defined. This method, however, should be avoided
+for public functions, as it will be more costly to call them than simply using ``func()``.
+
+If a function is defined outside a contract, it cannot have a visibility specifier (e.g. ``public``).
+
 
 Arguments passing and return values
 ___________________________________

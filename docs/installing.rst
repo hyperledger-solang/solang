@@ -28,11 +28,11 @@ Option 2: Download binaries
 
 There are binaries available on github releases:
 
-- `Linux x86-64 <https://github.com/hyperledger/solang/releases/download/v0.2.3/solang-linux-x86-64>`_
-- `Linux arm64 <https://github.com/hyperledger/solang/releases/download/v0.2.3/solang-linux-arm64>`_
-- `Windows x64 <https://github.com/hyperledger/solang/releases/download/v0.2.3/solang.exe>`_
-- `MacOS intel <https://github.com/hyperledger/solang/releases/download/v0.2.3/solang-mac-intel>`_
-- `MacOS arm <https://github.com/hyperledger/solang/releases/download/v0.2.3/solang-mac-arm>`_
+- `Linux x86-64 <https://github.com/hyperledger/solang/releases/download/v0.3.0/solang-linux-x86-64>`_
+- `Linux arm64 <https://github.com/hyperledger/solang/releases/download/v0.3.0/solang-linux-arm64>`_
+- `Windows x64 <https://github.com/hyperledger/solang/releases/download/v0.3.0/solang.exe>`_
+- `MacOS intel <https://github.com/hyperledger/solang/releases/download/v0.3.0/solang-mac-intel>`_
+- `MacOS arm <https://github.com/hyperledger/solang/releases/download/v0.3.0/solang-mac-arm>`_
 
 Download the file and save it somewhere in your ``$PATH``, for example the bin directory in your home directory. If the
 path you use is not already in ``$PATH``, then you need to add it yourself.
@@ -56,7 +56,7 @@ Option 3: Use ghcr.io/hyperledger/solang containers
 
 New images are automatically made available on
 `solang containers <https://github.com/hyperledger/solang/pkgs/container/solang>`_.
-There is a release `v0.2.3` tag and a `latest` tag:
+There is a release `v0.3.0` tag and a `latest` tag:
 
 .. code-block:: bash
 
@@ -87,7 +87,7 @@ Then you can build the image using:
 Option 5: Build Solang from source
 ----------------------------------
 
-In order to build Solang from source, you will need rust 1.65.0 or higher,
+In order to build Solang from source, you will need rust 1.68.0 or higher,
 and a build of LLVM based on the Solana LLVM tree. There are a few LLVM patches required that are not upstream yet.
 First, follow the steps below for installing LLVM and then proceed from there.
 
@@ -113,7 +113,7 @@ These patches make it possible to generate code for Solana, and fixes
 concurrency issues in the lld linker.
 
 You can either download the pre-built libraries from
-`github <https://github.com/hyperledger/solang/releases/tag/v0.2.3>`_
+`github <https://github.com/hyperledger/solang/releases/tag/v0.3.0>`_
 or :ref:`build your own from source <llvm-from-source>`. After that, you need to add the ``bin`` of your
 LLVM directory to your path, so that the build system of Solang can find the correct version of LLVM to use.
 

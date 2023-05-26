@@ -489,7 +489,6 @@ NoFunctionTyPrecedence0: Expression = {
 
         Expression::List(Loc::File(file_no, l, r), a)
     },
-    <@L> "this" <@R> => Expression::This(Loc::File(file_no, <>)),
     LiteralExpression
 }
 
@@ -1226,7 +1225,6 @@ extern {
         "catch" => Token::Catch,
         "receive" => Token::Receive,
         "fallback" => Token::Fallback,
-        "this" => Token::This,
         "as" => Token::As,
         "is" => Token::Is,
         "abstract" => Token::Abstract,

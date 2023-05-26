@@ -77,12 +77,10 @@ impl Namespace {
         symbol: Symbol,
     ) -> bool {
         if builtin::is_reserved(&id.name) {
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::warning(
                 id.loc,
                 format!("'{}' shadows name of a builtin", id.name),
             ));
-
-            return false;
         }
 
         if let Some(Symbol::Function(v)) =

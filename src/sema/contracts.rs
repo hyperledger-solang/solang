@@ -259,10 +259,10 @@ impl ast::Namespace {
 }
 
 // Is a contract a base of another contract
-pub fn is_base(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
-    let bases = &ns.contracts[parent].bases;
+pub fn is_base(base: usize, derived: usize, ns: &ast::Namespace) -> bool {
+    let bases = &ns.contracts[derived].bases;
 
-    if base == parent || bases.iter().any(|e| e.contract_no == base) {
+    if base == derived || bases.iter().any(|e| e.contract_no == base) {
         return true;
     }
 

@@ -23,7 +23,7 @@ use crate::sema::{
     unused_variable::{check_function_call, check_var_usage_expression, used_variable},
     Recurse,
     {
-        ast::{Builtin, Expression, Namespace, RetrieveType, Type},
+        ast::{Expression, Namespace, RetrieveType, Type},
         diagnostics::Diagnostics,
         eval::check_term_for_constant_overflow,
     },
@@ -720,20 +720,5 @@ pub fn expression(
             ));
             Err(())
         }
-        pt::Expression::This(loc) => match context.contract_no {
-            Some(contract_no) => Ok(Expression::Builtin {
-                loc: *loc,
-                tys: vec![Type::Contract(contract_no)],
-                kind: Builtin::GetAddress,
-                args: Vec::new(),
-            }),
-            None => {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "this not allowed outside contract".to_owned(),
-                ));
-                Err(())
-            }
-        },
     }
 }

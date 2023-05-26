@@ -2,7 +2,7 @@
 
 # solang - Solidity Compiler for Solana and Substrate
 
-[![Discord](https://img.shields.io/discord/905194001349627914?logo=Hyperledger&style=plastic)](https://discord.gg/jhn4rkqNsT)
+[![Discord](https://img.shields.io/discord/905194001349627914?logo=Hyperledger&style=plastic)](https://discord.gg/hyperledger)
 [![CI](https://github.com/hyperledger/solang/workflows/test/badge.svg)](https://github.com/hyperledger/solang/actions)
 [![Documentation Status](https://readthedocs.org/projects/solang/badge/?version=latest)](https://solang.readthedocs.io/en/latest/?badge=latest)
 [![license](https://img.shields.io/github/license/hyperledger/solang.svg)](LICENSE)
@@ -133,21 +133,6 @@ up to date with the newest Solidity syntax and features.  In addition, we focus 
 and improve developer experience.
 Here is a brief description of what we envision for the next versions.
 
-### V0.3
-
-| Feature                                      | Status      |
-|----------------------------------------------|-------------|
-| Specify values as "1 sol" and "1e9 lamports" | Completed   |
-| Call Solana's Rust contracts from Solidity   | Completed   |
-| Improvements in overflow checking            | Completed   |
-| Support Solana's Program Derived Addresses   | Completed   |
-| Call Solidity from Solana's Rust contracts   | Not started |
-| Improve developer experience for Substrate   | Completed   |
-| Tooling for calls between ink! <> solidity   | In progress |
-| Support chain extensions for Substrate       | Completed   |
-| Provide CLI for node interactions            | Not started |
-
-
 ### V0.4
 
 | Feature                                            | Status      |
@@ -156,6 +141,9 @@ Here is a brief description of what we envision for the next versions.
 | Adopt single static assignment for code generation | Not started |
 | Support openzeppelin on Substrate target           | Not started |
 | Provide Solidity -> Substrate porting guide        | Not started |
+| Call Solidity from Solana's Rust contracts         | Not started |
+| Tooling for calls between ink! <> solidity         | In progress |
+| Provide CLI for node interactions                  | Not started |
 
 ## License
 
