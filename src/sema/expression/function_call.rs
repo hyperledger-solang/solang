@@ -164,8 +164,10 @@ pub(super) fn call_function_type(
     }
 }
 
-/// Create a list of functions that can be called in this context. If global is true, then
-/// include functions outside of contracts
+/// Create a list of functions matching the given `name` that can be called in this context.
+/// A function is available if it has a body block or if its virtual and its contract is not concrete.
+///
+/// If global is true, then include functions outside of contracts.
 pub fn available_functions(
     name: &str,
     global: bool,
@@ -190,11 +192,12 @@ pub fn available_functions(
                 .keys()
                 .filter(|func_no| ns.functions[**func_no].name == name)
                 .filter_map(|func_no| {
-                    if ns.functions[*func_no].has_body || ns.functions[*func_no].is_virtual {
-                        Some(*func_no)
-                    } else {
-                        None
+                    let is_abstract = ns.functions[*func_no].is_virtual
+                        && !ns.contracts[contract_no].is_concrete();
+                    if ns.functions[*func_no].has_body || is_abstract {
+                        return Some(*func_no);
                     }
+                    None
                 }),
         );
     }
@@ -251,7 +254,7 @@ pub fn function_call_pos_args(
     for function_no in &function_nos {
         let func = &ns.functions[*function_no];
 
-        if func.ty != func_ty {
+        if func.ty != func_ty || matches!(func.visibility, pt::Visibility::External(_)) {
             continue;
         }
 
@@ -410,7 +413,9 @@ pub(super) fn function_call_named_args(
     for function_no in &function_nos {
         let func = &ns.functions[*function_no];
 
-        if func.ty != pt::FunctionTy::Function {
+        if func.ty != pt::FunctionTy::Function
+            || matches!(func.visibility, pt::Visibility::External(_))
+        {
             continue;
         }
 
