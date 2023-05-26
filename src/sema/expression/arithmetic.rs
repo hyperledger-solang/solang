@@ -3,7 +3,7 @@
 use crate::sema::ast::{Expression, Namespace, RetrieveType, StringLocation, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::eval::eval_const_rational;
-use crate::sema::expression::integers::{coerce, coerce_number, get_int_length};
+use crate::sema::expression::integers::{coerce, coerce_number, type_bits_and_sign};
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{user_defined_operator, ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
@@ -223,8 +223,8 @@ pub(super) fn shift_left(
     check_var_usage_expression(ns, &left, &right, symtable);
     // left hand side may be bytes/int/uint
     // right hand size may be int/uint
-    let _ = get_int_length(&left.ty(), &l.loc(), true, ns, diagnostics)?;
-    let (right_length, _) = get_int_length(&right.ty(), &r.loc(), false, ns, diagnostics)?;
+    let _ = type_bits_and_sign(&left.ty(), &l.loc(), true, ns, diagnostics)?;
+    let (right_length, _) = type_bits_and_sign(&right.ty(), &r.loc(), false, ns, diagnostics)?;
 
     let left_type = left.ty().deref_any().clone();
 
@@ -254,8 +254,8 @@ pub(super) fn shift_right(
     let left_type = left.ty().deref_any().clone();
     // left hand side may be bytes/int/uint
     // right hand size may be int/uint
-    let _ = get_int_length(&left_type, &l.loc(), true, ns, diagnostics)?;
-    let (right_length, _) = get_int_length(&right.ty(), &r.loc(), false, ns, diagnostics)?;
+    let _ = type_bits_and_sign(&left_type, &l.loc(), true, ns, diagnostics)?;
+    let (right_length, _) = type_bits_and_sign(&right.ty(), &r.loc(), false, ns, diagnostics)?;
 
     Ok(Expression::ShiftRight {
         loc: *loc,
@@ -521,29 +521,147 @@ pub(super) fn power(
 /// Test for equality; first check string equality, then integer equality
 pub(super) fn equal(
     loc: &pt::Loc,
-    left: Expression,
-    right: Expression,
+    l: &pt::Expression,
+    r: &pt::Expression,
+    context: &ExprContext,
     ns: &mut Namespace,
+    symtable: &mut Symtable,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    // Comparing stringliteral against stringliteral
-    if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
-        (&left, &right)
-    {
-        return Ok(Expression::BoolLiteral {
-            loc: *loc,
-            value: l == r,
-        });
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+
+    check_var_usage_expression(ns, &left, &right, symtable);
+
+    if let Some(expr) = user_defined_operator(
+        loc,
+        &[&left, &right],
+        pt::UserDefinedOperator::Equal,
+        diagnostics,
+        ns,
+    ) {
+        return Ok(expr);
     }
 
     let left_type = left.ty();
     let right_type = right.ty();
 
+    if let Some(expr) =
+        is_string_equal(loc, &left, &left_type, &right, &right_type, ns, diagnostics)?
+    {
+        return Ok(expr);
+    }
+
+    let ty = coerce(
+        &left_type,
+        &left.loc(),
+        &right_type,
+        &right.loc(),
+        ns,
+        diagnostics,
+    )?;
+
+    if ty.is_rational() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot use rational numbers with '==' operator".into(),
+        ));
+        return Err(());
+    }
+
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+
+    let expr = Expression::Equal {
+        loc: *loc,
+        left: Box::new(left.cast(&left.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&right.loc(), &ty, true, ns, diagnostics)?),
+    };
+
+    Ok(expr)
+}
+
+pub(super) fn not_equal(
+    loc: &pt::Loc,
+    l: &pt::Expression,
+    r: &pt::Expression,
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+) -> Result<Expression, ()> {
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Integer)?;
+
+    check_var_usage_expression(ns, &left, &right, symtable);
+
+    if let Some(expr) = user_defined_operator(
+        loc,
+        &[&left, &right],
+        pt::UserDefinedOperator::NotEqual,
+        diagnostics,
+        ns,
+    ) {
+        return Ok(expr);
+    }
+
+    let left_type = left.ty();
+    let right_type = right.ty();
+
+    if let Some(expr) =
+        is_string_equal(loc, &left, &left_type, &right, &right_type, ns, diagnostics)?
+    {
+        return Ok(Expression::Not {
+            loc: *loc,
+            expr: expr.into(),
+        });
+    }
+
+    let ty = coerce(
+        &left_type,
+        &left.loc(),
+        &right_type,
+        &right.loc(),
+        ns,
+        diagnostics,
+    )?;
+
+    if ty.is_rational() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot use rational numbers with '!=' operator".into(),
+        ));
+        return Err(());
+    }
+
+    let left = expression(l, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+    let right = expression(r, context, ns, symtable, diagnostics, ResolveTo::Type(&ty))?;
+
+    let expr = Expression::NotEqual {
+        loc: *loc,
+        left: Box::new(left.cast(&left.loc(), &ty, true, ns, diagnostics)?),
+        right: Box::new(right.cast(&right.loc(), &ty, true, ns, diagnostics)?),
+    };
+
+    Ok(expr)
+}
+
+/// If the left and right arguments are part of string comparison, return
+/// a string comparision expression, else None.
+fn is_string_equal(
+    loc: &pt::Loc,
+    left: &Expression,
+    left_type: &Type,
+    right: &Expression,
+    right_type: &Type,
+    ns: &Namespace,
+    diagnostics: &mut Diagnostics,
+) -> Result<Option<Expression>, ()> {
     // compare string against literal
     match (&left, &right_type.deref_any()) {
         (Expression::BytesLiteral { value: l, .. }, Type::String)
         | (Expression::BytesLiteral { value: l, .. }, Type::DynamicBytes) => {
-            return Ok(Expression::StringCompare {
+            return Ok(Some(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(right.cast(
                     &right.loc(),
@@ -553,7 +671,7 @@ pub(super) fn equal(
                     diagnostics,
                 )?)),
                 right: StringLocation::CompileTime(l.clone()),
-            });
+            }));
         }
         _ => {}
     }
@@ -561,7 +679,7 @@ pub(super) fn equal(
     match (&right, &left_type.deref_any()) {
         (Expression::BytesLiteral { value, .. }, Type::String)
         | (Expression::BytesLiteral { value, .. }, Type::DynamicBytes) => {
-            return Ok(Expression::StringCompare {
+            return Ok(Some(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(left.cast(
                     &left.loc(),
@@ -571,7 +689,7 @@ pub(super) fn equal(
                     diagnostics,
                 )?)),
                 right: StringLocation::CompileTime(value.clone()),
-            });
+            }));
         }
         _ => {}
     }
@@ -579,7 +697,7 @@ pub(super) fn equal(
     // compare string
     match (&left_type.deref_any(), &right_type.deref_any()) {
         (Type::String, Type::String) | (Type::DynamicBytes, Type::DynamicBytes) => {
-            return Ok(Expression::StringCompare {
+            return Ok(Some(Expression::StringCompare {
                 loc: *loc,
                 left: StringLocation::RunTime(Box::new(left.cast(
                     &left.loc(),
@@ -595,35 +713,12 @@ pub(super) fn equal(
                     ns,
                     diagnostics,
                 )?)),
-            });
+            }));
         }
         _ => {}
     }
 
-    let ty = coerce(
-        &left_type,
-        &left.loc(),
-        &right_type,
-        &right.loc(),
-        ns,
-        diagnostics,
-    )?;
-
-    let expr = Expression::Equal {
-        loc: *loc,
-        left: Box::new(left.cast(&left.loc(), &ty, true, ns, diagnostics)?),
-        right: Box::new(right.cast(&right.loc(), &ty, true, ns, diagnostics)?),
-    };
-
-    if ty.is_rational() {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            "cannot use rational numbers with '!=' or '==' operator".into(),
-        ));
-        return Err(());
-    }
-
-    Ok(expr)
+    Ok(None)
 }
 
 /// Try string concatenation

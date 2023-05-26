@@ -1345,27 +1345,55 @@ fn expression(
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
-            (
-                Expression::Equal {
-                    loc: *loc,
-                    left: Box::new(left.0),
-                    right: Box::new(right.0),
-                },
-                false,
-            )
+            if let (
+                Expression::BytesLiteral { value: l, .. },
+                Expression::BytesLiteral { value: r, .. },
+            ) = (&left.0, &right.0)
+            {
+                (
+                    Expression::BoolLiteral {
+                        loc: *loc,
+                        value: l == r,
+                    },
+                    true,
+                )
+            } else {
+                (
+                    Expression::Equal {
+                        loc: *loc,
+                        left: Box::new(left.0),
+                        right: Box::new(right.0),
+                    },
+                    false,
+                )
+            }
         }
         Expression::NotEqual { loc, left, right } => {
             let left = expression(left, vars, cfg, ns);
             let right = expression(right, vars, cfg, ns);
 
-            (
-                Expression::NotEqual {
-                    loc: *loc,
-                    left: Box::new(left.0),
-                    right: Box::new(right.0),
-                },
-                false,
-            )
+            if let (
+                Expression::BytesLiteral { value: l, .. },
+                Expression::BytesLiteral { value: r, .. },
+            ) = (&left.0, &right.0)
+            {
+                (
+                    Expression::BoolLiteral {
+                        loc: *loc,
+                        value: l != r,
+                    },
+                    true,
+                )
+            } else {
+                (
+                    Expression::NotEqual {
+                        loc: *loc,
+                        left: Box::new(left.0),
+                        right: Box::new(right.0),
+                    },
+                    false,
+                )
+            }
         }
         Expression::Not { loc, expr } => {
             let expr = expression(expr, vars, cfg, ns);
