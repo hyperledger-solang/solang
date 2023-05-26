@@ -4,6 +4,7 @@ use crate::sema::ast::{Expression, Namespace, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::ResolveTo;
 use num_bigint::{BigInt, Sign};
+use num_traits::Zero;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 
@@ -40,7 +41,9 @@ pub(super) fn coerce(
     coerce_number(l, l_loc, r, r_loc, true, false, ns, diagnostics)
 }
 
-pub(super) fn get_int_length(
+/// Calculate the number of bits and the sign of a type, or generate a diagnostic
+/// that the type that is not allowed.
+pub(super) fn type_bits_and_sign(
     l: &Type,
     l_loc: &pt::Loc,
     allow_bytes: bool,
@@ -74,8 +77,8 @@ pub(super) fn get_int_length(
             ));
             Err(())
         }
-        Type::Ref(n) => get_int_length(n, l_loc, allow_bytes, ns, diagnostics),
-        Type::StorageRef(_, n) => get_int_length(n, l_loc, allow_bytes, ns, diagnostics),
+        Type::Ref(n) => type_bits_and_sign(n, l_loc, allow_bytes, ns, diagnostics),
+        Type::StorageRef(_, n) => type_bits_and_sign(n, l_loc, allow_bytes, ns, diagnostics),
         _ => {
             diagnostics.push(Diagnostic::error(
                 *l_loc,
@@ -153,9 +156,9 @@ pub fn coerce_number(
         _ => (),
     }
 
-    let (left_len, left_signed) = get_int_length(l, l_loc, false, ns, diagnostics)?;
+    let (left_len, left_signed) = type_bits_and_sign(l, l_loc, false, ns, diagnostics)?;
 
-    let (right_len, right_signed) = get_int_length(r, r_loc, false, ns, diagnostics)?;
+    let (right_len, right_signed) = type_bits_and_sign(r, r_loc, false, ns, diagnostics)?;
 
     Ok(match (left_signed, right_signed) {
         (true, true) => Type::Int(left_len.max(right_len)),
@@ -189,19 +192,19 @@ pub fn bigint_to_expression(
 
     if let ResolveTo::Type(resolve_to) = resolve_to {
         if *resolve_to != Type::Unresolved {
-            if !resolve_to.is_integer(ns) {
+            if !(resolve_to.is_integer(ns) || matches!(resolve_to, Type::Bytes(_)) && n.is_zero()) {
                 diagnostics.push(Diagnostic::cast_error(
                     *loc,
                     format!("expected '{}', found integer", resolve_to.to_string(ns)),
                 ));
                 return Err(());
-            } else {
-                return Ok(Expression::NumberLiteral {
-                    loc: *loc,
-                    ty: resolve_to.clone(),
-                    value: n.clone(),
-                });
             }
+
+            return Ok(Expression::NumberLiteral {
+                loc: *loc,
+                ty: resolve_to.clone(),
+                value: n.clone(),
+            });
         }
     }
 
