@@ -16,4 +16,6 @@ contract bar {
         }
         
 // ---- Expect: diagnostics ----
-// error: 14:63-68: function 'total' is overloaded
+// warning: 10:13-33: function can be declared 'view'
+// warning: 12:21-29: local variable 'variable' has been assigned, but never read
+// warning: 14:51-60: local variable 'func_type' has been assigned, but never read

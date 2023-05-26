@@ -254,7 +254,7 @@ pub fn function_call_pos_args(
     for function_no in &function_nos {
         let func = &ns.functions[*function_no];
 
-        if func.ty != func_ty || matches!(func.visibility, pt::Visibility::External(_)) {
+        if func.ty != func_ty {
             continue;
         }
 
@@ -376,9 +376,7 @@ pub(super) fn function_call_named_args(
     for function_no in &function_nos {
         let func = &ns.functions[*function_no];
 
-        if func.ty != pt::FunctionTy::Function
-            || matches!(func.visibility, pt::Visibility::External(_))
-        {
+        if func.ty != pt::FunctionTy::Function {
             continue;
         }
 

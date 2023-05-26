@@ -15,4 +15,5 @@ contract B is I, A {
 }
 
 // ---- Expect: diagnostics ----
-// error: 13:24-29: unknown function or type 'total'\n"`: source: tests/contract_testcases/substrate/functions/virtual_function_call_02.sol
+// error: 13:24-31: functions declared external cannot be called via an internal function call
+// 	note 6:5-47: declaration of function 'total'
