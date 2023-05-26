@@ -113,7 +113,7 @@ These patches make it possible to generate code for Solana, and fixes
 concurrency issues in the lld linker.
 
 You can either download the pre-built libraries from
-`github <https://github.com/hyperledger/solang/releases/tag/v0.3.0>`_
+`github <https://github.com/hyperledger/solang-llvm/releases>`_
 or :ref:`build your own from source <llvm-from-source>`. After that, you need to add the ``bin`` of your
 LLVM directory to your path, so that the build system of Solang can find the correct version of LLVM to use.
 
