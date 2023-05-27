@@ -248,7 +248,8 @@ fn ethereum_solidity_tests() {
         })
         .sum();
 
-    assert_eq!(errors, 1072);
+    assert_eq!(errors, 1068);
+}
 
 fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
     let mut cache = FileResolver::new();
