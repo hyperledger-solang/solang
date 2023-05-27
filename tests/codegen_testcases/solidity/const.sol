@@ -22,4 +22,18 @@ contract c {
 // CHECK: return uint32 16
 		return x;
 	}
+
+// BEGIN-CHECK: c::function::equal
+	function equal() public pure returns (bool) {
+		// should be const folded
+// CHECK: return true
+		return "abcd" == "abcd";
+	}
+
+// BEGIN-CHECK: c::function::not_equal
+	function not_equal() public pure returns (bool) {
+		// should be const folded
+// CHECK: return false
+		return "abcd" != "abcd";
+	}
 }

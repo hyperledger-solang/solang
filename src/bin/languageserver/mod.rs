@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use clap::ArgMatches;
 use rust_lapper::{Interval, Lapper};
 use serde_json::Value;
 use solang::{
@@ -15,6 +14,8 @@ use solang_parser::pt;
 use std::{collections::HashMap, ffi::OsString, fmt::Write, path::PathBuf};
 use tokio::sync::Mutex;
 use tower_lsp::{jsonrpc::Result, lsp_types::*, Client, LanguageServer, LspService, Server};
+
+use crate::cli::{target_arg, LanguageServerCommand};
 
 struct Hovers {
     file: ast::File,
@@ -32,17 +33,17 @@ pub struct SolangServer {
 }
 
 #[tokio::main(flavor = "current_thread")]
-pub async fn start_server(target: Target, matches: &ArgMatches) -> ! {
+pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
     let mut importpaths = Vec::new();
     let mut importmaps = Vec::new();
 
-    if let Some(paths) = matches.get_many::<PathBuf>("IMPORTPATH") {
+    if let Some(paths) = &language_args.import_path {
         for path in paths {
             importpaths.push(path.clone());
         }
     }
 
-    if let Some(maps) = matches.get_many::<(String, PathBuf)>("IMPORTMAP") {
+    if let Some(maps) = &language_args.import_map {
         for (map, path) in maps {
             importmaps.push((map.clone(), path.clone()));
         }
@@ -50,6 +51,8 @@ pub async fn start_server(target: Target, matches: &ArgMatches) -> ! {
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
+
+    let target = target_arg(&language_args.target);
 
     let (service, socket) = LspService::new(|client| SolangServer {
         client,

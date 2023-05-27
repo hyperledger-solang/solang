@@ -3,7 +3,7 @@
 use crate::sema::ast::{Expression, Namespace, RetrieveType, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::eval::check_term_for_constant_overflow;
-use crate::sema::expression::integers::get_int_length;
+use crate::sema::expression::integers::type_bits_and_sign;
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
 use crate::sema::symtable::Symtable;
@@ -198,8 +198,9 @@ pub(super) fn assign_expr(
      -> Result<Expression, ()> {
         let set = match expr {
             pt::Expression::AssignShiftLeft(..) | pt::Expression::AssignShiftRight(..) => {
-                let left_length = get_int_length(ty, loc, true, ns, diagnostics)?;
-                let right_length = get_int_length(&set_type, &left.loc(), false, ns, diagnostics)?;
+                let left_length = type_bits_and_sign(ty, loc, true, ns, diagnostics)?;
+                let right_length =
+                    type_bits_and_sign(&set_type, &left.loc(), false, ns, diagnostics)?;
 
                 // TODO: does shifting by negative value need compiletime/runtime check?
                 if left_length == right_length {
