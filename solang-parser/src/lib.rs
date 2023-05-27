@@ -94,7 +94,7 @@ fn parser_error_to_diagnostic(
             Loc::File(file_no, token.0, token.2),
             format!("extra token '{}' encountered", token.0),
         ),
-        ParseError::UnrecognizedEOF { expected, location } => Diagnostic::parser_error(
+        ParseError::UnrecognizedEof { expected, location } => Diagnostic::parser_error(
             Loc::File(file_no, *location, *location),
             format!("unexpected end of file, expecting {}", expected.join(", ")),
         ),

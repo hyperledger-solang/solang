@@ -162,7 +162,7 @@ pub fn common_sub_expression_elimination(cfg: &mut ControlFlowGraph, ns: &mut Na
     // Second pass: eliminate common subexpressions
     for (block_no, cycle) in &cfg_as_dag.visiting_order {
         let mut cur_set = sets.remove(block_no).unwrap();
-        let mut cur_block = &mut cfg.blocks[*block_no];
+        let cur_block = &mut cfg.blocks[*block_no];
         ave.set_cur_block(*block_no);
         cst.set_cur_block(*block_no);
         let mut new_instructions: Vec<Instr> = Vec::new();

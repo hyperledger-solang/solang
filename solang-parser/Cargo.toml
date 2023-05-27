@@ -7,14 +7,14 @@ documentation = "https://solang.readthedocs.io/"
 license = "Apache-2.0"
 build = "build.rs"
 description = "Solang Solidity Parser"
-keywords = [ "solidity", "parser" ]
+keywords = ["solidity", "parser"]
 edition = "2021"
 
 [build-dependencies]
-lalrpop = { version = "0.19.12", default-features = false }
+lalrpop = { version = "0.20", default-features = false }
 
 [dependencies]
-lalrpop-util = "0.19.12"
+lalrpop-util = "0.20"
 phf = { version = "0.11", features = ["macros"] }
 unicode-xid = "0.2"
 itertools = "0.10"
