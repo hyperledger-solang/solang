@@ -6,7 +6,7 @@ contract foo {
 
     test_stru storage_struct;
 
-    function bar() public pure {
+    function bar() public view {
         test_stru storage tts = storage_struct;
         assembly {
             // The variables 'a' and 'b' contain zero

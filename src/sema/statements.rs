@@ -1769,7 +1769,7 @@ fn destructure_values(
                 ty: right_tys[i].clone(),
                 var_no: i,
             }
-            .cast(&loc, left_ty.deref_memory(), true, ns, diagnostics)?;
+            .cast(&loc, left_ty.deref_any(), true, ns, diagnostics)?;
         }
     }
     Ok(expr)
