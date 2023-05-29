@@ -5,4 +5,4 @@
             }
         }
 // ---- Expect: diagnostics ----
-// error: 4:24-25: unrecognised token '(', expected "!=", "%", "%=", "&", "&&", "&=", ")", "*", "**", "*=", "+", "++", "+=", ",", "-", "--", "-=", ".", "/", "/=", ":", ";", "<", "<<", "<<=", "<=", "=", "==", ">", ">=", ">>", ">>=", "?", "[", "]", "^", "^=", "case", "default", "leave", "switch", "|", "|=", "||", "}", identifier
+// error: 4:24-25: unrecognised token '(', expected "++", "--", ".", "[", "case", "default", "leave", "switch", identifier
