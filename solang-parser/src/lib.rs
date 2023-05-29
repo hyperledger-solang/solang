@@ -21,13 +21,10 @@ mod tests;
 
 #[allow(
     clippy::needless_lifetimes,
-    clippy::clone_on_copy,
     clippy::type_complexity,
-    clippy::too_many_arguments,
     clippy::ptr_arg,
     clippy::redundant_clone,
-    clippy::just_underscores_and_digits,
-    clippy::or_fun_call
+    clippy::just_underscores_and_digits
 )]
 mod solidity {
     include!(concat!(env!("OUT_DIR"), "/solidity.rs"));
@@ -94,7 +91,7 @@ fn parser_error_to_diagnostic(
             Loc::File(file_no, token.0, token.2),
             format!("extra token '{}' encountered", token.0),
         ),
-        ParseError::UnrecognizedEOF { expected, location } => Diagnostic::parser_error(
+        ParseError::UnrecognizedEof { expected, location } => Diagnostic::parser_error(
             Loc::File(file_no, *location, *location),
             format!("unexpected end of file, expecting {}", expected.join(", ")),
         ),

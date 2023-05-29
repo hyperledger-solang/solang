@@ -9,7 +9,7 @@ jobs:
   linux-x86-64:
     name: Linux x86-64
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-2
+    container: ghcr.io/hyperledger/solang-llvm:ci-3
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3.1.0
@@ -33,7 +33,7 @@ jobs:
     name: Linux arm64
     runs-on: linux-arm64
     if: ${{ github.repository_owner == 'hyperledger' }}
-    container: ghcr.io/hyperledger/solang-llvm:ci-2
+    container: ghcr.io/hyperledger/solang-llvm:ci-3
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3.1.0
