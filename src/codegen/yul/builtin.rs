@@ -154,7 +154,13 @@ pub(crate) fn process_builtin(
         }
 
         YulBuiltInFunction::Address => {
-            Expression::Builtin { loc: *loc, tys: vec![Type::Address(false)], kind: Builtin::GetAddress, args: vec![] }
+            let address_fetch = Expression::Builtin { loc: *loc, tys: vec![
+                Type::Ref(Box::new(Type::Address(false)))], kind: Builtin::GetAddress, args: vec![] };
+            Expression::Load {
+                loc: *loc,
+                ty: Type::Address(false),
+                expr: Box::new(address_fetch),
+            }
         }
 
         YulBuiltInFunction::Balance => {
@@ -163,7 +169,14 @@ pub(crate) fn process_builtin(
         }
 
         YulBuiltInFunction::SelfBalance => {
-            let addr = Expression::Builtin { loc: *loc, tys: vec![Type::Contract(contract_no)], kind: Builtin::GetAddress, args: vec![] };
+            let address_fetch = Expression::Builtin { loc: *loc, tys: vec![
+                Type::Ref(Box::new(Type::Contract(contract_no))),
+            ], kind: Builtin::GetAddress, args: vec![] };
+            let addr = Expression::Load {
+                loc: *loc,
+                ty: Type::Contract(contract_no),
+                expr: Box::new(address_fetch),
+            };
             Expression::Builtin { loc: *loc, tys: vec![Type::Value], kind: Builtin::Balance, args: vec![addr] }
         }
 

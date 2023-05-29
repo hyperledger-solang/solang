@@ -5,7 +5,7 @@ contract ExternalFunctions {
 
     // BEGIN-CHECK: ExternalFunctions::ExternalFunctions::function::to_storage
     function to_storage() public {
-        // CHECK: ty:function(int32) external returns (uint64) storage %temp.4 = function(int32) external returns (uint64)(function(int32) external returns (uint64)(struct { hex"42761137", (builtin GetAddress ()) }))
+        // CHECK: ty:function(int32) external returns (uint64) storage %temp.4 = function(int32) external returns (uint64)(function(int32) external returns (uint64)(struct { hex"42761137", (load (builtin GetAddress ())) }))
         // CHECK: store storage slot(uint256 0) ty:function(int32) external returns (uint64) = %temp.4
         func = this.foo;
     }
@@ -49,7 +49,7 @@ contract ExternalFunctions {
         // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 0 value:hex"f503f5fe"
         // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 4 value:(load (struct function(int32) external returns (uint64)(%temp.8) field 1))
         // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 36 value:(load (struct function(int32) external returns (uint64)(%temp.8) field 0))
-        // CHECK: _ = external call::regular address:(builtin GetAddress ()) payload:%abi_encoded.temp.9 value:uint128 0 gas:uint64 0 accounts: seeds:
+        // CHECK: _ = external call::regular address:(load (builtin GetAddress ())) payload:%abi_encoded.temp.9 value:uint128 0 gas:uint64 0 accounts: seeds: contract|function:(0, 3)
         this.bar(func);
     }
 }

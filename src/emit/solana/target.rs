@@ -11,7 +11,8 @@ use crate::emit::{ContractArgs, TargetRuntime, Variable};
 use crate::sema::ast::{self, Namespace};
 use inkwell::types::{BasicType, BasicTypeEnum, IntType};
 use inkwell::values::{
-    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+    ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
+    PointerValue,
 };
 use inkwell::{AddressSpace, IntPredicate};
 use num_traits::ToPrimitive;
@@ -1707,11 +1708,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     "key_pointer",
                 );
 
-                binary.builder.build_load(
-                    binary.address_type(ns),
-                    key_pointer.into_pointer_value(),
-                    "key",
-                )
+                key_pointer.as_basic_value_enum()
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::ProgramId,

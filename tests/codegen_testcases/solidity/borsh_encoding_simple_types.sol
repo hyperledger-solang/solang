@@ -22,7 +22,7 @@ contract EncodingTest {
 
         // CHECK: ty:bytes %abi_encoded.temp.55 = (alloc bytes len uint32 207)
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 0 value:%myAddr
-	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 32 value:(builtin GetAddress ())
+	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 32 value:(load (builtin GetAddress ()))
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 64 value:(arg #0)
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 65 value:uint8 1
 	    // CHECK: writebuffer buffer:%abi_encoded.temp.55 offset:uint32 66 value:uint16 2

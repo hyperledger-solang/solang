@@ -2170,6 +2170,21 @@ fn expr_builtin(
                 var_no: temp,
             }
         }
+        ast::Builtin::GetAddress => {
+            // In emit, GetAddress returns a pointer to the address
+            let codegen_expr = Expression::Builtin {
+                loc: *loc,
+                tys: vec![Type::Ref(Box::new(Type::Address(false)))],
+                kind: Builtin::GetAddress,
+                args: vec![],
+            };
+
+            Expression::Load {
+                loc: *loc,
+                ty: Type::Address(false),
+                expr: Box::new(codegen_expr),
+            }
+        }
         _ => {
             let arguments: Vec<Expression> = args
                 .iter()
