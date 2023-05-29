@@ -436,11 +436,7 @@ pub fn contract_function(
         })
         .to_owned();
 
-    let bases: Vec<String> = contract
-        .base
-        .iter()
-        .map(|base| format!("{}", base.name))
-        .collect();
+    let bases = ns.contract_bases(contract_no);
 
     let tags = resolve_tags(
         func.loc.file_no(),
@@ -448,7 +444,7 @@ pub fn contract_function(
         tags,
         Some(&params),
         Some(&returns),
-        Some(&bases),
+        Some(bases),
         ns,
     );
 
