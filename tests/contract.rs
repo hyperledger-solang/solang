@@ -164,7 +164,6 @@ fn check_diagnostics(path: &Path, ns: &Namespace) {
     }
 
     let mut found = String::new();
-
     let file = File::open(path).unwrap();
 
     for line in BufReader::new(file).lines() {
@@ -180,5 +179,5 @@ fn check_diagnostics(path: &Path, ns: &Namespace) {
 
     assert!(!found.is_empty());
 
-    assert_eq!(found, expected);
+    assert_eq!(found, expected, "source: {}", path.display());
 }
