@@ -244,7 +244,7 @@ pub(super) fn member_access(
                 };
             }
         }
-        Type::String | Type::DynamicBytes => {
+        Type::String | Type::DynamicBytes | Type::Slice(_) => {
             if id.name == "length" {
                 return Ok(Expression::Builtin {
                     loc: *loc,

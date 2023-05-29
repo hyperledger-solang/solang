@@ -21,7 +21,7 @@ use std::path::PathBuf;
 pub struct Prototype {
     pub builtin: Builtin,
     pub namespace: Option<&'static str>,
-    pub method: Option<Type>,
+    pub method: Vec<Type>,
     pub name: &'static str,
     pub params: Vec<Type>,
     pub ret: Vec<Type>,
@@ -37,7 +37,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Assert,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "assert",
             params: vec![Type::Bool],
             ret: vec![Type::Void],
@@ -48,7 +48,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Print,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "print",
             params: vec![Type::String],
             ret: vec![Type::Void],
@@ -59,7 +59,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Require,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "require",
             params: vec![Type::Bool],
             ret: vec![Type::Void],
@@ -70,7 +70,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Require,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "require",
             params: vec![Type::Bool, Type::String],
             ret: vec![Type::Void],
@@ -81,7 +81,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::SelfDestruct,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "selfdestruct",
             params: vec![Type::Address(true)],
             ret: vec![Type::Unreachable],
@@ -92,7 +92,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Keccak256,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "keccak256",
             params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(32)],
@@ -103,7 +103,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Ripemd160,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "ripemd160",
             params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(20)],
@@ -114,7 +114,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Sha256,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "sha256",
             params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(32)],
@@ -125,7 +125,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Blake2_128,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "blake2_128",
             params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(16)],
@@ -136,7 +136,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Blake2_256,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "blake2_256",
             params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(32)],
@@ -147,7 +147,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Gasleft,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "gasleft",
             params: vec![],
             ret: vec![Type::Uint(64)],
@@ -158,7 +158,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::BlockHash,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "blockhash",
             params: vec![Type::Uint(64)],
             ret: vec![Type::Bytes(32)],
@@ -169,7 +169,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::AbiDecode,
             namespace: Some("abi"),
-            method: None,
+            method: vec![],
             name: "decode",
             params: vec![Type::DynamicBytes],
             ret: vec![],
@@ -180,7 +180,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::AbiEncode,
             namespace: Some("abi"),
-            method: None,
+            method: vec![],
             name: "encode",
             params: vec![],
             ret: vec![],
@@ -192,7 +192,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::AbiEncodePacked,
             namespace: Some("abi"),
-            method: None,
+            method: vec![],
             name: "encodePacked",
             params: vec![],
             ret: vec![],
@@ -204,7 +204,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::AbiEncodeWithSelector,
             namespace: Some("abi"),
-            method: None,
+            method: vec![],
             name: "encodeWithSelector",
             params: vec![Type::FunctionSelector],
             ret: vec![],
@@ -216,7 +216,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::AbiEncodeWithSignature,
             namespace: Some("abi"),
-            method: None,
+            method: vec![],
             name: "encodeWithSignature",
             params: vec![Type::String],
             ret: vec![],
@@ -228,7 +228,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::AbiEncodeCall,
             namespace: Some("abi"),
-            method: None,
+            method: vec![],
             name: "encodeCall",
             params: vec![],
             ret: vec![],
@@ -240,7 +240,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Gasprice,
             namespace: Some("tx"),
-            method: None,
+            method: vec![],
             name: "gasprice",
             params: vec![Type::Uint(64)],
             ret: vec![Type::Value],
@@ -251,7 +251,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::MulMod,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "mulmod",
             params: vec![Type::Uint(256), Type::Uint(256), Type::Uint(256)],
             ret: vec![Type::Uint(256)],
@@ -263,7 +263,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::AddMod,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "addmod",
             params: vec![Type::Uint(256), Type::Uint(256), Type::Uint(256)],
             ret: vec![Type::Uint(256)],
@@ -275,7 +275,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::SignatureVerify,
             namespace: None,
-            method: None,
+            method: vec![],
             name: "signatureVerify",
             params: vec![Type::Address(false), Type::DynamicBytes, Type::DynamicBytes],
             ret: vec![Type::Bool],
@@ -286,7 +286,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::UserTypeWrap,
             namespace: None,
-            method: Some(Type::UserType(0)),
+            method: vec![Type::UserType(0)],
             name: "wrap",
             params: vec![],
             ret: vec![Type::UserType(0)],
@@ -297,7 +297,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::UserTypeUnwrap,
             namespace: None,
-            method: Some(Type::UserType(0)),
+            method: vec![Type::UserType(0)],
             name: "unwrap",
             params: vec![Type::UserType(0)],
             ret: vec![],
@@ -314,7 +314,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::BlockCoinbase,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "coinbase",
             params: vec![],
             ret: vec![Type::Address(true)],
@@ -325,7 +325,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::BlockDifficulty,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "difficulty",
             params: vec![],
             ret: vec![Type::Uint(256)],
@@ -336,7 +336,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::GasLimit,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "gaslimit",
             params: vec![],
             ret: vec![Type::Uint(64)],
@@ -347,7 +347,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::BlockNumber,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "number",
             params: vec![],
             ret: vec![Type::Uint(64)],
@@ -358,7 +358,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Slot,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "slot",
             params: vec![],
             ret: vec![Type::Uint(64)],
@@ -369,7 +369,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ProgramId,
             namespace: Some("tx"),
-            method: None,
+            method: vec![],
             name: "program_id",
             params: vec![],
             ret: vec![Type::Address(false)],
@@ -380,7 +380,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Timestamp,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "timestamp",
             params: vec![],
             ret: vec![Type::Uint(64)],
@@ -391,7 +391,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::MinimumBalance,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "minimum_balance",
             params: vec![],
             ret: vec![Type::Value],
@@ -402,7 +402,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ChainId,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "chainid",
             params: vec![],
             ret: vec![Type::Uint(256)],
@@ -413,7 +413,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::BaseFee,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "basefee",
             params: vec![],
             ret: vec![Type::Uint(256)],
@@ -424,7 +424,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::PrevRandao,
             namespace: Some("block"),
-            method: None,
+            method: vec![],
             name: "prevrandao",
             params: vec![],
             ret: vec![Type::Uint(256)],
@@ -435,7 +435,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Calldata,
             namespace: Some("msg"),
-            method: None,
+            method: vec![],
             name: "data",
             params: vec![],
             ret: vec![Type::DynamicBytes],
@@ -446,7 +446,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Sender,
             namespace: Some("msg"),
-            method: None,
+            method: vec![],
             name: "sender",
             params: vec![],
             ret: vec![Type::Address(true)],
@@ -457,7 +457,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Signature,
             namespace: Some("msg"),
-            method: None,
+            method: vec![],
             name: "sig",
             params: vec![],
             ret: vec![Type::FunctionSelector],
@@ -468,7 +468,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Value,
             namespace: Some("msg"),
-            method: None,
+            method: vec![],
             name: "value",
             params: vec![],
             ret: vec![Type::Value],
@@ -479,7 +479,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Gasprice,
             namespace: Some("tx"),
-            method: None,
+            method: vec![],
             name: "gasprice",
             params: vec![],
             ret: vec![Type::Value],
@@ -490,7 +490,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Origin,
             namespace: Some("tx"),
-            method: None,
+            method: vec![],
             name: "origin",
             params: vec![],
             ret: vec![Type::Address(false)],
@@ -501,7 +501,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::Accounts,
             namespace: Some("tx"),
-            method: None,
+            method: vec![],
             name: "accounts",
             params: vec![],
             ret: vec![Type::Array(
@@ -521,7 +521,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadInt8,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readInt8",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Int(8)],
@@ -532,7 +532,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadInt16LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readInt16LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Int(16)],
@@ -543,7 +543,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadInt32LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readInt32LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Int(32)],
@@ -554,7 +554,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadInt64LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readInt64LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Int(64)],
@@ -565,7 +565,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadInt128LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readInt128LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Int(128)],
@@ -576,7 +576,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadInt256LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readInt256LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Int(256)],
@@ -587,7 +587,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadUint8,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readUint8",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(8)],
@@ -598,7 +598,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadUint16LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readUint16LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(16)],
@@ -609,7 +609,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadUint32LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readUint32LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(32)],
@@ -620,7 +620,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadUint64LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readUint64LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(64)],
@@ -631,7 +631,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadUint128LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readUint128LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(128)],
@@ -642,7 +642,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadUint256LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readUint256LE",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Uint(256)],
@@ -653,7 +653,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::ReadAddress,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes, Type::Slice(Box::new(Type::Bytes(1)))],
             name: "readAddress",
             params: vec![Type::Uint(32)],
             ret: vec![Type::Address(false)],
@@ -664,7 +664,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteInt8,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeInt8",
             params: vec![Type::Int(8), Type::Uint(32)],
             ret: vec![],
@@ -675,7 +675,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteInt16LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeInt16LE",
             params: vec![Type::Int(16), Type::Uint(32)],
             ret: vec![],
@@ -686,7 +686,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteInt32LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeInt32LE",
             params: vec![Type::Int(32), Type::Uint(32)],
             ret: vec![],
@@ -697,7 +697,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteInt64LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeInt64LE",
             params: vec![Type::Int(64), Type::Uint(32)],
             ret: vec![],
@@ -708,7 +708,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteInt128LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeInt128LE",
             params: vec![Type::Int(128), Type::Uint(32)],
             ret: vec![],
@@ -719,7 +719,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteInt256LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeInt256LE",
             params: vec![Type::Int(256), Type::Uint(32)],
             ret: vec![],
@@ -730,7 +730,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteUint16LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeUint16LE",
             params: vec![Type::Uint(16), Type::Uint(32)],
             ret: vec![],
@@ -741,7 +741,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteUint32LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeUint32LE",
             params: vec![Type::Uint(32), Type::Uint(32)],
             ret: vec![],
@@ -752,7 +752,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteUint64LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeUint64LE",
             params: vec![Type::Uint(64), Type::Uint(32)],
             ret: vec![],
@@ -763,7 +763,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteUint128LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeUint128LE",
             params: vec![Type::Uint(128), Type::Uint(32)],
             ret: vec![],
@@ -774,7 +774,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteUint256LE,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeUint256LE",
             params: vec![Type::Uint(256), Type::Uint(32)],
             ret: vec![],
@@ -785,7 +785,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteAddress,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeAddress",
             params: vec![Type::Address(false), Type::Uint(32)],
             ret: vec![],
@@ -796,7 +796,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteString,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeString",
             params: vec![Type::String, Type::Uint(32)],
             ret: vec![],
@@ -807,7 +807,7 @@ static BUILTIN_METHODS: Lazy<[Prototype; 27]> = Lazy::new(|| {
         Prototype {
             builtin: Builtin::WriteBytes,
             namespace: None,
-            method: Some(Type::DynamicBytes),
+            method: vec![Type::DynamicBytes],
             name: "writeBytes",
             params: vec![Type::DynamicBytes, Type::Uint(32)],
             ret: vec![],
@@ -895,7 +895,7 @@ pub fn is_reserved(fname: &str) -> bool {
     }
 
     let is_builtin_function = BUILTIN_FUNCTIONS.iter().any(|p| {
-        (p.name == fname && p.namespace.is_none() && p.method.is_none())
+        (p.name == fname && p.namespace.is_none() && p.method.is_empty())
             || (p.namespace == Some(fname))
     });
 
@@ -904,7 +904,7 @@ pub fn is_reserved(fname: &str) -> bool {
     }
 
     BUILTIN_VARIABLE.iter().any(|p| {
-        (p.name == fname && p.namespace.is_none() && p.method.is_none())
+        (p.name == fname && p.namespace.is_none() && p.method.is_empty())
             || (p.namespace == Some(fname))
     })
 }
@@ -922,7 +922,7 @@ pub(super) fn resolve_call(
 ) -> Result<Expression, ()> {
     let funcs = BUILTIN_FUNCTIONS
         .iter()
-        .filter(|p| p.name == id && p.namespace == namespace && p.method.is_none())
+        .filter(|p| p.name == id && p.namespace == namespace && p.method.is_empty())
         .collect::<Vec<&Prototype>>();
     let mut errors: Diagnostics = Diagnostics::default();
 
@@ -1352,7 +1352,7 @@ pub(super) fn resolve_method_call(
     let expr_ty = expr.ty();
     let funcs: Vec<_> = BUILTIN_METHODS
         .iter()
-        .filter(|func| func.name == id.name && func.method.as_ref() == Some(&expr_ty))
+        .filter(|func| func.name == id.name && func.method.contains(&expr_ty))
         .collect();
     let mut errors = Diagnostics::default();
 

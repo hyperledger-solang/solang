@@ -1357,6 +1357,7 @@ impl Type {
             ))),
             Type::Array(ty, dim) if dim.len() == 1 => Type::Ref(ty.clone()),
             Type::Bytes(_) => Type::Bytes(1),
+            Type::Slice(ty) => Type::Ref(Box::new(*ty.clone())),
             _ => panic!("deref on non-array"),
         }
     }
@@ -1480,6 +1481,7 @@ impl Type {
                 .sum::<BigInt>(),
             Type::String
             | Type::DynamicBytes
+            | Type::Slice(_)
             | Type::InternalFunction { .. }
             | Type::Ref(_)
             | Type::StorageRef(..) => BigInt::from(ns.target.ptr_size() / 8),

@@ -91,12 +91,12 @@ fn data() {
                 revert("account not found");
             }
 
-            function test2() public payable returns (uint32) {
+            function test2() public payable returns (uint32, uint32) {
                 for (uint32 i = 0; i < tx.accounts.length; i++) {
                     AccountInfo ai = tx.accounts[i];
 
                     if (ai.key == address(this)) {
-                        return ai.data.readUint32LE(1);
+                        return (ai.data.readUint32LE(1), ai.data.length);
                     }
                 }
 
@@ -139,9 +139,15 @@ fn data() {
 
     assert_eq!(
         returns,
-        BorshToken::Uint {
-            width: 32,
-            value: BigInt::from(val),
-        }
+        BorshToken::Tuple(vec![
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(val),
+            },
+            BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(4096),
+            }
+        ]),
     );
 }

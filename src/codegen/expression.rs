@@ -659,12 +659,37 @@ pub fn expression(
             ty,
             expr: var,
             field: member,
-        } => Expression::StructMember {
-            loc: *loc,
-            ty: ty.clone(),
-            expr: Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
-            member: *member,
-        },
+        } => {
+            let readonly = if let Type::Struct(struct_type) = var.ty().deref_memory() {
+                let definition = struct_type.definition(ns);
+                definition.fields[*member].readonly
+            } else {
+                false
+            };
+
+            let member_ty = if readonly {
+                Type::Ref(Box::new(ty.clone()))
+            } else {
+                ty.clone()
+            };
+
+            let member_ptr = Expression::StructMember {
+                loc: *loc,
+                ty: member_ty,
+                expr: Box::new(expression(var, cfg, contract_no, func, ns, vartab, opt)),
+                member: *member,
+            };
+
+            if readonly {
+                Expression::Load {
+                    loc: *loc,
+                    ty: ty.clone(),
+                    expr: Box::new(member_ptr),
+                }
+            } else {
+                member_ptr
+            }
+        }
         ast::Expression::StringCompare { loc, left, right } => Expression::StringCompare {
             loc: *loc,
             left: string_location(left, cfg, contract_no, func, ns, vartab, opt),
@@ -3136,7 +3161,7 @@ fn array_subscript(
                 expression(&ast_big_int, cfg, contract_no, func, ns, vartab, opt)
             }
         },
-        Type::DynamicBytes => Expression::Builtin {
+        Type::DynamicBytes | Type::Slice(_) => Expression::Builtin {
             loc: *loc,
             tys: vec![Type::Uint(32)],
             kind: Builtin::ArrayLength,
@@ -3382,7 +3407,7 @@ fn array_subscript(
         }
     } else {
         match array_ty.deref_memory() {
-            Type::DynamicBytes | Type::Array(..) => Expression::Subscript {
+            Type::DynamicBytes | Type::Array(..) | Type::Slice(_) => Expression::Subscript {
                 loc: *loc,
                 ty: elem_ty.clone(),
                 array_ty: array_ty.clone(),

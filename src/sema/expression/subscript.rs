@@ -83,7 +83,7 @@ pub(super) fn array_subscript(
 
     let deref_ty = array_ty.deref_any();
     match deref_ty {
-        Type::Bytes(_) | Type::Array(..) | Type::DynamicBytes => {
+        Type::Bytes(_) | Type::Array(..) | Type::DynamicBytes | Type::Slice(_) => {
             if array_ty.is_contract_storage() {
                 let elem_ty = array_ty.storage_array_elem();
 

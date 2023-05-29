@@ -116,17 +116,24 @@ pub(super) fn solana_deploy(
         .into(),
     };
 
+    let loaded_item = Expression::Load {
+        loc: Loc::Codegen,
+        ty: Type::Slice(Box::new(Type::Bytes(1))),
+        expr: Expression::StructMember {
+            loc: Loc::Codegen,
+            ty: Type::Ref(Box::new(Type::Slice(Box::new(Type::Bytes(1))))),
+            expr: tx_account_0.into(),
+            member: 2,
+        }
+        .into(),
+    };
+
     // .data.length
     let account_length = Expression::Builtin {
         loc: Loc::Codegen,
         tys: vec![Type::Uint(32)],
         kind: Builtin::ArrayLength,
-        args: vec![Expression::StructMember {
-            loc: Loc::Codegen,
-            ty: Type::DynamicBytes,
-            expr: tx_account_0.into(),
-            member: 2,
-        }],
+        args: vec![loaded_item],
     };
 
     let account_data_var = vartab.temp_name("data_length", &Type::Uint(32));
