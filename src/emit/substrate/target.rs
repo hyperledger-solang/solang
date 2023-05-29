@@ -1502,6 +1502,9 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     "seal_address"
                 );
 
+                // The scratch buffer is a global buffer which gets overwritten by many syscalls.
+                // Whenever an address is needed in the Substrate target, we strongly recommend
+                // to `Expression::Load` the return of GetAddress to work with GetAddress.
                 scratch_buf.as_basic_value_enum()
             }
             codegen::Expression::Builtin {
