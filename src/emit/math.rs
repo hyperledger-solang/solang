@@ -8,6 +8,36 @@ use inkwell::values::{FunctionValue, IntValue, PointerValue};
 use inkwell::{AddressSpace, IntPredicate};
 use solang_parser::pt::Loc;
 
+// Calculate whether multiplication overflows
+fn calculate_mul_ovf(
+    bin : &Binary<'a>,
+    mul_ty: IntType<'a>,
+    mul_bits : u32,
+    bits : u32,
+    o: &inkwell::values::IntValue
+) -> inkwell::values::IntValue {
+    let res = bin.builder.build_load(mul_ty, o, "mul");
+    let ovf_any_type = if mul_bits != bits {
+        // If there are any set bits, then there is an overflow.
+        let check_ovf = bin.builder.build_right_shift(
+            res.into_int_value(),
+            mul_ty.const_int((bits).into(), false),
+            false,
+            "",
+        );
+        bin.builder.build_int_compare(
+            IntPredicate::NE,
+            check_ovf,
+            check_ovf.get_type().const_zero(),
+            "",
+        )
+    } else {
+        // If no size extension took place, there is no overflow in most significant N bits
+        bin.context.bool_type().const_zero()
+    };
+    ovf_any_type
+}
+
 /// Signed overflow detection is handled by the following steps:
 /// 1- Do an unsigned multiplication first, This step will check if the generated value will fit in N bits. (unsigned overflow)
 /// 2- Get the result, and negate it if needed.
@@ -86,25 +116,7 @@ fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
         "",
     );
 
-    let res = bin.builder.build_load(mul_ty, o, "mul");
-    let ovf_any_type = if mul_bits != bits {
-        // If there are any set bits, then there is an overflow.
-        let check_ovf = bin.builder.build_right_shift(
-            res.into_int_value(),
-            mul_ty.const_int((bits).into(), false),
-            false,
-            "",
-        );
-        bin.builder.build_int_compare(
-            IntPredicate::NE,
-            check_ovf,
-            check_ovf.get_type().const_zero(),
-            "",
-        )
-    } else {
-        // If no size extension took place, there is no overflow in most significant N bits
-        bin.context.bool_type().const_zero()
-    };
+    let ovf_any_type = calculate_mul_ovf(bin, mul_ty, mul_bits, bits, o);
 
     let negate_result = bin
         .builder
@@ -309,30 +321,11 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
                 "ovf",
             );
 
-            let res = bin.builder.build_load(mul_ty, o, "mul");
-
             let error_block = bin.context.append_basic_block(function, "error");
             let return_block = bin.context.append_basic_block(function, "return_block");
 
             // If the operands were extended to nearest 32 bit size, check the most significant N bits, where N equals bit width after extension minus original bit width.
-            let ovf_any_type = if mul_bits != bits {
-                // If there are any set bits, then there is an overflow.
-                let check_ovf = bin.builder.build_right_shift(
-                    res.into_int_value(),
-                    mul_ty.const_int((bits).into(), false),
-                    false,
-                    "",
-                );
-                bin.builder.build_int_compare(
-                    IntPredicate::NE,
-                    check_ovf,
-                    check_ovf.get_type().const_zero(),
-                    "",
-                )
-            } else {
-                // If no size extension took place, there is no overflow in most significant N bits
-                bin.context.bool_type().const_zero()
-            };
+            let ovf_any_type = calculate_mul_ovf(bin, mul_ty, mul_bits, bits, o);
 
             // Until this point, we only checked the extended bits for ovf. But mul ovf can take place any where from bit size to double bit size.
             // For example: If we have uint72, it will be extended to uint96. We only checked the most significant 24 bits for overflow, which can happen up to 72*2=144 bits.
