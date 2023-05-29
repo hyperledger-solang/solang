@@ -678,9 +678,7 @@ function _approve(
     //
 }/**//**//**//**//**//**//**///
 // ---- Expect: diagnostics ----
-// warning: 188:5-75: function can be declared 'view'
 // warning: 195:50-56: conversion truncates uint256 to uint128, as value is type uint128 on target evm
-// warning: 264:5-270:37: function can be declared 'view'
 // warning: 268:17-25: function parameter 'weiValue' is unused
 // warning: 269:23-35: function parameter 'errorMessage' is unused
 // warning: 276:70-78: conversion truncates uint256 to uint128, as value is type uint128 on target evm
