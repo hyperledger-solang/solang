@@ -3586,10 +3586,29 @@ pub(super) fn assert_failure(
 }
 
 /// Generate the binary code for a contract
+#[cfg(feature = "llvm")]
 fn code(loc: &Loc, contract_no: usize, ns: &Namespace, opt: &Options) -> Expression {
     let contract = &ns.contracts[contract_no];
 
     let code = contract.emit(ns, opt);
+
+    let size = Expression::NumberLiteral {
+        loc: *loc,
+        ty: Type::Uint(32),
+        value: code.len().into(),
+    };
+
+    Expression::AllocDynamicBytes {
+        loc: *loc,
+        ty: Type::DynamicBytes,
+        size: size.into(),
+        initializer: Some(code),
+    }
+}
+
+#[cfg(not(feature = "llvm"))]
+fn code(loc: &Loc, _contract_no: usize, _ns: &Namespace, _opt: &Options) -> Expression {
+    let code = b"code placeholder".to_vec();
 
     let size = Expression::NumberLiteral {
         loc: *loc,

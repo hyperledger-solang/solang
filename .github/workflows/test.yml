@@ -34,6 +34,9 @@ jobs:
       - name: Run cargo clippy
         if: always()
         run: cargo clippy --workspace --tests --bins -- -D warnings
+      - name: Test without llvm feature
+        if: always()
+        run: cargo clippy --workspace --no-default-features --lib -- -D warnings
       - name: Run cargo doc
         if: always()
         run: cargo doc --workspace --bins
