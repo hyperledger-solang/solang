@@ -454,7 +454,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .chain_extension(Default::default()) // Does not exist in Solidity
         .max_event_topics(4)
         .account_id(TypeSpec::new(
-            resolve_ast(&ast::Type::Address(false).into(), ns, &mut registry).into(),
+            resolve_ast(&ast::Type::Address(false), ns, &mut registry).into(),
             path!("AccountId"),
         ))
         .balance(TypeSpec::new(
