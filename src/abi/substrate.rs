@@ -5,8 +5,8 @@ use contract_metadata::{
 };
 use ink_metadata::{
     layout::{FieldLayout, Layout, LayoutKey, LeafLayout, RootLayout, StructLayout},
-    ConstructorSpec, ContractSpec, EventParamSpec, EventSpec, InkProject, MessageParamSpec,
-    MessageSpec, ReturnTypeSpec, TypeSpec,
+    ConstructorSpec, ContractSpec, EnvironmentSpec, EventParamSpec, EventSpec, InkProject,
+    MessageParamSpec, MessageSpec, ReturnTypeSpec, TypeSpec,
 };
 
 use serde_json::Value;
@@ -450,11 +450,49 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         })
         .collect::<Vec<EventSpec<PortableForm>>>();
 
+    let environment: EnvironmentSpec<PortableForm> = EnvironmentSpec::new()
+        .chain_extension(Default::default()) // Does not exist in Solidity
+        .max_event_topics(4)
+        .account_id(TypeSpec::new(
+            resolve_ast(&ast::Type::Address(false).into(), ns, &mut registry).into(),
+            path!("AccountId"),
+        ))
+        .balance(TypeSpec::new(
+            primitive_to_ty(&ast::Type::Uint(128), &mut registry).into(),
+            path!("Balance"),
+        ))
+        .block_number(TypeSpec::new(
+            primitive_to_ty(&ast::Type::Uint(64), &mut registry).into(),
+            path!("BlockNumber"),
+        ))
+        .hash(TypeSpec::new(
+            resolve_ast(
+                &ast::Type::UserType(
+                    ns.user_types
+                        .iter()
+                        .enumerate()
+                        .find(|(_, t)| t.name.as_str() == "Hash")
+                        .expect("this is a compiler builtin; qed")
+                        .0,
+                ),
+                ns,
+                &mut registry,
+            )
+            .into(),
+            path!("Hash"),
+        ))
+        .timestamp(TypeSpec::new(
+            primitive_to_ty(&ast::Type::Uint(64), &mut registry).into(),
+            path!("Timestamp"),
+        ))
+        .done();
+
     let spec = ContractSpec::new()
         .constructors(constructors)
         .messages(messages)
         .events(events)
         .docs(vec![render(&ns.contracts[contract_no].tags)])
+        .environment(environment)
         .done();
 
     InkProject::new_portable(storage, spec, registry.finish())
