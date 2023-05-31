@@ -10,6 +10,27 @@ contribute.
 * We suggest to refer to `Microsoft bias free writing guidelines <https://docs.microsoft.com/en-us/style-guide/bias-free-communication>`_
   and `Google inclusive doc writing guide <https://developers.google.com/style/inclusive-documentation>`_ as starting points.
 
+How to report issues
+--------------------
+
+Please report issues to
+`github issues <https://github.com/hyperledger/solang/issues>`_.
+
+How to contribute code
+----------------------
+
+Code contributions are submitted via 
+`pull requests <https://github.com/hyperledger/solang/compare>`_.
+
+Please fork this repository and make desired changes inside a dedicated branch on your fork.
+Prior to opening a pull request for your branch, make sure that the code in your branch
+
+* does compile without any warnings (run ``cargo build --workspace``)
+* does not produce any clippy lints (run ``cargo clippy --workspace``)
+* does pass all unit tests (run ``cargo test --workspace``)
+* has no merge conflicts with the ``main`` branch
+* is correctly formatted (run ``cargo fmt --all`` if your IDE does not do that automatically)
+
 Target Specific
 ---------------
 
@@ -17,12 +38,6 @@ Solang supports Substrate and Solana. These targets need testing
 via integration tests. New targets like
 `Fabric <https://github.com/hyperledger/fabric-chaincode-wasm>`_ need to be
 added, and tests added.
-
-How to report issues
---------------------
-
-Please report issues to
-`github issues <https://github.com/hyperledger/solang/issues>`_.
 
 Debugging issues with LLVM
 --------------------------
