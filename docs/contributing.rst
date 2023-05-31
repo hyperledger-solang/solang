@@ -28,6 +28,7 @@ Prior to opening a pull request for your branch, make sure that the code in your
 - does not produce any clippy lints (run ``cargo clippy --workspace``)
 - does pass all unit tests (run ``cargo test --workspace``)
 - has no merge conflicts with the ``main`` branch
+- is correctly formatted (run ``cargo fmt --all`` if your IDE does not do that automatically)
 
 Target Specific
 ---------------
