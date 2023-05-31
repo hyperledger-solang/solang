@@ -1,0 +1,5 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./integration/subxt-tests/Cargo.toml"
+    ]
+}
