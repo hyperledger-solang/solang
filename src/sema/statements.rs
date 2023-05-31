@@ -752,7 +752,7 @@ fn statement(
 
                         Ok(true)
                     } else {
-                        ns.diagnostics.push(Diagnostic::error(
+                        ns.diagnostics.push(Diagnostic::warning(
                             *loc,
                             "argument to 'delete' should be storage reference".to_string(),
                         ));

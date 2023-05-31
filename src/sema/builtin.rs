@@ -292,7 +292,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             ret: vec![Type::UserType(0)],
             target: vec![],
             doc: "wrap type into user defined type",
-            constant: false,
+            constant: true,
         },
         Prototype {
             builtin: Builtin::UserTypeUnwrap,
@@ -303,7 +303,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             ret: vec![],
             target: vec![],
             doc: "unwrap user defined type",
-            constant: false,
+            constant: true,
         },
     ]
 });

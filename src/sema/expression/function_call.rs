@@ -250,6 +250,14 @@ pub fn function_call_pos_args(
     let mut name_matches = 0;
     let mut errors = Diagnostics::default();
 
+    if context.constant {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot call function in constant expression".to_string(),
+        ));
+        return Err(());
+    }
+
     // Try to resolve as a function call
     for function_no in &function_nos {
         let func = &ns.functions[*function_no];
@@ -1387,6 +1395,14 @@ pub(super) fn method_call_pos_args(
         return Ok(resolved_call);
     }
 
+    if context.constant {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot call function in constant expression".to_string(),
+        ));
+        return Err(());
+    }
+
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
         path.identifiers.push(func.clone());
 
@@ -2339,29 +2355,19 @@ pub fn function_call_expr(
     let (ty, call_args, call_args_loc) = collect_call_args(ty, diagnostics)?;
 
     match ty.remove_parenthesis() {
-        pt::Expression::MemberAccess(_, member, func) => {
-            if context.constant {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot call function in constant expression".to_string(),
-                ));
-                return Err(());
-            }
-
-            method_call_pos_args(
-                loc,
-                member,
-                func,
-                args,
-                &call_args,
-                call_args_loc,
-                context,
-                ns,
-                symtable,
-                diagnostics,
-                resolve_to,
-            )
-        }
+        pt::Expression::MemberAccess(_, member, func) => method_call_pos_args(
+            loc,
+            member,
+            func,
+            args,
+            &call_args,
+            call_args_loc,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+            resolve_to,
+        ),
         pt::Expression::Variable(id) => {
             // is it a builtin
             if builtin::is_builtin_call(None, &id.name, ns) {
