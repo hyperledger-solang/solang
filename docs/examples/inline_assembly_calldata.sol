@@ -6,7 +6,7 @@ contract foo {
 
     test_stru storage_struct;
 
-    function bar(int256[] calldata vl) public pure {
+    function bar(int256[] calldata vl) public view {
         test_stru storage tts = storage_struct;
         assembly {
             // 'a' contains vl memory address

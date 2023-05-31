@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sema::ast::{Builtin, CallArgs, Diagnostic, EventDecl, Expression, Namespace};
+use crate::sema::ast::{
+    Builtin, CallArgs, Diagnostic, EventDecl, Expression, Namespace, RetrieveType,
+};
 use crate::sema::symtable::{Symtable, VariableUsage};
 use crate::sema::{ast, symtable};
 use solang_parser::pt::{ContractTy, Loc};
@@ -27,7 +29,11 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
         }
 
         Expression::Subscript { array, index, .. } => {
-            assigned_variable(ns, array, symtable);
+            if array.ty().is_contract_storage() {
+                subscript_variable(ns, array, symtable);
+            } else {
+                assigned_variable(ns, array, symtable);
+            }
             used_variable(ns, index, symtable);
         }
 
@@ -40,6 +46,49 @@ pub fn assigned_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Sy
         }
 
         _ => {}
+    }
+}
+
+// We have two cases here
+//  contract c {
+//      int[2] case1;
+//
+//      function f(int[2] storage case2) {
+//          case1[0] = 1;
+//          case2[0] = 1;
+//      }
+//  }
+//  The subscript for case1 is an assignment
+//  The subscript for case2 is a read
+fn subscript_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtable) {
+    match &exp {
+        Expression::StorageVariable {
+            contract_no,
+            var_no,
+            ..
+        } => {
+            ns.contracts[*contract_no].variables[*var_no].assigned = true;
+        }
+
+        Expression::Variable { var_no, .. } => {
+            let var = symtable.vars.get_mut(var_no).unwrap();
+            var.read = true;
+        }
+
+        Expression::StructMember { expr, .. } => {
+            subscript_variable(ns, expr, symtable);
+        }
+
+        Expression::Subscript { array, index, .. } => {
+            subscript_variable(ns, array, symtable);
+            subscript_variable(ns, index, symtable);
+        }
+
+        Expression::InternalFunctionCall { .. } | Expression::ExternalFunctionCall { .. } => {
+            check_function_call(ns, exp, symtable);
+        }
+
+        _ => (),
     }
 }
 
