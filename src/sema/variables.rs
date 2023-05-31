@@ -364,15 +364,7 @@ pub fn variable_decl<'a>(
         None
     };
 
-    let bases = if let Some(contract) = contract {
-        contract
-            .base
-            .iter()
-            .map(|base| format!("{}", base.name))
-            .collect()
-    } else {
-        Vec::new()
-    };
+    let bases = contract_no.map(|contract_no| ns.contract_bases(contract_no));
 
     let tags = resolve_tags(
         def.name.as_ref().unwrap().loc.file_no(),
@@ -384,7 +376,7 @@ pub fn variable_decl<'a>(
         tags,
         None,
         None,
-        Some(&bases),
+        bases,
         ns,
     );
 

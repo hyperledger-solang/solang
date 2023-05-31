@@ -11,7 +11,7 @@ pub fn resolve_tags(
     tags: &[DocComment],
     params: Option<&[Parameter]>,
     returns: Option<&[Parameter]>,
-    bases: Option<&[String]>,
+    bases: Option<Vec<usize>>,
     ns: &mut Namespace,
 ) -> Vec<Tag> {
     let mut res: Vec<Tag> = Vec::new();
@@ -147,7 +147,12 @@ pub fn resolve_tags(
                         tag_loc,
                         "missing contract for tag '@inheritdoc'".to_string(),
                     ));
-                } else if bases.unwrap().iter().any(|s| &c.value == s) {
+                } else if bases
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .any(|contract_no| c.value == ns.contracts[*contract_no].name)
+                {
                     res.push(Tag {
                         loc,
                         tag: String::from("inheritdoc"),
