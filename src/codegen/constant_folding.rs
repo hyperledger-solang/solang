@@ -197,6 +197,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     seeds,
                     loc,
                     accounts,
+                    constructor_no,
                 } => {
                     let encoded_args = expression(encoded_args, Some(&vars), cfg, ns).0;
                     let value = value
@@ -220,6 +221,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         success: *success,
                         res: *res,
                         contract_no: *contract_no,
+                        constructor_no: *constructor_no,
                         encoded_args,
                         value,
                         gas,

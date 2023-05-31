@@ -88,6 +88,7 @@ pub(super) fn call_constructor(
             success,
             res: address_res,
             contract_no,
+            constructor_no: *constructor_no,
             encoded_args,
             value,
             gas,

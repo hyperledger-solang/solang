@@ -423,6 +423,7 @@ fn string() {
         success: None,
         res: 0,
         contract_no: 0,
+        constructor_no: None,
         encoded_args: concat.clone(),
         value: Some(compare.clone()),
         gas: concat2.clone(),

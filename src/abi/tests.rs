@@ -1545,7 +1545,7 @@ fn data_account_signer() {
             }),
             IdlAccountItem::IdlAccount(IdlAccount {
                 name: "wallet".to_string(),
-                is_mut: false,
+                is_mut: true,
                 is_signer: true,
                 is_optional: Some(false),
                 docs: None,
@@ -1596,7 +1596,7 @@ fn data_account_signer() {
             }),
             IdlAccountItem::IdlAccount(IdlAccount {
                 name: "wallet".to_string(),
-                is_mut: false,
+                is_mut: true,
                 is_signer: true,
                 is_optional: Some(false),
                 docs: None,
@@ -1824,8 +1824,8 @@ fn system_account_for_payer_annotation() {
                 relations: vec![],
             }),
             IdlAccountItem::IdlAccount(IdlAccount {
-                name: "wallet".to_string(),
-                is_mut: false,
+                name: "addr_".to_string(),
+                is_mut: true,
                 is_signer: true,
                 is_optional: Some(false),
                 docs: None,
@@ -2184,7 +2184,7 @@ fn multiple_contracts() {
 contract creator {
     Child public c;
 
-    function create_child(address child, address payer) public returns (uint64) {
+    function create_child(address child, address payer) external returns (uint64) {
         print("Going to create child");
         c = new Child{address: child}(payer);
 
@@ -2228,6 +2228,15 @@ contract Child {
                 relations: vec![],
             }),
             IdlAccountItem::IdlAccount(IdlAccount {
+                name: "payer".to_string(),
+                is_mut: true,
+                is_signer: true,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
                 name: "systemProgram".to_string(),
                 is_mut: false,
                 is_signer: false,
@@ -2240,6 +2249,83 @@ contract Child {
                 name: "clock".to_string(),
                 is_mut: false,
                 is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![]
+            })
+        ]
+    );
+}
+
+#[test]
+fn constructor_double_payer() {
+    let src = r#"
+    import 'solana';
+
+@program_id("SoLDxXQ9GMoa15i4NavZc61XGkas2aom4aNiWT6KUER")
+contract Builder {
+    BeingBuilt other;
+
+    @payer(payer_account)
+    constructor(address addr) {
+        other = new BeingBuilt{address: addr}("abc");
+    }
+}
+
+
+@program_id("SoLGijpEqEeXLEqa9ruh7a6Lu4wogd6rM8FNoR7e3wY")
+contract BeingBuilt {
+    @seed(my_seed)
+    @space(1024)
+    @payer(other_account)
+    constructor(bytes my_seed) {}
+
+    function say_this(string text) public pure {
+        print(text);
+    }
+}
+    "#;
+
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl = generate_anchor_idl(0, &ns);
+
+    assert_eq!(idl.instructions[0].name, "new");
+    assert_eq!(
+        idl.instructions[0].accounts,
+        vec![
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "dataAccount".to_string(),
+                is_mut: true,
+                is_signer: true,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "payer_account".to_string(),
+                is_mut: true,
+                is_signer: true,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "systemProgram".to_string(),
+                is_mut: false,
+                is_signer: false,
+                is_optional: Some(false),
+                docs: None,
+                pda: None,
+                relations: vec![],
+            }),
+            IdlAccountItem::IdlAccount(IdlAccount {
+                name: "other_account".to_string(),
+                is_mut: true,
+                is_signer: true,
                 is_optional: Some(false),
                 docs: None,
                 pda: None,

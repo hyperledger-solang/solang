@@ -9,7 +9,7 @@ contract hatchling {
 }
 
 contract adult {
-    function test(address addr) public {
+    function test(address addr) external {
         hatchling h = new hatchling{address: addr}("luna");
     }
 }

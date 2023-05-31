@@ -4,7 +4,6 @@ import 'solana';
 contract RuntimeErrors {
     bytes b = hex"0000_00fa";
     uint256[] arr;
-    Creature public c;
 
     constructor() {}
 
@@ -64,12 +63,6 @@ contract RuntimeErrors {
     // external call failed
     function call_ext(Creature e) public {
         e.say_my_name();
-    }
-
-    // contract creation failed (contract was deplyed with no value)
-    function create_child(address child_contract_addr, address payer) public {
-        c = new Creature{address: child_contract_addr}(payer);
-        c.say_my_name();
     }
 
     function i_will_revert() public {

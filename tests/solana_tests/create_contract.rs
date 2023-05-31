@@ -11,7 +11,7 @@ fn simple_create_contract_no_seed() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other(address foo, address payer) public returns (bar1) {
+            function test_other(address foo, address payer) external returns (bar1) {
                 bar1 x = new bar1{address: foo}("yo from bar0", payer);
 
                 return x;
@@ -59,6 +59,8 @@ fn simple_create_contract_no_seed() {
         },
     );
 
+    vm.account_data.insert([0; 32], AccountState::default());
+
     let bar1 = vm
         .function(
             "test_other",
@@ -85,7 +87,7 @@ fn simple_create_contract() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other(address foo, address payer) public returns (bar1) {
+            function test_other(address foo, address payer) external returns (bar1) {
                 bar1 x = new bar1{address: foo}("yo from bar0", payer);
 
                 return x;
@@ -121,6 +123,8 @@ fn simple_create_contract() {
 
     let seed = vm.create_pda(&program_id);
     let payer = account_new();
+
+    vm.account_data.insert([0; 32], AccountState::default());
 
     let bar1 = vm
         .function(
@@ -212,12 +216,13 @@ fn create_contract_with_payer() {
 }
 
 #[test]
+#[should_panic(expected = "external call failed")]
 // 64424509440 = 15 << 32 (ERROR_NEW_ACCOUNT_NEEDED)
 fn missing_contract() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other(address foo) public returns (bar1) {
+            function test_other(address foo) external returns (bar1) {
                 bar1 x = new bar1{address: foo}("yo from bar0");
 
                 return x;
@@ -247,8 +252,9 @@ fn missing_contract() {
     let missing = account_new();
 
     vm.logs.clear();
+    vm.account_data.insert(missing, AccountState::default());
+    // There is no payer account, so the external call fails.
     let _ = vm.function_must_fail("test_other", &[BorshToken::Address(missing)]);
-    assert_eq!(vm.logs, "new account needed");
 }
 
 #[test]
@@ -256,7 +262,7 @@ fn two_contracts() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other(address a, address b) public returns (bar1) {
+            function test_other(address a, address b) external returns (bar1) {
                 bar1 x = new bar1{address: a}("yo from bar0");
                 bar1 y = new bar1{address: b}("hi from bar0");
 
@@ -266,7 +272,7 @@ fn two_contracts() {
 
         @program_id("CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT")
         contract bar1 {
-            @payer(address"3wvhRNAJSDCk5Mub8NEcShszRrHHVDHsuSUdAcL2aaMV")
+            @payer(payer_account)
             constructor(string v) {
                 print("bar1 says: " + v);
             }
@@ -286,6 +292,7 @@ fn two_contracts() {
     let seed1 = vm.create_pda(&program_id);
     let seed2 = vm.create_pda(&program_id);
 
+    vm.account_data.insert([0; 32], AccountState::default());
     let _bar1 = vm.function(
         "test_other",
         &[BorshToken::Address(seed1.0), BorshToken::Address(seed2.0)],
@@ -445,7 +452,7 @@ fn account_with_seed_bump_literals() {
             @space(2 << 8 + 4)
             @seed("meh")
             @bump(33) // 33 = ascii !
-            @payer(address"vS5Tf8mnHGbUCMLQWrnvsFvwHLfA5p3yQM3ozxPckn8")
+            @payer(my_account)
             constructor() {}
 
             function hello() public returns (bool) {
@@ -482,9 +489,9 @@ fn create_child() {
         contract creator {
             Child public c;
 
-            function create_child(address child, address payer) public {
+            function create_child(address child) external {
                 print("Going to create child");
-                c = new Child{address: child}(payer);
+                c = new Child{address: child}();
 
                 c.say_hello();
             }
@@ -494,7 +501,7 @@ fn create_child() {
         contract Child {
             @payer(payer)
             @space(511 + 7)
-            constructor(address payer) {
+            constructor() {
                 print("In child constructor");
             }
 
@@ -512,11 +519,12 @@ fn create_child() {
     let program_id = vm.stack[0].program;
 
     let seed = vm.create_pda(&program_id);
+    vm.account_data.insert(payer, AccountState::default());
+    vm.account_data.insert(seed.0, AccountState::default());
 
-    vm.function(
-        "create_child",
-        &[BorshToken::Address(seed.0), BorshToken::Address(payer)],
-    );
+    vm.account_data.insert([0; 32], AccountState::default());
+
+    vm.function("create_child", &[BorshToken::Address(seed.0)]);
 
     assert_eq!(
         vm.logs,
@@ -570,23 +578,9 @@ contract Child {
 
     let seed = vm.create_pda(&program_id);
 
-    vm.account_data.insert(
-        seed.0,
-        AccountState {
-            data: vec![],
-            owner: None,
-            lamports: 0,
-        },
-    );
+    vm.account_data.insert(seed.0, AccountState::default());
 
-    vm.account_data.insert(
-        payer,
-        AccountState {
-            data: vec![],
-            owner: None,
-            lamports: 0,
-        },
-    );
+    vm.account_data.insert(payer, AccountState::default());
 
     let mut metas = vm.default_metas();
     metas.push(AccountMeta {

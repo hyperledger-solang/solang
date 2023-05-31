@@ -66,6 +66,7 @@ pub fn account_new() -> Account {
     a
 }
 
+#[derive(Default)]
 struct AccountState {
     data: Vec<u8>,
     owner: Option<Account>,
@@ -1003,10 +1004,10 @@ impl Pubkey {
 pub struct AccountMeta {
     /// An account's public key
     pub pubkey: Pubkey,
-    /// True if an Instruction requires a Transaction signature matching `pubkey`.
-    pub is_signer: bool,
     /// True if the `pubkey` can be loaded as a read-write account.
     pub is_writable: bool,
+    /// True if an Instruction requires a Transaction signature matching `pubkey`.
+    pub is_signer: bool,
 }
 
 fn translate(
@@ -1344,7 +1345,7 @@ fn sol_invoke_signed_c(
             vm.stack.insert(0, p);
 
             let res = vm.execute(&instruction.accounts, &instruction.data);
-            assert!(matches!(res, StableResult::Ok(0)));
+            assert!(matches!(res, StableResult::Ok(0)), "external call failed");
 
             let refs = context.refs.try_borrow_mut().unwrap();
 

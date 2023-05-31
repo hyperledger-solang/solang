@@ -2179,6 +2179,21 @@ pub(super) fn parse_call_args(
                     .to_string(),
             ));
             return Err(());
+        } else if res.accounts.is_none()
+            && !matches!(
+                ns.functions[context.function_no.unwrap()].visibility,
+                Visibility::External(_)
+            )
+            && !ns.functions[context.function_no.unwrap()].is_constructor()
+        {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "accounts are required for calling a contract. You can either provide the \
+                accounts with the {accounts: ...} call argument or change this function's \
+                visibility to external"
+                    .to_string(),
+            ));
+            return Err(());
         }
     }
 

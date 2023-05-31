@@ -102,6 +102,10 @@ by using the call argument ``address``:
 .. include:: ../examples/solana/contract_address.sol
   :code: solidity
 
+When the contract's data account is passed through the ``address`` call argument, the compiler will automatically create
+the ``AccountMeta`` array the constructor call needs. Due to the impossibility to track account ordering in
+private, internal and public functions, such a call argument is only allowed in external functions.
+
 Alternatively, the data account to be initialized can be provided using the ``accounts`` call argument. In this case,
 one needs to instantiate a fixed length array of type ``AccountMeta`` to pass to the call. The array must contain all
 the accounts the transaction is going to need, in addition to the data account to be initialized.
