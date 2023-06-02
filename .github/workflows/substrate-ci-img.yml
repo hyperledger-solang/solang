@@ -1,7 +1,12 @@
 name: Build and push substrate ci image
-on: [workflow_dispatch]
+on:
+  push:
+    branches:
+      - custom-substrate-ci-image
+  pull_request:
+
 jobs:
-  build-push-ci-image:
+  build-push-substrate-ci-image:
     runs-on: solang-ubuntu-latest
     steps:
       - name: Checkout sources
