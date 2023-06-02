@@ -992,7 +992,7 @@ fn try_type_method(
             };
         }
 
-        Type::Array(..) | Type::DynamicBytes => {
+        Type::Array(..) | Type::DynamicBytes if var_ty.is_dynamic(ns) => {
             if func.name == "push" {
                 let elem_ty = var_ty.array_elem();
 
