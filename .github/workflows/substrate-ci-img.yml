@@ -14,4 +14,4 @@ jobs:
       - run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
           img_tag=$(git rev-parse --short "$GITHUB_SHA")
-          docker buildx build --provenance=false --platform linux/amd64 -t ghcr.io/${GITHUB_REPOSITORY}:substrate-ci-${img_tag} --push integration/substrate/ci-image
+          docker buildx build --provenance=false --platform linux/amd64 -t ghcr.io/hyperledger/solang-ci-substrate:${img_tag} --push integration/substrate/ci-image
