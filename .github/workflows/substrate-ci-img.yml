@@ -1,0 +1,12 @@
+name: Build and push substrate ci image
+on: [workflow_dispatch]
+jobs:
+  build-push-ci-image:
+    runs-on: solang-ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3.1.0
+      - run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+          img_tag=$(git rev-parse --short "$GITHUB_SHA")
+          docker buildx build --provenance=false --platform linux/amd64 -t ghcr.io/${GITHUB_REPOSITORY}/substrate-ci:img_tag --push integration/substrate/ci-image/Dockerfile
