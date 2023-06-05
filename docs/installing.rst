@@ -162,14 +162,14 @@ Building LLVM from source
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The LLVM project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which
-you may need to consult. First if all clone our LLVM repository:
+you may need to consult. First of all clone our LLVM repository:
 
 .. code-block:: bash
 
 	git clone --depth 1 --branch solana-rustc/15.0-2022-08-09 https://github.com/solana-labs/llvm-project
 	cd llvm-project
 
-Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have LLVM installed, and then run the build:
+Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with a directory where you would like to have LLVM installed, and then run the build:
 
 .. code-block:: bash
 
