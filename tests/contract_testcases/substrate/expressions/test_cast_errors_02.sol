@@ -6,4 +6,4 @@ contract test {
         }
 // ---- Expect: diagnostics ----
 // warning: 2:13-73: function can be declared 'pure'
-// warning: 2:35-38: function parameter 'foo' has never been read
+// warning: 2:35-38: function parameter 'foo' is unused

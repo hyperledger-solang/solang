@@ -15,4 +15,4 @@ contract TestContract {
 }
 
 // ---- Expect: diagnostics ----
-// warning: 12:39-47: function parameter 'needHash' has never been read
+// warning: 12:39-47: function parameter 'needHash' is unused

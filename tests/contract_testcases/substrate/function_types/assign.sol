@@ -6,5 +6,5 @@ contract test {
             }
         }
 // ---- Expect: diagnostics ----
-// warning: 2:30-34: function parameter 'arg1' has never been read
+// warning: 2:30-34: function parameter 'arg1' is unused
 // error: 5:42-43: function mutability not compatible in conversion from 'function(int32) internal' to 'function(int32) internal pure'

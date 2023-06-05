@@ -13,10 +13,10 @@ contract C is A {
 
 // ---- Expect: diagnostics ----
 // warning: 2:20-26: 'public': visibility for constructors is ignored
-// warning: 7:20-21: function parameter 'b' has never been read
+// warning: 7:20-21: function parameter 'b' is unused
 // warning: 7:23-29: 'public': visibility for constructors is ignored
-// warning: 8:23-24: function parameter 'b' has never been read
+// warning: 8:23-24: function parameter 'b' is unused
 // warning: 8:26-32: 'public': visibility for constructors is ignored
-// warning: 10:26-27: function parameter 'i' has never been read
-// warning: 11:25-26: function parameter 's' has never been read
+// warning: 10:26-27: function parameter 'i' is unused
+// warning: 11:25-26: function parameter 's' is unused
 // warning: 11:28-34: 'public': visibility for constructors is ignored

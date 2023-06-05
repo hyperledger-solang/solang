@@ -969,7 +969,7 @@ fn resolve_bodies(
             broken = true;
         } else if !ns.diagnostics.any_errors() {
             for variable in ns.functions[function_no].symtable.vars.values() {
-                if let Some(warning) = emit_warning_local_variable(variable) {
+                if let Some(warning) = emit_warning_local_variable(variable, ns) {
                     ns.diagnostics.push(warning);
                 }
             }

@@ -185,6 +185,23 @@ pub(crate) fn statement(
 
                     return;
                 }
+            } else if let ast::Expression::Builtin { args, .. } = expr {
+                // When array pop and push are top-level expressions, they can be removed
+                if should_remove_assignment(ns, expr, func, opt) {
+                    let mut params = SideEffectsCheckParameters {
+                        cfg,
+                        contract_no,
+                        func: Some(func),
+                        ns,
+                        vartab,
+                        opt,
+                    };
+                    for arg in args {
+                        arg.recurse(&mut params, process_side_effects_expressions);
+                    }
+
+                    return;
+                }
             }
 
             let _ = expression(expr, cfg, contract_no, Some(func), ns, vartab, opt);

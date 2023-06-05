@@ -14,7 +14,7 @@
             }
         }
 // ---- Expect: diagnostics ----
-// warning: 3:33-34: function parameter 'l' has never been read
+// warning: 3:33-34: function parameter 'l' is unused
 // warning: 8:13-18: storage variable 'x' has never been used
 // warning: 11:25-26: declaration of 'x' shadows state variable
 // 	note 8:13-18: previous declaration of state variable

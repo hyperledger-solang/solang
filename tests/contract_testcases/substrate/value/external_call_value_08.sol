@@ -13,5 +13,5 @@
             }
         }
 // ---- Expect: diagnostics ----
-// warning: 3:33-34: function parameter 'l' has never been read
+// warning: 3:33-34: function parameter 'l' is unused
 // error: 12:17-46: sending value to function 'test' which is not payable
