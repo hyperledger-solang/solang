@@ -6,7 +6,7 @@
   "scripts": {
     "test": "tsc; ts-mocha -t 20000 *.spec.ts",
     "build": "./build.sh",
-    "build-ink": "docker run --rm -v $(pwd)/ink/caller:/opt/contract ghcr.io/hyperledger/solang-substrate-ci:a1a354a cargo contract build --release --manifest-path /opt/contract/Cargo.toml"
+    "build-ink": "docker run --rm -v $(pwd)/ink/caller:/opt/contract ghcr.io/hyperledger/solang-substrate-ci:e41a9c0 cargo contract build --release --manifest-path /opt/contract/Cargo.toml"
   },
   "contributors": [
     {
