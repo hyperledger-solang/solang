@@ -16,5 +16,5 @@ contract MyTest {
 
 
 // ---- Expect: diagnostics ----
-// error: 5:11-15: method 'push' does not exist
-// error: 12:11-14: method 'pop' does not exist
+// error: 5:11-15: method push() is not available for fixed length arrays
+// error: 12:11-14: method pop() is not available for fixed length arrays
