@@ -34,6 +34,10 @@
     "@polkadot/api-contract": "^10.6",
     "@polkadot/keyring": "^12.1",
     "@polkadot/types": "^10.6",
-    "@polkadot/util-crypto": "^12.1"
+    "@polkadot/util-crypto": "^12.1",
+    "websnark": "git+https://github.com/tornadocash/websnark.git#4c0af6a8b65aabea3c09f377f63c44e7a58afa6d",
+    "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#869181cfaf7526fe8972073d31655493a04326d5",
+    "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
+    "fixed-merkle-tree": "^0.6.0"
   }
 }
