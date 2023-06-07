@@ -19,6 +19,19 @@ use inkwell::{AddressSpace, IntPredicate};
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
 
+macro_rules! create_gep_instruction {
+    ($binary:expr, $base_pointer:expr, $index:expr) => {
+        unsafe {
+            $binary.builder.build_gep(
+                $binary.context.i8_type().array_type(SCRATCH_SIZE),
+                $base_pointer.as_pointer_value(),
+                &[i32_zero!(), $index],
+                "data_offset",
+            )
+        }
+    };
+}
+
 impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn set_storage_extfunc(
         &self,
@@ -450,14 +463,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.position_at_end(retrieve_block);
 
-        let offset = unsafe {
-            binary.builder.build_gep(
-                binary.context.i8_type().array_type(SCRATCH_SIZE),
-                binary.scratch.unwrap().as_pointer_value(),
-                &[i32_zero!(), index],
-                "data_offset",
-            )
-        };
+        let offset = create_gep_instruction!(binary, binary.scratch.unwrap(), index);
 
         // set the result
         binary.builder.build_store(offset, val);
@@ -526,15 +532,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .into_int_value();
 
         // set the result
-        let offset = unsafe {
-            binary.builder.build_gep(
-                binary.context.i8_type().array_type(SCRATCH_SIZE),
-                binary.scratch.unwrap().as_pointer_value(),
-                &[i32_zero!(), length],
-                "data_offset",
-            )
-        };
-
+        let offset = create_gep_instruction!(binary, binary.scratch.unwrap(), length);
+        
         binary.builder.build_store(offset, val);
 
         // Set the new length
@@ -636,14 +635,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_int_sub(length, i32_const!(1), "new_length");
 
         let val = if load {
-            let offset = unsafe {
-                binary.builder.build_gep(
-                    binary.context.i8_type().array_type(SCRATCH_SIZE),
-                    binary.scratch.unwrap().as_pointer_value(),
-                    &[i32_zero!(), new_length],
-                    "data_offset",
-                )
-            };
+        let offset = create_gep_instruction!(binary, binary.scratch.unwrap(), new_length);
 
             Some(
                 binary
