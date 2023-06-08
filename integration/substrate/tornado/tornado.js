@@ -61,8 +61,8 @@ function parseNote(noteString) {
 }
 
 async function init() {
-    circuit = require(__dirname + '/build/circuits/withdraw.json');
-    proving_key = fs.readFileSync(__dirname + '/build/circuits/withdraw_proving_key.bin').buffer;
+    circuit = require(__dirname + '/tornado-cli/build/circuits/withdraw.json');
+    proving_key = fs.readFileSync(__dirname + '/tornado-cli/build/circuits/withdraw_proving_key.bin').buffer;
     groth16 = await buildGroth16();
 }
 
