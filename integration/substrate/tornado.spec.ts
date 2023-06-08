@@ -4,17 +4,26 @@ import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
 import { DecodedEvent } from '@polkadot/api-contract/types';
 import { KeyringPair } from '@polkadot/keyring/types';
-import { createNote, init, parseNote, } from './tornado/tornado'
+import { createNote, init, parseNote, toHex, withdraw, } from './tornado/tornado'
 
 const value = 1000000000000;
 const merkle_tree_height = 20;
+
+function addrToBigInt(uint8Array: Uint8Array): bigint {
+    let result = BigInt(0);
+    for (let i = 0; i < uint8Array.length; i++) {
+        result <<= BigInt(8); // Left shift by 8 bits
+        result += BigInt(uint8Array[i]); // Add the current byte
+    }
+    return result;
+}
 
 describe('Deploy tornado contracts and test them', () => {
     let conn: ApiPromise;
     let tornado: ContractPromise;
     let alice: KeyringPair;
     let dave: KeyringPair;
-    let deposits;
+    let deposits: { noteString: string; commitment: string; }[];
 
     before(async function () {
         alice = aliceKeypair();
@@ -50,8 +59,17 @@ describe('Deploy tornado contracts and test them', () => {
         await conn.disconnect();
     });
 
-    it('Withdraws the funds from alice', async function () {
+    it('Withdraws funds from alice', async function () {
         this.timeout(50000);
 
+        let proof = await withdraw(addrToBigInt(dave.addressRaw), deposits[0].noteString);
+        let parameters = [
+            proof.proof,
+            proof.args[0], // Merkle root
+            proof.args[1], // Nullifier hash
+            proof.args[2], // Recipient address
+        ];
+        let gasLimit = await weight(conn, tornado, "withdraw", parameters);
+        await transaction(tornado.tx.withdraw({ gasLimit }, ...parameters), alice);
     });
 });

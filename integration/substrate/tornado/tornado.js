@@ -22,7 +22,7 @@ const rbigint = nbytes => snarkjs.bigInt.leBuff2int(crypto.randomBytes(nbytes));
 const pedersenHash = data => circomlib.babyJub.unpackPoint(circomlib.pedersenHash.hash(data))[0];
 
 /** BigNumber to hex string of specified length */
-function toHex(number, length = 32) {
+export function toHex(number, length = 32) {
     const str = number instanceof Buffer ? number.toString('hex') : bigInt(number).toString(16)
     return '0x' + str.padStart(length * 2, '0')
 }
@@ -121,12 +121,13 @@ async function generateProof({ deposit, recipient, relayerAddress = 0, fee = 0, 
     const args = [
         toHex(input.root),
         toHex(input.nullifierHash),
-        toHex(input.recipient, 20),
+        toHex(input.recipient),
         toHex(input.relayer, 20),
         toHex(input.fee),
         toHex(input.refund),
     ]
 
+    console.log(args);
     return { proof: proofToLE(proof), args }
 }
 
