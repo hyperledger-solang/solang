@@ -11,17 +11,15 @@ const bigInt = snarkjs.bigInt
 const merkleTree = require('fixed-merkle-tree')
 const websnarkUtils = require('websnark/src/utils')
 
-let circuit, proving_key, groth16
-const netId = 43 // Doesn't really matter for this PoC
-const MERKLE_TREE_HEIGHT = 20 // Default used by tornado, should be plenty enough
+let circuit, proving_key, groth16, netId, MERKLE_TREE_HEIGHT
 
 const PRIME_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
 /** Generate random number of specified byte length */
-const rbigint = nbytes => snarkjs.bigInt.leBuff2int(crypto.randomBytes(nbytes))
+const rbigint = nbytes => snarkjs.bigInt.leBuff2int(crypto.randomBytes(nbytes));
 
 /** Compute pedersen hash */
-const pedersenHash = data => circomlib.babyJub.unpackPoint(circomlib.pedersenHash.hash(data))[0]
+const pedersenHash = data => circomlib.babyJub.unpackPoint(circomlib.pedersenHash.hash(data))[0];
 
 /** BigNumber to hex string of specified length */
 function toHex(number, length = 32) {
@@ -29,7 +27,8 @@ function toHex(number, length = 32) {
     return '0x' + str.padStart(length * 2, '0')
 }
 
-function proofToLittleEndian(proof) {
+// Wasm is little endian
+function proofToLE(proof) {
     const segments = proof.slice(2).match(/.{1,64}/g);
     const swapped = segments.map(s => swapEndianness(s))
     return '0x' + swapped.join('')
@@ -44,7 +43,7 @@ function swapEndianness(hexString) {
     return reversedHexString; // Parse the reversed string as a hexadecimal value
 }
 
-function parseNote(noteString) {
+export function parseNote(noteString) {
     const noteRegex = /tornado-(?<currency>\w+)-(?<amount>[\d.]+)-(?<netId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g
     const match = noteRegex.exec(noteString)
     if (!match) {
@@ -60,7 +59,9 @@ function parseNote(noteString) {
     return { currency: match.groups.currency, amount: match.groups.amount, netId, deposit }
 }
 
-async function init() {
+export async function init({ networkId = 43, merkle_tree_height = 20 }) {
+    netId = networkId;
+    MERKLE_TREE_HEIGHT = merkle_tree_height;
     circuit = require(__dirname + '/tornado-cli/build/circuits/withdraw.json');
     proving_key = fs.readFileSync(__dirname + '/tornado-cli/build/circuits/withdraw_proving_key.bin').buffer;
     groth16 = await buildGroth16();
@@ -68,33 +69,32 @@ async function init() {
 
 function createDeposit({ nullifier, secret }) {
     const deposit = { nullifier, secret }
-    deposit.preimage = Buffer.concat([deposit.nullifier.leInt2Buff(31), deposit.secret.leInt2Buff(31)])
-    deposit.commitment = pedersenHash(deposit.preimage)
-    deposit.commitmentHex = toHex(deposit.commitment)
-    deposit.nullifierHash = pedersenHash(deposit.nullifier.leInt2Buff(31))
-    deposit.nullifierHex = toHex(deposit.nullifierHash)
-    return deposit
+    deposit.preimage = Buffer.concat([deposit.nullifier.leInt2Buff(31), deposit.secret.leInt2Buff(31)]);
+    deposit.commitment = pedersenHash(deposit.preimage);
+    deposit.commitmentHex = toHex(deposit.commitment);
+    deposit.nullifierHash = pedersenHash(deposit.nullifier.leInt2Buff(31));
+    deposit.nullifierHex = toHex(deposit.nullifierHash);
+    return deposit;
 }
 
-function createNote({ currency, amount }) {
-    const deposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) })
-    const note = toHex(deposit.preimage, 62)
-    const noteString = `tornado-${currency}-${amount}-${netId}-${note}`
-    console.log(`Your note: ${noteString}`)
+export function createNote({ currency = 'ETH', amount = 1000000000000 }) {
+    const deposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) });
+    const note = toHex(deposit.preimage, 62);
+    const noteString = `tornado-${currency}-${amount}-${netId}-${note}`;
     console.log(`Your commitment: ${toHex(deposit.commitment, 32)}`);
-    return noteString
+    return { noteString, commitment: deposit.commitment };
 }
 
 // leaves is supposed a list of commitments sorted by their leafIndex (chronologically sorted)
 async function generateMerkleProof(deposit, leafIndex, leaves) {
-    console.log('generating merkle proof')
-    let tree = new merkleTree(MERKLE_TREE_HEIGHT, leaves)
-    const { pathElements, pathIndices } = tree.path(leafIndex)
+    console.log('generating merkle proof');
+    let tree = new merkleTree(MERKLE_TREE_HEIGHT, leaves);
+    const { pathElements, pathIndices } = tree.path(leafIndex);
     return { pathElements, pathIndices, root: tree.root() }
 }
 
 async function generateProof({ deposit, recipient, relayerAddress = 0, fee = 0, refund = 0 }) {
-    const { root, pathElements, pathIndices } = await generateMerkleProof(deposit, 0, [deposit.commitment])
+    const { root, pathElements, pathIndices } = await generateMerkleProof(deposit, 0, [deposit.commitment]);
 
     const input = {
         // Public snark inputs
@@ -112,11 +112,11 @@ async function generateProof({ deposit, recipient, relayerAddress = 0, fee = 0, 
         pathIndices: pathIndices,
     }
 
-    console.log('Generating SNARK proof')
-    console.time('Proof time')
-    const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
-    const { proof } = websnarkUtils.toSolidityInput(proofData)
-    console.timeEnd('Proof time')
+    console.log('Generating SNARK proof');
+    console.time('Proof time');
+    const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key);
+    const { proof } = websnarkUtils.toSolidityInput(proofData);
+    console.timeEnd('Proof time');
 
     const args = [
         toHex(input.root),
@@ -127,17 +127,10 @@ async function generateProof({ deposit, recipient, relayerAddress = 0, fee = 0, 
         toHex(input.refund),
     ]
 
-    return { proof: proofToLittleEndian(proof), args }
+    return { proof: proofToLE(proof), args }
 }
 
-function commitment() {
-    let currency = "ETH";
-    let amount = 1000000000000;
-    return createNote({ currency, amount });
-
-}
-
-async function withdraw(to, noteString) {
+export async function withdraw(to, noteString) {
     // Substrate 32 byte addrs aren't necessarely within the finite field (as opposed to ETH addresses).
     // This hack naturally makes it work regardless. Maybe it would even be fine in production too.
     const recipient = to % PRIME_FIELD;
@@ -145,12 +138,12 @@ async function withdraw(to, noteString) {
     return await generateProof({ deposit: parsed_note.deposit, recipient });
 }
 
-async function main() {
-    await init();
-    let noteString = commitment();
-    let proof = await withdraw(0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dn, noteString);
-    console.log(proof);
-    process.exit(0);
-}
-
-main()
+//async function main() {
+//    await init({});
+//    let noteString = createNote({});
+//    let proof = await withdraw(0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dn, noteString);
+//    console.log(proof);
+//    process.exit(0);
+//}
+//
+//main()
