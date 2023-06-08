@@ -9,7 +9,7 @@ import { createNote, init, parseNote, toHex, withdraw, } from './tornado/tornado
 const value = 1000000000000;
 const merkle_tree_height = 20;
 
-function addrToBigInt(uint8Array: Uint8Array): bigint {
+function addressToBigInt(uint8Array: Uint8Array): bigint {
     let result = BigInt(0);
     for (let i = 0; i < uint8Array.length; i++) {
         result <<= BigInt(8); // Left shift by 8 bits
@@ -59,17 +59,23 @@ describe('Deploy tornado contracts and test them', () => {
         await conn.disconnect();
     });
 
-    it('Withdraws funds from alice', async function () {
+    it('Withdraws funds from alice to dave', async function () {
         this.timeout(50000);
 
-        let proof = await withdraw(addrToBigInt(dave.addressRaw), deposits[0].noteString);
+        let { data: { free: balanceBefore } } = await conn.query.system.account(dave.address);
+
+        let recipient = addressToBigInt(dave.addressRaw);
+        let proof = await withdraw(recipient, deposits[0].noteString);
         let parameters = [
             proof.proof,
-            proof.args[0], // Merkle root
-            proof.args[1], // Nullifier hash
-            proof.args[2], // Recipient address
+            proof.args[0],      // Merkle root
+            proof.args[1],      // Nullifier hash
+            toHex(recipient),   // The contract will mod it over the finite field
         ];
         let gasLimit = await weight(conn, tornado, "withdraw", parameters);
         await transaction(tornado.tx.withdraw({ gasLimit }, ...parameters), alice);
+
+        let { data: { free: balanceAfter } } = await conn.query.system.account(dave.address);
+        expect(balanceBefore.toBigInt() + BigInt(value)).toEqual(balanceAfter.toBigInt());
     });
 });

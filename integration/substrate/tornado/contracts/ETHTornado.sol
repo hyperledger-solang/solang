@@ -37,6 +37,7 @@ contract ETHTornado is Tornado {
         require(_refund == 0, "Refund value is supposed to be zero for ETH instance");
         require(_fee == 0, "Relayers are not used with this PoC");
         require(uint256(_relayer) == 0, "Relayers are not used with this PoC");
+        print("{:x}".format(_recipient));
         _recipient.transfer(denomination);
     }
 }

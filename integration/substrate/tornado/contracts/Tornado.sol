@@ -87,7 +87,7 @@ abstract contract Tornado is MerkleTreeWithHistory {
         uint256 _fee = 0;
         uint256 _refund = 0;
         // Substrate 32 byte addresses are not necessarely within the field the SNARK uses..
-        uint256 recipient = uint256(_recipient) % 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+        uint256 recipient_input = uint256(_recipient) % 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
         bytes32 _root = abi.decode(_root_bytes, (bytes32));
         bytes32 _nullifierHash = abi.decode(_nullifierHash_bytes, (bytes32));
@@ -97,7 +97,7 @@ abstract contract Tornado is MerkleTreeWithHistory {
         require(
             verifier.verifyProof(
                 _proof,
-                [uint256(_root), uint256(_nullifierHash), recipient, uint256(_relayer), _fee, _refund]
+                [uint256(_root), uint256(_nullifierHash), recipient_input, uint256(_relayer), _fee, _refund]
             ),
             "Invalid withdraw proof"
         );
