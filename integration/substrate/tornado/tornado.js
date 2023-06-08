@@ -43,7 +43,7 @@ function swapEndianness(hexString) {
     return reversedHexString; // Parse the reversed string as a hexadecimal value
 }
 
-export function parseNote(noteString) {
+function parseNote(noteString) {
     const noteRegex = /tornado-(?<currency>\w+)-(?<amount>[\d.]+)-(?<netId>\d+)-0x(?<note>[0-9a-fA-F]{124})/g
     const match = noteRegex.exec(noteString)
     if (!match) {
@@ -81,7 +81,7 @@ export function createNote({ currency = 'ETH', amount = 1000000000000 }) {
     const deposit = createDeposit({ nullifier: rbigint(31), secret: rbigint(31) });
     const note = toHex(deposit.preimage, 62);
     const noteString = `tornado-${currency}-${amount}-${netId}-${note}`;
-    console.log(`Your commitment: ${toHex(deposit.commitment, 32)}`);
+    // console.log(`Your commitment: ${toHex(deposit.commitment, 32)}`); // Uncomment for debug
     return { noteString, commitment: toHex(deposit.commitment) };
 }
 
@@ -93,17 +93,18 @@ async function generateMerkleProof(deposit, leafIndex, leaves) {
     return { pathElements, pathIndices, root: tree.root() }
 }
 
-async function generateProof({ deposit, recipient, relayerAddress = 0, fee = 0, refund = 0 }) {
-    const { root, pathElements, pathIndices } = await generateMerkleProof(deposit, 0, [deposit.commitment]);
+async function generateProof({ deposit, recipient, leaves }) {
+    const leafIndex = leaves.indexOf(toHex(deposit.commitment));
+    const { root, pathElements, pathIndices } = await generateMerkleProof(deposit, leafIndex, leaves);
 
     const input = {
         // Public snark inputs
         root: root,
         nullifierHash: deposit.nullifierHash,
         recipient: bigInt(recipient),
-        relayer: bigInt(relayerAddress),
-        fee: bigInt(fee),
-        refund: bigInt(refund),
+        relayer: bigInt(0),
+        fee: bigInt(0),
+        refund: bigInt(0),
 
         // Private snark inputs
         nullifier: deposit.nullifier,
@@ -127,24 +128,14 @@ async function generateProof({ deposit, recipient, relayerAddress = 0, fee = 0, 
         toHex(input.refund),
     ]
 
-    console.log(args);
+    // console.log(args); // uncomment for debug
     return { proof: proofToLE(proof), args }
 }
 
-export async function withdraw(to, noteString) {
+export async function withdraw(to, noteString, leaves) {
     // Substrate 32 byte addrs aren't necessarely within the finite field (as opposed to ETH addresses).
     // This hack naturally makes it work regardless. Maybe it would even be fine in production too.
     const recipient = to % PRIME_FIELD;
     const parsed_note = parseNote(noteString);
-    return await generateProof({ deposit: parsed_note.deposit, recipient });
+    return await generateProof({ deposit: parsed_note.deposit, recipient, leaves });
 }
-
-//async function main() {
-//    await init({});
-//    let noteString = createNote({});
-//    let proof = await withdraw(0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27dn, noteString);
-//    console.log(proof);
-//    process.exit(0);
-//}
-//
-//main()

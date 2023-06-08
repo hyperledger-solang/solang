@@ -1,12 +1,20 @@
+// Tests against the tornado cash core contracts.
+// The tornado contracts used here contain minor mechanical changes to work fine on Substrate.
+// The ZK-SNARK setup is the same as ETH Tornado on mainnet.
+// On the node, the MiMC sponge hash (available as EVM bytecode) and bn128 curve operations
+// (precompiled contracts on Ethereum) are expected to beimplemented as chain extensions.
+
 import expect from 'expect';
 import { weight, createConnection, deploy, transaction, aliceKeypair, daveKeypair, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
-import { DecodedEvent } from '@polkadot/api-contract/types';
 import { KeyringPair } from '@polkadot/keyring/types';
-import { createNote, init, parseNote, toHex, withdraw, } from './tornado/tornado'
+import { createNote, init, toHex, withdraw, } from './tornado/tornado'
 
-const value = 1000000000000;
+type Deposit = { noteString: string; commitment: string; };
+
+let deposits: Deposit[];
+const denomination = 1000000000000;
 const merkle_tree_height = 20;
 
 function addressToBigInt(uint8Array: Uint8Array): bigint {
@@ -18,12 +26,25 @@ function addressToBigInt(uint8Array: Uint8Array): bigint {
     return result;
 }
 
-describe('Deploy tornado contracts and test them', () => {
+// Generate a ZK proof needed to withdraw funds. Uses the deposit at the given `index`. 
+async function generateProof(recipient: KeyringPair, index: number): Promise<string[]> {
+    let to = addressToBigInt(recipient.addressRaw);
+    // In production, we'd fetch and parse all events, which is too cumbersome for this PoC.
+    let leaves = deposits.map(e => e.commitment);
+    let proof = await withdraw(to, deposits[index].noteString, leaves);
+    return [
+        proof.proof,
+        proof.args[0],  // Merkle root
+        proof.args[1],  // Nullifier hash
+        toHex(to),      // The contract will mod it over the finite field
+    ];
+}
+
+describe('Deploy the tornado contract, create 2 deposits and withdraw them afterwards', () => {
     let conn: ApiPromise;
     let tornado: ContractPromise;
     let alice: KeyringPair;
     let dave: KeyringPair;
-    let deposits: { noteString: string; commitment: string; }[];
 
     before(async function () {
         alice = aliceKeypair();
@@ -37,7 +58,7 @@ describe('Deploy tornado contracts and test them', () => {
             [
                 verifier_contract.address,
                 hasher_contract.address,
-                value,
+                denomination,
                 merkle_tree_height
             ];
         let tornado_contract = await deploy(conn, alice, 'ETHTornado.contract', 0n, ...parameters);
@@ -48,34 +69,42 @@ describe('Deploy tornado contracts and test them', () => {
         deposits = [createNote({}), createNote({})];
 
         // Deposit some funds to the tornado contract
-        let gasLimit = await weight(conn, tornado, "deposit", [deposits[0].commitment], value);
-        await transaction(tornado.tx.deposit({ gasLimit, value }, deposits[0].commitment), alice);
+        let gasLimit = await weight(conn, tornado, "deposit", [deposits[0].commitment], denomination);
+        let tx = tornado.tx.deposit({ gasLimit, value: denomination }, deposits[0].commitment)
+        await transaction(tx, alice);
 
-        gasLimit = await weight(conn, tornado, "deposit", [deposits[1].commitment], value);
-        await transaction(tornado.tx.deposit({ gasLimit, value }, deposits[1].commitment), dave);
+        gasLimit = await weight(conn, tornado, "deposit", [deposits[1].commitment], denomination);
+        tx = tornado.tx.deposit({ gasLimit, value: denomination }, deposits[1].commitment)
+        await transaction(tx, dave);
     });
 
     after(async function () {
         await conn.disconnect();
     });
 
-    it('Withdraws funds from alice to dave', async function () {
+    it('Withdraws funds deposited by alice to dave', async function () {
         this.timeout(50000);
 
         let { data: { free: balanceBefore } } = await conn.query.system.account(dave.address);
 
-        let recipient = addressToBigInt(dave.addressRaw);
-        let proof = await withdraw(recipient, deposits[0].noteString);
-        let parameters = [
-            proof.proof,
-            proof.args[0],      // Merkle root
-            proof.args[1],      // Nullifier hash
-            toHex(recipient),   // The contract will mod it over the finite field
-        ];
+        let parameters = await generateProof(dave, 0);
         let gasLimit = await weight(conn, tornado, "withdraw", parameters);
         await transaction(tornado.tx.withdraw({ gasLimit }, ...parameters), alice);
 
-        let { data: { free: balanceAfter } } = await conn.query.system.account(dave.address);
-        expect(balanceBefore.toBigInt() + BigInt(value)).toEqual(balanceAfter.toBigInt());
+        let { data: { free } } = await conn.query.system.account(dave.address);
+        expect(balanceBefore.toBigInt() + BigInt(denomination)).toEqual(free.toBigInt());
+    });
+
+    it('Withdraws funds deposited by dave to alice', async function () {
+        this.timeout(50000);
+
+        let { data: { free: balanceBefore } } = await conn.query.system.account(dave.address);
+
+        let parameters = await generateProof(dave, 1);
+        let gasLimit = await weight(conn, tornado, "withdraw", parameters);
+        await transaction(tornado.tx.withdraw({ gasLimit }, ...parameters), alice);
+
+        let { data: { free } } = await conn.query.system.account(dave.address);
+        expect(balanceBefore.toBigInt() + BigInt(denomination)).toEqual(free.toBigInt());
     });
 });
