@@ -82,7 +82,7 @@ export function createNote({ currency = 'ETH', amount = 1000000000000 }) {
     const note = toHex(deposit.preimage, 62);
     const noteString = `tornado-${currency}-${amount}-${netId}-${note}`;
     console.log(`Your commitment: ${toHex(deposit.commitment, 32)}`);
-    return { noteString, commitment: deposit.commitment };
+    return { noteString, commitment: toHex(deposit.commitment) };
 }
 
 // leaves is supposed a list of commitments sorted by their leafIndex (chronologically sorted)
