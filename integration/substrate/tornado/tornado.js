@@ -59,7 +59,7 @@ function parseNote(noteString) {
     return { currency: match.groups.currency, amount: match.groups.amount, netId, deposit }
 }
 
-export async function init({ networkId = 43, merkle_tree_height = 20 }) {
+export async function init_snark({ networkId = 43, merkle_tree_height = 20 }) {
     netId = networkId;
     MERKLE_TREE_HEIGHT = merkle_tree_height;
     circuit = require(__dirname + '/tornado-cli/build/circuits/withdraw.json');
