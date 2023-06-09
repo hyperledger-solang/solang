@@ -85,7 +85,7 @@ export function createNote({ currency = 'ETH', amount = 1000000000000 }) {
     return { noteString, commitment: toHex(deposit.commitment) };
 }
 
-// leaves is supposed a list of commitments sorted by their leafIndex (chronologically sorted)
+// The 'leaves' argument is supposed to be a list of commitments sorted by their leafIndex (chronologically sorted)
 async function generateMerkleProof(deposit, leafIndex, leaves) {
     console.log('generating merkle proof');
     let tree = new merkleTree(MERKLE_TREE_HEIGHT, leaves);
@@ -133,7 +133,7 @@ async function generateProof({ deposit, recipient, leaves }) {
 }
 
 export async function withdraw(to, noteString, leaves) {
-    // Substrate 32 byte addrs aren't necessarely within the finite field (as opposed to ETH addresses).
+    // Substrate 32 byte addrs aren't necessarily within the finite field (as opposed to ETH addresses).
     // This hack naturally makes it work regardless. Maybe it would even be fine in production too.
     const recipient = to % PRIME_FIELD;
     const parsed_note = parseNote(noteString);

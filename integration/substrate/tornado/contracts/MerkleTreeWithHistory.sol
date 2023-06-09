@@ -23,11 +23,11 @@ contract MerkleTreeWithHistory {
 
     uint32 public levels;
 
-    // the following variables are made public for easier testing and debugging and
-    // are not supposed to be accessed in regular code
+    // The following variables are made public for easier testing and debugging.
+    // They are not supposed to be accessed in regular code
 
-    // filledSubtrees and roots could be bytes32[size], but using mappings makes it cheaper because
-    // it removes index range check on every interaction
+    // filledSubtrees and roots could be bytes32[size], but using mappings is cheaper because
+    // they do not have index range check on every interaction
     mapping(uint256 => bytes32) public filledSubtrees;
     mapping(uint256 => bytes32) public roots;
     uint32 public constant ROOT_HISTORY_SIZE = 30;
