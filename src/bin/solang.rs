@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use clap::{Command, CommandFactory, Parser};
+use clap::{Command, CommandFactory, FromArgMatches};
 
 use clap_complete::generate;
 use itertools::Itertools;
@@ -15,14 +15,14 @@ use solang::{
 use std::{
     collections::{HashMap, HashSet},
     ffi::{OsStr, OsString},
-    fs::{create_dir_all, File},
+    fs::{self, create_dir, create_dir_all, File},
     io::prelude::*,
     path::{Path, PathBuf},
     process::exit,
 };
 
 use crate::cli::{
-    imports_arg, options_arg, target_arg, Cli, Commands, Compile, CompilerOutput, Doc,
+    imports_arg, options_arg, target_arg, Cli, Commands, Compile, CompilerOutput, Doc, New,
     ShellComplete,
 };
 
@@ -32,27 +32,97 @@ mod idl;
 mod languageserver;
 
 fn main() {
-    let cli = Cli::parse();
+    let matches = Cli::command().get_matches();
+
+    let cli = Cli::from_arg_matches(&matches).unwrap();
 
     match cli.command {
         Commands::Doc(doc_args) => doc(doc_args),
-        Commands::Compile(compile_args) => compile(&compile_args),
+        Commands::Compile(compile_args) => {
+            // Read config from configuration file. If extra args exist, only overwrite the fields that the user explicitly provides.
+            let config = if let Some(conf_file) = &compile_args.configuration_file {
+                eprintln!("info: reading default config from toml file");
+                let debug = matches.subcommand_matches("compile").unwrap();
+                let mut compile = read_toml_config(conf_file);
+                compile.overwrite_with_matches(debug);
+
+                compile
+            } else {
+                compile_args
+            };
+            compile(&config)
+        }
         Commands::ShellComplete(shell_args) => shell_complete(Cli::command(), shell_args),
         Commands::LanguageServer(server_args) => languageserver::start_server(&server_args),
         Commands::Idl(idl_args) => idl::idl(&idl_args),
+        Commands::New(new_arg) => new_command(new_arg),
     }
+}
+
+fn read_toml_config(path: &OsString) -> Compile {
+    let toml_data = fs::read_to_string(path).unwrap();
+
+    let res: Result<Compile, _> = toml::from_str(&toml_data);
+
+    match res {
+        Ok(compile_args) => compile_args,
+        Err(err) => {
+            let msg = err.message();
+            eprintln!("{msg}");
+            exit(1);
+        }
+    }
+}
+
+fn new_command(args: New) {
+    let target = args.target_name.as_str();
+
+    // Default project name is "solana_project" or "substrate_project"
+    let default_path = OsString::from(format!("{target}_project"));
+
+    let dir_path = args.project_name.unwrap_or(default_path);
+
+    match create_dir(&dir_path) {
+        Ok(_) => (),
+        Err(error) => {
+            eprintln!("couldn't create project directory, reason: {error}");
+            exit(1)
+        }
+    };
+
+    let flipper = match target {
+        "solana" => include_str!("./solang_new_examples/solana/flipper.sol"),
+        "substrate" => include_str!("./solang_new_examples/substrate/flipper.sol"),
+        _ => unreachable!(),
+    };
+
+    let mut flipper_file = create_file(&Path::new(&dir_path).join("flipper.sol"));
+    flipper_file
+        .write_all(flipper.to_string().as_bytes())
+        .expect("failed to write flipper example");
+
+    let mut toml_file = create_file(&Path::new(&dir_path).join("solang.toml"));
+
+    let toml_content = match target {
+        "solana" => include_str!("./solang_new_examples/solana/solana_config.toml"),
+        "substrate" => include_str!("./solang_new_examples/substrate/substrate_config.toml"),
+        _ => unreachable!(),
+    };
+    toml_file
+        .write_all(toml_content.to_string().as_bytes())
+        .expect("failed to write example toml configuration file");
 }
 
 fn doc(doc_args: Doc) {
     let target = target_arg(&doc_args.target);
-    let mut resolver = imports_arg(&doc_args.package);
+    let mut resolver: FileResolver = imports_arg(&doc_args.package);
 
     let verbose = doc_args.verbose;
     let mut success = true;
     let mut files = Vec::new();
 
     for filename in doc_args.package.input {
-        let ns = solang::parse_and_resolve(&filename, &mut resolver, target);
+        let ns = solang::parse_and_resolve(filename.as_os_str(), &mut resolver, target);
 
         ns.print_diagnostics(&resolver, verbose);
 
@@ -79,9 +149,11 @@ fn doc(doc_args: Doc) {
 }
 
 fn compile(compile_args: &Compile) {
+    let target = target_arg(&compile_args.target_arg);
+
     let mut json = JsonResult {
         errors: Vec::new(),
-        target: compile_args.target_arg.name.clone(),
+        target: target.to_string(),
         program: String::new(),
         contracts: HashMap::new(),
     };
@@ -93,8 +165,6 @@ fn compile(compile_args: &Compile) {
     let mut resolver = imports_arg(&compile_args.package);
 
     let opt = options_arg(&compile_args.debug_features, &compile_args.optimizations);
-
-    let target = target_arg(&compile_args.target_arg);
 
     let mut namespaces = Vec::new();
 
@@ -110,7 +180,7 @@ fn compile(compile_args: &Compile) {
     for filename in &compile_args.package.input {
         // TODO: this could be parallelized using e.g. rayon
         let ns = process_file(
-            filename,
+            filename.as_os_str(),
             &mut resolver,
             target,
             &compile_args.compiler_output,

@@ -82,3 +82,41 @@ fn create_output_dir() {
     // nothing should have been created because flapper does not exist
     assert!(!test3.exists());
 }
+
+#[test]
+fn basic_compilation_from_toml() {
+    let mut new_cmd = Command::cargo_bin("solang").unwrap();
+    let tmp = TempDir::new_in("tests").unwrap();
+
+    let solana_test = tmp.path().join("solana_test");
+
+    //solang new --target solana
+    new_cmd
+        .arg("new")
+        .arg(solana_test.clone())
+        .args(["--target", "solana"])
+        .assert()
+        .success();
+    File::open(solana_test.join("flipper.sol")).expect("should exist");
+    File::open(solana_test.join("solang.toml")).expect("should exist");
+
+    // compile flipper using config file
+    let mut compile_cmd = Command::cargo_bin("solang").unwrap();
+
+    compile_cmd
+        .args(["compile", "--config-file"])
+        .current_dir(solana_test)
+        .assert()
+        .success();
+
+    let substrate_test = tmp.path().join("substrate_test");
+    let _new_cmd = Command::cargo_bin("solang")
+        .unwrap()
+        .arg("new")
+        .arg(substrate_test.clone())
+        .args(["--target", "solana"])
+        .assert()
+        .success();
+
+    compile_cmd.current_dir(substrate_test).assert().success();
+}
