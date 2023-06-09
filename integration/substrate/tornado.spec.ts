@@ -83,8 +83,6 @@ describe('Deploy the tornado contract, create 2 deposits and withdraw them after
     });
 
     it('Withdraws funds deposited by alice to dave', async function () {
-        this.timeout(50000);
-
         let { data: { free: balanceBefore } } = await conn.query.system.account(dave.address);
 
         let parameters = await generateProof(dave, 0);
@@ -96,8 +94,6 @@ describe('Deploy the tornado contract, create 2 deposits and withdraw them after
     });
 
     it('Withdraws funds deposited by dave to alice', async function () {
-        this.timeout(50000);
-
         let { data: { free: balanceBefore } } = await conn.query.system.account(dave.address);
 
         let parameters = await generateProof(dave, 1);
