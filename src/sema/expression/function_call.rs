@@ -992,7 +992,7 @@ fn try_type_method(
             };
         }
 
-        Type::Array(..) | Type::DynamicBytes => {
+        Type::Array(..) | Type::DynamicBytes if var_ty.is_dynamic(ns) => {
             if func.name == "push" {
                 let elem_ty = var_ty.array_elem();
 
@@ -1055,6 +1055,17 @@ fn try_type_method(
                     args: vec![var_expr.clone()],
                 }));
             }
+        }
+
+        Type::Array(..) if func.name == "push" || func.name == "pop" => {
+            diagnostics.push(Diagnostic::error(
+                func.loc,
+                format!(
+                    "method {}() is not available for fixed length arrays",
+                    func.name
+                ),
+            ));
+            return Err(());
         }
 
         Type::Contract(ext_contract_no) => {
@@ -1436,10 +1447,10 @@ pub(super) fn method_call_pos_args(
 
     let var_expr = expression(var, context, ns, symtable, diagnostics, ResolveTo::Unknown)?;
 
-    if let Some(expr) =
+    if let Some(resolved_call) =
         builtin::resolve_method_call(&var_expr, func, args, context, ns, symtable, diagnostics)?
     {
-        return Ok(expr);
+        return Ok(resolved_call);
     }
 
     if let Some(resolved_call) = try_storage_reference(
@@ -1457,7 +1468,10 @@ pub(super) fn method_call_pos_args(
         return Ok(resolved_call);
     }
 
-    if let Some(resolved_call) = try_type_method(
+    let mut diagnostics_type: u8 = 0;
+    let mut type_method_diagnostics = Diagnostics::default();
+
+    match try_type_method(
         loc,
         func,
         var,
@@ -1468,12 +1482,21 @@ pub(super) fn method_call_pos_args(
         &var_expr,
         ns,
         symtable,
-        diagnostics,
+        &mut type_method_diagnostics,
         resolve_to,
-    )? {
-        return Ok(resolved_call);
+    ) {
+        Ok(Some(resolved_call)) => {
+            diagnostics.extend(type_method_diagnostics);
+            return Ok(resolved_call);
+        }
+        Ok(None) => (),
+        Err(()) => {
+            // Adding one means diagnostics from type method
+            diagnostics_type += 1;
+        }
     }
 
+    let mut resolve_using_diagnostics = Diagnostics::default();
     // resolve it using library extension
     match using::try_resolve_using_call(
         loc,
@@ -1482,23 +1505,30 @@ pub(super) fn method_call_pos_args(
         context,
         args,
         symtable,
-        diagnostics,
+        &mut resolve_using_diagnostics,
         ns,
         resolve_to,
     ) {
-        Ok(Some(expr)) => {
-            return Ok(expr);
+        Ok(Some(resolved_call)) => {
+            diagnostics.extend(resolve_using_diagnostics);
+            return Ok(resolved_call);
         }
         Ok(None) => (),
-        Err(_) => {
-            return Err(());
+        Err(()) => {
+            // Adding two means diagnostics from resolve_using
+            diagnostics_type += 2;
         }
     }
 
-    diagnostics.push(Diagnostic::error(
-        func.loc,
-        format!("method '{}' does not exist", func.name),
-    ));
+    match diagnostics_type {
+        1 => diagnostics.extend(type_method_diagnostics),
+        2 => diagnostics.extend(resolve_using_diagnostics),
+        // If 'diagnostics_type' is 3, we have errors from both type_method and resolve_using.
+        _ => diagnostics.push(Diagnostic::error(
+            func.loc,
+            format!("method '{}' does not exist", func.name),
+        )),
+    }
 
     Err(())
 }
