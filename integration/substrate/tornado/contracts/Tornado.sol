@@ -86,7 +86,7 @@ abstract contract Tornado is MerkleTreeWithHistory {
         address payable _relayer = address payable(0);
         uint256 _fee = 0;
         uint256 _refund = 0;
-        // Substrate 32 byte addresses are not necessarely within the field the SNARK uses..
+        // Substrate 32 byte addresses are not necessarily within the field the SNARK uses.
         uint256 recipient_input = uint256(_recipient) % 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
         bytes32 _root = abi.decode(_root_bytes, (bytes32));
