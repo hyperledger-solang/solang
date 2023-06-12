@@ -1395,6 +1395,7 @@ impl Type {
             Type::Slice(_) => false,
             Type::Unresolved => false,
             Type::FunctionSelector => false,
+            Type::UserType(no) => ns.user_types[*no].ty.is_fixed_reference_type(ns),
             _ => unreachable!("{:?}", self),
         }
     }
