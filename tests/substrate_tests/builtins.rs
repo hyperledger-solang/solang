@@ -775,3 +775,22 @@ fn call_chain_extension() {
     assert_eq!(ret.0, data.iter().map(|i| *i as u32).sum::<u32>());
     assert_eq!(ret.1, data.iter().cloned().rev().collect::<Vec<_>>());
 }
+
+#[test]
+fn is_contract() {
+    let mut runtime = build_solidity(
+        r##"
+        import "substrate";
+        contract Foo {
+            function test(address _a) public view returns (bool) {
+                return is_contract(_a);
+            }
+        }"##,
+    );
+
+    runtime.function("test", runtime.0.data().accounts[0].address.to_vec());
+    assert_eq!(runtime.output(), vec![1]);
+
+    runtime.function("test", [0; 32].to_vec());
+    assert_eq!(runtime.output(), vec![0]);
+}
