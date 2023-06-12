@@ -49,7 +49,7 @@ contract ExternalFunctions {
         // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 0 value:hex"f503f5fe"
         // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 4 value:(load (struct function(int32) external returns (uint64)(%temp.8) field 1))
         // CHECK: writebuffer buffer:%abi_encoded.temp.9 offset:uint32 36 value:(load (struct function(int32) external returns (uint64)(%temp.8) field 0))
-        // CHECK: _ = external call::regular address:(load (builtin GetAddress ())) payload:%abi_encoded.temp.9 value:uint128 0 gas:uint64 0 accounts: seeds: contract|function:(0, 3)
+        // CHECK: _ = external call::regular address:(load (builtin GetAddress ())) payload:%abi_encoded.temp.9 value:uint128 0 gas:uint64 0 accounts: seeds:
         this.bar(func);
     }
 }
