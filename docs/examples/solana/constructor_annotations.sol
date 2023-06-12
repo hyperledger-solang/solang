@@ -6,7 +6,7 @@ contract Foo {
     @seed(seed_val)
     @bump(bump_val)
     @payer(payer)
-    constructor(address payer, bytes seed_val, bytes1 bump_val) {
+    constructor(bytes seed_val, bytes1 bump_val) {
         // ...
     }
 }

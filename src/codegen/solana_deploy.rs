@@ -4,6 +4,9 @@ use super::{
     cfg::ReturnCode, expression, Builtin, ControlFlowGraph, Expression, Instr, Options, Type,
     Vartable,
 };
+use crate::codegen::solana_accounts::account_management::{
+    account_meta_literal, index_accounts_vector,
+};
 use crate::sema::ast::{
     self, ArrayLength, CallTy, ConstructorAnnotation, Function, FunctionAttributes, Namespace,
     StructType,
@@ -233,7 +236,7 @@ pub(super) fn solana_deploy(
         }
     }
 
-    if let Some(ConstructorAnnotation::Payer(payer)) = func
+    if let Some(ConstructorAnnotation::Payer(_, name)) = func
         .annotations
         .iter()
         .find(|tag| matches!(tag, ConstructorAnnotation::Payer(..)))
@@ -245,7 +248,15 @@ pub(super) fn solana_deploy(
 
         let metas = vartab.temp_name("metas", &metas_ty);
 
-        let payer = expression(payer, cfg, contract_no, None, ns, vartab, opt);
+        // FIXME: The +1 accounts for the not yet added data account, which is always the first one.
+        // We need to fix a chicken and egg problem to solve this. The proper indexes are only
+        // calculated after that the deploy code is generated.
+        // Alternatively, we can conceive an Expression::NamedIndex to index the tx.account by
+        // account name and exchange it by a normal Expression::Subscript at the AccountManagement
+        // pass.
+        // THAT IS WORK FOR ANOTHER PR!
+        let payer_index = func.solana_accounts.borrow().get_index_of(name).unwrap() + 1;
+        let ptr_to_address = index_accounts_vector(payer_index);
 
         cfg.add(
             vartab,
@@ -257,51 +268,23 @@ pub(super) fn solana_deploy(
                     ty: metas_ty.clone(),
                     dimensions: vec![2],
                     values: vec![
-                        Expression::StructLiteral {
-                            loc: Loc::Codegen,
-                            ty: Type::Struct(StructType::AccountMeta),
-                            values: vec![
-                                Expression::GetRef {
-                                    loc: Loc::Codegen,
-                                    ty: Type::Address(false),
-                                    expr: Box::new(payer),
-                                },
-                                Expression::BoolLiteral {
-                                    loc: Loc::Codegen,
-                                    value: true,
-                                },
-                                Expression::BoolLiteral {
-                                    loc: Loc::Codegen,
-                                    value: true,
-                                },
-                            ],
-                        },
-                        Expression::StructLiteral {
-                            loc: Loc::Codegen,
-                            ty: Type::Struct(StructType::AccountMeta),
-                            values: vec![
-                                Expression::Builtin {
-                                    loc: Loc::Codegen,
-                                    tys: vec![Type::Ref(Box::new(Type::Address(false)))],
-                                    kind: Builtin::GetAddress,
-                                    args: vec![],
-                                },
-                                Expression::BoolLiteral {
-                                    loc: Loc::Codegen,
-                                    value: true,
-                                },
-                                Expression::BoolLiteral {
-                                    loc: Loc::Codegen,
-                                    value: true,
-                                },
-                            ],
-                        },
+                        account_meta_literal(ptr_to_address, true, true),
+                        account_meta_literal(
+                            Expression::Builtin {
+                                loc: Loc::Codegen,
+                                tys: vec![Type::Ref(Box::new(Type::Address(false)))],
+                                kind: Builtin::GetAddress,
+                                args: vec![],
+                            },
+                            true,
+                            true,
+                        ),
                     ],
                 },
             },
         );
 
-        // Calculate minimum balance for rent-excempt
+        // Calculate minimum balance for rent-exempt
         let (space, lamports) = if let Some(ConstructorAnnotation::Space(space_expr)) = func
             .annotations
             .iter()

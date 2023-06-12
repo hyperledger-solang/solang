@@ -1250,7 +1250,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         function: FunctionValue<'b>,
         _success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
-        address: PointerValue<'b>,
+        _address: PointerValue<'b>,
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
         mut contract_args: ContractArgs<'b>,
@@ -1267,11 +1267,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         let payload = binary.vector_bytes(encoded_args);
         let payload_len = encoded_args_len.into_int_value();
 
-        if contract_args.accounts.is_some() {
-            self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args);
-        } else {
-            self.build_external_call(binary, address, payload, payload_len, contract_args, ns);
-        }
+        assert!(contract_args.accounts.is_some());
+        // The AccountMeta array is always present for Solana contracts
+        self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args);
     }
 
     fn builtin_function(

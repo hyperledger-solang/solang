@@ -4,23 +4,25 @@ contract creator {
     Child public c;
     Child public c_metas;
 
-    function create_child(address child, address payer) public {
+    function create_child(address child) external {
         print("Going to create child");
-        c = new Child{address: child}(payer);
+        c = new Child{address: child}();
 
         c.say_hello();
     }
 
-    function create_seed1(address child, address payer, bytes seed, bytes1 bump, uint64 space) public {
+    function create_seed1(address child, bytes seed, bytes1 bump, uint64 space) external {
         print("Going to create Seed1");
-        Seed1 s = new Seed1{address: child}(payer, seed, bump, space);
+        Seed1 s = new Seed1{address: child}(seed, bump, space);
 
         s.say_hello();
     }
 
-    function create_seed2(address child, address payer, bytes seed, uint32 space) public {
+    function create_seed2(address child, bytes seed, uint32 space) external {
         print("Going to create Seed2");
-        new Seed2{address: child}(payer, seed, space);
+
+        new Seed2{address: child}(seed, space);
+
     }
 
     function create_child_with_metas(address child, address payer) public {
@@ -31,8 +33,13 @@ contract creator {
             AccountMeta({pubkey: address"11111111111111111111111111111111", is_writable: false, is_signer: false})
         ];
 
-        c_metas = new Child{accounts: metas}(payer);        
+        c_metas = new Child{accounts: metas}();        
         c_metas.use_metas();
+    }
+
+    function create_without_annotation(address child) external {
+        MyCreature cc = new MyCreature{address: child}();
+        cc.say_my_name();
     }
 }
 
@@ -40,7 +47,7 @@ contract creator {
 contract Child {
     @payer(payer)
     @space(511 + 7)
-    constructor(address payer) {
+    constructor() {
         print("In child constructor");
     }
 
@@ -60,7 +67,7 @@ contract Seed1 {
     @seed(seed)
     @bump(bump)
     @space(space)
-    constructor(address payer, bytes seed, bytes1 bump, uint64 space) {
+    constructor(bytes seed, bytes1 bump, uint64 space) {
         print("In Seed1 constructor");
     }
 
@@ -77,7 +84,7 @@ contract Seed2 {
     @seed("sunflower")
     @seed(seed)
     @space(space + 23)
-    constructor(address payer, bytes seed, uint64 space) {
+    constructor(bytes seed, uint64 space) {
         my_seed = seed;
 
         print("In Seed2 constructor");
@@ -89,5 +96,16 @@ contract Seed2 {
         if (pda == address(this)) {
             print("I am PDA.");
         }
+    }
+}
+
+@program_id("8gTkAidfM82u3DGbKcZpHwL5p47KQA16MDb4WmrHdmF6")
+contract MyCreature {
+    constructor() {
+        print("In child constructor");
+    }
+
+    function say_my_name() public pure {
+        print("say_my_name");
     }
 }

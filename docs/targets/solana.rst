@@ -236,8 +236,7 @@ arguments can be used in the annotations.
 
 Creating an account needs a payer, so at a minimum the ``@payer`` annotation must be
 specified. If it is missing, then the data account must be created client-side.
-The ``@payer`` requires an address. This can be a constructor argument or
-an address literal.
+The ``@payer`` annotation declares a Solana account that must be passed in the transaction.
 
 The size of the data account can be specified with ``@space``. This is a
 ``uint64`` expression which can either be a constant or use one of the constructor
@@ -446,3 +445,26 @@ The usage of system instructions needs the correct setting of writable and signe
 contracts on chain. Examples are available on Solang's integration tests.
 See `system_instruction_example.sol <https://github.com/hyperledger/solang/blob/main/integration/solana/system_instruction_example.sol>`_
 and `system_instruction.spec.ts <https://github.com/hyperledger/solang/blob/main/integration/solana/system_instruction.spec.ts>`_
+
+
+Solana Account Management
+_________________________
+
+In a contract constructor, one can optionally write the ``@payer`` annotation, which receives a character sequence as
+an argument. This annotation defines a Solana account that is going to pay for the initialization of the contract's data
+account. The syntax ``@payer(my_account)`` declares an account named ``my_account``, which will be
+required for every call to the constructor.
+
+In any Solana cross program invocation, including constructor calls, all the accounts a transaction needs must be
+informed. Whenever possible, the compiler will automatically generate the ``AccountMeta`` array that satisfies
+this requirement. Currently, that only works if the constructor call is done in an function declared external, as shown
+in the example below. In any other case, the ``AccountMeta`` array must be manually created, following an account ordering
+the IDL file specifies.
+
+The following example shows two correct ways of calling a constructor. Note that the IDL for the ``BeingBuilt`` contract
+has an instruction called ``new``, representing the contract's constructor, whose accounts are specified in the
+following order: ``dataAccount``, ``payer_account``, ``systemAccount``. That is the order one must follow when invoking
+such a constructor.
+
+.. include:: ../examples/solana/payer_annotation.sol
+  :code: solidity

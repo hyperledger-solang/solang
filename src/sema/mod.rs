@@ -31,6 +31,7 @@ mod function_annotation;
 mod functions;
 mod mutability;
 mod namespace;
+pub(crate) mod solana_accounts;
 mod statements;
 pub mod symtable;
 pub mod tags;

@@ -15,7 +15,7 @@ contract hatchling {
 }
 
 contract creator {
-    function create_hatchling(address new_address) public {
+    function create_hatchling(address new_address) external {
         hatchling h;
        
 	h = new hatchling{address: new_address}("luna", address(this));

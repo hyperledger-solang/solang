@@ -334,13 +334,16 @@ pub struct Function {
 /// it is stored in a IndexMap<String, SolanaAccount> (see above)
 #[derive(Clone, Copy, Debug)]
 pub struct SolanaAccount {
+    pub loc: pt::Loc,
     pub is_signer: bool,
     pub is_writer: bool,
+    /// Has the compiler automatically generated this account entry?
+    pub generated: bool,
 }
 
 pub enum ConstructorAnnotation {
     Seed(Expression),
-    Payer(Expression),
+    Payer(pt::Loc, String),
     Space(Expression),
     Bump(Expression),
 }
@@ -348,10 +351,10 @@ pub enum ConstructorAnnotation {
 impl CodeLocation for ConstructorAnnotation {
     fn loc(&self) -> pt::Loc {
         match self {
-            ConstructorAnnotation::Seed(expr) => expr.loc(),
-            ConstructorAnnotation::Payer(expr) => expr.loc(),
-            ConstructorAnnotation::Space(expr) => expr.loc(),
-            ConstructorAnnotation::Bump(expr) => expr.loc(),
+            ConstructorAnnotation::Seed(expr)
+            | ConstructorAnnotation::Space(expr)
+            | ConstructorAnnotation::Bump(expr) => expr.loc(),
+            ConstructorAnnotation::Payer(loc, _) => *loc,
         }
     }
 }

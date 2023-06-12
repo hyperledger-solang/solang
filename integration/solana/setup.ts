@@ -21,7 +21,7 @@ export async function loadContract(name: string, args: any[] = [], space: number
 
     const program_key = loadKey(`${name}.key`);
 
-    await create_account(provider, storage, program_key.publicKey, space);
+    await create_account(storage, program_key.publicKey, space);
 
     const program = new Program(idl, program_key.publicKey, provider);
 
@@ -32,7 +32,8 @@ export async function loadContract(name: string, args: any[] = [], space: number
     return { provider, program, payer, storage, program_key: program_key.publicKey };
 }
 
-async function create_account(provider: AnchorProvider, account: Keypair, programId: PublicKey, space: number) {
+export async function create_account(account: Keypair, programId: PublicKey, space: number) {
+    const provider = AnchorProvider.local(endpoint);
     const lamports = await provider.connection.getMinimumBalanceForRentExemption(space);
 
     const transaction = new Transaction();
@@ -63,7 +64,7 @@ export async function loadContractWithProvider(provider: AnchorProvider, name: s
     const storage = Keypair.generate();
     const program_key = loadKey(`${name}.key`);
 
-    await create_account(provider, storage, program_key.publicKey, space);
+    await create_account(storage, program_key.publicKey, space);
 
     const program = new Program(idl, program_key.publicKey, provider);
 
@@ -86,8 +87,13 @@ async function newAccountWithLamports(connection: Connection): Promise<Keypair> 
 
     console.log('Airdropping SOL to a new wallet ...');
     let signature = await connection.requestAirdrop(account.publicKey, 100 * LAMPORTS_PER_SOL);
-    await connection.confirmTransaction(signature, 'confirmed');
+    const latestBlockHash = await connection.getLatestBlockhash();
 
+    await connection.confirmTransaction({
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        signature,
+    }, 'confirmed');
     return account;
 }
 
@@ -143,12 +149,10 @@ async function setup() {
 }
 
 function newConnection(): Connection {
-    const connection = new Connection(endpoint, {
+    return new Connection(endpoint, {
         commitment: "confirmed",
         confirmTransactionInitialTimeout: 1e6,
     });
-
-    return connection;
 }
 
 if (require.main === module) {
