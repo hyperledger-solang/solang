@@ -5,7 +5,7 @@ use ink_env::{
     hash::{Blake2x256, CryptoHash},
     topics::PrefixedValue,
 };
-use ink_metadata::InkProject;
+use ink_metadata::{InkProject, TypeSpec};
 use ink_primitives::{AccountId, Hash};
 use parity_scale_codec::Encode;
 use scale_info::form::PortableForm;
@@ -41,7 +41,21 @@ contract Mother {
     }
 }"##;
 
-    let solidity_abi = load_abi(&build_wasm(src, false, false)[0].1).spec();
+    let solang_abi = load_abi(&build_wasm(src, false, false)[0].1);
     let ink_str = std::fs::read_to_string("testdata/ink/mother.json").unwrap();
     let ink_abi: InkProject = serde_json::from_str(&ink_str).unwrap();
+
+    let solang_env = solang_abi.spec().environment();
+    let ink_env = ink_abi.spec().environment();
+
+    assert_path(solang_env.timestamp(), ink_env.timestamp());
+    assert_path(solang_env.account_id(), ink_env.account_id());
+    assert_path(solang_env.hash(), ink_env.hash());
+    assert_path(solang_env.balance(), ink_env.balance());
+    assert_path(solang_env.block_number(), ink_env.block_number());
+    assert_eq!(solang_env.max_event_topics(), ink_env.max_event_topics());
+}
+
+fn assert_path(a: &TypeSpec<PortableForm>, b: &TypeSpec<PortableForm>) {
+    assert_eq!(a.display_name(), b.display_name());
 }
