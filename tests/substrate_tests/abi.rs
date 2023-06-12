@@ -1,20 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{build_wasm, load_abi};
-use ink_env::{
-    hash::{Blake2x256, CryptoHash},
-    topics::PrefixedValue,
-};
 use ink_metadata::{InkProject, TypeSpec};
-use ink_primitives::{AccountId, Hash};
-use parity_scale_codec::Encode;
+use once_cell::sync::Lazy;
 use scale_info::form::PortableForm;
-use solang::{file_resolver::FileResolver, Target};
-use std::ffi::OsStr;
+use std::sync::Mutex;
 
-#[test]
-fn mother() {
-    // Partial mock of the ink! "mother" integration test.
+/// Partially mimicking the ink! "mother" integration test.
+static MOTHER: Lazy<Mutex<(InkProject, InkProject)>> = Lazy::new(|| {
     let src = r##"
 import "substrate";
 
@@ -45,17 +38,45 @@ contract Mother {
     let ink_str = std::fs::read_to_string("testdata/ink/mother.json").unwrap();
     let ink_abi: InkProject = serde_json::from_str(&ink_str).unwrap();
 
-    let solang_env = solang_abi.spec().environment();
-    let ink_env = ink_abi.spec().environment();
+    Mutex::new((solang_abi, ink_abi))
+});
 
-    assert_path(solang_env.timestamp(), ink_env.timestamp());
-    assert_path(solang_env.account_id(), ink_env.account_id());
-    assert_path(solang_env.hash(), ink_env.hash());
-    assert_path(solang_env.balance(), ink_env.balance());
-    assert_path(solang_env.block_number(), ink_env.block_number());
-    assert_eq!(solang_env.max_event_topics(), ink_env.max_event_topics());
+fn eq_display(a: &TypeSpec<PortableForm>, b: &TypeSpec<PortableForm>) {
+    assert_eq!(a.display_name(), b.display_name());
 }
 
-fn assert_path(a: &TypeSpec<PortableForm>, b: &TypeSpec<PortableForm>) {
-    assert_eq!(a.display_name(), b.display_name());
+fn eq_path(a: &scale_info::Type<PortableForm>, b: &scale_info::Type<PortableForm>) {
+    dbg!(&a.type_def);
+    assert_eq!(a.type_def, b.type_def);
+}
+
+#[test]
+fn environment_matches_ink() {
+    let mother = MOTHER.lock().unwrap();
+    let (solang, ink) = (mother.0.spec().environment(), mother.1.spec().environment());
+
+    eq_display(solang.timestamp(), ink.timestamp());
+    eq_display(solang.account_id(), ink.account_id());
+    eq_display(solang.hash(), ink.hash());
+    eq_display(solang.balance(), ink.balance());
+    eq_display(solang.block_number(), ink.block_number());
+    assert_eq!(solang.max_event_topics(), ink.max_event_topics());
+}
+
+#[test]
+fn address_type_path_exists() {
+    let mother = MOTHER.lock().unwrap();
+    let (solang, ink) = (mother.0.registry(), mother.1.registry());
+
+    let ink_address = &ink.types[8].ty.path;
+    assert!(solang.types.iter().any(|t| &t.ty.path == ink_address));
+}
+
+#[test]
+fn hash_type_path_exists() {
+    let mother = MOTHER.lock().unwrap();
+    let (solang, ink) = (mother.0.registry(), mother.1.registry());
+
+    let ink_hash = &ink.types[1].ty.path;
+    assert!(solang.types.iter().any(|t| &t.ty.path == ink_hash));
 }
