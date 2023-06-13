@@ -8,6 +8,8 @@ use std::str;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
+use tempfile::tempdir;
+use wasm_opt::OptimizationOptions;
 
 use crate::codegen::{cfg::ReturnCode, Options};
 use crate::emit::substrate;
@@ -112,27 +114,47 @@ impl<'a> Binary<'a> {
             )
             .unwrap();
 
-        match target_machine.write_to_memory_buffer(
-            &self.module,
-            if generate == Generate::Assembly {
-                FileType::Assembly
-            } else {
-                FileType::Object
-            },
-        ) {
-            Ok(out) => {
+        let mut blob = target_machine
+            .write_to_memory_buffer(
+                &self.module,
+                if generate == Generate::Assembly {
+                    FileType::Assembly
+                } else {
+                    FileType::Object
+                },
+            )
+            .map(|out| {
                 let slice = out.as_slice();
 
                 if generate == Generate::Linked {
-                    let bs = link(slice, &self.name, self.target);
-
-                    Ok(bs.to_vec())
+                    link(slice, &self.name, self.target).to_vec()
                 } else {
-                    Ok(slice.to_vec())
+                    slice.to_vec()
                 }
-            }
-            Err(s) => Err(s.to_string()),
+            })
+            .map_err(|s| s.to_string())?;
+
+        if let Some(level) = self.options.wasm_opt.filter(|_| self.target.is_substrate()) {
+            let mut infile = tempdir().map_err(|e| e.to_string())?.into_path();
+            infile.push(&self.name);
+            let outfile = infile.with_extension("wasmopt");
+            std::fs::write(&infile, &blob).map_err(|e| e.to_string())?;
+
+            // Using the same config as cargo contract:
+            // https://github.com/paritytech/cargo-contract/blob/71a8a42096e2df36d54a695d099aecfb1e394b78/crates/build/src/wasm_opt.rs#L67
+            OptimizationOptions::from(level)
+                .mvp_features_only()
+                .zero_filled_memory(true)
+                .debug_info(self.options.generate_debug_information)
+                .run(&infile, &outfile)
+                .map_err(|err| {
+                    format!("error: wasm-opt for binary {} failed: {}", self.name, err)
+                })?;
+
+            blob = std::fs::read(&outfile).expect("just wrote this file");
         }
+
+        Ok(blob)
     }
 
     /// Mark all functions as internal unless they're in the export_list. This helps the
