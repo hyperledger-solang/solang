@@ -733,6 +733,16 @@ impl Runtime {
 
         Ok(data.iter().map(|i| *i as u32).sum())
     }
+
+    #[seal(0)]
+    fn is_contract(input_ptr: u32) -> Result<u32, Trap> {
+        let address = read_account(mem, input_ptr);
+        Ok(vm
+            .accounts
+            .iter()
+            .any(|account| account.contract.is_some() && account.address == address)
+            .into())
+    }
 }
 
 /// Provides a mock implementation of substrates [contracts pallet][1]

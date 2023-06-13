@@ -341,6 +341,11 @@ looks like in a solidity contract:
 .. include:: ../examples/substrate/call_chain_extension.sol
   :code: solidity
 
+is_contract(address AccountId) returns (bool)
++++++++++++++++++++++++++++++++++++++++++++++
+
+Only available on Substrate. Checks whether the given address is a contract address. 
+
 Cryptography
 ____________
 
