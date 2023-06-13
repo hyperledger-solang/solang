@@ -44,6 +44,7 @@ use crate::codegen::cfg::ASTFunction;
 use crate::codegen::solana_accounts::account_management::manage_contract_accounts;
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
+use contract_build::OptimizationPasses;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
@@ -96,6 +97,7 @@ pub struct Options {
     pub log_api_return_codes: bool,
     pub log_runtime_errors: bool,
     pub log_prints: bool,
+    pub wasm_opt: Option<OptimizationPasses>,
 }
 
 impl Default for Options {
@@ -111,6 +113,7 @@ impl Default for Options {
             log_api_return_codes: false,
             log_runtime_errors: false,
             log_prints: true,
+            wasm_opt: None,
         }
     }
 }

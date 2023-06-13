@@ -20,6 +20,7 @@ use std::{
     path::{Path, PathBuf},
     process::exit,
 };
+use wasm_opt::OptimizationOptions;
 
 use crate::cli::{
     imports_arg, options_arg, target_arg, Cli, Commands, Compile, CompilerOutput, Doc,
@@ -308,7 +309,41 @@ fn contract_results(
         return;
     }
 
-    let code = binary.code(Generate::Linked).expect("llvm build");
+    let mut code = binary.code(Generate::Linked).expect("llvm build");
+
+    if let Some(level) = opt.wasm_opt.filter(|_| ns.target.is_substrate()) {
+        if verbose {
+            eprintln!(
+                "info: wasm-opt level '{}' for contract {}",
+                level, resolved_contract.name
+            );
+        }
+
+        let infile = PathBuf::from(&ns.contracts[contract_no].name);
+        let outfile = infile.with_extension("wasmopt");
+        let mut file = create_file(&infile);
+        file.write_all(&code).unwrap();
+
+        // Using the same config as cargo contract:
+        // https://github.com/paritytech/cargo-contract/blob/71a8a42096e2df36d54a695d099aecfb1e394b78/crates/build/src/wasm_opt.rs#L67
+        OptimizationOptions::from(level)
+            .mvp_features_only()
+            .zero_filled_memory(true)
+            .debug_info(opt.generate_debug_information)
+            .run(&infile, &outfile)
+            .map_err(|err| {
+                eprintln!(
+                    "error: wasm-opt for contract {} failed: {}",
+                    resolved_contract.name, err
+                );
+                exit(1);
+            })
+            .expect("exit(1) on error");
+
+        code = std::fs::read(&outfile).expect("just wrote this file");
+        std::fs::remove_file(outfile).expect("just wrote this file");
+        std::fs::remove_file(infile).expect("just wrote this file");
+    }
 
     if std_json {
         json_contracts.insert(
