@@ -2,7 +2,8 @@
 
 use super::Options;
 use crate::codegen::{cfg::ControlFlowGraph, vartable::Vartable, OptimizationLevel};
-use crate::sema::ast::{Expression, Function, Namespace};
+use crate::sema::ast::RetrieveType;
+use crate::sema::ast::{Builtin, Expression, Function, Namespace};
 use crate::sema::symtable::VariableUsage;
 
 /// This struct saves the parameters to call 'check_side_effects_expressions'
@@ -50,6 +51,25 @@ pub fn should_remove_assignment(
         | Expression::Cast { expr, .. }
         | Expression::BytesCast { expr, .. } => should_remove_assignment(ns, expr, func, opt),
 
+        Expression::Builtin {
+            kind: Builtin::ArrayLength,
+            args,
+            ..
+        } => should_remove_assignment(ns, &args[0], func, opt),
+
+        Expression::Builtin {
+            kind: Builtin::ArrayPop | Builtin::ArrayPush,
+            args,
+            ..
+        } => {
+            // If the argument is a storage reference, the operation shall not be removed
+            if args[0].ty().is_contract_storage() {
+                return false;
+            }
+
+            should_remove_assignment(ns, &args[0], func, opt)
+        }
+
         _ => false,
     }
 }
@@ -68,7 +88,7 @@ pub fn should_remove_variable(pos: usize, func: &Function, opt: &Options) -> boo
     }
 
     // If the variable has been assigned, we must detect special cases
-    // Parameters and return variable cannot be removed
+    // Parameters and return variables cannot be removed
     if !var.read
         && var.assigned
         && matches!(

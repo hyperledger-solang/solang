@@ -1771,9 +1771,9 @@ fn dynamic_array_pop_empty_array() {
         pragma solidity 0;
 
         contract foo {
-            function test() public {
+            function test() public returns (int) {
                 int[] bar = new int[](0);
-                bar.pop();
+                return bar.pop();
             }
         }"#,
     );
@@ -1965,5 +1965,42 @@ contract RH {
                 value: BigInt::from(4u8),
             },
         ])
+    );
+}
+
+#[test]
+fn push_empty_array() {
+    let src = r#"
+contract MyTest {
+    function foo() public pure returns (bytes memory) {
+        bytes b1 = hex"41";
+        bytes b2 = hex"41";
+
+        b2.push(0x41);
+
+        return (b1);
+    }
+
+    function foo2() public pure returns (uint64) {
+        uint64[] a;
+        a.push(20);
+        return a[0];
+    }
+}
+    "#;
+
+    let mut vm = build_solidity(src);
+    vm.constructor(&[]);
+
+    let ret = vm.function("foo", &[]).unwrap();
+    assert_eq!(ret, BorshToken::Bytes(vec![65]));
+
+    let ret = vm.function("foo2", &[]).unwrap();
+    assert_eq!(
+        ret,
+        BorshToken::Uint {
+            width: 64,
+            value: BigInt::from(20),
+        }
     );
 }

@@ -66,7 +66,7 @@ contract c {
         x = 102 + t*y/(t+5*y) + g + test3() - vec.push(2) + ct.sum(1, 2);
 		return 2;
 // CHECK: push array ty:int32[] value:int32 2
-// CHECK: _ = external call::regular address:%ct payload:%abi_encoded.temp.89 value:uint128 0 gas:uint64 0 accounts: seeds:
+// CHECK: _ = external call::regular address:%ct payload:%abi_encoded.temp.90 value:uint128 0 gas:uint64 0 accounts: seeds: contract|function:(0, 2)
 }
 
 }
@@ -77,7 +77,7 @@ contract c3 {
         c2 ct = new c2();
 
         return 3;
-// CHECK: constructor(no: ) salt: value: gas:uint64 0 address: seeds: c2 encoded buffer: %abi_encoded.temp.108 accounts: 
+// CHECK: constructor(no: ) salt: value: gas:uint64 0 address: seeds: c2 encoded buffer: %abi_encoded.temp.109 accounts: 
     }
 
 // BEGIN-CHECK: c3::function::test7
@@ -136,7 +136,7 @@ return 3;
         int f = 4;
 
         int c = 32 +4 *(f = it1+it2);
-// CHECK: ty:int256 %c = (int256 32 + (sext int256 (int64 4 * (trunc int64 (%temp.117 + %temp.118)))))
+// CHECK: ty:int256 %c = (int256 32 + (sext int256 (int64 4 * (trunc int64 (%temp.118 + %temp.119)))))
 // NOT-CHECK: ty:int256 %f = (%temp.10 + %temp.11)
         return c;
     }
@@ -177,7 +177,7 @@ return 3;
     function test14() public returns (int) {
         int[] storage ptrArr = testArr;
 
-// CHECK: store storage slot(%temp.137) ty:int256 storage = int256 3
+// CHECK: store storage slot(%temp.138) ty:int256 storage = int256 3
         ptrArr.push(3);
 
         return ptrArr[0];
