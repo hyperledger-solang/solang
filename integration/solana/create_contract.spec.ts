@@ -3,7 +3,7 @@
 import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from '@solana/web3.js';
 import expect from 'expect';
 import { Program, Provider, BN } from '@project-serum/anchor';
-import { loadContract } from './setup';
+import {create_account, loadContract} from './setup';
 import fs from 'fs';
 
 describe('ChildContract', function () {
@@ -22,12 +22,14 @@ describe('ChildContract', function () {
         let child_program = new PublicKey("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT");
         let child = Keypair.generate();
 
-        const signature = await program.methods.createChild(child.publicKey, payer.publicKey)
-            .accounts({ dataAccount: storage.publicKey })
+        const signature = await program.methods.createChild(child.publicKey)
+            .accounts({
+                dataAccount: storage.publicKey,
+                payer: payer.publicKey,
+            })
             .remainingAccounts([
                 { pubkey: child_program, isSigner: false, isWritable: false },
                 { pubkey: child.publicKey, isSigner: true, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
             ])
             .signers([payer, child])
             .rpc({ commitment: 'confirmed' });
@@ -49,12 +51,14 @@ describe('ChildContract', function () {
         let [address, bump] = await PublicKey.findProgramAddress([seed], seed_program);
 
         const signature = await program.methods.createSeed1(
-            address, payer.publicKey, seed, Buffer.from([bump]), new BN(711))
-            .accounts({ dataAccount: storage.publicKey })
+            address, seed, Buffer.from([bump]), new BN(711))
+            .accounts({
+                dataAccount: storage.publicKey,
+                payer: payer.publicKey,
+            })
             .remainingAccounts([
                 { pubkey: seed_program, isSigner: false, isWritable: false },
                 { pubkey: address, isSigner: false, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
             ])
             .signers([payer])
             .rpc({ commitment: 'confirmed' });
@@ -80,12 +84,14 @@ describe('ChildContract', function () {
         let seed = Buffer.concat([bare_seed, Buffer.from([bump])]);
 
         const signature = await program.methods.createSeed2(
-            address, payer.publicKey, seed, new BN(9889))
-            .accounts({ dataAccount: storage.publicKey })
+            address, seed, new BN(9889))
+            .accounts({
+                dataAccount: storage.publicKey,
+                payer: payer.publicKey
+            })
             .remainingAccounts([
                 { pubkey: seed_program, isSigner: false, isWritable: false },
                 { pubkey: address, isSigner: false, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
             ])
             .signers([payer])
             .rpc({ commitment: 'confirmed' });
@@ -133,5 +139,29 @@ describe('ChildContract', function () {
         const info = await provider.connection.getAccountInfo(child.publicKey);
 
         expect(info?.data.length).toEqual(518);
+    });
+
+    it('Create Contract without annotations', async function () {
+        const child = Keypair.generate();
+        const child_program = new PublicKey("8gTkAidfM82u3DGbKcZpHwL5p47KQA16MDb4WmrHdmF6");
+
+        await create_account(child, child_program, 8192);
+        const signature = await program.methods.createWithoutAnnotation(child.publicKey)
+            .accounts( {dataAccount: storage.publicKey})
+            .remainingAccounts(
+                [
+                    {pubkey: child_program, isSigner: false, isWritable: false},
+                    {pubkey: child.publicKey, isSigner: true, isWritable: true}
+                ]
+            ).signers([child])
+            .rpc({ commitment: 'confirmed'});
+
+        const tx = await provider.connection.getTransaction(signature, {
+            commitment: 'confirmed',
+            maxSupportedTransactionVersion: undefined,
+        });
+
+        expect(tx?.meta?.logMessages!.toString()).toContain('In child constructor');
+        expect(tx?.meta?.logMessages!.toString()).toContain('say_my_name');
     });
 });

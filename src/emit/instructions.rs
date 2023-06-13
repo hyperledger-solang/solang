@@ -671,6 +671,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             seeds,
             loc,
             accounts,
+            constructor_no: _,
         } => {
             let encoded_args = expression(target, bin, encoded_args, &w.vars, function, ns);
             let encoded_args_len = bin.vector_len(encoded_args).as_basic_value_enum();

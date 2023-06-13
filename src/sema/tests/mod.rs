@@ -464,7 +464,7 @@ contract aborting {
 }
 
 contract runner {
-    function test(address a) public pure {
+    function test(address a) external pure {
         aborting abort = new aborting{address: a}();
 
         try abort.abort() returns (int32 a, bool b) {

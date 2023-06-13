@@ -28,7 +28,7 @@ use self::{
     cfg::{optimize_and_check_cfg, ControlFlowGraph, Instr},
     dispatch::function_dispatch,
     expression::expression,
-    solana_accounts::collect_accounts_from_contract,
+    solana_accounts::account_collection::collect_accounts_from_contract,
     vartable::Vartable,
 };
 use crate::sema::ast::{
@@ -41,6 +41,7 @@ use crate::{
 use std::cmp::Ordering;
 
 use crate::codegen::cfg::ASTFunction;
+use crate::codegen::solana_accounts::account_management::manage_contract_accounts;
 use crate::codegen::yul::generate_yul_function_cfg;
 use crate::sema::Recurse;
 use num_bigint::{BigInt, Sign};
@@ -159,7 +160,14 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
     if ns.target == Target::Solana {
         for contract_no in 0..ns.contracts.len() {
             if ns.contracts[contract_no].instantiable {
-                collect_accounts_from_contract(contract_no, ns);
+                let diag = collect_accounts_from_contract(contract_no, ns);
+                ns.diagnostics.extend(diag);
+            }
+        }
+
+        for contract_no in 0..ns.contracts.len() {
+            if ns.contracts[contract_no].instantiable {
+                manage_contract_accounts(contract_no, ns);
             }
         }
     }

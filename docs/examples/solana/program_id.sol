@@ -8,7 +8,7 @@ contract Foo {
 contract Bar {
     Foo public foo;
 
-    function create_foo(address new_address) public {
+    function create_foo(address new_address) external {
         foo = new Foo{address: new_address}();
     }
 

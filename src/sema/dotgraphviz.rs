@@ -227,8 +227,12 @@ impl Dot {
                     ConstructorAnnotation::Bump(expr) => {
                         self.add_expression(expr, Some(func), ns, node, "bump".into());
                     }
-                    ConstructorAnnotation::Payer(expr) => {
-                        self.add_expression(expr, Some(func), ns, node, "payer".into());
+                    ConstructorAnnotation::Payer(_, name) => {
+                        self.add_node(
+                            Node::new("payer", vec![name.clone()]),
+                            Some(node),
+                            Some(String::from("payer declaration")),
+                        );
                     }
                 };
             }

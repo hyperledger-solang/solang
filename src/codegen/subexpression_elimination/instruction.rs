@@ -336,6 +336,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 seeds,
                 loc,
                 accounts,
+                constructor_no,
             } => {
                 let new_value = value
                     .as_ref()
@@ -361,6 +362,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     success: *success,
                     res: *res,
                     contract_no: *contract_no,
+                    constructor_no: *constructor_no,
                     encoded_args: self.regenerate_expression(encoded_args, ave, cst).1,
                     value: new_value,
                     gas: self.regenerate_expression(gas, ave, cst).1,

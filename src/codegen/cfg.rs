@@ -119,6 +119,7 @@ pub enum Instr {
         success: Option<usize>,
         res: usize,
         contract_no: usize,
+        constructor_no: Option<usize>,
         encoded_args: Expression,
         value: Option<Expression>,
         gas: Expression,
@@ -1234,13 +1235,19 @@ impl ControlFlowGraph {
                 value,
                 address,seeds,
                 accounts,
+                constructor_no,
                 loc:_
             } => format!(
-                "%{}, {} = constructor salt:{} value:{} gas:{} address:{} seeds:{} {} encoded buffer: {} accounts: {}",
+                "%{}, {} = constructor(no: {}) salt:{} value:{} gas:{} address:{} seeds:{} {} encoded buffer: {} accounts: {}",
                 self.vars[res].id.name,
                 match success {
                     Some(i) => format!("%{}", self.vars[i].id.name),
                     None => "_".to_string(),
+                },
+                if let Some(no) = constructor_no {
+                    format!("{}", no)
+                } else {
+                    String::new()
                 },
                 match salt {
                     Some(salt) => self.expr_to_string(contract, ns, salt),

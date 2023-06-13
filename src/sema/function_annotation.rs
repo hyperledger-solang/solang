@@ -9,11 +9,15 @@ use super::{
     unused_variable::used_variable,
     Symtable,
 };
+use crate::sema::ast::SolanaAccount;
 use crate::sema::expression::literals::number_literal;
 use crate::sema::expression::resolve_expression::expression;
+use crate::sema::solana_accounts::BuiltinAccounts;
 use crate::Target;
+use indexmap::map::Entry;
 use num_traits::ToPrimitive;
 use solang_parser::pt::{self, CodeLocation};
+use std::str::FromStr;
 
 /// Resolve the prototype annotation for functions (just the selector). These
 /// annotations can be resolved for functions without a body. This means they
@@ -261,31 +265,56 @@ pub fn function_body_annotations(
                 }
             }
             "payer" if is_solana_constructor => {
-                let ty = Type::Address(false);
                 let loc = note.loc;
 
-                if let Ok(expr) = expression(
-                    &note.value,
-                    context,
-                    ns,
-                    symtable,
-                    &mut diagnostics,
-                    ResolveTo::Type(&ty),
-                ) {
-                    if let Ok(expr) = expr.cast(&expr.loc(), &ty, true, ns, &mut diagnostics) {
-                        if let Some(prev) = &payer {
+                if let pt::Expression::Variable(id) = &note.value {
+                    if BuiltinAccounts::from_str(&id.name).is_ok() {
+                        diagnostics.push(Diagnostic::error(
+                            id.loc,
+                            format!("'{}' is a reserved account name", id.name),
+                        ));
+                        continue;
+                    }
+
+                    match ns.functions[function_no]
+                        .solana_accounts
+                        .borrow_mut()
+                        .entry(id.name.clone())
+                    {
+                        Entry::Occupied(other_account) => {
                             diagnostics.push(Diagnostic::error_with_note(
-                                loc,
-                                "duplicate @payer annotation for constructor".into(),
-                                *prev,
-                                "previous @payer".into(),
+                                id.loc,
+                                format!("account '{}' already defined", id.name),
+                                other_account.get().loc,
+                                "previous definition".to_string(),
                             ));
-                        } else {
-                            payer = Some(loc);
-                            used_variable(ns, &expr, symtable);
-                            resolved_annotations.push(ConstructorAnnotation::Payer(expr));
+                        }
+                        Entry::Vacant(vacancy) => {
+                            if let Some(prev) = &payer {
+                                diagnostics.push(Diagnostic::error_with_note(
+                                    loc,
+                                    "duplicate @payer annotation for constructor".into(),
+                                    *prev,
+                                    "previous @payer".into(),
+                                ));
+                            } else {
+                                payer = Some(loc);
+                                vacancy.insert(SolanaAccount {
+                                    loc: note.loc,
+                                    is_signer: true,
+                                    is_writer: true,
+                                    generated: false,
+                                });
+                                resolved_annotations
+                                    .push(ConstructorAnnotation::Payer(loc, id.name.clone()));
+                            }
                         }
                     }
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        note.loc,
+                        "invalid parameter for annotation".to_string(),
+                    ));
                 }
             }
             _ => diagnostics.push(Diagnostic::error(
@@ -300,7 +329,7 @@ pub fn function_body_annotations(
 
     if !resolved_annotations.is_empty() && diagnostics.is_empty() && payer.is_none() {
         diagnostics.push(Diagnostic::error(
-            resolved_annotations[0].loc(),
+            ns.functions[function_no].loc,
             "@payer annotation required for constructor".into(),
         ));
     }

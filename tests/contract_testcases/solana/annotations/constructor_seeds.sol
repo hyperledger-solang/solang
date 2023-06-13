@@ -31,7 +31,7 @@ contract c3 {
 	@seed(hex"41420044")
 	@bump(b)
 	@bump(5)
-	@payer(address"Chi1doxDSNjrmbZ5sq3H2cXyTq3KNfGepmbhyHaxcr8")
+	@payer(my_account)
 	@payer(bar)
 	@space(1025 + 5)
 	@space(4)
@@ -61,18 +61,18 @@ contract c4 {
 // error: 15:15: address literal 102 invalid character '0'
 // error: 20:8-9: duplicate @bump annotation for constructor
 // 	note 19:2-10: previous @bump
-// error: 21:9-60: address literal Chi1doxDSNjrmbZ5sq3H2cXyTq3KNfGepmbhyHaxcr incorrect length of 31
+// error: 21:2-61: invalid parameter for annotation
 // error: 24:2-11: duplicate @space annotation for constructor
 // 	note 23:2-18: previous @space
 // error: 28:1-17: annotion takes an account, for example '@program_id("BBH7Xi5ddus5EoQhzJLgyodVxJJGkvBRCY5AhBA1jwUr")'
 // error: 33:8-9: duplicate @bump annotation for constructor
 // 	note 32:2-10: previous @bump
 // error: 35:2-13: duplicate @payer annotation for constructor
-// 	note 34:2-62: previous @payer
+// 	note 34:2-20: previous @payer
 // error: 37:2-11: duplicate @space annotation for constructor
 // 	note 36:2-18: previous @space
 // error: 40:2-14: unknown annotation seed for function
 // error: 41:2-10: unknown annotation bump for function
 // error: 42:2-62: unknown annotation payer for function
 // error: 43:2-11: unknown annotation space for function
-// error: 49:8-21: @payer annotation required for constructor
+// error: 52:2-16: @payer annotation required for constructor

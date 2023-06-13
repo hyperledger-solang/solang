@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { Keypair, PublicKey } from '@solana/web3.js';
+import {Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction} from '@solana/web3.js';
 import expect from 'expect';
-import { loadContract } from './setup';
-import { Program, Provider, BN } from '@project-serum/anchor';
+import {loadContract} from './setup';
+import {Program, Provider, BN, AnchorProvider} from '@project-serum/anchor';
+import {createAccount} from "@solana/spl-token";
 
 describe('Runtime Errors', function () {
     this.timeout(150000);
@@ -24,7 +25,7 @@ describe('Runtime Errors', function () {
         }
         catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: storage index out of bounds in runtime_errors.sol:42:11-12,
+            expect(logs).toContain(`Program log: runtime_error: storage index out of bounds in runtime_errors.sol:41:11-12,
 `);
         }
 
@@ -33,7 +34,7 @@ describe('Runtime Errors', function () {
         }
         catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: storage array index out of bounds in runtime_errors.sol:49:19-23,
+            expect(logs).toContain(`Program log: runtime_error: storage array index out of bounds in runtime_errors.sol:48:19-23,
 `);
         }
 
@@ -41,7 +42,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.popEmptyStorage().accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: pop from empty storage array in runtime_errors.sol:61:9-12,
+            expect(logs).toContain(`Program log: runtime_error: pop from empty storage array in runtime_errors.sol:60:9-12,
 `)
 
         }
@@ -50,7 +51,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.invalidInstruction().accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: reached invalid instruction in runtime_errors.sol:108:13-22,
+            expect(logs).toContain(`Program log: runtime_error: reached invalid instruction in runtime_errors.sol:101:13-22,
 `)
 
         }
@@ -59,7 +60,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.byteCastFailure(new BN(33)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: bytes cast error in runtime_errors.sol:114:23-40,
+            expect(logs).toContain(`Program log: runtime_error: bytes cast error in runtime_errors.sol:107:23-40,
 `)
 
         }
@@ -68,7 +69,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.iWillRevert().accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: revert encountered in runtime_errors.sol:76:9-17,
+            expect(logs).toContain(`Program log: runtime_error: revert encountered in runtime_errors.sol:69:9-17,
 `)
         }
 
@@ -76,7 +77,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.assertTest(new BN(9)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: assert failure in runtime_errors.sol:35:16-24,
+            expect(logs).toContain(`Program log: runtime_error: assert failure in runtime_errors.sol:34:16-24,
 `)
         }
 
@@ -84,7 +85,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.writeIntegerFailure(new BN(1)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: integer too large to write in buffer in runtime_errors.sol:81:18-31,
+            expect(logs).toContain(`Program log: runtime_error: integer too large to write in buffer in runtime_errors.sol:74:18-31,
 `)
         }
 
@@ -92,7 +93,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.writeBytesFailure(new BN(9)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: data does not fit into buffer in runtime_errors.sol:87:18-28,
+            expect(logs).toContain(`Program log: runtime_error: data does not fit into buffer in runtime_errors.sol:80:18-28,
 `)
         }
 
@@ -101,7 +102,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.readIntegerFailure(new BN(2)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: read integer out of bounds in runtime_errors.sol:92:18-30,
+            expect(logs).toContain(`Program log: runtime_error: read integer out of bounds in runtime_errors.sol:85:18-30,
 `)
         }
 
@@ -110,7 +111,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.outOfBounds(new BN(19)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: array index out of bounds in runtime_errors.sol:103:16-21,
+            expect(logs).toContain(`Program log: runtime_error: array index out of bounds in runtime_errors.sol:96:16-21,
 `)
         }
 
@@ -119,37 +120,8 @@ describe('Runtime Errors', function () {
             let res = await program.methods.truncFailure(new BN(99999999999999)).accounts({ dataAccount: storage.publicKey }).simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: truncated type overflows in runtime_errors.sol:97:37-42,
+            expect(logs).toContain(`Program log: runtime_error: truncated type overflows in runtime_errors.sol:90:37-42,
 `)
-        }
-
-        let child_program = new PublicKey("Cre7AzxtwSxXwU2jekYtCAQ57DkBhY9SjGDLdcrwhAo6");
-        let child = Keypair.generate();
-
-
-        const signature = await program.methods.createChild(child.publicKey, payer.publicKey)
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts([
-                { pubkey: child_program, isSigner: false, isWritable: false },
-                { pubkey: child.publicKey, isSigner: true, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
-            ])
-            .signers([payer, child])
-            .rpc({ commitment: 'confirmed' });
-
-
-        const tx = await provider.connection.getTransaction(signature, { commitment: 'confirmed' });
-        try {
-            const signature = await program.methods.createChild(child.publicKey, payer.publicKey)
-                .accounts({ dataAccount: storage.publicKey })
-                .remainingAccounts([
-                    { pubkey: child_program, isSigner: false, isWritable: false },
-                    { pubkey: payer.publicKey, isSigner: true, isWritable: true },
-                ])
-                .signers([payer]).simulate();
-        } catch (e: any) {
-            const logs = e.simulationResponse.logs
-            expect(logs).toContain("Program log: new account needed");
         }
 
     });

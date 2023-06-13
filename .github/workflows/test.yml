@@ -310,6 +310,8 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
+      with:
+        submodules: recursive
       # We can't run substrate as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate

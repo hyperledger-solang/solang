@@ -62,18 +62,6 @@ contract RuntimeErrors {
         arr.pop();
     }
 
-
-    // contract creation failed
-    function create_child() public {
-        address a = address(0);
-        c = new child{address: a}();
-        //c2 = new child();
-        uint128 x = address(this).balance;
-        //print("sesa");
-        print("x = {}".format(x));
-
-    }
-
     function i_will_revert() public {
         revert();
     }
@@ -200,7 +188,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: read integer out of bounds in test.sol:86:18-30,\n"
+        "runtime_error: read integer out of bounds in test.sol:74:18-30,\n"
     );
     vm.logs.clear();
 
@@ -214,7 +202,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: truncated type overflows in test.sol:91:37-42,\n"
+        "runtime_error: truncated type overflows in test.sol:79:37-42,\n"
     );
     vm.logs.clear();
 
@@ -222,7 +210,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: reached invalid instruction in test.sol:102:13-22,\n"
+        "runtime_error: reached invalid instruction in test.sol:90:13-22,\n"
     );
 
     vm.logs.clear();
@@ -246,7 +234,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: data does not fit into buffer in test.sol:81:18-28,\n"
+        "runtime_error: data does not fit into buffer in test.sol:69:18-28,\n"
     );
 
     vm.logs.clear();
@@ -275,7 +263,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: array index out of bounds in test.sol:97:16-21,\n"
+        "runtime_error: array index out of bounds in test.sol:85:16-21,\n"
     );
 
     vm.logs.clear();
@@ -290,7 +278,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: integer too large to write in buffer in test.sol:75:18-31,\n"
+        "runtime_error: integer too large to write in buffer in test.sol:63:18-31,\n"
     );
 
     vm.logs.clear();
@@ -305,7 +293,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: bytes cast error in test.sol:110:23-40,\n"
+        "runtime_error: bytes cast error in test.sol:98:23-40,\n"
     );
 
     vm.logs.clear();
@@ -314,13 +302,8 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: revert encountered in test.sol:70:9-17,\n"
+        "runtime_error: revert encountered in test.sol:58:9-17,\n"
     );
 
-    vm.logs.clear();
-
-    _res = vm.function_must_fail("create_child", &[]);
-
-    assert_eq!(vm.logs, "new account needed");
     vm.logs.clear();
 }

@@ -911,9 +911,16 @@ impl<'a> Builder<'a> {
                 match note {
                     ast::ConstructorAnnotation::Bump(expr)
                     | ast::ConstructorAnnotation::Seed(expr)
-                    | ast::ConstructorAnnotation::Payer(expr)
                     | ast::ConstructorAnnotation::Space(expr) => {
                         builder.expression(expr, &func.symtable)
+                    }
+
+                    ast::ConstructorAnnotation::Payer(loc, name) => {
+                        builder.hovers.push(HoverEntry {
+                            start: loc.start(),
+                            stop: loc.end(),
+                            val: format!("payer account: {}", name),
+                        });
                     }
                 }
             }
