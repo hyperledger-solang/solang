@@ -45,11 +45,6 @@ fn eq_display(a: &TypeSpec<PortableForm>, b: &TypeSpec<PortableForm>) {
     assert_eq!(a.display_name(), b.display_name());
 }
 
-fn eq_path(a: &scale_info::Type<PortableForm>, b: &scale_info::Type<PortableForm>) {
-    dbg!(&a.type_def);
-    assert_eq!(a.type_def, b.type_def);
-}
-
 #[test]
 fn environment_matches_ink() {
     let mother = MOTHER.lock().unwrap();
