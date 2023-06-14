@@ -145,6 +145,21 @@ This also means that, whenever the length of an array is accessed using '.length
 Note that this optimization does not cover every case. When an array is passed
 as a function argument, for instance, the length is unknown.
 
+``wasm-opt`` optimization passes
+--------------------------------
+
+For the Substrate target, optimization passes from the `binaryen <https://github.com/WebAssembly/binaryen>`_ ``wasm-opt`` 
+tool can be applied. This may vastly shrink the Wasm code size and can make the code more efficient as well.
+
+Use the ``--wasm-opt`` compile flag to enable ``wasm-opt`` optimizations. Possible values are 
+``0`` - ``4``, ``s`` and ``z``, corresponding to the ``wasm-opt`` flags ``-O0`` - ``-O4``, ``-Os`` and ``-Oz`` respectively.
+To learn more about the optimization levels please consult ``wasm-opt --help``.
+
+.. note::
+
+    In ``--release`` mode, if ``--wasm-opt`` is not specified, the level ``z`` ("super-focusing on code size") will be used.
+
+
 Debugging Options
 -----------------
 

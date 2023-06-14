@@ -183,7 +183,7 @@ pub struct Optimizations {
 
     #[arg(
         name = "WASM_OPT",
-        help = "wasm-opt passes for Wasm targets",
+        help = "wasm-opt passes for Wasm targets (0, 1, 2, 3, 4, s or z; see the wasm-opt help for more details)",
         long = "wasm-opt",
         num_args = 1
     )]
