@@ -147,9 +147,7 @@ impl<'a> Binary<'a> {
                 .zero_filled_memory(true)
                 .debug_info(self.options.generate_debug_information)
                 .run(&infile, &outfile)
-                .map_err(|err| {
-                    format!("error: wasm-opt for binary {} failed: {}", self.name, err)
-                })?;
+                .map_err(|err| format!("wasm-opt for binary {} failed: {}", self.name, err))?;
 
             blob = std::fs::read(&outfile).expect("just wrote this file");
         }
