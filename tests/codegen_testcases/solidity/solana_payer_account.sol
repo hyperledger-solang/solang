@@ -17,10 +17,9 @@ contract Builder {
 
 @program_id("SoLGijpEqEeXLEqa9ruh7a6Lu4wogd6rM8FNoR7e3wY")
 contract Built {
-    @seed(my_seed)
     @space(1024)
     @payer(payer_account)
-    constructor(bytes my_seed) {}
+    constructor(@seed bytes my_seed) {}
     // BEGIN-CHECK: solang_dispatch
     // CHECK: ty:struct AccountMeta[2] %metas.temp.10 = [2] [ struct { (load (struct (subscript struct AccountInfo[] (builtin Accounts ())[uint32 1]) field 0)), true, true }, struct { (builtin GetAddress ()), true, true } ]
     // The account metas should have the proper index in the AccountInfo array: 1

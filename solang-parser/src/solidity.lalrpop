@@ -284,7 +284,7 @@ TypeDefinition: Box<TypeDefinition> = {
 Annotation: Box<Annotation> = {
     <l:@L> "@" <id:SolIdentifier> "(" <value:Expression> ")" <r:@R> => {
         Box::new(Annotation {
-            loc: Loc::File(file_no, l, r), id, value
+            loc: Loc::File(file_no, l, r), id, value: Some(value)
         })
     }
 }
@@ -520,14 +520,12 @@ HexLiteral: HexLiteral = {
     }
 }
 
-// A parameter list is used for function arguments, returns, and destructuring statements.
-// In destructuring statements, parameters can be optional. So, we make parameters optional
-// and as an added bonus we can generate error messages about missing parameters/returns
-// to functions
+// A parameter list is used for function arguments and return.
+// Destructure statements utilize NamedParameter, not Parameter
 Parameter: Parameter = {
-    <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier?> <r:@R> => {
+    <l:@L> <annotation:ParameterAnnotation?> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier?> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
-        Parameter{loc, ty, storage, name}
+        Parameter{loc, ty, storage, name, annotation}
     }
 }
 
@@ -545,14 +543,20 @@ ParameterList: Vec<(Loc, Option<Parameter>)> = {
     }
 }
 
+ParameterAnnotation: Annotation = {
+    <l:@L> "@" <id:SolIdentifier> <r:@R> => Annotation {
+        loc: Loc::File(file_no, l, r), id, value: None,
+    }
+}
+
 NamedParameter: Parameter = {
     <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
-        Parameter{ loc, ty, storage, name: Some(name) }
+        Parameter{ loc, ty, storage, name: Some(name), annotation: None }
     },
     <l:@L> <ty:Expression> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
-        Parameter{ loc, ty, storage: None, name: None }
+        Parameter{ loc, ty, storage: None, name: None, annotation: None }
     }
 }
 

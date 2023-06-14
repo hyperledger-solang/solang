@@ -232,6 +232,7 @@ fn parse_test() {
                                     loc: Loc::File(0, 785, 788),
                                     name: "sum".to_string(),
                                 }),
+                                annotation: None,
                             }),
                         )],
                         Box::new(Statement::Block {
@@ -273,6 +274,7 @@ fn parse_test() {
                                     loc: Loc::File(0, 876, 877),
                                     name: "b".to_string(),
                                 }),
+                                annotation: None,
                             }),
                             Statement::Block {
                                 loc: Loc::File(0, 879, 950),
@@ -302,6 +304,7 @@ fn parse_test() {
                                     loc: Loc::File(0, 977, 982),
                                     name: "error".to_string(),
                                 }),
+                                annotation: None,
                             },
                             Statement::Block {
                                 loc: Loc::File(0, 984, 1046),
@@ -330,6 +333,7 @@ fn parse_test() {
                                     loc: Loc::File(0, 1064, 1065),
                                     name: "x".to_string(),
                                 }),
+                                annotation: None,
                             },
                             Statement::Block {
                                 loc: Loc::File(0, 1067, 1129),
@@ -1266,4 +1270,67 @@ fn test_libsolidity() {
         .collect::<Vec<_>>();
 
     assert!(errors.is_empty(), "{}", errors.join("\n"));
+}
+
+#[test]
+fn parameter_annotation() {
+    let src = r#"
+contract MyTest {
+    constructor(@seed bytes mySeed) {}
+}
+    "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+
+    let expected_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(
+        ContractDefinition {
+            loc: File(0, 1, 59),
+            ty: ContractTy::Contract(File(0, 1, 9)),
+            name: Some(Identifier {
+                loc: File(0, 10, 16),
+                name: "MyTest".to_string(),
+            }),
+            base: vec![],
+            parts: vec![ContractPart::FunctionDefinition(
+                FunctionDefinition {
+                    loc: File(0, 23, 55),
+                    ty: FunctionTy::Constructor,
+                    name: None,
+                    name_loc: File(0, 34, 34),
+                    params: (vec![(
+                        File(0, 35, 53),
+                        Some(Parameter {
+                            loc: File(0, 35, 53),
+                            ty: Expression::Type(File(0, 41, 46), Type::DynamicBytes),
+                            storage: None,
+                            name: Some(Identifier {
+                                loc: File(0, 47, 53),
+                                name: "mySeed".to_string(),
+                            }),
+                            annotation: Some(Annotation {
+                                loc: File(0, 35, 40),
+                                id: Identifier {
+                                    loc: File(0, 36, 40),
+                                    name: "seed".to_string(),
+                                },
+                                value: None,
+                            }),
+                        }),
+                    )]),
+                    attributes: vec![],
+                    return_not_returns: None,
+                    returns: vec![],
+                    body: Some(Statement::Block {
+                        loc: File(0, 55, 57),
+                        unchecked: false,
+                        statements: vec![],
+                    }),
+                }
+                .into(),
+            )],
+        }
+        .into(),
+    )]);
+
+    assert_eq!(expected_tree, actual_parse_tree);
 }

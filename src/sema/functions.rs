@@ -8,7 +8,10 @@ use super::{
     tags::resolve_tags,
     ContractDefinition,
 };
+use crate::sema::ast::ParameterAnnotation;
+use crate::sema::function_annotation::unexpected_parameter_annotation;
 use crate::Target;
+use solang_parser::pt::FunctionTy;
 use solang_parser::{
     doccomment::DocComment,
     pt,
@@ -305,6 +308,7 @@ pub fn contract_function(
 
     let (params, params_success) = resolve_params(
         &func.params,
+        &func.ty,
         storage_allowed,
         file_no,
         Some(contract_no),
@@ -740,8 +744,15 @@ pub fn function(
 
     let mut diagnostics = Diagnostics::default();
 
-    let (params, params_success) =
-        resolve_params(&func.params, true, file_no, None, ns, &mut diagnostics);
+    let (params, params_success) = resolve_params(
+        &func.params,
+        &func.ty,
+        true,
+        file_no,
+        None,
+        ns,
+        &mut diagnostics,
+    );
 
     let (returns, returns_success) =
         resolve_returns(&func.returns, true, file_no, None, ns, &mut diagnostics);
@@ -828,6 +839,7 @@ pub fn function(
 /// Resolve the parameters
 pub fn resolve_params(
     parameters: &[(pt::Loc, Option<pt::Parameter>)],
+    func_ty: &pt::FunctionTy,
     is_internal: bool,
     file_no: usize,
     contract_no: Option<usize>,
@@ -839,7 +851,27 @@ pub fn resolve_params(
 
     for (loc, p) in parameters {
         let p = match p {
-            Some(p) => p,
+            Some(p @ pt::Parameter { ref annotation, .. }) => {
+                if annotation.is_some()
+                    && *func_ty != FunctionTy::Constructor
+                    && ns.target == Target::Solana
+                {
+                    diagnostics.push(Diagnostic::error(
+                        annotation.as_ref().unwrap().loc,
+                        "parameter annotations are only allowed in constructors".to_string(),
+                    ));
+                    success = false;
+                    continue;
+                } else if annotation.is_some() && ns.target != Target::Solana {
+                    diagnostics.push(unexpected_parameter_annotation(
+                        annotation.as_ref().unwrap().loc,
+                    ));
+                    success = false;
+                    continue;
+                }
+
+                p
+            }
             None => {
                 diagnostics.push(Diagnostic::error(*loc, "missing parameter type".to_owned()));
                 success = false;
@@ -914,6 +946,11 @@ pub fn resolve_params(
                     ty
                 };
 
+                let annotation = p.annotation.as_ref().map(|e| ParameterAnnotation {
+                    loc: e.loc,
+                    id: e.id.clone(),
+                });
+
                 params.push(Parameter {
                     loc: *loc,
                     id: p.name.clone(),
@@ -923,6 +960,7 @@ pub fn resolve_params(
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation,
                 });
             }
             Err(()) => success = false,
@@ -946,6 +984,14 @@ pub fn resolve_returns(
 
     for (loc, r) in returns {
         let r = match r {
+            Some(pt::Parameter {
+                annotation: Some(annotation),
+                ..
+            }) => {
+                diagnostics.push(unexpected_parameter_annotation(annotation.loc));
+                success = false;
+                continue;
+            }
             Some(r) => r,
             None => {
                 diagnostics.push(Diagnostic::error(*loc, "missing return type".to_owned()));
@@ -1036,6 +1082,7 @@ pub fn resolve_returns(
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 });
             }
             Err(()) => success = false,
@@ -1076,6 +1123,7 @@ fn signatures() {
                 readonly: false,
                 infinite_size: false,
                 recursive: false,
+                annotation: None,
             },
             Parameter {
                 loc: pt::Loc::Implicit,
@@ -1086,6 +1134,7 @@ fn signatures() {
                 readonly: false,
                 infinite_size: false,
                 recursive: false,
+                annotation: None,
             },
         ],
         Vec::new(),

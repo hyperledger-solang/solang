@@ -3,10 +3,8 @@ contract Foo {
 
     @space(500 + 12)
     @seed("Foo")
-    @seed(seed_val)
-    @bump(bump_val)
     @payer(payer)
-    constructor(bytes seed_val, bytes1 bump_val) {
+    constructor(@seed bytes seed_val, @bump bytes1 bump_val) {
         // ...
     }
 }

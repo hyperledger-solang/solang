@@ -734,6 +734,7 @@ fn check_arguments() {
                 readonly: false,
                 infinite_size: false,
                 recursive: false,
+                annotation: None,
             },
             Parameter {
                 loc,
@@ -747,6 +748,7 @@ fn check_arguments() {
                 readonly: false,
                 infinite_size: false,
                 recursive: false,
+                annotation: None,
             },
         ],
     );

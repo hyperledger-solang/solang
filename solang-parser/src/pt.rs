@@ -891,7 +891,7 @@ pub struct Annotation {
     /// The identifier.
     pub id: Identifier,
     /// The value.
-    pub value: Expression,
+    pub value: Option<Expression>,
 }
 
 /// A string literal.
@@ -1242,6 +1242,21 @@ impl Expression {
                 | Negate(..)
         )
     }
+
+    /// Returns if the expression is a literal
+    pub fn is_literal(&self) -> bool {
+        matches!(
+            self,
+            Expression::AddressLiteral(..)
+                | Expression::HexLiteral(..)
+                | Expression::BoolLiteral(..)
+                | Expression::NumberLiteral(..)
+                | Expression::ArrayLiteral(..)
+                | Expression::HexNumberLiteral(..)
+                | Expression::RationalNumberLiteral(..)
+                | Expression::StringLiteral(..)
+        )
+    }
 }
 
 /// A parameter.
@@ -1258,6 +1273,8 @@ pub struct Parameter {
     pub storage: Option<StorageLocation>,
     /// The optional identifier.
     pub name: Option<Identifier>,
+    /// An optional annotation '@annotation'.
+    pub annotation: Option<Annotation>,
 }
 
 /// Function mutability.

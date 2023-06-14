@@ -24,6 +24,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: true,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -37,6 +38,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -50,6 +52,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: true,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -63,6 +66,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: true,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -76,6 +80,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: true,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -89,6 +94,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: true,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -102,6 +108,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: true,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -115,6 +122,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: true,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
             ],
             offsets: Vec::new(),
@@ -138,6 +146,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -151,6 +160,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -164,6 +174,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
             ],
             offsets: Vec::new(),
@@ -184,6 +195,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -194,6 +206,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
             ],
             offsets: Vec::new(),

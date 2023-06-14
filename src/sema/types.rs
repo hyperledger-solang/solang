@@ -633,7 +633,7 @@ fn contract_annotations(
             continue;
         }
 
-        match &note.value {
+        match &note.value.as_ref().unwrap() {
             pt::Expression::StringLiteral(values) if values.len() == 1 => {
                 let string = &values[0].string;
                 let mut loc = values[0].loc;
@@ -751,6 +751,7 @@ pub fn struct_decl(
             readonly: false,
             infinite_size: false,
             recursive: false,
+            annotation: None,
         });
     }
 
@@ -858,6 +859,7 @@ fn event_decl(
             readonly: false,
             infinite_size: false,
             recursive: false,
+            annotation: None,
         });
     }
 
@@ -965,6 +967,7 @@ fn error_decl(
             readonly: false,
             infinite_size: false,
             recursive: false,
+            annotation: None,
         });
     }
 

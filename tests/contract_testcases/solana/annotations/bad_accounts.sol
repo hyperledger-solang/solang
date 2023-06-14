@@ -1,72 +1,81 @@
 
 contract BeingBuilt1 {
-    @seed(my_seed)
     @space(1024)
     @payer(clock)
-    constructor(bytes my_seed) {}
+    constructor(@seed bytes my_seed) {}
 }
 
 contract BeingBuilt2 {
-    @seed(my_seed)
     @space(1024)
     @payer(systemProgram)
-    constructor(bytes my_seed) {}
+    constructor(@seed bytes my_seed) {}
 }
 
 contract BeingBuilt3 {
-    @seed(my_seed)
     @space(1024)
     @payer(associatedTokenProgram)
-    constructor(bytes my_seed) {}
+    constructor(@seed bytes my_seed) {}
 }
 
 contract BeingBuilt4 {
-    @seed(my_seed)
     @space(1024)
     @payer(rent)
-    constructor(bytes my_seed) {}
+    constructor(@seed bytes my_seed) {}
 }
 
 contract BeingBuilt5 {
-    @seed(my_seed)
     @space(1024)
     @payer(tokenProgram)
-    constructor(bytes my_seed) {}
+    constructor(@seed bytes my_seed) {}
 }
 
 contract BeingBuilt6 {
-    @seed(my_seed)
     @space(1024)
     @payer(dataAccount)
-    constructor(bytes my_seed) {}
+    constructor(@seed bytes my_seed) {}
 }
 
 contract BeingBuilt7 {
-    @seed(my_seed)
-    @space(1024)
     @payer(SysvarInstruction)
-    constructor(bytes my_seed) {}
+    constructor(@seed bytes my_seed, @space uint64 my_space) {}
 }
 
 contract BeingBuilt8 {
-    @seed(my_seed)
+    @seed("pine_tree")
     @space(1024)
     @payer(solang)
     @payer(solang)
-    constructor(bytes my_seed) {}
+    constructor() {}
 
     function say_this(string text) public pure {
         print(text);
     }
 }
 
+
+contract OldAnnotationSyntax {
+    @payer(my_account)
+    @seed(my_seed)
+    @space(my_space)
+    @bump(my_bump)
+    constructor(bytes my_seed, uint64 my_space, bytes1 my_bump) {}
+
+    function my_func(@myNote uint64 a) public pure returns (uint64) {
+        return a-2;
+    }
+}
+
 // ---- Expect: diagnostics ----
-// error: 5:12-17: 'clock' is a reserved account name
-// error: 12:12-25: 'systemProgram' is a reserved account name
-// error: 19:12-34: 'associatedTokenProgram' is a reserved account name
-// error: 26:12-16: 'rent' is a reserved account name
-// error: 33:12-24: 'tokenProgram' is a reserved account name
-// error: 40:12-23: 'dataAccount' is a reserved account name
-// error: 47:12-29: 'SysvarInstruction' is a reserved account name
-// error: 55:12-18: account 'solang' already defined
-// 	note 54:5-19: previous definition
+// error: 4:12-17: 'clock' is a reserved account name
+// error: 10:12-25: 'systemProgram' is a reserved account name
+// error: 16:12-34: 'associatedTokenProgram' is a reserved account name
+// error: 22:12-16: 'rent' is a reserved account name
+// error: 28:12-24: 'tokenProgram' is a reserved account name
+// error: 34:12-23: 'dataAccount' is a reserved account name
+// error: 39:12-29: 'SysvarInstruction' is a reserved account name
+// error: 47:12-18: account 'solang' already defined
+// 	note 46:5-19: previous definition
+// error: 58:11-18: '@seed' annotation on top of a constructor only accepts literals
+// error: 59:12-20: '@space' annotation on top of a constructor only accepts literals
+// error: 60:11-18: '@bump' annotation on top of a constructor only accepts literals
+// error: 63:22-29: parameter annotations are only allowed in constructors
