@@ -38,6 +38,8 @@ fn test_abstract() {
         false,
         false,
         true,
+        #[cfg(feature = "wasm_opt")]
+        Some(contract_build::OptimizationPasses::Z),
     );
 
     assert!(!ns.diagnostics.any_errors());
@@ -78,6 +80,8 @@ fn test_abstract() {
         false,
         false,
         true,
+        #[cfg(feature = "wasm_opt")]
+        Some(contract_build::OptimizationPasses::Z),
     );
 
     assert!(!ns.diagnostics.any_errors());

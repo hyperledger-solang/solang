@@ -8,7 +8,9 @@ use std::str;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
+#[cfg(feature = "wasm_opt")]
 use tempfile::tempdir;
+#[cfg(feature = "wasm_opt")]
 use wasm_opt::OptimizationOptions;
 
 use crate::codegen::{cfg::ReturnCode, Options};
@@ -114,7 +116,7 @@ impl<'a> Binary<'a> {
             )
             .unwrap();
 
-        let mut blob = target_machine
+        let code = target_machine
             .write_to_memory_buffer(
                 &self.module,
                 if generate == Generate::Assembly {
@@ -134,11 +136,12 @@ impl<'a> Binary<'a> {
             })
             .map_err(|s| s.to_string())?;
 
+        #[cfg(feature = "wasm_opt")]
         if let Some(level) = self.options.wasm_opt.filter(|_| self.target.is_substrate()) {
             let mut infile = tempdir().map_err(|e| e.to_string())?.into_path();
             infile.push(&self.name);
             let outfile = infile.with_extension("wasmopt");
-            std::fs::write(&infile, &blob).map_err(|e| e.to_string())?;
+            std::fs::write(&infile, &code).map_err(|e| e.to_string())?;
 
             // Using the same config as cargo contract:
             // https://github.com/paritytech/cargo-contract/blob/71a8a42096e2df36d54a695d099aecfb1e394b78/crates/build/src/wasm_opt.rs#L67
@@ -149,10 +152,10 @@ impl<'a> Binary<'a> {
                 .run(&infile, &outfile)
                 .map_err(|err| format!("wasm-opt for binary {} failed: {}", self.name, err))?;
 
-            blob = std::fs::read(&outfile).expect("just wrote this file");
+            return std::fs::read(&outfile).map_err(|e| e.to_string());
         }
 
-        Ok(blob)
+        Ok(code)
     }
 
     /// Mark all functions as internal unless they're in the export_list. This helps the

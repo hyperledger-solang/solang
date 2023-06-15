@@ -2,6 +2,7 @@
 
 use clap::{builder::ValueParser, value_parser, ArgAction, Args, Parser, Subcommand};
 use clap_complete::Shell;
+#[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
 
 use std::{ffi::OsString, path::PathBuf, process::exit};
@@ -181,6 +182,7 @@ pub struct Optimizations {
     #[arg(name = "OPT", help = "Set llvm optimizer level ", short = 'O', default_value = "default", value_parser = ["none", "less", "default", "aggressive"], num_args = 1)]
     pub opt_level: String,
 
+    #[cfg(feature = "wasm_opt")]
     #[arg(
         name = "WASM_OPT",
         help = "wasm-opt passes for Wasm targets (0, 1, 2, 3, 4, s or z; see the wasm-opt help for more details)",
@@ -270,6 +272,7 @@ pub fn options_arg(debug: &DebugFeatures, optimizations: &Optimizations) -> Opti
         log_api_return_codes: debug.log_api_return_codes & !debug.release,
         log_runtime_errors: debug.log_runtime_errors & !debug.release,
         log_prints: debug.log_prints & !debug.release,
+        #[cfg(feature = "wasm_opt")]
         wasm_opt: optimizations.wasm_opt_passes.or(if debug.release {
             Some(OptimizationPasses::Z)
         } else {

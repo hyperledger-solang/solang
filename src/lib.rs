@@ -125,6 +125,7 @@ pub fn compile(
     log_api_return_codes: bool,
     log_runtime_errors: bool,
     log_prints: bool,
+    #[cfg(feature = "wasm_opt")] wasm_opt: Option<contract_build::OptimizationPasses>,
 ) -> (Vec<(Vec<u8>, String)>, sema::ast::Namespace) {
     let mut ns = parse_and_resolve(filename, resolver, target);
     let opts = codegen::Options {
@@ -132,6 +133,8 @@ pub fn compile(
         opt_level: opt_level.into(),
         log_runtime_errors,
         log_prints,
+        #[cfg(feature = "wasm_opt")]
+        wasm_opt,
         ..Default::default()
     };
 

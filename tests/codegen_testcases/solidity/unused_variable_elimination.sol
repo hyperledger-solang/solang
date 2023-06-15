@@ -66,7 +66,7 @@ contract c {
         x = 102 + t*y/(t+5*y) + g + test3() - vec.push(2) + ct.sum(1, 2);
 		return 2;
 // CHECK: push array ty:int32[] value:int32 2
-// CHECK: _ = external call::regular address:%ct payload:%abi_encoded.temp.90 value:uint128 0 gas:uint64 0 accounts: seeds:
+// CHECK: _ = external call::regular address:%ct payload:%abi_encoded.temp.90 value:uint128 0 gas:uint64 0 accounts: seeds: contract|function:(0, 2)
 }
 
 }
