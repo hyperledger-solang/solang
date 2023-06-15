@@ -94,7 +94,7 @@ mod tests {
         match res {
             Ok(_) => unreachable!(),
             Err(error) => {
-                assert_eq!("contains no '='", error.message())
+                assert_eq!("invalid type: sequence, expected a map", error.message())
             }
         }
     }
