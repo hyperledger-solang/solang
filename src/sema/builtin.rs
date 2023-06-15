@@ -1631,7 +1631,7 @@ impl Namespace {
 
     pub fn add_substrate_builtins(&mut self) {
         let loc = pt::Loc::Builtin;
-        let id = |name: &str| Identifier {
+        let identifier = |name: &str| Identifier {
             name: name.into(),
             loc,
         };
@@ -1659,7 +1659,7 @@ impl Namespace {
         });
 
         let symbol = Symbol::UserType(loc, type_no);
-        assert!(self.add_symbol(file_no, None, &id("Hash"), symbol));
+        assert!(self.add_symbol(file_no, None, &identifier("Hash"), symbol));
 
         // Chain extensions
         let mut func = Function::new(
@@ -1673,7 +1673,7 @@ impl Namespace {
             vec![
                 Parameter {
                     loc,
-                    id: Some(id("id")),
+                    id: Some(identifier("id")),
                     ty: Type::Uint(32),
                     ty_loc: Some(loc),
                     readonly: false,
@@ -1683,7 +1683,7 @@ impl Namespace {
                 },
                 Parameter {
                     loc,
-                    id: Some(id("input")),
+                    id: Some(identifier("input")),
                     ty: Type::DynamicBytes,
                     ty_loc: Some(loc),
                     readonly: false,
@@ -1695,7 +1695,7 @@ impl Namespace {
             vec![
                 Parameter {
                     loc,
-                    id: Some(id("return_value")),
+                    id: Some(identifier("return_value")),
                     ty: Type::Uint(32),
                     ty_loc: Some(loc),
                     readonly: false,
@@ -1705,7 +1705,7 @@ impl Namespace {
                 },
                 Parameter {
                     loc,
-                    id: Some(id("output")),
+                    id: Some(identifier("output")),
                     ty: Type::DynamicBytes,
                     ty_loc: Some(loc),
                     readonly: false,
@@ -1719,7 +1719,46 @@ impl Namespace {
 
         func.has_body = true;
         let func_no = self.functions.len();
-        let id = id(&func.name);
+        let id = identifier(&func.name);
+        self.functions.push(func);
+
+        assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
+
+        // is_contract API
+        let mut func = Function::new(
+            loc,
+            "is_contract".to_string(),
+            None,
+            Vec::new(),
+            pt::FunctionTy::Function,
+            Some(pt::Mutability::View(loc)),
+            pt::Visibility::Public(Some(loc)),
+            vec![Parameter {
+                loc,
+                id: Some(identifier("address")),
+                ty: Type::Address(false),
+                ty_loc: Some(loc),
+                readonly: false,
+                indexed: false,
+                infinite_size: false,
+                recursive: false,
+            }],
+            vec![Parameter {
+                loc,
+                id: Some(identifier("is_contract")),
+                ty: Type::Bool,
+                ty_loc: Some(loc),
+                readonly: false,
+                indexed: false,
+                infinite_size: false,
+                recursive: false,
+            }],
+            self,
+        );
+
+        func.has_body = true;
+        let func_no = self.functions.len();
+        let id = identifier(&func.name);
         self.functions.push(func);
 
         assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));

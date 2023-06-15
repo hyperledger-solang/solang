@@ -18,4 +18,4 @@
 // 	note 6:32-36: previous argument for base contract 'a'
 // error: 6:32-36: duplicate argument for base contract 'a'
 // 	note 6:32-36: previous argument for base contract 'a'
-// warning: 7:31-32: function parameter 'y' has never been read
+// warning: 7:31-32: function parameter 'y' is unused

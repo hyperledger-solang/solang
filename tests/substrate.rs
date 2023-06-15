@@ -733,6 +733,16 @@ impl Runtime {
 
         Ok(data.iter().map(|i| *i as u32).sum())
     }
+
+    #[seal(0)]
+    fn is_contract(input_ptr: u32) -> Result<u32, Trap> {
+        let address = read_account(mem, input_ptr);
+        Ok(vm
+            .accounts
+            .iter()
+            .any(|account| account.contract.is_some() && account.address == address)
+            .into())
+    }
 }
 
 /// Provides a mock implementation of substrates [contracts pallet][1]
@@ -951,7 +961,7 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
     MockSubstrate(Store::new(&Engine::default(), Runtime::new(blobs)))
 }
 
-fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {
+pub fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {
     let tmp_file = OsStr::new("test.sol");
     let mut cache = FileResolver::new();
     cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
@@ -963,7 +973,7 @@ fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)>
     wasm
 }
 
-fn load_abi(s: &str) -> InkProject {
+pub fn load_abi(s: &str) -> InkProject {
     let bundle = serde_json::from_str::<ContractMetadata>(s).unwrap();
     serde_json::from_value::<InkProject>(serde_json::to_value(bundle.abi).unwrap()).unwrap()
 }

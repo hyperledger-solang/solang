@@ -6,5 +6,5 @@
             function bar() foo(var) public pure {}
         }
 // ---- Expect: diagnostics ----
-// warning: 4:33-34: function parameter 'x' has never been read
+// warning: 4:33-34: function parameter 'x' is unused
 // error: 6:32-35: function declared 'pure' but this expression reads from state

@@ -141,11 +141,19 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             args,
             ..
         } => {
-            // We should not eliminate an array from the code when 'length' is called
-            // So the variable is also assigned
-            assigned_variable(ns, &args[0], symtable);
             used_variable(ns, &args[0], symtable);
         }
+
+        Expression::Builtin {
+            kind: Builtin::ArrayPush | Builtin::ArrayPop,
+            args,
+            ..
+        } => {
+            // Array push and pop return values, so they are both read and assigned.
+            used_variable(ns, &args[0], symtable);
+            assigned_variable(ns, &args[0], symtable);
+        }
+
         Expression::StorageArrayLength { array, .. } => {
             // We should not eliminate an array from the code when 'length' is called
             // So the variable is also assigned
@@ -228,7 +236,7 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
             args,
             ..
         } => match expr_type {
-            Builtin::ArrayPush => {
+            Builtin::ArrayPush | Builtin::ArrayPop => {
                 assigned_variable(ns, &args[0], symtable);
                 if args.len() > 1 {
                     used_variable(ns, &args[1], symtable);
@@ -286,16 +294,18 @@ pub fn check_var_usage_expression(
 }
 
 /// Emit different warning types according to the function variable usage
-pub fn emit_warning_local_variable(variable: &symtable::Variable) -> Option<Diagnostic> {
+pub fn emit_warning_local_variable(
+    variable: &symtable::Variable,
+    ns: &Namespace,
+) -> Option<Diagnostic> {
     match &variable.usage_type {
         VariableUsage::Parameter => {
-            if !variable.read {
+            if (!variable.read && !variable.ty.is_reference_type(ns))
+                || (!variable.read && !variable.assigned && variable.ty.is_reference_type(ns))
+            {
                 return Some(Diagnostic::warning(
                     variable.id.loc,
-                    format!(
-                        "function parameter '{}' has never been read",
-                        variable.id.name
-                    ),
+                    format!("function parameter '{}' is unused", variable.id.name),
                 ));
             }
             None

@@ -681,8 +681,8 @@ function _approve(
 // warning: 188:5-75: function can be declared 'view'
 // warning: 195:50-56: conversion truncates uint256 to uint128, as value is type uint128 on target evm
 // warning: 264:5-270:37: function can be declared 'view'
-// warning: 268:17-25: function parameter 'weiValue' has never been read
-// warning: 269:23-35: function parameter 'errorMessage' has never been read
+// warning: 268:17-25: function parameter 'weiValue' is unused
+// warning: 269:23-35: function parameter 'errorMessage' is unused
 // warning: 276:70-78: conversion truncates uint256 to uint128, as value is type uint128 on target evm
 // warning: 321:9-17: 'internal': visibility for constructors is ignored
 // warning: 386:9-61: storage variable '_isExcluded' has never been used

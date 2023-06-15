@@ -17,6 +17,6 @@
         
 // ---- Expect: diagnostics ----
 // warning: 11:13-42: function can be declared 'pure'
-// warning: 11:33-34: function parameter 'a' has never been read
+// warning: 11:33-34: function parameter 'a' is unused
 // warning: 15:13-42: function can be declared 'pure'
-// warning: 15:33-34: function parameter 'a' has never been read
+// warning: 15:33-34: function parameter 'a' is unused

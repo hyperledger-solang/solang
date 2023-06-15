@@ -1132,7 +1132,7 @@ contract testTypes {
         .contains_message("found contract 'testTypes'"));
     assert!(ns
         .diagnostics
-        .contains_message("function parameter 'vl' has never been read"));
+        .contains_message("function parameter 'vl' is unused"));
 
     let file = r#"
     contract testTypes {
