@@ -273,10 +273,9 @@ pub struct CompileTargetArg {
     pub value_length: Option<u64>,
 }
 
-#[derive(Args, Deserialize)]
+#[derive(Args)]
 pub struct DocPackage {
     #[arg(name = "INPUT", help = "Solidity input files",value_parser = ValueParser::path_buf(), num_args = 1.., required = true)]
-    #[serde(rename(deserialize = "input_files"))]
     pub input: Vec<PathBuf>,
 
     #[arg(name = "CONTRACT", help = "Contract names to compile (defaults to all)", value_delimiter = ',', action = ArgAction::Append, long = "contract")]
@@ -286,7 +285,6 @@ pub struct DocPackage {
     pub import_path: Option<Vec<PathBuf>>,
 
     #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map) , action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
-    #[serde(deserialize_with = "import_map_vec", default)]
     pub import_map: Option<Vec<(String, PathBuf)>>,
 }
 
@@ -303,7 +301,7 @@ pub struct CompilePackage {
     pub import_path: Option<Vec<PathBuf>>,
 
     #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map) , action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
-    #[serde(deserialize_with = "import_map_vec", default)]
+    #[serde(deserialize_with = "deserialize_inline_table", default)]
     pub import_map: Option<Vec<(String, PathBuf)>>,
 }
 
@@ -546,23 +544,32 @@ fn parse_import_map(map: &str) -> Result<(String, PathBuf), String> {
     }
 }
 
-fn import_map_vec<'de, D>(deserializer: D) -> Result<Option<Vec<(String, PathBuf)>>, D::Error>
+fn deserialize_inline_table<'de, D>(
+    deserializer: D,
+) -> Result<Option<Vec<(String, PathBuf)>>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let vec: Option<Vec<String>> = Option::deserialize(deserializer)?;
-    match vec {
-        Some(values) => {
-            let results: Result<Vec<(String, PathBuf)>, String> = values
-                .into_iter()
-                .map(|value| parse_import_map(value.as_str()))
-                .collect();
+    let res: Option<toml::Table> = Option::deserialize(deserializer)?;
 
-            match results {
-                Ok(mapped) => Ok(Some(mapped)),
-                Err(err) => Err(serde::de::Error::custom(err)),
-            }
-        }
+    match res {
+        Some(table) => Ok(Some(
+            table
+                .iter()
+                .map(|f| {
+                    (
+                        f.0.clone(),
+                        if f.1.is_str() {
+                            PathBuf::from(f.1.as_str().unwrap())
+                        } else {
+                            let key = f.1;
+                            eprintln!("error: invalid value for import map {key}");
+                            exit(1)
+                        },
+                    )
+                })
+                .collect(),
+        )),
         None => Ok(None),
     }
 }

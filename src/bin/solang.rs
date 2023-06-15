@@ -67,8 +67,7 @@ fn read_toml_config(path: &OsString) -> Compile {
     match res {
         Ok(compile_args) => compile_args,
         Err(err) => {
-            let msg = err.message();
-            eprintln!("{msg}");
+            eprintln!("{err}");
             exit(1);
         }
     }

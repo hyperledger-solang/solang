@@ -131,12 +131,42 @@ Options:
 \-\-release
    Disable all debugging features for :ref:`release`
 
+\-\-config-file
+  Read compiler configurations from a ``.toml`` file. The minimal fields required in the configuration file are:
+   
+  .. code-block:: toml
+
+    [package]
+    input_files = ["flipper.sol"]  # Solidity files to compile
+
+    [target]
+    name = "solana"  # Target name
+
+
+  Fields that are not explicitly present in the .toml file are defaulted. If any other argument is provided in the command line, for example, ``solang compile --config-file --target substrate``, the argument will be overridden.
+  The priority for the args is given as follows:
+  1. Command line
+  2. Configuration file
+  3. Default values.
+
 .. warning::
 
     If multiple Solidity source files define the same contract name, you will get a single
     compiled contract file for this contract name. As a result, you will only have a single
     contract with the duplicate name without knowing from which Solidity file it originated.
     Solang will not give a warning about this problem.
+
+
+
+Starting a new project
+______________________________
+
+
+  solang new --target solana my_project
+
+Start a new Solang project with an example `flipper.sol <https://github.com/hyperledger/solang/blob/main/examples/solana/flipper.sol>`_ contract,
+next to an example configuration file.
+
 
 
 Generating Documentation Usage
