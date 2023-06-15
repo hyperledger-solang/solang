@@ -102,7 +102,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
             // substituted to struct { AccountId }
             let field = Field::new(None, address_ty.into(), None, vec![]);
             let c = TypeDefComposite::new(vec![field]);
-            let path = path!("ink_env", "types", "AccountId");
+            let path = path!("ink_primitives", "types", "AccountId");
             let ty: Type<PortableForm> =
                 Type::new(path, vec![], TypeDef::Composite(c), Default::default());
             registry.register_type(ty)
@@ -219,7 +219,7 @@ fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegis
                 ("Hash", pt::Loc::Builtin) => {
                     let field = Field::new(None, resolved.into(), None, vec![]);
                     let composite = TypeDef::Composite(TypeDefComposite::new([field]));
-                    let path = path!("ink_env", "types", "Hash");
+                    let path = path!("ink_primitives", "types", "Hash");
                     registry.register_type(Type::new(path, vec![], composite, vec![]))
                 }
                 _ => resolved,

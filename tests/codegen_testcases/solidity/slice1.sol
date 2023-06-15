@@ -58,10 +58,11 @@ contract c {
 	}
 
 // BEGIN-CHECK: c::function::test6
-	function test6() public pure {
+	function test6() public pure returns (bytes) {
 		bytes x = "foo6";
 
 		x.pop();
+		return x;
 		// pop modifies vectotr
 // CHECK: alloc bytes uint32 4 "foo6"
 	}

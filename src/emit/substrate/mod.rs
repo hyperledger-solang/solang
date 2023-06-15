@@ -176,6 +176,7 @@ impl SubstrateTarget {
             "terminate",
             "deposit_event",
             "transfer",
+            "is_contract",
         ]);
 
         binary
@@ -305,6 +306,7 @@ impl SubstrateTarget {
         external!("caller", void_type, u8_ptr, u32_ptr);
         external!("terminate", void_type, u8_ptr);
         external!("deposit_event", void_type, u8_ptr, u32_val, u8_ptr, u32_val);
+        external!("is_contract", i32_type, u8_ptr);
     }
 
     /// Emits the "deploy" function if `init` is `Some`, otherwise emits the "call" function.

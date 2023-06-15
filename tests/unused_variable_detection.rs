@@ -543,7 +543,7 @@ fn statements() {
     assert_eq!(ns.diagnostics.count_warnings(), 2);
     assert!(ns
         .diagnostics
-        .warning_contains("function parameter 'a' has never been read"));
+        .warning_contains("function parameter 'a' is unused"));
     assert!(ns
         .diagnostics
         .warning_contains("local variable 'ct' has been assigned, but never read",));
@@ -669,7 +669,48 @@ fn array_push_pop() {
     "#;
 
     let ns = parse(file);
+    assert_eq!(ns.diagnostics.count_warnings(), 2);
+    assert!(ns
+        .diagnostics
+        .warning_contains("storage variable 'vec1' has been assigned, but never read"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("local variable 'vec2' has been assigned, but never read"));
+
+    let file = r#"
+      contract Test1 {
+        function test_storage(uint64[] storage arr1, uint128[] storage arr2) private {
+            arr1.push(32);
+            arr2.pop();
+        }
+
+        function arg_ptr(uint64[] memory arr1, uint16[] memory arr2) private pure {
+            arr1.push(422);
+            arr2.pop();
+        }
+    }
+    "#;
+    let ns = parse(file);
     assert_eq!(ns.diagnostics.count_warnings(), 0);
+
+    let file = r#"
+      contract Test1 {
+        function test_storage(uint64[] storage arr1) private pure {
+
+        }
+
+        function arg_ptr(uint64[] memory arr2) private pure {
+        }
+    }
+    "#;
+    let ns = parse(file);
+    assert_eq!(ns.diagnostics.count_warnings(), 2);
+    assert!(ns
+        .diagnostics
+        .warning_contains("function parameter 'arr1' is unused"));
+    assert!(ns
+        .diagnostics
+        .warning_contains("function parameter 'arr2' is unused"));
 }
 
 #[test]

@@ -14,6 +14,6 @@
         }
         
 // ---- Expect: diagnostics ----
-// warning: 3:29-33: function parameter 'arg1' has never been read
+// warning: 3:29-33: function parameter 'arg1' is unused
 // warning: 3:35-41: 'public': visibility for constructors is ignored
 // error: 12:25-42: cannot construct 'foo' of type 'abstract contract'
