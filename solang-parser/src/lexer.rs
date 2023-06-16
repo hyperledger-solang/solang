@@ -178,6 +178,8 @@ pub enum Token<'input> {
     Case,
     Default,
     YulArrow,
+
+    Annotation(&'input str),
     At,
 }
 
@@ -315,6 +317,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Default => write!(f, "default"),
             Token::YulArrow => write!(f, "->"),
             Token::At => write!(f, "@"),
+            Token::Annotation(name) => write!(f, "@{name}"),
         }
     }
 }
@@ -745,22 +748,7 @@ impl<'input> Lexer<'input> {
         'toplevel: loop {
             match self.chars.next() {
                 Some((start, ch)) if ch == '_' || ch == '$' || UnicodeXID::is_xid_start(ch) => {
-                    let end;
-
-                    loop {
-                        if let Some((i, ch)) = self.chars.peek() {
-                            if !UnicodeXID::is_xid_continue(*ch) && *ch != '$' {
-                                end = *i;
-                                break;
-                            }
-                            self.chars.next();
-                        } else {
-                            end = self.input.len();
-                            break;
-                        }
-                    }
-
-                    let id = &self.input[start..end];
+                    let (id, end) = self.match_identifier(start);
 
                     if id == "unicode" {
                         match self.chars.peek() {
@@ -974,7 +962,14 @@ impl<'input> Lexer<'input> {
                         Ok(parse_result) => return Some(parse_result),
                     }
                 }
-                Some((i, '@')) => return Some((i, Token::At, i + 1)),
+                Some((start, '@')) => {
+                    let (id, end) = self.match_identifier(start);
+                    return if id.len() == 1 {
+                        Some((start, Token::At, start + 1))
+                    } else {
+                        Some((start, Token::Annotation(&id[1..]), end))
+                    };
+                }
                 Some((i, ';')) => return Some((i, Token::Semicolon, i + 1)),
                 Some((i, ',')) => return Some((i, Token::Comma, i + 1)),
                 Some((i, '(')) => return Some((i, Token::OpenParenthesis, i + 1)),
@@ -982,19 +977,19 @@ impl<'input> Lexer<'input> {
                 Some((i, '{')) => return Some((i, Token::OpenCurlyBrace, i + 1)),
                 Some((i, '}')) => return Some((i, Token::CloseCurlyBrace, i + 1)),
                 Some((i, '~')) => return Some((i, Token::BitwiseNot, i + 1)),
-                Some((i, '=')) => match self.chars.peek() {
-                    Some((_, '=')) => {
-                        self.chars.next();
-                        return Some((i, Token::Equal, i + 2));
+                Some((i, '=')) => {
+                    return match self.chars.peek() {
+                        Some((_, '=')) => {
+                            self.chars.next();
+                            Some((i, Token::Equal, i + 2))
+                        }
+                        Some((_, '>')) => {
+                            self.chars.next();
+                            Some((i, Token::Arrow, i + 2))
+                        }
+                        _ => Some((i, Token::Assign, i + 1)),
                     }
-                    Some((_, '>')) => {
-                        self.chars.next();
-                        return Some((i, Token::Arrow, i + 2));
-                    }
-                    _ => {
-                        return Some((i, Token::Assign, i + 1));
-                    }
-                },
+                }
                 Some((i, '!')) => {
                     return if let Some((_, '=')) = self.chars.peek() {
                         self.chars.next();
@@ -1217,6 +1212,24 @@ impl<'input> Lexer<'input> {
                 }
             }
         }
+    }
+
+    fn match_identifier(&mut self, start: usize) -> (&'input str, usize) {
+        let end;
+        loop {
+            if let Some((i, ch)) = self.chars.peek() {
+                if !UnicodeXID::is_xid_continue(*ch) && *ch != '$' {
+                    end = *i;
+                    break;
+                }
+                self.chars.next();
+            } else {
+                end = self.input.len();
+                break;
+            }
+        }
+
+        (&self.input[start..end], end)
     }
 }
 
@@ -1892,6 +1905,34 @@ mod tests {
         let mut errors = Vec::new();
         let tokens = Lexer::new(".9e10", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((0, Token::RationalNumber("", "9", "10"), 5)));
+        assert_eq!(
+            tokens,
+            vec!((0, Token::RationalNumber("", "9", "10"), 5))
+        );
+
+        errors.clear();
+        comments.clear();
+        let tokens =
+            Lexer::new("@my_annotation", 0, &mut comments, &mut errors).collect::<Vec<_>>();
+        assert_eq!(
+            tokens,
+            vec![(0, Token::Annotation("my_annotation"), 14)]
+        );
+        assert!(errors.is_empty());
+        assert!(comments.is_empty());
+
+        errors.clear();
+        comments.clear();
+        let tokens =
+            Lexer::new("@ my_annotation", 0, &mut comments, &mut errors).collect::<Vec<_>>();
+        assert_eq!(
+            tokens,
+            vec![
+                (0, Token::At, 1),
+                (2, Token::Identifier("my_annotation"), 15)
+            ]
+        );
+        assert!(errors.is_empty());
+        assert!(comments.is_empty());
     }
 }

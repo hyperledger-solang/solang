@@ -137,6 +137,10 @@ SolIdentifier: Identifier = {
     <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
 }
 
+SolAnnotation: Identifier = {
+    <l:@L> <a:annotation> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: a.to_string()},
+}
+
 SolIdentifierOrError: Option<Identifier> = {
     SolIdentifier => Some(<>),
     ! => {
@@ -282,7 +286,7 @@ TypeDefinition: Box<TypeDefinition> = {
 }
 
 Annotation: Box<Annotation> = {
-    <l:@L> "@" <id:SolIdentifier> "(" <value:Expression> ")" <r:@R> => {
+    <l:@L> <id:SolAnnotation> "(" <value:Expression> ")" <r:@R> => {
         Box::new(Annotation {
             loc: Loc::File(file_no, l, r), id, value: Some(value)
         })
@@ -544,7 +548,7 @@ ParameterList: Vec<(Loc, Option<Parameter>)> = {
 }
 
 ParameterAnnotation: Annotation = {
-    <l:@L> "@" <id:SolIdentifier> <r:@R> => Annotation {
+    <l:@L> <id:SolAnnotation> <r:@R> => Annotation {
         loc: Loc::File(file_no, l, r), id, value: None,
     }
 }
@@ -1121,6 +1125,7 @@ extern {
 
     enum Token<'input> {
         identifier => Token::Identifier(<&'input str>),
+        annotation => Token::Annotation(<&'input str>),
         string => Token::StringLiteral(<bool>, <&'input str>),
         hexstring => Token::HexLiteral(<&'input str>),
         address => Token::AddressLiteral(<&'input str>),

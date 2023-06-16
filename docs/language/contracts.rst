@@ -117,8 +117,8 @@ For the creation of a contract, the data account must the **first** element in s
 .. include:: ../examples/solana/create_contract_with_metas.sol
   :code: solidity
 
-The ordering of the account in the ``AccountMeta`` array matters and must follow the
-:ref:`IDL disposal <account_management>`.
+The sequence of the accounts in the ``AccountMeta`` array matters and must follow the
+:ref:`IDL ordering <account_management>`.
 
 
 Base contracts, abstract contracts and interfaces
