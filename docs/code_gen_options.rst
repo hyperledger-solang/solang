@@ -149,7 +149,7 @@ as a function argument, for instance, the length is unknown.
 --------------------------------
 
 For the Substrate target, optimization passes from the `binaryen <https://github.com/WebAssembly/binaryen>`_ ``wasm-opt`` 
-tool can be applied. This may vastly shrink the Wasm code size and make it more efficient.
+tool can be applied. This may shrink the Wasm code size and makes it more efficient.
 
 Use the ``--wasm-opt`` compile flag to enable ``wasm-opt`` optimizations. Possible values are 
 ``0`` - ``4``, ``s`` and ``z``, corresponding to the ``wasm-opt`` flags ``-O0`` - ``-O4``, ``-Os`` and ``-Oz`` respectively.
