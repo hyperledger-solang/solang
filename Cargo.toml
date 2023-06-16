@@ -96,7 +96,7 @@ lto = true
 [features]
 default = ["llvm", "wasm_opt"]
 llvm = ["inkwell", "libc"]
-wasm_opt = ["wasm-opt", "contract-build"]
+wasm_opt = ["llvm", "wasm-opt", "contract-build"]
 
 [workspace]
 members = ["solang-parser", "tests/wasm_host_attr"]
