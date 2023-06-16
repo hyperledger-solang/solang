@@ -139,7 +139,7 @@ impl<'a> Binary<'a> {
         #[cfg(feature = "wasm_opt")]
         if let Some(level) = self.options.wasm_opt.filter(|_| self.target.is_substrate()) {
             let mut infile = tempdir().map_err(|e| e.to_string())?.into_path();
-            infile.push(&self.name);
+            infile.push("code.wasm");
             let outfile = infile.with_extension("wasmopt");
             std::fs::write(&infile, &code).map_err(|e| e.to_string())?;
 
