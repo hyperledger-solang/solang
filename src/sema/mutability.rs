@@ -1,19 +1,36 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::ast::{
-    Builtin, DestructureField, Diagnostic, Expression, Function, Mutability, Namespace, Statement,
-    Type,
+use super::{
+    ast::{
+        Builtin, CallTy, DestructureField, Diagnostic, Expression, Function, Mutability, Namespace,
+        RetrieveType, Statement, Type,
+    },
+    yul::ast::{YulExpression, YulStatement},
+    Recurse,
 };
-use crate::sema::ast::RetrieveType;
-use crate::sema::yul::ast::{YulExpression, YulStatement};
-use crate::sema::Recurse;
-use solang_parser::pt;
+use solang_parser::{helpers::CodeLocation, pt};
+
+#[derive(PartialEq, PartialOrd)]
+enum Access {
+    None,
+    Read,
+    Write,
+    Value,
+}
+
+impl Access {
+    fn increase_to(&mut self, other: Access) {
+        if *self < other {
+            *self = other;
+        }
+    }
+}
 
 /// check state mutability
 pub fn mutability(file_no: usize, ns: &mut Namespace) {
     if !ns.diagnostics.any_errors() {
         for func in &ns.functions {
-            if func.loc.try_file_no() != Some(file_no) {
+            if func.loc.try_file_no() != Some(file_no) || func.ty == pt::FunctionTy::Modifier {
                 continue;
             }
 
@@ -27,41 +44,90 @@ pub fn mutability(file_no: usize, ns: &mut Namespace) {
 /// While we recurse through the AST, maintain some state
 struct StateCheck<'a> {
     diagnostics: Vec<Diagnostic>,
-    does_read_state: bool,
-    does_write_state: bool,
-    can_read_state: bool,
-    can_write_state: bool,
+    declared_access: Access,
+    required_access: Access,
     func: &'a Function,
+    modifier: Option<pt::Loc>,
     ns: &'a Namespace,
 }
 
 impl<'a> StateCheck<'a> {
-    fn write(&mut self, loc: &pt::Loc) {
-        if !self.can_write_state {
-            self.diagnostics.push(Diagnostic::error(
-                *loc,
-                format!(
-                    "function declared '{}' but this expression writes to state",
-                    self.func.mutability
-                ),
-            ));
+    fn value(&mut self, loc: &pt::Loc) {
+        if self.declared_access != Access::Value {
+            if let Some(modifier_loc) = &self.modifier {
+                self.diagnostics.push(Diagnostic::error_with_note(
+                    *modifier_loc,
+                    format!(
+                        "function declared '{}' but modifier accesses value sent, which is only allowed for payable functions",
+                        self.func.mutability
+                    ),
+                    *loc,
+                    "access of value sent".into()
+                ));
+            } else {
+                self.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "function declared '{}' but this expression accesses value sent, which is only allowed for payable functions",
+                        self.func.mutability
+                    ),
+                ));
+            }
         }
 
-        self.does_write_state = true;
+        self.required_access.increase_to(Access::Value);
+    }
+
+    fn write(&mut self, loc: &pt::Loc) {
+        if self.declared_access < Access::Write {
+            if let Some(modifier_loc) = &self.modifier {
+                self.diagnostics.push(Diagnostic::error_with_note(
+                    *modifier_loc,
+                    format!(
+                        "function declared '{}' but modifier writes to state",
+                        self.func.mutability
+                    ),
+                    *loc,
+                    "write to state".into(),
+                ));
+            } else {
+                self.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "function declared '{}' but this expression writes to state",
+                        self.func.mutability
+                    ),
+                ));
+            }
+        }
+
+        self.required_access.increase_to(Access::Write);
     }
 
     fn read(&mut self, loc: &pt::Loc) {
-        if !self.can_read_state {
-            self.diagnostics.push(Diagnostic::error(
-                *loc,
-                format!(
-                    "function declared '{}' but this expression reads from state",
-                    self.func.mutability
-                ),
-            ));
+        if self.declared_access < Access::Read {
+            if let Some(modifier_loc) = &self.modifier {
+                self.diagnostics.push(Diagnostic::error_with_note(
+                    *modifier_loc,
+                    format!(
+                        "function declared '{}' but modifier reads from state",
+                        self.func.mutability
+                    ),
+                    *loc,
+                    "read to state".into(),
+                ));
+            } else {
+                self.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "function declared '{}' but this expression reads from state",
+                        self.func.mutability
+                    ),
+                ));
+            }
         }
 
-        self.does_read_state = true;
+        self.required_access.increase_to(Access::Read);
     }
 }
 
@@ -72,23 +138,16 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
 
     let mut state = StateCheck {
         diagnostics: Vec::new(),
-        does_read_state: false,
-        does_write_state: false,
-        can_write_state: false,
-        can_read_state: false,
+        declared_access: match func.mutability {
+            Mutability::Pure(_) => Access::None,
+            Mutability::View(_) => Access::Read,
+            Mutability::Nonpayable(_) => Access::Write,
+            Mutability::Payable(_) => Access::Value,
+        },
+        required_access: Access::None,
         func,
+        modifier: None,
         ns,
-    };
-
-    match func.mutability {
-        Mutability::Pure(_) => (),
-        Mutability::View(_) => {
-            state.can_read_state = true;
-        }
-        Mutability::Payable(_) | Mutability::Nonpayable(_) => {
-            state.can_read_state = true;
-            state.can_write_state = true;
-        }
     };
 
     for arg in &func.modifiers {
@@ -118,7 +177,11 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
                 // modifiers do not have mutability, bases or modifiers itself
                 let func = &ns.functions[function_no];
 
+                state.modifier = Some(arg.loc());
+
                 recurse_statements(&func.body, ns, &mut state);
+
+                state.modifier = None;
             }
         }
     }
@@ -126,7 +189,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
     recurse_statements(&func.body, ns, &mut state);
 
     if pt::FunctionTy::Function == func.ty && !func.is_accessor {
-        if !state.does_write_state && !state.does_read_state {
+        if state.required_access == Access::None {
             match func.mutability {
                 Mutability::Payable(_) | Mutability::Pure(_) => (),
                 Mutability::Nonpayable(_) => {
@@ -147,7 +210,8 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
             }
         }
 
-        if !state.does_write_state && state.does_read_state && func.mutability.is_default() {
+        // don't suggest marking payable as view (declared_access == Value)
+        if state.required_access == Access::Read && state.declared_access == Access::Write {
             state.diagnostics.push(Diagnostic::warning(
                 func.loc,
                 "function can be declared 'view'".to_string(),
@@ -295,6 +359,19 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         } => state.write(loc),
         Expression::Builtin {
             loc,
+            kind: Builtin::Value,
+            ..
+        } => {
+            // internal/private functions cannot be declared payable, so msg.value is only checked
+            // as reading state in private/internal functions in solc.
+            if state.func.is_public() {
+                state.value(loc)
+            } else {
+                state.read(loc)
+            }
+        }
+        Expression::Builtin {
+            loc,
             kind: Builtin::ArrayPush | Builtin::ArrayPop,
             args,
             ..
@@ -315,13 +392,10 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             }
             _ => unreachable!(),
         },
-        Expression::ExternalFunctionCallRaw { loc, .. } => {
-            if state.ns.target.is_substrate() {
-                state.write(loc)
-            } else {
-                state.read(loc)
-            }
-        }
+        Expression::ExternalFunctionCallRaw { loc, ty, .. } => match ty {
+            CallTy::Static => state.read(loc),
+            CallTy::Delegate | CallTy::Regular => state.write(loc),
+        },
         _ => {
             return true;
         }
