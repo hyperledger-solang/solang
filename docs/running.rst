@@ -131,6 +131,9 @@ Options:
 \-\-release
    Disable all debugging features for :ref:`release`
 
+\-\-wasm-opt
+   wasm-opt passes for Wasm targets (0, 1, 2, 3, 4, s or z; see the wasm-opt help for more details).
+
 .. warning::
 
     If multiple Solidity source files define the same contract name, you will get a single

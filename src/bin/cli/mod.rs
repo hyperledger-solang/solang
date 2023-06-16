@@ -2,6 +2,8 @@
 
 use clap::{builder::ValueParser, value_parser, ArgAction, Args, Parser, Subcommand};
 use clap_complete::Shell;
+#[cfg(feature = "wasm_opt")]
+use contract_build::OptimizationPasses;
 
 use std::{ffi::OsString, path::PathBuf, process::exit};
 
@@ -105,7 +107,7 @@ pub struct CompilerOutput {
     #[arg(name = "STD-JSON",help = "mimic solidity json output on stdout", conflicts_with_all = ["VERBOSE", "OUTPUT", "EMIT"] , action = ArgAction::SetTrue, long = "standard-json")]
     pub std_json_output: bool,
 
-    #[arg(name = "OUTPUT",help = "output directory", short = 'o', long = "output", num_args = 1, value_parser =ValueParser::string())]
+    #[arg(name = "OUTPUT",help = "output directory", short = 'o', long = "output", num_args = 1, value_parser = ValueParser::string())]
     pub output_directory: Option<String>,
 
     #[arg(name = "OUTPUTMETA",help = "output directory for metadata", long = "output-meta", num_args = 1, value_parser = ValueParser::string())]
@@ -179,6 +181,15 @@ pub struct Optimizations {
 
     #[arg(name = "OPT", help = "Set llvm optimizer level ", short = 'O', default_value = "default", value_parser = ["none", "less", "default", "aggressive"], num_args = 1)]
     pub opt_level: String,
+
+    #[cfg(feature = "wasm_opt")]
+    #[arg(
+        name = "WASM_OPT",
+        help = "wasm-opt passes for Wasm targets (0, 1, 2, 3, 4, s or z; see the wasm-opt help for more details)",
+        long = "wasm-opt",
+        num_args = 1
+    )]
+    pub wasm_opt_passes: Option<OptimizationPasses>,
 }
 
 pub(crate) fn target_arg(target_arg: &TargetArg) -> Target {
@@ -261,6 +272,12 @@ pub fn options_arg(debug: &DebugFeatures, optimizations: &Optimizations) -> Opti
         log_api_return_codes: debug.log_api_return_codes & !debug.release,
         log_runtime_errors: debug.log_runtime_errors & !debug.release,
         log_prints: debug.log_prints & !debug.release,
+        #[cfg(feature = "wasm_opt")]
+        wasm_opt: optimizations.wasm_opt_passes.or(if debug.release {
+            Some(OptimizationPasses::Z)
+        } else {
+            None
+        }),
     }
 }
 

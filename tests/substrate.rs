@@ -967,7 +967,17 @@ pub fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, Stri
     cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
     let opt = inkwell::OptimizationLevel::Default;
     let target = Target::default_substrate();
-    let (wasm, ns) = compile(tmp_file, &mut cache, opt, target, log_ret, log_err, true);
+    let (wasm, ns) = compile(
+        tmp_file,
+        &mut cache,
+        opt,
+        target,
+        log_ret,
+        log_err,
+        true,
+        #[cfg(feature = "wasm_opt")]
+        Some(contract_build::OptimizationPasses::Z),
+    );
     ns.print_diagnostics_in_plain(&cache, false);
     assert!(!wasm.is_empty());
     wasm

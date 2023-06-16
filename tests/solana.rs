@@ -147,6 +147,8 @@ fn build_solidity(src: &str) -> VirtualMachine {
         false,
         true,
         true,
+        #[cfg(feature = "wasm_opt")]
+        None,
     );
 
     ns.print_diagnostics_in_plain(&cache, false);

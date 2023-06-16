@@ -34,7 +34,10 @@ jobs:
       - name: Run cargo clippy
         if: always()
         run: cargo clippy --workspace --tests --bins -- -D warnings
-      - name: Test without llvm feature
+      - name: Run cargo clippy without wasm_opt feature
+        if: always()
+        run: cargo clippy --workspace --no-default-features --features llvm --bins -- -D warnings
+      - name: Run cargo clippy without llvm feature
         if: always()
         run: cargo clippy --workspace --no-default-features --lib -- -D warnings
       - name: Run cargo doc
@@ -155,6 +158,8 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose --workspace
+    - name: Run tests without wasm_opt
+      run: cargo test --verbose --workspace --no-default-features --features llvm
     - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-mac-arm
