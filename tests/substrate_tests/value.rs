@@ -199,7 +199,7 @@ fn constructor_salt() {
         r##"
         contract b {
             function step1() public {
-                a f = new a{salt: 1}();
+                a f = new a{salt: hex"01"}();
             }
         }
 
@@ -217,8 +217,8 @@ fn constructor_salt() {
         r##"
         contract b {
             function step1() public {
-                a f = new a{salt: 1}();
-                f = new a{salt: 2}();
+                a f = new a{salt: hex"01"}();
+                f = new a{salt: hex"02"}();
             }
         }
 
