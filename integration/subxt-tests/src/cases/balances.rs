@@ -4,7 +4,7 @@ use crate::{free_balance_of, node, Contract, WriteContract};
 use contract_transcode::ContractMessageTranscoder;
 use hex::FromHex;
 use parity_scale_codec::{Decode, Encode};
-use sp_core::{hexdisplay::AsBytesRef, keccak_256, KeccakHasher, H256};
+use sp_core::{hexdisplay::AsBytesRef, keccak_256, KeccakHasher, H256, U256};
 
 use crate::{DeployContract, Execution, ReadContract, API};
 
@@ -58,14 +58,10 @@ async fn case() -> anyhow::Result<()> {
             sp_keyring::AccountKeyring::Alice,
             0,
             &|t: &ContractMessageTranscoder| {
-                t.encode::<_, String>(
-                    "transfer",
-                    [
-                        format!("{:?}", dave.to_raw_public()),
-                        format!("{}", 20000_u128),
-                    ],
-                )
-                .unwrap()
+                let mut s = keccak_256(b"transfer(address,uint128)")[..4].to_vec();
+                dave.encode_to(&mut s);
+                20000_u128.encode_to(&mut s);
+                s
             },
         )
         .await?;
@@ -80,14 +76,10 @@ async fn case() -> anyhow::Result<()> {
             sp_keyring::AccountKeyring::Alice,
             0,
             &|t: &ContractMessageTranscoder| {
-                t.encode::<_, String>(
-                    "send",
-                    [
-                        format!("{:?}", dave.to_raw_public()),
-                        format!("{}", 10000_u128),
-                    ],
-                )
-                .unwrap()
+                let mut s = keccak_256(b"send(address,uint128)")[..4].to_vec();
+                dave.encode_to(&mut s);
+                10000_u128.encode_to(&mut s);
+                s
             },
         )
         .await?;
