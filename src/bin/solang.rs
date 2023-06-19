@@ -379,6 +379,14 @@ fn contract_results(
 
     let code = binary.code(Generate::Linked).expect("llvm build");
 
+    #[cfg(feature = "wasm_opt")]
+    if let Some(level) = opt.wasm_opt.filter(|_| ns.target.is_substrate() && verbose) {
+        eprintln!(
+            "info: wasm-opt level '{}' for contract {}",
+            level, resolved_contract.name
+        );
+    }
+
     if std_json {
         json_contracts.insert(
             binary.name,

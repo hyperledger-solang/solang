@@ -4,8 +4,7 @@
                 (bool s, bytes memory bs) = a.call{value: 2}("");
             }
         }
-        
+
 // ---- Expect: diagnostics ----
-// warning: 3:13-49: function can be declared 'view'
 // warning: 4:23-24: destructure variable 's' has never been used
 // warning: 4:39-41: destructure variable 'bs' has never been used

@@ -22,6 +22,8 @@ fn parse_and_codegen(src: &'static str) -> Namespace {
         log_api_return_codes: false,
         log_runtime_errors: false,
         log_prints: true,
+        #[cfg(feature = "wasm_opt")]
+        wasm_opt: None,
     };
 
     codegen(&mut ns, &opt);

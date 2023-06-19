@@ -148,6 +148,9 @@ Options:
   1. Command line
   2. Configuration file
   3. Default values.
+  
+\-\-wasm-opt
+   wasm-opt passes for Wasm targets (0, 1, 2, 3, 4, s or z; see the wasm-opt help for more details).
 
 .. warning::
 
