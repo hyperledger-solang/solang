@@ -203,6 +203,7 @@ mod tests {
                     vector_to_slice: true,
                     common_subexpression_elimination: true,
                     opt_level: Some("default".to_owned()),
+                    #[cfg(feature = "wasm_opt")]
                     wasm_opt_passes: None
                 }
             }
@@ -255,6 +256,7 @@ mod tests {
                     vector_to_slice: false,
                     common_subexpression_elimination: false,
                     opt_level: Some("aggressive".to_owned()),
+                    #[cfg(feature = "wasm_opt")]
                     wasm_opt_passes: None
                 }
             }
