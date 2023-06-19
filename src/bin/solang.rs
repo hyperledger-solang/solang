@@ -86,17 +86,18 @@ fn new_command(args: New) {
 
     let dir_path = args.project_name.unwrap_or(default_path);
 
-    match create_dir(&dir_path) {
-        Ok(_) => (),
-        Err(error) => {
-            eprintln!("couldn't create project directory, reason: {error}");
-            exit(1)
-        }
-    };
+    if let Err(error) = create_dir(&dir_path) {
+        eprintln!("couldn't create project directory, reason: {error}");
+        exit(1);
+    }
 
     let flipper = match target {
         "solana" => include_str!("./solang_new_examples/solana/flipper.sol"),
         "substrate" => include_str!("./solang_new_examples/substrate/flipper.sol"),
+        "evm" => {
+            eprintln!("EVM target is not supported yet!");
+            exit(1);
+        }
         _ => unreachable!(),
     };
 

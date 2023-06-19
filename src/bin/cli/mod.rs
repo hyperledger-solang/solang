@@ -379,6 +379,7 @@ pub struct Optimizations {
         long = "wasm-opt",
         num_args = 1
     )]
+    #[serde(rename(deserialize = "wasm-opt"))]
     pub wasm_opt_passes: Option<OptimizationPasses>,
 }
 
@@ -449,6 +450,9 @@ pub(crate) fn target_arg<T: TargetArgTrait>(target_arg: &T) -> Target {
     target
 }
 
+/// This trait is used to avoid code repetition when dealing with two implementations of the Package type:
+/// CompilePackage and DocPackage. Each struct represents a group of arguments for the compile and doc commands.
+/// Throughout the code, these two structs are treated the same, and this trait allows for unified handling.
 pub trait PackageTrait {
     fn get_input(&self) -> &Vec<PathBuf>;
     fn get_import_path(&self) -> &Option<Vec<PathBuf>>;
@@ -457,12 +461,13 @@ pub trait PackageTrait {
 
 impl PackageTrait for CompilePackage {
     fn get_input(&self) -> &Vec<PathBuf> {
-        match &self.input {
-            Some(files) => files,
-            None => {
-                eprintln!("No input files specified, please specifiy them in solang.toml or in command line");
-                exit(1);
-            }
+        if let Some(files) = &self.input {
+            files
+        } else {
+            eprintln!(
+                "No input files specified, please specifiy them in solang.toml or in command line"
+            );
+            exit(1);
         }
     }
 

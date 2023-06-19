@@ -4,7 +4,7 @@ contract flipper {
 
 	/// Constructor that initializes the `bool` value to the given `init_value`.
 	@payer(payer)
-	constructor(address payer, bool initvalue) {
+	constructor(bool initvalue) {
 		value = initvalue;
 	}
 

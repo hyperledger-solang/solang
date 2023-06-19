@@ -23,6 +23,7 @@ strength-reduce = true
 vector-to-slice = true
 common-subexpression-elimination = true
 llvm-IR-optimization-level = "default"  # Set llvm optimizer level. Valid options are "none", "less", "default", "aggressive"
+wasm_opt = 1
 
 [compiler-output]
 verbose = false    # show debug messages
