@@ -84,30 +84,10 @@ fn constants_and_types() {
 
     assert_eq!(idl.types.len(), 2);
 
-    assert_eq!(idl.types[0].name, "MyStruct");
+    assert_eq!(idl.types[0].name, "Week");
     assert!(idl.types[0].docs.is_none());
     assert_eq!(
         idl.types[0].ty,
-        IdlTypeDefinitionTy::Struct {
-            fields: vec![
-                IdlField {
-                    name: "g".to_string(),
-                    docs: None,
-                    ty: IdlType::U8,
-                },
-                IdlField {
-                    name: "d".to_string(),
-                    docs: None,
-                    ty: IdlType::Array(IdlType::U8.into(), 2)
-                }
-            ]
-        }
-    );
-
-    assert_eq!(idl.types[1].name, "Week");
-    assert!(idl.types[1].docs.is_none());
-    assert_eq!(
-        idl.types[1].ty,
         IdlTypeDefinitionTy::Enum {
             variants: vec![
                 IdlEnumVariant {
@@ -121,6 +101,31 @@ fn constants_and_types() {
                 IdlEnumVariant {
                     name: "Wednesday".to_string(),
                     fields: None,
+                }
+            ]
+        }
+    );
+
+    assert_eq!(idl.types[1].name, "cte5_returns");
+    assert_eq!(
+        idl.types[1].docs,
+        Some(vec![
+            "Data structure to hold the multiple returns of function cte5".into()
+        ])
+    );
+    assert_eq!(
+        idl.types[1].ty,
+        IdlTypeDefinitionTy::Struct {
+            fields: vec![
+                IdlField {
+                    name: "g".to_string(),
+                    docs: None,
+                    ty: IdlType::U8,
+                },
+                IdlField {
+                    name: "d".to_string(),
+                    docs: None,
+                    ty: IdlType::Array(IdlType::U8.into(), 2)
                 }
             ]
         }

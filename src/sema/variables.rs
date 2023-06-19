@@ -21,6 +21,7 @@ use solang_parser::{
     doccomment::DocComment,
     pt::{self, CodeLocation, OptionalCodeLocation},
 };
+use std::sync::Arc;
 
 pub struct DelayedResolveInitializer<'a> {
     var_no: usize,
@@ -450,15 +451,16 @@ pub fn variable_decl<'a>(
             let mut params = Vec::new();
             let param =
                 collect_parameters(&ty, &def.name, &mut symtable, &mut params, &mut expr, ns)?;
-            let ty = param.ty.clone();
 
-            if ty.contains_mapping(ns) {
+            if param.ty.contains_mapping(ns) {
                 // we can't return a mapping
                 ns.diagnostics.push(Diagnostic::decl_error(
                     def.loc,
                     "mapping in a struct variable cannot be public".to_string(),
                 ));
             }
+
+            let (body, returns) = accessor_body(expr, param, constant, &mut symtable, ns);
 
             let mut func = Function::new(
                 def.name.as_ref().unwrap().loc,
@@ -468,25 +470,13 @@ pub fn variable_decl<'a>(
                 pt::FunctionTy::Function,
                 // accessors for constant variables have view mutability
                 Some(pt::Mutability::View(def.name.as_ref().unwrap().loc)),
-                visibility,
+                pt::Visibility::External(None),
                 params,
-                vec![param],
+                returns,
                 ns,
             );
 
-            // Create the implicit body - just return the value
-            func.body = vec![Statement::Return(
-                pt::Loc::Implicit,
-                Some(if constant {
-                    expr
-                } else {
-                    Expression::StorageLoad {
-                        loc: pt::Loc::Implicit,
-                        ty,
-                        expr: Box::new(expr),
-                    }
-                }),
-            )];
+            func.body = body;
             func.is_accessor = true;
             func.has_body = true;
             func.is_override = is_override;
@@ -649,6 +639,127 @@ fn collect_parameters(
             recursive: false,
             annotation: None,
         }),
+    }
+}
+
+/// Build up an ast for the implict accessor function for public state variables.
+fn accessor_body(
+    expr: Expression,
+    param: Parameter,
+    constant: bool,
+    symtable: &mut Symtable,
+    ns: &mut Namespace,
+) -> (Vec<Statement>, Vec<Parameter>) {
+    // This could be done in codegen rather than sema, however I am not sure how we would implement
+    // that. After building up the parameter/returns list for the implicit function, we have done almost
+    // all the work already for building the body (see `expr` and `param` above). So, we would need to
+    // share some code between codegen and sema for this.
+
+    let mut ty = param.ty.clone();
+
+    // If the return value of an accessor function is a struct, return the members rather than
+    // the struct. This is a particular inconsistency in Solidity which does not apply recursively,
+    // i.e. if the struct contains structs, then those values are returned as structs.
+    if let Type::Struct(str) = &param.ty {
+        let expr = Arc::new(expr);
+
+        if !constant {
+            ty = Type::StorageRef(false, ty.into());
+        }
+
+        let var_no = symtable
+            .add(
+                &pt::Identifier {
+                    loc: pt::Loc::Implicit,
+                    name: "_".into(),
+                },
+                ty.clone(),
+                ns,
+                VariableInitializer::Solidity(Some(expr.clone())),
+                VariableUsage::LocalVariable,
+                Some(pt::StorageLocation::Storage(pt::Loc::Implicit)),
+            )
+            .unwrap();
+
+        symtable.vars[&var_no].read = true;
+        symtable.vars[&var_no].assigned = true;
+
+        let def = str.definition(ns);
+        let returns = def.fields.clone();
+
+        let list = if constant {
+            def.fields
+                .iter()
+                .enumerate()
+                .map(|(field, param)| Expression::Load {
+                    loc: pt::Loc::Implicit,
+                    ty: param.ty.clone(),
+                    expr: Expression::StructMember {
+                        loc: pt::Loc::Implicit,
+                        ty: Type::Ref(def.fields[field].ty.clone().into()),
+                        expr: Expression::Variable {
+                            loc: pt::Loc::Implicit,
+                            ty: ty.clone(),
+                            var_no,
+                        }
+                        .into(),
+                        field,
+                    }
+                    .into(),
+                })
+                .collect()
+        } else {
+            def.fields
+                .iter()
+                .enumerate()
+                .map(|(field, param)| Expression::StorageLoad {
+                    loc: pt::Loc::Implicit,
+                    ty: param.ty.clone(),
+                    expr: Expression::StructMember {
+                        loc: pt::Loc::Implicit,
+                        ty: Type::StorageRef(false, def.fields[field].ty.clone().into()),
+                        expr: Expression::Variable {
+                            loc: pt::Loc::Implicit,
+                            ty: ty.clone(),
+                            var_no,
+                        }
+                        .into(),
+                        field,
+                    }
+                    .into(),
+                })
+                .collect()
+        };
+
+        let body = vec![
+            Statement::VariableDecl(pt::Loc::Implicit, var_no, param, Some(expr)),
+            Statement::Return(
+                pt::Loc::Implicit,
+                Some(Expression::List {
+                    loc: pt::Loc::Implicit,
+                    list,
+                }),
+            ),
+        ];
+
+        (body, returns)
+    } else {
+        let body = vec![Statement::Return(
+            pt::Loc::Implicit,
+            Some(if constant {
+                expr
+            } else {
+                Expression::StorageLoad {
+                    loc: pt::Loc::Implicit,
+                    ty,
+                    expr: Box::new(expr),
+                }
+            }),
+        )];
+
+        let returns = vec![param];
+
+        (body, returns)
     }
 }
 
