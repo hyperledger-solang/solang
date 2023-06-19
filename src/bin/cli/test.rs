@@ -20,7 +20,7 @@ mod tests {
 
         if let Commands::Compile(compile_args) = cli.command {
             assert_eq!(
-                compile_args.package.input,
+                compile_args.package.input.unwrap(),
                 vec![PathBuf::from("flipper.sol")]
             );
             assert_eq!(compile_args.target_arg.name.unwrap(), "substrate");
@@ -56,7 +56,7 @@ mod tests {
 
         let package: cli::CompilePackage = toml::from_str(package_toml).unwrap();
 
-        assert_eq!(package.input, [PathBuf::from("flipper.sol")]);
+        assert_eq!(package.input.unwrap(), [PathBuf::from("flipper.sol")]);
         assert_eq!(package.contracts.unwrap(), ["flipper".to_owned()]);
         assert_eq!(
             package.import_path.unwrap(),
@@ -71,25 +71,11 @@ mod tests {
         );
 
         package_toml = r#"
-        contracts = ["flipper"] # Contracts to include from the compiled files
-        import_path = ["path1", "path2"]   
-        import_map = {map1="path", map2="path2"}    # Maps to import. Define as : import_paths = ["map=path/to/map", "map2=path/to/map2", ..]"#;
-
-        let mut res: Result<cli::CompilePackage, _> = toml::from_str(package_toml);
-
-        match res {
-            Ok(_) => unreachable!(),
-            Err(error) => {
-                assert_eq!("missing field `input_files`", error.message())
-            }
-        }
-
-        package_toml = r#"
             input_files = ["flipper.sol"]
             import_map = ["map_name.path"]
         "#;
 
-        res = toml::from_str(package_toml);
+        let res: Result<cli::CompilePackage, _> = toml::from_str(package_toml);
 
         match res {
             Ok(_) => unreachable!(),
@@ -186,7 +172,7 @@ mod tests {
             cli::Compile {
                 configuration_file: None,
                 package: cli::CompilePackage {
-                    input: vec![PathBuf::from("flipper.sol")],
+                    input: Some(vec![PathBuf::from("flipper.sol")]),
                     contracts: Some(vec!["flipper".to_owned()]),
                     import_path: Some(vec![]),
                     import_map: Some(vec![])
@@ -216,12 +202,13 @@ mod tests {
                     strength_reduce: true,
                     vector_to_slice: true,
                     common_subexpression_elimination: true,
-                    opt_level: Some("default".to_owned())
+                    opt_level: Some("default".to_owned()),
+                    wasm_opt_passes: None
                 }
             }
         );
 
-        let command = "solang compile flipper.sol --config-file solang.toml --target substrate --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ');
+        let command = "solang compile flipper.sol sesa.sol --config-file solang.toml --target substrate --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ');
 
         let matches = Cli::command().get_matches_from(command);
 
@@ -234,7 +221,10 @@ mod tests {
             cli::Compile {
                 configuration_file: None,
                 package: cli::CompilePackage {
-                    input: vec![PathBuf::from("flipper.sol")],
+                    input: Some(vec![
+                        PathBuf::from("flipper.sol"),
+                        PathBuf::from("sesa.sol")
+                    ]),
                     contracts: Some(vec!["flipper".to_owned()]),
                     import_path: Some(vec![]),
                     import_map: Some(vec![])
@@ -264,7 +254,8 @@ mod tests {
                     strength_reduce: false,
                     vector_to_slice: false,
                     common_subexpression_elimination: false,
-                    opt_level: Some("aggressive".to_owned())
+                    opt_level: Some("aggressive".to_owned()),
+                    wasm_opt_passes: None
                 }
             }
         );

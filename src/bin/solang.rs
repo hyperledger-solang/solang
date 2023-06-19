@@ -3,6 +3,7 @@
 use clap::{Command, CommandFactory, FromArgMatches};
 
 use clap_complete::generate;
+use cli::PackageTrait;
 use itertools::Itertools;
 use solang::{
     abi,
@@ -41,12 +42,16 @@ fn main() {
         Commands::Compile(compile_args) => {
             // Read config from configuration file. If extra args exist, only overwrite the fields that the user explicitly provides.
             let config = if let Some(conf_file) = &compile_args.configuration_file {
-                eprintln!("info: reading default config from toml file");
-                let debug = matches.subcommand_matches("compile").unwrap();
-                let mut compile = read_toml_config(conf_file);
-                compile.overwrite_with_matches(debug);
+                if PathBuf::from(conf_file).exists() {
+                    eprintln!("info: reading default config from toml file");
+                    let debug = matches.subcommand_matches("compile").unwrap();
+                    let mut compile = read_toml_config(conf_file);
+                    compile.overwrite_with_matches(debug);
 
-                compile
+                    compile
+                } else {
+                    compile_args
+                }
             } else {
                 compile_args
             };
@@ -176,7 +181,7 @@ fn compile(compile_args: &Compile) {
         HashSet::new()
     };
 
-    for filename in &compile_args.package.input {
+    for filename in compile_args.package.get_input() {
         // TODO: this could be parallelized using e.g. rayon
         let ns = process_file(
             filename.as_os_str(),

@@ -104,7 +104,7 @@ fn basic_compilation_from_toml() {
     let mut compile_cmd = Command::cargo_bin("solang").unwrap();
 
     compile_cmd
-        .args(["compile", "--config-file"])
+        .args(["compile"])
         .current_dir(solana_test)
         .assert()
         .success();

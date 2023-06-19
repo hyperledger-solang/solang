@@ -99,7 +99,7 @@ pub struct Doc {
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct Compile {
-    #[arg(name = "CONFFILE", help = "Take arguments from configuration file", long = "config-file", value_parser = ValueParser::os_string(), num_args = 0..=1, default_missing_value = "solang.toml")]
+    #[arg(name = "CONFFILE", help = "Take arguments from configuration file", long = "config-file", value_parser = ValueParser::os_string(), num_args = 0..=1, default_value = "solang.toml")]
     #[serde(skip)]
     pub configuration_file: Option<OsString>,
 
@@ -132,21 +132,22 @@ impl Compile {
                 "INPUT" => {
                     self.package.input = matches
                         .get_many::<PathBuf>("INPUT")
-                        .unwrap()
-                        .map(PathBuf::from)
-                        .collect()
+                        .map(|input_paths| input_paths.map(PathBuf::from).collect())
                 }
                 "CONTRACT" => {
-                    self.package.contracts = matches.get_one::<Vec<String>>("CONTRACT").cloned()
+                    self.package.contracts = matches
+                        .get_many::<String>("CONTRACT")
+                        .map(|contract_names| contract_names.map(String::from).collect())
                 }
                 "IMPORTPATH" => {
-                    self.package.import_path =
-                        matches.get_one::<Vec<PathBuf>>("IMPORTPATH").cloned()
+                    self.package.import_path = matches
+                        .get_many::<PathBuf>("IMPORTPATH")
+                        .map(|paths| paths.map(PathBuf::from).collect())
                 }
                 "IMPORTMAP" => {
                     self.package.import_map = matches
-                        .get_one::<Vec<(String, PathBuf)>>("IMPORTMAP")
-                        .cloned()
+                        .get_many::<(String, PathBuf)>("IMPORTMAP")
+                        .map(|import_map| import_map.cloned().collect())
                 }
 
                 // CompilerOutput args
@@ -265,7 +266,7 @@ pub struct TargetArg {
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct CompileTargetArg {
-    #[arg(name = "TARGET", required_unless_present = "CONFFILE" ,long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
+    #[arg(name = "TARGET", long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
     pub name: Option<String>,
 
     #[arg(name = "ADDRESS_LENGTH", help = "Address length on Substrate", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
@@ -292,9 +293,9 @@ pub struct DocPackage {
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct CompilePackage {
-    #[arg(name = "INPUT", help = "Solidity input files",value_parser = ValueParser::path_buf(), num_args = 1.., required_unless_present = "CONFFILE")]
+    #[arg(name = "INPUT", help = "Solidity input files",value_parser = ValueParser::path_buf(), num_args = 1..,)]
     #[serde(rename(deserialize = "input_files"))]
-    pub input: Vec<PathBuf>,
+    pub input: Option<Vec<PathBuf>>,
 
     #[arg(name = "CONTRACT", help = "Contract names to compile (defaults to all)", value_delimiter = ',', action = ArgAction::Append, long = "contract")]
     pub contracts: Option<Vec<String>>,
@@ -368,7 +369,8 @@ pub struct Optimizations {
     pub common_subexpression_elimination: bool,
 
     #[arg(name = "OPT", help = "Set llvm optimizer level ", short = 'O', default_value = "default", value_parser = ["none", "less", "default", "aggressive"], num_args = 1)]
-    pub opt_level: String,
+    #[serde(rename(deserialize = "llvm-IR-optimization-level"))]
+    pub opt_level: Option<String>,
 
     #[cfg(feature = "wasm_opt")]
     #[arg(
@@ -455,7 +457,13 @@ pub trait PackageTrait {
 
 impl PackageTrait for CompilePackage {
     fn get_input(&self) -> &Vec<PathBuf> {
-        &self.input
+        match &self.input {
+            Some(files) => files,
+            None => {
+                eprintln!("No input files specified, please specifiy them in solang.toml or in command line");
+                exit(1);
+            }
+        }
     }
 
     fn get_import_path(&self) -> &Option<Vec<PathBuf>> {
