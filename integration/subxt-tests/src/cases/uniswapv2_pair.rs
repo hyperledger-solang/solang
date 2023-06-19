@@ -15,7 +15,7 @@ use sp_core::{
 
 use crate::{Contract, DeployContract, Execution, ReadContract, WriteContract, API};
 
-#[ignore]
+#[ignore = "trapped when transfer liquidity"]
 #[tokio::test]
 async fn mint() -> anyhow::Result<()> {
     let api = API::new().await?;
@@ -30,16 +30,8 @@ async fn mint() -> anyhow::Result<()> {
             sp_keyring::AccountKeyring::Alice,
             0,
             &|t: &ContractMessageTranscoder| {
-                let mut s = t
-                    .encode::<_, String>(
-                        "transfer",
-                        [format!(
-                            "0x{}",
-                            hex::encode(w.pair.address.as_ref().unwrap())
-                        )],
-                    )
-                    .unwrap();
-
+                let mut s = keccak_256(b"transfer(address,uint)")[..4].to_vec();
+                w.pair.address.clone().unwrap().encode_to(&mut s);
                 U256::from(10_u8).pow(18_u8.into()).encode_to(&mut s);
 
                 s
@@ -53,16 +45,8 @@ async fn mint() -> anyhow::Result<()> {
             sp_keyring::AccountKeyring::Alice,
             0,
             &|t: &ContractMessageTranscoder| {
-                let mut s = t
-                    .encode::<_, String>(
-                        "transfer",
-                        [format!(
-                            "0x{}",
-                            hex::encode(w.pair.address.as_ref().unwrap())
-                        )],
-                    )
-                    .unwrap();
-
+                let mut s = keccak_256(b"transfer(address,uint)")[..4].to_vec();
+                w.pair.address.clone().unwrap().encode_to(&mut s);
                 U256::from(10_u8)
                     .pow(18_u8.into())
                     .mul(U256::from(4_u8))
@@ -195,7 +179,7 @@ async fn mint() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[ignore]
+#[ignore = "trapped when adding liquidity"]
 #[tokio::test]
 async fn swap_token0() -> anyhow::Result<()> {
     let api = API::new().await?;
@@ -387,7 +371,7 @@ async fn swap_token0() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[ignore]
+#[ignore = "trapped when adding liquidity"]
 #[tokio::test]
 async fn swap_token1() -> anyhow::Result<()> {
     let api = API::new().await?;
@@ -575,7 +559,7 @@ async fn swap_token1() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[ignore]
+#[ignore = "trapped when adding liquidity"]
 #[tokio::test]
 async fn burn() -> anyhow::Result<()> {
     let api = API::new().await?;
@@ -915,7 +899,7 @@ impl MockWorld {
                 0,
                 &|t: &ContractMessageTranscoder| {
                     let mut s = keccak_256(b"transfer(address,uint)")[..4].to_vec();
-                    self.pair.address.encode_to(&mut s);
+                    self.pair.address.clone().unwrap().encode_to(&mut s);
                     amount_a.encode_to(&mut s);
                     s
                 },
@@ -929,22 +913,9 @@ impl MockWorld {
                 0,
                 &|t: &ContractMessageTranscoder| {
                     let mut s = keccak_256(b"transfer(address,uint)")[..4].to_vec();
-                    self.pair.address.encode_to(&mut s);
+                    self.pair.address.clone().unwrap().encode_to(&mut s);
                     amount_b.encode_to(&mut s);
                     s
-
-                    // let mut s = t
-                    //     .encode(
-                    //         "transfer",
-                    //         [format!(
-                    //             "0x{}",
-                    //             hex::encode(self.pair.address.as_ref().unwrap())
-                    //         )],
-                    //     )
-                    //     .unwrap();
-
-                    // amount_b.encode_to(&mut s);
-                    // s
                 },
             )
             .await?;
@@ -955,14 +926,12 @@ impl MockWorld {
                 sp_keyring::AccountKeyring::Alice,
                 0,
                 &|t: &ContractMessageTranscoder| {
-                    t.encode(
-                        "mint",
-                        [format!(
-                            "0x{}",
-                            hex::encode(sp_keyring::AccountKeyring::Alice.to_account_id())
-                        )],
-                    )
-                    .unwrap()
+                    let mut s = keccak_256(b"mint(address)")[..4].to_vec();
+                    sp_keyring::AccountKeyring::Alice
+                        .to_account_id()
+                        .encode_to(&mut s);
+
+                    s
                 },
             )
             .await?;

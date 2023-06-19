@@ -8,7 +8,7 @@ use parity_scale_codec::{Decode, Encode};
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use sp_core::{crypto::AccountId32, hexdisplay::AsBytesRef};
 
-#[ignore]
+#[ignore = "contract trapped"]
 #[tokio::test]
 async fn case() -> anyhow::Result<()> {
     let api = API::new().await?;

@@ -55,13 +55,6 @@ async fn case() -> anyhow::Result<()> {
     // setX on callee
     let selector = t_callee.encode::<_, String>("set_x", [format!("102")])?;
 
-    // let selector = build_selector(
-    //     "250c2025",
-    //     Some(&mut |s| {
-    //         102_i64.encode_to(s);
-    //     }),
-    // )?;
-
     WriteContract {
         caller: sp_keyring::AccountKeyring::Alice,
         contract_address: callee.contract_address.clone(),

@@ -6,7 +6,7 @@ use sp_core::{hexdisplay::AsBytesRef, keccak_256};
 
 use crate::{Contract, DeployContract, Execution, ReadContract, WriteContract, API};
 
-#[ignore]
+#[ignore = "test removed"]
 #[tokio::test]
 async fn case() -> anyhow::Result<()> {
     let api = API::new().await?;
