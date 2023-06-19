@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use contract_transcode::ContractMessageTranscoder;
 
 use node::runtime_types::pallet_contracts::wasm::Determinism;
@@ -24,7 +26,7 @@ mod cases;
 
 // metadata file obtained from the latest substrate-contracts-node
 #[subxt::subxt(
-    runtime_metadata_path = "./metadata.scale",
+    runtime_metadata_url = "ws://localhost:9944",
     substitute_type(
         type = "sp_weights::weight_v2::Weight",
         with = "::subxt::utils::Static<::sp_weights::Weight>"
@@ -219,14 +221,6 @@ impl Execution for ReadContract {
                 return_value: rv.result.map(|v| v.data.to_vec()).unwrap_or_default(),
             })
         }
-
-        // if rv.did_revert() {
-        //     Err(anyhow::anyhow!("reverted"))
-        // } else {
-        //     Ok(output::ReadSuccess {
-        //         return_value: rv.data.to_vec(),
-        //     })
-        // }
     }
 }
 
@@ -389,16 +383,6 @@ async fn read_call(
     let rv = ContractResult::<Result<ExecReturnValue, DispatchError>, u128>::decode(
         &mut rv.as_bytes_ref(),
     )?;
-
-    // rv.result.map_err(|e| {
-    //     if let DispatchError::Module(m) = e {
-    //         if let Ok(d) = api.metadata().error(m.index, m.error[0]) {
-    //             return anyhow::anyhow!("{d:?}");
-    //         }
-    //     }
-
-    //     anyhow::anyhow!("{e:?}")
-    // })
 
     Ok(rv)
 }

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use contract_transcode::ContractMessageTranscoder;
 use hex::FromHex;
 use parity_scale_codec::{Decode, DecodeAll, Encode, Input};

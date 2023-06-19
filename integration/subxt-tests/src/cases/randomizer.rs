@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use contract_transcode::ContractMessageTranscoder;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::{hexdisplay::AsBytesRef, keccak_256};

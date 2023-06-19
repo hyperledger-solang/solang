@@ -6,10 +6,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-# FIXME: currently needed to bypass a transient dependency using nightly feature
-env:
- RUSTC_BOOTSTRAP: 1
-
 jobs:
   repolinter:
     name: Repolinter

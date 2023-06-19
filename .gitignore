@@ -5,3 +5,4 @@ Cargo.lock
 bundle.ll
 
 .helix/
+.vscode/

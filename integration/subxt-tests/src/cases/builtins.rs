@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use crate::{node, Contract, DeployContract, Execution, ReadContract, API};

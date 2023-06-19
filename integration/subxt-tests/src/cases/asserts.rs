@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{node, Contract, WriteContract};
 use contract_transcode::ContractMessageTranscoder;
 use hex::FromHex;

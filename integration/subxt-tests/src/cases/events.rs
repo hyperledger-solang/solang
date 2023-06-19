@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use contract_transcode::ContractMessageTranscoder;
 use parity_scale_codec::{Compact, Decode, Input};
 use sp_core::{crypto::AccountId32, hexdisplay::AsBytesRef};
