@@ -2085,7 +2085,7 @@ pub(super) fn parse_call_args(
                     return Err(());
                 }
 
-                let ty = Type::Uint(256);
+                let ty = Type::Bytes(32);
 
                 let expr = expression(
                     &arg.expr,

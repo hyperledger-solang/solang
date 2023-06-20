@@ -30,7 +30,7 @@ contract UniswapV2Factory is IUniswapV2Factory {
         //assembly {
         //    pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
         //}
-        pair = address(new UniswapV2Pair{salt: uint256(salt), value: 1e16}());
+        pair = address(new UniswapV2Pair{salt: salt, value: 1e16}());
         UniswapV2Pair(pair).initialize(token0, token1);
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction

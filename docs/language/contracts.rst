@@ -77,12 +77,15 @@ _______________________________________________________
     on Solana, the address of the new account must be set using ``address:``.
 
 When a new contract is created, the address for the new contract is a hash of the input
-(the constructor arguments) to the new contract. So, a contract cannot be created twice
-with the same input. This is why the salt is concatenated to the input. The salt is
-either a random value or it can be explicitly set using the ``{salt: 2}`` syntax. A
-constant will remove the need for the runtime random generation, however creating
-a contract twice with the same salt and arguments will fail. The salt is of type
-``uint256``.
+(the encoded constructor arguments) to the new contract and the salt. A contract cannot be
+created twice with the same input and salt. By giving a different salt, the same input
+can be used twice for a new contract. The salt can be set using the
+``{salt: hex"439d399ee3b5b0fae6c8d567a8cbfa22d59f8f2c5fe308fd0a92366c116e5f1a"}``
+syntax, or if it is omitted, then a random value is used.
+
+Specifying a salt will remove the need for generating a random value at runtime, however
+care must be taken to avoid using the same salt more than once. Creating a contract twice
+with the same salt and arguments will fail.  The salt is of type ``bytes32``.
 
 If gas is specified, this limits the amount gas the constructor for the new contract
 can use. gas is a ``uint64``.
