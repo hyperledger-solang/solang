@@ -2824,7 +2824,7 @@ pub fn emit_function_call(
             let flags = call_args
                 .flags
                 .as_ref()
-                .map(|expr| expression(&expr, cfg, caller_contract_no, func, ns, vartab, opt));
+                .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
             cfg.add(
                 vartab,
@@ -2918,7 +2918,7 @@ pub fn emit_function_call(
                 let flags = call_args
                     .flags
                     .as_ref()
-                    .map(|expr| expression(&expr, cfg, caller_contract_no, func, ns, vartab, opt));
+                    .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
                 cfg.add(
                     vartab,
@@ -2992,7 +2992,7 @@ pub fn emit_function_call(
                 let flags = call_args
                     .flags
                     .as_ref()
-                    .map(|expr| expression(&expr, cfg, caller_contract_no, func, ns, vartab, opt));
+                    .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
                 cfg.add(
                     vartab,

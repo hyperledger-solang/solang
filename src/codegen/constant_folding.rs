@@ -258,7 +258,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
                     let flags = flags
                         .as_ref()
-                        .map(|expr| expression(&expr, Some(&vars), cfg, ns).0);
+                        .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
                     cfg.blocks[block_no].instr[instr_no] = Instr::ExternalCall {
                         success: *success,
