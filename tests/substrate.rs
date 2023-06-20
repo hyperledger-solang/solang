@@ -522,7 +522,7 @@ impl Runtime {
             return Ok(5); // ReturnCode::TransferFailed
         }
 
-        let ((flags, data), state) = match vm.call("call", callee, input, value) {
+        let ((ret, data), state) = match vm.call("call", callee, input, value) {
             Some(Ok(state)) => ((state.data().output.as_data()), state),
             Some(Err(_)) => return Ok(1), // ReturnCode::CalleeTrapped
             None => return Ok(8),
@@ -534,13 +534,13 @@ impl Runtime {
             write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
         }
 
-        if flags == 2 {
+        if ret == 2 {
             return Ok(2); // ReturnCode::CalleeReverted
         }
 
         vm.accept_state(state.into_data(), value);
         if CallFlags::TailCall.set(flags) {
-            return Err(HostReturn::Data(flags, data).into());
+            return Err(HostReturn::Data(0, data).into());
         }
         Ok(0)
     }

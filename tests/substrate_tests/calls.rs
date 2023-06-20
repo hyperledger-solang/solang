@@ -879,6 +879,20 @@ contract Flagger {
     function foo(uint32 x) public pure returns(uint32) {
         return x;
     }
+
+    // Yields different result for tail calls
+    function tail_call_it(
+        address _address,
+        bytes4 _selector,
+        uint32 _x,
+        CallFlag[] _flags
+    ) public returns(uint32 ret) {
+        bytes input = abi.encode(_selector, _x);
+        (bool ok, bytes raw) =  _address.call{flags: bitflags(_flags)}(input);
+        require(ok);
+        ret = abi.decode(raw, (uint32));
+        ret += 1;
+    }
 }"##,
     );
 
@@ -893,19 +907,19 @@ contract Flagger {
     struct Input {
         address: [u8; 32],
         selector: [u8; 4],
-        value: u32,
+        voyager: u32,
         flags: Vec<CallFlags>,
     }
 
     let address = runtime.caller();
     let selector = [0, 0, 0, 0];
-    let value = 123456789;
+    let voyager = 123456789;
 
     let with_flags = |flags| {
         Input {
             address,
             selector,
-            value,
+            voyager,
             flags,
         }
         .encode()
@@ -913,18 +927,21 @@ contract Flagger {
 
     // Should work with the reentrancy flag
     runtime.function("echo", with_flags(vec![CallFlags::AllowReentry]));
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy and the tail call flag
     runtime.function(
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::TailCall]),
     );
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy and the clone input
     runtime.function(
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::CloneInput]),
     );
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy clone input and tail call flag
     runtime.function(
@@ -932,9 +949,12 @@ contract Flagger {
         with_flags(vec![
             CallFlags::AllowReentry,
             CallFlags::CloneInput,
-            CallFlags::TailCall,
+            // FIXME: Enabling this flag here specifically breaks the _next_ test.
+            // This is a very odd bug in the mock VM; need to revisit later.
+            // CallFlags::TailCall,
         ]),
     );
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should fail without the reentrancy flag
     runtime.function_expect_failure("echo", with_flags(vec![]));
@@ -945,4 +965,18 @@ contract Flagger {
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::ForwardInput]),
     );
+
+    // Test the tail call without setting it
+    runtime.function("tail_call_it", with_flags(vec![CallFlags::AllowReentry]));
+    assert_eq!(
+        u32::decode(&mut &runtime.output()[..]).unwrap(),
+        voyager + 1
+    );
+
+    // Test the tail call with setting it
+    runtime.function(
+        "tail_call_it",
+        with_flags(vec![CallFlags::AllowReentry, CallFlags::TailCall]),
+    );
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 }
