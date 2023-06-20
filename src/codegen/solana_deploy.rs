@@ -540,6 +540,7 @@ pub(super) fn solana_deploy(
                 },
                 callty: CallTy::Regular,
                 contract_function_no: None,
+                flags: None,
             },
         );
 

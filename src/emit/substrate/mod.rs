@@ -163,6 +163,7 @@ impl SubstrateTarget {
             "debug_message",
             "instantiate",
             "seal_call",
+            "delegate_call",
             "value_transferred",
             "minimum_balance",
             "weight_to_fee",
@@ -293,6 +294,16 @@ impl SubstrateTarget {
             u32_val,
             u8_ptr,
             u32_ptr
+        );
+        external!(
+            "delegate_call",
+            i32_type,
+            u32_val,
+            u8_ptr,
+            u8_ptr,
+            u32_val,
+            u8_ptr,
+            u32_val
         );
         external!("transfer", i32_type, u8_ptr, u32_val, u8_ptr, u32_val);
         external!("value_transferred", void_type, u8_ptr, u32_ptr);

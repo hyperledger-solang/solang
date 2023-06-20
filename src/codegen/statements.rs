@@ -1142,6 +1142,10 @@ fn try_catch(
                 args.insert(0, selector);
                 let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
+                let flags = call_args.flags.as_ref().map(|expr| {
+                    expression(&expr, cfg, callee_contract_no, Some(func), ns, vartab, opt)
+                });
+
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
@@ -1154,6 +1158,7 @@ fn try_catch(
                         gas,
                         callty: CallTy::Regular,
                         contract_function_no: None,
+                        flags,
                     },
                 );
 

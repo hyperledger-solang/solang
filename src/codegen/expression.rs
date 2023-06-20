@@ -1677,6 +1677,7 @@ fn payable_send(
                 },
                 callty: CallTy::Regular,
                 contract_function_no: None,
+                flags: None,
             },
         );
     }
@@ -1735,6 +1736,7 @@ fn payable_transfer(
                 },
                 callty: CallTy::Regular,
                 contract_function_no: None,
+                flags: None,
             },
         );
     }
@@ -2819,6 +2821,11 @@ pub fn emit_function_call(
 
             let success = vartab.temp_name("success", &Type::Bool);
 
+            let flags = call_args
+                .flags
+                .as_ref()
+                .map(|expr| expression(&expr, cfg, caller_contract_no, func, ns, vartab, opt));
+
             cfg.add(
                 vartab,
                 Instr::ExternalCall {
@@ -2831,6 +2838,7 @@ pub fn emit_function_call(
                     gas,
                     callty: ty.clone(),
                     contract_function_no: None,
+                    flags,
                 },
             );
 
@@ -2907,6 +2915,11 @@ pub fn emit_function_call(
 
                 let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
+                let flags = call_args
+                    .flags
+                    .as_ref()
+                    .map(|expr| expression(&expr, cfg, caller_contract_no, func, ns, vartab, opt));
+
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
@@ -2919,6 +2932,7 @@ pub fn emit_function_call(
                         gas,
                         callty: CallTy::Regular,
                         contract_function_no,
+                        flags,
                     },
                 );
 
@@ -2975,6 +2989,11 @@ pub fn emit_function_call(
 
                 let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
+                let flags = call_args
+                    .flags
+                    .as_ref()
+                    .map(|expr| expression(&expr, cfg, caller_contract_no, func, ns, vartab, opt));
+
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
@@ -2987,6 +3006,7 @@ pub fn emit_function_call(
                         gas,
                         callty: CallTy::Regular,
                         contract_function_no: None,
+                        flags,
                     },
                 );
 

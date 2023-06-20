@@ -809,6 +809,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     value,
                     salt,
                     seeds,
+                    flags: None,
                 },
                 ns,
                 *loc,
@@ -827,6 +828,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             callty,
             accounts,
             seeds,
+            flags,
             ..
         } => {
             let loc = payload.loc();
@@ -948,6 +950,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     salt: None,
                     seeds,
                     accounts,
+                    flags: None,
                 },
                 callty.clone(),
                 ns,

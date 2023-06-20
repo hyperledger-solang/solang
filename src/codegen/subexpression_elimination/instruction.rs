@@ -384,6 +384,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                 callty,
                 seeds,
                 contract_function_no,
+                flags,
             } => {
                 let new_address = address
                     .as_ref()
@@ -397,6 +398,10 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     .as_ref()
                     .map(|expr| self.regenerate_expression(expr, ave, cst).1);
 
+                let flags = flags
+                    .as_ref()
+                    .map(|expr| self.regenerate_expression(expr, ave, cst).1);
+
                 Instr::ExternalCall {
                     success: *success,
                     address: new_address,
@@ -407,6 +412,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     gas: self.regenerate_expression(gas, ave, cst).1,
                     callty: callty.clone(),
                     contract_function_no: *contract_function_no,
+                    flags,
                 }
             }
 
