@@ -226,7 +226,7 @@ fn ext() {
             function test() public {
                 function(int32) external returns (uint64) func = this.foo;
 
-                assert(func(102) == 0xabbaabba);
+                assert(func{flags: 8}(102) == 0xabbaabba);
             }
 
             function foo(int32) public returns (uint64) {
@@ -251,7 +251,7 @@ fn ext() {
             }
 
             function bar(function(int32) external returns (uint64) f) internal {
-                assert(f(102) == 0xabbaabba);
+                assert(f{flags: 8}(102) == 0xabbaabba);
             }
         }"##,
     );
@@ -272,7 +272,7 @@ fn ext() {
             }
 
             function bar(function(int32) external returns (uint64) f) internal {
-                assert(f(102) == 0xabbaabba);
+                assert(f{flags: 8}(102) == 0xabbaabba);
             }
         }"##,
     );
@@ -287,7 +287,7 @@ fn ext() {
             function test() public {
                 function(int32) external returns (uint64) func = this.foo;
 
-                this.bar(func);
+                this.bar{flags: 8}(func);
             }
 
             function foo(int32) public returns (uint64) {
@@ -295,7 +295,7 @@ fn ext() {
             }
 
             function bar(function(int32) external returns (uint64) f) public {
-                assert(f(102) == 0xabbaabba);
+                assert(f{flags: 8}(102) == 0xabbaabba);
             }
         }"##,
     );
@@ -314,7 +314,7 @@ fn ext() {
             }
 
             function test2() public {
-                this.bar(func);
+                this.bar{flags: 8}(func);
             }
 
             function foo(int32) public returns (uint64) {
@@ -322,7 +322,7 @@ fn ext() {
             }
 
             function bar(function(int32) external returns (uint64) f) public {
-                assert(f(102) == 0xabbaabba);
+                assert(f{flags: 8}(102) == 0xabbaabba);
             }
         }"##,
     );
@@ -352,14 +352,14 @@ fn encode_decode_ext_func() {
                 bytes4 selector = hex"00000000";
     	        bytes enc = abi.encode(a, selector);
                 function() external returns (uint8) dec2 = abi.decode(enc, (function() external returns (uint8)));
-                return dec2();
+                return dec2{flags: 8}();
             }
 
             function decode_call(function() external returns(uint8) func) public returns (uint8) {
                 bytes enc = abi.encode(func);
                 print("{}  ".format(enc));
                 function() external returns (uint8) dec2 = abi.decode(enc, (function() external returns (uint8)));
-                return dec2();
+                return dec2{flags: 8}();
             }
         }
         "##,

@@ -7,6 +7,7 @@ use ink_metadata::InkProject;
 use ink_primitives::Hash;
 use parity_scale_codec::Decode;
 use sha2::{Digest, Sha256};
+use std::collections::HashSet;
 use std::{collections::HashMap, ffi::OsStr, fmt, fmt::Write};
 use tiny_keccak::{Hasher, Keccak};
 use wasmi::core::{HostError, Trap, TrapCode};
@@ -21,6 +22,20 @@ mod substrate_tests;
 
 type StorageKey = [u8; 32];
 type Address = [u8; 32];
+
+#[derive(Clone, Copy)]
+enum CallFlags {
+    ForwardInput = 0,
+    CloneInput,
+    TailCall,
+    AllowReentry,
+}
+
+impl CallFlags {
+    fn set(&self, flags: u32) -> bool {
+        flags & 2u32.pow(*self as u32) != 0
+    }
+}
 
 /// Reason for halting execution. Same as in pallet contracts.
 #[derive(Default, Debug, Clone)]
@@ -201,7 +216,7 @@ struct Runtime {
     /// Will hold the memory reference after a successful execution.
     memory: Option<Memory>,
     /// The input for the contract execution.
-    input: Vec<u8>,
+    input: Option<Vec<u8>>,
     /// The output of the contract execution.
     output: HostReturn,
     /// Descirbes how much value was given to the contract call.
@@ -210,6 +225,8 @@ struct Runtime {
     debug_buffer: String,
     /// Stores all events emitted during contract execution.
     events: Vec<Event>,
+    /// The set of called events, needed for reentrancy protection.
+    called_accounts: HashSet<usize>,
 }
 
 impl Runtime {
@@ -237,8 +254,9 @@ impl Runtime {
         runtime.account = callee;
         runtime.transferred_value = value;
         runtime.accounts[callee].value += value;
-        runtime.input = input;
+        runtime.input = Some(input);
         runtime.output = Default::default();
+        runtime.called_accounts.insert(self.caller_account);
         runtime
     }
 
@@ -337,11 +355,12 @@ fn read_account(mem: &[u8], ptr: u32) -> Address {
 impl Runtime {
     #[seal(0)]
     fn input(dest_ptr: u32, len_ptr: u32) -> Result<(), Trap> {
-        assert!(read_len(mem, len_ptr) >= vm.input.len());
-        println!("seal_input: {}", hex::encode(&vm.input));
+        let data = vm.input.as_ref().expect("input was forwarded");
+        assert!(read_len(mem, len_ptr) >= data.len());
+        println!("seal_input: {}", hex::encode(data));
 
-        write_buf(mem, dest_ptr, &vm.input);
-        write_buf(mem, len_ptr, &(vm.input.len() as u32).to_le_bytes());
+        write_buf(mem, dest_ptr, data);
+        write_buf(mem, len_ptr, &(data.len() as u32).to_le_bytes());
 
         Ok(())
     }
@@ -466,9 +485,21 @@ impl Runtime {
         output_ptr: u32,
         output_len_ptr: u32,
     ) -> Result<u32, Trap> {
-        assert_eq!(flags, 0); // At the time, we never set call flags
+        assert!(flags <= 0b1111);
 
-        let input = read_buf(mem, input_ptr, input_len);
+        let input = if CallFlags::ForwardInput.set(flags) {
+            if vm.input.is_none() {
+                return Ok(1);
+            }
+            vm.input.take().unwrap()
+        } else if CallFlags::CloneInput.set(flags) {
+            if vm.input.is_none() {
+                return Ok(1);
+            }
+            vm.input.as_ref().unwrap().clone()
+        } else {
+            read_buf(mem, input_ptr, input_len)
+        };
         let value = read_value(mem, value_ptr);
         let callee_address = read_account(mem, callee_ptr);
 
@@ -482,6 +513,10 @@ impl Runtime {
             Some(index) => index,
             None => return Ok(8), // ReturnCode::NotCallable
         };
+
+        if vm.called_accounts.contains(&callee) && !CallFlags::AllowReentry.set(flags) {
+            return Ok(1);
+        }
 
         if value > vm.accounts[vm.account].value {
             return Ok(5); // ReturnCode::TransferFailed
@@ -504,6 +539,9 @@ impl Runtime {
         }
 
         vm.accept_state(state.into_data(), value);
+        if CallFlags::TailCall.set(flags) {
+            return Err(HostReturn::Data(flags, data).into());
+        }
         Ok(0)
     }
 
@@ -758,6 +796,7 @@ impl MockSubstrate {
 
         runtime.debug_buffer.clear();
         runtime.events.clear();
+        runtime.called_accounts.clear();
         self.0 = runtime.call(export, callee, input, value).unwrap()?;
         self.0.data_mut().transferred_value = 0;
 
