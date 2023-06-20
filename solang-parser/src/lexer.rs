@@ -180,7 +180,6 @@ pub enum Token<'input> {
     YulArrow,
 
     Annotation(&'input str),
-    At,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -316,7 +315,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Case => write!(f, "case"),
             Token::Default => write!(f, "default"),
             Token::YulArrow => write!(f, "->"),
-            Token::At => write!(f, "@"),
             Token::Annotation(name) => write!(f, "@{name}"),
         }
     }
@@ -964,10 +962,13 @@ impl<'input> Lexer<'input> {
                 }
                 Some((start, '@')) => {
                     let (id, end) = self.match_identifier(start);
-                    return if id.len() == 1 {
-                        Some((start, Token::At, start + 1))
+                    if id.len() == 1 {
+                        self.errors.push(LexicalError::UnrecognisedToken(
+                            Loc::File(self.file_no, start, start + 1),
+                            id.to_owned(),
+                        ));
                     } else {
-                        Some((start, Token::Annotation(&id[1..]), end))
+                        return Some((start, Token::Annotation(&id[1..]), end));
                     };
                 }
                 Some((i, ';')) => return Some((i, Token::Semicolon, i + 1)),
@@ -1905,19 +1906,13 @@ mod tests {
         let mut errors = Vec::new();
         let tokens = Lexer::new(".9e10", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(
-            tokens,
-            vec!((0, Token::RationalNumber("", "9", "10"), 5))
-        );
+        assert_eq!(tokens, vec!((0, Token::RationalNumber("", "9", "10"), 5)));
 
         errors.clear();
         comments.clear();
         let tokens =
             Lexer::new("@my_annotation", 0, &mut comments, &mut errors).collect::<Vec<_>>();
-        assert_eq!(
-            tokens,
-            vec![(0, Token::Annotation("my_annotation"), 14)]
-        );
+        assert_eq!(tokens, vec![(0, Token::Annotation("my_annotation"), 14)]);
         assert!(errors.is_empty());
         assert!(comments.is_empty());
 
@@ -1925,14 +1920,14 @@ mod tests {
         comments.clear();
         let tokens =
             Lexer::new("@ my_annotation", 0, &mut comments, &mut errors).collect::<Vec<_>>();
+        assert_eq!(tokens, vec![(2, Token::Identifier("my_annotation"), 15)]);
         assert_eq!(
-            tokens,
-            vec![
-                (0, Token::At, 1),
-                (2, Token::Identifier("my_annotation"), 15)
-            ]
+            errors,
+            vec![LexicalError::UnrecognisedToken(
+                Loc::File(0, 0, 1),
+                "@".to_string()
+            )]
         );
-        assert!(errors.is_empty());
         assert!(comments.is_empty());
     }
 }

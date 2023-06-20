@@ -1180,7 +1180,6 @@ extern {
         "]" => Token::CloseBracket,
         "." => Token::Member,
         "," => Token::Comma,
-        "@" => Token::At,
         Uint => Token::Uint(<u16>),
         Int => Token::Int(<u16>),
         Bytes => Token::Bytes(<u8>),
