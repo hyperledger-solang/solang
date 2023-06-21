@@ -77,4 +77,9 @@ describe('Deploy the CallFlags contract and tests for various call flag combinat
         answer = await query(conn, alice, contract, "tail_call_it", [contract.address, foo, voyager, flags]);
         expect(answer.output?.toJSON()).toStrictEqual(voyager);
     });
+
+    it('works on calls on "this"', async function () {
+        const answer = await query(conn, alice, contract, "call_this", [voyager]);
+        expect(answer.output?.toJSON()).toStrictEqual(voyager);
+    });
 });
