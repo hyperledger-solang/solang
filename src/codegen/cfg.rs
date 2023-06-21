@@ -1204,7 +1204,7 @@ impl ControlFlowGraph {
                     } else {
                         "_".to_string()
                     },
-                    flags.as_ref().map(|e| self.expr_to_string(contract, ns, e)).unwrap_or("0".to_string())
+                    flags.as_ref().map(|e| self.expr_to_string(contract, ns, e)).unwrap_or_default()
                 )
             }
             Instr::ValueTransfer {
