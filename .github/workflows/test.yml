@@ -86,7 +86,8 @@ jobs:
     - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-linux-x86-64
-        path: ./target/debug/solang
+        path: ./target/debug/solang 
+
 
   linux-arm:
     name: Linux Arm
@@ -343,6 +344,40 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/substrate
+    - name: cleanup
+      if: always()
+      run: docker kill ${{steps.substrate.outputs.id}}
+
+  substrate-subxt:
+    name: Substrate Integration test with subxt
+    runs-on: ubuntu-22.04
+    needs: linux-x86-64
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+      # We can't run substrate as a github actions service, since it requires
+      # command line arguments. See https://github.com/actions/runner/pull/1152
+    - name: Start substrate
+      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:e41a9c0 substrate-contracts-node --dev --ws-external) >> $GITHUB_OUTPUT
+      id: substrate
+    - uses: actions/download-artifact@master
+      with:
+        name: solang-linux-x86-64
+        path: bin
+    - run: |
+        chmod 755 ./bin/solang
+        echo "$(pwd)/bin" >> $GITHUB_PATH
+    - name: Install latest rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        default: true
+        override: true   
+    - run: solang compile --target substrate ../substrate/*.sol ../substrate/test/*.sol -o ./contracts/
+      working-directory: ./integration/subxt-tests
+    - name: Deploy and test contracts
+      run: cargo test -- --test-threads=1
+      working-directory: ./integration/subxt-tests
     - name: cleanup
       if: always()
       run: docker kill ${{steps.substrate.outputs.id}}

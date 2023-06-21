@@ -69,8 +69,8 @@ fn errors() {
 
         // contract creation failed (contract was deplyed with no value)
         function create_child() public {
-            c = new child{value: 900e15, salt:2}();
-            c2 = new child{value: 900e15, salt:2}();
+            c = new child{value: 900e15, salt: hex"02"}();
+            c2 = new child{value: 900e15, salt: hex"02"}();
             uint128 x = address(this).balance;
             //print("sesa");
             print("x = {}".format(x));
@@ -228,7 +228,7 @@ fn errors() {
 
     assert_eq!(
         runtime.debug_buffer(),
-        "runtime_error: contract creation failed in test.sol:64:17-51,\n"
+        "runtime_error: contract creation failed in test.sol:64:17-58,\n"
     );
 
     runtime.debug_buffer().clear();
