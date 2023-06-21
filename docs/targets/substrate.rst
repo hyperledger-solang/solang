@@ -57,7 +57,7 @@ The Substrate contracts pallet knows several
 `flags <https://github.com/paritytech/substrate/blob/6e0059a416a5768e58765a49b33c21920c0b0eb9/frame/contracts/src/wasm/runtime.rs#L392>`_ 
 that can be used when calling other contracts.
 
-Solang allows a named ``flag`` argument of type ``uint32`` to the ``address.call()`` function to set desired flags.
+Solang allows a named ``flags`` argument of type ``uint32`` to the ``address.call()`` function to set desired flags.
 By default (if this argument is unset), no flag will be set.
 
 The following example shows how call flags can be used:
