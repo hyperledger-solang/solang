@@ -1197,6 +1197,9 @@ impl Recurse for CallArgs {
         if let Some(accounts) = &self.accounts {
             accounts.recurse(cx, f);
         }
+        if let Some(flags) = &self.flags {
+            flags.recurse(cx, f);
+        }
     }
 }
 
