@@ -350,7 +350,7 @@ jobs:
 
   substrate-subxt:
     name: Substrate Integration test with subxt
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -373,9 +373,7 @@ jobs:
         toolchain: stable
         default: true
         override: true   
-    - run: solang compile --target substrate ../substrate/*.sol -o ./contracts/
-      working-directory: ./integration/subxt-tests
-    - run: solang compile --target substrate ../substrate/test/*.sol -o ./contracts/
+    - run: solang compile --target substrate ../substrate/*.sol ../substrate/test/*.sol -o ./contracts/
       working-directory: ./integration/subxt-tests
     - name: Deploy and test contracts
       run: cargo test -- --test-threads=1
