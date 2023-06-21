@@ -280,6 +280,9 @@ fn check_call_args(ns: &mut Namespace, call_args: &CallArgs, symtable: &mut Symt
     if let Some(seeds) = &call_args.seeds {
         used_variable(ns, seeds.as_ref(), symtable);
     }
+    if let Some(flags) = &call_args.flags {
+        used_variable(ns, flags.as_ref(), symtable);
+    }
 }
 
 /// Marks as used variables that appear in an expression with right and left hand side.
