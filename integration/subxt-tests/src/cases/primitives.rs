@@ -222,7 +222,7 @@ async fn case() -> anyhow::Result<()> {
     assert_eq!(res, 3);
 
     // op_i256
-    // TODO: currently contract-transcode don't support encoding/decoding of I256 type so we'll need  to encode it manually
+    // TODO: currently contract-transcode doesn't support encoding/decoding of I256 type so we'll need  to encode it manually
 
     let res = c
         .try_call(&api, sp_keyring::AccountKeyring::Alice, 0, |_| {
