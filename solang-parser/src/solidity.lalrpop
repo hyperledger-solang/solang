@@ -529,7 +529,7 @@ HexLiteral: HexLiteral = {
 Parameter: Parameter = {
     <l:@L> <annotation:ParameterAnnotation?> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier?> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
-        Parameter{loc, ty, storage, name, annotation}
+        Parameter{loc, annotation, ty, storage, name}
     }
 }
 
@@ -556,11 +556,11 @@ ParameterAnnotation: Annotation = {
 NamedParameter: Parameter = {
     <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
-        Parameter{ loc, ty, storage, name: Some(name), annotation: None }
+        Parameter{ loc, annotation: None, ty, storage, name: Some(name) }
     },
     <l:@L> <ty:Expression> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
-        Parameter{ loc, ty, storage: None, name: None, annotation: None }
+        Parameter{ loc, annotation: None, ty, storage: None, name: None }
     }
 }
 

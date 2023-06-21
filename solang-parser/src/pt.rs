@@ -1267,14 +1267,14 @@ impl Expression {
 pub struct Parameter {
     /// The code location.
     pub loc: Loc,
+    /// An optional annotation '@annotation'.
+    pub annotation: Option<Annotation>,
     /// The type.
     pub ty: Expression,
     /// The optional memory location.
     pub storage: Option<StorageLocation>,
     /// The optional identifier.
     pub name: Option<Identifier>,
-    /// An optional annotation '@annotation'.
-    pub annotation: Option<Annotation>,
 }
 
 /// Function mutability.

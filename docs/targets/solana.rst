@@ -227,7 +227,7 @@ is passed to the transaction that runs the constructor code.
 
 Alternatively, the data account can be created by the constructor, on chain. When
 this method is used, some parameters must be specified for the account
-using annotations. Annotations placed on top of a constructor can only contain literals or
+using annotations. Annotations placed above a constructor can only contain literals or
 constant expressions, as is the case for first ``@seed`` and ``@space`` in the following example.
 Annotations can also refer to constructor arguments when placed next to them, as the second ``@seed`` and
 the ``@bump`` examples below. The ``@payer`` annotation is a special annotation that
@@ -257,8 +257,8 @@ If the data account is going to be a
 `program derived address <https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_,
 then the seeds and bump have to be provided. There can be multiple seeds, and an optional
 single bump. If the bump is not provided, then the seeds must not create an
-account that falls on the curve. When placed on top of the constructor, the ``@seed`` can be a string literal,
-or a hex string with the format ``hex"4142"``. If next to an argument, the seed annotation must refer to an argument
+account that falls on the curve. When placed above the constructor, the ``@seed`` can be a string literal,
+or a hex string with the format ``hex"4142"``. If before an argument, the seed annotation must refer to an argument
 of type ``bytes``. The ``@bump`` must a single byte of type ``bytes1``.
 
 .. _value_transfer:
