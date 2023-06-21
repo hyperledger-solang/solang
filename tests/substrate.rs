@@ -25,15 +25,16 @@ type Address = [u8; 32];
 
 #[derive(Clone, Copy)]
 enum CallFlags {
-    ForwardInput = 0,
-    CloneInput,
-    TailCall,
-    AllowReentry,
+    ForwardInput = 1,
+    CloneInput = 2,
+    TailCall = 4,
+    AllowReentry = 8,
 }
 
 impl CallFlags {
+    /// Returns true if this flag is set in the given `flags`.
     fn set(&self, flags: u32) -> bool {
-        flags & 2u32.pow(*self as u32) != 0
+        flags & *self as u32 != 0
     }
 }
 
