@@ -26,7 +26,7 @@ mod cases;
 
 // metadata file obtained from the latest substrate-contracts-node
 #[subxt::subxt(
-    runtime_metadata_url = "ws://localhost:9944",
+    runtime_metadata_path = "./metadata.scale",
     substitute_type(
         type = "sp_weights::weight_v2::Weight",
         with = "::subxt::utils::Static<::sp_weights::Weight>"
