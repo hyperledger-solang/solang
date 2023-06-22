@@ -14,7 +14,7 @@ contract CallFlags {
     // Cloning and forwarding should have the effect of calling this function again, regardless of what _address was passed.
     // Furthermore:
     // Cloning the input should work together with reentrancy.
-    // Forwarding the input should fail caused by reading the input more than once in the loop
+    // Forwarding the input should fail due to reading the input more than once in the loop
     // Tail call should work with any combination of input forwarding.
     function echo(
         address _address,

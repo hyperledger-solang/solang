@@ -849,9 +849,9 @@ contract Flagger {
 
     // Reentrancy is required for reaching the `foo` function for itself.
     //
-    // Cloneing and forward should have the effect of calling this function again, regardless of what _address was passed.
+    // Cloning and forwarding should have the effect of calling this function again, regardless of what _address was passed.
     // Furthermore:
-    // Cloneing the clone should work together with reentrancy.
+    // Cloning the clone should work together with reentrancy.
     // Forwarding the input should fail caused by reading the input more than once in the loop
     // Tail call should work with any combination of input forward.
     function echo(

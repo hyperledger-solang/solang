@@ -68,7 +68,7 @@ describe('Deploy the CallFlags contract and tests for various call flag combinat
         expect(error.toJSON()).toStrictEqual("0x0b000000");
     });
 
-    it('test for the tail call flag to work correct', async function () {
+    it('test for the tail call flag to work correctly', async function () {
         let flags = [CallFlags.ALLOW_REENTRY];
         let answer = await query(conn, alice, contract, "tail_call_it", [contract.address, foo, voyager, flags]);
         expect(answer.output?.toJSON()).toStrictEqual(voyager + 1);
