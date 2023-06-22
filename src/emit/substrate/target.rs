@@ -981,6 +981,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // do the actual call
         let ret = match call_type {
             ast::CallTy::Regular => {
+                // FIXME: Using the namespace value type, this comment is no longer valid?
                 // balance is a u128
                 let value_ptr = binary
                     .builder
@@ -988,7 +989,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 binary
                     .builder
                     .build_store(value_ptr, contract_args.value.unwrap());
-                call!(
+                let ret = call!(
                     "seal_call",
                     &[
                         i32_zero!().into(), // TODO implement flags (mostly used for proxy calls)
@@ -1004,11 +1005,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .try_as_basic_value()
                 .left()
                 .unwrap()
-                .into_int_value()
+                .into_int_value();
+                log_return_code(binary, "seal_call", ret);
+                ret
             }
             ast::CallTy::Delegate => {
                 // delegate_call asks for a code hash instead of an address
-                let hash_len = i32_const!(32); // TODO?
+                let hash_len = i32_const!(32); // FIXME: This is configurable like the address length
                 let code_hash_out_ptr = binary.builder.build_array_alloca(
                     binary.context.i8_type(),
                     hash_len,
@@ -1018,7 +1021,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .builder
                     .build_alloca(binary.context.i32_type(), "code_hash_out_len_ptr");
                 binary.builder.build_store(code_hash_out_len_ptr, hash_len);
-
                 let code_hash_ret = call!(
                     "code_hash",
                     &[
@@ -1031,30 +1033,33 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .left()
                 .unwrap()
                 .into_int_value();
+                log_return_code(binary, "seal_code_hash", code_hash_ret);
 
-                let is_found = binary.builder.build_int_compare(
+                let code_hash_found = binary.builder.build_int_compare(
                     IntPredicate::EQ,
                     code_hash_ret,
                     i32_zero!(),
-                    "is_found",
+                    "code_hash_found",
                 );
                 let entry = binary.builder.get_insert_block().unwrap();
-                let found_block = binary
+                let call_block = binary
                     .context
                     .append_basic_block(function, "code_hash_found");
                 let not_found_block = binary
                     .context
                     .append_basic_block(function, "code_hash_not_found");
                 let done_block = binary.context.append_basic_block(function, "done_block");
-                binary
-                    .builder
-                    .build_conditional_branch(is_found, found_block, not_found_block);
+                binary.builder.build_conditional_branch(
+                    code_hash_found,
+                    call_block,
+                    not_found_block,
+                );
 
                 binary.builder.position_at_end(not_found_block);
                 self.log_runtime_error(binary, "not a contract account".to_string(), Some(loc), ns);
                 binary.builder.build_unconditional_branch(done_block);
 
-                binary.builder.position_at_end(found_block);
+                binary.builder.position_at_end(call_block);
                 let delegate_call_ret = call!(
                     "delegate_call",
                     &[
@@ -1070,19 +1075,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .left()
                 .unwrap()
                 .into_int_value();
+                log_return_code(binary, "seal_delegate_call", delegate_call_ret);
                 binary.builder.build_unconditional_branch(done_block);
 
                 binary.builder.position_at_end(done_block);
                 let ty = binary.context.i32_type();
                 let ret = binary.builder.build_phi(ty, "storage_res");
                 ret.add_incoming(&[(&code_hash_ret, not_found_block), (&ty.const_zero(), entry)]);
-                ret.add_incoming(&[(&delegate_call_ret, found_block), (&ty.const_zero(), entry)]);
+                ret.add_incoming(&[(&delegate_call_ret, call_block), (&ty.const_zero(), entry)]);
                 ret.as_basic_value().into_int_value()
             }
             ast::CallTy::Static => unreachable!("sema does not allow this"),
         };
-
-        log_return_code(binary, "seal_call", ret);
 
         let is_success =
             binary
