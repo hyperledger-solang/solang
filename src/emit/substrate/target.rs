@@ -967,7 +967,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
         contract_args: ContractArgs<'b>,
-        _ty: ast::CallTy,
+        ty: ast::CallTy,
         ns: &ast::Namespace,
         loc: Loc,
     ) {
@@ -988,23 +988,101 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         // do the actual call
-        let ret = call!(
-            "seal_call",
-            &[
-                i32_zero!().into(), // TODO implement flags (mostly used for proxy calls)
-                address.unwrap().into(),
-                contract_args.gas.unwrap().into(),
-                value_ptr.into(),
-                payload.into(),
-                payload_len.into(),
-                scratch_buf.into(),
-                scratch_len.into(),
-            ]
-        )
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value();
+        let ret = match ty {
+            ast::CallTy::Regular => call!(
+                "seal_call",
+                &[
+                    i32_zero!().into(), // TODO implement flags (mostly used for proxy calls)
+                    address.unwrap().into(),
+                    contract_args.gas.unwrap().into(),
+                    value_ptr.into(),
+                    payload.into(),
+                    payload_len.into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
+                ]
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value(),
+            ast::CallTy::Delegate => {
+                // delegate_call asks for a code hash instead of an address
+                let hash_len = i32_const!(32); // TODO?
+                let code_hash_out_ptr = binary.builder.build_array_alloca(
+                    binary.context.i8_type(),
+                    hash_len,
+                    "code_hash_out_ptr",
+                );
+                let code_hash_out_len_ptr = binary
+                    .builder
+                    .build_alloca(binary.context.i32_type(), "code_hash_out_len_ptr");
+                binary.builder.build_store(code_hash_out_len_ptr, hash_len);
+
+                let code_hash_ret = call!(
+                    "code_hash",
+                    &[
+                        address.unwrap().into(),
+                        code_hash_out_ptr.into(),
+                        code_hash_out_len_ptr.into(),
+                    ]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+                // ret should eq 0
+
+                let is_found = binary.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    code_hash_ret,
+                    i32_zero!(),
+                    "is_found",
+                );
+                let found_block = binary
+                    .context
+                    .append_basic_block(function, "code_hash_found");
+                let not_found_block = binary
+                    .context
+                    .append_basic_block(function, "code_hash_not_found");
+                binary
+                    .builder
+                    .build_conditional_branch(is_found, found_block, not_found_block);
+
+                binary.builder.position_at_end(not_found_block);
+                self.log_runtime_error(binary, "not a contract account".to_string(), Some(loc), ns);
+                self.assert_failure(
+                    binary,
+                    scratch_buf,
+                    binary
+                        .builder
+                        .build_load(binary.context.i32_type(), scratch_len, "string_len")
+                        .into_int_value(),
+                );
+
+                binary.builder.position_at_end(found_block);
+                binary
+                    .builder
+                    .build_store(value_ptr, contract_args.value.unwrap());
+
+                call!(
+                    "delegate_call",
+                    &[
+                        i32_zero!().into(), // TODO implement flags (mostly used for proxy calls)
+                        code_hash_out_ptr.into(),
+                        payload.into(),
+                        payload_len.into(),
+                        scratch_buf.into(),
+                        scratch_len.into(),
+                    ]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+            }
+            ast::CallTy::Static => unreachable!("sema does not allow this"),
+        };
 
         log_return_code(binary, "seal_call", ret);
 
