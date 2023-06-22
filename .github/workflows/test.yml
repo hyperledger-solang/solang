@@ -374,7 +374,8 @@ jobs:
           override: true
         run: cargo clippy --workspace --tests
         working-directory: ./integration/subxt-tests
-      - run: "parallel solang compile -v --target substrate --release -o ./contracts/ ::: ../substrate/*.sol ../substrate/test/*.sol"
+      - name: Compile the contracts
+        run: "parallel solang compile -v --target substrate --release -o ./contracts/ ::: ../substrate/*.sol ../substrate/test/*.sol"
         working-directory: ./integration/subxt-tests
       - name: Deploy and test contracts
         run: cargo test -- --test-threads=1
