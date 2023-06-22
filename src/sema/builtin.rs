@@ -1511,6 +1511,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -1521,6 +1522,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
             ],
             vec![Parameter {
@@ -1532,6 +1534,7 @@ impl Namespace {
                 indexed: false,
                 infinite_size: false,
                 recursive: false,
+                annotation: None,
             }],
             self,
         );
@@ -1574,6 +1577,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -1584,6 +1588,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
             ],
             vec![
@@ -1596,6 +1601,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc: pt::Loc::Builtin,
@@ -1606,6 +1612,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
             ],
             self,
@@ -1680,6 +1687,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc,
@@ -1690,6 +1698,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
             ],
             vec![
@@ -1702,6 +1711,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
                 Parameter {
                     loc,
@@ -1712,6 +1722,7 @@ impl Namespace {
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 },
             ],
             self,
@@ -1742,6 +1753,7 @@ impl Namespace {
                 indexed: false,
                 infinite_size: false,
                 recursive: false,
+                annotation: None,
             }],
             vec![Parameter {
                 loc,
@@ -1752,6 +1764,7 @@ impl Namespace {
                 indexed: false,
                 infinite_size: false,
                 recursive: false,
+                annotation: None,
             }],
             self,
         );

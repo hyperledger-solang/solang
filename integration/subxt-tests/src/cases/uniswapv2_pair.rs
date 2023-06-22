@@ -29,7 +29,7 @@ async fn mint() -> anyhow::Result<()> {
             &api,
             sp_keyring::AccountKeyring::Alice,
             0,
-            &|t: &ContractMessageTranscoder| {
+            &|_: &ContractMessageTranscoder| {
                 let mut s = keccak_256(b"transfer(address,uint)")[..4].to_vec();
                 w.pair.address.clone().unwrap().encode_to(&mut s);
                 U256::from(10_u8).pow(18_u8.into()).encode_to(&mut s);
@@ -44,7 +44,7 @@ async fn mint() -> anyhow::Result<()> {
             &api,
             sp_keyring::AccountKeyring::Alice,
             0,
-            &|t: &ContractMessageTranscoder| {
+            &|_: &ContractMessageTranscoder| {
                 let mut s = keccak_256(b"transfer(address,uint)")[..4].to_vec();
                 w.pair.address.clone().unwrap().encode_to(&mut s);
                 U256::from(10_u8)
@@ -159,7 +159,7 @@ async fn mint() -> anyhow::Result<()> {
         U256::from(10_u8).pow(18_u8.into()).mul(U256::from(4_u8))
     );
 
-    let (r0, r1, block) = w
+    let (r0, r1, _) = w
         .pair
         .try_call(
             &api,
@@ -191,8 +191,6 @@ async fn swap_token0() -> anyhow::Result<()> {
     let token1_amount = U256::from(10_u8).pow(U256::from(19_u8));
 
     let w = MockWorld::init(&api).await?;
-
-    let min_liquidity: U256 = U256::from(1000_u32);
 
     w.add_liquitity(&api, &token0_amount, &token1_amount)
         .await?;
@@ -252,11 +250,7 @@ async fn swap_token0() -> anyhow::Result<()> {
             &|t: &ContractMessageTranscoder| t.encode::<_, String>("getReserves", []).unwrap(),
         )
         .await
-        .and_then(|v| {
-            let t = &w.pair.transcoder;
-
-            <(u128, u128, u32)>::decode(&mut &v[..]).map_err(Into::into)
-        })?;
+        .and_then(|v| <(u128, u128, u32)>::decode(&mut &v[..]).map_err(Into::into))?;
 
     assert_eq!(U256::from(out.0), token0_amount + swap_amount);
     assert_eq!(U256::from(out.1), token1_amount - expected_output);
@@ -383,8 +377,6 @@ async fn swap_token1() -> anyhow::Result<()> {
     let token1_amount = U256::from(10_u8).pow(U256::from(19_u8));
 
     let w = MockWorld::init(&api).await?;
-
-    let min_liquidity: U256 = U256::from(1000_u32);
 
     w.add_liquitity(&api, &token0_amount, &token1_amount)
         .await?;
@@ -777,7 +769,7 @@ impl MockWorld {
                         "new",
                         [format!(
                             "0x{}",
-                            hex::encode(&sp_keyring::AccountKeyring::Alice.to_account_id())
+                            hex::encode(sp_keyring::AccountKeyring::Alice.to_account_id())
                         )],
                     )
                     .unwrap()
@@ -860,7 +852,7 @@ impl MockWorld {
             .await
             .and_then(|v| <AccountId32>::decode(&mut &v[..]).map_err(Into::into))?;
 
-        pair = pair.from_addr(pair_addr)?;
+        pair = pair.new_with_addr(pair_addr)?;
 
         let token_0_addr = pair
             .try_call(
@@ -897,7 +889,7 @@ impl MockWorld {
                 api,
                 sp_keyring::AccountKeyring::Alice,
                 0,
-                &|t: &ContractMessageTranscoder| {
+                &|_: &ContractMessageTranscoder| {
                     let mut s = keccak_256(b"transfer(address,uint)")[..4].to_vec();
                     self.pair.address.clone().unwrap().encode_to(&mut s);
                     amount_a.encode_to(&mut s);
@@ -911,7 +903,7 @@ impl MockWorld {
                 api,
                 sp_keyring::AccountKeyring::Alice,
                 0,
-                &|t: &ContractMessageTranscoder| {
+                &|_: &ContractMessageTranscoder| {
                     let mut s = keccak_256(b"transfer(address,uint)")[..4].to_vec();
                     self.pair.address.clone().unwrap().encode_to(&mut s);
                     amount_b.encode_to(&mut s);
@@ -925,7 +917,7 @@ impl MockWorld {
                 api,
                 sp_keyring::AccountKeyring::Alice,
                 0,
-                &|t: &ContractMessageTranscoder| {
+                &|_: &ContractMessageTranscoder| {
                     let mut s = keccak_256(b"mint(address)")[..4].to_vec();
                     sp_keyring::AccountKeyring::Alice
                         .to_account_id()

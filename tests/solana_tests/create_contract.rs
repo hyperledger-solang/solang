@@ -325,9 +325,8 @@ fn account_with_space() {
         r#"
         contract bar {
 
-            @space(102 * x)
             @payer(payer)
-            constructor(uint64 x, address payer) {}
+            constructor(@space uint64 x, address payer) {}
 
             function hello() public returns (bool) {
                 return true;
@@ -345,12 +344,12 @@ fn account_with_space() {
     vm.constructor(&[
         BorshToken::Uint {
             width: 64,
-            value: 3.into(),
+            value: 306.into(),
         },
         BorshToken::Address(payer),
     ]);
 
-    assert_eq!(vm.account_data.get_mut(&data).unwrap().data.len(), 3 * 102);
+    assert_eq!(vm.account_data.get_mut(&data).unwrap().data.len(), 306);
 
     let ret = vm.function("hello", &[]).unwrap();
 
@@ -364,9 +363,8 @@ fn account_with_seed() {
         contract bar {
 
             @space(511 + 102)
-            @seed(seed)
             @payer(payer)
-            constructor(bytes seed, address payer) {}
+            constructor(@seed bytes seed) {}
 
             function hello() public returns (bool) {
                 return true;
@@ -381,9 +379,7 @@ fn account_with_seed() {
 
     vm.stack[0].data = seed.0;
 
-    let payer = account_new();
-
-    vm.constructor(&[BorshToken::Bytes(seed.1), BorshToken::Address(payer)]);
+    vm.constructor(&[BorshToken::Bytes(seed.1)]);
 
     assert_eq!(
         vm.account_data.get_mut(&seed.0).unwrap().data.len(),
@@ -402,10 +398,8 @@ fn account_with_seed_bump() {
         contract bar {
 
             @space(511 + 102)
-            @seed(seed)
-            @bump(b)
             @payer(payer)
-            constructor(bytes seed, address payer, byte b) {}
+            constructor(@seed bytes seed, @bump byte b) {}
 
             function hello() public returns (bool) {
                 return true;
@@ -422,11 +416,8 @@ fn account_with_seed_bump() {
 
     vm.stack[0].data = seed.0;
 
-    let payer = account_new();
-
     vm.constructor(&[
         BorshToken::Bytes(seed.1),
-        BorshToken::Address(payer),
         BorshToken::Uint {
             width: 8,
             value: bump.into(),

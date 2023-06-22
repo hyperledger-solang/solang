@@ -49,9 +49,13 @@ impl Display for pt::Annotation {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_char('@')?;
         self.id.fmt(f)?;
-        f.write_char('(')?;
-        self.value.fmt(f)?;
-        f.write_char(')')
+        if let Some(value) = &self.value {
+            f.write_char('(')?;
+            value.fmt(f)?;
+            f.write_char(')')?;
+        }
+
+        Ok(())
     }
 }
 
@@ -199,6 +203,7 @@ impl Display for pt::NamedArgument {
 
 impl Display for pt::Parameter {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write_opt!(f, &self.annotation, ' ');
         self.ty.fmt(f)?;
         write_opt!(f, ' ', &self.storage);
         write_opt!(f, ' ', &self.name);
@@ -1253,6 +1258,7 @@ fn rm_underscores(s: &str) -> Cow<'_, str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pt::{Annotation, Loc};
 
     macro_rules! struct_tests {
         ($(pt::$t:ident { $( $f:ident: $e:expr ),* $(,)? } => $expected:expr),* $(,)?) => {
@@ -1411,6 +1417,7 @@ mod tests {
                 ty: expr_ty!($i),
                 storage: None,
                 name: None,
+                annotation: None,
             }
         };
 
@@ -1420,6 +1427,7 @@ mod tests {
                 ty: expr_ty!($i),
                 storage: None,
                 name: Some(id(stringify!($n))),
+                annotation: None,
             }
         };
 
@@ -1429,6 +1437,7 @@ mod tests {
                 ty: expr_ty!($i),
                 storage: Some(storage!($s)),
                 name: Some(id(stringify!($n))),
+                annotation: None,
             }
         };
     }
@@ -1496,7 +1505,7 @@ mod tests {
         struct_tests![
             pt::Annotation {
                 id: id("name"),
-                value: expr!(value),
+                value: Some(expr!(value)),
             } => "@name(value)",
 
             pt::Base {
@@ -1572,22 +1581,36 @@ mod tests {
                 ty: expr_ty!(uint256),
                 storage: None,
                 name: None,
+                annotation: None,
             } => "uint256",
             pt::Parameter {
                 ty: expr_ty!(uint256),
                 storage: None,
                 name: Some(id("name")),
+                annotation: None,
             } => "uint256 name",
             pt::Parameter {
                 ty: expr_ty!(uint256),
                 storage: Some(pt::StorageLocation::Calldata(Default::default())),
                 name: Some(id("name")),
+                annotation: None,
             } => "uint256 calldata name",
             pt::Parameter {
                 ty: expr_ty!(uint256),
                 storage: Some(pt::StorageLocation::Calldata(Default::default())),
                 name: None,
+                annotation: None,
             } => "uint256 calldata",
+            pt::Parameter {
+                ty: expr_ty!(bytes),
+                storage: None,
+                name: Some(id("my_seed")),
+                annotation: Some(Annotation {
+                    loc: Loc::Builtin,
+                    id: id("name"),
+                    value: None,
+                }),
+            } => "@name bytes my_seed",
 
             pt::StringLiteral {
                 unicode: false,

@@ -1,41 +1,34 @@
 @program_id("@#$!")
 contract c1 {
 	/**
-	 * Multiple seeds allowed, but bump must be after last seed.
+	 * Multiple seeds allowed. Space has an incorrect expression
 	 */
 	@seed("feh")
-	@seed(foo)
-	@seed(bar)
-	@bump(b)
-	@seed(baz)
 	@space(102 + a)
-	constructor(bytes foo, string bar, bytes baz, uint8 b) {}
+	constructor(@seed bytes foo, @seed string bar, @seed bytes baz, @bump uint8 b) {}
 }
 
 @program_id("102")
 contract c2 {
 	/// Only one bump allowed.
 	@seed(hex"41420044")
-	@bump(b)
 	@bump(5)
 	@payer(address"Chi1doxDSNjrmbZ5sq3H2cXyTq3KNfGepmbhyHaxcr")
 	@payer(bar)
 	@space(1025 + 5)
 	@space(4)
-	constructor(bytes foo, address payable bar, bytes baz, uint8 b) {}
+	constructor(bytes foo, bytes baz, @bump uint8 b) {}
 }
 
 @program_id(foo)
 contract c3 {
-	/**  Only one bump allowed. */
+	/**  Only one bump and one space allowed. */
 	@seed(hex"41420044")
-	@bump(b)
-	@bump(5)
 	@payer(my_account)
 	@payer(bar)
 	@space(1025 + 5)
 	@space(4)
-	constructor(bytes foo, address payable bar, bytes baz, uint8 b) {}
+	constructor(bytes foo, address payable bar, bytes baz, @bump bytes1 b, @bump bytes1 c) {}
 
 	@seed("meh")
 	@bump(1)
@@ -54,25 +47,23 @@ contract c4 {
 
 // ---- Expect: diagnostics ----
 // error: 1:14: address literal @#$! invalid character '@'
-// error: 8:8-11: conversion from string to bytes not possible
-// error: 9:2-10: @bump should be after the last @seed
-// 	note 10:2-12: location of @seed annotation
-// error: 11:15-16: 'a' not found
-// error: 15:15: address literal 102 invalid character '0'
-// error: 20:8-9: duplicate @bump annotation for constructor
-// 	note 19:2-10: previous @bump
-// error: 21:2-61: invalid parameter for annotation
-// error: 24:2-11: duplicate @space annotation for constructor
-// 	note 23:2-18: previous @space
-// error: 28:1-17: annotion takes an account, for example '@program_id("BBH7Xi5ddus5EoQhzJLgyodVxJJGkvBRCY5AhBA1jwUr")'
-// error: 33:8-9: duplicate @bump annotation for constructor
-// 	note 32:2-10: previous @bump
-// error: 35:2-13: duplicate @payer annotation for constructor
-// 	note 34:2-20: previous @payer
-// error: 37:2-11: duplicate @space annotation for constructor
-// 	note 36:2-18: previous @space
-// error: 40:2-14: unknown annotation seed for function
-// error: 41:2-10: unknown annotation bump for function
-// error: 42:2-62: unknown annotation payer for function
-// error: 43:2-11: unknown annotation space for function
-// error: 52:2-16: @payer annotation required for constructor
+// error: 7:15-16: 'a' not found
+// error: 8:31-36: conversion from string to bytes not possible
+// error: 11:15: address literal 102 invalid character '0'
+// error: 16:2-61: invalid parameter for annotation
+// error: 19:9-10: duplicate @space annotation for constructor
+// 	note 18:2-18: previous @space
+// error: 20:36-41: duplicate @bump annotation for constructor
+// 	note 15:2-10: previous @bump
+// error: 23:1-17: annotion takes an account, for example '@program_id("BBH7Xi5ddus5EoQhzJLgyodVxJJGkvBRCY5AhBA1jwUr")'
+// error: 28:2-13: duplicate @payer annotation for constructor
+// 	note 27:2-20: previous @payer
+// error: 30:9-10: duplicate @space annotation for constructor
+// 	note 29:2-18: previous @space
+// error: 31:73-78: duplicate @bump annotation for constructor
+// 	note 31:57-62: previous @bump
+// error: 33:2-14: unknown annotation seed for function
+// error: 34:2-10: unknown annotation bump for function
+// error: 35:2-62: unknown annotation payer for function
+// error: 36:2-11: unknown annotation space for function
+// error: 45:2-16: @payer annotation required for constructor

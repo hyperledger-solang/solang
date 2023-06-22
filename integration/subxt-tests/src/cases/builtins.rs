@@ -31,7 +31,7 @@ async fn case() -> anyhow::Result<()> {
             sp_keyring::AccountKeyring::Alice,
             0,
             &|t: &ContractMessageTranscoder| {
-                t.encode("hash_ripemd160", [format!("0x{}", hex::encode(&input_str))])
+                t.encode("hash_ripemd160", [format!("0x{}", hex::encode(input_str))])
                     .unwrap()
             },
         )
@@ -47,7 +47,7 @@ async fn case() -> anyhow::Result<()> {
             sp_keyring::AccountKeyring::Alice,
             0,
             &|t: &ContractMessageTranscoder| {
-                t.encode("hash_sha256", [format!("0x{}", hex::encode(&input_str))])
+                t.encode("hash_sha256", [format!("0x{}", hex::encode(input_str))])
                     .unwrap()
             },
         )
@@ -63,11 +63,8 @@ async fn case() -> anyhow::Result<()> {
             sp_keyring::AccountKeyring::Alice,
             0,
             &|t: &ContractMessageTranscoder| {
-                t.encode(
-                    "hash_kecccak256",
-                    [format!("0x{}", hex::encode(&input_str))],
-                )
-                .unwrap()
+                t.encode("hash_kecccak256", [format!("0x{}", hex::encode(input_str))])
+                    .unwrap()
             },
         )
         .await?;

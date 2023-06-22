@@ -253,6 +253,14 @@ pub struct Parameter {
     /// Is this struct field recursive. Recursive does not mean infinite size in all cases:
     /// `struct S { S[] s }` is recursive but not of infinite size.
     pub recursive: bool,
+
+    pub annotation: Option<ParameterAnnotation>,
+}
+
+#[derive(Debug, Eq, Clone, PartialEq)]
+pub struct ParameterAnnotation {
+    pub loc: pt::Loc,
+    pub id: pt::Identifier,
 }
 
 impl Parameter {

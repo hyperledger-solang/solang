@@ -176,7 +176,12 @@ impl Dot {
 
             for param in &*func.params {
                 labels.push(format!(
-                    "{} {}",
+                    "{}{} {}",
+                    if let Some(annotation) = &param.annotation {
+                        format!("@{} ", annotation.id.name)
+                    } else {
+                        String::new()
+                    },
                     param.ty.to_string(ns),
                     param.name_as_str()
                 ));

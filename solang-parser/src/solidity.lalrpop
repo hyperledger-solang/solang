@@ -137,6 +137,10 @@ SolIdentifier: Identifier = {
     <l:@L> "revert" <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: "revert".to_string()},
 }
 
+SolAnnotation: Identifier = {
+    <l:@L> <a:annotation> <r:@R> => Identifier{loc: Loc::File(file_no, l, r), name: a.to_string()},
+}
+
 SolIdentifierOrError: Option<Identifier> = {
     SolIdentifier => Some(<>),
     ! => {
@@ -282,9 +286,9 @@ TypeDefinition: Box<TypeDefinition> = {
 }
 
 Annotation: Box<Annotation> = {
-    <l:@L> "@" <id:SolIdentifier> "(" <value:Expression> ")" <r:@R> => {
+    <l:@L> <id:SolAnnotation> "(" <value:Expression> ")" <r:@R> => {
         Box::new(Annotation {
-            loc: Loc::File(file_no, l, r), id, value
+            loc: Loc::File(file_no, l, r), id, value: Some(value)
         })
     }
 }
@@ -520,14 +524,12 @@ HexLiteral: HexLiteral = {
     }
 }
 
-// A parameter list is used for function arguments, returns, and destructuring statements.
-// In destructuring statements, parameters can be optional. So, we make parameters optional
-// and as an added bonus we can generate error messages about missing parameters/returns
-// to functions
+// A parameter list is used for function arguments and return.
+// Destructure statements utilize NamedParameter, not Parameter
 Parameter: Parameter = {
-    <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier?> <r:@R> => {
+    <l:@L> <annotation:ParameterAnnotation?> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier?> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
-        Parameter{loc, ty, storage, name}
+        Parameter{loc, annotation, ty, storage, name}
     }
 }
 
@@ -545,14 +547,20 @@ ParameterList: Vec<(Loc, Option<Parameter>)> = {
     }
 }
 
+ParameterAnnotation: Annotation = {
+    <l:@L> <id:SolAnnotation> <r:@R> => Annotation {
+        loc: Loc::File(file_no, l, r), id, value: None,
+    }
+}
+
 NamedParameter: Parameter = {
     <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:SolIdentifier> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
-        Parameter{ loc, ty, storage, name: Some(name) }
+        Parameter{ loc, annotation: None, ty, storage, name: Some(name) }
     },
     <l:@L> <ty:Expression> <r:@R> => {
         let loc = Loc::File(file_no, l, r);
-        Parameter{ loc, ty, storage: None, name: None }
+        Parameter{ loc, annotation: None, ty, storage: None, name: None }
     }
 }
 
@@ -1117,6 +1125,7 @@ extern {
 
     enum Token<'input> {
         identifier => Token::Identifier(<&'input str>),
+        annotation => Token::Annotation(<&'input str>),
         string => Token::StringLiteral(<bool>, <&'input str>),
         hexstring => Token::HexLiteral(<&'input str>),
         address => Token::AddressLiteral(<&'input str>),
@@ -1171,7 +1180,6 @@ extern {
         "]" => Token::CloseBracket,
         "." => Token::Member,
         "," => Token::Comma,
-        "@" => Token::At,
         Uint => Token::Uint(<u16>),
         Int => Token::Int(<u16>),
         Bytes => Token::Bytes(<u8>),

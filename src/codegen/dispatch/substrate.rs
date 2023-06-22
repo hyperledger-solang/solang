@@ -56,6 +56,7 @@ fn new_cfg(ns: &Namespace) -> ControlFlowGraph {
         readonly: true,
         infinite_size: false,
         recursive: false,
+        annotation: None,
     };
     let mut input_len = input_ptr.clone();
     input_len.ty = Uint(32);
