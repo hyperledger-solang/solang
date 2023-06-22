@@ -6,10 +6,10 @@ use std::io::Read;
 use std::io::Write;
 use tempfile::tempdir;
 use wasm_encoder::{
-    ConstExpr, DataSection, DataSegment, DataSegmentMode, EntityType, GlobalSection, GlobalType,
-    ImportSection, MemoryType, Module, RawSection, ValType,
+    ConstExpr, EntityType, GlobalSection, GlobalType, ImportSection, MemoryType, Module,
+    RawSection, ValType,
 };
-use wasmparser::{Data, DataKind, Global, Import, Parser, Payload::*, SectionLimited, TypeRef};
+use wasmparser::{Global, Import, Parser, Payload::*, SectionLimited, TypeRef};
 
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
@@ -70,7 +70,6 @@ fn generate_module(input: &[u8]) -> Vec<u8> {
     let mut module = Module::new();
     for payload in Parser::new(0).parse_all(input).map(|s| s.unwrap()) {
         match payload {
-            DataSection(s) => generate_data_section(s, &mut module),
             ImportSection(s) => generate_import_section(s, &mut module),
             GlobalSection(s) => generate_global_section(s, &mut module),
             ModuleSection { .. } | ComponentSection { .. } => panic!("nested WASM module"),
@@ -111,31 +110,6 @@ fn generate_import_section(section: SectionLimited<Import>, module: &mut Module)
         imports.import(module_name, import.name, import_type);
     }
     module.section(&imports);
-}
-
-/// Generate the the data segment and remove any empty segments.
-fn generate_data_section(section: SectionLimited<Data>, module: &mut Module) {
-    let mut segments = DataSection::new();
-    for segment in section
-        .into_iter()
-        .map(|segment| segment.unwrap())
-        .filter(|segment| segment.data.iter().any(|b| *b != 0))
-    {
-        match segment.kind {
-            DataKind::Active {
-                memory_index: 0, ..
-            } => assert!(segments.is_empty(), "expected only a single data segment"),
-            _ => panic!("expected an active data segment"),
-        }
-        segments.segment(DataSegment {
-            mode: DataSegmentMode::Active {
-                memory_index: 0, // Currently, the WASM spec allows only one memory per module
-                offset: &wasm_encoder::ConstExpr::i32_const(0),
-            },
-            data: segment.data.iter().cloned(),
-        });
-    }
-    module.section(&segments);
 }
 
 /// Set the stack pointer to 64k (this is the only global)
