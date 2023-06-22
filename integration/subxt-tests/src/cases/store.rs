@@ -46,11 +46,11 @@ async fn case() -> anyhow::Result<()> {
     assert_eq!(res, (0, 0, 0, U256::zero()));
 
     #[derive(Encode, Decode, PartialEq, Eq, Debug)]
-    enum enum_bar {
-        bar1,
-        bar2,
-        bar3,
-        bar4,
+    enum Bar {
+        Bar1,
+        Bar2,
+        Bar3,
+        Bar4,
     }
 
     let selector = transcoder.encode::<_, String>("get_values2", [])?;
@@ -64,7 +64,7 @@ async fn case() -> anyhow::Result<()> {
     .execute(&api)
     .await
     .and_then(|e| {
-        <(U256, String, Vec<u8>, [u8; 4], enum_bar)>::decode(&mut e.return_value.as_bytes_ref())
+        <(U256, String, Vec<u8>, [u8; 4], Bar)>::decode(&mut e.return_value.as_bytes_ref())
             .map_err(Into::into)
     })?;
 
@@ -75,7 +75,7 @@ async fn case() -> anyhow::Result<()> {
             "".into(),
             hex::decode("b00b1e")?,
             <_>::from_hex("00000000")?,
-            enum_bar::bar1
+            Bar::Bar1
         )
     );
 
@@ -127,7 +127,7 @@ async fn case() -> anyhow::Result<()> {
     .execute(&api)
     .await
     .and_then(|e| {
-        <(U256, String, Vec<u8>, [u8; 4], enum_bar)>::decode(&mut e.return_value.as_bytes_ref())
+        <(U256, String, Vec<u8>, [u8; 4], Bar)>::decode(&mut e.return_value.as_bytes_ref())
             .map_err(Into::into)
     })?;
 
@@ -138,7 +138,7 @@ async fn case() -> anyhow::Result<()> {
             "the course of true love never did run smooth".into(),
             hex::decode("b00b1e")?,
             <_>::from_hex("41424344")?,
-            enum_bar::bar2
+            Bar::Bar2
         )
     );
 
@@ -190,7 +190,7 @@ async fn case() -> anyhow::Result<()> {
     .execute(&api)
     .await
     .and_then(|e| {
-        <(U256, String, Vec<u8>, [u8; 4], enum_bar)>::decode(&mut e.return_value.as_bytes_ref())
+        <(U256, String, Vec<u8>, [u8; 4], Bar)>::decode(&mut e.return_value.as_bytes_ref())
             .map_err(Into::into)
     })?;
 
@@ -201,7 +201,7 @@ async fn case() -> anyhow::Result<()> {
             "".into(),
             hex::decode("b0ff1e")?,
             <_>::from_hex("61626364")?,
-            enum_bar::bar4
+            Bar::Bar4
         )
     );
 

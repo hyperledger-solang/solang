@@ -65,7 +65,7 @@ async fn case() -> anyhow::Result<()> {
         users.push((name, rnd_addr, id, perms));
     }
 
-    let (name, addr, id, perms) = users.choose(&mut thread_rng()).unwrap();
+    let (_name, _addr, id, _perms) = users.choose(&mut thread_rng()).unwrap();
 
     let output = contract
         .try_call(
@@ -78,7 +78,7 @@ async fn case() -> anyhow::Result<()> {
         )
         .await?;
 
-    let (name, addr, id, perms) =
+    let (_name, _addr, id, perms) =
         <(String, AccountId32, u64, Vec<u8>)>::decode(&mut output.as_bytes_ref())?;
 
     if !perms.is_empty() {

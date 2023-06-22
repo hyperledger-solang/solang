@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+#![allow(unused_imports)]
+#![allow(dead_code)]
 
 use contract_transcode::ContractMessageTranscoder;
 
@@ -429,7 +431,7 @@ impl Contract {
         })
     }
 
-    pub fn from_addr(&self, address: AccountId32) -> anyhow::Result<Self> {
+    pub fn new_with_addr(&self, address: AccountId32) -> anyhow::Result<Self> {
         let mut out = Contract::new(self.path)?;
 
         out.address.replace(address);
@@ -468,7 +470,7 @@ impl Contract {
         .await?;
         let addr = deployed.contract_address;
 
-        self.address.replace(addr.clone());
+        self.address.replace(addr);
 
         Ok(deployed.events)
     }

@@ -28,10 +28,8 @@ async fn case() -> anyhow::Result<()> {
     // check blake2_128
     let input_str = "Call me Ishmael.";
 
-    let selector = transcoder.encode(
-        "hash_blake2_128",
-        [format!("0x{}", hex::encode(&input_str))],
-    )?;
+    let selector =
+        transcoder.encode("hash_blake2_128", [format!("0x{}", hex::encode(input_str))])?;
 
     let rv = ReadContract {
         caller: sp_keyring::AccountKeyring::Alice,
@@ -46,10 +44,8 @@ async fn case() -> anyhow::Result<()> {
     assert_eq!(rv.return_value, expected);
 
     // check blake2_256
-    let selector = transcoder.encode(
-        "hash_blake2_256",
-        [format!("0x{}", hex::encode(&input_str))],
-    )?;
+    let selector =
+        transcoder.encode("hash_blake2_256", [format!("0x{}", hex::encode(input_str))])?;
 
     let rv = ReadContract {
         caller: sp_keyring::AccountKeyring::Alice,
