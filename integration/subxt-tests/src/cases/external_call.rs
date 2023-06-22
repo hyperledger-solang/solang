@@ -20,8 +20,8 @@ async fn case() -> anyhow::Result<()> {
     let c_callee = Contract::new("./contracts/callee.contract")?;
     let t_callee = &c_callee.transcoder;
 
-    let c_callee2 = Contract::new("./contracts/callee2.contract")?;
-    let t_callee2 = &c_caller.transcoder;
+    let _c_callee2 = Contract::new("./contracts/callee2.contract")?;
+    let _t_callee2 = &c_caller.transcoder;
 
     let selector = t_caller.encode::<_, String>("new", [])?;
 
@@ -53,7 +53,7 @@ async fn case() -> anyhow::Result<()> {
     .await?;
 
     // setX on callee
-    let selector = t_callee.encode::<_, String>("set_x", [format!("102")])?;
+    let selector = t_callee.encode::<_, String>("set_x", ["102".into()])?;
 
     WriteContract {
         caller: sp_keyring::AccountKeyring::Alice,
