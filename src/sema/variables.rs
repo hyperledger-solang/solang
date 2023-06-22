@@ -576,6 +576,7 @@ fn collect_parameters(
                 readonly: false,
                 infinite_size: false,
                 recursive: false,
+                annotation: None,
             });
 
             collect_parameters(value, value_name, symtable, params, expr, ns)
@@ -627,6 +628,7 @@ fn collect_parameters(
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 });
             }
 
@@ -645,6 +647,7 @@ fn collect_parameters(
             readonly: false,
             infinite_size: false,
             recursive: false,
+            annotation: None,
         }),
     }
 }

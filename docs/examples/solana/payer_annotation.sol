@@ -37,10 +37,9 @@ contract Builder {
 
 @program_id("SoLGijpEqEeXLEqa9ruh7a6Lu4wogd6rM8FNoR7e3wY")
 contract BeingBuilt {
-    @seed(my_seed)
     @space(1024)
     @payer(payer_account)
-    constructor(bytes my_seed) {}
+    constructor(@seed bytes my_seed) {}
 
     function say_this(string text) public pure {
         print(text);

@@ -104,7 +104,7 @@ describe('ChildContract', function () {
 
         const info = await provider.connection.getAccountInfo(address);
 
-        expect(info?.data.length).toEqual(9889 + 23);
+        expect(info?.data.length).toEqual(9889);
 
         const idl = JSON.parse(fs.readFileSync('Seed2.json', 'utf8'));
 
