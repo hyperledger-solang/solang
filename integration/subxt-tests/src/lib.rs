@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+
+// FIXME: Stems from a bunch of disabled tests.
+// Ideally they should be enable again in the future.
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
