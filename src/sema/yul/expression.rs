@@ -425,6 +425,7 @@ pub(crate) fn resolve_function_call(
             readonly: false,
             infinite_size: false,
             recursive: false,
+            annotation: None,
         };
 
         for item in &resolved_arguments {

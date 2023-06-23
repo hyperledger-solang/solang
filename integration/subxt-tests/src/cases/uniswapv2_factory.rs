@@ -251,7 +251,7 @@ impl MockWorld {
                         "new",
                         [format!(
                             "0x{}",
-                            hex::encode(&sp_keyring::AccountKeyring::Alice.to_account_id())
+                            hex::encode(sp_keyring::AccountKeyring::Alice.to_account_id())
                         )],
                     )
                     .unwrap()

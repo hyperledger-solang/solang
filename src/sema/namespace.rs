@@ -18,6 +18,7 @@ use crate::Target;
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
+use solang_parser::pt::FunctionTy;
 use solang_parser::{
     pt,
     pt::{CodeLocation, OptionalCodeLocation},
@@ -1055,6 +1056,7 @@ impl Namespace {
 
                     let (params, params_success) = resolve_params(
                         params,
+                        &FunctionTy::Function,
                         is_external,
                         file_no,
                         contract_no,

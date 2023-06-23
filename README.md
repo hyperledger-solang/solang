@@ -138,12 +138,12 @@ Here is a brief description of what we envision for the next versions.
 | Feature                                            | Status      |
 |----------------------------------------------------|-------------|
 | Improve management over optimization passes        | Not started |
-| Adopt single static assignment for code generation | Not started |
-| Support openzeppelin on Substrate target           | Not started |
+| Adopt single static assignment for code generation | In progress |
+| Support openzeppelin on Substrate target           | In progress |
 | Provide Solidity -> Substrate porting guide        | Not started |
 | Call Solidity from Solana's Rust contracts         | Not started |
 | Tooling for calls between ink! <> solidity         | In progress |
-| Provide CLI for node interactions                  | Not started |
+| Provide CLI for node interactions                  | In progress |
 
 ## License
 

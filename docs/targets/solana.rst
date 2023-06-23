@@ -227,16 +227,20 @@ is passed to the transaction that runs the constructor code.
 
 Alternatively, the data account can be created by the constructor, on chain. When
 this method is used, some parameters must be specified for the account
-using annotations. Those are placed before the constructor. If there is no
-constructor present, then an empty constructor can be added. The constructor
-arguments can be used in the annotations.
+using annotations. Annotations placed above a constructor can only contain literals or
+constant expressions, as is the case for first ``@seed`` and ``@space`` in the following example.
+Annotations can also refer to constructor arguments when placed next to them, as the second ``@seed`` and
+the ``@bump`` examples below. The ``@payer`` annotation is a special annotation that
+:ref:`declares an account <account_management>`.
+
+If the contract has no constructor, annotations can be paired with an empty constructor.
 
 .. include:: ../examples/solana/constructor_annotations.sol
   :code: solidity
 
 Creating an account needs a payer, so at a minimum the ``@payer`` annotation must be
 specified. If it is missing, then the data account must be created client-side.
-The ``@payer`` annotation declares a Solana account that must be passed in the transaction.
+The ``@payer`` annotation :ref:`declares a Solana account <account_management>` that must be passed in the transaction.
 
 The size of the data account can be specified with ``@space``. This is a
 ``uint64`` expression which can either be a constant or use one of the constructor
@@ -253,9 +257,9 @@ If the data account is going to be a
 `program derived address <https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses>`_,
 then the seeds and bump have to be provided. There can be multiple seeds, and an optional
 single bump. If the bump is not provided, then the seeds must not create an
-account that falls on the curve. The ``@seed`` can be a string literal,
-or a hex string with the format ``hex"4142"``, or a constructor argument of type
-``bytes``. The ``@bump`` must a single byte of type ``bytes1``.
+account that falls on the curve. When placed above the constructor, the ``@seed`` can be a string literal,
+or a hex string with the format ``hex"4142"``. If before an argument, the seed annotation must refer to an argument
+of type ``bytes``. The ``@bump`` must a single byte of type ``bytes1``.
 
 .. _value_transfer:
 
@@ -446,6 +450,7 @@ contracts on chain. Examples are available on Solang's integration tests.
 See `system_instruction_example.sol <https://github.com/hyperledger/solang/blob/main/integration/solana/system_instruction_example.sol>`_
 and `system_instruction.spec.ts <https://github.com/hyperledger/solang/blob/main/integration/solana/system_instruction.spec.ts>`_
 
+.. _account_management:
 
 Solana Account Management
 _________________________

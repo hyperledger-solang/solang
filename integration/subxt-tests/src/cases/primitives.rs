@@ -38,18 +38,18 @@ async fn case() -> anyhow::Result<()> {
 
     // test res
     #[derive(Encode, Decode)]
-    enum oper {
-        add,
-        sub,
-        mul,
-        div,
-        r#mod,
-        pow,
-        shl,
-        shr,
-        or,
-        and,
-        xor,
+    enum Oper {
+        Add,
+        Sub,
+        Mul,
+        Div,
+        Mod,
+        Pow,
+        Shl,
+        Shr,
+        Or,
+        And,
+        Xor,
     }
 
     let is_mul = c
@@ -68,9 +68,9 @@ async fn case() -> anyhow::Result<()> {
                 .expect("unable to find selector")
         })
         .await
-        .and_then(|rv| oper::decode(&mut rv.as_bytes_ref()).map_err(Into::into))?;
+        .and_then(|rv| Oper::decode(&mut rv.as_bytes_ref()).map_err(Into::into))?;
 
-    if let oper::div = return_div {
+    if let Oper::Div = return_div {
     } else {
         panic!("not div");
     }
@@ -230,7 +230,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("d6435f25").expect("unable to decode selector");
 
-            oper::add.encode_to(&mut sel);
+            Oper::Add.encode_to(&mut sel);
             U256::from_dec_str("1000")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -250,7 +250,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("d6435f25").expect("unable to decode selector");
 
-            oper::sub.encode_to(&mut sel);
+            Oper::Sub.encode_to(&mut sel);
             U256::from_dec_str("1000")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -271,7 +271,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("d6435f25").expect("unable to decode selector");
 
-            oper::mul.encode_to(&mut sel);
+            Oper::Mul.encode_to(&mut sel);
             U256::from_dec_str("1000")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -291,7 +291,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("d6435f25").expect("unable to decode selector");
 
-            oper::div.encode_to(&mut sel);
+            Oper::Div.encode_to(&mut sel);
             U256::from_dec_str("1000")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -311,7 +311,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("d6435f25").expect("unable to decode selector");
 
-            oper::r#mod.encode_to(&mut sel);
+            Oper::Mod.encode_to(&mut sel);
             U256::from_dec_str("1000")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -330,7 +330,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("d6435f25").expect("unable to decode selector");
 
-            oper::shl.encode_to(&mut sel);
+            Oper::Shl.encode_to(&mut sel);
             (!U256::from_dec_str("10000000000000").unwrap() + U256::one()).encode_to(&mut sel);
 
             U256::from_dec_str("8")
@@ -348,7 +348,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("d6435f25").expect("unable to decode selector");
 
-            oper::shr.encode_to(&mut sel);
+            Oper::Shr.encode_to(&mut sel);
             (!U256::from_dec_str("10000000000000").unwrap() + U256::one()).encode_to(&mut sel);
 
             U256::from_dec_str("8")
@@ -370,7 +370,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("b446eacd").expect("unable to decode selector");
 
-            oper::add.encode_to(&mut sel);
+            Oper::Add.encode_to(&mut sel);
             U256::from_dec_str("1000")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -389,7 +389,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("b446eacd").expect("unable to decode selector");
 
-            oper::sub.encode_to(&mut sel);
+            Oper::Sub.encode_to(&mut sel);
             U256::from_dec_str("1000")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -408,7 +408,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("b446eacd").expect("unable to decode selector");
 
-            oper::mul.encode_to(&mut sel);
+            Oper::Mul.encode_to(&mut sel);
             U256::from_dec_str("123456789")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -427,7 +427,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("b446eacd").expect("unable to decode selector");
 
-            oper::div.encode_to(&mut sel);
+            Oper::Div.encode_to(&mut sel);
             U256::from_dec_str("123456789")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -446,7 +446,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("b446eacd").expect("unable to decode selector");
 
-            oper::r#mod.encode_to(&mut sel);
+            Oper::Mod.encode_to(&mut sel);
             U256::from_dec_str("123456789")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -465,7 +465,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("b446eacd").expect("unable to decode selector");
 
-            oper::pow.encode_to(&mut sel);
+            Oper::Pow.encode_to(&mut sel);
             U256::from_dec_str("123456789")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -488,7 +488,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("b446eacd").expect("unable to decode selector");
 
-            oper::shl.encode_to(&mut sel);
+            Oper::Shl.encode_to(&mut sel);
             U256::from_dec_str("10000000000000")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");
@@ -507,7 +507,7 @@ async fn case() -> anyhow::Result<()> {
             // since i256 is not supported by contract-metadata we need to manually supply the selector and encode its inputs
             let mut sel = hex::decode("b446eacd").expect("unable to decode selector");
 
-            oper::shr.encode_to(&mut sel);
+            Oper::Shr.encode_to(&mut sel);
             U256::from_dec_str("10000000000000")
                 .map(|o| o.encode_to(&mut sel))
                 .expect("unable to encode to selector");

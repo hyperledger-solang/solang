@@ -36,12 +36,6 @@ constructor arguments, which need to be provided.
 .. include:: ../examples/substrate/contract_new.sol
   :code: solidity
 
-On Solana, the contract being created must have the ``@program_id()`` annotation, and the address
-of the new account must be specified using the ``{address: new_address}`` syntax.
-
-.. include:: ../examples/substrate/contract_new.sol
-  :code: solidity
-
 The constructor might fail for various reasons, for example ``require()`` might fail here. This can
 be handled using the :ref:`try-catch` statement, else errors cause the transaction to fail.
 
@@ -98,7 +92,8 @@ can use. gas is a ``uint64``.
 Instantiating a contract on Solana
 __________________________________
 
-On Solana, contracts are deployed to a program account, which holds only the contract's executable binary.
+On Solana, the contract being created must have the ``@program_id()`` annotation that specifies the program account to
+which the contract code has been deployed. This account holds only the contract's executable binary.
 When calling a constructor, one needs to provide an address that will serve as the contract's data account,
 by using the call argument ``address``:
 
@@ -121,6 +116,9 @@ For the creation of a contract, the data account must the **first** element in s
 
 .. include:: ../examples/solana/create_contract_with_metas.sol
   :code: solidity
+
+The sequence of the accounts in the ``AccountMeta`` array matters and must follow the
+:ref:`IDL ordering <account_management>`.
 
 
 Base contracts, abstract contracts and interfaces
