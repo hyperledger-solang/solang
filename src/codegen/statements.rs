@@ -1177,7 +1177,7 @@ fn try_catch(
 
                 cfg.set_basic_block(success_block);
 
-                if func_returns != vec![Type::Void] {
+                if !try_stmt.returns.is_empty() {
                     let mut res = Vec::new();
 
                     for ret in &try_stmt.returns {
