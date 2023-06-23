@@ -59,7 +59,7 @@ async fn case() -> anyhow::Result<()> {
             &api,
             sp_keyring::AccountKeyring::Alice,
             0,
-            &|t: &ContractMessageTranscoder| {
+            &|_: &ContractMessageTranscoder| {
                 let mut s = keccak_256(b"transfer(address,uint128)")[..4].to_vec();
                 dave.encode_to(&mut s);
                 20000_u128.encode_to(&mut s);
@@ -77,7 +77,7 @@ async fn case() -> anyhow::Result<()> {
             &api,
             sp_keyring::AccountKeyring::Alice,
             0,
-            &|t: &ContractMessageTranscoder| {
+            &|_: &ContractMessageTranscoder| {
                 let mut s = keccak_256(b"send(address,uint128)")[..4].to_vec();
                 dave.encode_to(&mut s);
                 10000_u128.encode_to(&mut s);

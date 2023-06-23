@@ -59,6 +59,7 @@ pub struct Binary<'a> {
     pub(crate) return_values: HashMap<ReturnCode, IntValue<'a>>,
     /// No initializer for vector_new
     pub(crate) vector_init_empty: PointerValue<'a>,
+    global_constant_strings: RefCell<HashMap<Vec<u8>, PointerValue<'a>>>,
 }
 
 impl<'a> Binary<'a> {
@@ -322,6 +323,7 @@ impl<'a> Binary<'a> {
                 .i8_type()
                 .ptr_type(AddressSpace::default())
                 .const_null(),
+            global_constant_strings: RefCell::new(HashMap::new()),
         }
     }
 
@@ -359,6 +361,11 @@ impl<'a> Binary<'a> {
         data: &[u8],
         constant: bool,
     ) -> PointerValue<'a> {
+        if let Some(emitted_string) = self.global_constant_strings.borrow().get(data) {
+            if constant {
+                return *emitted_string;
+            }
+        }
         let ty = self.context.i8_type().array_type(data.len() as u32);
 
         let gv = self
@@ -372,9 +379,14 @@ impl<'a> Binary<'a> {
         if constant {
             gv.set_constant(true);
             gv.set_unnamed_addr(true);
+            let ptr_val = gv.as_pointer_value();
+            self.global_constant_strings
+                .borrow_mut()
+                .insert(data.to_vec(), ptr_val);
+            ptr_val
+        } else {
+            gv.as_pointer_value()
         }
-
-        gv.as_pointer_value()
     }
 
     /// Wrapper for alloca. Ensures that the alloca is done on the first basic block.

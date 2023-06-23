@@ -242,6 +242,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     callty,
                     seeds,
                     contract_function_no,
+                    flags,
                 } => {
                     let value = expression(value, Some(&vars), cfg, ns).0;
                     let gas = expression(gas, Some(&vars), cfg, ns).0;
@@ -255,6 +256,9 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let seeds = seeds
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
+                    let flags = flags
+                        .as_ref()
+                        .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
                     cfg.blocks[block_no].instr[instr_no] = Instr::ExternalCall {
                         success: *success,
@@ -266,6 +270,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         gas,
                         callty: callty.clone(),
                         contract_function_no: *contract_function_no,
+                        flags,
                     };
                 }
                 Instr::SelfDestruct { recipient } => {

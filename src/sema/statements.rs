@@ -17,6 +17,7 @@ use crate::sema::expression::function_call::{
 };
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::function_annotation::function_body_annotations;
+use crate::sema::function_annotation::{unexpected_parameter_annotation, UnresolvedAnnotation};
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use crate::sema::yul::resolve_inline_assembly;
@@ -50,6 +51,7 @@ pub fn resolve_function_body(
         yul_function: false,
     };
 
+    let mut unresolved_annotation: Vec<UnresolvedAnnotation> = Vec::new();
     // first add function parameters
     for (i, p) in def.params.iter().enumerate() {
         let p = p.1.as_ref().unwrap();
@@ -63,7 +65,12 @@ pub fn resolve_function_body(
                 p.storage.clone(),
             ) {
                 ns.check_shadowing(file_no, contract_no, name);
-
+                if p.annotation.is_some() {
+                    unresolved_annotation.push(UnresolvedAnnotation {
+                        parameter_no: i,
+                        var_no: pos,
+                    });
+                }
                 symtable.arguments.push(Some(pos));
             }
         } else {
@@ -71,7 +78,14 @@ pub fn resolve_function_body(
         }
     }
 
-    function_body_annotations(function_no, annotations, &mut symtable, &context, ns);
+    function_body_annotations(
+        function_no,
+        annotations,
+        &unresolved_annotation,
+        &mut symtable,
+        &context,
+        ns,
+    );
 
     // now that the function arguments have been resolved, we can resolve the bases for
     // constructors.
@@ -391,6 +405,7 @@ fn statement(
                         readonly: false,
                         infinite_size: false,
                         recursive: false,
+                        annotation: None,
                     },
                     initializer,
                 ));
@@ -1478,12 +1493,17 @@ fn destructure(
                 left_tys.push(None);
                 fields.push(DestructureField::None);
             }
+
             Some(pt::Parameter {
                 loc,
                 ty,
                 storage,
                 name: None,
+                annotation,
             }) => {
+                // The grammar does not allow annotation in destructures, so this assertion shall
+                // always be true.
+                assert!(annotation.is_none());
                 if let Some(storage) = storage {
                     diagnostics.push(Diagnostic::error(
                         storage.loc(),
@@ -1563,7 +1583,11 @@ fn destructure(
                 ty,
                 storage,
                 name: Some(name),
+                annotation,
             }) => {
+                // The grammar does not allow annotation in destructures, so this assertion shall
+                // always be true.
+                assert!(annotation.is_none());
                 let (ty, ty_loc) = resolve_var_decl_ty(ty, storage, context, ns, diagnostics)?;
 
                 if let Some(pos) = symtable.add(
@@ -1589,6 +1613,7 @@ fn destructure(
                             readonly: false,
                             infinite_size: false,
                             recursive: false,
+                            annotation: None,
                         },
                     ));
                 }
@@ -2035,8 +2060,12 @@ pub fn parameter_list_to_expr_list<'a>(
                         broken = true;
                     }
                     Some(pt::Parameter {
-                        name: Some(name), ..
+                        name: Some(name),
+                        annotation,
+                        ..
                     }) => {
+                        // The grammar does not allow an annotation inside a list
+                        assert!(annotation.is_none());
                         diagnostics.push(Diagnostic::error(
                             name.loc,
                             "single value expected".to_string(),
@@ -2045,15 +2074,20 @@ pub fn parameter_list_to_expr_list<'a>(
                     }
                     Some(pt::Parameter {
                         storage: Some(storage),
+                        annotation,
                         ..
                     }) => {
+                        // The grammar does not allow an annotation inside a list
+                        assert!(annotation.is_none());
                         diagnostics.push(Diagnostic::error(
                             storage.loc(),
                             "storage specified not permitted here".to_string(),
                         ));
                         broken = true;
                     }
-                    Some(pt::Parameter { ty, .. }) => {
+                    Some(pt::Parameter { annotation, ty, .. }) => {
+                        // The grammar does not allow an annotation inside a list
+                        assert!(annotation.is_none());
                         list.push(ty);
                     }
                 }
@@ -2284,6 +2318,14 @@ fn try_catch(
 
         match &param.1 {
             Some(pt::Parameter {
+                annotation: Some(annotation),
+                ..
+            }) => {
+                diagnostics.push(unexpected_parameter_annotation(annotation.loc));
+                broken = true;
+            }
+
+            Some(pt::Parameter {
                 ty, storage, name, ..
             }) => {
                 let (ret_ty, ty_loc) = resolve_var_decl_ty(ty, storage, context, ns, diagnostics)?;
@@ -2321,6 +2363,7 @@ fn try_catch(
                                 readonly: false,
                                 infinite_size: false,
                                 recursive: false,
+                                annotation: None,
                             },
                         ));
                     }
@@ -2336,6 +2379,7 @@ fn try_catch(
                             readonly: false,
                             infinite_size: false,
                             recursive: false,
+                            annotation: None,
                         },
                     ));
                 }
@@ -2408,6 +2452,8 @@ fn try_catch(
                             ),
                         ));
                         return Err(());
+                    } else if let Some(annotation) = &param.annotation {
+                        diagnostics.push(unexpected_parameter_annotation(annotation.loc));
                     }
 
                     let mut result = Parameter {
@@ -2419,6 +2465,7 @@ fn try_catch(
                         readonly: false,
                         infinite_size: false,
                         recursive: false,
+                        annotation: None,
                     };
 
                     if let Some(name) = &param.name {
@@ -2465,6 +2512,9 @@ fn try_catch(
                         ),
                     ));
                     return Err(());
+                } else if let Some(annotation) = &param.annotation {
+                    ns.diagnostics
+                        .push(unexpected_parameter_annotation(annotation.loc));
                 }
 
                 let (error_ty, ty_loc) =
@@ -2502,6 +2552,7 @@ fn try_catch(
                     readonly: false,
                     infinite_size: false,
                     recursive: false,
+                    annotation: None,
                 };
 
                 if let Some(name) = &param.name {

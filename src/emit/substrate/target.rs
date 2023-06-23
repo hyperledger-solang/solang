@@ -992,7 +992,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 let ret = call!(
                     "seal_call",
                     &[
-                        i32_zero!().into(), // TODO implement flags (mostly used for proxy calls)
+                        contract_args.flags.unwrap_or(i32_zero!()).into(),
                         address.unwrap().into(),
                         contract_args.gas.unwrap().into(),
                         value_ptr.into(),
@@ -1063,7 +1063,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 let delegate_call_ret = call!(
                     "delegate_call",
                     &[
-                        i32_zero!().into(), // TODO implement flags (mostly used for proxy calls)
+                        contract_args.flags.unwrap_or(i32_zero!()).into(),
                         code_hash_out_ptr.into(),
                         payload.into(),
                         payload_len.into(),

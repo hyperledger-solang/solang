@@ -64,10 +64,7 @@ contract Child {
 contract Seed1 {
 
     @payer(payer)
-    @seed(seed)
-    @bump(bump)
-    @space(space)
-    constructor(bytes seed, bytes1 bump, uint64 space) {
+    constructor(@seed bytes seed, @bump bytes1 bump, @space uint64 space) {
         print("In Seed1 constructor");
     }
 
@@ -82,9 +79,7 @@ contract Seed2 {
 
     @payer(payer)
     @seed("sunflower")
-    @seed(seed)
-    @space(space + 23)
-    constructor(bytes seed, uint64 space) {
+    constructor(@seed bytes seed, @space uint64 space) {
         my_seed = seed;
 
         print("In Seed2 constructor");

@@ -180,6 +180,7 @@ fn process_parameters(parameters: &[pt::YulTypedIdentifier], ns: &mut Namespace)
             readonly: false,
             infinite_size: false,
             recursive: false,
+            annotation: None,
         });
     }
 

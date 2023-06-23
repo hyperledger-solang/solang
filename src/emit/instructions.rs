@@ -809,6 +809,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     value,
                     salt,
                     seeds,
+                    flags: None,
                 },
                 ns,
                 *loc,
@@ -827,6 +828,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             callty,
             accounts,
             seeds,
+            flags,
             ..
         } => {
             let loc = payload.loc();
@@ -928,7 +930,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             } else {
                 None
             };
-
+            let flags = flags
+                .as_ref()
+                .map(|e| expression(target, bin, e, &w.vars, function, ns).into_int_value());
             let success = match success {
                 Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
                 None => None,
@@ -948,6 +952,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     salt: None,
                     seeds,
                     accounts,
+                    flags,
                 },
                 callty.clone(),
                 ns,
