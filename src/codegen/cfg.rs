@@ -141,6 +141,7 @@ pub enum Instr {
         gas: Expression,
         callty: CallTy,
         contract_function_no: Option<(usize, usize)>,
+        flags: Option<Expression>,
     },
     /// Value transfer; either address.send() or address.transfer()
     ValueTransfer {
@@ -1170,10 +1171,11 @@ impl ControlFlowGraph {
                 seeds,
                 gas,
                 callty,
-                contract_function_no
+                contract_function_no,
+                flags
             } => {
                 format!(
-                    "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{} contract|function:{}",
+                    "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{} contract|function:{} flags:{}",
                     match success {
                         Some(i) => format!("%{}", self.vars[i].id.name),
                         None => "_".to_string(),
@@ -1201,7 +1203,8 @@ impl ControlFlowGraph {
                         format!("({contract_no}, {function_no})")
                     } else {
                         "_".to_string()
-                    }
+                    },
+                    flags.as_ref().map(|e| self.expr_to_string(contract, ns, e)).unwrap_or_default()
                 )
             }
             Instr::ValueTransfer {

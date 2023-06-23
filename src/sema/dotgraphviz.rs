@@ -1464,6 +1464,9 @@ impl Dot {
         if let Some(seeds) = &call_args.seeds {
             self.add_expression(seeds, func, ns, node, String::from("seeds"));
         }
+        if let Some(flags) = &call_args.flags {
+            self.add_expression(flags, func, ns, node, String::from("flags"));
+        }
     }
 
     fn add_string_location(

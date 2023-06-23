@@ -991,7 +991,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let ret = call!(
             "seal_call",
             &[
-                i32_zero!().into(), // TODO implement flags (mostly used for proxy calls)
+                contract_args.flags.unwrap_or(i32_zero!()).into(),
                 address.unwrap().into(),
                 contract_args.gas.unwrap().into(),
                 value_ptr.into(),

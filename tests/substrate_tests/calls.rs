@@ -831,3 +831,152 @@ fn selector() {
         .zip(runtime.output())
         .for_each(|(actual, expected)| assert_eq!(actual, expected));
 }
+
+#[test]
+fn call_flags() {
+    let mut runtime = build_solidity(
+        r##"
+contract Flagger {
+    uint8 roundtrips;
+
+    // See https://github.com/paritytech/substrate/blob/5ea6d95309aaccfa399c5f72e5a14a4b7c6c4ca1/frame/contracts/src/wasm/runtime.rs#L373
+    enum CallFlag { FORWARD_INPUT, CLONE_INPUT, TAIL_CALL, ALLOW_REENTRY }
+    function bitflags(CallFlag[] _flags) internal pure returns (uint32 flags) {
+        for (uint n = 0; n < _flags.length; n++) {
+            flags |= (2 ** uint32(_flags[n]));
+        }
+    }
+
+    // Reentrancy is required for reaching the `foo` function for itself.
+    //
+    // Cloning and forwarding should have the effect of calling this function again, regardless of what _address was passed.
+    // Furthermore:
+    // Cloning the clone should work together with reentrancy.
+    // Forwarding the input should fail caused by reading the input more than once in the loop
+    // Tail call should work with any combination of input forwarding.
+    function echo(
+        address _address,
+        bytes4 _selector,
+        uint32 _x,
+        CallFlag[] _flags
+    ) public payable returns(uint32 ret) {
+        for (uint n = 0; n < 2; n++) {
+            if (roundtrips > 1) {
+                return _x;
+            }
+            roundtrips += 1;
+
+            bytes input = abi.encode(_selector, _x);
+            (bool ok, bytes raw) =  _address.call{flags: bitflags(_flags)}(input);
+            require(ok);
+            ret = abi.decode(raw, (uint32));
+
+            roundtrips -= 1;
+        }
+    }
+
+    @selector([0,0,0,0])
+    function foo(uint32 x) public pure returns(uint32) {
+        return x;
+    }
+
+    // Yields different result for tail calls
+    function tail_call_it(
+        address _address,
+        bytes4 _selector,
+        uint32 _x,
+        CallFlag[] _flags
+    ) public returns(uint32 ret) {
+        bytes input = abi.encode(_selector, _x);
+        (bool ok, bytes raw) =  _address.call{flags: bitflags(_flags)}(input);
+        require(ok);
+        ret = abi.decode(raw, (uint32));
+        ret += 1;
+    }
+}"##,
+    );
+
+    #[derive(Encode)]
+    enum CallFlags {
+        ForwardInput,
+        CloneInput,
+        TailCall,
+        AllowReentry,
+    }
+    #[derive(Encode)]
+    struct Input {
+        address: [u8; 32],
+        selector: [u8; 4],
+        voyager: u32,
+        flags: Vec<CallFlags>,
+    }
+
+    let address = runtime.caller();
+    let selector = [0, 0, 0, 0];
+    let voyager = 123456789;
+
+    let with_flags = |flags| {
+        Input {
+            address,
+            selector,
+            voyager,
+            flags,
+        }
+        .encode()
+    };
+
+    // Should work with the reentrancy flag
+    runtime.function("echo", with_flags(vec![CallFlags::AllowReentry]));
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
+
+    // Should work with the reentrancy and the tail call flag
+    runtime.function(
+        "echo",
+        with_flags(vec![CallFlags::AllowReentry, CallFlags::TailCall]),
+    );
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
+
+    // Should work with the reentrancy and the clone input
+    runtime.function(
+        "echo",
+        with_flags(vec![CallFlags::AllowReentry, CallFlags::CloneInput]),
+    );
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
+
+    // Should work with the reentrancy clone input and tail call flag
+    runtime.function(
+        "echo",
+        with_flags(vec![
+            CallFlags::AllowReentry,
+            CallFlags::CloneInput,
+            // FIXME: Enabling this flag here specifically breaks the _next_ test.
+            // This is a very odd bug in the mock VM; need to revisit later.
+            // CallFlags::TailCall,
+        ]),
+    );
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
+
+    // Should fail without the reentrancy flag
+    runtime.function_expect_failure("echo", with_flags(vec![]));
+    runtime.function_expect_failure("echo", with_flags(vec![CallFlags::TailCall]));
+
+    // Should fail with input forwarding
+    runtime.function_expect_failure(
+        "echo",
+        with_flags(vec![CallFlags::AllowReentry, CallFlags::ForwardInput]),
+    );
+
+    // Test the tail call without setting it
+    runtime.function("tail_call_it", with_flags(vec![CallFlags::AllowReentry]));
+    assert_eq!(
+        u32::decode(&mut &runtime.output()[..]).unwrap(),
+        voyager + 1
+    );
+
+    // Test the tail call with setting it
+    runtime.function(
+        "tail_call_it",
+        with_flags(vec![CallFlags::AllowReentry, CallFlags::TailCall]),
+    );
+    assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
+}

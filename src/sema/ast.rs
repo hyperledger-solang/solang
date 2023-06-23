@@ -1187,6 +1187,7 @@ pub struct CallArgs {
     pub address: Option<Box<Expression>>,
     pub accounts: Option<Box<Expression>>,
     pub seeds: Option<Box<Expression>>,
+    pub flags: Option<Box<Expression>>,
 }
 
 impl Recurse for CallArgs {
@@ -1203,6 +1204,9 @@ impl Recurse for CallArgs {
         }
         if let Some(accounts) = &self.accounts {
             accounts.recurse(cx, f);
+        }
+        if let Some(flags) = &self.flags {
+            flags.recurse(cx, f);
         }
     }
 }

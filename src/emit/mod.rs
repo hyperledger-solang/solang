@@ -42,6 +42,7 @@ pub struct ContractArgs<'b> {
     salt: Option<IntValue<'b>>,
     seeds: Option<(PointerValue<'b>, IntValue<'b>)>,
     accounts: Option<(PointerValue<'b>, IntValue<'b>)>,
+    flags: Option<IntValue<'b>>,
 }
 
 #[derive(Clone, Copy)]

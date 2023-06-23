@@ -273,7 +273,7 @@ fn this_address() {
             int32 s;
 
             function step1() public returns (int32) {
-                this.other(102);
+                this.other{flags: 8}(102);
                 return s;
             }
 
