@@ -1098,6 +1098,36 @@ pub fn expression(
                 var_no: var,
             }
         }
+        ast::Expression::NamedSubscript {
+            loc, array, name, ..
+        } => {
+            // This expression should only exist for Solana's AccountInfo array
+            assert_eq!(
+                array.ty().deref_memory(),
+                &Type::Array(
+                    Box::new(Type::Struct(StructType::AccountInfo)),
+                    vec![ArrayLength::Dynamic]
+                )
+            );
+            // Variables do not really occupy space in the stack. We forward expressions in emit
+            // without allocating memory whenever we use a variable.
+            let ty = Type::Ref(Box::new(Type::Struct(StructType::AccountInfo)));
+            let var_placeholder = vartab.temp_anonymous(&ty);
+            cfg.add(
+                vartab,
+                Instr::AccountAccess {
+                    loc: *loc,
+                    name: name.clone(),
+                    var_no: var_placeholder,
+                },
+            );
+
+            Expression::Variable {
+                loc: *loc,
+                var_no: var_placeholder,
+                ty,
+            }
+        }
     }
 }
 

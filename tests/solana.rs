@@ -1476,10 +1476,11 @@ impl VirtualMachine {
     }
 
     fn constructor(&mut self, args: &[BorshToken]) {
-        self.constructor_expected(0, args)
+        let default_metas = self.default_metas();
+        self.constructor_expected(0, &default_metas, args)
     }
 
-    fn constructor_expected(&mut self, expected: u64, args: &[BorshToken]) {
+    fn constructor_expected(&mut self, expected: u64, metas: &[AccountMeta], args: &[BorshToken]) {
         self.return_data = None;
 
         let program = &self.stack[0];
@@ -1498,9 +1499,7 @@ impl VirtualMachine {
             calldata.append(&mut encoded_data);
         };
 
-        let default_metas = self.default_metas();
-
-        let res = self.execute(&default_metas, &calldata);
+        let res = self.execute(metas, &calldata);
 
         if let ProgramResult::Ok(res) = res {
             assert_eq!(res, expected);

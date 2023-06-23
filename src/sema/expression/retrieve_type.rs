@@ -50,15 +50,19 @@ impl RetrieveType for Expression {
             | Expression::PreDecrement { ty, .. }
             | Expression::PostIncrement { ty, .. }
             | Expression::PostDecrement { ty, .. }
-            | Expression::Assign { ty, .. } => ty.clone(),
-            Expression::Subscript { ty, .. } => ty.clone(),
-            Expression::ZeroExt { to, .. }
-            | Expression::SignExt { to, .. }
-            | Expression::Trunc { to, .. }
-            | Expression::CheckingTrunc { to, .. }
-            | Expression::Cast { to, .. }
-            | Expression::BytesCast { to, .. } => to.clone(),
-            Expression::StorageArrayLength { ty, .. } => ty.clone(),
+            | Expression::Assign { ty, .. }
+            | Expression::Subscript { ty, .. }
+            | Expression::ZeroExt { to: ty, .. }
+            | Expression::SignExt { to: ty, .. }
+            | Expression::Trunc { to: ty, .. }
+            | Expression::CheckingTrunc { to: ty, .. }
+            | Expression::Cast { to: ty, .. }
+            | Expression::BytesCast { to: ty, .. }
+            | Expression::UserDefinedOperator { ty, .. }
+            | Expression::InternalFunction { ty, .. }
+            | Expression::ExternalFunction { ty, .. }
+            | Expression::NamedSubscript { ty, .. }
+            | Expression::StorageArrayLength { ty, .. } => ty.clone(),
             Expression::ExternalFunctionCallRaw { .. } => {
                 panic!("two return values");
             }
@@ -76,9 +80,6 @@ impl RetrieveType for Expression {
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
             Expression::InterfaceId { .. } => Type::FunctionSelector,
             Expression::FormatString { .. } => Type::String,
-            Expression::UserDefinedOperator { ty, .. }
-            | Expression::InternalFunction { ty, .. }
-            | Expression::ExternalFunction { ty, .. } => ty.clone(),
         }
     }
 }
