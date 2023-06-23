@@ -4,5 +4,6 @@
 src/emit/substrate/ @xermicus
 src/emit/solana/ @LucasSte @seanyoung
 integration/substrate/ @xermicus
+integration/subxt-tests/ @xermicus
 integration/solana/ @LucasSte @seanyoung
 integration/anchor/ @LucasSte @seanyoung
