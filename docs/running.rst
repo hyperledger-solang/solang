@@ -131,6 +131,26 @@ Options:
 \-\-release
    Disable all debugging features for :ref:`release`
 
+\-\-config-file
+  Read compiler configurations from a ``.toml`` file. The minimal fields required in the configuration file are:
+   
+  .. code-block:: toml
+
+    [package]
+    input_files = ["flipper.sol"]  # Solidity files to compile
+
+    [target]
+    name = "solana"  # Target name
+
+
+  Fields not explicitly present in the .toml acquire the compiler's default value.
+  If any other argument is provided in the command line, for example, ``solang compile --config-file --target substrate``, the argument will be overridden.
+  The priority for the args is given as follows:
+  1. Command line
+  2. Configuration file
+  3. Default values.
+  The default name for the toml file is "solang.toml". If two configuration files exist in the same directory, priority will be given to the one passed explicitly to this argument.
+  
 \-\-wasm-opt
    wasm-opt passes for Wasm targets (0, 1, 2, 3, 4, s or z; see the wasm-opt help for more details).
 
@@ -140,6 +160,21 @@ Options:
     compiled contract file for this contract name. As a result, you will only have a single
     contract with the duplicate name without knowing from which Solidity file it originated.
     Solang will not give a warning about this problem.
+
+
+
+Starting a new project
+______________________________
+
+
+  solang new \-\-target solana my_project
+
+A solang project is a directory in which there are one or more solidity files and a ``solang.toml`` file where 
+the compilation options are defined. Given these two components, a user can run ``solang compile`` in a similar fashion as ``cargo build``.
+
+The ``solang new`` command creates a new solang project with an example `flipper <https://github.com/hyperledger/solang/blob/main/examples/solana/flipper.sol>`_ contract,
+and a default ``solang.toml`` configuration file.
+
 
 
 Generating Documentation Usage

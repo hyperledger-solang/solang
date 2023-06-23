@@ -1,9 +1,7 @@
-@program_id("F1ipperKF9EfD821ZbbYjS319LXYiBmjhzkkf5a26rC")
 contract flipper {
 	bool private value;
 
 	/// Constructor that initializes the `bool` value to the given `init_value`.
-	@payer(payer)
 	constructor(bool initvalue) {
 		value = initvalue;
 	}
