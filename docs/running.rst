@@ -149,7 +149,7 @@ Options:
   1. Command line
   2. Configuration file
   3. Default values.
-  The default name for the toml file is "solang.toml". If two configuration files exist in the same directory, priority will be givin to the one passed explicitly to this argument.
+  The default name for the toml file is "solang.toml". If two configuration files exist in the same directory, priority will be given to the one passed explicitly to this argument.
   
 \-\-wasm-opt
    wasm-opt passes for Wasm targets (0, 1, 2, 3, 4, s or z; see the wasm-opt help for more details).
@@ -169,7 +169,7 @@ ______________________________
 
   solang new \-\-target solana my_project
 
-A solang project is a directory in which there is one or more solidity files, next to a ``solang.toml`` file where 
+A solang project is a directory in which there are one or more solidity files and a ``solang.toml`` file where 
 the compilation options are defined. Given these two components, a user can run ``solang compile`` in a similar fashion as ``cargo build``.
 
 The ``solang new`` command creates a new solang project with an example `flipper <https://github.com/hyperledger/solang/blob/main/examples/solana/flipper.sol>`_ contract,
