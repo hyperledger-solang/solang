@@ -11,55 +11,38 @@ import { ApiPromise } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
 
 
-describe('Deploy the delegator and the delegatee contracts; test the delegatecall to work correct', () => {
+describe('Deploy the upgradable proxy and implementations; expect the proxy call and upgrade mechanism to work', () => {
     let conn: ApiPromise;
-    let delegatee: ContractPromise;
-    let delegator: ContractPromise;
+    let proxy: ContractPromise;
+    let implV1: ContractPromise;
+    let implV2: ContractPromise;
     let alice: KeyringPair;
-    let dave: KeyringPair;
 
     before(async function () {
         alice = aliceKeypair();
-        dave = daveKeypair();
         conn = await createConnection();
 
-        const delegator_contract = await deploy(conn, alice, 'Delegator.contract', 0n);
-        delegator = new ContractPromise(conn, delegator_contract.abi, delegator_contract.address);
+        const implV1_deployment = await deploy(conn, alice, 'UpgradeableImplV1.contract', 0n);
+        implV1 = new ContractPromise(conn, implV1_deployment.abi, implV1_deployment.address);
 
-        const delegatee_contract = await deploy(conn, alice, 'Delegatee.contract', 0n);
-        delegatee = new ContractPromise(conn, delegatee_contract.abi, delegatee_contract.address);
+        const implV2_deployment = await deploy(conn, alice, 'UpgradeableImplV2.contract', 0n);
+        implV2 = new ContractPromise(conn, implV2_deployment.abi, implV2_deployment.address);
 
-        // Set delegatee storage to default values and alice address
-        const gasLimit = await weight(conn, delegatee, 'setVars', [0n]);
-        await transaction(delegatee.tx.setVars({ gasLimit }, [0n]), alice);
+        //const constructor = implV1.abi.constructors[0].selector.toJSON();
+        const proxy_deployment = await deploy(conn, alice, 'UpgradeableProxy.contract', 0n, implV1.address);
+        console.log(proxy_deployment);
+        proxy = new ContractPromise(conn, implV1_deployment.abi, proxy_deployment.address);
     });
 
     after(async function () {
         await conn.disconnect();
     });
 
-    it('Executes the delegatee in the contex of the delegator', async function () {
-        const value = 1000000n;
-        const arg = 123456789n;
-        const parameters = [delegatee.address, arg];
-
-        const gasLimit = await weight(conn, delegator, 'setVars', parameters);
-        await transaction(delegator.tx.setVars({ gasLimit, value }, ...parameters), dave);
-
-        // Storage of the delegatee must not change
-        let num = await query(conn, alice, delegatee, "num");
-        expect(BigInt(num.output?.toString() ?? "")).toStrictEqual(0n);
-        let balance = await query(conn, alice, delegatee, "value");
-        expect(BigInt(balance.output?.toString() ?? "")).toStrictEqual(0n);
-        let sender = await query(conn, alice, delegatee, "sender");
-        expect(sender.output?.toJSON()).toStrictEqual(alice.address);
-
-        // Storage of the delegator must have changed
-        num = await query(conn, alice, delegator, "num");
-        expect(BigInt(num.output?.toString() ?? "")).toStrictEqual(arg);
-        balance = await query(conn, alice, delegator, "value");
-        expect(BigInt(balance.output?.toString() ?? "")).toStrictEqual(value);
-        sender = await query(conn, alice, delegator, "sender");
-        expect(sender.output?.toJSON()).toStrictEqual(dave.address);
+    it('Works', async function () {
+        const gasLimit = await weight(conn, proxy, 'inc', []);
+        await transaction(proxy.tx.inc({ gasLimit }), alice);
+        await transaction(proxy.tx.inc({ gasLimit }), alice);
+        let count = await query(conn, alice, proxy, "count");
+        expect(BigInt(count.output?.toString() ?? "")).toStrictEqual(2n);
     });
 });
