@@ -1299,6 +1299,13 @@ fn try_type_method(
                     return Err(());
                 }
 
+                if ty == CallTy::Delegate && ns.target.is_substrate() && call_args.gas.is_some() {
+                    diagnostics.push(Diagnostic::warning(
+                        *loc,
+                        format!("'gas' specified on 'delegatecall' will be ignored"),
+                    ));
+                }
+
                 if args.len() != 1 {
                     diagnostics.push(Diagnostic::error(
                         *loc,

@@ -37,9 +37,9 @@ When writing libraries there are restrictions compared to contracts:
 .. note::
 
     When using the Ethereum Foundation Solidity compiler, library are a special contract type and libraries are
-    called using `delegatecall`. Parity Substrate has no ``delegatecall`` functionality so Solang statically
-    links the library calls into your contract code. This does make for larger contract code, however this
-    reduces the call overhead and make it possible to do compiler optimizations across library and contract code.
+    called using `delegatecall`. Solang statically links the library calls into your contract code.
+    This does make for larger contract code, however this reduces the call overhead and make it possible to do
+    compiler optimizations across library and contract code.
 
 Library Using For
 _________________

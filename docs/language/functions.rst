@@ -308,6 +308,39 @@ calling.
 
 .. _fallback_receive:
 
+Calling an external function using ``delegatecall``
+___________________________________________________
+
+External functions can also be called using ``delegatecall``.
+The difference to a regular ``call`` is that  ``delegatecall`` executes the callee code in the context of the caller,
+which has the following implications:
+
+* The callee will read from and write to the `caller` storage
+* ``value`` can't be specified for ``delegatecall`` (``msg.value`` stays the same in the callee)
+* ``msg.sender`` stays the same in the callee
+
+``delegatecall`` is commonly used to implement re-usable libraries and 
+`upgradeable contracts <https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable>`_.
+
+.. code-block:: solidity
+
+    function delegate(
+    	address callee,
+    	bytes input
+    ) public returns(bytes result) {
+        (bool ok, result) = callee.delegatecall(input);
+        require(ok);
+    }
+
+Refer to the `Ethereum Solidity documentation <https://docs.soliditylang.org/en/latest/introduction-to-smart-contracts.html#delegatecall-and-libraries>`_
+for more information.
+
+..  note::
+    ``delegatecall`` is not available on Solana.
+
+..  note::
+    On Substrate, specifying ``gas`` won't have any effect on ``delegatecall``.
+
 fallback() and receive() function
 _________________________________
 
