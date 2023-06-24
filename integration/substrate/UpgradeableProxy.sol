@@ -74,27 +74,18 @@ abstract contract StorageSlot {
     mapping(bytes32 => address) getAddressSlot;
 }
 
-// Bare minimum proxy wit
+// Minimal proxy implementation; without security
 contract UpgradeableProxy is Proxy, StorageSlot {
     event Upgraded(address indexed implementation);
 
     bytes32 internal constant IMPLEMENTATION_SLOT =
         0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
-    constructor(address _logic) payable {
-        upgradeTo(_logic);
-    }
-    // FIXME: Should be upgradeToAndCall
-    // However for this integration test we don't need to do anything inside the constructor
-    //constructor(address _logic, bytes memory _data) payable {
-    //    upgradeToAndCall(_logic, _data);
-    //}
-
     function _setImplementation(address newImplementation) private {
         // FIXME once issue #809 (supporting address.code) is solved
-        //if (newImplementation.code.length == 0) {
-        //    revert ERC1967InvalidImplementation(newImplementation);
-        //}
+        // if (newImplementation.code.length == 0) {
+        //     revert ERC1967InvalidImplementation(newImplementation);
+        // }
         // FIXME see #1387 and #1388
         getAddressSlot[IMPLEMENTATION_SLOT] = newImplementation;
     }
@@ -107,9 +98,10 @@ contract UpgradeableProxy is Proxy, StorageSlot {
     function upgradeToAndCall(
         address newImplementation,
         bytes memory data
-    ) public {
+    ) public returns (bytes ret) {
         upgradeTo(newImplementation);
-        newImplementation.delegatecall(data);
+        (bool ok, ret) = newImplementation.delegatecall(data);
+        require(ok);
     }
 
     function _implementation()
@@ -121,16 +113,15 @@ contract UpgradeableProxy is Proxy, StorageSlot {
     {
         return getAddressSlot[IMPLEMENTATION_SLOT];
     }
-
-    function proxy(bytes input) public returns (bytes result) {
-        (bool ok, result) = address(this).delegatecall(input);
-        require(ok);
-    }
 }
 
 // Proxy implementation v1
 contract UpgradeableImplV1 {
     uint public count;
+
+    constructor() {
+        count = 1;
+    }
 
     function inc() external {
         count += 1;
@@ -140,7 +131,11 @@ contract UpgradeableImplV1 {
 // Proxy implementation v2
 contract UpgradeableImplV2 {
     uint public count;
-    string foo;
+    string public version;
+
+    constructor() {
+        version = "v2";
+    }
 
     function inc() external {
         count += 1;
@@ -148,13 +143,5 @@ contract UpgradeableImplV2 {
 
     function dec() external {
         count -= 1;
-    }
-
-    function set_foo(string _foo) public {
-        foo = _foo;
-    }
-
-    function get_foo() public view returns (string) {
-        return foo;
     }
 }
