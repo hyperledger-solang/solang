@@ -56,16 +56,16 @@ Now you can deploy the contract code using:
 solana program deploy flipper.so
 ```
 
-Now install `@project-serum/anchor`:
+Now install `@coral-xyz/anchor`:
 
 ```
-npm install @project-serum/anchor
+npm install @coral-xyz/anchor
 ```
 
 Save the following to `flipper.js`:
 ```javascript
 const { readFileSync } = require('fs');
-const anchor = require('@project-serum/anchor');
+const anchor = require('@coral-xyz/anchor');
 
 const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
 const PROGRAM_SO = readFileSync('./flipper.so');

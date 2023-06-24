@@ -108,14 +108,14 @@ After deploying the program, you can start on the client side, which needs the a
 
 .. code-block:: bash
 
-    npm install @project-serum/anchor
+    npm install @coral-xyz/anchor
 
 Write the following javascript to a file called ``flipper.js``.
 
 .. code-block:: javascript
 
     const { readFileSync } = require('fs');
-    const anchor = require('@project-serum/anchor');
+    const anchor = require('@coral-xyz/anchor');
 
     const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
     const PROGRAM_SO = readFileSync('./flipper.so');

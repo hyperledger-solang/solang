@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { BN } from '@project-serum/anchor';
+import { BN } from '@coral-xyz/anchor';
 import expect from 'expect';
 import { loadContract } from './setup';
 

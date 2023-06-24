@@ -19,7 +19,7 @@ jobs:
   lints:
     name: Lints
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-3
+    container: ghcr.io/hyperledger/solang-llvm:ci-4
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -71,7 +71,7 @@ jobs:
   linux-x86-64:
     name: Linux x86-64
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-3
+    container: ghcr.io/hyperledger/solang-llvm:ci-4
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -86,14 +86,14 @@ jobs:
     - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-linux-x86-64
-        path: ./target/debug/solang 
+        path: ./target/debug/solang
 
 
   linux-arm:
     name: Linux Arm
     runs-on: linux-arm64
     if: ${{ github.repository_owner == 'hyperledger' }}
-    container: ghcr.io/hyperledger/solang-llvm:ci-3
+    container: ghcr.io/hyperledger/solang-llvm:ci-4
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -231,7 +231,7 @@ jobs:
   anchor:
     name: Anchor Integration test
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-3
+    container: ghcr.io/hyperledger/solang-llvm:ci-4
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -278,7 +278,7 @@ jobs:
   solana:
     name: Solana Integration test
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-3
+    container: ghcr.io/hyperledger/solang-llvm:ci-4
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -372,7 +372,7 @@ jobs:
       with:
         toolchain: stable
         default: true
-        override: true   
+        override: true
     - run: 'parallel solang compile -v --target substrate --release -o ./contracts/ ::: ../substrate/*.sol ../substrate/test/*.sol'
       working-directory: ./integration/subxt-tests
     - name: Deploy and test contracts

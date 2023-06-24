@@ -1,7 +1,7 @@
 import expect from 'expect';
 import { loadContract } from './setup';
 import crypto from 'crypto';
-import { BN } from '@project-serum/anchor';
+import { BN } from '@coral-xyz/anchor';
 
 describe('Simple solang tests', function () {
     this.timeout(500000);
