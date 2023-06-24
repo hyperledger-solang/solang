@@ -32,10 +32,10 @@ describe('Deploy the upgradable proxy and implementations; expect the upgrade me
         proxy = new ContractPromise(conn, proxy_deployment.abi, proxy_deployment.address);
 
         // Pretend the proxy contract to be implementation V1
-        const implV1_deployment = await deploy(conn, alice, 'UpgradeableImplV1.contract', 0n);
-        await upgrade_and_constructor(implV1_deployment.address, implV1_deployment.abi.constructors[0].selector);
-        counter = new ContractPromise(conn, implV1_deployment.abi, proxy_deployment.address);
-        let count = await query(conn, alice, counter, "count");
+        const implV1 = await deploy(conn, alice, 'UpgradeableImplV1.contract', 0n);
+        await upgrade_and_constructor(implV1.address, implV1.abi.constructors[0].selector);
+        counter = new ContractPromise(conn, implV1.abi, proxy_deployment.address);
+        const count = await query(conn, alice, counter, "count");
         expect(BigInt(count.output?.toString() ?? "")).toStrictEqual(1n);
     });
 
