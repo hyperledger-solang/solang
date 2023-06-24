@@ -666,12 +666,12 @@ fn var_or_function() {
         r##"
         contract x is c {
             function f1() public returns (int64) {
-                return c.selector();
+                return selector;
             }
 
             function f2() public returns (int64)  {
-                function() internal returns (int64) a = c.selector;
-                return a();
+                function() external returns (int64) a = this.selector;
+                return a{flags: 8}();
             }
         }
 
