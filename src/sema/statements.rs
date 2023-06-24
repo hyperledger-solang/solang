@@ -2272,7 +2272,7 @@ fn try_catch(
                 func_returns = vec![];
             }
 
-            if returns.len() != func_returns.len() {
+            if !returns.is_empty() && returns.len() != func_returns.len() {
                 diagnostics.push(Diagnostic::error(
                     expr.loc(),
                     format!(

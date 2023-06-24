@@ -373,7 +373,7 @@ jobs:
         toolchain: stable
         default: true
         override: true   
-    - run: solang compile --target substrate ../substrate/*.sol ../substrate/test/*.sol -o ./contracts/
+    - run: 'parallel solang compile -v --target substrate --release -o ./contracts/ ::: ../substrate/*.sol ../substrate/test/*.sol'
       working-directory: ./integration/subxt-tests
     - name: Deploy and test contracts
       run: cargo test -- --test-threads=1

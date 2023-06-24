@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use clap::{builder::ValueParser, value_parser, ArgAction, Args, Parser, Subcommand};
+use clap::{
+    builder::ValueParser, parser::ValueSource, value_parser, ArgAction, ArgMatches, Args, Id,
+    Parser, Subcommand,
+};
 use clap_complete::Shell;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
 
+use serde::Deserialize;
 use std::{ffi::OsString, path::PathBuf, process::exit};
 
 use solang::{
@@ -37,6 +41,18 @@ pub enum Commands {
 
     #[command(about = "Generate Solidity interface files from Anchor IDL files")]
     Idl(IdlCommand),
+
+    #[command(about = "Create a new Solang project")]
+    New(New),
+}
+
+#[derive(Args)]
+pub struct New {
+    #[arg(name = "TARGETNAME",required= true, long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
+    pub target_name: String,
+
+    #[arg(name = "INPUT", help = "Name of the project", num_args = 1, value_parser =  ValueParser::os_string())]
+    pub project_name: Option<OsString>,
 }
 
 #[derive(Args)]
@@ -69,7 +85,7 @@ pub struct ShellComplete {
 #[derive(Args)]
 pub struct Doc {
     #[clap(flatten)]
-    pub package: Package,
+    pub package: DocPackage,
 
     #[clap(flatten)]
     pub target: TargetArg,
@@ -81,39 +97,158 @@ pub struct Doc {
     pub output_directory: Option<OsString>,
 }
 
-#[derive(Args)]
+#[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct Compile {
-    #[clap(flatten)]
-    pub package: Package,
+    #[arg(name = "CONFFILE", help = "Take arguments from configuration file", long = "config-file", value_parser = ValueParser::os_string(), num_args = 0..=1, default_value = "solang.toml")]
+    #[serde(skip)]
+    pub configuration_file: Option<OsString>,
 
     #[clap(flatten)]
+    pub package: CompilePackage,
+
+    #[clap(flatten)]
+    #[serde(default = "CompilerOutput::default")]
     pub compiler_output: CompilerOutput,
 
     #[clap(flatten)]
-    pub target_arg: TargetArg,
+    #[serde(rename(deserialize = "target"))]
+    pub target_arg: CompileTargetArg,
 
     #[clap(flatten)]
+    #[serde(default = "DebugFeatures::default")]
     pub debug_features: DebugFeatures,
 
     #[clap(flatten)]
+    #[serde(default = "Optimizations::default")]
     pub optimizations: Optimizations,
 }
 
-#[derive(Args)]
+impl Compile {
+    /// loop over args explicitly provided at runtime and update Compile accordingly.
+    pub fn overwrite_with_matches(&mut self, matches: &ArgMatches) -> &mut Compile {
+        for id in explicit_args(matches) {
+            match id.as_str() {
+                // Package args
+                "INPUT" => {
+                    self.package.input = matches
+                        .get_many::<PathBuf>("INPUT")
+                        .map(|input_paths| input_paths.map(PathBuf::from).collect())
+                }
+                "CONTRACT" => {
+                    self.package.contracts = matches
+                        .get_many::<String>("CONTRACT")
+                        .map(|contract_names| contract_names.map(String::from).collect())
+                }
+                "IMPORTPATH" => {
+                    self.package.import_path = matches
+                        .get_many::<PathBuf>("IMPORTPATH")
+                        .map(|paths| paths.map(PathBuf::from).collect())
+                }
+                "IMPORTMAP" => {
+                    self.package.import_map = matches
+                        .get_many::<(String, PathBuf)>("IMPORTMAP")
+                        .map(|import_map| import_map.cloned().collect())
+                }
+
+                // CompilerOutput args
+                "EMIT" => self.compiler_output.emit = matches.get_one::<String>("EMIT").cloned(),
+                "OUTPUT" => {
+                    self.compiler_output.output_directory =
+                        matches.get_one::<String>("OUTPUT").cloned()
+                }
+                "OUTPUTMETA" => {
+                    self.compiler_output.output_meta =
+                        matches.get_one::<String>("OUTPUTMETA").cloned()
+                }
+                "STD-JSON" => {
+                    self.compiler_output.std_json_output =
+                        *matches.get_one::<bool>("STD-JSON").unwrap()
+                }
+                "VERBOSE" => {
+                    self.compiler_output.verbose = *matches.get_one::<bool>("VERBOSE").unwrap()
+                }
+
+                // DebugFeatures args
+                "NOLOGAPIRETURNS" => {
+                    self.debug_features.log_api_return_codes =
+                        *matches.get_one::<bool>("NOLOGAPIRETURNS").unwrap()
+                }
+                "NOLOGRUNTIMEERRORS" => {
+                    self.debug_features.log_runtime_errors =
+                        *matches.get_one::<bool>("NOLOGRUNTIMEERRORS").unwrap()
+                }
+                "NOPRINTS" => {
+                    self.debug_features.log_prints = *matches.get_one::<bool>("NOPRINTS").unwrap()
+                }
+                "GENERATEDEBUGINFORMATION" => {
+                    self.debug_features.generate_debug_info =
+                        *matches.get_one::<bool>("GENERATEDEBUGINFORMATION").unwrap()
+                }
+                "RELEASE" => {
+                    self.debug_features.release = *matches.get_one::<bool>("RELEASE").unwrap()
+                }
+
+                // Optimizations args
+                "DEADSTORAGE" => {
+                    self.optimizations.dead_storage =
+                        *matches.get_one::<bool>("DEADSTORAGE").unwrap()
+                }
+                "CONSTANTFOLDING" => {
+                    self.optimizations.constant_folding =
+                        *matches.get_one::<bool>("CONSTANTFOLDING").unwrap()
+                }
+                "STRENGTHREDUCE" => {
+                    self.optimizations.strength_reduce =
+                        *matches.get_one::<bool>("STRENGTHREDUCE").unwrap()
+                }
+                "VECTORTOSLICE" => {
+                    self.optimizations.vector_to_slice =
+                        *matches.get_one::<bool>("VECTORTOSLICE").unwrap()
+                }
+                "COMMONSUBEXPRESSIONELIMINATION" => {
+                    self.optimizations.common_subexpression_elimination = *matches
+                        .get_one::<bool>("COMMONSUBEXPRESSIONELIMINATION")
+                        .unwrap()
+                }
+                "OPT" => self.optimizations.opt_level = matches.get_one::<String>("OPT").cloned(),
+
+                "TARGET" => self.target_arg.name = matches.get_one::<String>("TARGET").cloned(),
+                "ADDRESS_LENGTH" => {
+                    self.target_arg.address_length =
+                        matches.get_one::<u64>("ADDRESS_LENGTH").cloned()
+                }
+                "VALUE_LENGTH" => {
+                    self.target_arg.value_length = matches.get_one::<u64>("VALUE_LENGTH").cloned()
+                }
+
+                _ => {}
+            }
+        }
+
+        self
+    }
+}
+
+#[derive(Args, Deserialize, Default, Debug, PartialEq)]
 pub struct CompilerOutput {
     #[arg(name = "EMIT", help = "Emit compiler state at early stage", long = "emit", num_args = 1, value_parser = ["ast-dot", "cfg", "llvm-ir", "llvm-bc", "object", "asm"])]
+    #[serde(deserialize_with = "deserialize_emit", default)]
     pub emit: Option<String>,
 
     #[arg(name = "STD-JSON",help = "mimic solidity json output on stdout", conflicts_with_all = ["VERBOSE", "OUTPUT", "EMIT"] , action = ArgAction::SetTrue, long = "standard-json")]
+    #[serde(default)]
     pub std_json_output: bool,
 
-    #[arg(name = "OUTPUT",help = "output directory", short = 'o', long = "output", num_args = 1, value_parser = ValueParser::string())]
+    #[arg(name = "OUTPUT",help = "output directory", short = 'o', long = "output", num_args = 1, value_parser =ValueParser::string())]
+    #[serde(default)]
     pub output_directory: Option<String>,
 
     #[arg(name = "OUTPUTMETA",help = "output directory for metadata", long = "output-meta", num_args = 1, value_parser = ValueParser::string())]
+    #[serde(default)]
     pub output_meta: Option<String>,
 
     #[arg(name = "VERBOSE" ,help = "show debug messages", short = 'v', action = ArgAction::SetTrue, long = "verbose")]
+    #[serde(default)]
     pub verbose: bool,
 }
 
@@ -129,10 +264,22 @@ pub struct TargetArg {
     pub value_length: Option<u64>,
 }
 
+#[derive(Args, Deserialize, Debug, PartialEq)]
+pub struct CompileTargetArg {
+    #[arg(name = "TARGET", long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
+    pub name: Option<String>,
+
+    #[arg(name = "ADDRESS_LENGTH", help = "Address length on Substrate", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    pub address_length: Option<u64>,
+
+    #[arg(name = "VALUE_LENGTH", help = "Value length on Substrate", long = "value-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    pub value_length: Option<u64>,
+}
+
 #[derive(Args)]
-pub struct Package {
-    #[arg(name = "INPUT", help = "Solidity input files", required= true, value_parser = ValueParser::os_string(), num_args = 1..)]
-    pub input: Vec<OsString>,
+pub struct DocPackage {
+    #[arg(name = "INPUT", help = "Solidity input files",value_parser = ValueParser::path_buf(), num_args = 1.., required = true)]
+    pub input: Vec<PathBuf>,
 
     #[arg(name = "CONTRACT", help = "Contract names to compile (defaults to all)", value_delimiter = ',', action = ArgAction::Append, long = "contract")]
     pub contracts: Option<Vec<String>>,
@@ -144,43 +291,86 @@ pub struct Package {
     pub import_map: Option<Vec<(String, PathBuf)>>,
 }
 
-#[derive(Args)]
+#[derive(Args, Deserialize, Debug, PartialEq)]
+pub struct CompilePackage {
+    #[arg(name = "INPUT", help = "Solidity input files",value_parser = ValueParser::path_buf(), num_args = 1..,)]
+    #[serde(rename(deserialize = "input_files"))]
+    pub input: Option<Vec<PathBuf>>,
+
+    #[arg(name = "CONTRACT", help = "Contract names to compile (defaults to all)", value_delimiter = ',', action = ArgAction::Append, long = "contract")]
+    pub contracts: Option<Vec<String>>,
+
+    #[arg(name = "IMPORTPATH", help = "Directory to search for solidity files",value_parser = ValueParser::path_buf() , action = ArgAction::Append, long = "importpath", short = 'I', num_args = 1)]
+    pub import_path: Option<Vec<PathBuf>>,
+
+    #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map) , action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
+    #[serde(deserialize_with = "deserialize_inline_table", default)]
+    pub import_map: Option<Vec<(String, PathBuf)>>,
+}
+
+#[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct DebugFeatures {
     #[arg(name = "NOLOGAPIRETURNS", help = "Disable logging the return codes of runtime API calls in the environment", long = "no-log-api-return-codes", action = ArgAction::SetFalse)]
+    #[serde(default, rename(deserialize = "log-api-return-codes"))]
     pub log_api_return_codes: bool,
 
     #[arg(name = "NOLOGRUNTIMEERRORS", help = "Disable logging runtime errors in the environment", long = "no-log-runtime-errors", action = ArgAction::SetFalse)]
+    #[serde(default, rename(deserialize = "log-runtime-errors"))]
     pub log_runtime_errors: bool,
 
     #[arg(name = "NOPRINTS", help = "Disable logging prints in the environment", long = "no-prints", action = ArgAction::SetFalse)]
+    #[serde(default = "default_true", rename(deserialize = "prints"))]
     pub log_prints: bool,
 
     #[arg(name = "GENERATEDEBUGINFORMATION", help = "Enable generating debug information for LLVM IR", long = "generate-debug-info", action = ArgAction::SetTrue, short = 'g')]
+    #[serde(default, rename(deserialize = "generate-debug-info"))]
     pub generate_debug_info: bool,
 
     #[arg(name = "RELEASE", help = "Disable all debugging features such as prints, logging runtime errors, and logging api return codes", long = "release", action = ArgAction::SetTrue)]
+    #[serde(default)]
     pub release: bool,
 }
 
-#[derive(Args)]
+impl Default for DebugFeatures {
+    fn default() -> Self {
+        DebugFeatures {
+            log_api_return_codes: true,
+            log_runtime_errors: true,
+            log_prints: true,
+            generate_debug_info: false,
+            release: false,
+        }
+    }
+}
+
+#[derive(Args, Deserialize, Default, Debug, PartialEq)]
 pub struct Optimizations {
     #[arg(name = "DEADSTORAGE", help = "Disable dead storage codegen optimization", long = "no-dead-storage", action = ArgAction::SetFalse, display_order = 3)]
+    #[serde(default = "default_true", rename(deserialize = "dead-storage"))]
     pub dead_storage: bool,
 
     #[arg(name = "CONSTANTFOLDING", help = "Disable constant folding codegen optimization", long = "no-constant-folding", action = ArgAction::SetFalse, display_order = 1)]
+    #[serde(default = "default_true", rename(deserialize = "constant-folding"))]
     pub constant_folding: bool,
 
     #[arg(name = "STRENGTHREDUCE", help = "Disable strength reduce codegen optimization", long = "no-strength-reduce", action = ArgAction::SetFalse, display_order = 2)]
+    #[serde(default = "default_true", rename(deserialize = "strength-reduce"))]
     pub strength_reduce: bool,
 
     #[arg(name = "VECTORTOSLICE", help = "Disable vector to slice codegen optimization", long = "no-vector-to-slice", action = ArgAction::SetFalse, display_order = 4)]
+    #[serde(default = "default_true", rename(deserialize = "vector-to-slice"))]
     pub vector_to_slice: bool,
 
     #[arg(name = "COMMONSUBEXPRESSIONELIMINATION", help = "Disable common subexpression elimination", long = "no-cse", action = ArgAction::SetFalse, display_order = 5)]
+    #[serde(
+        default = "default_true",
+        rename(deserialize = "common-subexpression-elimination")
+    )]
     pub common_subexpression_elimination: bool,
 
     #[arg(name = "OPT", help = "Set llvm optimizer level ", short = 'O', default_value = "default", value_parser = ["none", "less", "default", "aggressive"], num_args = 1)]
-    pub opt_level: String,
+    #[serde(rename(deserialize = "llvm-IR-optimization-level"))]
+    pub opt_level: Option<String>,
 
     #[cfg(feature = "wasm_opt")]
     #[arg(
@@ -189,27 +379,69 @@ pub struct Optimizations {
         long = "wasm-opt",
         num_args = 1
     )]
+    #[serde(rename(deserialize = "wasm-opt"))]
     pub wasm_opt_passes: Option<OptimizationPasses>,
 }
 
-pub(crate) fn target_arg(target_arg: &TargetArg) -> Target {
-    if target_arg.name.as_str() == "solana" || target_arg.name.as_str() == "evm" {
-        if target_arg.address_length.is_some() {
+pub trait TargetArgTrait {
+    fn get_name(&self) -> &String;
+    fn get_address_length(&self) -> &Option<u64>;
+    fn get_value_length(&self) -> &Option<u64>;
+}
+
+impl TargetArgTrait for TargetArg {
+    fn get_name(&self) -> &String {
+        &self.name
+    }
+
+    fn get_address_length(&self) -> &Option<u64> {
+        &self.address_length
+    }
+
+    fn get_value_length(&self) -> &Option<u64> {
+        &self.value_length
+    }
+}
+
+impl TargetArgTrait for CompileTargetArg {
+    fn get_name(&self) -> &String {
+        if let Some(name) = &self.name {
+            name
+        } else {
+            eprintln!("error: no target name specified");
+            exit(1);
+        }
+    }
+
+    fn get_address_length(&self) -> &Option<u64> {
+        &self.address_length
+    }
+
+    fn get_value_length(&self) -> &Option<u64> {
+        &self.value_length
+    }
+}
+
+pub(crate) fn target_arg<T: TargetArgTrait>(target_arg: &T) -> Target {
+    let target_name = target_arg.get_name();
+
+    if target_name == "solana" || target_name == "evm" {
+        if target_arg.get_address_length().is_some() {
             eprintln!("error: address length cannot be modified except for substrate target");
             exit(1);
         }
 
-        if target_arg.value_length.is_some() {
+        if target_arg.get_value_length().is_some() {
             eprintln!("error: value length cannot be modified except for substrate target");
             exit(1);
         }
     }
 
-    let target = match target_arg.name.as_str() {
+    let target = match target_name.as_str() {
         "solana" => solang::Target::Solana,
         "substrate" => solang::Target::Substrate {
-            address_length: target_arg.address_length.unwrap_or(32) as usize,
-            value_length: target_arg.value_length.unwrap_or(16) as usize,
+            address_length: target_arg.get_address_length().unwrap_or(32) as usize,
+            value_length: target_arg.get_value_length().unwrap_or(16) as usize,
         },
         "evm" => solang::Target::EVM,
         _ => unreachable!(),
@@ -218,10 +450,54 @@ pub(crate) fn target_arg(target_arg: &TargetArg) -> Target {
     target
 }
 
-pub fn imports_arg(package: &Package) -> FileResolver {
+/// This trait is used to avoid code repetition when dealing with two implementations of the Package type:
+/// CompilePackage and DocPackage. Each struct represents a group of arguments for the compile and doc commands.
+/// Throughout the code, these two structs are treated the same, and this trait allows for unified handling.
+pub trait PackageTrait {
+    fn get_input(&self) -> &Vec<PathBuf>;
+    fn get_import_path(&self) -> &Option<Vec<PathBuf>>;
+    fn get_import_map(&self) -> &Option<Vec<(String, PathBuf)>>;
+}
+
+impl PackageTrait for CompilePackage {
+    fn get_input(&self) -> &Vec<PathBuf> {
+        if let Some(files) = &self.input {
+            files
+        } else {
+            eprintln!(
+                "No input files specified, please specifiy them in solang.toml or in command line"
+            );
+            exit(1);
+        }
+    }
+
+    fn get_import_path(&self) -> &Option<Vec<PathBuf>> {
+        &self.import_path
+    }
+
+    fn get_import_map(&self) -> &Option<Vec<(String, PathBuf)>> {
+        &self.import_map
+    }
+}
+
+impl PackageTrait for DocPackage {
+    fn get_input(&self) -> &Vec<PathBuf> {
+        &self.input
+    }
+
+    fn get_import_path(&self) -> &Option<Vec<PathBuf>> {
+        &self.import_path
+    }
+
+    fn get_import_map(&self) -> &Option<Vec<(String, PathBuf)>> {
+        &self.import_map
+    }
+}
+
+pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
     let mut resolver = FileResolver::new();
 
-    for filename in &package.input {
+    for filename in package.get_input() {
         if let Ok(path) = PathBuf::from(filename).canonicalize() {
             let _ = resolver.add_import_path(path.parent().unwrap());
         }
@@ -232,7 +508,7 @@ pub fn imports_arg(package: &Package) -> FileResolver {
         exit(1);
     }
 
-    if let Some(paths) = &package.import_path {
+    if let Some(paths) = package.get_import_path() {
         for path in paths {
             if let Err(e) = resolver.add_import_path(path) {
                 eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
@@ -241,7 +517,7 @@ pub fn imports_arg(package: &Package) -> FileResolver {
         }
     }
 
-    if let Some(maps) = &package.import_map {
+    if let Some(maps) = package.get_import_map() {
         for (map, path) in maps {
             if let Err(e) = resolver.add_import_map(OsString::from(map), path.clone()) {
                 eprintln!("error: import path '{}': {}", path.display(), e);
@@ -254,13 +530,18 @@ pub fn imports_arg(package: &Package) -> FileResolver {
 }
 
 pub fn options_arg(debug: &DebugFeatures, optimizations: &Optimizations) -> Options {
-    let opt_level = match optimizations.opt_level.as_str() {
-        "none" => OptimizationLevel::None,
-        "less" => OptimizationLevel::Less,
-        "default" => OptimizationLevel::Default,
-        "aggressive" => OptimizationLevel::Aggressive,
-        _ => unreachable!(),
+    let opt_level = if let Some(level) = &optimizations.opt_level {
+        match level.as_str() {
+            "none" => OptimizationLevel::None,
+            "less" => OptimizationLevel::Less,
+            "default" => OptimizationLevel::Default,
+            "aggressive" => OptimizationLevel::Aggressive,
+            _ => unreachable!(),
+        }
+    } else {
+        OptimizationLevel::Default
     };
+
     Options {
         dead_storage: optimizations.dead_storage,
         constant_folding: optimizations.constant_folding,
@@ -290,4 +571,69 @@ fn parse_import_map(map: &str) -> Result<(String, PathBuf), String> {
     } else {
         Err("contains no '='".to_owned())
     }
+}
+
+fn deserialize_inline_table<'de, D>(
+    deserializer: D,
+) -> Result<Option<Vec<(String, PathBuf)>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let res: Option<toml::Table> = Option::deserialize(deserializer)?;
+
+    match res {
+        Some(table) => Ok(Some(
+            table
+                .iter()
+                .map(|f| {
+                    (
+                        f.0.clone(),
+                        if f.1.is_str() {
+                            PathBuf::from(f.1.as_str().unwrap())
+                        } else {
+                            let key = f.1;
+                            eprintln!("error: invalid value for import map {key}");
+                            exit(1)
+                        },
+                    )
+                })
+                .collect(),
+        )),
+        None => Ok(None),
+    }
+}
+
+fn deserialize_emit<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let str: Option<String> = Option::deserialize(deserializer)?;
+    match str {
+        Some(value) => {
+            match value.as_str() {
+                "ast-dot"|"cfg"|"llvm-ir"|"llvm-bc" |"object"| "asm" => 
+                    Ok(Some(value))
+                ,
+                _ => Err(serde::de::Error::custom("Invalid option for `emit`. Valid options are: `ast-dot`, `cfg`, `llvm-ir`, `llvm-bc`, `object`, `asm`"))
+            }
+        }
+        None => Ok(None),
+    }
+}
+
+fn default_true() -> bool {
+    true
+}
+
+/// Get args provided explicitly at runtime.
+fn explicit_args(matches: &ArgMatches) -> Vec<&Id> {
+    matches
+        .ids()
+        .filter(|x| {
+            matches!(
+                matches.value_source(x.as_str()),
+                Some(ValueSource::CommandLine)
+            )
+        })
+        .collect()
 }

@@ -334,6 +334,65 @@ fn try_catch_external_calls() {
 }
 
 #[test]
+fn try_catch_external_calls_dont_decode_returns() {
+    // try not using the return values of test() - revert case
+    // note the absense of "try o.test() returns (int32 y, bool) {"
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public returns (int32 x) {
+                other o = new other();
+                try o.test() {
+                    x = 1;
+                } catch (bytes c) {
+                    x = 2;
+                }
+            }
+        }
+
+        contract other {
+            function test() public returns (int32, bool) {
+                revert("foo");
+            }
+        }
+        "##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", Vec::new());
+
+    assert_eq!(runtime.output(), 2i32.encode());
+
+    // try not using the return values of test() - normal case
+    // note the absense of "try o.test() returns (int32 y, bool) {"
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public returns (int32 x) {
+                other o = new other();
+                try o.test({meh: false}) {
+                    x = 1;
+                } catch (bytes c) {
+                    x = 2;
+                }
+            }
+        }
+
+        contract other {
+            function test(bool meh) public returns (int32, bool) {
+                return (5, meh);
+            }
+        }
+        "##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", Vec::new());
+
+    assert_eq!(runtime.output(), 1i32.encode());
+}
+
+#[test]
 fn try_catch_constructor() {
     let mut runtime = build_solidity(
         r##"
@@ -397,6 +456,7 @@ fn try_catch_constructor() {
                 try new other(true) {
                     x = 1;
                 } catch (bytes c) {
+                    print("returns:{}".format(c));
                     assert(c == hex"a079c3080c666f6f");
                     x = 2;
                 }
@@ -418,6 +478,7 @@ fn try_catch_constructor() {
     // TODO / REGRESSION
     // This traps with InstructionTrap(MemoryOutOfBounds). Which does not seem right
     // runtime.function_expect_failure("test", Vec::new());
+    // There is a problem with reading return data, see output pf: print("returns:{}".format(c));
 }
 
 #[test]

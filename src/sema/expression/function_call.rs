@@ -2665,13 +2665,22 @@ fn resolve_internal_call(
         return None;
     } else if let (Some(base_no), Some(derived_no)) = (func.contract_no, context.contract_no) {
         if is_base(base_no, derived_no, ns) && matches!(func.visibility, Visibility::External(_)) {
-            errors.push(Diagnostic::error_with_note(
-                *loc,
-                "functions declared external cannot be called via an internal function call"
-                    .to_string(),
-                func.loc,
-                format!("declaration of {} '{}'", func.ty, func.name),
-            ));
+            if func.is_accessor {
+                errors.push(Diagnostic::error_with_note(
+                    *loc,
+                    "accessor function cannot be called via an internal function call".to_string(),
+                    func.loc,
+                    format!("declaration of '{}'", func.name),
+                ));
+            } else {
+                errors.push(Diagnostic::error_with_note(
+                    *loc,
+                    "functions declared external cannot be called via an internal function call"
+                        .to_string(),
+                    func.loc,
+                    format!("declaration of {} '{}'", func.ty, func.name),
+                ));
+            }
             return None;
         }
     }
