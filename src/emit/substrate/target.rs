@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{HashTy, ReturnCode};
-use crate::codegen::error_msg_with_loc;
 use crate::emit::binary::Binary;
-use crate::emit::expression::{expression, string_to_basic_value};
+use crate::emit::expression::expression;
 use crate::emit::storage::StorageSlot;
 use crate::emit::substrate::{log_return_code, SubstrateTarget, SCRATCH_SIZE};
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
@@ -352,8 +351,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.position_at_end(bang_block);
 
-        self.log_runtime_error(
-            binary,
+        binary.log_runtime_error(
+            self,
             "storage array index out of bounds".to_string(),
             Some(loc),
             ns,
@@ -440,8 +439,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.log_runtime_error(
-            binary,
+        binary.log_runtime_error(
+            self,
             "storage index out of bounds".to_string(),
             Some(loc),
             ns,
@@ -620,8 +619,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.log_runtime_error(
-            binary,
+        binary.log_runtime_error(
+            self,
             "pop from empty storage array".to_string(),
             Some(loc),
             ns,
@@ -938,12 +937,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             binary.builder.position_at_end(bail_block);
 
-            self.log_runtime_error(
-                binary,
-                "contract creation failed".to_string(),
-                Some(loc),
-                ns,
-            );
+            binary.log_runtime_error(self, "contract creation failed".to_string(), Some(loc), ns);
             self.assert_failure(
                 binary,
                 scratch_buf,
@@ -1027,7 +1021,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             binary.builder.position_at_end(bail_block);
 
-            self.log_runtime_error(binary, "external call failed".to_string(), Some(loc), ns);
+            binary.log_runtime_error(self, "external call failed".to_string(), Some(loc), ns);
             self.assert_failure(
                 binary,
                 scratch_buf,
@@ -1096,7 +1090,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             binary.builder.position_at_end(bail_block);
 
-            self.log_runtime_error(binary, "value transfer failure".to_string(), Some(loc), ns);
+            binary.log_runtime_error(self, "value transfer failure".to_string(), Some(loc), ns);
             self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
             binary.builder.position_at_end(success_block);
@@ -1661,31 +1655,5 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ) -> IntValue<'a> {
         // not needed for slot-based storage chains
         unimplemented!()
-    }
-
-    fn log_runtime_error(
-        &self,
-        bin: &Binary,
-        reason_string: String,
-        reason_loc: Option<Loc>,
-        ns: &Namespace,
-    ) {
-        if !bin.options.log_runtime_errors {
-            return;
-        }
-        emit_context!(bin);
-        let error_with_loc = error_msg_with_loc(ns, &reason_string, reason_loc);
-        let custom_error = string_to_basic_value(bin, ns, error_with_loc + ",\n");
-        call!(
-            "debug_message",
-            &[
-                bin.vector_bytes(custom_error).into(),
-                bin.vector_len(custom_error).into()
-            ]
-        )
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value();
     }
 }
