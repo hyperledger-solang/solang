@@ -312,8 +312,7 @@ Calling an external function using ``delegatecall``
 ___________________________________________________
 
 External functions can also be called using ``delegatecall``.
-The difference to a regular ``call`` is that  ``delegatecall`` executes the callee code in the context of the caller,
-which has the following implications:
+The difference to a regular ``call`` is that  ``delegatecall`` executes the callee code in the context of the caller:
 
 * The callee will read from and write to the `caller` storage
 * ``value`` can't be specified for ``delegatecall`` (``msg.value`` stays the same in the callee)

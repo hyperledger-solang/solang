@@ -981,8 +981,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // do the actual call
         let ret = match call_type {
             ast::CallTy::Regular => {
-                // FIXME: Using the namespace value type, this comment is no longer valid?
-                // balance is a u128
                 let value_ptr = binary
                     .builder
                     .build_alloca(binary.value_type(ns), "balance");
@@ -1056,7 +1054,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 );
 
                 binary.builder.position_at_end(not_found_block);
-                self.log_runtime_error(binary, "not a contract account".to_string(), Some(loc), ns);
+                let msg = "delegatecall callee is not a contract account";
+                self.log_runtime_error(binary, msg.into(), Some(loc), ns);
                 binary.builder.build_unconditional_branch(done_block);
 
                 binary.builder.position_at_end(call_block);
