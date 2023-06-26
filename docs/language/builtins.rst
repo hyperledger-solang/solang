@@ -365,7 +365,9 @@ Pitfalls generally applying to writing
 must be considered whenever using this builtin function, most notably:
 
 * The contract must safeguard access to this functionality, so that it is only callable by priviledged users.
-* The code you are upgrading to must be storage compatible with the existing code.
+* The code you are upgrading to must be 
+  `storage compatible <https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies#storage-collisions-between-implementation-versions>`_
+  with the existing code.
 * Constructors and any other initializers, including initial storage value definitions, won't be executed.
 
 Cryptography
