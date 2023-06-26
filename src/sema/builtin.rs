@@ -1669,29 +1669,110 @@ impl Namespace {
         assert!(self.add_symbol(file_no, None, &identifier("Hash"), symbol));
 
         // Chain extensions
-        let mut func = Function::new(
-            loc,
-            "chain_extension".to_string(),
-            None,
-            Vec::new(),
-            pt::FunctionTy::Function,
-            None,
-            pt::Visibility::Public(Some(loc)),
-            vec![
-                Parameter {
+        for mut func in [
+            Function::new(
+                loc,
+                "chain_extension".to_string(),
+                None,
+                Vec::new(),
+                pt::FunctionTy::Function,
+                None,
+                pt::Visibility::Public(Some(loc)),
+                vec![
+                    Parameter {
+                        loc,
+                        id: Some(identifier("id")),
+                        ty: Type::Uint(32),
+                        ty_loc: Some(loc),
+                        readonly: false,
+                        indexed: false,
+                        infinite_size: false,
+                        recursive: false,
+                        annotation: None,
+                    },
+                    Parameter {
+                        loc,
+                        id: Some(identifier("input")),
+                        ty: Type::DynamicBytes,
+                        ty_loc: Some(loc),
+                        readonly: false,
+                        indexed: false,
+                        infinite_size: false,
+                        recursive: false,
+                        annotation: None,
+                    },
+                ],
+                vec![
+                    Parameter {
+                        loc,
+                        id: Some(identifier("return_value")),
+                        ty: Type::Uint(32),
+                        ty_loc: Some(loc),
+                        readonly: false,
+                        indexed: false,
+                        infinite_size: false,
+                        recursive: false,
+                        annotation: None,
+                    },
+                    Parameter {
+                        loc,
+                        id: Some(identifier("output")),
+                        ty: Type::DynamicBytes,
+                        ty_loc: Some(loc),
+                        readonly: false,
+                        indexed: false,
+                        infinite_size: false,
+                        recursive: false,
+                        annotation: None,
+                    },
+                ],
+                self,
+            ),
+            // is_contract API
+            Function::new(
+                loc,
+                "is_contract".to_string(),
+                None,
+                Vec::new(),
+                pt::FunctionTy::Function,
+                Some(pt::Mutability::View(loc)),
+                pt::Visibility::Public(Some(loc)),
+                vec![Parameter {
                     loc,
-                    id: Some(identifier("id")),
-                    ty: Type::Uint(32),
+                    id: Some(identifier("address")),
+                    ty: Type::Address(false),
                     ty_loc: Some(loc),
                     readonly: false,
                     indexed: false,
                     infinite_size: false,
                     recursive: false,
                     annotation: None,
-                },
-                Parameter {
+                }],
+                vec![Parameter {
                     loc,
-                    id: Some(identifier("input")),
+                    id: Some(identifier("is_contract")),
+                    ty: Type::Bool,
+                    ty_loc: Some(loc),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                    annotation: None,
+                }],
+                self,
+            ),
+            // set_code_hash API
+            Function::new(
+                loc,
+                "set_code_hash".to_string(),
+                None,
+                Vec::new(),
+                pt::FunctionTy::Function,
+                None,
+                pt::Visibility::Public(Some(loc)),
+                vec![Parameter {
+                    loc,
+                    id: Some(identifier("code_hash_ptr")),
                     ty: Type::DynamicBytes,
                     ty_loc: Some(loc),
                     readonly: false,
@@ -1699,12 +1780,10 @@ impl Namespace {
                     infinite_size: false,
                     recursive: false,
                     annotation: None,
-                },
-            ],
-            vec![
-                Parameter {
+                }],
+                vec![Parameter {
                     loc,
-                    id: Some(identifier("return_value")),
+                    id: Some(identifier("return_code")),
                     ty: Type::Uint(32),
                     ty_loc: Some(loc),
                     readonly: false,
@@ -1712,68 +1791,15 @@ impl Namespace {
                     infinite_size: false,
                     recursive: false,
                     annotation: None,
-                },
-                Parameter {
-                    loc,
-                    id: Some(identifier("output")),
-                    ty: Type::DynamicBytes,
-                    ty_loc: Some(loc),
-                    readonly: false,
-                    indexed: false,
-                    infinite_size: false,
-                    recursive: false,
-                    annotation: None,
-                },
-            ],
-            self,
-        );
-
-        func.has_body = true;
-        let func_no = self.functions.len();
-        let id = identifier(&func.name);
-        self.functions.push(func);
-
-        assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
-
-        // is_contract API
-        let mut func = Function::new(
-            loc,
-            "is_contract".to_string(),
-            None,
-            Vec::new(),
-            pt::FunctionTy::Function,
-            Some(pt::Mutability::View(loc)),
-            pt::Visibility::Public(Some(loc)),
-            vec![Parameter {
-                loc,
-                id: Some(identifier("address")),
-                ty: Type::Address(false),
-                ty_loc: Some(loc),
-                readonly: false,
-                indexed: false,
-                infinite_size: false,
-                recursive: false,
-                annotation: None,
-            }],
-            vec![Parameter {
-                loc,
-                id: Some(identifier("is_contract")),
-                ty: Type::Bool,
-                ty_loc: Some(loc),
-                readonly: false,
-                indexed: false,
-                infinite_size: false,
-                recursive: false,
-                annotation: None,
-            }],
-            self,
-        );
-
-        func.has_body = true;
-        let func_no = self.functions.len();
-        let id = identifier(&func.name);
-        self.functions.push(func);
-
-        assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
+                }],
+                self,
+            ),
+        ] {
+            func.has_body = true;
+            let func_no = self.functions.len();
+            let id = identifier(&func.name);
+            self.functions.push(func);
+            assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
+        }
     }
 }

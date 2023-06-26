@@ -1646,6 +1646,19 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .build_store(args[1].into_pointer_value(), is_contract);
                 None
             }
+            "set_code_hash" => {
+                let ptr = binary.vector_bytes(args[0].into_pointer_value().into());
+                let ret = call!("set_code_hash", &[ptr.into()], "seal_set_code_hash")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+                binary
+                    .builder
+                    .build_store(args[1].into_pointer_value(), ret);
+                log_return_code(binary, "seal_set_code_hash", ret);
+                None
+            }
             _ => unimplemented!(),
         }
     }
