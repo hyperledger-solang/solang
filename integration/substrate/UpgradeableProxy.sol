@@ -1,4 +1,4 @@
-// Integration test against the delegatecall() function in combination with input forwarding and tail call call flags.
+// Integration test against the delegatecall() function in combination with input forwarding and tail call flags.
 // WARNING: This code is neither EIP compliant nor secure nor audited nor intended to be used in production.
 
 // SPDX-License-Identifier: MIT
@@ -21,7 +21,7 @@ abstract contract Proxy {
     /**
      * @dev Delegates the current call to `implementation`.
      *
-     * This function does not return to its internal call site, it will return directly to the external caller.
+     * This function does not return to its internal call site. It will return directly to the external caller.
      */
     function _delegate(address implementation) internal virtual {
         implementation.delegatecall{flags: FORWARD_INPUT | TAIL_CALL}(hex"");
@@ -36,7 +36,7 @@ abstract contract Proxy {
     /**
      * @dev Delegates the current call to the address returned by `_implementation()`.
      *
-     * This function does not return to its internal call site, it will return directly to the external caller.
+     * This function does not return to its internal call site. It will return directly to the external caller.
      */
     function _fallback() internal virtual {
         _beforeFallback();
@@ -44,7 +44,7 @@ abstract contract Proxy {
     }
 
     /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other
+     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. It will run if no other
      * function in the contract matches the call data.
      */
     fallback() external virtual {
@@ -52,7 +52,7 @@ abstract contract Proxy {
     }
 
     /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data
+     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. It will run if call data
      * is empty.
      */
     receive() external payable virtual {

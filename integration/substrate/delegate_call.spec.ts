@@ -32,7 +32,7 @@ describe('Deploy the delegator and the delegatee contracts; test the delegatecal
         await conn.disconnect();
     });
 
-    it('Executes the delegatee in the contex of the delegator', async function () {
+    it('Executes the delegatee in the context of the delegator', async function () {
         const value = 1000000n;
         const arg = 123456789n;
         const parameters = [delegatee.address, arg];
