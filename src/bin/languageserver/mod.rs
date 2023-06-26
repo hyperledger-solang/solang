@@ -1176,20 +1176,19 @@ impl LanguageServer for SolangServer {
         if let Ok(path) = uri.to_file_path() {
             if let Some(text_buf) = self.text_buffers.lock().await.get_mut(&path) {
                 for content_change in params.content_changes {
-                    if let Some(range) = content_change.range {
-
+                    *text_buf = if let Some(range) = content_change.range {
                         let start_line = range.start.line as usize;
                         let start_col = range.start.character as usize;
                         let end_line = range.end.line as usize;
                         let end_col = range.end.character as usize;
-
+                        
+                        // directly add the changes to the buffer when changes are present at the end of the file
                         if start_line == text_buf.lines().count() {
                             text_buf.push_str(&content_change.text);
                             return;
                         }
 
                         let mut new = String::new();
-
                         for (i, line) in text_buf.lines().enumerate() {
                             if i < start_line {
                                 new.push_str(&line);
@@ -1213,10 +1212,11 @@ impl LanguageServer for SolangServer {
                                 new.push('\n');
                             }
                         }
-                        *text_buf = new;
+                        new
                     } else {
-                        *text_buf = content_change.text;
-                    }
+                        // when no range is provided, entire file is sent in the request
+                        content_change.text
+                    };
                 }
             }
         }
