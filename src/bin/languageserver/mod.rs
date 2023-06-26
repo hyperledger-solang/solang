@@ -72,12 +72,12 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
 impl SolangServer {
     /// Parse file
     async fn parse_file(&self, uri: Url) {
+        // if let Some(contents) = self.text_buffers.lock().await.get(&path) {
+        let mut resolver = FileResolver::new();
+        for (path, contents) in self.text_buffers.lock().await.iter() {
+            resolver.set_file_contents(path.to_str().unwrap(), contents.clone());
+        }
         if let Ok(path) = uri.to_file_path() {
-            let mut resolver = FileResolver::new();
-            if let Some(contents) = self.text_buffers.lock().await.get(&path) {
-                resolver.set_file_contents(path.to_str().unwrap(), contents.clone());
-            }
-
             let dir = path.parent().unwrap();
 
             let _ = resolver.add_import_path(dir);
