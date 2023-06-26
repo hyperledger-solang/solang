@@ -30,6 +30,7 @@ pub struct SolangServer {
     importpaths: Vec<PathBuf>,
     importmaps: Vec<(String, PathBuf)>,
     files: Mutex<HashMap<PathBuf, Hovers>>,
+    text_buffers: Mutex<HashMap<PathBuf, String>>,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -58,6 +59,7 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
         client,
         target,
         files: Mutex::new(HashMap::new()),
+        text_buffers: Mutex::new(HashMap::new()),
         importpaths,
         importmaps,
     });
@@ -72,6 +74,9 @@ impl SolangServer {
     async fn parse_file(&self, uri: Url) {
         if let Ok(path) = uri.to_file_path() {
             let mut resolver = FileResolver::new();
+            if let Some(contents) = self.text_buffers.lock().await.get(&path) {
+                resolver.set_file_contents(path.to_str().unwrap(), contents.clone());
+            }
 
             let dir = path.parent().unwrap();
 
@@ -1158,17 +1163,99 @@ impl LanguageServer for SolangServer {
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         let uri = params.text_document.uri;
 
+        if let Ok(path) = uri.to_file_path() {
+            self.text_buffers.lock().await.insert(path, params.text_document.text);
+        }
+
         self.parse_file(uri).await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        let uri = params.text_document.uri;
+        use std::fs::OpenOptions;
+        use std::io::Write;
+        let mut data_file = OpenOptions::new()
+            .append(true)
+            .open("/tmp/code")
+            .expect("cannot open file");
 
+        let uri = params.text_document.uri;
+        data_file
+            .write(format!("{:#?}\n", &uri.to_file_path()).as_bytes())
+            .expect("write failed");
+
+        if let Ok(path) = uri.to_file_path() {
+            if let Some(text_buf) = self.text_buffers.lock().await.get_mut(&path) {
+                for content_change in params.content_changes {
+                    if let Some(range) = content_change.range {
+
+                        let start_line = range.start.line as usize;
+                        let start_col = range.start.character as usize;
+                        let end_line = range.end.line as usize;
+                        let end_col = range.end.character as usize;
+
+                        data_file
+                            .write(format!("{}:{} - {}:{}\n", start_line, start_col, end_line, end_col).as_bytes())
+                            .expect("write failed");
+
+                        if start_line == text_buf.lines().count() {
+                            data_file
+                                .write(b"inside equal condition")
+                                .expect("write failed");
+                            text_buf.push_str(&content_change.text);
+                            return;
+                        }
+
+                        let mut new = String::new();
+
+                        for (i, line) in text_buf.lines().enumerate() {
+                            if i < start_line {
+                                new.push_str(&line);
+                                new.push('\n');
+                                continue;
+                            }
+
+                            if i > end_line {
+                                new.push_str(&line);
+                                new.push('\n');
+                                continue;
+                            }
+
+                            if i == start_line {
+                                new.push_str(&line[..start_col]);
+                                new.push_str(&content_change.text);
+                            }
+
+                            if i == end_line {
+                                new.push_str(&line[end_col..]);
+                                new.push('\n');
+                            }
+                        }
+                        *text_buf = new;
+                    } else {
+                        *text_buf = content_change.text;
+                    }
+                }
+            }
+        }
+
+        if let Some(text_buf) = self.text_buffers.lock().await.get_mut(&uri.to_file_path().unwrap()) {
+            data_file
+                .write(format!("========================\n{:#?}\n================================\n", text_buf).as_bytes())
+                .expect("write failed");
+        }
         self.parse_file(uri).await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
         let uri = params.text_document.uri;
+
+        if let Some(text) = params.text {
+            if let Ok(path) = uri.to_file_path() {
+                if let Some(text_buf) = self.text_buffers.lock().await.get_mut(&path) {
+                    *text_buf = text;
+                }
+            }
+        }
 
         self.parse_file(uri).await;
     }
@@ -1178,6 +1265,7 @@ impl LanguageServer for SolangServer {
 
         if let Ok(path) = uri.to_file_path() {
             self.files.lock().await.remove(&path);
+            self.text_buffers.lock().await.remove(&path);
         }
     }
 
