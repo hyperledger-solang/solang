@@ -1463,6 +1463,10 @@ pub fn generate_cfg(
     }
 
     let mut cfg = function_cfg(contract_no, function_no, ns, opt);
+    let ast_fn = function_no
+        .map(ASTFunction::SolidityFunction)
+        .unwrap_or(ASTFunction::None);
+    optimize_and_check_cfg(&mut cfg, ns, ast_fn, opt);
 
     if let Some(func_no) = function_no {
         let func = &ns.functions[func_no];
@@ -1488,6 +1492,7 @@ pub fn generate_cfg(
                     ns,
                     opt,
                 );
+                optimize_and_check_cfg(&mut cfg, ns, ast_fn, opt);
             }
 
             cfg.public = public;
@@ -1495,17 +1500,6 @@ pub fn generate_cfg(
             cfg.selector = ns.functions[func_no].selector(ns, &contract_no);
         }
     }
-
-    optimize_and_check_cfg(
-        &mut cfg,
-        ns,
-        if let Some(func_no) = function_no {
-            ASTFunction::SolidityFunction(func_no)
-        } else {
-            ASTFunction::None
-        },
-        opt,
-    );
 
     all_cfgs[cfg_no] = cfg;
 }
