@@ -10,6 +10,10 @@ abstract contract Upgradeable {
 contract SetCodeCounterV1 is Upgradeable {
     uint public count;
 
+    constructor(uint _count) {
+        count = _count;
+    }
+
     function inc() external {
         count += 1;
     }
@@ -18,11 +22,11 @@ contract SetCodeCounterV1 is Upgradeable {
 contract SetCodeCounterV2 is Upgradeable {
     uint public count;
 
-    function inc() external {
-        count += 1;
+    constructor(uint _count) {
+        count = _count;
     }
 
-    function dec() external {
+    function inc() external {
         count -= 1;
     }
 }
