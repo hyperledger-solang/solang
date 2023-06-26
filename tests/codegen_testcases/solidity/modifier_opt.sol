@@ -9,10 +9,10 @@ contract Test {
 
         // CHECK: block0: # entry
         // CHECK: branchcond (uint128((builtin Value ())) != uint128 0),
-        // NOT-CHECK: branchcond (uint128((builtin Value ())) != (uint128 1 - uint128 1)),
+        // NOT-CHECK: uint128 1 - uint128 1
 
         // CHECK: branchcond (uint128((builtin Value ())) != uint128 -1),
-        // NOT-CHECK: branchcond (uint128((builtin Value ())) != (uint128 2 ** uint128 127)),
+        // NOT-CHECK: uint128 2 ** uint128 127
     }
 
     // BEGIN-CHECK: Test::testMethod::modifier1::m2
@@ -23,10 +23,10 @@ contract Test {
 
         // CHECK: block0: # entry
         // CHECK: branchcond (uint128((builtin Value ())) != uint128 -1),
-        // NOT-CHECK: branchcond (uint128((builtin Value ())) != (uint128 2 ** uint128 127)),
+        // NOT-CHECK: uint128 2 ** uint128 127,
 
         // CHECK: branchcond (uint128((builtin Value ())) != uint128 0),
-        // NOT-CHECK: branchcond (uint128((builtin Value ())) != (uint128 1 - uint128 1)),
+        // NOT-CHECK: uint128 1 - uint128 1
     }
 
     // BEGIN-CHECK: Test::function::testMethod
@@ -35,6 +35,6 @@ contract Test {
 
         // CHECK: block0: # entry
         // CHECK: return uint256 -1
-        // NOT-CHECK: return ((uint256 2 ** uint256 256) - uint256 1)
+        // NOT-CHECK: (uint256 2 ** uint256 256) - uint256 1
     }
 }
