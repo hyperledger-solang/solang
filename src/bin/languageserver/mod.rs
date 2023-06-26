@@ -1171,17 +1171,7 @@ impl LanguageServer for SolangServer {
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        use std::fs::OpenOptions;
-        use std::io::Write;
-        let mut data_file = OpenOptions::new()
-            .append(true)
-            .open("/tmp/code")
-            .expect("cannot open file");
-
         let uri = params.text_document.uri;
-        data_file
-            .write(format!("{:#?}\n", &uri.to_file_path()).as_bytes())
-            .expect("write failed");
 
         if let Ok(path) = uri.to_file_path() {
             if let Some(text_buf) = self.text_buffers.lock().await.get_mut(&path) {
@@ -1193,14 +1183,7 @@ impl LanguageServer for SolangServer {
                         let end_line = range.end.line as usize;
                         let end_col = range.end.character as usize;
 
-                        data_file
-                            .write(format!("{}:{} - {}:{}\n", start_line, start_col, end_line, end_col).as_bytes())
-                            .expect("write failed");
-
                         if start_line == text_buf.lines().count() {
-                            data_file
-                                .write(b"inside equal condition")
-                                .expect("write failed");
                             text_buf.push_str(&content_change.text);
                             return;
                         }
@@ -1238,11 +1221,6 @@ impl LanguageServer for SolangServer {
             }
         }
 
-        if let Some(text_buf) = self.text_buffers.lock().await.get_mut(&uri.to_file_path().unwrap()) {
-            data_file
-                .write(format!("========================\n{:#?}\n================================\n", text_buf).as_bytes())
-                .expect("write failed");
-        }
         self.parse_file(uri).await;
     }
 
