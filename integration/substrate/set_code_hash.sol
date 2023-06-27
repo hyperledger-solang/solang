@@ -1,9 +1,8 @@
 import "substrate";
 
 abstract contract Upgradeable {
-    function set_code(Hash code) external {
-        bytes _code = Hash.unwrap(code);
-        require(set_code_hash(_code) == 0);
+    function set_code(uint8[32] code) external {
+        require(set_code_hash(code) == 0);
     }
 }
 

@@ -1773,7 +1773,8 @@ impl Namespace {
                 vec![Parameter {
                     loc,
                     id: Some(identifier("code_hash_ptr")),
-                    ty: Type::DynamicBytes,
+                    // FIXME: The hash length should be configurable
+                    ty: Type::Array(Type::Uint(8).into(), vec![ArrayLength::Fixed(32.into())]),
                     ty_loc: Some(loc),
                     readonly: false,
                     indexed: false,

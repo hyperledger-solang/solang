@@ -1647,7 +1647,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 None
             }
             "set_code_hash" => {
-                let ptr = binary.vector_bytes(args[0].into_pointer_value().into());
+                let ptr = args[0].into_pointer_value();
                 let ret = call!("set_code_hash", &[ptr.into()], "seal_set_code_hash")
                     .try_as_basic_value()
                     .left()
