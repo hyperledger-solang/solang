@@ -252,7 +252,7 @@ pub(super) fn member_access(
                     .borrow()
                     .contains_key(&id.name)
                 {
-                    Ok(Expression::NamedSubscript {
+                    Ok(Expression::NamedMember {
                         loc: *loc,
                         ty: Type::Ref(Box::new(Type::Struct(StructType::AccountInfo))),
                         array: Box::new(expr),

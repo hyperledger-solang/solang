@@ -61,7 +61,7 @@ impl RetrieveType for Expression {
             | Expression::UserDefinedOperator { ty, .. }
             | Expression::InternalFunction { ty, .. }
             | Expression::ExternalFunction { ty, .. }
-            | Expression::NamedSubscript { ty, .. }
+            | Expression::NamedMember { ty, .. }
             | Expression::StorageArrayLength { ty, .. } => ty.clone(),
             Expression::ExternalFunctionCallRaw { .. } => {
                 panic!("two return values");

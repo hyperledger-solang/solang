@@ -1098,7 +1098,7 @@ pub fn expression(
                 var_no: var,
             }
         }
-        ast::Expression::NamedSubscript {
+        ast::Expression::NamedMember {
             loc, array, name, ..
         } => {
             // This expression should only exist for Solana's AccountInfo array

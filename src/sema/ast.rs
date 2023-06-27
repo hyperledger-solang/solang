@@ -1072,7 +1072,7 @@ pub enum Expression {
         array: Box<Expression>,
         index: Box<Expression>,
     },
-    NamedSubscript {
+    NamedMember {
         loc: pt::Loc,
         ty: Type,
         array: Box<Expression>,
@@ -1426,7 +1426,7 @@ impl CodeLocation for Expression {
             | Expression::FormatString { loc, format: _ }
             | Expression::InterfaceId { loc, .. }
             | Expression::And { loc, .. }
-            | Expression::NamedSubscript { loc, .. }
+            | Expression::NamedMember { loc, .. }
             | Expression::UserDefinedOperator { loc, .. } => *loc,
         }
     }

@@ -1436,7 +1436,7 @@ impl Dot {
                     self.add_expression(expr, func, ns, node, format!("entry #{no}"));
                 }
             }
-            Expression::NamedSubscript {
+            Expression::NamedMember {
                 loc, name, array, ..
             } => {
                 let labels = vec![
