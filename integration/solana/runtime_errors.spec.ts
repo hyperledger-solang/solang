@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import {Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction} from '@solana/web3.js';
+import { Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from '@solana/web3.js';
 import expect from 'expect';
-import {loadContract} from './setup';
-import {Program, Provider, BN, AnchorProvider} from '@project-serum/anchor';
-import {createAccount} from "@solana/spl-token";
+import { loadContract } from './setup';
+import { Program, Provider, BN, AnchorProvider } from '@coral-xyz/anchor';
+import { createAccount } from "@solana/spl-token";
 
 describe('Runtime Errors', function () {
     this.timeout(150000);

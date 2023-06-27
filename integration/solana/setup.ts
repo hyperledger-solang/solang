@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, BpfLoader, Transaction, SystemProgram, BPF_LOADER_PROGRAM_ID, TransactionExpiredBlockheightExceededError } from '@solana/web3.js';
-import { AnchorProvider, Program } from '@project-serum/anchor';
+import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import fs from 'fs';
 
 const endpoint: string = process.env.RPC_URL || "http://127.0.0.1:8899";

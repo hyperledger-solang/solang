@@ -10,7 +10,7 @@ contract creator {
             AccountMeta({pubkey: child, is_signer: false, is_writable: false}),
             AccountMeta({pubkey: payer, is_signer: true, is_writable: true})
         ];
-        // CHECK: constructor(no: 4) salt: value: gas:uint64 0 address: seeds: Child encoded buffer: %abi_encoded.temp.16 accounts: %metas
+        // CHECK: constructor(no: 4) salt: value: gas:uint64 0 address: seeds: Child encoded buffer: %abi_encoded.temp.17 accounts: %metas
         c = new Child{accounts: metas}(payer);
 
         c.say_hello();

@@ -196,6 +196,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
             | Instr::ReturnCode { .. }
             | Instr::Branch { .. }
             | Instr::PopMemory { .. }
+            | Instr::AccountAccess { .. }
             | Instr::Unimplemented { .. } => {}
         }
     }

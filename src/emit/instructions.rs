@@ -1103,6 +1103,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         }
 
         Instr::Unimplemented { .. } => unimplemented!(),
+        Instr::AccountAccess { .. } => {
+            unreachable!("Instr::AccountAccess shall never appear in the CFG")
+        }
     }
 }
 
