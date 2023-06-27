@@ -314,9 +314,13 @@ ___________________________________________________
 External functions can also be called using ``delegatecall``.
 The difference to a regular ``call`` is that  ``delegatecall`` executes the callee code in the context of the caller:
 
-* The callee will read from and write to the `caller` storage
-* ``value`` can't be specified for ``delegatecall`` (``msg.value`` stays the same in the callee)
-* ``msg.sender`` stays the same in the callee
+* The callee will read from and write to the `caller` storage.
+* ``value`` can't be specified for ``delegatecall``; instead it will always stay the same in the callee.
+* ``msg.sender`` does not change; it stays the same as in the callee.
+
+Refer to the `contracts pallet <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.delegate_call>`_ 
+and `Ethereum Solidity <https://docs.soliditylang.org/en/latest/introduction-to-smart-contracts.html#delegatecall-and-libraries>`_
+documentations for more information.
 
 ``delegatecall`` is commonly used to implement re-usable libraries and 
 `upgradeable contracts <https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable>`_.
@@ -330,9 +334,6 @@ The difference to a regular ``call`` is that  ``delegatecall`` executes the call
         (bool ok, result) = callee.delegatecall(input);
         require(ok);
     }
-
-Refer to the `Ethereum Solidity documentation <https://docs.soliditylang.org/en/latest/introduction-to-smart-contracts.html#delegatecall-and-libraries>`_
-for more information.
 
 ..  note::
     ``delegatecall`` is not available on Solana.
