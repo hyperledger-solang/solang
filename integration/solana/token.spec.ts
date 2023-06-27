@@ -3,7 +3,7 @@
 import { getOrCreateAssociatedTokenAccount, createMint, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Keypair } from '@solana/web3.js';
 import { loadContract } from './setup';
-import { BN } from '@project-serum/anchor';
+import { BN } from '@coral-xyz/anchor';
 import expect from 'expect';
 
 describe('Create spl-token and use from solidity', function () {

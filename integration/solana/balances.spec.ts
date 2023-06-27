@@ -3,7 +3,7 @@
 import expect from 'expect';
 import { Transaction, SystemProgram, sendAndConfirmTransaction } from '@solana/web3.js';
 import { loadContract } from './setup';
-import { BN } from '@project-serum/anchor';
+import { BN } from '@coral-xyz/anchor';
 
 describe('Deploy solang contract and test', function () {
     this.timeout(500000);
