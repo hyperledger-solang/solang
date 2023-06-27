@@ -63,24 +63,24 @@ contract CompactEncoding {
         // CHECK: branchcond (unsigned more (builtin ArrayLength ((arg #0))) > uint32 1073741823), block6, block7
 
         // CHECK: block1: # small
-        // CHECK: ty:uint32 %temp.19 = uint32 1
+        // CHECK: ty:uint32 %temp.23 = uint32 1
         // CHECK: branch block5
 
         // CHECK: block2: # medium
-        // CHECK: ty:uint32 %temp.19 = uint32 2
+        // CHECK: ty:uint32 %temp.23 = uint32 2
         // CHECK: branch block5
 
         // CHECK: block3: # medium_or_big
         // CHECK: branchcond (unsigned more (builtin ArrayLength ((arg #0))) > uint32 16383), block4, block2
 
         // CHECK: block4: # big
-        // CHECK: ty:uint32 %temp.19 = uint32 4
+        // CHECK: ty:uint32 %temp.23 = uint32 4
         // CHECK: branch block5
 
         // CHECK: block5: # done
-        // CHECK: ty:bytes %abi_encoded.temp.20 = (alloc bytes len (%temp.19 + (builtin ArrayLength ((arg #0)))))
-        // CHECK: ty:uint32 %temp.21 = (builtin ArrayLength ((arg #0)))
-        // CHECK: branchcond (unsigned more %temp.21 > uint32 1073741823), block13, block14
+        // CHECK: ty:bytes %abi_encoded.temp.24 = (alloc bytes len (%temp.23 + (builtin ArrayLength ((arg #0)))))
+        // CHECK: ty:uint32 %temp.25 = (builtin ArrayLength ((arg #0)))
+        // CHECK: branchcond (unsigned more %temp.25 > uint32 1073741823), block13, block14
 
         // CHECK: block6: # fail
         // CHECK: assert-failure
@@ -89,29 +89,29 @@ contract CompactEncoding {
         // CHECK: branchcond (unsigned more (builtin ArrayLength ((arg #0))) > uint32 63), block3, block1
 
         // CHECK: block8: # small
-        // CHECK: writebuffer buffer:%abi_encoded.temp.20 offset:uint32 0 value:uint8((%temp.21 * uint32 4))
-        // CHECK: ty:uint32 %temp.22 = uint32 1
+        // CHECK: writebuffer buffer:%abi_encoded.temp.24 offset:uint32 0 value:uint8((%temp.25 * uint32 4))
+        // CHECK: ty:uint32 %temp.26 = uint32 1
         // CHECK: branch block12
 
         // CHECK: block9: # medium
-        // CHECK: writebuffer buffer:%abi_encoded.temp.20 offset:uint32 0 value:uint16(((%temp.21 * uint32 4) | uint32 1))
-        // CHECK: ty:uint32 %temp.22 = uint32 2
+        // CHECK: writebuffer buffer:%abi_encoded.temp.24 offset:uint32 0 value:uint16(((%temp.25 * uint32 4) | uint32 1))
+        // CHECK: ty:uint32 %temp.26 = uint32 2
         // CHECK: branch block12
 
         // CHECK: block10: # medium_or_big
-        // CHECK: branchcond (unsigned more %temp.21 > uint32 16383), block11, block9
+        // CHECK: branchcond (unsigned more %temp.25 > uint32 16383), block11, block9
 
         // CHECK: block11: # big
-        // CHECK: writebuffer buffer:%abi_encoded.temp.20 offset:uint32 0 value:((%temp.21 * uint32 4) | uint32 2)
-        // CHECK: ty:uint32 %temp.22 = uint32 4
+        // CHECK: writebuffer buffer:%abi_encoded.temp.24 offset:uint32 0 value:((%temp.25 * uint32 4) | uint32 2)
+        // CHECK: ty:uint32 %temp.26 = uint32 4
         // CHECK: branch block12
 
         // CHECK: block12: # done
-        // CHECK: memcpy src: (arg #0), dest: (advance ptr: %abi_encoded.temp.20, by: (uint32 0 + %temp.22)), bytes_len: %temp.21
-        // CHECK: ty:bytes %enc = %abi_encoded.temp.20
-        // CHECK: ty:uint32 %temp.23 = (builtin ArrayLength (%enc))
-        // CHECK: ty:uint32 %temp.25 = (zext uint32 (builtin ReadFromBuffer (%enc, uint32 0)))
-        // CHECK: switch (%temp.25 & uint32 3):
+        // CHECK: memcpy src: (arg #0), dest: (advance ptr: %abi_encoded.temp.24, by: (uint32 0 + %temp.26)), bytes_len: %temp.25
+        // CHECK: ty:bytes %enc = %abi_encoded.temp.24
+        // CHECK: ty:uint32 %temp.27 = (builtin ArrayLength (%enc))
+        // CHECK: ty:uint32 %temp.29 = (zext uint32 (builtin ReadFromBuffer (%enc, uint32 0)))
+        // CHECK: switch (%temp.29 & uint32 3):
         // CHECK:         case uint32 0: goto block #15
         // CHECK:         case uint32 1: goto block #16
         // CHECK:         case uint32 2: goto block #17
@@ -121,39 +121,39 @@ contract CompactEncoding {
         // CHECK: assert-failure
 
         // CHECK: block14: # prepare
-        // CHECK: branchcond (unsigned more %temp.21 > uint32 63), block10, block8
+        // CHECK: branchcond (unsigned more %temp.25 > uint32 63), block10, block8
 
         // CHECK: block15: # case_0
-        // CHECK: ty:uint32 %temp.24 = (%temp.25 >> uint32 2)
-        // CHECK: ty:uint32 %temp.25 = uint32 1
+        // CHECK: ty:uint32 %temp.28 = (%temp.29 >> uint32 2)
+        // CHECK: ty:uint32 %temp.29 = uint32 1
         // CHECK: branch block19
 
         // CHECK: block16: # case_1
-        // CHECK: ty:uint32 %temp.24 = ((zext uint32 (builtin ReadFromBuffer (%enc, uint32 0))) >> uint32 2)
-        // CHECK: ty:uint32 %temp.25 = uint32 2
+        // CHECK: ty:uint32 %temp.28 = ((zext uint32 (builtin ReadFromBuffer (%enc, uint32 0))) >> uint32 2)
+        // CHECK: ty:uint32 %temp.29 = uint32 2
         // CHECK: branch block19
 
         // CHECK: block17: # case_2
-        // CHECK: ty:uint32 %temp.24 = ((builtin ReadFromBuffer (%enc, uint32 0)) >> uint32 2)
-        // CHECK: ty:uint32 %temp.25 = uint32 4
+        // CHECK: ty:uint32 %temp.28 = ((builtin ReadFromBuffer (%enc, uint32 0)) >> uint32 2)
+        // CHECK: ty:uint32 %temp.29 = uint32 4
         // CHECK: branch block19
 
         // CHECK: block18: # case_default
         // CHECK: assert-failure
 
         // CHECK: block19: # done
-        // CHECK: branchcond (unsigned (uint32 0 + %temp.25) <= %temp.23), block20, block21
+        // CHECK: branchcond (unsigned (uint32 0 + %temp.29) <= %temp.27), block20, block21
 
         // CHECK: block20: # inbounds
-        // CHECK: branchcond (unsigned (uint32 0 + (%temp.24 + %temp.25)) <= %temp.23), block22, block23
+        // CHECK: branchcond (unsigned (uint32 0 + (%temp.28 + %temp.29)) <= %temp.27), block22, block23
 
         // CHECK: block21: # out_of_bounds
         // CHECK: assert-failure
 
         // CHECK: block22: # inbounds
-        // CHECK: ty:string %temp.26 = (alloc string len %temp.24)
-        // CHECK: memcpy src: (advance ptr: %enc, by: (uint32 0 + %temp.25)), dest: %temp.26, bytes_len: %temp.24
-        // CHECK: branchcond (unsigned less (uint32 0 + (%temp.24 + %temp.25)) < %temp.23), block24, block25
+        // CHECK: ty:string %temp.30 = (alloc string len %temp.28)
+        // CHECK: memcpy src: (advance ptr: %enc, by: (uint32 0 + %temp.29)), dest: %temp.30, bytes_len: %temp.28
+        // CHECK: branchcond (unsigned less (uint32 0 + (%temp.28 + %temp.29)) < %temp.27), block24, block25
 
         // CHECK: block23: # out_of_bounds
         // CHECK: assert-failure
