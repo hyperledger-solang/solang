@@ -28,8 +28,11 @@ pub(crate) fn function_dispatch(
     all_cfg: &[ControlFlowGraph],
     ns: &mut Namespace,
     opt: &Options,
-) -> ControlFlowGraph {
-    Dispatch::new(all_cfg, ns, opt).build()
+) -> Vec<ControlFlowGraph> {
+    vec![
+        Dispatch::new(all_cfg, ns, opt, FunctionTy::Constructor).build(),
+        Dispatch::new(all_cfg, ns, opt, FunctionTy::Function).build(),
+    ]
 }
 
 struct Dispatch<'a> {
@@ -43,10 +46,16 @@ struct Dispatch<'a> {
     ns: &'a mut Namespace,
     selector_len: Box<Expression>,
     opt: &'a Options,
+    ty: FunctionTy,
 }
 
-fn new_cfg(ns: &Namespace) -> ControlFlowGraph {
-    let mut cfg = ControlFlowGraph::new("substrate_dispatch".into(), ASTFunction::None);
+fn new_cfg(ns: &Namespace, ty: FunctionTy) -> ControlFlowGraph {
+    let name = match ty {
+        FunctionTy::Constructor => "substrate_deploy_dispatch",
+        FunctionTy::Function => "substrate_call_dispatch",
+        _ => unreachable!(),
+    };
+    let mut cfg = ControlFlowGraph::new(name.into(), ASTFunction::None);
     let input_ptr = Parameter {
         loc: Codegen,
         id: None,
@@ -70,9 +79,16 @@ fn new_cfg(ns: &Namespace) -> ControlFlowGraph {
 
 impl<'a> Dispatch<'a> {
     /// Create a new `Dispatch` struct that has all the data needed for building the dispatch logic.
-    fn new(all_cfg: &'a [ControlFlowGraph], ns: &'a mut Namespace, opt: &'a Options) -> Self {
+    ///
+    /// `ty` specifies whether to include constructors or functions.
+    fn new(
+        all_cfg: &'a [ControlFlowGraph],
+        ns: &'a mut Namespace,
+        opt: &'a Options,
+        ty: FunctionTy,
+    ) -> Self {
         let mut vartab = Vartable::new(ns.next_id);
-        let mut cfg = new_cfg(ns);
+        let mut cfg = new_cfg(ns, ty);
 
         // Read input length from args
         let input_len = vartab.temp_name("input_len", &Uint(32));
@@ -145,6 +161,7 @@ impl<'a> Dispatch<'a> {
             ns,
             selector_len,
             opt,
+            ty,
         }
     }
 
@@ -175,8 +192,8 @@ impl<'a> Dispatch<'a> {
             .all_cfg
             .iter()
             .enumerate()
-            .filter_map(|(func_no, func_cfg)| match func_cfg.ty {
-                FunctionTy::Function | FunctionTy::Constructor if func_cfg.public => {
+            .filter_map(|(func_no, func_cfg)| {
+                if func_cfg.ty == self.ty && func_cfg.public {
                     let selector = BigInt::from_bytes_le(Sign::Plus, &func_cfg.selector);
                     let case = Expression::NumberLiteral {
                         loc: Codegen,
@@ -184,8 +201,9 @@ impl<'a> Dispatch<'a> {
                         value: selector,
                     };
                     Some((case, self.dispatch_case(func_no)))
+                } else {
+                    None
                 }
-                _ => None,
             })
             .collect();
 

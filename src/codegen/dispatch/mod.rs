@@ -11,9 +11,9 @@ pub(super) fn function_dispatch(
     all_cfg: &[ControlFlowGraph],
     ns: &mut Namespace,
     opt: &Options,
-) -> ControlFlowGraph {
+) -> Vec<ControlFlowGraph> {
     match &ns.target {
-        Target::Solana => solana::function_dispatch(contract_no, all_cfg, ns, opt),
+        Target::Solana => vec![solana::function_dispatch(contract_no, all_cfg, ns, opt)],
         Target::Substrate { .. } | Target::EVM => {
             substrate::function_dispatch(contract_no, all_cfg, ns, opt)
         }
