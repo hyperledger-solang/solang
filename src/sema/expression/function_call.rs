@@ -1281,7 +1281,7 @@ fn try_type_method(
 
             let ty = match func.name.as_str() {
                 "call" => Some(CallTy::Regular),
-                "delegatecall" if ns.target == Target::EVM => Some(CallTy::Delegate),
+                "delegatecall" if ns.target != Target::Solana => Some(CallTy::Delegate),
                 "staticcall" if ns.target == Target::EVM => Some(CallTy::Static),
                 _ => None,
             };
@@ -1297,6 +1297,13 @@ fn try_type_method(
                     ));
 
                     return Err(());
+                }
+
+                if ty == CallTy::Delegate && ns.target.is_substrate() && call_args.gas.is_some() {
+                    diagnostics.push(Diagnostic::warning(
+                        *loc,
+                        "'gas' specified on 'delegatecall' will be ignored".into(),
+                    ));
                 }
 
                 if args.len() != 1 {
