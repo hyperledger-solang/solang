@@ -408,7 +408,7 @@ impl<'a> Dispatch<'a> {
         );
 
         // No need to check value transferred; we will abort either way
-        if fallback_cfg.is_none() && receive_cfg.is_none() {
+        if (fallback_cfg.is_none() && receive_cfg.is_none()) || self.ty == FunctionTy::Constructor {
             return self.selector_invalid();
         }
 
