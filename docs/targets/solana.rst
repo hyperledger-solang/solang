@@ -354,7 +354,7 @@ uint64 ``lamports``
     The lamports of the accounts. This field can be modified, however the lamports need to be
     balanced for all accounts by the end of the transaction.
 
-bytes ``data```
+bytes ``data``
     The account data. This field can be modified, but use with caution.
 
 address ``owner``
@@ -473,3 +473,11 @@ such a constructor.
 
 .. include:: ../examples/solana/payer_annotation.sol
   :code: solidity
+
+
+Accessing accounts' data
+________________________
+
+Accounts declared on a constructor using the ``@payer`` annotation are available for access inside it.
+For an account declared as ``@payer(funder)``, the access follows the syntax ``tx.accounts.funder``, which returns
+the :ref:`AccountInfo builtin struct <account_info>`.
