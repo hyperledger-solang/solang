@@ -36,7 +36,7 @@ When writing libraries there are restrictions compared to contracts:
 
 .. note::
 
-    When using the Ethereum Foundation Solidity compiler, libraries are a special contract type are
+    When using the Ethereum Foundation Solidity compiler, libraries are a special contract type and are
     called using `delegatecall`. Solang statically links the library calls into your contract code.
     This generates larger contract code, however it reduces the call overhead and make it possible to do
     compiler optimizations across library and contract code.
