@@ -2,6 +2,44 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## v0.3.1 Göttingen
+
+### Added
+- Write environment configured into Substrate metadata. [xermicus](https://github.com/xermicus)
+- Tornado cash example for Substrate. [xermicus](https://github.com/xermicus)
+- `is_contract` is available as a builtin for Substrate. [xermicus](https://github.com/xermicus)
+- The `wasm-opt` optimizer now optimizes Substrate binaries. [xermicus](https://github.com/xermicus)
+- Call flags are now available for Substrate. [xermicus](https://github.com/xermicus)
+- Read compiler configurations from toml file. [salaheldinsoliman](https://github.com/salaheldinsoliman)
+- Accounts declared with `@payer(my_account)` can be accessed with the 
+  syntax `tx.accounts.my_account`. [LucasSte](https://github.com/LucasSte)
+- `delegatecall()` builtin has been added for Substrate. [xermicus](https://github.com/xermicus)
+- `get_contents_of_file_no` for Solang parser. [BenTheKush](https://github.com/BenTheKush)
+- `set_code_hash()` builtin has been aded for Substrate. [xermicus](https://github.com/xermicus)
+
+### Fixed
+- Diagnostics do not include large numbers anymore. [seanyoung](https://github.com/seanyoung)
+- Correctly parse and resolve `require(i < 2**255)`. [seanyoung](https://github.com/seanyoung)
+- Virtual function are available for call. [xermicus](https://github.com/xermicus)
+- Allow `.wrap()` and `.unwrap()` user defined type methods in constants. [xermicus](https://github.com/xermicus)
+- `@inheritdoc` now works with bases of bases. [seanyoung](https://github.com/seanyoung)
+- Allow destructures to assign to storage variables. [seanyoung](https://github.com/seanyoung)
+- Do not allow push and pop in fixed length arrays. [LucasSte](https://github.com/LucasSte)
+- Improve unused variable elimination to remove unused arrays. [LucasSte](https://github.com/LucasSte)
+- Salt argument should be of type `bytes32`. [seanyoung](https://github.com/seanyoung)
+- Allow return vallues to be ignored in try-catch statements. [seanyoung](https://github.com/seanyoung)
+- Optimize modifiers' CFGs. [xermicus](https://github.com/xermicus)
+- Fix an error whereby building large contracts would cause an LLVM error. [LucasSte](https://github.com/LucasSte)
+- A constructor cannot run twice on the same data account. [seanyoung](https://github.com/seanyoung)
+- Split the `call` and `deploy` dispatches on Substrate. [xermicus](https://github.com/xermicus)
+
+### Changed
+- `@payer` annotation declares an account in a constructor. [LucasSte](https://github.com/LucasSte)
+- Do not allow `.call()` functions in functions declared as view. [seanyoung](https://github.com/seanyoung)
+- Constructor annotations above a constructor either declare an account or receive a literal parameter. Those before
+  constructor arguments refer to them. [LucasSte](https://github.com/LucasSte)
+- Implicit accessor function now returns struct members. [seanyoung](https://github.com/seanyoung)
+
 ## v0.3.0 Venice
 
 The parser and semantic analysis stage of Solang have gone through
