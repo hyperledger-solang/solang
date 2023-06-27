@@ -24,13 +24,17 @@ struct Hovers {
 
 type HoverEntry = Interval<usize, String>;
 
+struct Files {
+    hovers: HashMap<PathBuf, Hovers>,
+    text_buffers: HashMap<PathBuf, String>,
+}
+
 pub struct SolangServer {
     client: Client,
     target: Target,
     importpaths: Vec<PathBuf>,
     importmaps: Vec<(String, PathBuf)>,
-    files: Mutex<HashMap<PathBuf, Hovers>>,
-    text_buffers: Mutex<HashMap<PathBuf, String>>,
+    files: Mutex<Files>,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -58,8 +62,10 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
     let (service, socket) = LspService::new(|client| SolangServer {
         client,
         target,
-        files: Mutex::new(HashMap::new()),
-        text_buffers: Mutex::new(HashMap::new()),
+        files: Mutex::new(Files {
+            hovers: HashMap::new(),
+            text_buffers: HashMap::new(),
+        }),
         importpaths,
         importmaps,
     });
@@ -72,9 +78,8 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
 impl SolangServer {
     /// Parse file
     async fn parse_file(&self, uri: Url) {
-        // if let Some(contents) = self.text_buffers.lock().await.get(&path) {
         let mut resolver = FileResolver::new();
-        for (path, contents) in self.text_buffers.lock().await.iter() {
+        for (path, contents) in self.files.lock().await.text_buffers.iter() {
             resolver.set_file_contents(path.to_str().unwrap(), contents.clone());
         }
         if let Ok(path) = uri.to_file_path() {
@@ -159,7 +164,7 @@ impl SolangServer {
 
             let hovers = Builder::build(&ns);
 
-            self.files.lock().await.insert(path, hovers);
+            self.files.lock().await.hovers.insert(path, hovers);
 
             res.await;
         }
@@ -1164,7 +1169,11 @@ impl LanguageServer for SolangServer {
         let uri = params.text_document.uri;
 
         if let Ok(path) = uri.to_file_path() {
-            self.text_buffers.lock().await.insert(path, params.text_document.text);
+            self.files
+                .lock()
+                .await
+                .text_buffers
+                .insert(path, params.text_document.text);
         }
 
         self.parse_file(uri).await;
@@ -1174,15 +1183,15 @@ impl LanguageServer for SolangServer {
         let uri = params.text_document.uri;
 
         if let Ok(path) = uri.to_file_path() {
-            if let Some(text_buf) = self.text_buffers.lock().await.get_mut(&path) {
+            if let Some(text_buf) = self.files.lock().await.text_buffers.get_mut(&path) {
                 for content_change in params.content_changes {
                     *text_buf = if let Some(range) = content_change.range {
                         let start_line = range.start.line as usize;
                         let start_col = range.start.character as usize;
                         let end_line = range.end.line as usize;
                         let end_col = range.end.character as usize;
-                        
-                        // directly add the changes to the buffer when changes are present at the end of the file
+
+                        // Directly add the changes to the buffer when changes are present at the end of the file.
                         if start_line == text_buf.lines().count() {
                             text_buf.push_str(&content_change.text);
                             return;
@@ -1191,13 +1200,13 @@ impl LanguageServer for SolangServer {
                         let mut new = String::new();
                         for (i, line) in text_buf.lines().enumerate() {
                             if i < start_line {
-                                new.push_str(&line);
+                                new.push_str(line);
                                 new.push('\n');
                                 continue;
                             }
 
                             if i > end_line {
-                                new.push_str(&line);
+                                new.push_str(line);
                                 new.push('\n');
                                 continue;
                             }
@@ -1214,7 +1223,7 @@ impl LanguageServer for SolangServer {
                         }
                         new
                     } else {
-                        // when no range is provided, entire file is sent in the request
+                        // When no range is provided, entire file is sent in the request.
                         content_change.text
                     };
                 }
@@ -1229,7 +1238,7 @@ impl LanguageServer for SolangServer {
 
         if let Some(text) = params.text {
             if let Ok(path) = uri.to_file_path() {
-                if let Some(text_buf) = self.text_buffers.lock().await.get_mut(&path) {
+                if let Some(text_buf) = self.files.lock().await.text_buffers.get_mut(&path) {
                     *text_buf = text;
                 }
             }
@@ -1242,8 +1251,8 @@ impl LanguageServer for SolangServer {
         let uri = params.text_document.uri;
 
         if let Ok(path) = uri.to_file_path() {
-            self.files.lock().await.remove(&path);
-            self.text_buffers.lock().await.remove(&path);
+            self.files.lock().await.hovers.remove(&path);
+            self.files.lock().await.text_buffers.remove(&path);
         }
     }
 
@@ -1258,8 +1267,8 @@ impl LanguageServer for SolangServer {
         let uri = txtdoc.uri;
 
         if let Ok(path) = uri.to_file_path() {
-            let files = self.files.lock().await;
-            if let Some(hovers) = files.get(&path) {
+            let files = &self.files.lock().await;
+            if let Some(hovers) = files.hovers.get(&path) {
                 let offset = hovers
                     .file
                     .get_offset(pos.line as usize, pos.character as usize);
