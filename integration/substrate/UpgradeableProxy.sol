@@ -119,11 +119,8 @@ contract UpgradeableProxy is Proxy, StorageSlot {
 contract UpgradeableImplV1 {
     uint public count;
 
-    constructor() {
-        count = 1;
-    }
-
     function inc() external {
+        print("v1");
         count += 1;
     }
 }
@@ -133,7 +130,7 @@ contract UpgradeableImplV2 {
     uint public count;
     string public version;
 
-    constructor() {
+    function setVersion() public {
         version = "v2";
     }
 
