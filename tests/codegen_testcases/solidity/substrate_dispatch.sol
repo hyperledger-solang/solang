@@ -286,6 +286,7 @@ contract simple {
 	// CHECK: 	store (arg #3), %selector.temp.46
 	// CHECK: 	switch %selector.temp.46:
 	// CHECK: 		case uint32 3576764294: goto block #3
+	// NOT-CHECK: 	case uint32 2018875586: goto block #3
 	// CHECK: 		default: goto block #2
 	// CHECK: block2: # fb_or_recv
 	// CHECK: 	return code: function selector invalid
@@ -306,6 +307,7 @@ contract simple {
 	// CHECK: 	store (arg #3), %selector.temp.50
 	// CHECK: 	switch %selector.temp.50:
 	// CHECK: 		case uint32 2018875586: goto block #3
+	// NOT-CHECK: 	case uint32 3576764294: goto block #3
 	// CHECK: 		default: goto block #2
 	// CHECK: block2: # fb_or_recv
 	// CHECK: 	return code: function selector invalid
