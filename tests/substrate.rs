@@ -904,13 +904,8 @@ impl MockSubstrate {
         self.invoke("call", input).unwrap();
     }
 
-    /// Call the "call" function with the given input and expect the contract to trap.
-    ///
-    /// `input` must contain the desired function selector.
-    ///
-    /// Only traps caused by an `unreachable` instruction are allowed. Other traps will panic instead.
-    pub fn raw_function_failure(&mut self, input: Vec<u8>) {
-        match self.invoke("call", input) {
+    fn raw_failure(&mut self, export: &str, input: Vec<u8>) {
+        match self.invoke(export, input) {
             Err(wasmi::Error::Trap(trap)) => match trap.trap_code() {
                 Some(TrapCode::UnreachableCodeReached) => (),
                 _ => panic!("trap: {trap:?}"),
@@ -918,6 +913,24 @@ impl MockSubstrate {
             Err(err) => panic!("unexpected error: {err:?}"),
             Ok(_) => panic!("unexpected return from main"),
         }
+    }
+
+    /// Call the "call" function with the given input and expect the contract to trap.
+    ///
+    /// `input` must contain the desired function selector.
+    ///
+    /// Only traps caused by an `unreachable` instruction are allowed. Other traps will panic instead.
+    pub fn raw_function_failure(&mut self, input: Vec<u8>) {
+        self.raw_failure("call", input);
+    }
+
+    /// Call the "deploy" function with the given input and expect the contract to trap.
+    ///
+    /// `input` must contain the desired function selector.
+    ///
+    /// Only traps caused by an `unreachable` instruction are allowed. Other traps will panic instead.
+    pub fn raw_constructor_failure(&mut self, input: Vec<u8>) {
+        self.raw_failure("deploy", input);
     }
 
     pub fn heap_verify(&mut self) {
