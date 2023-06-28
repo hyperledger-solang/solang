@@ -327,34 +327,22 @@ impl SubstrateTarget {
     /// Emits the "deploy" function if `init` is `Some`, otherwise emits the "call" function.
     fn emit_dispatch(&mut self, init: Option<FunctionValue>, bin: &mut Binary, ns: &Namespace) {
         let ty = bin.context.void_type().fn_type(&[], false);
-        let name = if init.is_some() { "deploy" } else { "call" };
-        let func = bin.module.add_function(name, ty, None);
+        let export_name = if init.is_some() { "deploy" } else { "call" };
+        let func = bin.module.add_function(export_name, ty, None);
         let (input, input_length) = self.public_function_prelude(bin, func);
+        let dispatch_cfg_name = &format!("substrate_{}_dispatch", export_name);
+        let args = vec![
+            BasicMetadataValueEnum::PointerValue(input),
+            BasicMetadataValueEnum::IntValue(input_length),
+            BasicMetadataValueEnum::IntValue(self.value_transferred(bin, ns)),
+            BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
+        ];
+        // Call the storage initializers on deploy
         if let Some(initializer) = init {
             bin.builder.build_call(initializer, &[], "");
-            let func = bin
-                .module
-                .get_function("substrate_deploy_dispatch")
-                .unwrap();
-            let args = vec![
-                BasicMetadataValueEnum::PointerValue(input),
-                BasicMetadataValueEnum::IntValue(input_length),
-                BasicMetadataValueEnum::IntValue(self.value_transferred(bin, ns)),
-                BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
-            ];
-            bin.builder
-                .build_call(func, &args, "substrate_deploy_dispatch");
-        } else {
-            let func = bin.module.get_function("substrate_call_dispatch").unwrap();
-            let args = vec![
-                BasicMetadataValueEnum::PointerValue(input),
-                BasicMetadataValueEnum::IntValue(input_length),
-                BasicMetadataValueEnum::IntValue(self.value_transferred(bin, ns)),
-                BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
-            ];
-            bin.builder
-                .build_call(func, &args, "substrate_call_dispatch");
         }
+        let cfg = bin.module.get_function(dispatch_cfg_name).unwrap();
+        bin.builder.build_call(cfg, &args, dispatch_cfg_name);
 
         bin.builder.build_unreachable();
     }
