@@ -1049,7 +1049,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 binary.builder.position_at_end(not_found_block);
                 let msg = "delegatecall callee is not a contract account";
-                self.log_runtime_error(binary, msg.into(), Some(loc), ns);
+                binary.log_runtime_error(self, msg.into(), Some(loc), ns);
                 binary.builder.build_unconditional_branch(done_block);
 
                 binary.builder.position_at_end(call_block);
