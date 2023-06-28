@@ -1047,18 +1047,21 @@ fn constructors_and_messages_distinct_in_dispatcher() {
     let mut runtime = build_solidity(
         r##"
         contract c {
+            @selector([0, 1, 2, 3])
             constructor() {}
+
+            @selector([4, 5, 6, 7])
             function foo() public pure {}
         }"##,
     );
 
-    let constructor = 0xcdbf608du32.to_be_bytes().to_vec();
+    let constructor = 0x00010203u32.to_be_bytes().to_vec();
     // Given this constructor selector works as intended
     runtime.raw_constructor(constructor.clone());
     // Expect calling the constructor via "call" to trap the contract
     runtime.raw_function_failure(constructor);
 
-    let function = 0xc2985578u32.to_be_bytes().to_vec();
+    let function = 0x04050607u32.to_be_bytes().to_vec();
     // Given this function selector works as intended
     runtime.raw_function(function.clone());
     // Expect calling the function via "deploy" to trap the contract
