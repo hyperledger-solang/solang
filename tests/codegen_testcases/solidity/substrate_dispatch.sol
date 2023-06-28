@@ -181,7 +181,6 @@ contract is_payable {
 	// CHECK: block3: # func_0_dispatch
 	// CHECK: 	branchcond (unsigned more %value.temp.30 > uint128 0), block4, block5
 	// CHECK: block4: # func_0_got_value
-	// CHECK: 	print (format string ( hex"72756e74696d655f6572726f723a206e6f6e2070617961626c652066756e6374696f6e20666f6f2072656365697665642076616c75652c0a"))
 	// CHECK: 	assert-failure
 	// CHECK: block5: # func_0_no_value
 	// CHECK: 	 = call is_payable::is_payable::function::foo 
@@ -242,7 +241,6 @@ contract overloaded {
 	// CHECK: block4: # func_3_dispatch
 	// CHECK: 	branchcond (unsigned more %value.temp.38 > uint128 0), block5, block6
 	// CHECK: block5: # func_3_got_value
-	// CHECK: 	print (format string ( hex"72756e74696d655f6572726f723a206e6f6e2070617961626c652066756e6374696f6e20665f5f75696e743235362072656365697665642076616c75652c0a"))
 	// CHECK: 	assert-failure
 	// CHECK: block6: # func_3_no_value
 	// CHECK: 	ty:uint32 %temp.40 = (trunc uint32 (%input_len.temp.37 - uint32 4))
@@ -314,7 +312,6 @@ contract simple {
 	// CHECK: block3: # func_0_dispatch
 	// CHECK: 	branchcond (unsigned more %value.temp.48 > uint128 0), block4, block5
 	// CHECK: block4: # func_0_got_value
-	// CHECK: 	print (format string ( hex"72756e74696d655f6572726f723a206e6f6e2070617961626c652066756e6374696f6e20666f6f2072656365697665642076616c75652c0a"))
 	// CHECK: 	assert-failure
 	// CHECK: block5: # func_0_no_value
 	// CHECK: 	 = call simple::simple::function::foo 
