@@ -1097,19 +1097,19 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
 }
 
 static BPF_IR: [&[u8]; 6] = [
-    include_bytes!("../../stdlib/bpf/stdlib.bc"),
-    include_bytes!("../../stdlib/bpf/bigint.bc"),
-    include_bytes!("../../stdlib/bpf/format.bc"),
-    include_bytes!("../../stdlib/bpf/solana.bc"),
-    include_bytes!("../../stdlib/bpf/ripemd160.bc"),
-    include_bytes!("../../stdlib/bpf/heap.bc"),
+    include_bytes!("../../target/bpf/stdlib.bc"),
+    include_bytes!("../../target/bpf/bigint.bc"),
+    include_bytes!("../../target/bpf/format.bc"),
+    include_bytes!("../../target/bpf/solana.bc"),
+    include_bytes!("../../target/bpf/ripemd160.bc"),
+    include_bytes!("../../target/bpf/heap.bc"),
 ];
 
 static WASM_IR: [&[u8]; 4] = [
-    include_bytes!("../../stdlib/wasm/stdlib.bc"),
-    include_bytes!("../../stdlib/wasm/heap.bc"),
-    include_bytes!("../../stdlib/wasm/bigint.bc"),
-    include_bytes!("../../stdlib/wasm/format.bc"),
+    include_bytes!("../../target/wasm/stdlib.bc"),
+    include_bytes!("../../target/wasm/heap.bc"),
+    include_bytes!("../../target/wasm/bigint.bc"),
+    include_bytes!("../../target/wasm/format.bc"),
 ];
 
-static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/wasm/ripemd160.bc");
+static RIPEMD160_IR: &[u8] = include_bytes!("../../target/wasm/ripemd160.bc");

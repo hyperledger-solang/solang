@@ -2,14 +2,14 @@ CC=clang
 BIT_INT_FLAGS=-Xclang -fexperimental-max-bitint-width=512
 CFLAGS=$(TARGET_FLAGS) -emit-llvm -O3 -ffreestanding -fno-builtin -Wall -Wno-unused-function $(BIT_INT_FLAGS)
 
-bpf/%.bc: %.c
+../target/bpf/%.bc: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
-wasm/%.bc: %.c
+../target/wasm/%.bc: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
-SOLANA=$(addprefix bpf/,solana.bc bigint.bc format.bc stdlib.bc ripemd160.bc heap.bc)
-WASM=$(addprefix wasm/,ripemd160.bc stdlib.bc bigint.bc format.bc heap.bc)
+SOLANA=$(addprefix ../target/bpf/,solana.bc bigint.bc format.bc stdlib.bc ripemd160.bc heap.bc)
+WASM=$(addprefix ../target/wasm/,ripemd160.bc stdlib.bc bigint.bc format.bc heap.bc)
 
 all: $(SOLANA) $(WASM)
 
@@ -21,10 +21,10 @@ $(WASM): TARGET_FLAGS=--target=wasm32
 bpf/solana.bc: solana.c solana_sdk.h | outputs_dirs
 
 outputs_dirs:
-	@mkdir -p bpf wasm
+	@mkdir -p ../target/bpf ../target/wasm
 
 clean:
-	rm -rf bpf wasm
+	rm -rf ../target/bpf ../target/wasm
 
 test:
 	clang -DTEST -DSOL_TEST -O3 -Wall solana.c stdlib.c -o test
