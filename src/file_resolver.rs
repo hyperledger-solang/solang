@@ -82,7 +82,7 @@ impl FileResolver {
     }
 
     /// Get the file contents of `file_no`th file if it exists
-    pub fn get_file_contents_of_file_no(&self, file_no: usize) -> Option<Arc<str>> {
+    pub fn get_contents_of_file_no(&self, file_no: usize) -> Option<Arc<str>> {
         self.files.get(file_no).cloned()
     }
 
