@@ -13,6 +13,40 @@ use crate::{
 use num_bigint::{BigInt, Sign};
 use solang_parser::pt::{FunctionTy, Loc::Codegen};
 
+/// On Substrate, contracts export  a `call` and a `deploy` function.
+/// The `contracts` pallet will invoke `deploy` on contract instatiation,
+/// and `call` on any contract calls after the instantiation.
+///
+/// On Ethereum, constructors do not exist on-chain; they are only executed once.
+/// To cope with that model, we emit different code for the dispatcher,
+/// depending on the exported function:
+/// * On `deploy`, match only on constructor selectors
+/// * On `call`, match only on selectors of externally callable functions
+pub enum DispatchType {
+    Deploy,
+    Call,
+}
+
+impl ToString for DispatchType {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Deploy => "substrate_deploy_dispatch",
+            Self::Call => "substrate_call_dispatch",
+        }
+        .into()
+    }
+}
+
+impl From<FunctionTy> for DispatchType {
+    fn from(value: FunctionTy) -> Self {
+        match value {
+            FunctionTy::Constructor => Self::Deploy,
+            FunctionTy::Function => Self::Call,
+            _ => unreachable!("only constructors and functions have corresponding dispatch types"),
+        }
+    }
+}
+
 /// The dispatch algorithm consists of these steps:
 /// 1. If the input is less than the expected selector length (default 4 bytes), fallback or receive.
 /// 2. Match the function selector
@@ -50,12 +84,7 @@ struct Dispatch<'a> {
 }
 
 fn new_cfg(ns: &Namespace, ty: FunctionTy) -> ControlFlowGraph {
-    let name = match ty {
-        FunctionTy::Constructor => "substrate_deploy_dispatch",
-        FunctionTy::Function => "substrate_call_dispatch",
-        _ => unreachable!(),
-    };
-    let mut cfg = ControlFlowGraph::new(name.into(), ASTFunction::None);
+    let mut cfg = ControlFlowGraph::new(DispatchType::from(ty).to_string(), ASTFunction::None);
     let input_ptr = Parameter {
         loc: Codegen,
         id: None,

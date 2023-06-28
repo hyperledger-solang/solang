@@ -749,8 +749,6 @@ pub struct Contract {
     pub code: OnceCell<Vec<u8>>,
     /// Can the contract be instantiated, i.e. not abstract, no errors, etc.
     pub instantiable: bool,
-    /// CFG number of this contract's dispatch function
-    pub dispatch_no: usize,
     /// Account of deployed program code on Solana
     pub program_id: Option<Vec<u8>>,
 }
