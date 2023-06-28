@@ -9,6 +9,11 @@ describe('Simple solang tests', function () {
     it('flipper', async function () {
         let { program, storage } = await loadContract('flipper', [true]);
 
+        // make sure we can't run the constructor twice
+        await expect(program.methods.new(false)
+            .accounts({ dataAccount: storage.publicKey })
+            .rpc()).rejects.toThrow();
+
         let res = await program.methods.get().accounts({ dataAccount: storage.publicKey }).view();
 
         expect(res).toStrictEqual(true);

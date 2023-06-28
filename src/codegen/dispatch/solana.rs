@@ -6,10 +6,7 @@ use crate::codegen::{
     vartable::Vartable,
     Builtin, Expression, Options,
 };
-use crate::{
-    sema::ast::{Namespace, StructType, Type},
-    Target,
-};
+use crate::sema::ast::{Namespace, StructType, Type};
 use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
 use solang_parser::{pt, pt::Loc};
@@ -146,21 +143,6 @@ pub(crate) fn function_dispatch(
         }),
     };
 
-    let magic = vartab.temp_name("magic", &Type::Uint(32));
-
-    cfg.add(
-        &mut vartab,
-        Instr::LoadStorage {
-            res: magic,
-            ty: Type::Uint(32),
-            storage: Expression::NumberLiteral {
-                loc: Loc::Codegen,
-                ty: Type::Uint(32),
-                value: 0.into(),
-            },
-        },
-    );
-
     let mut cases = Vec::new();
 
     for (cfg_no, func_cfg) in all_cfg.iter().enumerate() {
@@ -172,7 +154,6 @@ pub(crate) fn function_dispatch(
             add_function_dispatch_case(
                 cfg_no,
                 func_cfg,
-                magic,
                 &argsdata,
                 argslen.clone(),
                 contract_no,
@@ -280,7 +261,6 @@ pub(crate) fn function_dispatch(
 fn add_function_dispatch_case(
     cfg_no: usize,
     func_cfg: &ControlFlowGraph,
-    magic: usize,
     argsdata: &Expression,
     argslen: Expression,
     contract_no: usize,
@@ -298,43 +278,7 @@ fn add_function_dispatch_case(
     };
 
     if needs_account {
-        // check for magic in data account, to see if data account is initialized
-        let magic_ok = cfg.new_basic_block("magic_ok".into());
-        let magic_bad = cfg.new_basic_block("magic_bad".into());
-
-        cfg.add(
-            vartab,
-            Instr::BranchCond {
-                cond: Expression::Equal {
-                    loc: Loc::Codegen,
-                    left: Expression::Variable {
-                        loc: Loc::Codegen,
-                        ty: Type::Uint(32),
-                        var_no: magic,
-                    }
-                    .into(),
-                    right: Expression::NumberLiteral {
-                        loc: Loc::Codegen,
-                        ty: Type::Uint(32),
-                        value: ns.contracts[contract_no].selector().into(),
-                    }
-                    .into(),
-                },
-                true_block: magic_ok,
-                false_block: magic_bad,
-            },
-        );
-
-        cfg.set_basic_block(magic_bad);
-
-        cfg.add(
-            vartab,
-            Instr::ReturnCode {
-                code: ReturnCode::InvalidDataError,
-            },
-        );
-
-        cfg.set_basic_block(magic_ok);
+        check_magic(ns.contracts[contract_no].selector(), cfg, vartab);
     }
 
     let truncated_len = Expression::Trunc {
@@ -445,6 +389,8 @@ fn add_constructor_dispatch_case(
     let entry = cfg.new_basic_block(format!("constructor_cfg_{cfg_no}"));
     cfg.set_basic_block(entry);
 
+    check_magic(0, cfg, vartab);
+
     let mut returns: Vec<Expression> = Vec::new();
 
     if !func_cfg.params.is_empty() {
@@ -469,16 +415,14 @@ fn add_constructor_dispatch_case(
         );
     }
 
-    if ns.target == Target::Solana {
-        if let ASTFunction::SolidityFunction(function_no) = func_cfg.function_no {
-            let func = &ns.functions[function_no];
+    if let ASTFunction::SolidityFunction(function_no) = func_cfg.function_no {
+        let func = &ns.functions[function_no];
 
-            solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt);
-        } else if let Some((func, _)) = &ns.contracts[contract_no].default_constructor {
-            solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt);
-        } else {
-            unreachable!();
-        }
+        solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt);
+    } else if let Some((func, _)) = &ns.contracts[contract_no].default_constructor {
+        solana_deploy(func, &returns, contract_no, vartab, cfg, ns, opt);
+    } else {
+        unreachable!();
     }
 
     // Call storage initializer
@@ -512,4 +456,59 @@ fn add_constructor_dispatch_case(
     );
 
     entry
+}
+
+fn check_magic(magic_value: u32, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
+    // check for magic in data account, to see if data account is initialized
+    let magic_ok = cfg.new_basic_block("magic_ok".into());
+    let magic_bad = cfg.new_basic_block("magic_bad".into());
+
+    let magic = vartab.temp_name("magic", &Type::Uint(32));
+
+    cfg.add(
+        vartab,
+        Instr::LoadStorage {
+            res: magic,
+            ty: Type::Uint(32),
+            storage: Expression::NumberLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Uint(32),
+                value: 0.into(),
+            },
+        },
+    );
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: Expression::Equal {
+                loc: Loc::Codegen,
+                left: Expression::Variable {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(32),
+                    var_no: magic,
+                }
+                .into(),
+                right: Expression::NumberLiteral {
+                    loc: Loc::Codegen,
+                    ty: Type::Uint(32),
+                    value: magic_value.into(),
+                }
+                .into(),
+            },
+            true_block: magic_ok,
+            false_block: magic_bad,
+        },
+    );
+
+    cfg.set_basic_block(magic_bad);
+
+    cfg.add(
+        vartab,
+        Instr::ReturnCode {
+            code: ReturnCode::InvalidDataError,
+        },
+    );
+
+    cfg.set_basic_block(magic_ok);
 }
