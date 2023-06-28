@@ -7,6 +7,7 @@ use inkwell::module::{Linkage, Module};
 use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 
+use crate::codegen::dispatch::substrate::DispatchType;
 use crate::emit::functions::{emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};
 
@@ -330,17 +331,20 @@ impl SubstrateTarget {
         let export_name = if init.is_some() { "deploy" } else { "call" };
         let func = bin.module.add_function(export_name, ty, None);
         let (input, input_length) = self.public_function_prelude(bin, func);
-        let dispatch_cfg_name = &format!("substrate_{}_dispatch", export_name);
         let args = vec![
             BasicMetadataValueEnum::PointerValue(input),
             BasicMetadataValueEnum::IntValue(input_length),
             BasicMetadataValueEnum::IntValue(self.value_transferred(bin, ns)),
             BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
         ];
-        // Call the storage initializers on deploy
-        if let Some(initializer) = init {
-            bin.builder.build_call(initializer, &[], "");
-        }
+        let dispatch_cfg_name = &init
+            .map(|initializer| {
+                // Call the storage initializers on deploy
+                bin.builder.build_call(initializer, &[], "");
+                DispatchType::Deploy
+            })
+            .unwrap_or(DispatchType::Call)
+            .to_string();
         let cfg = bin.module.get_function(dispatch_cfg_name).unwrap();
         bin.builder.build_call(cfg, &args, dispatch_cfg_name);
 

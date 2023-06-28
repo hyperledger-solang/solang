@@ -46,7 +46,6 @@ impl ast::Contract {
             cfg: Vec::new(),
             code: OnceCell::new(),
             instantiable,
-            dispatch_no: 0,
             program_id: None,
         }
     }

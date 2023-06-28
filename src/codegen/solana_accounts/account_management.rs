@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::dispatch::solana::SOLANA_DISPATCH_CFG_NAME;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{ArrayLength, Function, Namespace, StructType, Type};
 use crate::sema::solana_accounts::BuiltinAccounts;
@@ -32,12 +33,12 @@ pub(crate) fn manage_contract_accounts(contract_no: usize, ns: &mut Namespace) {
     }
 
     if let Some(constructor) = constructor_no {
-        let dispatch = ns.contracts[contract_no].dispatch_no;
-        traverse_cfg(
-            &mut ns.contracts[contract_no].cfg[dispatch],
-            &ns.functions,
-            constructor,
-        );
+        let dispatch = ns.contracts[contract_no]
+            .cfg
+            .iter_mut()
+            .find(|cfg| cfg.name == SOLANA_DISPATCH_CFG_NAME)
+            .expect("dispatch CFG is always generated");
+        traverse_cfg(dispatch, &ns.functions, constructor);
     }
 }
 

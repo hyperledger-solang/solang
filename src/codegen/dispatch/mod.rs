@@ -4,7 +4,7 @@ use super::{cfg::ControlFlowGraph, Options};
 use crate::{sema::ast::Namespace, Target};
 
 pub(super) mod solana;
-pub(super) mod substrate;
+pub(crate) mod substrate;
 
 pub(super) fn function_dispatch(
     contract_no: usize,
