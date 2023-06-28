@@ -13,9 +13,9 @@ use tempfile::tempdir;
 #[cfg(feature = "wasm_opt")]
 use wasm_opt::OptimizationOptions;
 
-use crate::codegen::{cfg::ReturnCode, Options};
-use crate::emit::substrate;
+use crate::codegen::{cfg::ReturnCode, error_msg_with_loc, Options};
 use crate::emit::{solana, BinaryOp, Generate};
+use crate::emit::{substrate, TargetRuntime};
 use crate::linker::link;
 use crate::Target;
 use inkwell::builder::Builder;
@@ -34,6 +34,7 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 use once_cell::sync::OnceCell;
+use solang_parser::pt;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
 
@@ -1050,6 +1051,28 @@ impl<'a> Binary<'a> {
             }
             _ => unreachable!(),
         }
+    }
+
+    pub(super) fn log_runtime_error<T: TargetRuntime<'a> + ?Sized>(
+        &self,
+        target: &T,
+        reason_string: String,
+        reason_loc: Option<pt::Loc>,
+        ns: &Namespace,
+    ) {
+        if !self.options.log_runtime_errors {
+            return;
+        }
+        let error_with_loc = error_msg_with_loc(ns, reason_string, reason_loc);
+        let global_string =
+            self.emit_global_string("runtime_error", error_with_loc.as_bytes(), true);
+        target.print(
+            self,
+            global_string,
+            self.context
+                .i32_type()
+                .const_int(error_with_loc.len() as u64, false),
+        );
     }
 }
 

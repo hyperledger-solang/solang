@@ -213,14 +213,6 @@ pub trait TargetRuntime<'a> {
     /// Prints a string
     fn print(&self, bin: &Binary, string: PointerValue, length: IntValue);
 
-    fn log_runtime_error(
-        &self,
-        bin: &Binary,
-        reason_string: String,
-        reason_loc: Option<Loc>,
-        ns: &Namespace,
-    );
-
     /// Return success without any result
     fn return_empty_abi(&self, bin: &Binary);
 
