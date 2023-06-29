@@ -349,8 +349,8 @@ Only available on Substrate. Checks whether the given address is a contract addr
 set_code_hash(bytes hash) returns (uint32)
 ++++++++++++++++++++++++++++++++++++++++++
 
-Only available on Substrate. Replace the contracts code with the code corresponding to ``hash``.
-Implies that the new code was already uploaded, otherwise the operation fails.
+Only available on Substrate. Replace the contract's code with the code corresponding to ``hash``.
+Assumes that the new code was already uploaded, otherwise the operation fails.
 A return value of 0 indicates success; a return value of 7 indicates that there was no corresponding code found.
 
 .. note::
