@@ -794,3 +794,54 @@ fn is_contract() {
     runtime.function("test", [0; 32].to_vec());
     assert_eq!(runtime.output(), vec![0]);
 }
+
+#[test]
+fn set_code_hash() {
+    let mut runtime = build_solidity(
+        r##"
+        import "substrate";
+
+        abstract contract SetCode {
+            function set_code(uint8[32] code_hash) external {
+                require(set_code_hash(code_hash) == 0);
+            }
+        }
+        
+        contract CounterV1 is SetCode {
+            uint32 public count;
+        
+            function inc() external {
+                count += 1;
+            }
+        }
+        
+        contract CounterV2 is SetCode {
+            uint32 public count;
+        
+            function inc() external {
+                count -= 1;
+            }
+        }"##,
+    );
+
+    runtime.function("inc", vec![]);
+    runtime.function("count", vec![]);
+    assert_eq!(runtime.output(), 1u32.encode());
+
+    let v2_code_hash = ink_primitives::Hash::default().as_ref().to_vec();
+    runtime.function_expect_failure("set_code", v2_code_hash);
+
+    let v2_code_hash = runtime.blobs()[1].hash;
+    runtime.function("set_code", v2_code_hash.as_ref().to_vec());
+
+    runtime.function("inc", vec![]);
+    runtime.function("count", vec![]);
+    assert_eq!(runtime.output(), 0u32.encode());
+
+    let v1_code_hash = runtime.blobs()[0].hash;
+    runtime.function("set_code", v1_code_hash.as_ref().to_vec());
+
+    runtime.function("inc", vec![]);
+    runtime.function("count", vec![]);
+    assert_eq!(runtime.output(), 1u32.encode());
+}
