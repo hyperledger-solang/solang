@@ -189,6 +189,14 @@ pub enum Instr {
     /// be removed. We only have this so we can pass evm code through sema/codegen, which is used
     /// by the language server and the ethereum solidity tests.
     Unimplemented { reachable: bool },
+    /// This instruction serves to track account accesses through 'tx.accounts.my_account'
+    /// on Solana, and has no emit implementation. It is exchanged by the proper
+    /// Expression::Subscript at solana_accounts/account_management.rs
+    AccountAccess {
+        loc: pt::Loc,
+        var_no: usize,
+        name: String,
+    },
 }
 
 /// This struct defined the return codes that we send to the execution environment when we return
@@ -348,6 +356,7 @@ impl Instr {
             | Instr::Nop
             | Instr::ReturnCode { .. }
             | Instr::Branch { .. }
+            | Instr::AccountAccess { .. }
             | Instr::PopMemory { .. }
             | Instr::Unimplemented { .. } => {}
         }
@@ -1352,6 +1361,10 @@ impl ControlFlowGraph {
             Instr::Unimplemented { .. } => {
                 "unimplemented".into()
             }
+
+            Instr::AccountAccess { .. } => {
+                unreachable!("Instr::AccountAccess shall never be in the final CFG")
+            }
         }
     }
 
@@ -1463,6 +1476,10 @@ pub fn generate_cfg(
     }
 
     let mut cfg = function_cfg(contract_no, function_no, ns, opt);
+    let ast_fn = function_no
+        .map(ASTFunction::SolidityFunction)
+        .unwrap_or(ASTFunction::None);
+    optimize_and_check_cfg(&mut cfg, ns, ast_fn, opt);
 
     if let Some(func_no) = function_no {
         let func = &ns.functions[func_no];
@@ -1488,6 +1505,7 @@ pub fn generate_cfg(
                     ns,
                     opt,
                 );
+                optimize_and_check_cfg(&mut cfg, ns, ast_fn, opt);
             }
 
             cfg.public = public;
@@ -1495,17 +1513,6 @@ pub fn generate_cfg(
             cfg.selector = ns.functions[func_no].selector(ns, &contract_no);
         }
     }
-
-    optimize_and_check_cfg(
-        &mut cfg,
-        ns,
-        if let Some(func_no) = function_no {
-            ASTFunction::SolidityFunction(func_no)
-        } else {
-            ASTFunction::None
-        },
-        opt,
-    );
 
     all_cfgs[cfg_no] = cfg;
 }

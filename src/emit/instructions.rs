@@ -298,7 +298,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_conditional_branch(is_array_empty, error, pop);
 
             bin.builder.position_at_end(error);
-            target.log_runtime_error(bin, "pop from empty array".to_string(), Some(*loc), ns);
+            bin.log_runtime_error(target, "pop from empty array".to_string(), Some(*loc), ns);
             target.assert_failure(
                 bin,
                 bin.context
@@ -1103,6 +1103,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         }
 
         Instr::Unimplemented { .. } => unimplemented!(),
+        Instr::AccountAccess { .. } => {
+            unreachable!("Instr::AccountAccess shall never appear in the CFG")
+        }
     }
 }
 

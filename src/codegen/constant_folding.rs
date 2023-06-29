@@ -9,6 +9,7 @@ use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
+use solang_parser::pt;
 use solang_parser::pt::Loc;
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Shl, Shr, Sub};
 use tiny_keccak::{Hasher, Keccak};
@@ -386,1192 +387,192 @@ fn expression(
             overflowing,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let (
-                Expression::NumberLiteral { value: left, .. },
-                Expression::NumberLiteral { value: right, .. },
-            ) = (&left.0, &right.0)
-            {
-                bigint_to_expression(loc, ty, left.add(right))
-            } else {
-                (
-                    Expression::Add {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        overflowing: *overflowing,
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    },
-                    left.1 && right.1,
-                )
-            }
-        }
+        } => add(loc, ty, *overflowing, left, right, vars, cfg, ns),
         Expression::Subtract {
             loc,
             ty,
             overflowing,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let (
-                Expression::NumberLiteral { value: left, .. },
-                Expression::NumberLiteral { value: right, .. },
-            ) = (&left.0, &right.0)
-            {
-                bigint_to_expression(loc, ty, left.sub(right))
-            } else {
-                (
-                    Expression::Subtract {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        overflowing: *overflowing,
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    },
-                    left.1 && right.1,
-                )
-            }
-        }
+        } => subtract(loc, ty, *overflowing, left, right, vars, cfg, ns),
         Expression::AdvancePointer {
             pointer,
             bytes_offset: offset,
-        } => {
-            // Only the offset can be simplified
-            let offset = expression(offset, vars, cfg, ns);
-
-            match &offset.0 {
-                // There is no reason to advance the pointer by a zero offset
-                Expression::NumberLiteral { value: num, .. } if num.is_zero() => {
-                    (*pointer.clone(), false)
-                }
-
-                _ => (
-                    Expression::AdvancePointer {
-                        pointer: pointer.clone(),
-                        bytes_offset: Box::new(offset.0),
-                    },
-                    offset.1,
-                ),
-            }
-        }
+        } => advance_pointer(pointer, offset, vars, cfg, ns),
         Expression::Multiply {
             loc,
             ty,
             overflowing,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let (
-                Expression::NumberLiteral { value: left, .. },
-                Expression::NumberLiteral { value: right, .. },
-            ) = (&left.0, &right.0)
-            {
-                bigint_to_expression(loc, ty, left.mul(right))
-            } else {
-                (
-                    Expression::Multiply {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        overflowing: *overflowing,
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    },
-                    left.1 && right.1,
-                )
-            }
-        }
+        } => multiply(loc, ty, *overflowing, left, right, vars, cfg, ns),
         Expression::BitwiseAnd {
             loc,
             ty,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let (
-                Expression::NumberLiteral { value: left, .. },
-                Expression::NumberLiteral { value: right, .. },
-            ) = (&left.0, &right.0)
-            {
-                bigint_to_expression(loc, ty, left.bitand(right))
-            } else {
-                (
-                    Expression::BitwiseAnd {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    },
-                    left.1 && right.1,
-                )
-            }
-        }
+        } => bitwise_and(loc, ty, left, right, vars, cfg, ns),
         Expression::BitwiseOr {
             loc,
             ty,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let (
-                Expression::NumberLiteral { value: left, .. },
-                Expression::NumberLiteral { value: right, .. },
-            ) = (&left.0, &right.0)
-            {
-                bigint_to_expression(loc, ty, left.bitor(right))
-            } else {
-                (
-                    Expression::BitwiseOr {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    },
-                    left.1 && right.1,
-                )
-            }
-        }
+        } => bitwise_or(loc, ty, left, right, vars, cfg, ns),
         Expression::BitwiseXor {
             loc,
             ty,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let (
-                Expression::NumberLiteral { value: left, .. },
-                Expression::NumberLiteral { value: right, .. },
-            ) = (&left.0, &right.0)
-            {
-                bigint_to_expression(loc, ty, left.bitxor(right))
-            } else {
-                (
-                    Expression::BitwiseXor {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    },
-                    left.1 && right.1,
-                )
-            }
-        }
+        } => bitwise_xor(loc, ty, left, right, vars, cfg, ns),
         Expression::ShiftLeft {
             loc,
             ty,
             left: left_expr,
             right: right_expr,
-        } => {
-            let left = expression(left_expr, vars, cfg, ns);
-            let right = expression(right_expr, vars, cfg, ns);
-
-            if let (
-                Expression::NumberLiteral { value: left, .. },
-                Expression::NumberLiteral { value: right, .. },
-            ) = (&left.0, &right.0)
-            {
-                if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
-                    ns.diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!("left shift by {right} is not possible"),
-                    ));
-                } else {
-                    let right: u64 = right.to_u64().unwrap();
-
-                    return bigint_to_expression(loc, ty, left.shl(&right));
-                }
-            }
-            (
-                Expression::ShiftLeft {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    left: Box::new(left.0),
-                    right: Box::new(right.0),
-                },
-                left.1 && right.1,
-            )
-        }
+        } => shift_left(loc, ty, left_expr, right_expr, vars, cfg, ns),
         Expression::ShiftRight {
             loc,
             ty,
             left: left_expr,
             right: right_expr,
             signed,
-        } => {
-            let left = expression(left_expr, vars, cfg, ns);
-            let right = expression(right_expr, vars, cfg, ns);
-
-            if let (
-                Expression::NumberLiteral { value: left, .. },
-                Expression::NumberLiteral { value: right, .. },
-            ) = (&left.0, &right.0)
-            {
-                if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
-                    ns.diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!("right shift by {right} is not possible"),
-                    ));
-                } else {
-                    let right: u64 = right.to_u64().unwrap();
-
-                    return bigint_to_expression(loc, ty, left.shr(&right));
-                }
-            }
-
-            (
-                Expression::ShiftRight {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    left: Box::new(left.0),
-                    right: Box::new(right.0),
-                    signed: *signed,
-                },
-                left.1 && right.1,
-            )
-        }
+        } => shift_right(loc, ty, left_expr, right_expr, *signed, vars, cfg, ns),
         Expression::Power {
             loc,
             ty,
             overflowing,
             base,
             exp,
-        } => {
-            let base = expression(base, vars, cfg, ns);
-            let exp = expression(exp, vars, cfg, ns);
-
-            if let (
-                Expression::NumberLiteral { value: left, .. },
-                Expression::NumberLiteral { value: right, .. },
-            ) = (&base.0, &exp.0)
-            {
-                if right.sign() == Sign::Minus || right >= &BigInt::from(u32::MAX) {
-                    ns.diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!("power {right} not possible"),
-                    ));
-                } else {
-                    let right: u32 = right.to_u32().unwrap();
-
-                    return bigint_to_expression(loc, ty, left.pow(right));
-                }
-            }
-
-            (
-                Expression::Power {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    overflowing: *overflowing,
-                    base: Box::new(base.0),
-                    exp: Box::new(exp.0),
-                },
-                base.1 && exp.1,
-            )
-        }
+        } => power(loc, ty, *overflowing, base, exp, vars, cfg, ns),
         Expression::UnsignedDivide {
             loc,
             ty,
             left,
             right,
-        }
-        | Expression::SignedDivide {
+        } => divide(loc, ty, left, right, vars, cfg, ns, false),
+        Expression::SignedDivide {
             loc,
             ty,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let Expression::NumberLiteral { value: right, .. } = &right.0 {
-                if right.is_zero() {
-                    ns.diagnostics
-                        .push(Diagnostic::error(*loc, String::from("divide by zero")));
-                } else if let Expression::NumberLiteral { value: left, .. } = &left.0 {
-                    return bigint_to_expression(loc, ty, left.div(right));
-                }
-            }
-            (
-                if matches!(expr, Expression::SignedDivide { .. }) {
-                    Expression::SignedDivide {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    }
-                } else {
-                    Expression::UnsignedDivide {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    }
-                },
-                left.1 && right.1,
-            )
-        }
+        } => divide(loc, ty, left, right, vars, cfg, ns, true),
         Expression::SignedModulo {
             loc,
             ty,
             left,
             right,
-        }
-        | Expression::UnsignedModulo {
+        } => modulo(loc, ty, left, right, vars, cfg, ns, true),
+        Expression::UnsignedModulo {
             loc,
             ty,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let Expression::NumberLiteral { value: right, .. } = &right.0 {
-                if right.is_zero() {
-                    ns.diagnostics
-                        .push(Diagnostic::error(*loc, String::from("divide by zero")));
-                } else if let Expression::NumberLiteral { value: left, .. } = &left.0 {
-                    return bigint_to_expression(loc, ty, left.rem(right));
-                }
-            }
-
-            (
-                if matches!(expr, Expression::SignedModulo { .. }) {
-                    Expression::SignedModulo {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    }
-                } else {
-                    Expression::UnsignedModulo {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    }
-                },
-                left.1 && right.1,
-            )
-        }
-        Expression::ZeroExt { loc, ty, expr } => {
-            let expr = expression(expr, vars, cfg, ns);
-            if let Expression::NumberLiteral { value, .. } = expr.0 {
-                (
-                    Expression::NumberLiteral {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        value,
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::ZeroExt {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        expr: Box::new(expr.0),
-                    },
-                    expr.1,
-                )
-            }
-        }
-        Expression::SignExt { loc, ty, expr } => {
-            let expr = expression(expr, vars, cfg, ns);
-            if let Expression::NumberLiteral { value, .. } = expr.0 {
-                (
-                    Expression::NumberLiteral {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        value,
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::SignExt {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        expr: Box::new(expr.0),
-                    },
-                    expr.1,
-                )
-            }
-        }
-        Expression::Trunc { loc, ty, expr } => {
-            let expr = expression(expr, vars, cfg, ns);
-            if let Expression::NumberLiteral { value, .. } = expr.0 {
-                bigint_to_expression(loc, ty, value)
-            } else {
-                (
-                    Expression::Trunc {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        expr: Box::new(expr.0),
-                    },
-                    expr.1,
-                )
-            }
-        }
-        Expression::BitwiseNot { loc, ty, expr } => {
-            let expr = expression(expr, vars, cfg, ns);
-            if let Expression::NumberLiteral { value, .. } = expr.0 {
-                bigint_to_expression(loc, ty, !value)
-            } else {
-                (
-                    Expression::BitwiseNot {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        expr: Box::new(expr.0),
-                    },
-                    expr.1,
-                )
-            }
-        }
-        Expression::Negate { loc, ty, expr } => {
-            let expr = expression(expr, vars, cfg, ns);
-            if let Expression::NumberLiteral { value, .. } = expr.0 {
-                bigint_to_expression(loc, ty, -value)
-            } else {
-                (
-                    Expression::Negate {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        expr: Box::new(expr.0),
-                    },
-                    expr.1,
-                )
-            }
-        }
-        Expression::Variable {
-            loc,
-            ty,
-            var_no: var,
-        } => {
-            if !matches!(ty, Type::Ref(_) | Type::StorageRef(..)) {
-                if let Some(vars) = vars {
-                    if let Some(defs) = vars.get(var) {
-                        // There must be at least one definition, and all should evaluate to the same value
-                        let mut v = None;
-
-                        for def in defs.keys() {
-                            if let Some(expr) = get_definition(def, cfg) {
-                                let expr = expression(expr, None, cfg, ns);
-
-                                if expr.1 {
-                                    if let Some(last) = &v {
-                                        if !constants_equal(last, &expr.0) {
-                                            v = None;
-                                            break;
-                                        }
-                                    }
-
-                                    v = Some(expr.0);
-                                } else {
-                                    v = None;
-                                    break;
-                                }
-                            } else {
-                                v = None;
-                                break;
-                            }
-                        }
-
-                        if let Some(expr) = v {
-                            if *loc != Loc::Codegen {
-                                ns.var_constants.insert(*loc, expr.clone());
-                            }
-                            return (expr, true);
-                        }
-                    }
-                }
-            }
-
-            (expr.clone(), false)
+        } => modulo(loc, ty, left, right, vars, cfg, ns, false),
+        Expression::ZeroExt { loc, ty, expr } => zero_ext(loc, ty, expr, vars, cfg, ns),
+        Expression::SignExt { loc, ty, expr } => sign_ext(loc, ty, expr, vars, cfg, ns),
+        Expression::Trunc { loc, ty, expr } => trunc(loc, ty, expr, vars, cfg, ns),
+        Expression::BitwiseNot { loc, ty, expr } => bitwise_not(loc, ty, expr, vars, cfg, ns),
+        Expression::Negate { loc, ty, expr } => negate(loc, ty, expr, vars, cfg, ns),
+        Expression::Variable { loc, ty, var_no } => {
+            reference_variable(loc, *var_no, ty, vars, cfg, ns, expr)
         }
         Expression::Builtin {
             loc,
             tys,
-            kind: Builtin::Keccak256,
+            kind:
+                kind @ Builtin::Keccak256
+                | kind @ Builtin::Ripemd160
+                | kind @ Builtin::Blake2_256
+                | kind @ Builtin::Blake2_128
+                | kind @ Builtin::Sha256,
             args,
-        } => {
-            let arg = expression(&args[0], vars, cfg, ns);
-
-            if let Expression::AllocDynamicBytes {
-                initializer: Some(bs),
-                ..
-            } = arg.0
-            {
-                let mut hasher = Keccak::v256();
-                hasher.update(&bs);
-                let mut hash = [0u8; 32];
-                hasher.finalize(&mut hash);
-
-                (
-                    Expression::BytesLiteral {
-                        loc: *loc,
-                        ty: tys[0].clone(),
-                        value: hash.to_vec(),
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::Builtin {
-                        loc: *loc,
-                        tys: tys.clone(),
-                        kind: Builtin::Keccak256,
-                        args: vec![arg.0],
-                    },
-                    false,
-                )
-            }
-        }
-        Expression::Builtin {
-            loc,
-            tys,
-            kind: Builtin::Ripemd160,
-            args,
-        } => {
-            let arg = expression(&args[0], vars, cfg, ns);
-
-            if let Expression::AllocDynamicBytes {
-                initializer: Some(bs),
-                ..
-            } = arg.0
-            {
-                let mut hasher = Ripemd160::new();
-                hasher.update(&bs);
-                let result = hasher.finalize();
-
-                (
-                    Expression::BytesLiteral {
-                        loc: *loc,
-                        ty: tys[0].clone(),
-                        value: result[..].to_vec(),
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::Builtin {
-                        loc: *loc,
-                        tys: tys.clone(),
-                        kind: Builtin::Ripemd160,
-                        args: vec![arg.0],
-                    },
-                    false,
-                )
-            }
-        }
-        Expression::Builtin {
-            loc,
-            tys,
-            kind: Builtin::Blake2_256,
-            args,
-        } => {
-            let arg = expression(&args[0], vars, cfg, ns);
-
-            if let Expression::AllocDynamicBytes {
-                initializer: Some(bs),
-                ..
-            } = arg.0
-            {
-                let hash = blake2_rfc::blake2b::blake2b(32, &[], &bs);
-
-                (
-                    Expression::BytesLiteral {
-                        loc: *loc,
-                        ty: tys[0].clone(),
-                        value: hash.as_bytes().to_vec(),
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::Builtin {
-                        loc: *loc,
-                        tys: tys.clone(),
-                        kind: Builtin::Blake2_256,
-                        args: vec![arg.0],
-                    },
-                    false,
-                )
-            }
-        }
-        Expression::Builtin {
-            loc,
-            tys,
-            kind: Builtin::Blake2_128,
-            args,
-        } => {
-            let arg = expression(&args[0], vars, cfg, ns);
-
-            if let Expression::AllocDynamicBytes {
-                initializer: Some(bs),
-                ..
-            } = arg.0
-            {
-                let hash = blake2_rfc::blake2b::blake2b(16, &[], &bs);
-
-                (
-                    Expression::BytesLiteral {
-                        loc: *loc,
-                        ty: tys[0].clone(),
-                        value: hash.as_bytes().to_vec(),
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::Builtin {
-                        loc: *loc,
-                        tys: tys.clone(),
-                        kind: Builtin::Blake2_128,
-                        args: vec![arg.0],
-                    },
-                    false,
-                )
-            }
-        }
-        Expression::Builtin {
-            loc,
-            tys,
-            kind: Builtin::Sha256,
-            args,
-        } => {
-            let arg = expression(&args[0], vars, cfg, ns);
-
-            if let Expression::AllocDynamicBytes {
-                initializer: Some(bs),
-                ..
-            } = arg.0
-            {
-                let mut hasher = Sha256::new();
-
-                // write input message
-                hasher.update(&bs);
-
-                // read hash digest and consume hasher
-                let result = hasher.finalize();
-
-                (
-                    Expression::BytesLiteral {
-                        loc: *loc,
-                        ty: tys[0].clone(),
-                        value: result[..].to_vec(),
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::Builtin {
-                        loc: *loc,
-                        tys: tys.clone(),
-                        kind: Builtin::Sha256,
-                        args: vec![arg.0],
-                    },
-                    false,
-                )
-            }
-        }
-        Expression::Keccak256 {
-            loc,
-            ty,
-            exprs: args,
-        } => {
-            let mut all_constant = true;
-            let mut hasher = Keccak::v256();
-
-            let args = args
-                .iter()
-                .map(|expr| {
-                    let (expr, _) = expression(expr, vars, cfg, ns);
-
-                    if all_constant {
-                        match &expr {
-                            Expression::AllocDynamicBytes {
-                                initializer: Some(value),
-                                ..
-                            }
-                            | Expression::BytesLiteral { value, .. } => {
-                                hasher.update(value);
-                            }
-                            Expression::NumberLiteral { ty, value, .. } => {
-                                let (sign, mut bs) = value.to_bytes_le();
-
-                                match ty {
-                                    Type::Enum(_) => bs.resize(1, 0),
-                                    Type::Uint(bits) => bs.resize(*bits as usize / 8, 0),
-                                    Type::Int(bits) => {
-                                        let v = if sign == Sign::Minus { 0xffu8 } else { 0 };
-
-                                        bs.resize(*bits as usize / 8, v);
-                                    }
-                                    Type::Bytes(n) => {
-                                        while (*n as usize) < bs.len() {
-                                            bs.insert(0, 0);
-                                        }
-                                    }
-                                    Type::Address(_) => {
-                                        bs.resize(ns.address_length, 0);
-                                    }
-                                    _ => unreachable!(),
-                                }
-
-                                hasher.update(&bs);
-                            }
-                            _ => {
-                                all_constant = false;
-                            }
-                        }
-                    }
-
-                    expr
-                })
-                .collect();
-
-            if all_constant {
-                let mut hash = [0u8; 32];
-                hasher.finalize(&mut hash);
-                let mut hash = hash.to_vec();
-                hash.reverse();
-
-                (
-                    Expression::BytesLiteral {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        value: hash,
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::Keccak256 {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        exprs: args,
-                    },
-                    false,
-                )
-            }
-        }
+        } => builtin_hash(loc, tys, *kind, args, vars, cfg, ns),
+        Expression::Keccak256 { loc, ty, exprs } => keccak_256(loc, ty, exprs, vars, cfg, ns),
         // The rest is simply for recursing; no constant expansion should be done
-        Expression::StructLiteral {
-            loc,
-            ty,
-            values: args,
-        } => {
-            let args = args
-                .iter()
-                .map(|expr| expression(expr, vars, cfg, ns).0)
-                .collect();
-
-            (
-                Expression::StructLiteral {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    values: args,
-                },
-                false,
-            )
+        Expression::StructLiteral { loc, ty, values } => {
+            struct_literal(loc, ty, values, vars, cfg, ns)
         }
         Expression::ArrayLiteral {
             loc,
             ty,
             dimensions,
-            values: args,
-        } => {
-            let args = args
-                .iter()
-                .map(|expr| expression(expr, vars, cfg, ns).0)
-                .collect();
-
-            (
-                Expression::ArrayLiteral {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    dimensions: dimensions.clone(),
-                    values: args,
-                },
-                false,
-            )
-        }
+            values,
+        } => array_literal(loc, ty, values, dimensions, vars, cfg, ns),
         Expression::ConstArrayLiteral {
             loc,
             ty,
             dimensions,
-            values: args,
-        } => {
-            let args = args
-                .iter()
-                .map(|expr| expression(expr, vars, cfg, ns).0)
-                .collect();
-
-            (
-                Expression::ConstArrayLiteral {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    dimensions: dimensions.clone(),
-                    values: args,
-                },
-                false,
-            )
-        }
-        Expression::Load { loc, ty, expr } => {
-            let (expr, _) = expression(expr, vars, cfg, ns);
-
-            (
-                Expression::Load {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    expr: Box::new(expr),
-                },
-                false,
-            )
-        }
-        Expression::Cast { loc, ty, expr } => {
-            let (expr, _) = expression(expr, vars, cfg, ns);
-
-            (
-                Expression::Cast {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    expr: Box::new(expr),
-                },
-                false,
-            )
-        }
+            values,
+        } => const_array_literal(loc, ty, values, dimensions, vars, cfg, ns),
+        Expression::Load { loc, ty, expr } => load(loc, ty, expr, vars, cfg, ns),
+        Expression::Cast { loc, ty, expr } => cast(loc, ty, expr, vars, cfg, ns),
         Expression::BytesCast {
             loc,
-            ty: from,
-            from: to,
+            ty,
+            from,
             expr,
-        } => {
-            let (expr, _) = expression(expr, vars, cfg, ns);
-
-            (
-                Expression::BytesCast {
-                    loc: *loc,
-                    ty: from.clone(),
-                    from: to.clone(),
-                    expr: Box::new(expr),
-                },
-                false,
-            )
-        }
+        } => bytes_cast(loc, ty, from, expr, vars, cfg, ns),
         Expression::More {
             loc,
             signed,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            (
-                Expression::More {
-                    loc: *loc,
-                    signed: *signed,
-                    left: Box::new(left.0),
-                    right: Box::new(right.0),
-                },
-                false,
-            )
-        }
+        } => more(loc, left, right, vars, cfg, ns, *signed),
         Expression::Less {
             loc,
             signed,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            (
-                Expression::Less {
-                    loc: *loc,
-                    signed: *signed,
-                    left: Box::new(left.0),
-                    right: Box::new(right.0),
-                },
-                false,
-            )
-        }
+        } => less(loc, left, right, vars, cfg, ns, *signed),
         Expression::MoreEqual {
             loc,
             signed,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            (
-                Expression::MoreEqual {
-                    loc: *loc,
-                    signed: *signed,
-                    left: Box::new(left.0),
-                    right: Box::new(right.0),
-                },
-                false,
-            )
-        }
+        } => more_equal(loc, left, right, vars, cfg, ns, *signed),
         Expression::LessEqual {
             loc,
             signed,
             left,
             right,
-        } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            (
-                Expression::LessEqual {
-                    loc: *loc,
-                    signed: *signed,
-                    left: Box::new(left.0),
-                    right: Box::new(right.0),
-                },
-                false,
-            )
-        }
-        Expression::Equal { loc, left, right } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let (
-                Expression::BytesLiteral { value: l, .. },
-                Expression::BytesLiteral { value: r, .. },
-            ) = (&left.0, &right.0)
-            {
-                (
-                    Expression::BoolLiteral {
-                        loc: *loc,
-                        value: l == r,
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::Equal {
-                        loc: *loc,
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    },
-                    false,
-                )
-            }
-        }
-        Expression::NotEqual { loc, left, right } => {
-            let left = expression(left, vars, cfg, ns);
-            let right = expression(right, vars, cfg, ns);
-
-            if let (
-                Expression::BytesLiteral { value: l, .. },
-                Expression::BytesLiteral { value: r, .. },
-            ) = (&left.0, &right.0)
-            {
-                (
-                    Expression::BoolLiteral {
-                        loc: *loc,
-                        value: l != r,
-                    },
-                    true,
-                )
-            } else {
-                (
-                    Expression::NotEqual {
-                        loc: *loc,
-                        left: Box::new(left.0),
-                        right: Box::new(right.0),
-                    },
-                    false,
-                )
-            }
-        }
-        Expression::Not { loc, expr } => {
-            let expr = expression(expr, vars, cfg, ns);
-
-            (
-                Expression::Not {
-                    loc: *loc,
-                    expr: Box::new(expr.0),
-                },
-                expr.1,
-            )
-        }
+        } => less_equal(loc, left, right, vars, cfg, ns, *signed),
+        Expression::Equal { loc, left, right } => equal(loc, left, right, vars, cfg, ns),
+        Expression::NotEqual { loc, left, right } => not_equal(loc, left, right, vars, cfg, ns),
+        Expression::Not { loc, expr } => not(loc, expr, vars, cfg, ns),
         Expression::Subscript {
             loc,
             ty,
             array_ty,
-            expr: array,
+            expr,
             index,
-        } => {
-            let array = expression(array, vars, cfg, ns);
-            let index = expression(index, vars, cfg, ns);
-
-            (
-                Expression::Subscript {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    array_ty: array_ty.clone(),
-                    expr: Box::new(array.0),
-                    index: Box::new(index.0),
-                },
-                false,
-            )
-        }
+        } => subscript(loc, ty, array_ty, expr, index, vars, cfg, ns),
         Expression::StructMember {
             loc,
             ty,
             expr,
             member,
-        } => {
-            let strct = expression(expr, vars, cfg, ns);
-
-            (
-                Expression::StructMember {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    expr: Box::new(strct.0),
-                    member: *member,
-                },
-                false,
-            )
-        }
-
+        } => struct_member(loc, ty, expr, *member, vars, cfg, ns),
         Expression::StorageArrayLength {
             loc,
             ty,
             array,
             elem_ty,
-        } => {
-            let array = expression(array, vars, cfg, ns);
-
-            (
-                Expression::StorageArrayLength {
-                    loc: *loc,
-                    ty: ty.clone(),
-                    array: Box::new(array.0),
-                    elem_ty: elem_ty.clone(),
-                },
-                false,
-            )
-        }
+        } => storage_array_length(loc, ty, array, elem_ty, vars, cfg, ns),
         Expression::StringCompare { loc, left, right } => {
-            if let (StringLocation::CompileTime(left), StringLocation::CompileTime(right)) =
-                (left, right)
-            {
-                (
-                    Expression::BoolLiteral {
-                        loc: *loc,
-                        value: left == right,
-                    },
-                    true,
-                )
-            } else {
-                let left = if let StringLocation::RunTime(left) = left {
-                    StringLocation::RunTime(Box::new(expression(left, vars, cfg, ns).0))
-                } else {
-                    left.clone()
-                };
-
-                let right = if let StringLocation::RunTime(right) = right {
-                    StringLocation::RunTime(Box::new(expression(right, vars, cfg, ns).0))
-                } else {
-                    right.clone()
-                };
-
-                (
-                    Expression::StringCompare {
-                        loc: *loc,
-                        left,
-                        right,
-                    },
-                    false,
-                )
-            }
+            string_compare(loc, left, right, vars, cfg, ns)
         }
         Expression::StringConcat {
             loc,
             ty,
             left,
             right,
-        } => {
-            if let (StringLocation::CompileTime(left), StringLocation::CompileTime(right)) =
-                (left, right)
-            {
-                let mut bs = Vec::with_capacity(left.len() + right.len());
-
-                bs.extend(left);
-                bs.extend(right);
-
-                (
-                    Expression::BytesLiteral {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        value: bs,
-                    },
-                    true,
-                )
-            } else {
-                let left = if let StringLocation::RunTime(left) = left {
-                    StringLocation::RunTime(Box::new(expression(left, vars, cfg, ns).0))
-                } else {
-                    left.clone()
-                };
-
-                let right = if let StringLocation::RunTime(right) = right {
-                    StringLocation::RunTime(Box::new(expression(right, vars, cfg, ns).0))
-                } else {
-                    right.clone()
-                };
-
-                (
-                    Expression::StringConcat {
-                        loc: *loc,
-                        ty: ty.clone(),
-                        left,
-                        right,
-                    },
-                    false,
-                )
-            }
-        }
+        } => string_concat(loc, ty, left, right, vars, cfg, ns),
         Expression::Builtin {
             loc,
             tys,
-            kind: builtin,
+            kind,
             args,
-        } => {
-            let args = args
-                .iter()
-                .map(|expr| expression(expr, vars, cfg, ns).0)
-                .collect();
-
-            (
-                Expression::Builtin {
-                    loc: *loc,
-                    tys: tys.clone(),
-                    kind: *builtin,
-                    args,
-                },
-                false,
-            )
-        }
+        } => builtin(loc, tys, *kind, args, vars, cfg, ns),
         Expression::AllocDynamicBytes {
             loc,
             ty,
@@ -1671,4 +672,1252 @@ fn constants_equal(left: &Expression, right: &Expression) -> bool {
         },
         _ => false,
     }
+}
+
+fn add(
+    loc: &pt::Loc,
+    ty: &Type,
+    overflowing: bool,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let (
+        Expression::NumberLiteral { value: left, .. },
+        Expression::NumberLiteral { value: right, .. },
+    ) = (&left.0, &right.0)
+    {
+        bigint_to_expression(loc, ty, left.add(right))
+    } else {
+        (
+            Expression::Add {
+                loc: *loc,
+                ty: ty.clone(),
+                overflowing,
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            },
+            left.1 && right.1,
+        )
+    }
+}
+
+fn subtract(
+    loc: &pt::Loc,
+    ty: &Type,
+    overflowing: bool,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let (
+        Expression::NumberLiteral { value: left, .. },
+        Expression::NumberLiteral { value: right, .. },
+    ) = (&left.0, &right.0)
+    {
+        bigint_to_expression(loc, ty, left.sub(right))
+    } else {
+        (
+            Expression::Subtract {
+                loc: *loc,
+                ty: ty.clone(),
+                overflowing,
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            },
+            left.1 && right.1,
+        )
+    }
+}
+
+fn advance_pointer(
+    pointer: &Expression,
+    offset: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    // Only the offset can be simplified
+    let offset = expression(offset, vars, cfg, ns);
+
+    match &offset.0 {
+        // There is no reason to advance the pointer by a zero offset
+        Expression::NumberLiteral { value: num, .. } if num.is_zero() => (pointer.clone(), false),
+
+        _ => (
+            Expression::AdvancePointer {
+                pointer: Box::new(pointer.clone()),
+                bytes_offset: Box::new(offset.0),
+            },
+            offset.1,
+        ),
+    }
+}
+
+fn multiply(
+    loc: &pt::Loc,
+    ty: &Type,
+    overflowing: bool,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let (
+        Expression::NumberLiteral { value: left, .. },
+        Expression::NumberLiteral { value: right, .. },
+    ) = (&left.0, &right.0)
+    {
+        bigint_to_expression(loc, ty, left.mul(right))
+    } else {
+        (
+            Expression::Multiply {
+                loc: *loc,
+                ty: ty.clone(),
+                overflowing,
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            },
+            left.1 && right.1,
+        )
+    }
+}
+
+fn bitwise_and(
+    loc: &pt::Loc,
+    ty: &Type,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let (
+        Expression::NumberLiteral { value: left, .. },
+        Expression::NumberLiteral { value: right, .. },
+    ) = (&left.0, &right.0)
+    {
+        bigint_to_expression(loc, ty, left.bitand(right))
+    } else {
+        (
+            Expression::BitwiseAnd {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            },
+            left.1 && right.1,
+        )
+    }
+}
+
+fn bitwise_or(
+    loc: &pt::Loc,
+    ty: &Type,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let (
+        Expression::NumberLiteral { value: left, .. },
+        Expression::NumberLiteral { value: right, .. },
+    ) = (&left.0, &right.0)
+    {
+        bigint_to_expression(loc, ty, left.bitor(right))
+    } else {
+        (
+            Expression::BitwiseOr {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            },
+            left.1 && right.1,
+        )
+    }
+}
+
+fn bitwise_xor(
+    loc: &pt::Loc,
+    ty: &Type,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let (
+        Expression::NumberLiteral { value: left, .. },
+        Expression::NumberLiteral { value: right, .. },
+    ) = (&left.0, &right.0)
+    {
+        bigint_to_expression(loc, ty, left.bitxor(right))
+    } else {
+        (
+            Expression::BitwiseXor {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            },
+            left.1 && right.1,
+        )
+    }
+}
+
+fn shift_left(
+    loc: &pt::Loc,
+    ty: &Type,
+    left_expr: &Expression,
+    right_expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left_expr, vars, cfg, ns);
+    let right = expression(right_expr, vars, cfg, ns);
+
+    if let (
+        Expression::NumberLiteral { value: left, .. },
+        Expression::NumberLiteral { value: right, .. },
+    ) = (&left.0, &right.0)
+    {
+        if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("left shift by {right} is not possible"),
+            ));
+        } else {
+            let right: u64 = right.to_u64().unwrap();
+
+            return bigint_to_expression(loc, ty, left.shl(&right));
+        }
+    }
+    (
+        Expression::ShiftLeft {
+            loc: *loc,
+            ty: ty.clone(),
+            left: Box::new(left.0),
+            right: Box::new(right.0),
+        },
+        left.1 && right.1,
+    )
+}
+
+fn shift_right(
+    loc: &pt::Loc,
+    ty: &Type,
+    left_expr: &Expression,
+    right_expr: &Expression,
+    signed: bool,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left_expr, vars, cfg, ns);
+    let right = expression(right_expr, vars, cfg, ns);
+
+    if let (
+        Expression::NumberLiteral { value: left, .. },
+        Expression::NumberLiteral { value: right, .. },
+    ) = (&left.0, &right.0)
+    {
+        if right.sign() == Sign::Minus || right >= &BigInt::from(left_expr.ty().bits(ns)) {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("right shift by {right} is not possible"),
+            ));
+        } else {
+            let right: u64 = right.to_u64().unwrap();
+
+            return bigint_to_expression(loc, ty, left.shr(&right));
+        }
+    }
+
+    (
+        Expression::ShiftRight {
+            loc: *loc,
+            ty: ty.clone(),
+            left: Box::new(left.0),
+            right: Box::new(right.0),
+            signed,
+        },
+        left.1 && right.1,
+    )
+}
+
+fn power(
+    loc: &pt::Loc,
+    ty: &Type,
+    overflowing: bool,
+    base: &Expression,
+    exp: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let base = expression(base, vars, cfg, ns);
+    let exp = expression(exp, vars, cfg, ns);
+
+    if let (
+        Expression::NumberLiteral { value: left, .. },
+        Expression::NumberLiteral { value: right, .. },
+    ) = (&base.0, &exp.0)
+    {
+        if right.sign() == Sign::Minus || right >= &BigInt::from(u32::MAX) {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("power {right} not possible"),
+            ));
+        } else {
+            let right: u32 = right.to_u32().unwrap();
+
+            return bigint_to_expression(loc, ty, left.pow(right));
+        }
+    }
+
+    (
+        Expression::Power {
+            loc: *loc,
+            ty: ty.clone(),
+            overflowing,
+            base: Box::new(base.0),
+            exp: Box::new(exp.0),
+        },
+        base.1 && exp.1,
+    )
+}
+
+fn divide(
+    loc: &pt::Loc,
+    ty: &Type,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+    signed: bool,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let Expression::NumberLiteral { value: right, .. } = &right.0 {
+        if right.is_zero() {
+            ns.diagnostics
+                .push(Diagnostic::error(*loc, String::from("divide by zero")));
+        } else if let Expression::NumberLiteral { value: left, .. } = &left.0 {
+            return bigint_to_expression(loc, ty, left.div(right));
+        }
+    }
+    (
+        if signed {
+            Expression::SignedDivide {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            }
+        } else {
+            Expression::UnsignedDivide {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            }
+        },
+        left.1 && right.1,
+    )
+}
+
+fn modulo(
+    loc: &pt::Loc,
+    ty: &Type,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+    signed: bool,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let Expression::NumberLiteral { value: right, .. } = &right.0 {
+        if right.is_zero() {
+            ns.diagnostics
+                .push(Diagnostic::error(*loc, String::from("divide by zero")));
+        } else if let Expression::NumberLiteral { value: left, .. } = &left.0 {
+            return bigint_to_expression(loc, ty, left.rem(right));
+        }
+    }
+
+    (
+        if signed {
+            Expression::SignedModulo {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            }
+        } else {
+            Expression::UnsignedModulo {
+                loc: *loc,
+                ty: ty.clone(),
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            }
+        },
+        left.1 && right.1,
+    )
+}
+
+fn zero_ext(
+    loc: &pt::Loc,
+    ty: &Type,
+    expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let expr = expression(expr, vars, cfg, ns);
+    if let Expression::NumberLiteral { value, .. } = expr.0 {
+        (
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: ty.clone(),
+                value,
+            },
+            true,
+        )
+    } else {
+        (
+            Expression::ZeroExt {
+                loc: *loc,
+                ty: ty.clone(),
+                expr: Box::new(expr.0),
+            },
+            expr.1,
+        )
+    }
+}
+
+fn sign_ext(
+    loc: &pt::Loc,
+    ty: &Type,
+    expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let expr = expression(expr, vars, cfg, ns);
+    if let Expression::NumberLiteral { value, .. } = expr.0 {
+        (
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: ty.clone(),
+                value,
+            },
+            true,
+        )
+    } else {
+        (
+            Expression::SignExt {
+                loc: *loc,
+                ty: ty.clone(),
+                expr: Box::new(expr.0),
+            },
+            expr.1,
+        )
+    }
+}
+
+fn trunc(
+    loc: &pt::Loc,
+    ty: &Type,
+    expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let expr = expression(expr, vars, cfg, ns);
+    if let Expression::NumberLiteral { value, .. } = expr.0 {
+        bigint_to_expression(loc, ty, value)
+    } else {
+        (
+            Expression::Trunc {
+                loc: *loc,
+                ty: ty.clone(),
+                expr: Box::new(expr.0),
+            },
+            expr.1,
+        )
+    }
+}
+
+fn bitwise_not(
+    loc: &pt::Loc,
+    ty: &Type,
+    expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let expr = expression(expr, vars, cfg, ns);
+    if let Expression::NumberLiteral { value, .. } = expr.0 {
+        bigint_to_expression(loc, ty, !value)
+    } else {
+        (
+            Expression::BitwiseNot {
+                loc: *loc,
+                ty: ty.clone(),
+                expr: Box::new(expr.0),
+            },
+            expr.1,
+        )
+    }
+}
+
+fn negate(
+    loc: &pt::Loc,
+    ty: &Type,
+    expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let expr = expression(expr, vars, cfg, ns);
+    if let Expression::NumberLiteral { value, .. } = expr.0 {
+        bigint_to_expression(loc, ty, -value)
+    } else {
+        (
+            Expression::Negate {
+                loc: *loc,
+                ty: ty.clone(),
+                expr: Box::new(expr.0),
+            },
+            expr.1,
+        )
+    }
+}
+
+fn reference_variable(
+    loc: &pt::Loc,
+    var: usize,
+    ty: &Type,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+    expr: &Expression,
+) -> (Expression, bool) {
+    if !matches!(ty, Type::Ref(_) | Type::StorageRef(..)) {
+        if let Some(vars) = vars {
+            if let Some(defs) = vars.get(&var) {
+                // There must be at least one definition, and all should evaluate to the same value
+                let mut v = None;
+
+                for def in defs.keys() {
+                    if let Some(expr) = get_definition(def, cfg) {
+                        let expr = expression(expr, None, cfg, ns);
+
+                        if expr.1 {
+                            if let Some(last) = &v {
+                                if !constants_equal(last, &expr.0) {
+                                    v = None;
+                                    break;
+                                }
+                            }
+
+                            v = Some(expr.0);
+                        } else {
+                            v = None;
+                            break;
+                        }
+                    } else {
+                        v = None;
+                        break;
+                    }
+                }
+
+                if let Some(expr) = v {
+                    if *loc != Loc::Codegen {
+                        ns.var_constants.insert(*loc, expr.clone());
+                    }
+                    return (expr, true);
+                }
+            }
+        }
+    }
+
+    (expr.clone(), false)
+}
+
+fn builtin_hash(
+    loc: &pt::Loc,
+    tys: &[Type],
+    kind: Builtin,
+    args: &[Expression],
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let arg = expression(&args[0], vars, cfg, ns);
+
+    if let Expression::AllocDynamicBytes {
+        initializer: Some(bs),
+        ..
+    } = arg.0
+    {
+        let hash: Vec<u8> = match kind {
+            Builtin::Keccak256 => {
+                let mut hasher = Keccak::v256();
+                hasher.update(&bs);
+                let mut hash = [0u8; 32];
+                hasher.finalize(&mut hash);
+                hash.to_vec()
+            }
+            Builtin::Ripemd160 => {
+                let mut hasher = Ripemd160::new();
+                hasher.update(&bs);
+                let result = hasher.finalize();
+                result[..].to_vec()
+            }
+            Builtin::Blake2_256 => {
+                let hash = blake2_rfc::blake2b::blake2b(32, &[], &bs);
+                hash.as_bytes().to_vec()
+            }
+            Builtin::Blake2_128 => {
+                let hash = blake2_rfc::blake2b::blake2b(16, &[], &bs);
+                hash.as_bytes().to_vec()
+            }
+            Builtin::Sha256 => {
+                let mut hasher = Sha256::new();
+                hasher.update(&bs);
+                let result = hasher.finalize();
+                result[..].to_vec()
+            }
+            _ => unreachable!("not a hash"),
+        };
+
+        (
+            Expression::BytesLiteral {
+                loc: *loc,
+                ty: tys[0].clone(),
+                value: hash,
+            },
+            true,
+        )
+    } else {
+        (
+            Expression::Builtin {
+                loc: *loc,
+                tys: tys.to_owned(),
+                kind,
+                args: vec![arg.0],
+            },
+            false,
+        )
+    }
+}
+
+fn keccak_256(
+    loc: &pt::Loc,
+    ty: &Type,
+    args: &[Expression],
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let mut all_constant = true;
+    let mut hasher = Keccak::v256();
+
+    let args = args
+        .iter()
+        .map(|expr| {
+            let (expr, _) = expression(expr, vars, cfg, ns);
+
+            if all_constant {
+                match &expr {
+                    Expression::AllocDynamicBytes {
+                        initializer: Some(value),
+                        ..
+                    }
+                    | Expression::BytesLiteral { value, .. } => {
+                        hasher.update(value);
+                    }
+                    Expression::NumberLiteral { ty, value, .. } => {
+                        let (sign, mut bs) = value.to_bytes_le();
+
+                        match ty {
+                            Type::Enum(_) => bs.resize(1, 0),
+                            Type::Uint(bits) => bs.resize(*bits as usize / 8, 0),
+                            Type::Int(bits) => {
+                                let v = if sign == Sign::Minus { 0xffu8 } else { 0 };
+
+                                bs.resize(*bits as usize / 8, v);
+                            }
+                            Type::Bytes(n) => {
+                                while (*n as usize) < bs.len() {
+                                    bs.insert(0, 0);
+                                }
+                            }
+                            Type::Address(_) => {
+                                bs.resize(ns.address_length, 0);
+                            }
+                            _ => unreachable!(),
+                        }
+
+                        hasher.update(&bs);
+                    }
+                    _ => {
+                        all_constant = false;
+                    }
+                }
+            }
+
+            expr
+        })
+        .collect();
+
+    if all_constant {
+        let mut hash = [0u8; 32];
+        hasher.finalize(&mut hash);
+        let mut hash = hash.to_vec();
+        hash.reverse();
+
+        (
+            Expression::BytesLiteral {
+                loc: *loc,
+                ty: ty.clone(),
+                value: hash,
+            },
+            true,
+        )
+    } else {
+        (
+            Expression::Keccak256 {
+                loc: *loc,
+                ty: ty.clone(),
+                exprs: args,
+            },
+            false,
+        )
+    }
+}
+
+fn struct_literal(
+    loc: &pt::Loc,
+    ty: &Type,
+    args: &[Expression],
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let args = args
+        .iter()
+        .map(|expr| expression(expr, vars, cfg, ns).0)
+        .collect();
+
+    (
+        Expression::StructLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            values: args,
+        },
+        false,
+    )
+}
+
+fn array_literal(
+    loc: &pt::Loc,
+    ty: &Type,
+    args: &[Expression],
+    dimensions: &[u32],
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let args = args
+        .iter()
+        .map(|expr| expression(expr, vars, cfg, ns).0)
+        .collect();
+
+    (
+        Expression::ArrayLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            dimensions: dimensions.to_owned(),
+            values: args,
+        },
+        false,
+    )
+}
+
+fn const_array_literal(
+    loc: &pt::Loc,
+    ty: &Type,
+    args: &[Expression],
+    dimensions: &[u32],
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let args = args
+        .iter()
+        .map(|expr| expression(expr, vars, cfg, ns).0)
+        .collect();
+
+    (
+        Expression::ConstArrayLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            dimensions: dimensions.to_owned(),
+            values: args,
+        },
+        false,
+    )
+}
+
+fn load(
+    loc: &pt::Loc,
+    ty: &Type,
+    expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let (expr, _) = expression(expr, vars, cfg, ns);
+
+    (
+        Expression::Load {
+            loc: *loc,
+            ty: ty.clone(),
+            expr: Box::new(expr),
+        },
+        false,
+    )
+}
+
+fn cast(
+    loc: &pt::Loc,
+    ty: &Type,
+    expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let (expr, _) = expression(expr, vars, cfg, ns);
+
+    (
+        Expression::Cast {
+            loc: *loc,
+            ty: ty.clone(),
+            expr: Box::new(expr),
+        },
+        false,
+    )
+}
+
+fn bytes_cast(
+    loc: &pt::Loc,
+    to: &Type,
+    from: &Type,
+    expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let (expr, _) = expression(expr, vars, cfg, ns);
+
+    (
+        Expression::BytesCast {
+            loc: *loc,
+            ty: to.clone(),
+            from: from.clone(),
+            expr: Box::new(expr),
+        },
+        false,
+    )
+}
+
+fn more(
+    loc: &pt::Loc,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+    signed: bool,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    (
+        Expression::More {
+            loc: *loc,
+            signed,
+            left: Box::new(left.0),
+            right: Box::new(right.0),
+        },
+        false,
+    )
+}
+
+fn less(
+    loc: &pt::Loc,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+    signed: bool,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    (
+        Expression::Less {
+            loc: *loc,
+            signed,
+            left: Box::new(left.0),
+            right: Box::new(right.0),
+        },
+        false,
+    )
+}
+
+fn more_equal(
+    loc: &pt::Loc,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+    signed: bool,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    (
+        Expression::MoreEqual {
+            loc: *loc,
+            signed,
+            left: Box::new(left.0),
+            right: Box::new(right.0),
+        },
+        false,
+    )
+}
+
+fn less_equal(
+    loc: &pt::Loc,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+    signed: bool,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    (
+        Expression::LessEqual {
+            loc: *loc,
+            signed,
+            left: Box::new(left.0),
+            right: Box::new(right.0),
+        },
+        false,
+    )
+}
+
+fn equal(
+    loc: &pt::Loc,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
+        (&left.0, &right.0)
+    {
+        (
+            Expression::BoolLiteral {
+                loc: *loc,
+                value: l == r,
+            },
+            true,
+        )
+    } else {
+        (
+            Expression::Equal {
+                loc: *loc,
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            },
+            false,
+        )
+    }
+}
+
+fn not_equal(
+    loc: &pt::Loc,
+    left: &Expression,
+    right: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let left = expression(left, vars, cfg, ns);
+    let right = expression(right, vars, cfg, ns);
+
+    if let (Expression::BytesLiteral { value: l, .. }, Expression::BytesLiteral { value: r, .. }) =
+        (&left.0, &right.0)
+    {
+        (
+            Expression::BoolLiteral {
+                loc: *loc,
+                value: l != r,
+            },
+            true,
+        )
+    } else {
+        (
+            Expression::NotEqual {
+                loc: *loc,
+                left: Box::new(left.0),
+                right: Box::new(right.0),
+            },
+            false,
+        )
+    }
+}
+
+fn not(
+    loc: &pt::Loc,
+    expr: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let expr = expression(expr, vars, cfg, ns);
+
+    (
+        Expression::Not {
+            loc: *loc,
+            expr: Box::new(expr.0),
+        },
+        expr.1,
+    )
+}
+
+fn subscript(
+    loc: &pt::Loc,
+    ty: &Type,
+    array_ty: &Type,
+    array: &Expression,
+    index: &Expression,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let array = expression(array, vars, cfg, ns);
+    let index = expression(index, vars, cfg, ns);
+
+    (
+        Expression::Subscript {
+            loc: *loc,
+            ty: ty.clone(),
+            array_ty: array_ty.clone(),
+            expr: Box::new(array.0),
+            index: Box::new(index.0),
+        },
+        false,
+    )
+}
+
+fn struct_member(
+    loc: &pt::Loc,
+    ty: &Type,
+    expr: &Expression,
+    member: usize,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let strct = expression(expr, vars, cfg, ns);
+
+    (
+        Expression::StructMember {
+            loc: *loc,
+            ty: ty.clone(),
+            expr: Box::new(strct.0),
+            member,
+        },
+        false,
+    )
+}
+
+fn storage_array_length(
+    loc: &pt::Loc,
+    ty: &Type,
+    array: &Expression,
+    elem_ty: &Type,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let array = expression(array, vars, cfg, ns);
+
+    (
+        Expression::StorageArrayLength {
+            loc: *loc,
+            ty: ty.clone(),
+            array: Box::new(array.0),
+            elem_ty: elem_ty.clone(),
+        },
+        false,
+    )
+}
+
+fn string_compare(
+    loc: &pt::Loc,
+    left: &StringLocation<Expression>,
+    right: &StringLocation<Expression>,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    if let (StringLocation::CompileTime(left), StringLocation::CompileTime(right)) = (left, right) {
+        (
+            Expression::BoolLiteral {
+                loc: *loc,
+                value: left == right,
+            },
+            true,
+        )
+    } else {
+        let left = if let StringLocation::RunTime(left) = left {
+            StringLocation::RunTime(Box::new(expression(left, vars, cfg, ns).0))
+        } else {
+            left.clone()
+        };
+
+        let right = if let StringLocation::RunTime(right) = right {
+            StringLocation::RunTime(Box::new(expression(right, vars, cfg, ns).0))
+        } else {
+            right.clone()
+        };
+
+        (
+            Expression::StringCompare {
+                loc: *loc,
+                left,
+                right,
+            },
+            false,
+        )
+    }
+}
+
+fn string_concat(
+    loc: &pt::Loc,
+    ty: &Type,
+    left: &StringLocation<Expression>,
+    right: &StringLocation<Expression>,
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    if let (StringLocation::CompileTime(left), StringLocation::CompileTime(right)) = (left, right) {
+        let mut bs = Vec::with_capacity(left.len() + right.len());
+
+        bs.extend(left);
+        bs.extend(right);
+
+        (
+            Expression::BytesLiteral {
+                loc: *loc,
+                ty: ty.clone(),
+                value: bs,
+            },
+            true,
+        )
+    } else {
+        let left = if let StringLocation::RunTime(left) = left {
+            StringLocation::RunTime(Box::new(expression(left, vars, cfg, ns).0))
+        } else {
+            left.clone()
+        };
+
+        let right = if let StringLocation::RunTime(right) = right {
+            StringLocation::RunTime(Box::new(expression(right, vars, cfg, ns).0))
+        } else {
+            right.clone()
+        };
+
+        (
+            Expression::StringConcat {
+                loc: *loc,
+                ty: ty.clone(),
+                left,
+                right,
+            },
+            false,
+        )
+    }
+}
+
+fn builtin(
+    loc: &pt::Loc,
+    tys: &[Type],
+    kind: Builtin,
+    args: &[Expression],
+    vars: Option<&reaching_definitions::VarDefs>,
+    cfg: &ControlFlowGraph,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    let args = args
+        .iter()
+        .map(|expr| expression(expr, vars, cfg, ns).0)
+        .collect();
+
+    (
+        Expression::Builtin {
+            loc: *loc,
+            tys: tys.to_owned(),
+            kind,
+            args,
+        },
+        false,
+    )
 }

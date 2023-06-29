@@ -2,8 +2,8 @@
 
 import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from '@solana/web3.js';
 import expect from 'expect';
-import { Program, Provider, BN } from '@project-serum/anchor';
-import {create_account, loadContract} from './setup';
+import { Program, Provider, BN } from '@coral-xyz/anchor';
+import { create_account, loadContract } from './setup';
 import fs from 'fs';
 
 describe('ChildContract', function () {
@@ -147,14 +147,14 @@ describe('ChildContract', function () {
 
         await create_account(child, child_program, 8192);
         const signature = await program.methods.createWithoutAnnotation(child.publicKey)
-            .accounts( {dataAccount: storage.publicKey})
+            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts(
                 [
-                    {pubkey: child_program, isSigner: false, isWritable: false},
-                    {pubkey: child.publicKey, isSigner: true, isWritable: true}
+                    { pubkey: child_program, isSigner: false, isWritable: false },
+                    { pubkey: child.publicKey, isSigner: true, isWritable: true }
                 ]
             ).signers([child])
-            .rpc({ commitment: 'confirmed'});
+            .rpc({ commitment: 'confirmed' });
 
         const tx = await provider.connection.getTransaction(signature, {
             commitment: 'confirmed',

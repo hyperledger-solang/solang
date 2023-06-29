@@ -108,14 +108,14 @@ After deploying the program, you can start on the client side, which needs the a
 
 .. code-block:: bash
 
-    npm install @project-serum/anchor
+    npm install @coral-xyz/anchor
 
 Write the following javascript to a file called ``flipper.js``.
 
 .. code-block:: javascript
 
     const { readFileSync } = require('fs');
-    const anchor = require('@project-serum/anchor');
+    const anchor = require('@coral-xyz/anchor');
 
     const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
     const PROGRAM_SO = readFileSync('./flipper.so');
@@ -354,7 +354,7 @@ uint64 ``lamports``
     The lamports of the accounts. This field can be modified, however the lamports need to be
     balanced for all accounts by the end of the transaction.
 
-bytes ``data```
+bytes ``data``
     The account data. This field can be modified, but use with caution.
 
 address ``owner``
@@ -473,3 +473,11 @@ such a constructor.
 
 .. include:: ../examples/solana/payer_annotation.sol
   :code: solidity
+
+
+Accessing accounts' data
+________________________
+
+Accounts declared on a constructor using the ``@payer`` annotation are available for access inside it.
+For an account declared as ``@payer(funder)``, the access follows the syntax ``tx.accounts.funder``, which returns
+the :ref:`AccountInfo builtin struct <account_info>`.

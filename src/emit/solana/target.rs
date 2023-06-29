@@ -2,9 +2,8 @@
 
 use crate::codegen;
 use crate::codegen::cfg::{HashTy, ReturnCode};
-use crate::codegen::error_msg_with_loc;
 use crate::emit::binary::Binary;
-use crate::emit::expression::{expression, string_to_basic_value};
+use crate::emit::expression::expression;
 use crate::emit::loop_builder::LoopBuilder;
 use crate::emit::solana::SolanaTarget;
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
@@ -125,8 +124,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
         binary.builder.position_at_end(bang_block);
 
-        self.log_runtime_error(
-            binary,
+        binary.log_runtime_error(
+            self,
             "storage array index out of bounds".to_string(),
             Some(loc),
             ns,
@@ -206,8 +205,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_conditional_branch(in_range, set_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.log_runtime_error(
-            binary,
+        binary.log_runtime_error(
+            self,
             "storage index out of bounds".to_string(),
             Some(loc),
             ns,
@@ -466,8 +465,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.log_runtime_error(
-            binary,
+        binary.log_runtime_error(
+            self,
             "pop from empty storage array".to_string(),
             Some(loc),
             ns,
@@ -2120,25 +2119,5 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary
             .builder
             .build_return(Some(&binary.return_values[&ReturnCode::Success]));
-    }
-
-    fn log_runtime_error(
-        &self,
-        bin: &Binary,
-        reason_string: String,
-        reason_loc: Option<Loc>,
-        ns: &Namespace,
-    ) {
-        if !bin.options.log_runtime_errors {
-            return;
-        }
-
-        let error_with_loc = error_msg_with_loc(ns, &reason_string, reason_loc);
-        let custom_error = string_to_basic_value(bin, ns, error_with_loc + ",\n");
-        self.print(
-            bin,
-            bin.vector_bytes(custom_error),
-            bin.vector_len(custom_error),
-        );
     }
 }

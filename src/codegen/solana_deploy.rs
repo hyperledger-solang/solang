@@ -5,7 +5,7 @@ use super::{
     Vartable,
 };
 use crate::codegen::solana_accounts::account_management::{
-    account_meta_literal, index_accounts_vector,
+    account_meta_literal, retrieve_key_from_account_info,
 };
 use crate::sema::ast::{
     self, ArrayLength, CallTy, ConstructorAnnotation, Function, FunctionAttributes, Namespace,
@@ -248,15 +248,24 @@ pub(super) fn solana_deploy(
 
         let metas = vartab.temp_name("metas", &metas_ty);
 
-        // FIXME: The +1 accounts for the not yet added data account, which is always the first one.
-        // We need to fix a chicken and egg problem to solve this. The proper indexes are only
-        // calculated after that the deploy code is generated.
-        // Alternatively, we can conceive an Expression::NamedIndex to index the tx.account by
-        // account name and exchange it by a normal Expression::Subscript at the AccountManagement
-        // pass.
-        // THAT IS WORK FOR ANOTHER PR!
-        let payer_index = func.solana_accounts.borrow().get_index_of(name).unwrap() + 1;
-        let ptr_to_address = index_accounts_vector(payer_index);
+        let account_info_ty = Type::Ref(Box::new(Type::Struct(StructType::AccountInfo)));
+        let account_info_var = vartab.temp_anonymous(&account_info_ty);
+        cfg.add(
+            vartab,
+            Instr::AccountAccess {
+                loc: Loc::Codegen,
+                name: name.clone(),
+                var_no: account_info_var,
+            },
+        );
+
+        let account_var = Expression::Variable {
+            loc: Loc::Codegen,
+            ty: account_info_ty,
+            var_no: account_info_var,
+        };
+
+        let ptr_to_address = retrieve_key_from_account_info(account_var);
 
         cfg.add(
             vartab,

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{HashTy, ReturnCode};
-use crate::codegen::error_msg_with_loc;
 use crate::emit::binary::Binary;
-use crate::emit::expression::{expression, string_to_basic_value};
+use crate::emit::expression::expression;
 use crate::emit::storage::StorageSlot;
 use crate::emit::substrate::{log_return_code, SubstrateTarget, SCRATCH_SIZE};
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
@@ -352,8 +351,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         binary.builder.position_at_end(bang_block);
 
-        self.log_runtime_error(
-            binary,
+        binary.log_runtime_error(
+            self,
             "storage array index out of bounds".to_string(),
             Some(loc),
             ns,
@@ -440,8 +439,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.log_runtime_error(
-            binary,
+        binary.log_runtime_error(
+            self,
             "storage index out of bounds".to_string(),
             Some(loc),
             ns,
@@ -620,8 +619,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .build_conditional_branch(in_range, retrieve_block, bang_block);
 
         binary.builder.position_at_end(bang_block);
-        self.log_runtime_error(
-            binary,
+        binary.log_runtime_error(
+            self,
             "pop from empty storage array".to_string(),
             Some(loc),
             ns,
@@ -938,12 +937,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             binary.builder.position_at_end(bail_block);
 
-            self.log_runtime_error(
-                binary,
-                "contract creation failed".to_string(),
-                Some(loc),
-                ns,
-            );
+            binary.log_runtime_error(self, "contract creation failed".to_string(), Some(loc), ns);
             self.assert_failure(
                 binary,
                 scratch_buf,
@@ -967,46 +961,125 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         payload_len: IntValue<'b>,
         address: Option<PointerValue<'b>>,
         contract_args: ContractArgs<'b>,
-        _ty: ast::CallTy,
+        call_type: ast::CallTy,
         ns: &ast::Namespace,
         loc: Loc,
     ) {
         emit_context!(binary);
 
-        // balance is a u128
-        let value_ptr = binary
-            .builder
-            .build_alloca(binary.value_type(ns), "balance");
-        binary
-            .builder
-            .build_store(value_ptr, contract_args.value.unwrap());
-
         let (scratch_buf, scratch_len) = scratch_buf!();
-
         binary
             .builder
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         // do the actual call
-        let ret = call!(
-            "seal_call",
-            &[
-                contract_args.flags.unwrap_or(i32_zero!()).into(),
-                address.unwrap().into(),
-                contract_args.gas.unwrap().into(),
-                value_ptr.into(),
-                payload.into(),
-                payload_len.into(),
-                scratch_buf.into(),
-                scratch_len.into(),
-            ]
-        )
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value();
+        let ret = match call_type {
+            ast::CallTy::Regular => {
+                let value_ptr = binary
+                    .builder
+                    .build_alloca(binary.value_type(ns), "balance");
+                binary
+                    .builder
+                    .build_store(value_ptr, contract_args.value.unwrap());
+                let ret = call!(
+                    "seal_call",
+                    &[
+                        contract_args.flags.unwrap_or(i32_zero!()).into(),
+                        address.unwrap().into(),
+                        contract_args.gas.unwrap().into(),
+                        value_ptr.into(),
+                        payload.into(),
+                        payload_len.into(),
+                        scratch_buf.into(),
+                        scratch_len.into(),
+                    ]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+                log_return_code(binary, "seal_call", ret);
+                ret
+            }
+            ast::CallTy::Delegate => {
+                // delegate_call asks for a code hash instead of an address
+                let hash_len = i32_const!(32); // FIXME: This is configurable like the address length
+                let code_hash_out_ptr = binary.builder.build_array_alloca(
+                    binary.context.i8_type(),
+                    hash_len,
+                    "code_hash_out_ptr",
+                );
+                let code_hash_out_len_ptr = binary
+                    .builder
+                    .build_alloca(binary.context.i32_type(), "code_hash_out_len_ptr");
+                binary.builder.build_store(code_hash_out_len_ptr, hash_len);
+                let code_hash_ret = call!(
+                    "code_hash",
+                    &[
+                        address.unwrap().into(),
+                        code_hash_out_ptr.into(),
+                        code_hash_out_len_ptr.into(),
+                    ]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+                log_return_code(binary, "seal_code_hash", code_hash_ret);
 
-        log_return_code(binary, "seal_call", ret);
+                let code_hash_found = binary.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    code_hash_ret,
+                    i32_zero!(),
+                    "code_hash_found",
+                );
+                let entry = binary.builder.get_insert_block().unwrap();
+                let call_block = binary
+                    .context
+                    .append_basic_block(function, "code_hash_found");
+                let not_found_block = binary
+                    .context
+                    .append_basic_block(function, "code_hash_not_found");
+                let done_block = binary.context.append_basic_block(function, "done_block");
+                binary.builder.build_conditional_branch(
+                    code_hash_found,
+                    call_block,
+                    not_found_block,
+                );
+
+                binary.builder.position_at_end(not_found_block);
+                let msg = "delegatecall callee is not a contract account";
+                binary.log_runtime_error(self, msg.into(), Some(loc), ns);
+                binary.builder.build_unconditional_branch(done_block);
+
+                binary.builder.position_at_end(call_block);
+                let delegate_call_ret = call!(
+                    "delegate_call",
+                    &[
+                        contract_args.flags.unwrap_or(i32_zero!()).into(),
+                        code_hash_out_ptr.into(),
+                        payload.into(),
+                        payload_len.into(),
+                        scratch_buf.into(),
+                        scratch_len.into(),
+                    ]
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+                log_return_code(binary, "seal_delegate_call", delegate_call_ret);
+                binary.builder.build_unconditional_branch(done_block);
+
+                binary.builder.position_at_end(done_block);
+                let ty = binary.context.i32_type();
+                let ret = binary.builder.build_phi(ty, "storage_res");
+                ret.add_incoming(&[(&code_hash_ret, not_found_block), (&ty.const_zero(), entry)]);
+                ret.add_incoming(&[(&delegate_call_ret, call_block), (&ty.const_zero(), entry)]);
+                ret.as_basic_value().into_int_value()
+            }
+            ast::CallTy::Static => unreachable!("sema does not allow this"),
+        };
 
         let is_success =
             binary
@@ -1027,7 +1100,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             binary.builder.position_at_end(bail_block);
 
-            self.log_runtime_error(binary, "external call failed".to_string(), Some(loc), ns);
+            binary.log_runtime_error(self, "external call failed".to_string(), Some(loc), ns);
             self.assert_failure(
                 binary,
                 scratch_buf,
@@ -1096,7 +1169,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             binary.builder.position_at_end(bail_block);
 
-            self.log_runtime_error(binary, "value transfer failure".to_string(), Some(loc), ns);
+            binary.log_runtime_error(self, "value transfer failure".to_string(), Some(loc), ns);
             self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
             binary.builder.position_at_end(success_block);
@@ -1674,31 +1747,5 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ) -> IntValue<'a> {
         // not needed for slot-based storage chains
         unimplemented!()
-    }
-
-    fn log_runtime_error(
-        &self,
-        bin: &Binary,
-        reason_string: String,
-        reason_loc: Option<Loc>,
-        ns: &Namespace,
-    ) {
-        if !bin.options.log_runtime_errors {
-            return;
-        }
-        emit_context!(bin);
-        let error_with_loc = error_msg_with_loc(ns, &reason_string, reason_loc);
-        let custom_error = string_to_basic_value(bin, ns, error_with_loc + ",\n");
-        call!(
-            "debug_message",
-            &[
-                bin.vector_bytes(custom_error).into(),
-                bin.vector_len(custom_error).into()
-            ]
-        )
-        .try_as_basic_value()
-        .left()
-        .unwrap()
-        .into_int_value();
     }
 }

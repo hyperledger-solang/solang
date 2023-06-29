@@ -1072,6 +1072,12 @@ pub enum Expression {
         array: Box<Expression>,
         index: Box<Expression>,
     },
+    NamedMember {
+        loc: pt::Loc,
+        ty: Type,
+        array: Box<Expression>,
+        name: String,
+    },
     StructMember {
         loc: pt::Loc,
         ty: Type,
@@ -1420,6 +1426,7 @@ impl CodeLocation for Expression {
             | Expression::FormatString { loc, format: _ }
             | Expression::InterfaceId { loc, .. }
             | Expression::And { loc, .. }
+            | Expression::NamedMember { loc, .. }
             | Expression::UserDefinedOperator { loc, .. } => *loc,
         }
     }
@@ -1457,24 +1464,28 @@ impl CodeLocation for Instr {
                 _ => expr.loc(),
             },
             Instr::Call { args, .. } if args.is_empty() => pt::Loc::Codegen,
-            Instr::Call { args, .. } => args[0].loc(),
             Instr::Return { value } if value.is_empty() => pt::Loc::Codegen,
-            Instr::Return { value } => value[0].loc(),
-            Instr::EmitEvent { data, .. } => data.loc(),
-            Instr::BranchCond { cond, .. } => cond.loc(),
-            Instr::Store { dest, .. } => dest.loc(),
-            Instr::SetStorageBytes { storage, .. }
-            | Instr::PushStorage { storage, .. }
-            | Instr::PopStorage { storage, .. }
-            | Instr::LoadStorage { storage, .. }
-            | Instr::ClearStorage { storage, .. } => storage.loc(),
-            Instr::ExternalCall { value, .. } | Instr::SetStorage { value, .. } => value.loc(),
-            Instr::PushMemory { value, .. } => value.loc(),
-            Instr::Constructor { gas, .. } => gas.loc(),
-            Instr::ValueTransfer { address, .. } => address.loc(),
-            Instr::SelfDestruct { recipient } => recipient.loc(),
-            Instr::WriteBuffer { buf, .. } => buf.loc(),
-            Instr::Print { expr } => expr.loc(),
+            Instr::Call { args: arr, .. } | Instr::Return { value: arr } => arr[0].loc(),
+            Instr::EmitEvent { data: expr, .. }
+            | Instr::BranchCond { cond: expr, .. }
+            | Instr::Store { dest: expr, .. }
+            | Instr::SetStorageBytes { storage: expr, .. }
+            | Instr::PushStorage { storage: expr, .. }
+            | Instr::PopStorage { storage: expr, .. }
+            | Instr::LoadStorage { storage: expr, .. }
+            | Instr::ClearStorage { storage: expr, .. }
+            | Instr::ExternalCall { value: expr, .. }
+            | Instr::SetStorage { value: expr, .. }
+            | Instr::Constructor { gas: expr, .. }
+            | Instr::ValueTransfer { address: expr, .. }
+            | Instr::SelfDestruct { recipient: expr }
+            | Instr::WriteBuffer { buf: expr, .. }
+            | Instr::Switch { cond: expr, .. }
+            | Instr::ReturnData { data: expr, .. }
+            | Instr::Print { expr } => expr.loc(),
+
+            Instr::PushMemory { value: expr, .. } => expr.loc(),
+
             Instr::MemCopy {
                 source,
                 destination,
@@ -1483,14 +1494,14 @@ impl CodeLocation for Instr {
                 pt::Loc::File(_, _, _) => source.loc(),
                 _ => destination.loc(),
             },
-            Instr::Switch { cond, .. } => cond.loc(),
-            Instr::ReturnData { data, .. } => data.loc(),
             Instr::Branch { .. }
             | Instr::ReturnCode { .. }
             | Instr::Nop
             | Instr::AssertFailure { .. }
             | Instr::PopMemory { .. }
             | Instr::Unimplemented { .. } => pt::Loc::Codegen,
+
+            Instr::AccountAccess { loc, .. } => *loc,
         }
     }
 }
