@@ -67,7 +67,7 @@ describe('Deploy the upgradable proxy and implementations; expect the upgrade me
         count = await query(conn, alice, counter, "count");
         expect(BigInt(count.output?.toString() ?? "")).toStrictEqual(3n);
 
-        //gasLimit = await weight(conn, counter, 'dec', []);
+        gasLimit = await weight(conn, counter, 'dec', []);
         await transaction(counter.tx.dec({ gasLimit }), alice);
         count = await query(conn, alice, counter, "count");
         expect(BigInt(count.output?.toString() ?? "")).toStrictEqual(2n);
