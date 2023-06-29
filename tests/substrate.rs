@@ -70,12 +70,12 @@ impl HostError for HostReturn {}
 
 /// Represents a contract code artifact.
 #[derive(Clone)]
-struct WasmCode {
+pub struct WasmCode {
     /// A mapping from function names to selectors.
     messages: HashMap<String, Vec<u8>>,
     /// A list of the selectors of the constructors.
     constructors: Vec<Vec<u8>>,
-    hash: [u8; 32],
+    hash: Hash,
     blob: Vec<u8>,
 }
 
@@ -235,7 +235,7 @@ impl Runtime {
         Self {
             accounts: blobs
                 .iter()
-                .map(|blob| Account::with_contract(&blob.hash, blob))
+                .map(|blob| Account::with_contract(blob.hash.as_ref(), blob))
                 .collect(),
             blobs,
             ..Default::default()
@@ -309,7 +309,7 @@ impl Runtime {
     /// Returns `None` if there is no contract corresponding to the given `code_hash`.
     fn deploy(
         &mut self,
-        code_hash: [u8; 32],
+        code_hash: Hash,
         value: u128,
         salt: &[u8],
         input: Vec<u8>,
@@ -347,6 +347,10 @@ fn read_value(mem: &[u8], ptr: u32) -> u128 {
 
 fn read_account(mem: &[u8], ptr: u32) -> Address {
     Address::try_from(&mem[ptr as usize..(ptr + 32) as usize]).unwrap()
+}
+
+fn read_hash(mem: &[u8], ptr: u32) -> Hash {
+    Hash::try_from(&mem[ptr as usize..(ptr + 32) as usize]).unwrap()
 }
 
 /// Host functions mock the original implementation, refer to the [pallet docs][1] for more information.
@@ -572,7 +576,7 @@ impl Runtime {
         salt_ptr: u32,
         salt_len: u32,
     ) -> Result<u32, Trap> {
-        let code_hash = read_account(mem, code_hash_ptr);
+        let code_hash = read_hash(mem, code_hash_ptr);
         let salt = read_buf(mem, salt_ptr, salt_len);
         let input = read_buf(mem, input_data_ptr, input_data_len);
         let value = read_value(mem, value_ptr);
@@ -782,6 +786,16 @@ impl Runtime {
             .any(|account| account.contract.is_some() && account.address == address)
             .into())
     }
+
+    #[seal(0)]
+    fn set_code_hash(code_hash_ptr: u32) -> Result<u32, Trap> {
+        let hash = read_hash(mem, code_hash_ptr);
+        if let Some(code) = vm.blobs.iter().find(|code| code.hash == hash) {
+            vm.accounts[vm.account].contract.as_mut().unwrap().code = code.clone();
+            return Ok(0);
+        }
+        Ok(7) // ReturnCode::CodeNoteFound
+    }
 }
 
 /// Provides a mock implementation of substrates [contracts pallet][1]
@@ -871,6 +885,11 @@ impl MockSubstrate {
         let mut input = self.0.data().blobs[self.0.data().account].constructors[index].clone();
         input.append(&mut args);
         self.raw_constructor(input);
+    }
+
+    /// Get a list of all uploaded cotracts
+    pub fn blobs(&self) -> Vec<WasmCode> {
+        self.0.data().blobs.clone()
     }
 
     /// Call the "deploy" function with the given `input`.

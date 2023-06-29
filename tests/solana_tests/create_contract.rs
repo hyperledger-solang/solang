@@ -180,6 +180,20 @@ fn create_contract_wrong_program_id() {
 }
 
 #[test]
+fn call_constructor_twice() {
+    let mut vm = build_solidity(
+        r#"
+        @program_id("CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT")
+        contract bar0 {}
+        "#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.constructor_expected(2, &vm.default_metas(), &[]);
+}
+
+#[test]
 fn create_contract_with_payer() {
     let mut vm = build_solidity(
         r#"

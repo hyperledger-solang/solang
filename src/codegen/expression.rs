@@ -3697,8 +3697,8 @@ pub(crate) fn log_runtime_error(
     ns: &Namespace,
 ) {
     if report_error {
-        let error_with_loc = error_msg_with_loc(ns, reason, Some(reason_loc));
-        let expr = string_to_expr(error_with_loc + ",\n");
+        let error_with_loc = error_msg_with_loc(ns, reason.to_string(), Some(reason_loc));
+        let expr = string_to_expr(error_with_loc);
         cfg.add(vartab, Instr::Print { expr });
     }
 }

@@ -13,9 +13,9 @@ use tempfile::tempdir;
 #[cfg(feature = "wasm_opt")]
 use wasm_opt::OptimizationOptions;
 
-use crate::codegen::{cfg::ReturnCode, Options};
-use crate::emit::substrate;
+use crate::codegen::{cfg::ReturnCode, error_msg_with_loc, Options};
 use crate::emit::{solana, BinaryOp, Generate};
+use crate::emit::{substrate, TargetRuntime};
 use crate::linker::link;
 use crate::Target;
 use inkwell::builder::Builder;
@@ -34,6 +34,7 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 use once_cell::sync::OnceCell;
+use solang_parser::pt;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
 
@@ -1051,6 +1052,28 @@ impl<'a> Binary<'a> {
             _ => unreachable!(),
         }
     }
+
+    pub(super) fn log_runtime_error<T: TargetRuntime<'a> + ?Sized>(
+        &self,
+        target: &T,
+        reason_string: String,
+        reason_loc: Option<pt::Loc>,
+        ns: &Namespace,
+    ) {
+        if !self.options.log_runtime_errors {
+            return;
+        }
+        let error_with_loc = error_msg_with_loc(ns, reason_string, reason_loc);
+        let global_string =
+            self.emit_global_string("runtime_error", error_with_loc.as_bytes(), true);
+        target.print(
+            self,
+            global_string,
+            self.context
+                .i32_type()
+                .const_int(error_with_loc.len() as u64, false),
+        );
+    }
 }
 
 /// Return the stdlib as parsed llvm module. The solidity standard library is hardcoded into
@@ -1097,19 +1120,19 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
 }
 
 static BPF_IR: [&[u8]; 6] = [
-    include_bytes!("../../stdlib/bpf/stdlib.bc"),
-    include_bytes!("../../stdlib/bpf/bigint.bc"),
-    include_bytes!("../../stdlib/bpf/format.bc"),
-    include_bytes!("../../stdlib/bpf/solana.bc"),
-    include_bytes!("../../stdlib/bpf/ripemd160.bc"),
-    include_bytes!("../../stdlib/bpf/heap.bc"),
+    include_bytes!("../../target/bpf/stdlib.bc"),
+    include_bytes!("../../target/bpf/bigint.bc"),
+    include_bytes!("../../target/bpf/format.bc"),
+    include_bytes!("../../target/bpf/solana.bc"),
+    include_bytes!("../../target/bpf/ripemd160.bc"),
+    include_bytes!("../../target/bpf/heap.bc"),
 ];
 
 static WASM_IR: [&[u8]; 4] = [
-    include_bytes!("../../stdlib/wasm/stdlib.bc"),
-    include_bytes!("../../stdlib/wasm/heap.bc"),
-    include_bytes!("../../stdlib/wasm/bigint.bc"),
-    include_bytes!("../../stdlib/wasm/format.bc"),
+    include_bytes!("../../target/wasm/stdlib.bc"),
+    include_bytes!("../../target/wasm/heap.bc"),
+    include_bytes!("../../target/wasm/bigint.bc"),
+    include_bytes!("../../target/wasm/format.bc"),
 ];
 
-static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/wasm/ripemd160.bc");
+static RIPEMD160_IR: &[u8] = include_bytes!("../../target/wasm/ripemd160.bc");

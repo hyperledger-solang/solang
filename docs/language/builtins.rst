@@ -346,6 +346,30 @@ is_contract(address AccountId) returns (bool)
 
 Only available on Substrate. Checks whether the given address is a contract address. 
 
+set_code_hash(bytes hash) returns (uint32)
+++++++++++++++++++++++++++++++++++++++++++
+
+Only available on Substrate. Replace the contract's code with the code corresponding to ``hash``.
+Assumes that the new code was already uploaded, otherwise the operation fails.
+A return value of 0 indicates success; a return value of 7 indicates that there was no corresponding code found.
+
+.. note::
+
+    This is a low level function. We strongly advise consulting the underlying 
+    `API documentation <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.set_code_hash>`_ 
+    to obtain a full understanding of its implications.
+
+This functionality is intended to be used for implementing upgradeable contracts. 
+Pitfalls generally applying to writing
+`upgradeable contracts <https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable>`_ 
+must be considered whenever using this builtin function, most notably:
+
+* The contract must safeguard access to this functionality, so that it is only callable by priviledged users.
+* The code you are upgrading to must be 
+  `storage compatible <https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies#storage-collisions-between-implementation-versions>`_
+  with the existing code.
+* Constructors and any other initializers, including initial storage value definitions, won't be executed.
+
 Cryptography
 ____________
 

@@ -12,9 +12,9 @@ use solang_parser::pt::Loc;
 /// 1- Do an unsigned multiplication first, This step will check if the generated value will fit in N bits. (unsigned overflow)
 /// 2- Get the result, and negate it if needed.
 /// 3- Check for signed overflow, by checking for an unexpected change in the sign of the result.
-fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
+fn signed_ovf_detect<'a, T: TargetRuntime<'a> + ?Sized>(
     target: &T,
-    bin: &Binary<'b>,
+    bin: &Binary<'a>,
     mul_ty: IntType<'a>,
     mul_bits: u32,
     left: IntValue<'a>,
@@ -23,7 +23,7 @@ fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
     function: FunctionValue<'a>,
     ns: &Namespace,
     loc: Loc,
-) -> IntValue<'b> {
+) -> IntValue<'a> {
     // We check for signed overflow based on the facts:
     //  - * - = +
     //  + * + = +
@@ -180,7 +180,7 @@ fn signed_ovf_detect<'b, 'a: 'b, T: TargetRuntime<'a> + ?Sized>(
 
     bin.builder.position_at_end(error_block);
 
-    target.log_runtime_error(bin, "multiplication overflow".to_string(), Some(loc), ns);
+    bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc), ns);
     target.assert_failure(
         bin,
         bin.context
@@ -358,7 +358,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(error_block);
 
-            target.log_runtime_error(bin, "multiplication overflow".to_string(), Some(loc), ns);
+            bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc), ns);
             target.assert_failure(
                 bin,
                 bin.context
@@ -587,7 +587,7 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
 
     bin.builder.position_at_end(error_block);
 
-    target.log_runtime_error(bin, "math overflow".to_string(), Some(loc), ns);
+    bin.log_runtime_error(target, "math overflow".to_string(), Some(loc), ns);
 
     target.assert_failure(
         bin,

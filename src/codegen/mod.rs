@@ -1832,16 +1832,12 @@ impl From<&ast::Builtin> for Builtin {
     }
 }
 
-pub(super) fn error_msg_with_loc(ns: &Namespace, error: &str, loc: Option<Loc>) -> String {
-    if let Some(loc) = loc {
-        match loc {
-            Loc::File(..) => {
-                let loc_from_file = ns.loc_to_string(PathDisplay::Filename, &loc);
-                format!("runtime_error: {error} in {loc_from_file}")
-            }
-            _ => error.to_string(),
+pub(super) fn error_msg_with_loc(ns: &Namespace, error: String, loc: Option<Loc>) -> String {
+    match &loc {
+        Some(loc @ Loc::File(..)) => {
+            let loc_from_file = ns.loc_to_string(PathDisplay::Filename, loc);
+            format!("runtime_error: {error} in {loc_from_file},\n")
         }
-    } else {
-        error.to_string()
+        _ => error + ",\n",
     }
 }
