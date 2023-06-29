@@ -11,7 +11,8 @@ contract ConstructorDispatch {
 }
 
 contract HappyCaller {
-    function call(address callee, bytes input) public {
-        callee.call(input);
+    function call(address callee, bytes input) public returns (bytes ret) {
+        (bool ok, ret) = callee.call(input);
+        require(ok);
     }
 }
