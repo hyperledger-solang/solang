@@ -1179,7 +1179,7 @@ impl LanguageServer for SolangServer {
         if let Ok(path) = uri.to_file_path() {
             self.files.lock().await.remove(&path);
         }
-        
+
         self.client.publish_diagnostics(uri, vec![], None).await;
     }
 
