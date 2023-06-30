@@ -43,9 +43,10 @@ pub fn find_undefined_variables(
     }
 
     let mut all_diagnostics: Vec<Diagnostic> = diagnostics.into_values().collect();
+    let has_diagnostic = !all_diagnostics.is_empty();
     ns.diagnostics.append(&mut all_diagnostics);
 
-    !all_diagnostics.is_empty()
+    has_diagnostic
 }
 
 /// Checks for undefined variables in an expression associated to an instruction
