@@ -1280,7 +1280,6 @@ fn update_file_contents(
         // Directly add the changes to the buffer when changes are present at the end of the file.
         if start_line == prev_content.lines().count() {
             prev_content.push_str(&content_change.text);
-            // return format!("{}{}", prev_content, content_change.text);
             return prev_content;
         }
 
