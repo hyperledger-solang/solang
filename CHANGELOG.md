@@ -5,10 +5,10 @@ will be documented here.
 ## v0.3.1 Göttingen
 
 ### Added
-- Write environment configured into Substrate metadata. [xermicus](https://github.com/xermicus)
-- Tornado cash example for Substrate. [xermicus](https://github.com/xermicus)
-- `is_contract` is available as a builtin for Substrate. [xermicus](https://github.com/xermicus)
-- The `wasm-opt` optimizer now optimizes Substrate binaries. [xermicus](https://github.com/xermicus)
+- Write environment configuration into Substrate metadata. [xermicus](https://github.com/xermicus)
+- Tornado cash as an exemplary integration test for Substrate chain extensions. [xermicus](https://github.com/xermicus)
+- `is_contract` runtime API is available as a builtin for Substrate. [xermicus](https://github.com/xermicus)
+- The `wasm-opt` optimizer now optimizes the Wasm bytecode on the Substrate target. [xermicus](https://github.com/xermicus)
 - Call flags are now available for Substrate. [xermicus](https://github.com/xermicus)
 - Read compiler configurations from toml file. [salaheldinsoliman](https://github.com/salaheldinsoliman)
 - Accounts declared with `@payer(my_account)` can be accessed with the 
@@ -30,15 +30,32 @@ will be documented here.
 - Allow return vallues to be ignored in try-catch statements. [seanyoung](https://github.com/seanyoung)
 - Optimize modifiers' CFGs. [xermicus](https://github.com/xermicus)
 - Fix an error whereby building large contracts would cause an LLVM error. [LucasSte](https://github.com/LucasSte)
-- A constructor cannot run twice on the same data account. [seanyoung](https://github.com/seanyoung)
+- A constructor for a Solana contract cannot run twice on the same data account. [seanyoung](https://github.com/seanyoung)
 - Split the `call` and `deploy` dispatches on Substrate. [xermicus](https://github.com/xermicus)
 
 ### Changed
+-  Minimum Supported Rust Version (MSRV) is Rust `1.68`.
 - `@payer` annotation declares an account in a constructor. [LucasSte](https://github.com/LucasSte)
 - Do not allow `.call()` functions in functions declared as view. [seanyoung](https://github.com/seanyoung)
-- Constructor annotations above a constructor either declare an account or receive a literal parameter. Those before
-  constructor arguments refer to them. [LucasSte](https://github.com/LucasSte)
-- Implicit accessor function now returns struct members. [seanyoung](https://github.com/seanyoung)
+- Storage accessor function matches solc, and returns struct members if the sole return value is a single struct [seanyoung](https://github.com/seanyoung)
+- **breaking** Constructor annotations above a constructor can either declare an account or receive a literal parameter. [LucasSte](https://github.com/LucasSte)
+  ```
+  contract MyContract {
+    @payer(acc) // Declares account acc
+    @space(2+3) // Only literals or constant expressions allowed
+    @seed(myseed) // NOT ALLOWED
+    constructor(bytes myseed) {}
+  }
+  ```
+- Annotations placed before constructor arguments refer to the latter. [LucasSte](https://github.com/LucasSte)
+  ```
+  contract MyContract {
+    @payer(acc) // Declares account acc
+    @space(2+3) // Only literals or constant expressions allowed
+    constructor(@seed bytes myseed) {} 
+    // When an annotations refers to a parameter, the former must appear right before the latter.
+  }
+  ```
 
 ## v0.3.0 Venice
 
