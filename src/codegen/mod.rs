@@ -5,7 +5,7 @@ pub mod cfg;
 mod constant_folding;
 mod constructor;
 mod dead_storage;
-mod dispatch;
+pub(crate) mod dispatch;
 mod encoding;
 mod events;
 mod expression;
@@ -242,9 +242,9 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
-        let dispatch_cfg = function_dispatch(contract_no, &all_cfg, ns, opt);
-        ns.contracts[contract_no].dispatch_no = all_cfg.len();
-        all_cfg.push(dispatch_cfg);
+        for dispatch_cfg in function_dispatch(contract_no, &all_cfg, ns, opt) {
+            all_cfg.push(dispatch_cfg);
+        }
 
         ns.contracts[contract_no].cfg = all_cfg;
     }

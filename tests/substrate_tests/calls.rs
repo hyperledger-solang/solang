@@ -1038,3 +1038,29 @@ contract Flagger {
     );
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 }
+
+#[test]
+fn constructors_and_messages_distinct_in_dispatcher() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            @selector([0, 1, 2, 3])
+            constructor() {}
+
+            @selector([4, 5, 6, 7])
+            function foo() public pure {}
+        }"##,
+    );
+
+    let constructor = vec![0, 1, 2, 3];
+    // Given this constructor selector works as intended
+    runtime.raw_constructor(constructor.clone());
+    // Expect calling the constructor via "call" to trap the contract
+    runtime.raw_function_failure(constructor);
+
+    let function = vec![4, 5, 6, 7];
+    // Given this function selector works as intended
+    runtime.raw_function(function.clone());
+    // Expect calling the function via "deploy" to trap the contract
+    runtime.raw_constructor_failure(function);
+}

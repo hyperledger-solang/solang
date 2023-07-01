@@ -156,7 +156,6 @@ fn contract_constant_variable() {
         cfg: vec![],
         code: OnceCell::new(),
         instantiable: true,
-        dispatch_no: 0,
         program_id: None,
     };
     ns.contracts.push(contract);
@@ -292,7 +291,6 @@ fn slot_suffix() {
         cfg: vec![],
         code: OnceCell::new(),
         instantiable: true,
-        dispatch_no: 0,
         program_id: None,
     };
     ns.contracts.push(contract);

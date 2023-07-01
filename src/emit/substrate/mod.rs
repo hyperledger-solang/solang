@@ -7,6 +7,7 @@ use inkwell::module::{Linkage, Module};
 use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 
+use crate::codegen::dispatch::substrate::DispatchType;
 use crate::emit::functions::{emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};
 
@@ -327,20 +328,26 @@ impl SubstrateTarget {
     /// Emits the "deploy" function if `init` is `Some`, otherwise emits the "call" function.
     fn emit_dispatch(&mut self, init: Option<FunctionValue>, bin: &mut Binary, ns: &Namespace) {
         let ty = bin.context.void_type().fn_type(&[], false);
-        let name = if init.is_some() { "deploy" } else { "call" };
-        let func = bin.module.add_function(name, ty, None);
+        let export_name = if init.is_some() { "deploy" } else { "call" };
+        let func = bin.module.add_function(export_name, ty, None);
         let (input, input_length) = self.public_function_prelude(bin, func);
-        if let Some(initializer) = init {
-            bin.builder.build_call(initializer, &[], "");
-        }
-        let func = bin.module.get_function("substrate_dispatch").unwrap();
         let args = vec![
             BasicMetadataValueEnum::PointerValue(input),
             BasicMetadataValueEnum::IntValue(input_length),
             BasicMetadataValueEnum::IntValue(self.value_transferred(bin, ns)),
             BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
         ];
-        bin.builder.build_call(func, &args, "substrate_dispatch");
+        let dispatch_cfg_name = &init
+            .map(|initializer| {
+                // Call the storage initializers on deploy
+                bin.builder.build_call(initializer, &[], "");
+                DispatchType::Deploy
+            })
+            .unwrap_or(DispatchType::Call)
+            .to_string();
+        let cfg = bin.module.get_function(dispatch_cfg_name).unwrap();
+        bin.builder.build_call(cfg, &args, dispatch_cfg_name);
+
         bin.builder.build_unreachable();
     }
 }

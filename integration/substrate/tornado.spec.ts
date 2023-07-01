@@ -82,6 +82,8 @@ describe('Deploy the tornado contract, create 2 deposits and withdraw them after
     });
 
     it('Withdraws funds deposited by alice to dave', async function () {
+        this.timeout(50000);
+
         const { data: { free: balanceBefore } } = await conn.query.system.account(dave.address);
 
         const parameters = await generateProof(dave, 0);
@@ -96,6 +98,8 @@ describe('Deploy the tornado contract, create 2 deposits and withdraw them after
     });
 
     it('Withdraws funds deposited by dave to alice', async function () {
+        this.timeout(50000);
+
         const { data: { free: balanceBefore } } = await conn.query.system.account(dave.address);
 
         const parameters = await generateProof(dave, 1);
@@ -110,6 +114,8 @@ describe('Deploy the tornado contract, create 2 deposits and withdraw them after
     });
 
     it('Fails to withdraw without a valid proof', async function () {
+        this.timeout(50000);
+
         // Without a corresponding deposit, this merkle root should not exist yet
         deposits.push(createNote({}));
         let parameters = await generateProof(alice, 2);

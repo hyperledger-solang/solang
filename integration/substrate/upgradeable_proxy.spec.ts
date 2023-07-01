@@ -6,10 +6,15 @@ import { KeyringPair } from '@polkadot/keyring/types';
 import { DecodedEvent } from '@polkadot/api-contract/types';
 import { AccountId, ContractSelector } from '@polkadot/types/interfaces';
 
+interface IMsg {
+    identifier: string,
+    selector: any,
+};
+
 describe('Deploy the upgradable proxy and implementations; expect the upgrade mechanism to work', () => {
     // Helper: Upgrade implementation and execute a constructor that takes no arguments
-    async function upgrade_and_constructor(impl: AccountId, constructor: ContractSelector) {
-        const params = [impl, constructor];
+    async function upgrade_version(impl: AccountId, input: any) {
+        const params = [impl, input];
         const gasLimit = await weight(conn, proxy, 'upgradeToAndCall', params);
         let result: any = await transaction(proxy.tx.upgradeToAndCall({ gasLimit }, ...params), aliceKeypair());
 
@@ -33,7 +38,8 @@ describe('Deploy the upgradable proxy and implementations; expect the upgrade me
 
         // Pretend the proxy contract to be implementation V1
         const implV1 = await deploy(conn, alice, 'UpgradeableImplV1.contract', 0n);
-        await upgrade_and_constructor(implV1.address, implV1.abi.constructors[0].selector);
+        const selector = implV1.abi.messages.find((m: IMsg) => m.identifier === "inc").selector;
+        await upgrade_version(implV1.address, selector);
         counter = new ContractPromise(conn, implV1.abi, proxy_deployment.address);
         const count = await query(conn, alice, counter, "count");
         expect(BigInt(count.output?.toString() ?? "")).toStrictEqual(1n);
@@ -53,7 +59,8 @@ describe('Deploy the upgradable proxy and implementations; expect the upgrade me
 
         // Upgrade to implementation V2
         const implV2 = await deploy(conn, alice, 'UpgradeableImplV2.contract', 0n);
-        await upgrade_and_constructor(implV2.address, implV2.abi.constructors[0].selector);
+        const selector = implV2.abi.messages.find((m: IMsg) => m.identifier === "setVersion").selector;
+        await upgrade_version(implV2.address, selector);
         counter = new ContractPromise(conn, implV2.abi, proxy.address);
 
         // Test implementation V2
