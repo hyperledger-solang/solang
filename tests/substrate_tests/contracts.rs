@@ -99,10 +99,7 @@ fn revert_constructor() {
     );
 
     runtime.constructor(0, Vec::new());
-
     runtime.function_expect_failure("test", Vec::new());
-
-    assert_eq!(runtime.output().len(), 0);
 }
 
 #[test]

@@ -166,7 +166,6 @@ fn assert_ok() {
 }
 
 #[test]
-#[should_panic]
 fn assert_not_ok() {
     // parse
     let mut runtime = build_solidity(
@@ -180,6 +179,5 @@ fn assert_not_ok() {
     );
 
     runtime.constructor(0, Vec::new());
-
-    runtime.function("foo", Vec::new());
+    runtime.function_expect_failure("foo", Vec::new());
 }

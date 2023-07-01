@@ -946,14 +946,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             binary.builder.position_at_end(bail_block);
 
             binary.log_runtime_error(self, "contract creation failed".to_string(), Some(loc), ns);
-            self.assert_failure(
-                binary,
-                scratch_buf,
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
-                    .into_int_value(),
-            );
+            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
             binary.builder.position_at_end(success_block);
         }
@@ -1109,14 +1102,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             binary.builder.position_at_end(bail_block);
 
             binary.log_runtime_error(self, "external call failed".to_string(), Some(loc), ns);
-            self.assert_failure(
-                binary,
-                scratch_buf,
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
-                    .into_int_value(),
-            );
+            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
             binary.builder.position_at_end(success_block);
         }

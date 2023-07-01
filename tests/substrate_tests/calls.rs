@@ -35,11 +35,17 @@ fn revert() {
 
     runtime.function_expect_failure("test", Vec::new());
 
-    assert_eq!(runtime.output().len(), 0);
+    assert_eq!(runtime.output().len(), 4 + "yo!".to_string().encode().len());
 
     runtime.function_expect_failure("a", Vec::new());
 
-    assert_eq!(runtime.output().len(), 0);
+    assert_eq!(
+        runtime.output().len(),
+        4 + "revert value has to be passed down the stack"
+            .to_string()
+            .encode()
+            .len()
+    );
 
     let mut runtime = build_solidity(
         r##"
@@ -214,7 +220,7 @@ fn try_catch_external_calls() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.function_expect_failure("test", Vec::new());
+    runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
         r##"
@@ -271,7 +277,7 @@ fn try_catch_external_calls() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.function_expect_failure("test", Vec::new());
+    runtime.function("test", Vec::new());
 
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
@@ -330,7 +336,8 @@ fn try_catch_external_calls() {
     runtime.constructor(0, Vec::new());
     runtime.function("create_child", Vec::new());
 
-    runtime.function_expect_failure("test", Vec::new());
+    runtime.function("test", Vec::new());
+    assert_eq!(runtime.output(), 4000i32.encode());
 }
 
 #[test]
@@ -475,7 +482,7 @@ fn try_catch_constructor() {
     );
 
     runtime.constructor(0, Vec::new());
-    runtime.function_expect_failure("test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -892,8 +899,7 @@ fn selector() {
 
 #[test]
 fn call_flags() {
-    let mut runtime = build_solidity(
-        r##"
+    let src = r##"
 contract Flagger {
     uint8 roundtrips;
 
@@ -951,8 +957,8 @@ contract Flagger {
         ret = abi.decode(raw, (uint32));
         ret += 1;
     }
-}"##,
-    );
+}"##;
+    let build = || build_solidity(src);
 
     #[derive(Encode)]
     enum CallFlags {
@@ -969,7 +975,7 @@ contract Flagger {
         flags: Vec<CallFlags>,
     }
 
-    let address = runtime.caller();
+    let address = build().caller();
     let selector = [0, 0, 0, 0];
     let voyager = 123456789;
 
@@ -984,10 +990,12 @@ contract Flagger {
     };
 
     // Should work with the reentrancy flag
+    let mut runtime = build();
     runtime.function("echo", with_flags(vec![CallFlags::AllowReentry]));
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy and the tail call flag
+    let mut runtime = build();
     runtime.function(
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::TailCall]),
@@ -995,6 +1003,7 @@ contract Flagger {
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy and the clone input
+    let mut runtime = build();
     runtime.function(
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::CloneInput]),
@@ -1002,29 +1011,36 @@ contract Flagger {
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy clone input and tail call flag
+    let mut runtime = build();
     runtime.function(
         "echo",
         with_flags(vec![
             CallFlags::AllowReentry,
             CallFlags::CloneInput,
-            // FIXME: Enabling this flag here specifically breaks the _next_ test.
-            // This is a very odd bug in the mock VM; need to revisit later.
-            // CallFlags::TailCall,
+            CallFlags::TailCall,
         ]),
     );
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should fail without the reentrancy flag
+    let mut runtime = build();
     runtime.function_expect_failure("echo", with_flags(vec![]));
+    runtime.constructor(0, vec![]);
+
+    let mut runtime = build();
     runtime.function_expect_failure("echo", with_flags(vec![CallFlags::TailCall]));
+    runtime.constructor(0, vec![]);
 
     // Should fail with input forwarding
+    let mut runtime = build();
     runtime.function_expect_failure(
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::ForwardInput]),
     );
+    runtime.constructor(0, vec![]);
 
     // Test the tail call without setting it
+    let mut runtime = build();
     runtime.function("tail_call_it", with_flags(vec![CallFlags::AllowReentry]));
     assert_eq!(
         u32::decode(&mut &runtime.output()[..]).unwrap(),
@@ -1032,6 +1048,7 @@ contract Flagger {
     );
 
     // Test the tail call with setting it
+    let mut runtime = build();
     runtime.function(
         "tail_call_it",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::TailCall]),
