@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(unstable_name_collisions)]
+
 use itertools::Itertools;
 use rust_lapper::{Interval, Lapper};
 use serde_json::Value;
@@ -181,7 +183,7 @@ impl<'a> Builder<'a> {
                 if let Some(exp) = expr {
                     self.expression(exp, symtab);
                 }
-                let mut val = format!("{} {}", self.expanded_ty(&param.ty), param.name_as_str());
+                let mut val = format!("{} {}", self.expanded_ty(&param.ty, false), param.name_as_str());
                 if let Some(expr) = self.ns.var_constants.get(loc) {
                     match expr {
                         codegen::Expression::BytesLiteral {
@@ -289,7 +291,7 @@ impl<'a> Builder<'a> {
                             self.hovers.push(HoverEntry {
                                 start: param.loc.start(),
                                 stop: param.loc.end(),
-                                val: make_code_block(&self.expanded_ty(&param.ty)),
+                                val: make_code_block(&self.expanded_ty(&param.ty, true)),
                             });
                         }
                         ast::DestructureField::None => (),
@@ -378,7 +380,7 @@ impl<'a> Builder<'a> {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(&self.expanded_ty(ty)),
+                    val: make_code_block(&self.expanded_ty(ty, true)),
                 });
             }
             ast::Expression::CodeLiteral { loc, .. } => {
@@ -540,7 +542,7 @@ impl<'a> Builder<'a> {
 
             // Variable expression
             ast::Expression::Variable { loc, ty, var_no } => {
-                let mut val = self.expanded_ty(ty);
+                let mut val = self.expanded_ty(ty, false);
 
                 if let Some(expr) = self.ns.var_constants.get(loc) {
                     match expr {
@@ -572,7 +574,7 @@ impl<'a> Builder<'a> {
                 });
             }
             ast::Expression::ConstantVariable { loc, ty, .. } => {
-                let val = format!("constant ({})", self.expanded_ty(ty));
+                let val = format!("constant ({})", self.expanded_ty(ty, false));
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
@@ -580,7 +582,8 @@ impl<'a> Builder<'a> {
                 });
             }
             ast::Expression::StorageVariable { loc, ty, .. } => {
-                let val = format!("({})", self.expanded_ty(ty));
+                // TODO let val = format!("({})", self.expanded_ty(ty));
+                let val = format!("{}", self.expanded_ty(ty, true));
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
@@ -665,13 +668,13 @@ impl<'a> Builder<'a> {
                     let msg_tg = render(&fnc.tags[..]);
 
                     let params = fnc.params.iter()
-                        .map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty)))
+                        .map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty, false)))
                         .intersperse(", ".to_string())
                         .collect::<String>();
 
                     let rets = fnc.returns.iter()
                         .map(|ret| {
-                            let mut msg = self.expanded_ty(&ret.ty);
+                            let mut msg = self.expanded_ty(&ret.ty, false);
                             if ret.name_as_str() != "" {
                                 msg = format!("{}: {}", ret.name_as_str(), msg);
                             }
@@ -711,13 +714,13 @@ impl<'a> Builder<'a> {
                     let msg_tg = render(&fnc.tags[..]);
 
                     let params = fnc.params.iter()
-                        .map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty)))
+                        .map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty, false)))
                         .intersperse(", ".to_string())
                         .collect::<String>();
 
                     let rets = fnc.returns.iter()
                         .map(|ret| {
-                            let mut msg = self.expanded_ty(&ret.ty);
+                            let mut msg = self.expanded_ty(&ret.ty, false);
                             if ret.name_as_str() != "" {
                                 msg = format!("{}: {}", ret.name_as_str(), msg);
                             }
@@ -786,11 +789,11 @@ impl<'a> Builder<'a> {
             ast::Expression::Builtin { loc, kind, args, .. } => {
                 let (rets, params, doc) = if let Some(protval) = get_prototype(*kind) {
                     let rets = protval.ret.iter()
-                        .map(|ret| self.expanded_ty(ret))
+                        .map(|ret| self.expanded_ty(ret, false))
                         .intersperse(" ".to_string())
                         .collect::<String>();
                     let params = protval.params.iter()
-                        .map(|param| self.expanded_ty(param))
+                        .map(|param| self.expanded_ty(param, false))
                         .intersperse(" ".to_string())
                         .collect::<String>();
                     let doc = protval.doc;
@@ -802,7 +805,7 @@ impl<'a> Builder<'a> {
                     start: loc.start(),
                     stop: loc.end(),
                     // TODO val: format!("_[built-in]_ {} ( {} ): {}", make_code_block(rets), make_code_block(params), doc),
-                    val: make_code_block(format!("[built-in] {} ( {} ): {}", rets,params, doc)),
+                    val: make_code_block(format!("[built-in] {} ( {} ): {}", rets, params, doc)),
                 });
 
                 for expr in args {
@@ -828,7 +831,7 @@ impl<'a> Builder<'a> {
         self.hovers.push(HoverEntry {
             start: contract.loc.start(),
             stop: contract.loc.end(),
-            val: make_code_block(format!("{} {}", self.expanded_ty(&contract.ty), contract.name)),
+            val: make_code_block(format!("{} {}", self.expanded_ty(&contract.ty, false), contract.name)),
         });
         if let Some(expr) = &contract.initializer {
             self.expression(expr, symtab);
@@ -909,7 +912,7 @@ impl<'a> Builder<'a> {
                 builder.hovers.push(HoverEntry {
                     start: param.loc.start(),
                     stop: param.loc.end(),
-                    val: make_code_block(builder.expanded_ty(&param.ty)),
+                    val: make_code_block(builder.expanded_ty(&param.ty, true)),
                 });
             }
 
@@ -917,7 +920,7 @@ impl<'a> Builder<'a> {
                 builder.hovers.push(HoverEntry {
                     start: ret.loc.start(),
                     stop: ret.loc.end(),
-                    val: make_code_block(builder.expanded_ty(&ret.ty)),
+                    val: make_code_block(builder.expanded_ty(&ret.ty, true)),
                 });
             }
 
@@ -986,13 +989,13 @@ impl<'a> Builder<'a> {
     }
 
     /// Render the type with struct/enum fields expanded
-    fn expanded_ty(&self, ty: &ast::Type) -> String {
+    fn expanded_ty(&self, ty: &ast::Type, include_tags: bool) -> String {
         match ty {
-            ast::Type::Ref(ty) => self.expanded_ty(ty),
-            ast::Type::StorageRef(_, ty) => self.expanded_ty(ty),
+            ast::Type::Ref(ty) => self.expanded_ty(ty, include_tags),
+            ast::Type::StorageRef(_, ty) => self.expanded_ty(ty, include_tags),
             ast::Type::Struct(struct_type) => {
                 let strct = struct_type.definition(self.ns);
-                let tags = render(&strct.tags);
+                let tags = if include_tags { render(&strct.tags) } else { "".to_string() };
                 let fields = strct.fields.iter()
                     .map(|field| format!("\t{} {}", field.ty.to_string(self.ns), field.name_as_str()))
                     .intersperse(",\n".to_string())
@@ -1001,7 +1004,7 @@ impl<'a> Builder<'a> {
             }
             ast::Type::Enum(n) => {
                 let enm = &self.ns.enums[*n];
-                let tags = render(&enm.tags);
+                let tags = if include_tags { render(&enm.tags) } else { "".to_string() };
                 // TODO display the enum values in-order
                 // let mut values = Vec::new();
                 // values.resize(enm.values.len(), "");
