@@ -6,7 +6,7 @@ library CallFlags {
 }
 
 contract Reentrant {
-    function reentrant_tail_call(
+    function reentrant_call(
         address _address,
         bytes4 selector
     ) public returns (bytes ret) {
