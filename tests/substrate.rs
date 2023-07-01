@@ -935,7 +935,10 @@ impl MockSubstrate {
                 _ => panic!("trap: {trap:?}"),
             },
             Err(err) => panic!("unexpected error: {err:?}"),
-            Ok(_) => panic!("unexpected return from main"),
+            Ok(_) => match self.0.data().output {
+                HostReturn::Data(flags, _) if flags == 1 => (),
+                _ => panic!("unexpected return from main"),
+            },
         }
     }
 

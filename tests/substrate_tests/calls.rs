@@ -475,10 +475,7 @@ fn try_catch_constructor() {
     );
 
     runtime.constructor(0, Vec::new());
-    // TODO / REGRESSION
-    // This traps with InstructionTrap(MemoryOutOfBounds). Which does not seem right
-    // runtime.function_expect_failure("test", Vec::new());
-    // There is a problem with reading return data, see output pf: print("returns:{}".format(c));
+    runtime.function_expect_failure("test", Vec::new());
 }
 
 #[test]

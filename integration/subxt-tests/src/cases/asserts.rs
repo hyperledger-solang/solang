@@ -45,10 +45,7 @@ async fn case() -> anyhow::Result<()> {
             &|t: &ContractMessageTranscoder| t.encode::<_, String>("test_assert_rpc", []).unwrap(),
         )
         .await;
-
-    if let Err(r) = res {
-        assert!(r.to_string().contains("ContractTrapped"));
-    }
+    assert!(res.is_err());
 
     // write should failed
     let res = contract
@@ -59,10 +56,7 @@ async fn case() -> anyhow::Result<()> {
             &|t: &ContractMessageTranscoder| t.encode::<_, String>("test_assert_rpc", []).unwrap(),
         )
         .await;
-
-    if let Err(r) = res {
-        assert!(r.to_string().contains("ContractTrapped"));
-    }
+    assert!(res.unwrap_err().to_string().contains("ContractReverted"));
 
     // state should not change after failed operation
     let rv = contract

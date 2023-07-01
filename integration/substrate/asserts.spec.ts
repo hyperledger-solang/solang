@@ -2,6 +2,7 @@ import expect from 'expect';
 import { weight, createConnection, deploy, transaction, aliceKeypair, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
+import { Bytes } from '@polkadot/types';
 
 describe('Deploy asserts contract and test', () => {
     let conn: ApiPromise;
@@ -25,11 +26,11 @@ describe('Deploy asserts contract and test', () => {
         let contract = new ContractPromise(conn, deploy_contract.abi, deploy_contract.address);
 
         let res0 = await query(conn, alice, contract, "var");
-
         expect(res0.output?.toJSON()).toEqual(1);
 
         let res1 = await query(conn, alice, contract, "testAssertRpc");
-        expect(res1.result.toHuman()).toEqual({ "Err": { "Module": { "error": "0x0b000000", "index": "8" } } });
+        expect(res1.result.asOk.flags.isRevert).toStrictEqual(true);
+        expect(res1.result.asOk.data.toString()).toStrictEqual("0xa079c308204920726566757365");
 
         let gasLimit = await weight(conn, contract, "testAssert");
         let tx = contract.tx.testAssert({ gasLimit });
@@ -38,7 +39,8 @@ describe('Deploy asserts contract and test', () => {
             throw new Error("should not succeed");
         }, (res) => res);
 
-        expect(res2.dispatchError.toHuman()).toEqual({ "Module": { "error": "0x0b000000", "index": "8" } });
+        // Error 24 is ContractReverted
+        expect(res2.dispatchError.toHuman()).toEqual({ "Module": { "error": "0x18000000", "index": "8" } });
 
         let res3 = await query(conn, alice, contract, "var");
 

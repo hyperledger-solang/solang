@@ -62,10 +62,7 @@ describe('Deploy the CallFlags contract and tests for various call flag combinat
     it('fails with the input forwarding flag', async function () {
         const flags = [CallFlags.ALLOW_REENTRY, CallFlags.FORWARD_INPUT];
         const answer = await query(conn, alice, contract, "echo", [contract.address, foo, voyager, flags]);
-        const { index, error } = answer.result.asErr.asModule;
-        // Module 8 error 0x0b is ContractTrapped in the contracts pallet
-        expect(index.toJSON()).toStrictEqual(8);
-        expect(error.toJSON()).toStrictEqual("0x0b000000");
+        expect(answer.result.asOk.flags.isRevert).toStrictEqual(true);
     });
 
     it('test for the tail call flag to work correctly', async function () {
