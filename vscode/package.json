@@ -27,7 +27,7 @@
 					"type": "string",
 					"enum": [
 						"solana",
-						"substrate",
+						"polkadot",
 						"evm"
 					],
 					"default": "solana",
@@ -45,9 +45,13 @@
 				},
 				"solidity.trace.server": {
 					"scope": "window",
-                    			"type": "string",
-                    			"enum": ["off","messages","verbose"],
-                    			"default": "verbose"
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"default": "verbose"
 				}
 			}
 		},
