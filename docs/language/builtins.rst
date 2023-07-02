@@ -308,7 +308,7 @@ Hash
 Only available on Polkadot, it represents the ``Hash`` type from ``ink_primitives`` via user type definition.
 Its underlying type is ``bytes32``, but it will be reported correctly as the ``Hash`` type in the metadata.
 
-.. include:: ../examples/substrate/hash_type.sol
+.. include:: ../examples/polkadot/hash_type.sol
   :code: solidity
 
 chain_extension(uint32 ID, bytes input) returns (uint32, bytes)
@@ -338,7 +338,7 @@ The following example demonstrates the usage of this builtin function.
 It shows how the chain extension example from the `ink! documentation <https://use.ink/macros-attributes/chain-extension/>`_
 looks like in a solidity contract:
 
-.. include:: ../examples/substrate/call_chain_extension.sol
+.. include:: ../examples/polkadot/call_chain_extension.sol
   :code: solidity
 
 is_contract(address AccountId) returns (bool)

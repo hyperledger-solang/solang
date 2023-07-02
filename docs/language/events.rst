@@ -27,7 +27,7 @@ a different number of arguments.
     be passed for Solana's ``sol_log_data`` system call, regardless if the ``indexed`` keyword is present or not.
     This behavior follows what Solana's Anchor framework does.
 
-In Parity Substrate, the topic fields are always the hash of the value of the field. Ethereum only hashes fields
+In Polkadot, the topic fields are always the hash of the value of the field. Ethereum only hashes fields
 which do not fit in the 32 bytes. Since a cryptographic hash is used, it is only possible to compare the topic against a
 known value.
 
