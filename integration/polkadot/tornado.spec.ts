@@ -1,5 +1,5 @@
 // Tests against the tornado cash core contracts.
-// The tornado contracts used here contain minor mechanical changes to work fine on Substrate.
+// The tornado contracts used here contain minor mechanical changes to work fine on Polkadot.
 // The ZK-SNARK setup is the same as ETH Tornado on mainnet.
 // On the node, the MiMC sponge hash (available as EVM bytecode) and bn128 curve operations
 // (precompiled contracts on Ethereum) are expected to be implemented as chain extensions.

@@ -1,4 +1,4 @@
-import "substrate";
+import "polkadot";
 
 contract ChainExtension {
     // Implementation on the node:

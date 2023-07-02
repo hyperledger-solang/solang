@@ -1,4 +1,4 @@
-import "substrate";
+import "polkadot";
 
 // Partial mock of the ink! "mother" integration test.
 contract IsContractOracle {

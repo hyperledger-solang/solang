@@ -1,4 +1,4 @@
-import "substrate";
+import "polkadot";
 
 abstract contract Upgradeable {
     function set_code(uint8[32] code) external {

@@ -1,7 +1,7 @@
 {
-  "name": "substrate-tests",
+  "name": "polkadot-tests",
   "version": "0.0.1",
-  "description": "Integration tests with Solang and Substrate",
+  "description": "Integration tests with Solang and Polkadot",
   "main": "index.js",
   "scripts": {
     "test": "tsc; ts-mocha -t 20000 --exit *.spec.ts",

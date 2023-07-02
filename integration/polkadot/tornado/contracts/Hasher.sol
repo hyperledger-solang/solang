@@ -1,4 +1,4 @@
-import "substrate";
+import "polkadot";
 
 contract Hasher {
     function MiMCSponge(uint256 xL, uint256 xR) external returns (uint256 outL, uint256 outR) {

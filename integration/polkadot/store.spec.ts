@@ -108,7 +108,7 @@ describe.skip('Deploy store contract and test', () => {
 
                 await transaction(tx, alice);
 
-                // note that substrate does not give us access to the return values of a transaction;
+                // note transactions do not give us access to the return values of a contract execution;
                 // therefore, we can't check the return values of pop
 
                 bs = bs.slice(0, -2);
