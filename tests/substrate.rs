@@ -1038,7 +1038,7 @@ pub fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, Stri
     let mut cache = FileResolver::new();
     cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
     let opt = inkwell::OptimizationLevel::Default;
-    let target = Target::default_substrate();
+    let target = Target::default_polkadot();
     let (wasm, ns) = compile(
         tmp_file,
         &mut cache,

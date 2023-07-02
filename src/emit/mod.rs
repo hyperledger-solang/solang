@@ -21,10 +21,10 @@ mod functions;
 mod instructions;
 mod loop_builder;
 mod math;
+pub mod polkadot;
 pub mod solana;
 mod storage;
 mod strings;
-pub mod substrate;
 
 use crate::codegen::{cfg::HashTy, Options};
 use crate::emit::binary::Binary;

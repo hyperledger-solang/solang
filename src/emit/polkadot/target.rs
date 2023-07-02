@@ -3,8 +3,8 @@
 use crate::codegen::cfg::{HashTy, ReturnCode};
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
+use crate::emit::polkadot::{log_return_code, PolkadotTarget, SCRATCH_SIZE};
 use crate::emit::storage::StorageSlot;
-use crate::emit::substrate::{log_return_code, SubstrateTarget, SCRATCH_SIZE};
 use crate::emit::{ContractArgs, TargetRuntime, Variable};
 use crate::sema::ast;
 use crate::sema::ast::{Function, Namespace, Type};
@@ -18,7 +18,7 @@ use inkwell::{AddressSpace, IntPredicate};
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
 
-impl<'a> TargetRuntime<'a> for SubstrateTarget {
+impl<'a> TargetRuntime<'a> for PolkadotTarget {
     fn set_storage_extfunc(
         &self,
         binary: &Binary,
@@ -144,7 +144,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         binary.builder.position_at_end(done_storage);
     }
 
-    /// Read from substrate storage
+    /// Read from contract storage
     fn get_storage_int(
         &self,
         binary: &Binary<'a>,
@@ -200,7 +200,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         res.as_basic_value().into_int_value()
     }
 
-    /// Read string from substrate storage
+    /// Read string from contract storage
     fn get_storage_string(
         &self,
         binary: &Binary<'a>,
@@ -287,7 +287,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         res.as_basic_value().into_pointer_value()
     }
 
-    /// Read string from substrate storage
+    /// Read string from contract storage
     fn get_storage_bytes_subscript(
         &self,
         binary: &Binary<'a>,
@@ -1193,7 +1193,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         .into_pointer_value()
     }
 
-    /// Substrate value is usually 128 bits
+    /// Polkadot value is usually 128 bits
     fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
         emit_context!(binary);
 
@@ -1576,7 +1576,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 );
 
                 // The scratch buffer is a global buffer which gets overwritten by many syscalls.
-                // Whenever an address is needed in the Substrate target, we strongly recommend
+                // Whenever an address is needed in the Polkadot target, we strongly recommend
                 // to `Expression::Load` the return of GetAddress to work with GetAddress.
                 scratch_buf.as_basic_value_enum()
             }

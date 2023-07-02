@@ -188,7 +188,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     };
                 }
                 Type::Address(_) | Type::Contract(_) => {
-                    // FIXME: For substrate we should encode in the SS58 format
+                    // FIXME: For Polkadot we should encode in the SS58 format
                     let buf = bin.build_alloca(function, bin.address_type(ns), "address");
                     bin.builder.build_store(buf, val.into_array_value());
 

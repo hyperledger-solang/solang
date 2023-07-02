@@ -7,7 +7,7 @@ use inkwell::module::{Linkage, Module};
 use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 
-use crate::codegen::dispatch::substrate::DispatchType;
+use crate::codegen::dispatch::polkadot::DispatchType;
 use crate::emit::functions::{emit_functions, emit_initializer};
 use crate::emit::{Binary, TargetRuntime};
 
@@ -91,9 +91,9 @@ macro_rules! emit_context {
     };
 }
 
-pub struct SubstrateTarget;
+pub struct PolkadotTarget;
 
-impl SubstrateTarget {
+impl PolkadotTarget {
     pub fn build<'a>(
         context: &'a Context,
         std_lib: &Module<'a>,
@@ -138,7 +138,7 @@ impl SubstrateTarget {
         scratch.set_initializer(&context.i8_type().array_type(SCRATCH_SIZE).get_undef());
         binary.scratch = Some(scratch);
 
-        let mut target = SubstrateTarget;
+        let mut target = PolkadotTarget;
 
         target.declare_externals(&binary);
 

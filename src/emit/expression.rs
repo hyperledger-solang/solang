@@ -713,8 +713,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             // Load the result pointer
             let res = bin.builder.build_load(left.get_type(), o, "");
 
-            if *overflowing || ns.target.is_substrate() {
-                // In Substrate, overflow case will hit an unreachable expression, so no additional checks are needed.
+            if *overflowing || ns.target.is_polkadot() {
+                // In Polkadot, overflow case will hit an unreachable expression, so no additional checks are needed.
                 res
             } else {
                 // In Solana, a return other than zero will abort execution. We need to check if power() returned a zero or not.

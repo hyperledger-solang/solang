@@ -119,8 +119,7 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
 
@@ -150,8 +149,7 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
 
@@ -181,8 +179,7 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
 
@@ -210,8 +207,7 @@ fn event_imported() {
         .to_string(),
     );
 
-    let ns =
-        solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_substrate());
+    let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
 }

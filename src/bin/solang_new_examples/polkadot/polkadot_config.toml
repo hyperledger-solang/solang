@@ -6,7 +6,7 @@ import_map = {}   # Maps to import. Define as  import_map = {map = "path/to/map1
 
 
 [target]
-name = "substrate"  # Valid targets are "solana" and "substrate"
+name = "polkadot"  # Valid targets are "solana" and "polkadot"
 address_length = 32
 value_length = 16
 

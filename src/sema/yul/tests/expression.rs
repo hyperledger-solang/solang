@@ -1607,13 +1607,13 @@ contract foo {
     let ns = parse_and_resolve(
         OsStr::new("test.sol"),
         &mut cache,
-        Target::Substrate {
+        Target::Polkadot {
             address_length: 32,
             value_length: 16,
         },
     );
 
-    assert!(ns.diagnostics.contains_message("builtin 'coinbase' is not available for target substrate. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
+    assert!(ns.diagnostics.contains_message("builtin 'coinbase' is not available for target polkadot. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
 
     let file = r#"
     contract foo {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::emit::binary::Binary;
+use crate::emit::polkadot::{log_return_code, PolkadotTarget};
 use crate::emit::storage::StorageSlot;
-use crate::emit::substrate::{log_return_code, SubstrateTarget};
 use crate::emit::TargetRuntime;
 use crate::emit_context;
 use crate::sema::ast::{ArrayLength, Namespace, Type};
@@ -12,7 +12,7 @@ use inkwell::{AddressSpace, IntPredicate};
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive};
 
-impl StorageSlot for SubstrateTarget {
+impl StorageSlot for PolkadotTarget {
     fn set_storage(
         &self,
         binary: &Binary,

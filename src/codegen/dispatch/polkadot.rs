@@ -13,7 +13,7 @@ use crate::{
 use num_bigint::{BigInt, Sign};
 use solang_parser::pt::{FunctionTy, Loc::Codegen};
 
-/// On Substrate, contracts export  a `call` and a `deploy` function.
+/// On Polkadot, contracts export  a `call` and a `deploy` function.
 /// The `contracts` pallet will invoke `deploy` on contract instatiation,
 /// and `call` on any contract calls after the instantiation.
 ///

@@ -88,7 +88,7 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
 /// Given an `ast::Type`, find and register the `scale_info::Type` definition in the registry
 fn resolve_ast(ty: &ast::Type, ns: &ast::Namespace, registry: &mut PortableRegistryBuilder) -> u32 {
     match ty {
-        //  should reflect address_length for different substrate runtime
+        //  should reflect address_length for different Parachain runtime configurations
         ast::Type::Address(_) | ast::Type::Contract(_) => {
             // substituted to [u8; address_length]
             let address_ty = resolve_ast(
@@ -512,7 +512,7 @@ fn tags(contract_no: usize, tagname: &str, ns: &ast::Namespace) -> Vec<String> {
         .collect()
 }
 
-/// Generate the metadata for Substrate 4.0
+/// Generate the metadata for ink! 4.0
 pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
     let hash = blake2_rfc::blake2b::blake2b(32, &[], code);
     let version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();

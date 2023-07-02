@@ -15,8 +15,8 @@ use parity_scale_codec::Encode;
 use solang_parser::pt;
 
 /// This struct implements the trait 'EventEmitter' in order to handle the emission of events
-/// for Substrate
-pub(super) struct SubstrateEventEmitter<'a> {
+/// for Polkadot
+pub(super) struct PolkadotEventEmitter<'a> {
     /// Arguments passed to the event
     pub(super) args: &'a [ast::Expression],
     pub(super) ns: &'a Namespace,
@@ -34,7 +34,7 @@ fn topic_hash(encoded: &[u8]) -> Vec<u8> {
     buf.into()
 }
 
-impl EventEmitter for SubstrateEventEmitter<'_> {
+impl EventEmitter for PolkadotEventEmitter<'_> {
     fn emit(
         &self,
         contract_no: usize,

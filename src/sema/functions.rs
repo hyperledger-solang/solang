@@ -59,8 +59,8 @@ pub fn contract_function(
                 ));
                 return None;
             }
-            // Allow setting a name in Substrate to be used during metadata generation.
-            if func.name.is_some() && !ns.target.is_substrate() {
+            // Allow setting a name in Polkadot to be used during metadata generation.
+            if func.name.is_some() && !ns.target.is_polkadot() {
                 ns.diagnostics.push(Diagnostic::error(
                     func.loc,
                     "constructor cannot have a name".to_string(),
@@ -432,7 +432,7 @@ pub fn contract_function(
         .as_ref()
         .map(|s| s.name.as_str())
         .unwrap_or_else(|| {
-            if ns.target.is_substrate() && func.ty == pt::FunctionTy::Constructor {
+            if ns.target.is_polkadot() && func.ty == pt::FunctionTy::Constructor {
                 "new"
             } else {
                 ""

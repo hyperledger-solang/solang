@@ -30,7 +30,7 @@ impl Namespace {
     pub fn new(target: Target) -> Self {
         let (address_length, value_length) = match target {
             Target::EVM => (20, 16),
-            Target::Substrate {
+            Target::Polkadot {
                 address_length,
                 value_length,
             } => (address_length, value_length),
@@ -62,7 +62,7 @@ impl Namespace {
 
         match target {
             Target::Solana => ns.add_solana_builtins(),
-            Target::Substrate { .. } => ns.add_substrate_builtins(),
+            Target::Polkadot { .. } => ns.add_polkadot_builtins(),
             _ => {}
         }
 
@@ -896,7 +896,7 @@ impl Namespace {
         id: &pt::Expression,
         diagnostics: &mut Diagnostics,
     ) -> Result<Type, ()> {
-        let is_substrate = self.target.is_substrate();
+        let is_polkadot = self.target.is_polkadot();
 
         let resolve_dimensions = |ast_dimensions: &[Option<(pt::Loc, BigInt)>],
                                   diagnostics: &mut Diagnostics| {
@@ -916,9 +916,9 @@ impl Namespace {
                             "negative size of array declared".to_string(),
                         ));
                         return Err(());
-                    } else if is_substrate && n > &u32::MAX.into() {
+                    } else if is_polkadot && n > &u32::MAX.into() {
                         let msg = format!(
-                            "array dimension of {n} exceeds the maximum of 4294967295 on Substrate"
+                            "array dimension of {n} exceeds the maximum of 4294967295 on wasm32"
                         );
                         diagnostics.push(Diagnostic::decl_error(*loc, msg));
                         return Err(());

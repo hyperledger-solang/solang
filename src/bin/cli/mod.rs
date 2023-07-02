@@ -48,7 +48,7 @@ pub enum Commands {
 
 #[derive(Args)]
 pub struct New {
-    #[arg(name = "TARGETNAME",required= true, long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
+    #[arg(name = "TARGETNAME",required= true, long = "target", value_parser = ["solana", "polkadot", "evm"], help = "Target to build for [possible values: solana, polkadot]", num_args = 1, hide_possible_values = true)]
     pub target_name: String,
 
     #[arg(name = "INPUT", help = "Name of the project", num_args = 1, value_parser =  ValueParser::os_string())]
@@ -254,25 +254,25 @@ pub struct CompilerOutput {
 
 #[derive(Args)]
 pub struct TargetArg {
-    #[arg(name = "TARGET",required= true, long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
+    #[arg(name = "TARGET",required= true, long = "target", value_parser = ["solana", "polkadot", "evm"], help = "Target to build for [possible values: solana, polkadot]", num_args = 1, hide_possible_values = true)]
     pub name: String,
 
-    #[arg(name = "ADDRESS_LENGTH", help = "Address length on Substrate", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    #[arg(name = "ADDRESS_LENGTH", help = "Address length on the Polkadot Parachain", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
     pub address_length: Option<u64>,
 
-    #[arg(name = "VALUE_LENGTH", help = "Value length on Substrate", long = "value-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    #[arg(name = "VALUE_LENGTH", help = "Value length on the Polkadot Parachain", long = "value-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
     pub value_length: Option<u64>,
 }
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct CompileTargetArg {
-    #[arg(name = "TARGET", long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
+    #[arg(name = "TARGET", long = "target", value_parser = ["solana", "polkadot", "evm"], help = "Target to build for [possible values: solana, polkadot]", num_args = 1, hide_possible_values = true)]
     pub name: Option<String>,
 
-    #[arg(name = "ADDRESS_LENGTH", help = "Address length on Substrate", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    #[arg(name = "ADDRESS_LENGTH", help = "Address length on the Polkadot Parachain", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
     pub address_length: Option<u64>,
 
-    #[arg(name = "VALUE_LENGTH", help = "Value length on Substrate", long = "value-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    #[arg(name = "VALUE_LENGTH", help = "Value length on the Polkadot Parachain", long = "value-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
     pub value_length: Option<u64>,
 }
 
@@ -427,19 +427,19 @@ pub(crate) fn target_arg<T: TargetArgTrait>(target_arg: &T) -> Target {
 
     if target_name == "solana" || target_name == "evm" {
         if target_arg.get_address_length().is_some() {
-            eprintln!("error: address length cannot be modified except for substrate target");
+            eprintln!("error: address length cannot be modified except for polkadot target");
             exit(1);
         }
 
         if target_arg.get_value_length().is_some() {
-            eprintln!("error: value length cannot be modified except for substrate target");
+            eprintln!("error: value length cannot be modified except for polkadot target");
             exit(1);
         }
     }
 
     let target = match target_name.as_str() {
         "solana" => solang::Target::Solana,
-        "substrate" => solang::Target::Substrate {
+        "polkadot" => solang::Target::Polkadot {
             address_length: target_arg.get_address_length().unwrap_or(32) as usize,
             value_length: target_arg.get_value_length().unwrap_or(16) as usize,
         },
