@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 
 contract c2 {
     int public cd;

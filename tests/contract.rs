@@ -23,9 +23,9 @@ fn solana_contracts() -> io::Result<()> {
 }
 
 #[test]
-fn substrate_contracts() -> io::Result<()> {
+fn polkadot_contracts() -> io::Result<()> {
     contract_tests(
-        "tests/contract_testcases/substrate",
+        "tests/contract_testcases/polkadot",
         Target::default_polkadot(),
     )
 }

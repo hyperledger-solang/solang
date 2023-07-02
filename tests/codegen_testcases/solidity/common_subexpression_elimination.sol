@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 
 // Tests control commands
 contract c1 {

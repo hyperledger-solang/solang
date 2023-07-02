@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 
 contract Array_bound_Test {
     // BEGIN-CHECK: Array_bound_Test::Array_bound_Test::function::array_bound__uint256:

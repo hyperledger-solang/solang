@@ -918,7 +918,7 @@ impl Namespace {
                         return Err(());
                     } else if is_polkadot && n > &u32::MAX.into() {
                         let msg = format!(
-                            "array dimension of {n} exceeds the maximum of 4294967295 on wasm32"
+                            "array dimension of {n} exceeds the maximum of 4294967295 on Polkadot"
                         );
                         diagnostics.push(Diagnostic::decl_error(*loc, msg));
                         return Err(());

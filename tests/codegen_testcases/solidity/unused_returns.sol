@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 contract C {
         function foo() public returns (int, int) { return (1, 2); }
 
