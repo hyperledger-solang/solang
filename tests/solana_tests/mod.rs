@@ -30,6 +30,7 @@ mod signature_verify;
 mod simple;
 mod storage;
 mod strings;
+mod tags;
 mod unused_variable_elimination;
 mod using;
 mod vector_to_slice;
