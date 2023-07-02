@@ -8,7 +8,7 @@ Value in Solidity is represented by ``uint128``.
 
 .. note::
 
-    Parity Substrate can be compiled with a different type for ``T::Balance``. If you
+    On Polkadot, contracts can be compiled with a different type for ``T::Balance``. If you
     need support for a different type, please raise an
     `issue <https://github.com/hyperledger/solang/issues>`_.
 
@@ -19,7 +19,7 @@ The balance of a contract can be checked with `address` ``.balance``, so your ow
 is ``address(this).balance``.
 
 .. note::
-    Parity Substrate cannot check the balance for contracts other than the current
+    Polkadot cannot check the balance for contracts other than the current
     one. If you need to check the balance of another contract, then add a balance
     function to that contract like the one below, and call that function instead.
 

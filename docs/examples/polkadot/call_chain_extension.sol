@@ -1,4 +1,4 @@
-import "substrate";
+import "polkadot";
 
 contract Foo {
     // Call the "rand-extension" example chain extension demonstrated here:

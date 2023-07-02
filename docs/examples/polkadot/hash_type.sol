@@ -1,4 +1,4 @@
-import "substrate";
+import "polkadot";
 
 contract c {
     bytes32 current;

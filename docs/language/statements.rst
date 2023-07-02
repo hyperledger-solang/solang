@@ -127,18 +127,18 @@ be passed a reason code, which can be inspected using the ``catch Error(string)`
     On Solana, any transaction that fails halts the execution of a contract. The try-catch statement, thus,
     is not supported for Solana contracts and the compiler will raise an error if it detects its usage.
 
-.. include:: ../examples/substrate/statement_try_catch_constructor.sol
+.. include:: ../examples/polkadot/statement_try_catch_constructor.sol
   :code: solidity
 
 The same statement can be used for calling external functions. The ``returns (...)``
 part must match the return types for the function. If no name is provided, that
 return value is not accessible.
 
-.. include:: ../examples/substrate/statement_try_catch_call.sol
+.. include:: ../examples/polkadot/statement_try_catch_call.sol
   :code: solidity
 
 There is an alternate syntax which avoids the abi decoding by leaving the `catch Error(…)` out.
 This might be useful when no error string is expected, and will generate shorter code.
 
-.. include:: ../examples/substrate/statement_try_catch_no_error_handling.sol
+.. include:: ../examples/polkadot/statement_try_catch_no_error_handling.sol
   :code: solidity

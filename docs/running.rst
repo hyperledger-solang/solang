@@ -8,7 +8,7 @@ file (also known as the abi).
 
 The following targets are supported right now:
 `Solana <https://www.solana.com/>`_ and
-`Parity Substrate <https://substrate.io/>`_.
+`Polkadot <https://substrate.io/>`_ (via the ``contracts`` pallet runtime).
 
 Solang supports auto-completion for multiple shells. Use ``solang shell-complete --help`` to
 learn whether your favorite shell is supported. If so, evaluate the output of
@@ -35,15 +35,15 @@ Options:
   will be silent if there are no errors or warnings.
 
 \-\-target *target*
-  This takes one argument, which can either be ``solana`` or ``substrate``. The target
+  This takes one argument, which can either be ``solana`` or ``polkadot``. The target
   must be specified.
 
 \-\-address\-length *length-in-bytes*
-  Change the default address length on Substrate. By default, Substate uses an address type of 32 bytes. This option
+  Change the default address length on Polkadot. By default, Substate uses an address type of 32 bytes. This option
   is ignored for any other target.
 
 \-\-value\-length *length-in-bytes*
-  Change the default value length on Substrate. By default, Substate uses an value type of 16 bytes. This option
+  Change the default value length on Polkadot. By default, Substate uses an value type of 16 bytes. This option
   is ignored for any other target.
 
 -o, \-\-output *directory*
@@ -51,7 +51,7 @@ Options:
 
 \-\-output\-meta *directory*
   Sets the directory where metadata should be saved. For Solana, the metadata is the Anchor IDL file,
-  and, for Substrate, the .contract file. If this option is not set, the directory specified by ``--output``
+  and, for Polkadot, the .contract file. If this option is not set, the directory specified by ``--output``
   is used, and if that is not set either, the current working directory is used.
 
 \-\-contract *contract-name* [, *contract-name*]...
@@ -144,7 +144,7 @@ Options:
 
 
   Fields not explicitly present in the .toml acquire the compiler's default value.
-  If any other argument is provided in the command line, for example, ``solang compile --config-file --target substrate``, the argument will be overridden.
+  If any other argument is provided in the command line, for example, ``solang compile --config-file --target polkadot``, the argument will be overridden.
   The priority for the args is given as follows:
   1. Command line
   2. Configuration file
@@ -192,15 +192,15 @@ followed by one or more solidity source filenames.
 Options:
 
 \-\-target *target*
-  This takes one argument, which can either be ``solana`` or ``substrate``. The target
+  This takes one argument, which can either be ``solana`` or ``polkadot``. The target
   must be specified.
 
 \-\-address\-length *length-in-bytes*
-  Change the default address length on Substrate. By default, Substate uses an address type of 32 bytes. This option
+  Change the default address length on Polkadot. By default, Substate uses an address type of 32 bytes. This option
   is ignored for any other target.
 
 \-\-value\-length *length-in-bytes*
-  Change the default value length on Substrate. By default, Substate uses an value type of 16 bytes. This option
+  Change the default value length on Polkadot. By default, Substate uses an value type of 16 bytes. This option
   is ignored for any other target.
 
 \-\-importpath *directory*

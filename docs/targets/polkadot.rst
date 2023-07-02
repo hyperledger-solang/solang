@@ -1,12 +1,10 @@
-Parity Substrate
-================
+Polkadot
+========
 
-Solang works with Parity Substrate 3.0. Note that for recent Substrate versions, cross-contract calls as well as using `address`
-type as function argument or return values are not supported. We are currently working on fixing any regressions.
+Solang works on Polkadot Parachains integrating a recent version of the ``contracts`` pallets.
+Solidity flavored for the Polkadot target has the following differences to Ethereum Solidity:
 
-The Parity Substrate has the following differences to Ethereum Solidity:
-
-- The address type is 32 bytes, not 20 bytes. This is what Substrate calls an "account"
+- The address type is 32 bytes, not 20 bytes. This is what Substrate calls an "account".
 - An address literal has to be specified using the ``address"5GBWmgdFAMqm8ZgAHGobqDqX6tjLxJhv53ygjNtaaAn3sjeZ"`` syntax
 - ABI encoding and decoding is done using the `SCALE <https://docs.substrate.io/reference/scale-codec/>`_ encoding
 - Constructors can be named. Constructors with no name will be called ``new`` in the generated metadata.
@@ -20,7 +18,7 @@ directory. Write this to flipper.sol and run:
 
 .. code-block:: bash
 
-  solang compile --target substrate flipper.sol
+  solang compile --target polkadot flipper.sol
 
 Now you should have a file called ``flipper.contract``. The file contains both the ABI and contract wasm.
 It can be used directly in the
@@ -30,12 +28,12 @@ Builtin Imports
 ________________
 
 Some builtin functionality is only available after importing. The following types
-can be imported via the special import file ``substrate``.
+can be imported via the special import file ``polkadot``.
 
 .. code-block:: solidity
 
-    import {Hash} from 'substrate';
-    import {chain_extension} from 'substrate';
+    import {Hash} from 'polkadot';
+    import {chain_extension} from 'polkadot';
 
 Note that ``{Hash}`` can be omitted, renamed or imported via
 import object.
@@ -43,12 +41,11 @@ import object.
 .. code-block:: solidity
 
     // Now Hash will be known as InkHash
-    import {Hash as InkHash} from 'substrate';
+    import {Hash as InkHash} from 'polkadot';
 
 .. note::
 
-    The import file ``substrate`` is only available when compiling for the Substrate
-    target.
+    The import file ``polkadot`` is only available when compiling for the Polkadot target.
 
 Call Flags
 __________
@@ -62,6 +59,6 @@ By default (if this argument is unset), no flag will be set.
 
 The following example shows how call flags can be used:
 
-.. include:: ../examples/substrate/call_flags.sol
+.. include:: ../examples/polkadot/call_flags.sol
   :code: solidity
 

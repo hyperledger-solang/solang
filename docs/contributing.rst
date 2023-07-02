@@ -34,7 +34,7 @@ Prior to opening a pull request for your branch, make sure that the code in your
 Target Specific
 ---------------
 
-Solang supports Substrate and Solana. These targets need testing
+Solang supports Polkadot and Solana. These targets need testing
 via integration tests. New targets like
 `Fabric <https://github.com/hyperledger/fabric-chaincode-wasm>`_ need to be
 added, and tests added.

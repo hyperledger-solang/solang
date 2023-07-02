@@ -146,7 +146,7 @@ in the EIP.
 The contract code for a contract, i.e. the binary WebAssembly or Solana SBF, can be retrieved using the
 ``type(c).creationCode`` and ``type(c).runtimeCode`` fields, as ``bytes``. On EVM,
 the constructor code is in the ``creationCode`` and all the functions are in
-the ``runtimeCode``. Parity Substrate and Solana use the same
+the ``runtimeCode``. Polkadot and Solana use the same
 code for both, so those fields will evaluate to the same value.
 
 .. include:: ../examples/retrieve_contract_code.sol
