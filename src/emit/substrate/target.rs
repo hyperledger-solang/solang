@@ -786,7 +786,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "seal_return",
             &[i32_const!(1).into(), data.into(), length.into()]
         );
-        binary.builder.build_unreachable();
 
         // insert "unreachable" instruction; not that build_unreachable() tells the compiler
         // that this code path is not reachable and may be discarded.
