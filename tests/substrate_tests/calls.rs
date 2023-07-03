@@ -977,7 +977,8 @@ contract Flagger {
         flags: Vec<CallFlags>,
     }
 
-    let address = build().caller();
+    let mut runtime = build();
+    let address = runtime.caller();
     let selector = [0, 0, 0, 0];
     let voyager = 123456789;
 
@@ -992,12 +993,10 @@ contract Flagger {
     };
 
     // Should work with the reentrancy flag
-    let mut runtime = build();
     runtime.function("echo", with_flags(vec![CallFlags::AllowReentry]));
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy and the tail call flag
-    let mut runtime = build();
     runtime.function(
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::TailCall]),
@@ -1005,7 +1004,6 @@ contract Flagger {
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy and the clone input
-    let mut runtime = build();
     runtime.function(
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::CloneInput]),
@@ -1013,7 +1011,6 @@ contract Flagger {
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy clone input and tail call flag
-    let mut runtime = build();
     runtime.function(
         "echo",
         with_flags(vec![
@@ -1050,7 +1047,6 @@ contract Flagger {
     );
 
     // Test the tail call with setting it
-    let mut runtime = build();
     runtime.function(
         "tail_call_it",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::TailCall]),

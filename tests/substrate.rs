@@ -898,13 +898,14 @@ impl MockSubstrate {
     }
 
     /// Call the contract function `name` with the given input `args`.
+    /// Panics if the contract traps or reverts.
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.0.data().blobs[self.0.data().account].messages[name].clone();
         input.append(&mut args);
         self.raw_function(input);
     }
 
-    /// Call the contract function `name` with the given input `args` and expect the contract to trap.
+    /// Expect the contract function `name` with the given input `args` to trap or revert.
     ///
     /// Only traps caused by an `unreachable` instruction are allowed. Other traps will panic instead.
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
