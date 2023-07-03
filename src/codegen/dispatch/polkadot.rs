@@ -30,8 +30,8 @@ pub enum DispatchType {
 impl ToString for DispatchType {
     fn to_string(&self) -> String {
         match self {
-            Self::Deploy => "substrate_deploy_dispatch",
-            Self::Call => "substrate_call_dispatch",
+            Self::Deploy => "polkadot_deploy_dispatch",
+            Self::Call => "polkadot_call_dispatch",
         }
         .into()
     }

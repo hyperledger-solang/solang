@@ -3,7 +3,7 @@
 contract has_fallback_and_receive {
 	// BEGIN-CHECK: Contract: has_fallback_and_receive
 
-	// CHECK: # function substrate_deploy_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_deploy_dispatch public:false selector: nonpayable:false
 	// CHECK: block0: # entry
 	// CHECK: 	ty:uint32 %input_len.temp.1 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.2 = (arg #2)
@@ -21,7 +21,7 @@ contract has_fallback_and_receive {
 	// CHECK: 	 = call has_fallback_and_receive::has_fallback_and_receive::constructor::861731d5 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 
-	// CHECK: # function substrate_call_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_call_dispatch public:false selector: nonpayable:false
 	// CHECK: block0: # entry
 	// CHECK: 	ty:uint32 %input_len.temp.5 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.6 = (arg #2)
@@ -48,7 +48,7 @@ contract has_fallback_and_receive {
 contract has_fallback {
 	// BEGIN-CHECK: Contract: has_fallback
 
-	// CHECK: # function substrate_deploy_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_deploy_dispatch public:false selector: nonpayable:false
 	// CHECK: # params: buffer_pointer,uint32,uint128,uint32
 	// CHECK: # returns: 
 	// CHECK: block0: # entry
@@ -68,7 +68,7 @@ contract has_fallback {
 	// CHECK: 	 = call has_fallback::has_fallback::constructor::861731d5 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 
-	// CHECK: # function substrate_call_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_call_dispatch public:false selector: nonpayable:false
 	// CHECK: block0: # entry
 	// CHECK: 	ty:uint32 %input_len.temp.13 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.14 = (arg #2)
@@ -93,7 +93,7 @@ contract has_fallback {
 contract has_receive {
 	// BEGIN-CHECK: Contract: has_receive
 
-	// CHECK: # function substrate_deploy_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_deploy_dispatch public:false selector: nonpayable:false
 	// CHECK: # params: buffer_pointer,uint32,uint128,uint32
 	// CHECK: # returns: 
 	// CHECK: block0: # entry
@@ -113,7 +113,7 @@ contract has_receive {
 	// CHECK: 	 = call has_receive::has_receive::constructor::861731d5 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 
-	// CHECK: # function substrate_call_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_call_dispatch public:false selector: nonpayable:false
 	// CHECK: # params: buffer_pointer,uint32,uint128,uint32
 	// CHECK: # returns: 
 	// CHECK: block0: # entry
@@ -141,7 +141,7 @@ contract has_receive {
 contract is_payable {
 	// BEGIN-CHECK: Contract: is_payable
 
-	// CHECK: # function substrate_deploy_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_deploy_dispatch public:false selector: nonpayable:false
 	// CHECK: # params: buffer_pointer,uint32,uint128,uint32
 	// CHECK: # returns: 
 	// CHECK: block0: # entry
@@ -161,7 +161,7 @@ contract is_payable {
 	// CHECK: 	 = call is_payable::is_payable::constructor::861731d5 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 
-	// CHECK: # function substrate_call_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_call_dispatch public:false selector: nonpayable:false
 	// CHECK: # params: buffer_pointer,uint32,uint128,uint32
 	// CHECK: # returns: 
 	// CHECK: block0: # entry
@@ -196,7 +196,7 @@ contract is_payable {
 contract overloaded {
 	// BEGIN-CHECK: Contract: overloaded
 
-	// CHECK: # function substrate_deploy_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_deploy_dispatch public:false selector: nonpayable:false
 	// CHECK: block0: # entry
 	// CHECK: 	ty:uint32 %input_len.temp.33 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.34 = (arg #2)
@@ -218,7 +218,7 @@ contract overloaded {
 	// CHECK: 	 = call overloaded::overloaded::constructor::febb0f7e 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 
-	// CHECK: # function substrate_call_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_call_dispatch public:false selector: nonpayable:false
 	// CHECK: # params: buffer_pointer,uint32,uint128,uint32
 	// CHECK: # returns: 
 	// CHECK: block0: # entry
@@ -273,7 +273,7 @@ contract overloaded {
 contract simple {
 	// BEGIN-CHECK: Contract: simple
 
-	// CHECK: # function substrate_deploy_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_deploy_dispatch public:false selector: nonpayable:false
 	// CHECK: # params: buffer_pointer,uint32,uint128,uint32
 	// CHECK: # returns: 
 	// CHECK: block0: # entry
@@ -294,7 +294,7 @@ contract simple {
 	// CHECK: 	 = call simple::simple::constructor::861731d5 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 
-	// CHECK: # function substrate_call_dispatch public:false selector: nonpayable:false
+	// CHECK: # function polkadot_call_dispatch public:false selector: nonpayable:false
 	// CHECK: # params: buffer_pointer,uint32,uint128,uint32
 	// CHECK: # returns: 
 	// CHECK: block0: # entry
