@@ -232,9 +232,6 @@ struct Runtime {
 
 impl Runtime {
     fn new(blobs: Vec<WasmCode>) -> Self {
-        for blob in blobs.iter() {
-            println!("hash: {}", hex::encode(blob.hash));
-        }
         Self {
             accounts: blobs
                 .iter()

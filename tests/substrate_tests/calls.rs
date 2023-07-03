@@ -903,7 +903,7 @@ fn selector() {
 fn call_flags() {
     let src = r##"
 contract Flagger {
-    uint8 roundtrips;
+    uint8 roundtrips = 0;
 
     // Reentrancy is required for reaching the `foo` function for itself.
     //
@@ -969,29 +969,29 @@ contract Flagger {
     // Should work with the reentrancy and the tail call flag
     runtime.function("echo", with_flags(allow_reentry | tail_call));
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
+    runtime.constructor(0, vec![]); // Call the storage initializer after tail_call
 
     // Should work with the reentrancy and the clone input
-    let mut runtime = build_solidity(src);
     runtime.function("echo", with_flags(allow_reentry | clone_input));
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should work with the reentrancy clone input and tail call flag
     runtime.function("echo", with_flags(allow_reentry | clone_input | tail_call));
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
+    runtime.constructor(0, vec![]); // Reset counter in storage after tail call
 
     // Should fail without the reentrancy flag
-    let mut runtime = build_solidity(src);
     runtime.function_expect_failure("echo", with_flags(0));
+    runtime.constructor(0, vec![]); // Reset counter in storage after fail
 
-    let mut runtime = build_solidity(src);
     runtime.function_expect_failure("echo", with_flags(tail_call));
+    runtime.constructor(0, vec![]); // Reset counter in storage after fail
 
     // Should fail with input forwarding
-    let mut runtime = build_solidity(src);
     runtime.function_expect_failure("echo", with_flags(allow_reentry | forward_input));
+    runtime.constructor(0, vec![]); // Reset counter in storage after fail
 
     // Test the tail call without setting it
-    let mut runtime = build_solidity(src);
     runtime.function("tail_call_it", with_flags(allow_reentry));
     assert_eq!(
         u32::decode(&mut &runtime.output()[..]).unwrap(),
@@ -1001,6 +1001,7 @@ contract Flagger {
     // Test the tail call with setting it
     runtime.function("tail_call_it", with_flags(allow_reentry | tail_call));
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
+    runtime.constructor(0, vec![]); // Call the storage initializer after tail_call
 }
 
 #[test]
