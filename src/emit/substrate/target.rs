@@ -782,10 +782,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn assert_failure(&self, binary: &Binary, data: PointerValue, length: IntValue) {
         emit_context!(binary);
 
-        call!(
-            "seal_return",
-            &[i32_const!(1).into(), data.into(), length.into()]
-        );
+        let flags = i32_const!(1).into(); // First bit set means revert
+        call!("seal_return", &[flags, data.into(), length.into()]);
 
         // insert "unreachable" instruction; build_unreachable() tells the compiler
         // that this code path is not reachable and may be discarded.
