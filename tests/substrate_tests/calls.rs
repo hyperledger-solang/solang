@@ -960,7 +960,6 @@ contract Flagger {
         ret += 1;
     }
 }"##;
-    let build = || build_solidity(src);
 
     #[derive(Encode)]
     enum CallFlags {
@@ -977,7 +976,7 @@ contract Flagger {
         flags: Vec<CallFlags>,
     }
 
-    let mut runtime = build();
+    let mut runtime = build_solidity(src);
     let address = runtime.caller();
     let selector = [0, 0, 0, 0];
     let voyager = 123456789;
@@ -1022,21 +1021,21 @@ contract Flagger {
     assert_eq!(u32::decode(&mut &runtime.output()[..]).unwrap(), voyager);
 
     // Should fail without the reentrancy flag
-    let mut runtime = build();
+    let mut runtime = build_solidity(src);
     runtime.function_expect_failure("echo", with_flags(vec![]));
 
-    let mut runtime = build();
+    let mut runtime = build_solidity(src);
     runtime.function_expect_failure("echo", with_flags(vec![CallFlags::TailCall]));
 
     // Should fail with input forwarding
-    let mut runtime = build();
+    let mut runtime = build_solidity(src);
     runtime.function_expect_failure(
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::ForwardInput]),
     );
 
     // Test the tail call without setting it
-    let mut runtime = build();
+    let mut runtime = build_solidity(src);
     runtime.function("tail_call_it", with_flags(vec![CallFlags::AllowReentry]));
     assert_eq!(
         u32::decode(&mut &runtime.output()[..]).unwrap(),
