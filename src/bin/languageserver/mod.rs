@@ -789,7 +789,7 @@ impl<'a> Builder<'a> {
                 }
             }
             ast::Expression::Builtin { loc, kind, args, .. } => {
-                let (rets, params, doc) = if let Some(protval) = get_prototype(*kind) {
+                let (rets, name, params, doc) = if let Some(protval) = get_prototype(*kind) {
                     let rets = itertools::Itertools::intersperse(
                         protval.ret.iter().map(|ret| self.expanded_ty(ret, false)),
                         " ".to_string(),
@@ -798,16 +798,14 @@ impl<'a> Builder<'a> {
                         protval.params.iter().map(|param| self.expanded_ty(param, false)),
                         " ".to_string(),
                     ).collect::<String>();
-                    let doc = protval.doc;
-                    (rets, params, doc)
+                    (rets, protval.name, params, protval.doc)
                 } else {
-                    ("".to_string(), "".to_string(), "")
+                    ("".to_string(), "", "".to_string(), "")
                 };
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    // TODO val: format!("_[built-in]_ {} ( {} ): {}", make_code_block(rets), make_code_block(params), doc),
-                    val: make_code_block(format!("[built-in] {} ( {} ): {}", rets, params, doc)),
+                    val: make_code_block(format!("[built-in] {} {} ( {} ): {}", rets, name, params, doc)),
                 });
 
                 for expr in args {
@@ -949,7 +947,6 @@ impl<'a> Builder<'a> {
         for contract in &builder.ns.contracts {
             builder.hovers.push(HoverEntry {
                 start: contract.loc.start(),
-                // TODO stop: contract.loc.start() + val.len(),
                 stop: contract.loc.start() + contract.name.len(),
                 val: render(&contract.tags[..]),
             });
@@ -1022,9 +1019,6 @@ impl<'a> Builder<'a> {
                 } else {
                     "".to_string()
                 };
-                // TODO display the enum values in-order
-                // let mut values = Vec::new();
-                // values.resize(enm.values.len(), "");
                 let values = itertools::Itertools::intersperse(
                     enm.values.iter().map(|value| format!("\t{}", value.0)),
                     ",\n".to_string(),
