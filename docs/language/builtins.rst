@@ -346,8 +346,8 @@ is_contract(address AccountId) returns (bool)
 
 Only available on Polkadot. Checks whether the given address is a contract address. 
 
-set_code_hash(bytes hash) returns (uint32)
-++++++++++++++++++++++++++++++++++++++++++
+set_code_hash(uint8[32] hash) returns (uint32)
+++++++++++++++++++++++++++++++++++++++++++++++
 
 Only available on Polkadot. Replace the contract's code with the code corresponding to ``hash``.
 Assumes that the new code was already uploaded, otherwise the operation fails.
