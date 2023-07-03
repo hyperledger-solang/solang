@@ -785,8 +785,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let flags = i32_const!(1).into(); // First bit set means revert
         call!("seal_return", &[flags, data.into(), length.into()]);
 
-        // insert "unreachable" instruction; build_unreachable() tells the compiler
-        // that this code path is not reachable and may be discarded.
+        // Inserting an "unreachable" instruction signals to the LLVM optimizer
+        // that any following code can not be reached.
+        //
+        // The contracts pallet guarantees to never return from "seal_return",
+        // and we want to provide this higher level knowledge to the compiler.
+        //
+        // https://llvm.org/docs/LangRef.html#unreachable-instruction
         binary.builder.build_unreachable();
     }
 
