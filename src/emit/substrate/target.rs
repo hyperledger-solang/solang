@@ -787,7 +787,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             &[i32_const!(1).into(), data.into(), length.into()]
         );
 
-        // insert "unreachable" instruction; not that build_unreachable() tells the compiler
+        // insert "unreachable" instruction; build_unreachable() tells the compiler
         // that this code path is not reachable and may be discarded.
         binary.builder.build_unreachable();
     }
