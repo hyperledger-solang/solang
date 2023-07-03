@@ -18,7 +18,7 @@ impl YulBuiltinPrototype {
     pub fn is_available(&self, target: &Target) -> bool {
         match target {
             Target::EVM => self.availability[0],
-            Target::Substrate { .. } => self.availability[1],
+            Target::Polkadot { .. } => self.availability[1],
             Target::Solana => self.availability[2],
         }
     }

@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 contract c {
 // BEGIN-CHECK: c::function::test1
 	function test1() public pure{

@@ -83,7 +83,7 @@ pub fn resolve(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::N
         check_inheritance(contract_no, ns);
         mangle_function_names(contract_no, ns);
         verify_unique_selector(contract_no, ns);
-        substrate_requires_public_functions(contract_no, ns);
+        polkadot_requires_public_functions(contract_no, ns);
         unique_constructor_names(contract_no, ns);
         check_mangled_function_names(contract_no, ns);
     }
@@ -711,11 +711,11 @@ fn check_mangled_function_names(contract_no: usize, ns: &mut ast::Namespace) {
     }
 }
 
-/// A contract on substrate requires at least one public message
-fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespace) {
+/// A contract on the contracts pallet requires at least one public message
+fn polkadot_requires_public_functions(contract_no: usize, ns: &mut ast::Namespace) {
     let contract = &mut ns.contracts[contract_no];
 
-    if ns.target.is_substrate()
+    if ns.target.is_polkadot()
         && !ns.diagnostics.any_errors()
         && contract.is_concrete()
         && !contract.all_functions.keys().any(|func_no| {
@@ -728,7 +728,7 @@ fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespa
             }
         })
     {
-        let message = format!("contracts without public storage or functions are not allowed on Substrate. Consider declaring this contract abstract: 'abstract contract {}'", contract.name);
+        let message = format!("contracts without public storage or functions are not allowed on Polkadot. Consider declaring this contract abstract: 'abstract contract {}'", contract.name);
         contract.instantiable = false;
 
         ns.diagnostics
@@ -736,7 +736,7 @@ fn substrate_requires_public_functions(contract_no: usize, ns: &mut ast::Namespa
     }
 }
 
-/// Constructors and functions are no different in Substrate.
+/// Constructors and functions are no different pallet contracts.
 /// This function checks that all constructors and function names are unique.
 /// Overloading (mangled function or constructor names) is taken into account.
 fn unique_constructor_names(contract_no: usize, ns: &mut ast::Namespace) {

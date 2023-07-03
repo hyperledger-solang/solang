@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+mod polkadot;
 mod solana;
-mod substrate;
 
 use crate::codegen::cfg::ControlFlowGraph;
+use crate::codegen::events::polkadot::PolkadotEventEmitter;
 use crate::codegen::events::solana::SolanaEventEmitter;
-use crate::codegen::events::substrate::SubstrateEventEmitter;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Options;
 use crate::sema::ast;
@@ -37,8 +37,8 @@ pub(super) fn new_event_emitter<'a>(
     ns: &'a Namespace,
 ) -> Box<dyn EventEmitter + 'a> {
     match ns.target {
-        Target::Substrate { .. } | Target::EVM => {
-            Box::new(SubstrateEventEmitter { args, ns, event_no })
+        Target::Polkadot { .. } | Target::EVM => {
+            Box::new(PolkadotEventEmitter { args, ns, event_no })
         }
 
         Target::Solana => Box::new(SolanaEventEmitter {

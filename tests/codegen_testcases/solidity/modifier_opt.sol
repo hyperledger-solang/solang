@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 
 contract Test {
     // BEGIN-CHECK: Test::testMethod::modifier0::m1

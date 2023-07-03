@@ -344,7 +344,7 @@ pub(super) fn member_access(
         },
         Type::Address(_) => {
             if id.name == "balance" {
-                if ns.target.is_substrate() {
+                if ns.target.is_polkadot() {
                     let mut is_this = false;
 
                     if let Expression::Cast { expr: this, .. } = &expr {
@@ -360,7 +360,7 @@ pub(super) fn member_access(
                     if !is_this {
                         diagnostics.push(Diagnostic::error(
                             expr.loc(),
-                            "substrate can only retrieve balance of this, like 'address(this).balance'".to_string(),
+                            "polkadot can only retrieve balance of this, like 'address(this).balance'".to_string(),
                         ));
                         return Err(());
                     }

@@ -125,7 +125,7 @@ Address and Address Payable Type
 ________________________________
 
 The ``address`` type holds the address of an account. The length of an ``address`` type depends on
-the target being compiled for. On EVM, an address is 20 bytes. Solana and Substrate have an address
+the target being compiled for. On EVM, an address is 20 bytes. Solana and Polkadot have an address
 length of 32 bytes. The format of an address literal depends on what target you are building for. On EVM,
 ethereum addresses can be specified with a particular hexadecimal number.
 
@@ -152,7 +152,7 @@ In order to fix the address literal, copy the address literal from the compiler 
 
   error: address literal has incorrect checksum, expected ‘0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91’
 
-Substrate or Solana addresses are base58 encoded, not hexadecimal. An address literal can be specified with
+Polkadot or Solana addresses are base58 encoded, not hexadecimal. An address literal can be specified with
 the special syntax ``address"<account>"``.
 
 .. code-block:: solidity
@@ -184,7 +184,7 @@ bytes types and integer types. The ``==`` and ``!=`` operators work for comparin
 
 .. note::
 
-    Substrate can be compiled with a different type for Address. If your substrate has a different
+    Polkadot can be compiled with a different type for Address. If your target runtime has a different
     length for address, you can specify ``--address-length`` on the command line.
 
 Enums
@@ -293,7 +293,7 @@ On Solang, it is not necessary to cast the first element of the array literal.
   32 bytes. However, since ``bytes32`` is a primitive in itself, this will only be 32
   bytes when ABI encoded.
 
-  On Substrate, the `SCALE <https://docs.substrate.io/reference/scale-codec/>`_
+  On Polkadot, the `SCALE <https://docs.substrate.io/reference/scale-codec/>`_
   encoding uses 32 bytes for both types. Similarly, the `borsh encoding <https://borsh.io/>`_
   used on Solana uses 32 bytes for both types.
 
@@ -421,7 +421,7 @@ it is not possible to ``delete`` an entire mapping itself, but individual mappin
 
 .. note::
 
-  Solidity on Ethereum and on Substrate takes the keccak 256 hash of the key and the storage slot, and simply uses that
+  Solidity on Ethereum and on Polkadot takes the keccak 256 hash of the key and the storage slot, and simply uses that
   to find the entry. Its underlying hash table does not use separate chaining for collision resolution.
   The scheme is simple and avoids `"hash flooding" <https://en.wikipedia.org/wiki/Collision_attack#Hash_flooding>`_
   attacks that utilize hash collisions to exploit the worst-case time complexity for a separately chained
@@ -435,8 +435,7 @@ it is not possible to ``delete`` an entire mapping itself, but individual mappin
   space than the 256 bit storage slots. Any suggestions for solving this are very welcome!
 
   SipHash may serve as a way to implement mappings in memory, which would allow them to be local variables in
-  functions. Although the Substrate environment provides a function to generate random numbers to serve
-  as the hashes' secret, on Solana a safe alternative still needs to be found.
+  functions. Although, a safe alternative to random seeds still needs to be found.
 
 Contract Types
 ______________
@@ -448,7 +447,7 @@ sugar for calling functions on it.
 A contract can be created with the new statement, followed by the name of the contract. The
 arguments to the constructor must be provided.
 
-.. include:: ../examples/substrate/contract_type.sol
+.. include:: ../examples/polkadot/contract_type.sol
   :code: solidity
 
 Since child does not have a constructor, no arguments are needed for the new statement. The variable
