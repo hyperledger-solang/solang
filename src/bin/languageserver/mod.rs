@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(unstable_name_collisions)]
-
-use itertools::Itertools;
 use rust_lapper::{Interval, Lapper};
 use serde_json::Value;
 use solang::{
@@ -183,7 +180,11 @@ impl<'a> Builder<'a> {
                 if let Some(exp) = expr {
                     self.expression(exp, symtab);
                 }
-                let mut val = format!("{} {}", self.expanded_ty(&param.ty, false), param.name_as_str());
+                let mut val = format!(
+                    "{} {}",
+                    self.expanded_ty(&param.ty, false),
+                    param.name_as_str()
+                );
                 if let Some(expr) = self.ns.var_constants.get(loc) {
                     match expr {
                         codegen::Expression::BytesLiteral {
@@ -317,26 +318,29 @@ impl<'a> Builder<'a> {
             } => {
                 let event = &self.ns.events[*event_no];
                 let tags = render(&event.tags);
-                let fields = event.fields.iter()
-                    .map(|field| format!(
-                        "\t{}{}{}",
-                        field.ty.to_string(self.ns),
-                        if field.indexed { " indexed " } else { " " },
-                        field.name_as_str()
-                    ))
-                    .intersperse(",\n".to_string())
-                    .collect::<String>();
+                let fields = itertools::Itertools::intersperse(
+                    event.fields.iter().map(|field| {
+                        format!(
+                            "\t{}{}{}",
+                            field.ty.to_string(self.ns),
+                            if field.indexed { " indexed " } else { " " },
+                            field.name_as_str()
+                        )
+                    }),
+                    ",\n".to_string(),
+                )
+                .collect::<String>();
                 let val = format!(
-                    "{}\nevent {} {{\n{}\n}}{}", 
-                    tags, 
-                    event.symbol_name(self.ns), 
-                    fields, 
+                    "{}\nevent {} {{\n{}\n}}{}",
+                    tags,
+                    event.symbol_name(self.ns),
+                    fields,
                     if event.anonymous { " anonymous" } else { "" }
                 );
                 self.hovers.push(HoverEntry {
                     start: event_loc.start(),
                     stop: event_loc.end(),
-                    val: make_code_block(val), 
+                    val: make_code_block(val),
                 });
 
                 for arg in args {
@@ -380,7 +384,7 @@ impl<'a> Builder<'a> {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(&self.expanded_ty(ty, true)),
+                    val: make_code_block(self.expanded_ty(ty, true)),
                 });
             }
             ast::Expression::CodeLiteral { loc, .. } => {
@@ -582,12 +586,10 @@ impl<'a> Builder<'a> {
                 });
             }
             ast::Expression::StorageVariable { loc, ty, .. } => {
-                // TODO let val = format!("({})", self.expanded_ty(ty));
-                let val = format!("{}", self.expanded_ty(ty, true));
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(val),
+                    val: make_code_block(self.expanded_ty(ty, true)),
                 });
             }
             // Load expression
@@ -667,21 +669,21 @@ impl<'a> Builder<'a> {
                     let fnc = &self.ns.functions[*function_no];
                     let msg_tg = render(&fnc.tags[..]);
 
-                    let params = fnc.params.iter()
-                        .map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty, false)))
-                        .intersperse(", ".to_string())
-                        .collect::<String>();
+                    let params = itertools::Itertools::intersperse(
+                        fnc.params.iter().map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty, false))),
+                        ", ".to_string(),
+                    ).collect::<String>();
 
-                    let rets = fnc.returns.iter()
-                        .map(|ret| {
+                    let rets = itertools::Itertools::intersperse(
+                        fnc.returns.iter().map(|ret| {
                             let mut msg = self.expanded_ty(&ret.ty, false);
                             if ret.name_as_str() != "" {
                                 msg = format!("{}: {}", ret.name_as_str(), msg);
                             }
                             msg
-                        })
-                        .intersperse(", ".to_string())
-                        .collect::<String>();
+                        }),
+                        ", ".to_string(),
+                    ).collect::<String>();
 
                     let val = format!("{}\n{} {} ( {} ) returns ( {} )\n", msg_tg, fnc.ty, fnc.name, params, rets);
 
@@ -713,21 +715,21 @@ impl<'a> Builder<'a> {
                     let fnc = &self.ns.functions[*function_no];
                     let msg_tg = render(&fnc.tags[..]);
 
-                    let params = fnc.params.iter()
-                        .map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty, false)))
-                        .intersperse(", ".to_string())
-                        .collect::<String>();
+                    let params = itertools::Itertools::intersperse(
+                        fnc.params.iter().map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty, false))),
+                        ", ".to_string(),
+                    ).collect::<String>();
 
-                    let rets = fnc.returns.iter()
-                        .map(|ret| {
+                    let rets = itertools::Itertools::intersperse(
+                        fnc.returns.iter().map(|ret| {
                             let mut msg = self.expanded_ty(&ret.ty, false);
                             if ret.name_as_str() != "" {
                                 msg = format!("{}: {}", ret.name_as_str(), msg);
                             }
                             msg
-                        })
-                        .intersperse(", ".to_string())
-                        .collect::<String>();
+                        }),
+                        ", ".to_string(),
+                    ).collect::<String>();
 
                     let val = format!("{}\n{} {} ( {} ) returns ( {} )\n", msg_tg, fnc.ty, fnc.name, params, rets);
 
@@ -788,14 +790,14 @@ impl<'a> Builder<'a> {
             }
             ast::Expression::Builtin { loc, kind, args, .. } => {
                 let (rets, params, doc) = if let Some(protval) = get_prototype(*kind) {
-                    let rets = protval.ret.iter()
-                        .map(|ret| self.expanded_ty(ret, false))
-                        .intersperse(" ".to_string())
-                        .collect::<String>();
-                    let params = protval.params.iter()
-                        .map(|param| self.expanded_ty(param, false))
-                        .intersperse(" ".to_string())
-                        .collect::<String>();
+                    let rets = itertools::Itertools::intersperse(
+                        protval.ret.iter().map(|ret| self.expanded_ty(ret, false)),
+                        " ".to_string(),
+                    ).collect::<String>();
+                    let params = itertools::Itertools::intersperse(
+                        protval.params.iter().map(|param| self.expanded_ty(param, false)),
+                        " ".to_string(),
+                    ).collect::<String>();
                     let doc = protval.doc;
                     (rets, params, doc)
                 } else {
@@ -831,7 +833,11 @@ impl<'a> Builder<'a> {
         self.hovers.push(HoverEntry {
             start: contract.loc.start(),
             stop: contract.loc.end(),
-            val: make_code_block(format!("{} {}", self.expanded_ty(&contract.ty, false), contract.name)),
+            val: make_code_block(format!(
+                "{} {}",
+                self.expanded_ty(&contract.ty, false),
+                contract.name
+            )),
         });
         if let Some(expr) = &contract.initializer {
             self.expression(expr, symtab);
@@ -995,23 +1001,35 @@ impl<'a> Builder<'a> {
             ast::Type::StorageRef(_, ty) => self.expanded_ty(ty, include_tags),
             ast::Type::Struct(struct_type) => {
                 let strct = struct_type.definition(self.ns);
-                let tags = if include_tags { render(&strct.tags) } else { "".to_string() };
-                let fields = strct.fields.iter()
-                    .map(|field| format!("\t{} {}", field.ty.to_string(self.ns), field.name_as_str()))
-                    .intersperse(",\n".to_string())
-                    .collect::<String>();
+                let tags = if include_tags {
+                    render(&strct.tags)
+                } else {
+                    "".to_string()
+                };
+                let fields = itertools::Itertools::intersperse(
+                    strct.fields.iter().map(|field| {
+                        format!("\t{} {}", field.ty.to_string(self.ns), field.name_as_str())
+                    }),
+                    ",\n".to_string(),
+                )
+                .collect::<String>();
                 format!("{}\nstruct {} {{\n{}\n}}", tags, strct, fields)
             }
             ast::Type::Enum(n) => {
                 let enm = &self.ns.enums[*n];
-                let tags = if include_tags { render(&enm.tags) } else { "".to_string() };
+                let tags = if include_tags {
+                    render(&enm.tags)
+                } else {
+                    "".to_string()
+                };
                 // TODO display the enum values in-order
                 // let mut values = Vec::new();
                 // values.resize(enm.values.len(), "");
-                let values = enm.values.iter()
-                    .map(|value| format!("\t{}", value.0))
-                    .intersperse(",\n".to_string())
-                    .collect::<String>();
+                let values = itertools::Itertools::intersperse(
+                    enm.values.iter().map(|value| format!("\t{}", value.0)),
+                    ",\n".to_string(),
+                )
+                .collect::<String>();
                 format!("{}\nenum {} {{\n{}\n}}", tags, enm, values)
             }
             _ => ty.to_string(self.ns),
@@ -1153,14 +1171,9 @@ impl LanguageServer for SolangServer {
                     let range = loc_to_range(&loc, &hovers.file);
 
                     return Ok(Some(Hover {
-                        // contents: HoverContents::Scalar(MarkedString::String(
-                        //     hover.val.to_string(),
-                        // )),
-                        contents: HoverContents::Scalar(MarkedString::from_markdown(hover.val.to_string())),
-                        // contents: HoverContents::Markup(MarkupContent {
-                        //     kind: MarkupKind::Markdown,
-                        //     value: hover.val.to_string(),
-                        // }),
+                        contents: HoverContents::Scalar(MarkedString::from_markdown(
+                            hover.val.to_string(),
+                        )),
                         range: Some(range),
                     }));
                 }
