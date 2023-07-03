@@ -247,13 +247,14 @@ fn expressions() {
 }
 
 #[test]
+#[should_panic(expected = "IntegerDivisionByZero")]
 fn divisions_by_zero() {
     // parse
     let mut runtime = build_solidity(
         "
         contract test {
             uint256 divisor = 0;
-            function do_test(uint256 divisor) public returns (uint256 result){
+            function do_test() public returns (uint256 result){
                 result = 100 / divisor;
             }
         }",
