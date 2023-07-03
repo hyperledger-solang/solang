@@ -1024,11 +1024,9 @@ contract Flagger {
     // Should fail without the reentrancy flag
     let mut runtime = build();
     runtime.function_expect_failure("echo", with_flags(vec![]));
-    runtime.constructor(0, vec![]);
 
     let mut runtime = build();
     runtime.function_expect_failure("echo", with_flags(vec![CallFlags::TailCall]));
-    runtime.constructor(0, vec![]);
 
     // Should fail with input forwarding
     let mut runtime = build();
@@ -1036,7 +1034,6 @@ contract Flagger {
         "echo",
         with_flags(vec![CallFlags::AllowReentry, CallFlags::ForwardInput]),
     );
-    runtime.constructor(0, vec![]);
 
     // Test the tail call without setting it
     let mut runtime = build();
