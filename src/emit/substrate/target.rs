@@ -790,22 +790,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         // insert "unreachable" instruction; not that build_unreachable() tells the compiler
         // that this code path is not reachable and may be discarded.
-        //let asm_fn = binary.context.void_type().fn_type(&[], false);
-
-        //let asm = binary.context.create_inline_asm(
-        //    asm_fn,
-        //    "unreachable".to_string(),
-        //    "".to_string(),
-        //    true,
-        //    false,
-        //    None,
-        //    false,
-        //);
-
-        //binary
-        //    .builder
-        //    .build_indirect_call(asm_fn, asm, &[], "unreachable");
-
         binary.builder.build_unreachable();
     }
 

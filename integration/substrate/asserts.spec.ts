@@ -2,7 +2,6 @@ import expect from 'expect';
 import { weight, createConnection, deploy, transaction, aliceKeypair, query, } from './index';
 import { ContractPromise } from '@polkadot/api-contract';
 import { ApiPromise } from '@polkadot/api';
-import { Bytes } from '@polkadot/types';
 
 describe('Deploy asserts contract and test', () => {
     let conn: ApiPromise;
