@@ -1734,9 +1734,9 @@ pub enum Builtin {
     Gasprice,
     BaseFee,
     PrevRandao,
-    /// GetAddress returns a pointer to the address. On Substrate, this pointer points to the
+    /// GetAddress returns a pointer to the address. On Polkadot, this pointer points to the
     /// scratch buffer, to which many syscall write. We strongly recommend loading the pointer
-    /// before using on Substrate. This is not the case for Solana, though.
+    /// before using on Polkadot. This is not the case for Solana, though.
     GetAddress,
     ExtCodeSize,
     MinimumBalance,

@@ -1,8 +1,0 @@
-
-        contract b {
-            function step1(address j) public returns (uint128) {
-                return j.balance;
-            }
-        }
-// ---- Expect: diagnostics ----
-// error: 4:24-25: substrate can only retrieve balance of this, like 'address(this).balance'

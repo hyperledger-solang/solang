@@ -14,8 +14,8 @@ use tempfile::tempdir;
 use wasm_opt::OptimizationOptions;
 
 use crate::codegen::{cfg::ReturnCode, error_msg_with_loc, Options};
+use crate::emit::{polkadot, TargetRuntime};
 use crate::emit::{solana, BinaryOp, Generate};
-use crate::emit::{substrate, TargetRuntime};
 use crate::linker::link;
 use crate::Target;
 use inkwell::builder::Builder;
@@ -73,8 +73,8 @@ impl<'a> Binary<'a> {
     ) -> Self {
         let std_lib = load_stdlib(context, &ns.target);
         match ns.target {
-            Target::Substrate { .. } => {
-                substrate::SubstrateTarget::build(context, &std_lib, contract, ns, opt)
+            Target::Polkadot { .. } => {
+                polkadot::PolkadotTarget::build(context, &std_lib, contract, ns, opt)
             }
             Target::Solana => solana::SolanaTarget::build(context, &std_lib, contract, ns, opt),
             Target::EVM => unimplemented!(),
@@ -139,7 +139,7 @@ impl<'a> Binary<'a> {
             .map_err(|s| s.to_string())?;
 
         #[cfg(feature = "wasm_opt")]
-        if let Some(level) = self.options.wasm_opt.filter(|_| self.target.is_substrate()) {
+        if let Some(level) = self.options.wasm_opt.filter(|_| self.target.is_polkadot()) {
             let mut infile = tempdir().map_err(|e| e.to_string())?.into_path();
             infile.push("code.wasm");
             let outfile = infile.with_extension("wasmopt");
@@ -1107,8 +1107,8 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
             .unwrap();
     }
 
-    if let Target::Substrate { .. } = *target {
-        // substrate does not provide ripemd160
+    if let Target::Polkadot { .. } = *target {
+        // contracts pallet does not provide ripemd160
         let memory = MemoryBuffer::create_from_memory_range(RIPEMD160_IR, "ripemd160");
 
         module

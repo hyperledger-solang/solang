@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 
 contract ExternalFunctions {
     function(int32) external returns (uint64) func;

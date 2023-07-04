@@ -23,10 +23,10 @@ fn solana_contracts() -> io::Result<()> {
 }
 
 #[test]
-fn substrate_contracts() -> io::Result<()> {
+fn polkadot_contracts() -> io::Result<()> {
     contract_tests(
-        "tests/contract_testcases/substrate",
-        Target::default_substrate(),
+        "tests/contract_testcases/polkadot",
+        Target::default_polkadot(),
     )
 }
 
@@ -93,7 +93,7 @@ fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
     if !ns.diagnostics.any_errors() {
         // let's try and emit
         match ns.target {
-            Target::Solana | Target::Substrate { .. } => {
+            Target::Solana | Target::Polkadot { .. } => {
                 for contract in &ns.contracts {
                     if contract.instantiable {
                         let _ = contract.emit(&ns, &Default::default());

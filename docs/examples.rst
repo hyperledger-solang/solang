@@ -13,7 +13,7 @@ _______
 This is the `ink! flipper example <https://github.com/paritytech/ink/blob/v3.3.0/examples/flipper/lib.rs>`_
 written in Solidity:
 
-.. include:: ../examples/substrate/flipper.sol
+.. include:: ../examples/polkadot/flipper.sol
   :code: solidity
 
 Example

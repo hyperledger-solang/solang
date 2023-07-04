@@ -1299,7 +1299,7 @@ fn try_type_method(
                     return Err(());
                 }
 
-                if ty == CallTy::Delegate && ns.target.is_substrate() && call_args.gas.is_some() {
+                if ty == CallTy::Delegate && ns.target.is_polkadot() && call_args.gas.is_some() {
                     diagnostics.push(Diagnostic::warning(
                         *loc,
                         "'gas' specified on 'delegatecall' will be ignored".into(),
@@ -2188,10 +2188,10 @@ pub(super) fn parse_call_args(
                 res.seeds = Some(Box::new(expr));
             }
             "flags" => {
-                if !(ns.target.is_substrate() && external_call) {
+                if !(ns.target.is_polkadot() && external_call) {
                     diagnostics.push(Diagnostic::error(
                         arg.loc,
-                        "'flags' are only permitted for external calls on substrate".into(),
+                        "'flags' are only permitted for external calls on polkadot".into(),
                     ));
                     return Err(());
                 }

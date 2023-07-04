@@ -12,7 +12,7 @@ A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
-1. What ledger are you using, e.g. Solana or Substrate
+1. What ledger are you using, e.g. Solana or Polkadot
 2. Provide both Solidity source and client code (e.g. TypeScript)
 3. Provide Solang version number (output of `solang --version`)
 3. What behavior are you seeing?

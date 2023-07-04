@@ -25,7 +25,7 @@ async function tryActivate(context: vscode.ExtensionContext) {
 
 async function bootstrapExtension(context: vscode.ExtensionContext, serverpath: string) {
   const config = vscode.workspace.getConfiguration('solang');
-  const target: string = config.get('target') || 'substrate';
+  const target: string = config.get('target') || 'polkadot';
 
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated

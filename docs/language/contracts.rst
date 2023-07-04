@@ -8,7 +8,7 @@ When a contract is deployed, the contract storage is initialized to the initiali
 and any constructor is called. A constructor is not required for a contract. A constructor is defined
 like so:
 
-.. include:: ../../examples/substrate/flipper.sol
+.. include:: ../../examples/polkadot/flipper.sol
   :code: solidity
 
 A constructor can have any number of arguments.
@@ -17,9 +17,9 @@ If a constructor has arguments, they must be supplied when the contract is deplo
 If a contract is expected to receive value on instantiation, the constructor should be declared ``payable``.
 
 .. note::
-    Solang allows naming constructors in the Substrate target:
+    Solang allows naming constructors in the Polkadot target:
 
-    .. include:: ../examples/substrate/constructor_named.sol
+    .. include:: ../examples/polkadot/constructor_named.sol
       :code: solidity
 
     Constructors without a name will be called ``new`` in the metadata.
@@ -33,7 +33,7 @@ _______________________
 Contracts can be created using the ``new`` keyword. The contract that is being created might have
 constructor arguments, which need to be provided.
 
-.. include:: ../examples/substrate/contract_new.sol
+.. include:: ../examples/polkadot/contract_new.sol
   :code: solidity
 
 The constructor might fail for various reasons, for example ``require()`` might fail here. This can
@@ -51,13 +51,13 @@ _________________________________
 It is possible to send value to the new contract. This can be done with the ``{value: 500}``
 syntax, like so:
 
-.. include:: ../examples/substrate/contract_payable.sol
+.. include:: ../examples/polkadot/contract_payable.sol
   :code: solidity
 
 The constructor should be declared ``payable`` for this to work.
 
 .. note::
-    If no value is specified, then on Parity Substrate the minimum balance (also know as the
+    If no value is specified, then on Polkadot the minimum balance (also know as the
     existential deposit) is sent.
 
 .. note::
@@ -84,7 +84,7 @@ with the same salt and arguments will fail.  The salt is of type ``bytes32``.
 If gas is specified, this limits the amount gas the constructor for the new contract
 can use. gas is a ``uint64``.
 
-.. include:: ../examples/substrate/contract_gas_limit.sol
+.. include:: ../examples/polkadot/contract_gas_limit.sol
   :code: solidity
 
 .. _solana_constructor:

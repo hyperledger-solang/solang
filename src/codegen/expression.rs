@@ -907,7 +907,7 @@ pub fn expression(
             if opt.log_prints {
                 let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
-                let to_print = if ns.target.is_substrate() {
+                let to_print = if ns.target.is_polkadot() {
                     add_prefix_and_delimiter_to_print(expr)
                 } else {
                     expr
@@ -970,7 +970,7 @@ pub fn expression(
             args,
             ..
         } => abi_encode_call(args, cfg, contract_no, func, ns, vartab, loc, opt),
-        // The Substrate gas price builtin takes an argument; the others do not
+        // The Polkadot gas price builtin takes an argument; the others do not
         ast::Expression::Builtin {
             loc,
             kind: ast::Builtin::Gasprice,
@@ -1587,8 +1587,8 @@ fn require(
         .get(1)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
     match ns.target {
-        // On Solana and Substrate, print the reason, do not abi encode it
-        Target::Solana | Target::Substrate { .. } => {
+        // On Solana and Polkadot, print the reason, do not abi encode it
+        Target::Solana | Target::Polkadot { .. } => {
             if opt.log_runtime_errors {
                 if let Some(expr) = expr {
                     let prefix = b"runtime_error: ";

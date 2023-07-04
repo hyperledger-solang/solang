@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 
 contract CodeWithJD {
     mapping(address => uint256) balances;

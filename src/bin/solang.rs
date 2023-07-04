@@ -81,7 +81,7 @@ fn read_toml_config(path: &OsString) -> Compile {
 fn new_command(args: New) {
     let target = args.target_name.as_str();
 
-    // Default project name is "solana_project" or "substrate_project"
+    // Default project name is "solana_project" or "polkadot_project"
     let default_path = OsString::from(format!("{target}_project"));
 
     let dir_path = args.project_name.unwrap_or(default_path);
@@ -93,7 +93,7 @@ fn new_command(args: New) {
 
     let flipper = match target {
         "solana" => include_str!("./solang_new_examples/solana/flipper.sol"),
-        "substrate" => include_str!("./solang_new_examples/substrate/flipper.sol"),
+        "polkadot" => include_str!("./solang_new_examples/polkadot/flipper.sol"),
         "evm" => {
             eprintln!("EVM target is not supported yet!");
             exit(1);
@@ -110,7 +110,7 @@ fn new_command(args: New) {
 
     let toml_content = match target {
         "solana" => include_str!("./solang_new_examples/solana/solana_config.toml"),
-        "substrate" => include_str!("./solang_new_examples/substrate/substrate_config.toml"),
+        "polkadot" => include_str!("./solang_new_examples/polkadot/polkadot_config.toml"),
         _ => unreachable!(),
     };
     toml_file
@@ -386,7 +386,7 @@ fn contract_results(
     let code = binary.code(Generate::Linked).expect("llvm build");
 
     #[cfg(feature = "wasm_opt")]
-    if let Some(level) = opt.wasm_opt.filter(|_| ns.target.is_substrate() && verbose) {
+    if let Some(level) = opt.wasm_opt.filter(|_| ns.target.is_polkadot() && verbose) {
         eprintln!(
             "info: wasm-opt level '{}' for contract {}",
             level, resolved_contract.name

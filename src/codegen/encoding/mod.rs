@@ -1738,7 +1738,7 @@ pub(super) trait AbiEncoding {
 pub(super) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
     match &ns.target {
         Target::Solana => Box::new(BorshEncoding::new(packed)),
-        // Solana utilizes Borsh encoding and Substrate, SCALE encoding.
+        // Solana utilizes Borsh encoding and Polkadot, SCALE encoding.
         // All other targets are using the SCALE encoding, because we have tests for a
         // fake Ethereum target that checks the presence of Instr::AbiDecode and
         // Expression::AbiEncode.

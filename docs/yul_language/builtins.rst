@@ -7,7 +7,7 @@ Builtins
 Most operations in Yul are performed via builtin functions. Solang supports
 most builtins, however memory operations and chain operations are not implemented.
 Yul builtins are low level instructions and many are `ethereum specific <https://ethereum.org/en/developers/docs/evm/opcodes/>`_.
-On Solana and Substrate, some builtins, like ``delegatecall`` and ``staticcall``, for instance, are not available
+On Solana and Polkadot, some builtins, like ``delegatecall`` and ``staticcall``, for instance, are not available
 because the concept they implement does not exist in neither chains.
 
 .. warning::

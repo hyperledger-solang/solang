@@ -1,7 +1,7 @@
 # Hyperledger Solang Solidity parser
 
 This crate is part of [Hyperledger Solang](https://solang.readthedocs.io/). It contains the
-parser for Solidity, including the dialects used by Solang for Solana and Substrate.
+parser for Solidity, including the dialects used by Solang for Solana and Polkadot.
 
 This parser is compatible with Ethereum Solidity v0.8.20.
 

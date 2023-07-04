@@ -19,7 +19,7 @@ which are provided in the return statement, the values of the return variables a
 of the function is returned. It is still possible to explicitly return some values
 with a return statement.
 
-Any DocComment before a function will be include in the ABI. Currently only Substrate
+Any DocComment before a function will be include in the ABI. Currently only Polkadot
 supports documentation in the ABI.
 
 Function visibility
@@ -135,7 +135,7 @@ _________________________________________
 For external calls, value can be sent along with the call. The callee must be
 ``payable``. Likewise, a gas limit can be set.
 
-.. include:: ../examples/substrate/function_call_external_gas.sol
+.. include:: ../examples/polkadot/function_call_external_gas.sol
   :code: solidity
 
 .. note::
@@ -162,32 +162,32 @@ A constructor can be marked ``payable``, in which case value can be passed with 
 constructor.
 
 .. note::
-    If value is sent to a non-payable function on Parity Substrate, the call will be
+    If value is sent to a non-payable function on Polkadot, the call will be
     reverted. However there is no refund performed, so value will remain with the callee.
 
-    ``payable`` on constructors is not enforced on Parity Substrate. Funds are needed
+    ``payable`` on constructors is not enforced on Polkadot,. Funds are needed
     for storage rent and there is a minimum deposit needed for the contract. As a result,
-    constructors always receive value on Parity Substrate.
+    constructors always receive value on Polkadot.
 
 Overriding function selector
 ____________________________
 
 When a function is called, the function selector and the arguments are serialized
 (also known as abi encoded) and passed to the program. The function selector is
-what the runtime program uses to determine what function was called. On Substrate, the
+what the runtime program uses to determine what function was called. On Polkadot, the
 function selector is generated using a deterministic hash value of the function
 name and the arguments types. On Solana, the selector is known as discriminator.
 
 The selector value can be overriden with the annotation
 ``@selector([0xde, 0xad, 0xbe, 0xa1])``.
 
-.. include:: ../examples/substrate/function_selector_override.sol
+.. include:: ../examples/polkadot/function_selector_override.sol
   :code: solidity
 
-The given example only works for Substrate, whose selectors are four bytes wide. On Solana, they are eight bytes wide.
+The given example only works for Polkadot, whose selectors are four bytes wide. On Solana, they are eight bytes wide.
 
 Only ``public`` and ``external`` functions have a selector, and can have their
-selector overriden. On Substrate, constructors have selectors too, so they
+selector overriden. On Polkadot, constructors have selectors too, so they
 can also have their selector overriden. If a function overrides another one in a
 base contract, then the selector of both must match.
 
@@ -217,7 +217,7 @@ values. Here is an example of an overloaded function:
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
 
-Both Substrate and Solana runtime require unique function names, so
+Both Polkadot and Solana runtime require unique function names, so
 overloaded function names will be mangled in the ABI or the IDL.
 The function name will be concatenated with all of its argument types, separated by underscores, using the
 following rules:
@@ -240,7 +240,7 @@ Function modifiers are used to check pre-conditions or post-conditions for a fun
 new modifier must be declared which looks much like a function, but uses the ``modifier``
 keyword rather than ``function``.
 
-.. include:: ../examples/substrate/function_modifier.sol
+.. include:: ../examples/polkadot/function_modifier.sol
   :code: solidity
 
 The function `foo` can only be run by the owner of the contract, else the ``require()`` in its
@@ -272,13 +272,13 @@ this example, the `only_owner` modifier is run first, and if that reaches ``_;``
 `check_price` is executed. The body of function `foo()` is only reached once `check_price()`
 reaches ``_;``.
 
-.. include:: ../examples/substrate/function_multiple_modifiers.sol
+.. include:: ../examples/polkadot/function_multiple_modifiers.sol
   :code: solidity
 
 Modifiers can be inherited or declared ``virtual`` in a base contract and then overriden, exactly like
 functions can be.
 
-.. include:: ../examples/substrate/function_override_modifiers.sol
+.. include:: ../examples/polkadot/function_override_modifiers.sol
   :code: solidity
 
 Calling an external function using ``call()``
@@ -339,7 +339,7 @@ documentations for more information.
     ``delegatecall`` is not available on Solana.
 
 ..  note::
-    On Substrate, specifying ``gas`` won't have any effect on ``delegatecall``.
+    On Polkadot, specifying ``gas`` won't have any effect on ``delegatecall``.
 
 fallback() and receive() function
 _________________________________
@@ -357,7 +357,7 @@ call is made without value and no ``fallback()`` is defined, then the call also 
 
 Both functions must be declared ``external``.
 
-.. include:: ../examples/substrate/function_fallback_and_receive.sol
+.. include:: ../examples/polkadot/function_fallback_and_receive.sol
   :code: solidity
 
 ..  note::

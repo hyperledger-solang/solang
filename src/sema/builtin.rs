@@ -85,7 +85,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             name: "selfdestruct",
             params: vec![Type::Address(true)],
             ret: vec![Type::Unreachable],
-            target: vec![Target::EVM, Target::default_substrate()],
+            target: vec![Target::EVM, Target::default_polkadot()],
             doc: "Destroys current account and deposits any remaining balance to address",
             constant: false,
         },
@@ -129,7 +129,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             name: "blake2_128",
             params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(16)],
-            target: vec![Target::default_substrate()],
+            target: vec![Target::default_polkadot()],
             doc: "Calculates blake2-128 hash",
             constant: true,
         },
@@ -140,7 +140,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             name: "blake2_256",
             params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(32)],
-            target: vec![Target::default_substrate()],
+            target: vec![Target::default_polkadot()],
             doc: "Calculates blake2-256 hash",
             constant: true,
         },
@@ -151,7 +151,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             name: "gasleft",
             params: vec![],
             ret: vec![Type::Uint(64)],
-            target: vec![Target::default_substrate(), Target::EVM],
+            target: vec![Target::default_polkadot(), Target::EVM],
             doc: "Return remaining gas left in current call",
             constant: false,
         },
@@ -395,7 +395,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
             name: "minimum_balance",
             params: vec![],
             ret: vec![Type::Value],
-            target: vec![Target::default_substrate()],
+            target: vec![Target::default_polkadot()],
             doc: "Minimum balance required for an account",
             constant: false,
         },
@@ -483,7 +483,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
             name: "gasprice",
             params: vec![],
             ret: vec![Type::Value],
-            target: vec![Target::default_substrate(), Target::EVM],
+            target: vec![Target::default_polkadot(), Target::EVM],
             doc: "gas price for one gas unit",
             constant: false,
         },
@@ -850,7 +850,7 @@ pub fn builtin_var(
         .find(|p| p.name == fname && p.namespace == namespace)
     {
         if p.target.is_empty() || p.target.contains(&ns.target) {
-            if ns.target.is_substrate() && p.builtin == Builtin::Gasprice {
+            if ns.target.is_polkadot() && p.builtin == Builtin::Gasprice {
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     String::from(
@@ -990,7 +990,7 @@ pub(super) fn resolve_call(
             }
         } else {
             // tx.gasprice(1) is a bad idea, just like tx.gasprice. Warn about this
-            if ns.target.is_substrate() && func.builtin == Builtin::Gasprice {
+            if ns.target.is_polkadot() && func.builtin == Builtin::Gasprice {
                 if let Ok((_, val)) = eval_const_number(&cast_args[0], ns, diagnostics) {
                     if val == BigInt::one() {
                         diagnostics.push(Diagnostic::warning(
@@ -1636,7 +1636,7 @@ impl Namespace {
         ));
     }
 
-    pub fn add_substrate_builtins(&mut self) {
+    pub fn add_polkadot_builtins(&mut self) {
         let loc = pt::Loc::Builtin;
         let identifier = |name: &str| Identifier {
             name: name.into(),
@@ -1645,7 +1645,7 @@ impl Namespace {
 
         let file_no = self.files.len();
         self.files.push(File {
-            path: PathBuf::from("substrate"),
+            path: PathBuf::from("polkadot"),
             line_starts: Vec::new(),
             cache_no: None,
         });

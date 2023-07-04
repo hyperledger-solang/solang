@@ -70,7 +70,7 @@ pub enum Type {
     /// e.g. Type::Bytes is a pointer to struct.vector. When we advance it, it is a pointer
     /// to latter's data region.
     BufferPointer,
-    /// The function selector (or discriminator) type is 4 bytes on Substrate and 8 bytes on Solana
+    /// The function selector (or discriminator) type is 4 bytes on Polkadot and 8 bytes on Solana
     FunctionSelector,
 }
 

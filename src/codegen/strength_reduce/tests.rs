@@ -31,7 +31,7 @@ fn expresson_known_bits() {
     use crate::Target;
     use solang_parser::pt::Loc;
 
-    let ns = Namespace::new(Target::default_substrate());
+    let ns = Namespace::new(Target::default_polkadot());
     let loc = Loc::Codegen;
 
     let mut vars: Variables = HashMap::new();
@@ -318,7 +318,7 @@ fn expresson_known_bits() {
 
     assert_eq!(value, BigInt::from(7899900 & !0x1ffff));
 
-    // test: substrate
+    // test: polkadot
     // first try some constants
     let expr = Expression::Subtract {
         loc,
@@ -379,7 +379,7 @@ fn expresson_known_bits() {
 
     let mut vars = HashMap::new();
 
-    // substrate: 2 values and 2 values -> 4 values (with dedup)
+    // polkadot: 2 values and 2 values -> 4 values (with dedup)
     let mut val1 = expression_values(
         &Expression::NumberLiteral {
             loc,

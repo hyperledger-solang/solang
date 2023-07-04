@@ -1612,7 +1612,7 @@ fn function_cfg(
         pt::FunctionTy::Function => {
             format!("{}::function::{}", contract_name, func.llvm_symbol(ns))
         }
-        // There can be multiple constructors on Substrate, give them an unique name
+        // There can be multiple constructors on Polkadot, give them an unique name
         pt::FunctionTy::Constructor => {
             format!(
                 "{}::constructor::{}",
@@ -1654,7 +1654,7 @@ fn function_cfg(
     }
 
     cfg.ty = func.ty;
-    cfg.nonpayable = if ns.target.is_substrate() {
+    cfg.nonpayable = if ns.target.is_polkadot() {
         !func.is_constructor() && !func.is_payable()
     } else {
         !func.is_payable()

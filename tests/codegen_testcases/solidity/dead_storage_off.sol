@@ -1,4 +1,4 @@
-// RUN: --no-dead-storage --emit cfg --target substrate
+// RUN: --no-dead-storage --emit cfg --target polkadot
 contract nodeadstorage {
     int a;
 

@@ -24,8 +24,8 @@ use std::{ffi::OsStr, fmt};
 pub enum Target {
     /// Solana, see <https://solana.com/>
     Solana,
-    /// Parity Substrate, see <https://substrate.io/>
-    Substrate {
+    /// Parachains with the Substrate `contracts` pallet, see <https://substrate.io/>
+    Polkadot {
         address_length: usize,
         value_length: usize,
     },
@@ -37,7 +37,7 @@ impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Target::Solana => write!(f, "solana"),
-            Target::Substrate { .. } => write!(f, "substrate"),
+            Target::Polkadot { .. } => write!(f, "polkadot"),
             Target::EVM => write!(f, "evm"),
         }
     }
@@ -49,21 +49,21 @@ impl PartialEq for Target {
     fn eq(&self, other: &Self) -> bool {
         match self {
             Target::Solana => matches!(other, Target::Solana),
-            Target::Substrate { .. } => matches!(other, Target::Substrate { .. }),
+            Target::Polkadot { .. } => matches!(other, Target::Polkadot { .. }),
             Target::EVM => matches!(other, Target::EVM),
         }
     }
 }
 
 impl Target {
-    /// Short-hand for checking for Substrate target
-    pub fn is_substrate(&self) -> bool {
-        matches!(self, Target::Substrate { .. })
+    /// Short-hand for checking for Polkadot target
+    pub fn is_polkadot(&self) -> bool {
+        matches!(self, Target::Polkadot { .. })
     }
 
-    /// Create the target Substrate with default parameters
-    pub const fn default_substrate() -> Self {
-        Target::Substrate {
+    /// Create the target Polkadot with default parameters
+    pub const fn default_polkadot() -> Self {
+        Target::Polkadot {
             address_length: 32,
             value_length: 16,
         }
@@ -73,7 +73,7 @@ impl Target {
     pub fn from(name: &str) -> Option<Self> {
         match name {
             "solana" => Some(Target::Solana),
-            "substrate" => Some(Target::default_substrate()),
+            "polkadot" => Some(Target::default_polkadot()),
             "evm" => Some(Target::EVM),
             _ => None,
         }
