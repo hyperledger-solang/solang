@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{build_solidity, build_solidity_with_options};
+use funty::Numeric;
 use parity_scale_codec::{Decode, Encode};
 
 #[derive(Debug, PartialEq, Eq, Encode, Decode)]
@@ -39,13 +40,11 @@ fn revert() {
 
     runtime.function_expect_failure("a", Vec::new());
 
-    assert_eq!(
-        runtime.output().len(),
-        4 + "revert value has to be passed down the stack"
-            .to_string()
-            .encode()
-            .len()
+    let expected_error = (
+        0x08c379a0u32.to_le_bytes(), // "selector" of "Error(string)"
+        "revert value has to be passed down the stack".to_string(),
     );
+    assert_eq!(runtime.output(), expected_error.encode());
 
     let mut runtime = build_solidity(
         r##"
