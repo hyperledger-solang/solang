@@ -21,7 +21,7 @@ fn contract() {
             @selector([1,2,3,4,5,6,7,8])
             constructor() {}
         }"#,
-        Target::default_substrate(),
+        Target::Solana,
     );
 
     assert_eq!(ns.contracts[0].tags[0].tag, "notice");
@@ -56,7 +56,7 @@ fn contract() {
          * a contract
          */
         contract test {}"#,
-        Target::default_substrate(),
+        Target::Solana,
     );
 
     assert_eq!(ns.contracts[0].tags[0].tag, "notice");
@@ -82,7 +82,7 @@ fn struct_tag() {
             uint32 f1;
             uint32 f2;
         }"#,
-        Target::default_substrate(),
+        Target::Solana,
     );
 
     assert_eq!(ns.diagnostics.len(), 0);
@@ -106,7 +106,7 @@ fn event_tag() {
             uint32 f1,
             uint32 f2
         );"#,
-        Target::default_substrate(),
+        Target::Solana,
     );
 
     //Event never emitted generates a warning
@@ -131,7 +131,7 @@ fn event_tag() {
                 uint32 f2
             );
         }"#,
-        Target::default_substrate(),
+        Target::Solana,
     );
 
     //Event never emitted generates a warning
@@ -158,7 +158,7 @@ fn enum_tag() {
          *  @dev bla bla bla
          * @author f2 bar */
         enum x { x1 }"#,
-        Target::default_substrate(),
+        Target::Solana,
     );
 
     assert_eq!(ns.diagnostics.len(), 0);
@@ -184,10 +184,10 @@ fn functions() {
         }
 
         contract b {}"#,
-        Target::default_substrate(),
+        Target::Solana,
     );
 
-    assert_eq!(ns.diagnostics.len(), 3);
+    assert_eq!(ns.diagnostics.len(), 5);
 
     let func = ns.functions.iter().find(|func| func.name == "foo").unwrap();
 
@@ -214,7 +214,7 @@ fn variables() {
         }
 
         contract b {}"#,
-        Target::default_substrate(),
+        Target::Solana,
     );
 
     //Variable 'y' has never been used (one item error in diagnostic)
