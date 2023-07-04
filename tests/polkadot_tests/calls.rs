@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{build_solidity, build_solidity_with_options};
-use funty::Numeric;
 use parity_scale_codec::{Decode, Encode};
 
 #[derive(Debug, PartialEq, Eq, Encode, Decode)]
