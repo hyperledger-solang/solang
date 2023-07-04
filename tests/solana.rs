@@ -148,6 +148,8 @@ fn build_solidity(src: &str) -> VirtualMachine {
         false,
         true,
         true,
+        vec!["unknown".to_string()],
+        "0.0.1",
         #[cfg(feature = "wasm_opt")]
         None,
     );
@@ -167,7 +169,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
         }
 
         let code = contract.code.get().unwrap();
-        let idl = generate_anchor_idl(contract_no, &ns);
+        let idl = generate_anchor_idl(contract_no, &ns, "0.1.0");
 
         let program = if let Some(program_id) = &contract.program_id {
             program_id.clone().try_into().unwrap()

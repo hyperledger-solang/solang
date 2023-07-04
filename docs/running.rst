@@ -154,6 +154,17 @@ Options:
 \-\-wasm-opt
    wasm-opt passes for Wasm targets (0, 1, 2, 3, 4, s or z; see the wasm-opt help for more details).
 
+\-\-contract-authors
+   Specify authors for all contracts. If a `@author` tag is present, it will override this argument for the targeted contract.
+   For specifying multiple authors, use this format: `--contract-authors author1,author2,..`
+
+  .. note::
+
+      This will only affect the metadata in case of substrate target.
+
+\-\-version
+   Specify contracts version. According to `semver <https://semver.org/>`_ A normal version number must take the form X.Y.Z where X, Y, and Z are non-negative integers, and must not contain leading zeroes.
+
 .. warning::
 
     If multiple Solidity source files define the same contract name, you will get a single

@@ -1047,6 +1047,8 @@ pub fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, Stri
         log_ret,
         log_err,
         true,
+        vec!["unknown".to_string()],
+        "0.0.1",
         #[cfg(feature = "wasm_opt")]
         Some(contract_build::OptimizationPasses::Z),
     );

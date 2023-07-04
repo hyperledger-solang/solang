@@ -12,6 +12,7 @@ use solang::{
     file_resolver::FileResolver,
     sema::{ast::Namespace, file::PathDisplay},
     standard_json::{EwasmContract, JsonContract, JsonResult},
+    Target,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -241,6 +242,21 @@ fn compile(compile_args: &Compile) {
     if !errors {
         let mut seen_contracts = HashMap::new();
 
+        let authors = if let Some(authors) = &compile_args.package.authors {
+            if target == Target::Solana {
+                eprintln!("warning: the `authors` flag will be ignored for solana target")
+            }
+            authors.clone()
+        } else {
+            vec!["unknown".to_string()]
+        };
+
+        let version = if let Some(version) = &compile_args.package.version {
+            version
+        } else {
+            "0.0.1"
+        };
+
         for ns in namespaces.iter_mut() {
             for contract_no in 0..ns.contracts.len() {
                 contract_results(
@@ -250,6 +266,8 @@ fn compile(compile_args: &Compile) {
                     &mut json_contracts,
                     &mut seen_contracts,
                     &opt,
+                    &authors,
+                    version,
                 );
             }
         }
@@ -326,6 +344,8 @@ fn contract_results(
     json_contracts: &mut HashMap<String, JsonContract>,
     seen_contracts: &mut HashMap<String, String>,
     opt: &Options,
+    default_authors: &Vec<String>,
+    version: &str,
 ) {
     let verbose = compiler_output.verbose;
     let std_json = compiler_output.std_json_output;
@@ -424,7 +444,8 @@ fn contract_results(
 
         file.write_all(&code).unwrap();
 
-        let (metadata, meta_ext) = abi::generate_abi(contract_no, ns, &code, verbose);
+        let (metadata, meta_ext) =
+            abi::generate_abi(contract_no, ns, &code, verbose, default_authors, version);
         let meta_filename = output_file(compiler_output, &binary.name, meta_ext, true);
 
         if verbose {
