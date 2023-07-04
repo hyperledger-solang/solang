@@ -3620,7 +3620,7 @@ pub(super) fn assert_failure(
     let selector = 0x08c3_79a0u32;
     let selector = Expression::NumberLiteral {
         loc: Loc::Codegen,
-        ty: Type::Uint(32),
+        ty: Type::Bytes(4),
         value: BigInt::from(selector),
     };
     let args = vec![selector, arg.unwrap()];
