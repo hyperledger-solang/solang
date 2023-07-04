@@ -23,6 +23,7 @@ use solang::{
     abi::anchor::{discriminator, generate_anchor_idl},
     compile,
     file_resolver::FileResolver,
+    sema::ast,
     Target,
 };
 use std::{
@@ -1749,4 +1750,12 @@ impl VirtualMachine {
             0
         }
     }
+}
+
+pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
+    let mut cache = FileResolver::new();
+
+    cache.set_file_contents("test.sol", src.to_string());
+
+    solang::parse_and_resolve(OsStr::new("test.sol"), &mut cache, target)
 }
