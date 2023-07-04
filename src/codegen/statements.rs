@@ -1291,11 +1291,11 @@ fn try_catch(
 
         // Expect the returned data to match the 4 bytes function selector for "Error(string)"
         let buf = &Expression::ReturnData { loc: Codegen };
-        let tys = &[Uint(32), error_param.ty.clone()];
+        let tys = &[Type::Bytes(4), error_param.ty.clone()];
         let decoded = abi_decode(&Codegen, buf, tys, ns, vartab, cfg, None);
         let err_id = Expression::NumberLiteral {
             loc: Codegen,
-            ty: Uint(32),
+            ty: Type::Bytes(4),
             value: 0x08c3_79a0.into(),
         }
         .into();
