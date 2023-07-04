@@ -7,4 +7,4 @@
             }
         }
 // ---- Expect: diagnostics ----
-// error: 6:51-57: 'gas' not permitted for external calls or constructors on solana
+// error: 6:51-57: 'gas' not permitted for external calls or constructors on Solana
