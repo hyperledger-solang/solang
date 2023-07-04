@@ -45,7 +45,7 @@ async fn case() -> anyhow::Result<()> {
             &|t: &ContractMessageTranscoder| t.encode::<_, String>("test_assert_rpc", []).unwrap(),
         )
         .await;
-    assert!(res.is_err());
+    assert!(res.unwrap_err().to_string().contains("I refuse"));
 
     // write should failed
     let res = contract
