@@ -163,7 +163,7 @@ Options:
       This will only affect the metadata in case of substrate target.
 
 \-\-version
-   Specify contracts version. According to `semver <https://semver.org/>`_ A normal version number must take the form X.Y.Z where X, Y, and Z are non-negative integers, and must not contain leading zeroes.
+   Specify contracts version. According to `semver <https://semver.org/>`_, a normal version number must take the form X.Y.Z where X, Y, and Z are non-negative integers, and must not contain leading zeroes.
 
 .. warning::
 
