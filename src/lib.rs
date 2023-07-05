@@ -36,9 +36,9 @@ pub enum Target {
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Target::Solana => write!(f, "solana"),
-            Target::Polkadot { .. } => write!(f, "polkadot"),
-            Target::EVM => write!(f, "evm"),
+            Target::Solana => write!(f, "Solana"),
+            Target::Polkadot { .. } => write!(f, "Polkadot"),
+            Target::EVM => write!(f, "EVM"),
         }
     }
 }
@@ -125,6 +125,8 @@ pub fn compile(
     log_api_return_codes: bool,
     log_runtime_errors: bool,
     log_prints: bool,
+    authors: Vec<String>,
+    version: &str,
     #[cfg(feature = "wasm_opt")] wasm_opt: Option<contract_build::OptimizationPasses>,
 ) -> (Vec<(Vec<u8>, String)>, sema::ast::Namespace) {
     let mut ns = parse_and_resolve(filename, resolver, target);
@@ -158,7 +160,7 @@ pub fn compile(
         if contract.instantiable {
             let code = contract.emit(&ns, &opts);
 
-            let (abistr, _) = abi::generate_abi(contract_no, &ns, &code, false);
+            let (abistr, _) = abi::generate_abi(contract_no, &ns, &code, false, &authors, version);
 
             results.push((code, abistr));
         };

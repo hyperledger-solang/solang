@@ -9,15 +9,13 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use solana_rbpf::{
+    aligned_memory::AlignedMemory,
     ebpf,
     elf::Executable,
     error::EbpfError,
     memory_region::{AccessType, MemoryMapping, MemoryRegion},
-    verifier::RequisiteVerifier,
-    vm::{
-        BuiltInProgram, Config, ContextObject, EbpfVm, ProgramResult, StableResult,
-        VerifiedExecutable,
-    },
+    verifier::{RequisiteVerifier, TautologyVerifier},
+    vm::{BuiltinProgram, Config, ContextObject, EbpfVm, ProgramResult, StableResult},
 };
 use solang::{
     abi::anchor::{discriminator, generate_anchor_idl},
@@ -41,13 +39,15 @@ use tiny_keccak::{Hasher, Keccak};
 mod borsh_encoding;
 mod solana_tests;
 
+type Error = Box<dyn std::error::Error>;
+
 /// Error handling for syscall methods
 macro_rules! question_mark {
     ( $value:expr, $result:ident ) => {{
         let value = $value;
         match value {
             Err(err) => {
-                *$result = ProgramResult::Err(err.into());
+                *$result = ProgramResult::Err(err);
                 return;
             }
             Ok(value) => value,
@@ -148,6 +148,8 @@ fn build_solidity(src: &str) -> VirtualMachine {
         false,
         true,
         true,
+        vec!["unknown".to_string()],
+        "0.0.1",
         #[cfg(feature = "wasm_opt")]
         None,
     );
@@ -167,7 +169,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
         }
 
         let code = contract.code.get().unwrap();
-        let idl = generate_anchor_idl(contract_no, &ns);
+        let idl = generate_anchor_idl(contract_no, &ns, "0.1.0");
 
         let program = if let Some(program_id) = &contract.program_id {
             program_id.clone().try_into().unwrap()
@@ -542,7 +544,7 @@ fn sol_panic_(
     result: &mut ProgramResult,
 ) {
     println!("sol_panic_()");
-    *result = ProgramResult::Err(EbpfError::ExecutionOverrun(0));
+    *result = ProgramResult::Err(EbpfError::ExecutionOverrun(0).into());
 }
 
 fn sol_log(
@@ -1018,24 +1020,22 @@ fn translate(
     access_type: AccessType,
     vm_addr: u64,
     len: u64,
-) -> ProgramResult {
-    memory_mapping.map(access_type, vm_addr, len, 0)
+) -> Result<u64, Error> {
+    memory_mapping.map(access_type, vm_addr, len, 0).into()
 }
 
 fn translate_type_inner<'a, T>(
     memory_mapping: &MemoryMapping,
     access_type: AccessType,
     vm_addr: u64,
-) -> Result<&'a mut T, EbpfError> {
-    unsafe {
-        match translate(memory_mapping, access_type, vm_addr, size_of::<T>() as u64) {
-            ProgramResult::Ok(value) => Ok(&mut *(value as *mut T)),
-            ProgramResult::Err(e) => Err(e),
-        }
-    }
+) -> Result<&'a mut T, Error> {
+    let host_addr = translate(memory_mapping, access_type, vm_addr, size_of::<T>() as u64)?;
+
+    // host_addr is in our address space, cast
+    Ok(unsafe { &mut *(host_addr as *mut T) })
 }
 
-fn translate_type<'a, T>(memory_mapping: &MemoryMapping, vm_addr: u64) -> Result<&'a T, EbpfError> {
+fn translate_type<'a, T>(memory_mapping: &MemoryMapping, vm_addr: u64) -> Result<&'a T, Error> {
     translate_type_inner::<T>(memory_mapping, AccessType::Load, vm_addr).map(|value| &*value)
 }
 
@@ -1043,7 +1043,7 @@ fn translate_slice<'a, T>(
     memory_mapping: &MemoryMapping,
     vm_addr: u64,
     len: u64,
-) -> Result<&'a [T], EbpfError> {
+) -> Result<&'a [T], Error> {
     translate_slice_inner::<T>(memory_mapping, AccessType::Load, vm_addr, len).map(|value| &*value)
 }
 
@@ -1051,7 +1051,7 @@ fn translate_slice_mut<'a, T>(
     memory_mapping: &MemoryMapping,
     vm_addr: u64,
     len: u64,
-) -> Result<&'a mut [T], EbpfError> {
+) -> Result<&'a mut [T], Error> {
     translate_slice_inner::<T>(memory_mapping, AccessType::Store, vm_addr, len)
 }
 
@@ -1060,28 +1060,20 @@ fn translate_slice_inner<'a, T>(
     access_type: AccessType,
     vm_addr: u64,
     len: u64,
-) -> Result<&'a mut [T], EbpfError> {
+) -> Result<&'a mut [T], Error> {
     if len == 0 {
-        Ok(&mut [])
-    } else {
-        match translate(
-            memory_mapping,
-            access_type,
-            vm_addr,
-            len.saturating_mul(size_of::<T>() as u64),
-        ) {
-            ProgramResult::Ok(value) => {
-                Ok(unsafe { std::slice::from_raw_parts_mut(value as *mut T, len as usize) })
-            }
-            ProgramResult::Err(e) => Err(e),
-        }
+        return Ok(&mut []);
     }
+
+    let total_size = len.saturating_mul(size_of::<T>() as u64);
+
+    let host_addr = translate(memory_mapping, access_type, vm_addr, total_size)?;
+
+    // host_addr is in our address space, cast
+    Ok(unsafe { std::slice::from_raw_parts_mut(host_addr as *mut T, len as usize) })
 }
 
-fn translate_instruction(
-    addr: u64,
-    memory_mapping: &MemoryMapping,
-) -> Result<Instruction, EbpfError> {
+fn translate_instruction(addr: u64, memory_mapping: &MemoryMapping) -> Result<Instruction, Error> {
     let ix_c = translate_type::<SolInstruction>(memory_mapping, addr)?;
 
     let program_id = translate_type::<Pubkey>(memory_mapping, ix_c.program_id_addr)?;
@@ -1102,7 +1094,7 @@ fn translate_instruction(
                 is_writable: meta_c.is_writable,
             })
         })
-        .collect::<Result<Vec<AccountMeta>, EbpfError>>()?;
+        .collect::<Result<Vec<AccountMeta>, Error>>()?;
 
     Ok(Instruction {
         program_id: program_id.clone(),
@@ -1377,73 +1369,71 @@ impl VirtualMachine {
 
         let program = &self.stack[0];
 
-        let mut loader: BuiltInProgram<SyscallContext> = BuiltInProgram::new_loader(Config {
+        let mut loader = BuiltinProgram::new_loader(Config {
             static_syscalls: false,
-            enable_symbol_and_section_labels: true,
+            enable_symbol_and_section_labels: false,
             dynamic_stack_frames: false,
             ..Config::default()
         });
 
+        loader.register_function(b"sol_panic_", sol_panic_).unwrap();
+
+        loader.register_function(b"sol_log_", sol_log).unwrap();
+
         loader
-            .register_function_by_name("sol_panic_", sol_panic_)
+            .register_function(b"sol_log_pubkey", sol_log_pubkey)
             .unwrap();
 
         loader
-            .register_function_by_name("sol_log_", sol_log)
+            .register_function(b"sol_log_64_", sol_log_u64)
+            .unwrap();
+
+        loader.register_function(b"sol_sha256", sol_sha256).unwrap();
+
+        loader
+            .register_function(b"sol_keccak256", sol_keccak256)
             .unwrap();
 
         loader
-            .register_function_by_name("sol_log_pubkey", sol_log_pubkey)
+            .register_function(b"sol_create_program_address", sol_create_program_address)
             .unwrap();
 
         loader
-            .register_function_by_name("sol_log_64_", sol_log_u64)
+            .register_function(
+                b"sol_try_find_program_address",
+                sol_try_find_program_address,
+            )
             .unwrap();
 
         loader
-            .register_function_by_name("sol_sha256", sol_sha256)
+            .register_function(b"sol_invoke_signed_c", sol_invoke_signed_c)
             .unwrap();
 
         loader
-            .register_function_by_name("sol_keccak256", sol_keccak256)
+            .register_function(b"sol_set_return_data", sol_set_return_data)
             .unwrap();
 
         loader
-            .register_function_by_name("sol_create_program_address", sol_create_program_address)
+            .register_function(b"sol_get_return_data", sol_get_return_data)
             .unwrap();
 
         loader
-            .register_function_by_name("sol_try_find_program_address", sol_try_find_program_address)
-            .unwrap();
-
-        loader
-            .register_function_by_name("sol_invoke_signed_c", sol_invoke_signed_c)
-            .unwrap();
-
-        loader
-            .register_function_by_name("sol_set_return_data", sol_set_return_data)
-            .unwrap();
-
-        loader
-            .register_function_by_name("sol_get_return_data", sol_get_return_data)
-            .unwrap();
-
-        loader
-            .register_function_by_name("sol_log_data", sol_log_data)
+            .register_function(b"sol_log_data", sol_log_data)
             .unwrap();
 
         // program.program
         println!("program: {}", program.program.to_base58());
 
-        let executable = Executable::<SyscallContext>::from_elf(
+        let executable = Executable::<TautologyVerifier, SyscallContext>::from_elf(
             &self.account_data[&program.program].data,
             Arc::new(loader),
         )
         .expect("should work");
+        let config = *executable.get_config();
+        let text = executable.get_ro_region();
 
         let verified_executable =
-            VerifiedExecutable::<RequisiteVerifier, SyscallContext>::from_executable(executable)
-                .unwrap();
+            Executable::<RequisiteVerifier, SyscallContext>::verified(executable).unwrap();
 
         let mut context = SyscallContext {
             vm: Rc::new(RefCell::new(self)),
@@ -1453,15 +1443,18 @@ impl VirtualMachine {
             remaining: 1000000,
         };
 
-        let parameter_region =
-            MemoryRegion::new_writable(&mut parameter_bytes, ebpf::MM_INPUT_START);
-        let mut vm = EbpfVm::new(
-            &verified_executable,
-            &mut context,
-            &mut heap,
-            vec![parameter_region],
-        )
-        .unwrap();
+        let mut stack = AlignedMemory::<{ ebpf::HOST_ALIGN }>::zero_filled(config.stack_size());
+
+        let parameter_region = vec![
+            text,
+            MemoryRegion::new_writable(&mut parameter_bytes, ebpf::MM_INPUT_START),
+            MemoryRegion::new_writable(&mut heap, ebpf::MM_HEAP_START),
+            MemoryRegion::new_writable(stack.as_slice_mut(), ebpf::MM_STACK_START),
+        ];
+
+        let memory_mapping = MemoryMapping::new(parameter_region, &config).unwrap();
+
+        let mut vm = EbpfVm::new(&verified_executable, &mut context, memory_mapping, 4196);
 
         let (_, res) = vm.execute_program(true);
 

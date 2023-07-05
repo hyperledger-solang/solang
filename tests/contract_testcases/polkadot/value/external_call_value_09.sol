@@ -19,4 +19,4 @@
 // warning: 11:25-26: declaration of 'x' shadows state variable
 // 	note 8:13-18: previous declaration of state variable
 // warning: 11:25-26: local variable 'x' has been assigned, but never read
-// warning: 13:31-32: conversion truncates uint256 to uint128, as value is type uint128 on target polkadot
+// warning: 13:31-32: conversion truncates uint256 to uint128, as value is type uint128 on target Polkadot

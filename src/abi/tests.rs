@@ -43,13 +43,8 @@ contract caller {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
-    assert_eq!(
-        idl.version,
-        Version::parse(env!("CARGO_PKG_VERSION"))
-            .unwrap()
-            .to_string()
-    );
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
+    assert_eq!(idl.version, Version::parse("0.1.0").unwrap().to_string());
     assert_eq!(idl.name, "caller");
     assert!(idl.docs.is_some());
     assert_eq!(idl.docs.as_ref().unwrap().len(), 2);
@@ -78,7 +73,7 @@ fn constants_and_types() {
     "#;
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert!(idl.constants.is_empty());
 
@@ -186,7 +181,7 @@ fn instructions_and_types() {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions.len(), 7);
 
@@ -393,7 +388,7 @@ contract caller {
     // We need this to populate Contract.emit_events
     codegen::codegen(&mut ns, &Options::default());
 
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions.len(), 2);
 
@@ -548,7 +543,7 @@ fn types() {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions.len(), 2);
 
@@ -649,7 +644,7 @@ fn constructor() {
     "#;
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.name, "caller");
     assert!(idl.docs.is_none());
@@ -716,7 +711,7 @@ contract Testing {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions.len(), 2);
 
@@ -801,7 +796,7 @@ contract Testing {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions.len(), 3);
 
@@ -931,7 +926,7 @@ fn name_collision() {
 
     let mut ns = generate_namespace(str);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 3);
 
@@ -1025,7 +1020,7 @@ fn double_name_collision() {
 
     let mut ns = generate_namespace(str);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 4);
 
@@ -1126,7 +1121,7 @@ fn deduplication() {
     // We need this to populate Contract.emit_events
     codegen::codegen(&mut ns, &Options::default());
 
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions.len(), 2);
     assert_eq!(idl.instructions[0].name, "new");
@@ -1230,7 +1225,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 2);
     assert_eq!(idl.types[0].name, "D_Foo");
@@ -1249,7 +1244,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 2);
     assert_eq!(idl.types[0].name, "Foo");
@@ -1270,7 +1265,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
     assert_eq!(idl.types.len(), 2);
     assert_eq!(idl.types[0].name, "Foo");
     assert_eq!(idl.types[1].name, "D_Foo");
@@ -1290,7 +1285,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 2);
     assert_eq!(idl.types[0].name, "D_Foo");
@@ -1314,7 +1309,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 3);
     assert_eq!(idl.types[0].name, "Foo");
@@ -1338,7 +1333,7 @@ contract C {
     "#;
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 3);
     assert_eq!(idl.types[0].name, "Foo");
@@ -1362,7 +1357,7 @@ contract C {
     "#;
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 3);
     assert_eq!(idl.types[0].name, "D_Foo");
@@ -1391,7 +1386,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 4);
     assert_eq!(idl.types[0].name, "D_Foo");
@@ -1421,7 +1416,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 4);
     assert_eq!(idl.types[0].name, "D_Foo_1");
@@ -1451,7 +1446,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 4);
     assert_eq!(idl.types[0].name, "D_Foo");
@@ -1481,7 +1476,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.types.len(), 4);
     assert_eq!(idl.types[0].name, "D_Foo");
@@ -1509,7 +1504,7 @@ contract C {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert!(idl.metadata.is_some());
     assert_eq!(
@@ -1529,7 +1524,7 @@ fn data_account_signer() {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions.len(), 1);
 
@@ -1581,7 +1576,7 @@ fn data_account_signer() {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions.len(), 1);
 
@@ -1642,7 +1637,7 @@ fn accounts_call_chain() {
     "#;
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions[0].name, "new");
     assert_eq!(
@@ -1723,7 +1718,7 @@ fn accounts_on_recursion() {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions[0].name, "new");
     assert_eq!(
@@ -1813,7 +1808,7 @@ fn system_account_for_payer_annotation() {
     "#;
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions[0].name, "new");
     assert_eq!(
@@ -1882,7 +1877,7 @@ contract Test {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.instructions[0].name, "new");
 
@@ -1943,7 +1938,7 @@ contract Test {
     "#;
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(1, &ns);
+    let idl = generate_anchor_idl(1, &ns, "0.1.0");
 
     assert_eq!(idl.instructions[0].name, "new");
 
@@ -2037,7 +2032,7 @@ contract Test {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(4, &ns);
+    let idl = generate_anchor_idl(4, &ns, "0.1.0");
 
     assert_eq!(idl.instructions[0].name, "new");
     assert_eq!(
@@ -2214,7 +2209,7 @@ contract Child {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions[0].name, "new");
     assert_eq!(idl.instructions[1].name, "c");
@@ -2293,7 +2288,7 @@ contract BeingBuilt {
 
     let mut ns = generate_namespace(src);
     codegen(&mut ns, &Options::default());
-    let idl = generate_anchor_idl(0, &ns);
+    let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions[0].name, "new");
     assert_eq!(

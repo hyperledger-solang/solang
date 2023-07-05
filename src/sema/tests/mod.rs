@@ -619,6 +619,6 @@ contract Child {
     assert_eq!(errors.len(), 1);
     assert_eq!(
         errors[0].message,
-        "either 'address' or 'accounts' call argument is required on solana"
+        "either 'address' or 'accounts' call argument is required on Solana"
     );
 }

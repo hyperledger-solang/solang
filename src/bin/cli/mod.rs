@@ -8,6 +8,7 @@ use clap_complete::Shell;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
 
+use semver::Version;
 use serde::Deserialize;
 use std::{ffi::OsString, path::PathBuf, process::exit};
 
@@ -149,6 +150,12 @@ impl Compile {
                         .get_many::<(String, PathBuf)>("IMPORTMAP")
                         .map(|import_map| import_map.cloned().collect())
                 }
+                "AUTHOR" => {
+                    self.package.authors = matches
+                        .get_many::<String>("AUTHOR")
+                        .map(|contract_names| contract_names.map(String::from).collect())
+                }
+                "VERSION" => self.package.version = matches.get_one::<String>("VERSION").cloned(),
 
                 // CompilerOutput args
                 "EMIT" => self.compiler_output.emit = matches.get_one::<String>("EMIT").cloned(),
@@ -306,6 +313,14 @@ pub struct CompilePackage {
     #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map) , action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
     #[serde(deserialize_with = "deserialize_inline_table", default)]
     pub import_map: Option<Vec<(String, PathBuf)>>,
+
+    #[arg(name = "AUTHOR", help = "specify contracts authors" , long = "contract-authors", value_delimiter = ',', action = ArgAction::Append)]
+    #[serde(default)]
+    pub authors: Option<Vec<String>>,
+
+    #[arg(name = "VERSION", help = "specify contracts version", long = "version", num_args = 1, value_parser = ValueParser::new(parse_version))]
+    #[serde(default, deserialize_with = "deserialize_version")]
+    pub version: Option<String>,
 }
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
@@ -573,6 +588,13 @@ fn parse_import_map(map: &str) -> Result<(String, PathBuf), String> {
     }
 }
 
+fn parse_version(version: &str) -> Result<String, String> {
+    match Version::parse(version) {
+        Ok(version) => Ok(version.to_string()),
+        Err(err) => Err(err.to_string()),
+    }
+}
+
 fn deserialize_inline_table<'de, D>(
     deserializer: D,
 ) -> Result<Option<Vec<(String, PathBuf)>>, D::Error>
@@ -599,6 +621,21 @@ where
                 })
                 .collect(),
         )),
+        None => Ok(None),
+    }
+}
+
+fn deserialize_version<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let res: Option<String> = Option::deserialize(deserializer)?;
+
+    match res {
+        Some(version) => match Version::parse(&version) {
+            Ok(version) => Ok(Some(version.to_string())),
+            Err(err) => Err(serde::de::Error::custom(err)),
+        },
         None => Ok(None),
     }
 }

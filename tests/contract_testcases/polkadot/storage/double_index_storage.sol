@@ -27,4 +27,4 @@ contract BeeeefRegistry {
     }
 }
 // ---- Expect: diagnostics ----
-// warning: 22:34-40: conversion truncates uint256 to uint32, as memory size is type uint32 on target polkadot
+// warning: 22:34-40: conversion truncates uint256 to uint32, as memory size is type uint32 on target Polkadot
