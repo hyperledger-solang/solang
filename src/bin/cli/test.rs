@@ -175,7 +175,9 @@ mod tests {
                     input: Some(vec![PathBuf::from("flipper.sol")]),
                     contracts: Some(vec!["flipper".to_owned()]),
                     import_path: Some(vec![]),
-                    import_map: Some(vec![])
+                    import_map: Some(vec![]),
+                    authors: None,
+                    version: Some("0.1.0".to_string())
                 },
                 compiler_output: cli::CompilerOutput {
                     emit: None,
@@ -209,7 +211,7 @@ mod tests {
             }
         );
 
-        let command = "solang compile flipper.sol sesa.sol --config-file solang.toml --target polkadot --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ');
+        let command = "solang compile flipper.sol sesa.sol --config-file solang.toml --contract-authors not_sesa --target polkadot --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ');
 
         let matches = Cli::command().get_matches_from(command);
 
@@ -228,7 +230,9 @@ mod tests {
                     ]),
                     contracts: Some(vec!["flipper".to_owned()]),
                     import_path: Some(vec![]),
-                    import_map: Some(vec![])
+                    import_map: Some(vec![]),
+                    authors: Some(vec!["not_sesa".to_owned()]),
+                    version: Some("0.1.0".to_string())
                 },
                 compiler_output: cli::CompilerOutput {
                     emit: None,

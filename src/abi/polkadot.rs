@@ -512,8 +512,14 @@ fn tags(contract_no: usize, tagname: &str, ns: &ast::Namespace) -> Vec<String> {
         .collect()
 }
 
-/// Generate the metadata for ink! 4.0
-pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
+/// Generate the metadata for Substrate 4.0
+pub fn metadata(
+    contract_no: usize,
+    code: &[u8],
+    ns: &ast::Namespace,
+    default_authors: &Vec<String>,
+    contract_version: &str,
+) -> Value {
     let hash = blake2_rfc::blake2b::blake2b(32, &[], code);
     let version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
     let language = SourceLanguage::new(Language::Solidity, version.clone());
@@ -539,9 +545,9 @@ pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
     if !authors.is_empty() {
         builder.authors(authors);
     } else {
-        builder.authors(vec!["unknown"]);
+        builder.authors(default_authors);
     }
-    builder.version(Version::new(0, 0, 1));
+    builder.version(Version::parse(contract_version).unwrap());
     let contract = builder.build().unwrap();
 
     let project_json = serde_json::to_value(gen_project(contract_no, ns)).unwrap();
