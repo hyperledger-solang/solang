@@ -2546,7 +2546,7 @@ fn interfaceid(ns: &Namespace, contract_no: usize, loc: &pt::Loc) -> Expression 
     Expression::BytesLiteral {
         loc: *loc,
         ty: Type::Bytes(selector_len),
-        value: id.to_vec(),
+        value: id.clone(),
     }
 }
 
