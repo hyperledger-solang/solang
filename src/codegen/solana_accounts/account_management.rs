@@ -23,7 +23,7 @@ pub(crate) fn manage_contract_accounts(contract_no: usize, ns: &mut Namespace) {
         let cfg_no = ns.contracts[contract_no]
             .all_functions
             .get(function_no)
-            .cloned()
+            .copied()
             .unwrap();
         traverse_cfg(
             &mut ns.contracts[contract_no].cfg[cfg_no],
