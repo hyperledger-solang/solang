@@ -485,7 +485,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                     continue;
                 }
 
-                for prev in previous_defs.into_iter() {
+                for prev in previous_defs {
                     let func_prev = &ns.functions[prev];
 
                     if Some(base_contract_no) == func_prev.contract_no {

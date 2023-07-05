@@ -11,8 +11,8 @@ use super::{
 use crate::codegen::subexpression_elimination::common_sub_expression_elimination;
 use crate::codegen::{undefined_variable, Expression, LLVMName};
 use crate::sema::ast::{
-    CallTy, Contract, FunctionAttributes, Namespace, Parameter, RetrieveType, StringLocation,
-    StructType, Type,
+    CallTy, Contract, FunctionAttributes, Namespace, Parameter, RetrieveType, Statement,
+    StringLocation, StructType, Type,
 };
 use crate::sema::{contracts::collect_base_args, diagnostics::Diagnostics, Recurse};
 use crate::{sema::ast, Target};
@@ -1803,12 +1803,7 @@ fn function_cfg(
         );
     }
 
-    if func
-        .body
-        .last()
-        .map(|stmt| stmt.reachable())
-        .unwrap_or(true)
-    {
+    if func.body.last().map(Statement::reachable).unwrap_or(true) {
         let loc = match func.body.last() {
             Some(ins) => ins.loc(),
             None => pt::Loc::Codegen,
@@ -2012,7 +2007,7 @@ fn generate_modifier_dispatch(
     if modifier
         .body
         .last()
-        .map(|stmt| stmt.reachable())
+        .map(Statement::reachable)
         .unwrap_or(true)
     {
         let loc = match func.body.last() {
