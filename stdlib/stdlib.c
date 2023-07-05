@@ -165,7 +165,7 @@ bool __memcmp(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_l
 struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 {
     struct vector *v;
-    size_t size_array = members * size;
+    uint32_t size_array = members * size;
 
     v = __malloc(sizeof(*v) + size_array);
     v->len = members;
@@ -193,7 +193,7 @@ struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 
 struct vector *concat(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
 {
-    size_t size_array = left_len + right_len;
+    uint32_t size_array = left_len + right_len;
     struct vector *v = __malloc(sizeof(*v) + size_array);
     v->len = size_array;
     v->size = size_array;
