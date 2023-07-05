@@ -68,4 +68,4 @@ contract Swap_ETH_TO_USDX {
     }
 }
 // ---- Expect: diagnostics ----
-// warning: 61:20-53: conversion truncates uint256 to uint128, as value is type uint128 on target polkadot
+// warning: 61:20-53: conversion truncates uint256 to uint128, as value is type uint128 on target Polkadot

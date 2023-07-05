@@ -678,10 +678,10 @@ function _approve(
     //
 }/**//**//**//**//**//**//**///
 // ---- Expect: diagnostics ----
-// warning: 195:50-56: conversion truncates uint256 to uint128, as value is type uint128 on target evm
+// warning: 195:50-56: conversion truncates uint256 to uint128, as value is type uint128 on target EVM
 // warning: 268:17-25: function parameter 'weiValue' is unused
 // warning: 269:23-35: function parameter 'errorMessage' is unused
-// warning: 276:70-78: conversion truncates uint256 to uint128, as value is type uint128 on target evm
+// warning: 276:70-78: conversion truncates uint256 to uint128, as value is type uint128 on target EVM
 // warning: 321:9-17: 'internal': visibility for constructors is ignored
 // warning: 386:9-61: storage variable '_isExcluded' has never been used
 // warning: 390:9-51: storage variable 'MAX' has been assigned, but never read

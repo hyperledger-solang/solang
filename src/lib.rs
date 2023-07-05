@@ -36,9 +36,9 @@ pub enum Target {
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Target::Solana => write!(f, "solana"),
-            Target::Polkadot { .. } => write!(f, "polkadot"),
-            Target::EVM => write!(f, "evm"),
+            Target::Solana => write!(f, "Solana"),
+            Target::Polkadot { .. } => write!(f, "Polkadot"),
+            Target::EVM => write!(f, "EVM"),
         }
     }
 }
