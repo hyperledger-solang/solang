@@ -34,7 +34,7 @@ describe('Test that the constructor can not be reached from the call function', 
         // "Calling" the constructor should fail
         input = contract.abi.constructors[0].selector;
         attempt = await query(conn, alice, caller, "call", [contract.address, input]);
-        expect(attempt.result.isErr).toStrictEqual(true);
+        expect(attempt.result.asOk.flags.isRevert).toStrictEqual(true);
 
         const gasLimit = await weight(conn, caller, 'call', [contract.address, input]);
         await expect(transaction(caller.tx.call({ gasLimit }, contract.address, input), alice)).rejects.toBeDefined();

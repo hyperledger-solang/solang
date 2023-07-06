@@ -533,21 +533,20 @@ impl Runtime {
             None => return Ok(8),
         };
 
+        if CallFlags::TailCall.set(flags) {
+            return Err(HostReturn::Data(ret, data).into());
+        }
+
         if output_len_ptr != u32::MAX {
             assert!(read_len(mem, output_len_ptr) >= data.len());
             write_buf(mem, output_ptr, &data);
             write_buf(mem, output_len_ptr, &(data.len() as u32).to_le_bytes());
         }
 
-        if ret == 2 {
-            return Ok(2); // ReturnCode::CalleeReverted
+        if ret == 0 {
+            vm.accept_state(state.into_data(), value);
         }
-
-        vm.accept_state(state.into_data(), value);
-        if CallFlags::TailCall.set(flags) {
-            return Err(HostReturn::Data(0, data).into());
-        }
-        Ok(0)
+        Ok(ret)
     }
 
     #[seal(0)]
@@ -600,12 +599,10 @@ impl Runtime {
         write_buf(mem, address_ptr, &address);
         write_buf(mem, address_len_ptr, &(address.len() as u32).to_le_bytes());
 
-        if flags == 2 {
-            return Ok(2); // ReturnCode::CalleeReverted
+        if flags == 0 {
+            vm.accept_state(state.into_data(), value);
         }
-
-        vm.accept_state(state.into_data(), value);
-        Ok(0)
+        Ok(flags)
     }
 
     #[seal(0)]
@@ -901,13 +898,14 @@ impl MockSubstrate {
     }
 
     /// Call the contract function `name` with the given input `args`.
+    /// Panics if the contract traps or reverts.
     pub fn function(&mut self, name: &str, mut args: Vec<u8>) {
         let mut input = self.0.data().blobs[self.0.data().account].messages[name].clone();
         input.append(&mut args);
         self.raw_function(input);
     }
 
-    /// Call the contract function `name` with the given input `args` and expect the contract to trap.
+    /// Expect the contract function `name` with the given input `args` to trap or revert.
     ///
     /// Only traps caused by an `unreachable` instruction are allowed. Other traps will panic instead.
     pub fn function_expect_failure(&mut self, name: &str, mut args: Vec<u8>) {
@@ -921,6 +919,9 @@ impl MockSubstrate {
     /// `input` must contain the selector fo the constructor.
     pub fn raw_function(&mut self, input: Vec<u8>) {
         self.invoke("call", input).unwrap();
+        if let HostReturn::Data(flags, _) = self.0.data().output {
+            assert!(flags == 0)
+        }
     }
 
     fn raw_failure(&mut self, export: &str, input: Vec<u8>) {
@@ -930,7 +931,10 @@ impl MockSubstrate {
                 _ => panic!("trap: {trap:?}"),
             },
             Err(err) => panic!("unexpected error: {err:?}"),
-            Ok(_) => panic!("unexpected return from main"),
+            Ok(_) => match self.0.data().output {
+                HostReturn::Data(flags, _) if flags == 1 => (),
+                _ => panic!("unexpected return from main"),
+            },
         }
     }
 
