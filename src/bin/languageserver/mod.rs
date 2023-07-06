@@ -24,6 +24,7 @@ struct Hovers {
 
 type HoverEntry = Interval<usize, String>;
 
+/// Stores information used by language server for every opened file
 struct Files {
     hovers: HashMap<PathBuf, Hovers>,
     text_buffers: HashMap<PathBuf, String>,
@@ -1295,31 +1296,31 @@ fn update_file_contents(
             return prev_content;
         }
 
-        let mut new = String::new();
+        let mut new_content = String::new();
         for (i, line) in prev_content.lines().enumerate() {
             if i < start_line {
-                new.push_str(line);
-                new.push('\n');
+                new_content.push_str(line);
+                new_content.push('\n');
                 continue;
             }
 
             if i > end_line {
-                new.push_str(line);
-                new.push('\n');
+                new_content.push_str(line);
+                new_content.push('\n');
                 continue;
             }
 
             if i == start_line {
-                new.push_str(&line[..start_col]);
-                new.push_str(&content_change.text);
+                new_content.push_str(&line[..start_col]);
+                new_content.push_str(&content_change.text);
             }
 
             if i == end_line {
-                new.push_str(&line[end_col..]);
-                new.push('\n');
+                new_content.push_str(&line[end_col..]);
+                new_content.push('\n');
             }
         }
-        new
+        new_content
     } else {
         // When no range is provided, entire file is sent in the request.
         content_change.text
