@@ -2133,7 +2133,7 @@ impl Namespace {
             return !(self.contracts[base_contract_no].is_library()
                 || func.is_constructor() && contract_no != base_contract_no)
                 && func.is_public()
-                && func.ty != FunctionTy::Modifier
+                && func.ty != FunctionTy::Modifier;
         }
 
         false
