@@ -3,6 +3,7 @@ Cargo.lock
 /target
 **/*.rs.bk
 bundle.ll
+tests/.tmp*
 
 .helix/
 .vscode/
