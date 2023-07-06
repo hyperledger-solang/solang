@@ -115,9 +115,10 @@ fn error_type(
 
 fn wrap_result(
     ok: Option<TypeSpec<PortableForm>>,
-    err: TypeSpec<PortableForm>,
+    err: u32,
     registry: &mut PortableRegistryBuilder,
 ) -> TypeSpec<PortableForm> {
+    let err = TypeSpec::new(err.into(), registry.get(err).unwrap().path.clone());
     let ok = ok.unwrap_or_else(|| {
         let type_def = TypeDefTuple::new_portable([]);
         let unit = Type::new(Default::default(), vec![], type_def, vec![]);
@@ -128,7 +129,6 @@ fn wrap_result(
         TypeParameter::new_portable("T".into(), Some(*ok.ty())),
         TypeParameter::new_portable("E".into(), Some(*err.ty())),
     ];
-
     let variants = [
         Variant {
             name: "Ok".to_string(),
@@ -346,6 +346,12 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
     let contract_name = ns.contracts[contract_no].name.clone();
     let storage = Layout::Struct(StructLayout::new(contract_name, fields));
 
+    let err_defs = &[
+        ("String", &ast::Type::String),
+        ("Panic", &ast::Type::Uint(8)),
+    ];
+    let err = error_type(ns, &mut registry, err_defs);
+
     let constructor_spec = |f: &Function| -> ConstructorSpec<PortableForm> {
         let payable = matches!(f.mutability, ast::Mutability::Payable(_));
         let args = f
@@ -368,7 +374,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
             .payable(payable)
             .args(args)
             .docs(vec![render(&f.tags).as_str()])
-            .returns(ReturnTypeSpec::new(None))
+            .returns(ReturnTypeSpec::new(wrap_result(None, err, &mut registry)))
             .done()
     };
 
@@ -432,7 +438,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
                 Some(TypeSpec::new(ty.into(), path))
             }
         };
-        let ret_type = ReturnTypeSpec::new(ret_spec);
+        let ret_type = ReturnTypeSpec::new(wrap_result(ret_spec, err, &mut registry));
         let args = f
             .params
             .iter()
