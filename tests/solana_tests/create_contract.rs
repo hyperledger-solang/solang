@@ -171,12 +171,26 @@ fn create_contract_wrong_program_id() {
     let program = &vm.programs[0].program;
     vm.account_data.get_mut(program).unwrap().data = code;
 
-    vm.constructor_expected(7 << 32, &[]);
+    vm.constructor_expected(7 << 32, &vm.default_metas(), &[]);
 
     assert_eq!(
         vm.logs,
         "program_id should be CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT"
     );
+}
+
+#[test]
+fn call_constructor_twice() {
+    let mut vm = build_solidity(
+        r#"
+        @program_id("CPDgqnhHDCsjFkJKMturRQ1QeM9EXZg3EYCeDoRP8pdT")
+        contract bar0 {}
+        "#,
+    );
+
+    vm.constructor(&[]);
+
+    vm.constructor_expected(2, &vm.default_metas(), &[]);
 }
 
 #[test]
@@ -316,7 +330,7 @@ fn account_too_small() {
 
     vm.account_data.get_mut(&data).unwrap().data.truncate(100);
 
-    vm.constructor_expected(5 << 32, &[]);
+    vm.constructor_expected(5 << 32, &vm.default_metas(), &[]);
 }
 
 #[test]

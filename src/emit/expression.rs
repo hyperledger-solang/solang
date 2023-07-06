@@ -276,7 +276,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.position_at_end(bail_block);
 
                 // throw division by zero error should be an assert
-                target.log_runtime_error(bin, "division by zero".to_string(), Some(*loc), ns);
+                bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -373,7 +373,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.position_at_end(bail_block);
 
                 // throw division by zero error should be an assert
-                target.log_runtime_error(bin, "division by zero".to_string(), Some(*loc), ns);
+                bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -518,7 +518,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.position_at_end(bail_block);
 
                 // throw division by zero error should be an assert
-                target.log_runtime_error(bin, "division by zero".to_string(), Some(*loc), ns);
+                bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -612,7 +612,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder.position_at_end(bail_block);
 
                 // throw division by zero error should be an assert
-                target.log_runtime_error(bin, "division by zero".to_string(), Some(*loc), ns);
+                bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -713,8 +713,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             // Load the result pointer
             let res = bin.builder.build_load(left.get_type(), o, "");
 
-            if *overflowing || ns.target.is_substrate() {
-                // In Substrate, overflow case will hit an unreachable expression, so no additional checks are needed.
+            if *overflowing || ns.target.is_polkadot() {
+                // In Polkadot, overflow case will hit an unreachable expression, so no additional checks are needed.
                 res
             } else {
                 // In Solana, a return other than zero will abort execution. We need to check if power() returned a zero or not.
@@ -732,7 +732,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     .build_conditional_branch(error_ret, error_block, return_block);
                 bin.builder.position_at_end(error_block);
 
-                target.log_runtime_error(bin, "math overflow".to_string(), Some(*loc), ns);
+                bin.log_runtime_error(target, "math overflow".to_string(), Some(*loc), ns);
                 target.assert_failure(
                     bin,
                     bin.context
@@ -1134,7 +1134,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_conditional_branch(is_equal_to_n, cast, error);
 
             bin.builder.position_at_end(error);
-            target.log_runtime_error(bin, "bytes cast error".to_string(), Some(*loc), ns);
+            bin.log_runtime_error(target, "bytes cast error".to_string(), Some(*loc), ns);
             target.assert_failure(
                 bin,
                 bin.context
@@ -2022,22 +2022,4 @@ fn runtime_cast<'a>(
     } else {
         val
     }
-}
-
-pub(crate) fn string_to_basic_value<'a>(
-    bin: &Binary<'a>,
-    ns: &Namespace,
-    input: String,
-) -> BasicValueEnum<'a> {
-    let elem = Type::Bytes(1);
-    let size = bin.context.i32_type().const_int(input.len() as u64, false);
-
-    let elem_size = bin
-        .llvm_type(&elem, ns)
-        .size_of()
-        .unwrap()
-        .const_cast(bin.context.i32_type(), false);
-
-    let init = Option::Some(input.as_bytes().to_vec());
-    bin.vector_new(size, elem_size, init.as_ref()).into()
 }

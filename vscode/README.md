@@ -2,7 +2,7 @@
 
 The Solang Solidity Compiler compiles Solidity for the following blockchains:
 
-- Parity Substrate
+- Polkadot
 - Solana
 - evm (enough for the extension)
 

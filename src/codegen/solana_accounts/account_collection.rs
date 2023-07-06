@@ -451,6 +451,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 expr.recurse(data, check_expression);
             }
         }
+        Instr::AccountAccess { .. } => (),
     }
 }
 

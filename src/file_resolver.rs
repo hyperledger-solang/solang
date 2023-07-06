@@ -81,6 +81,11 @@ impl FileResolver {
         self.cached_paths.insert(PathBuf::from(path), pos);
     }
 
+    /// Get the file contents of `file_no`th file if it exists
+    pub fn get_contents_of_file_no(&self, file_no: usize) -> Option<Arc<str>> {
+        self.files.get(file_no).cloned()
+    }
+
     /// Get file with contents. This must be a file which was previously
     /// add to the cache
     pub fn get_file_contents_and_number(&self, file: &Path) -> (Arc<str>, usize) {

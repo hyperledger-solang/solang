@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 contract c {
 	function test() public pure returns (int32) {
 		int32 x = 104;

@@ -75,7 +75,7 @@ fn function_selector(
     ns: &mut Namespace,
 ) {
     if func.ty != pt::FunctionTy::Function
-        && (!ns.target.is_substrate() || func.ty != pt::FunctionTy::Constructor)
+        && (!ns.target.is_polkadot() || func.ty != pt::FunctionTy::Constructor)
     {
         diagnostics.push(Diagnostic::error(
             annotation.loc,
@@ -164,7 +164,7 @@ fn function_selector(
     }
 }
 
-/// Collect the seeds, bump, payer, and space for constructors. This is a no-op on Substrate/EVM since
+/// Collect the seeds, bump, payer, and space for constructors. This is a no-op on Polkadot/EVM since
 /// there should be no seed or bump annotations permitted on other targets.
 ///
 /// These annotations need a symbol table.

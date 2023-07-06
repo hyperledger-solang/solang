@@ -8,6 +8,7 @@ use clap_complete::Shell;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
 
+use semver::Version;
 use serde::Deserialize;
 use std::{ffi::OsString, path::PathBuf, process::exit};
 
@@ -48,7 +49,7 @@ pub enum Commands {
 
 #[derive(Args)]
 pub struct New {
-    #[arg(name = "TARGETNAME",required= true, long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
+    #[arg(name = "TARGETNAME",required= true, long = "target", value_parser = ["solana", "polkadot", "evm"], help = "Target to build for [possible values: solana, polkadot]", num_args = 1, hide_possible_values = true)]
     pub target_name: String,
 
     #[arg(name = "INPUT", help = "Name of the project", num_args = 1, value_parser =  ValueParser::os_string())]
@@ -149,6 +150,12 @@ impl Compile {
                         .get_many::<(String, PathBuf)>("IMPORTMAP")
                         .map(|import_map| import_map.cloned().collect())
                 }
+                "AUTHOR" => {
+                    self.package.authors = matches
+                        .get_many::<String>("AUTHOR")
+                        .map(|contract_names| contract_names.map(String::from).collect())
+                }
+                "VERSION" => self.package.version = matches.get_one::<String>("VERSION").cloned(),
 
                 // CompilerOutput args
                 "EMIT" => self.compiler_output.emit = matches.get_one::<String>("EMIT").cloned(),
@@ -254,25 +261,25 @@ pub struct CompilerOutput {
 
 #[derive(Args)]
 pub struct TargetArg {
-    #[arg(name = "TARGET",required= true, long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
+    #[arg(name = "TARGET",required= true, long = "target", value_parser = ["solana", "polkadot", "evm"], help = "Target to build for [possible values: solana, polkadot]", num_args = 1, hide_possible_values = true)]
     pub name: String,
 
-    #[arg(name = "ADDRESS_LENGTH", help = "Address length on Substrate", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    #[arg(name = "ADDRESS_LENGTH", help = "Address length on the Polkadot Parachain", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
     pub address_length: Option<u64>,
 
-    #[arg(name = "VALUE_LENGTH", help = "Value length on Substrate", long = "value-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    #[arg(name = "VALUE_LENGTH", help = "Value length on the Polkadot Parachain", long = "value-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
     pub value_length: Option<u64>,
 }
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct CompileTargetArg {
-    #[arg(name = "TARGET", long = "target", value_parser = ["solana", "substrate", "evm"], help = "Target to build for [possible values: solana, substrate]", num_args = 1, hide_possible_values = true)]
+    #[arg(name = "TARGET", long = "target", value_parser = ["solana", "polkadot", "evm"], help = "Target to build for [possible values: solana, polkadot]", num_args = 1, hide_possible_values = true)]
     pub name: Option<String>,
 
-    #[arg(name = "ADDRESS_LENGTH", help = "Address length on Substrate", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    #[arg(name = "ADDRESS_LENGTH", help = "Address length on the Polkadot Parachain", long = "address-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
     pub address_length: Option<u64>,
 
-    #[arg(name = "VALUE_LENGTH", help = "Value length on Substrate", long = "value-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
+    #[arg(name = "VALUE_LENGTH", help = "Value length on the Polkadot Parachain", long = "value-length", num_args = 1, value_parser = value_parser!(u64).range(4..1024))]
     pub value_length: Option<u64>,
 }
 
@@ -306,6 +313,14 @@ pub struct CompilePackage {
     #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map) , action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
     #[serde(deserialize_with = "deserialize_inline_table", default)]
     pub import_map: Option<Vec<(String, PathBuf)>>,
+
+    #[arg(name = "AUTHOR", help = "specify contracts authors" , long = "contract-authors", value_delimiter = ',', action = ArgAction::Append)]
+    #[serde(default)]
+    pub authors: Option<Vec<String>>,
+
+    #[arg(name = "VERSION", help = "specify contracts version", long = "version", num_args = 1, value_parser = ValueParser::new(parse_version))]
+    #[serde(default, deserialize_with = "deserialize_version")]
+    pub version: Option<String>,
 }
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
@@ -427,19 +442,19 @@ pub(crate) fn target_arg<T: TargetArgTrait>(target_arg: &T) -> Target {
 
     if target_name == "solana" || target_name == "evm" {
         if target_arg.get_address_length().is_some() {
-            eprintln!("error: address length cannot be modified except for substrate target");
+            eprintln!("error: address length cannot be modified except for polkadot target");
             exit(1);
         }
 
         if target_arg.get_value_length().is_some() {
-            eprintln!("error: value length cannot be modified except for substrate target");
+            eprintln!("error: value length cannot be modified except for polkadot target");
             exit(1);
         }
     }
 
     let target = match target_name.as_str() {
         "solana" => solang::Target::Solana,
-        "substrate" => solang::Target::Substrate {
+        "polkadot" => solang::Target::Polkadot {
             address_length: target_arg.get_address_length().unwrap_or(32) as usize,
             value_length: target_arg.get_value_length().unwrap_or(16) as usize,
         },
@@ -573,6 +588,13 @@ fn parse_import_map(map: &str) -> Result<(String, PathBuf), String> {
     }
 }
 
+fn parse_version(version: &str) -> Result<String, String> {
+    match Version::parse(version) {
+        Ok(version) => Ok(version.to_string()),
+        Err(err) => Err(err.to_string()),
+    }
+}
+
 fn deserialize_inline_table<'de, D>(
     deserializer: D,
 ) -> Result<Option<Vec<(String, PathBuf)>>, D::Error>
@@ -599,6 +621,21 @@ where
                 })
                 .collect(),
         )),
+        None => Ok(None),
+    }
+}
+
+fn deserialize_version<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let res: Option<String> = Option::deserialize(deserializer)?;
+
+    match res {
+        Some(version) => match Version::parse(&version) {
+            Ok(version) => Ok(Some(version.to_string())),
+            Err(err) => Err(serde::de::Error::custom(err)),
+        },
         None => Ok(None),
     }
 }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sema::ast::{ArrayLength, Builtin, Expression, Namespace, RetrieveType, Symbol, Type};
+use crate::sema::ast::{
+    ArrayLength, Builtin, Expression, Namespace, RetrieveType, StructType, Symbol, Type,
+};
 use crate::sema::builtin;
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::constructor::circular_reference;
@@ -217,7 +219,7 @@ pub(super) fn member_access(
                 });
             }
         }
-        Type::Array(_, dim) => {
+        Type::Array(elem_ty, dim) => {
             if id.name == "length" {
                 return match dim.last().unwrap() {
                     ArrayLength::Dynamic => Ok(Expression::Builtin {
@@ -241,6 +243,27 @@ pub(super) fn member_access(
                         )
                     }
                     ArrayLength::AnyFixed => unreachable!(),
+                };
+            } else if matches!(*elem_ty, Type::Struct(StructType::AccountInfo))
+                && context.function_no.is_some()
+            {
+                return if ns.functions[context.function_no.unwrap()]
+                    .solana_accounts
+                    .borrow()
+                    .contains_key(&id.name)
+                {
+                    Ok(Expression::NamedMember {
+                        loc: *loc,
+                        ty: Type::Ref(Box::new(Type::Struct(StructType::AccountInfo))),
+                        array: Box::new(expr),
+                        name: id.name.clone(),
+                    })
+                } else {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        "unrecognized account".to_string(),
+                    ));
+                    Err(())
                 };
             }
         }
@@ -321,7 +344,7 @@ pub(super) fn member_access(
         },
         Type::Address(_) => {
             if id.name == "balance" {
-                if ns.target.is_substrate() {
+                if ns.target.is_polkadot() {
                     let mut is_this = false;
 
                     if let Expression::Cast { expr: this, .. } = &expr {
@@ -337,7 +360,7 @@ pub(super) fn member_access(
                     if !is_this {
                         diagnostics.push(Diagnostic::error(
                             expr.loc(),
-                            "substrate can only retrieve balance of this, like 'address(this).balance'".to_string(),
+                            "polkadot can only retrieve balance of this, like 'address(this).balance'".to_string(),
                         ));
                         return Err(());
                     }

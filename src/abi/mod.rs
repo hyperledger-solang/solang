@@ -5,7 +5,7 @@ use crate::Target;
 
 pub mod anchor;
 pub mod ethereum;
-pub mod substrate;
+pub mod polkadot;
 mod tests;
 
 pub fn generate_abi(
@@ -13,17 +13,19 @@ pub fn generate_abi(
     ns: &Namespace,
     code: &[u8],
     verbose: bool,
+    default_authors: &Vec<String>,
+    version: &str,
 ) -> (String, &'static str) {
     match ns.target {
-        Target::Substrate { .. } => {
+        Target::Polkadot { .. } => {
             if verbose {
                 eprintln!(
-                    "info: Generating Substrate metadata for contract {}",
+                    "info: Generating ink! metadata for contract {}",
                     ns.contracts[contract_no].name
                 );
             }
 
-            let metadata = substrate::metadata(contract_no, code, ns);
+            let metadata = polkadot::metadata(contract_no, code, ns, default_authors, version);
 
             (serde_json::to_string_pretty(&metadata).unwrap(), "contract")
         }
@@ -35,7 +37,7 @@ pub fn generate_abi(
                 );
             }
 
-            let idl = anchor::generate_anchor_idl(contract_no, ns);
+            let idl = anchor::generate_anchor_idl(contract_no, ns, version);
 
             (serde_json::to_string_pretty(&idl).unwrap(), "json")
         }

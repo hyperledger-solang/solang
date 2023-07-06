@@ -1,7 +1,5 @@
 # Release Checklist
 
-- For next release, fix:
-  https://github.com/hyperledger/solang/issues/1321
 - Update the version in `Cargo.toml`, `solang-parser/Cargo.toml`, the binary
   links in `docs/installing.rst`, and `CHANGELOG.md`. Remember to match the
   solang-parser version in the top level `Cargo.toml`.

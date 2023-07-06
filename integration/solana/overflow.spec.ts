@@ -2,7 +2,7 @@
 
 import expect from 'expect';
 import { loadContract } from './setup';
-import { BN } from '@project-serum/anchor';
+import { BN } from '@coral-xyz/anchor';
 
 describe('Testing math overflow', function () {
     this.timeout(500000);

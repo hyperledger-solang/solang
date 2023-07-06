@@ -85,7 +85,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             name: "selfdestruct",
             params: vec![Type::Address(true)],
             ret: vec![Type::Unreachable],
-            target: vec![Target::EVM, Target::default_substrate()],
+            target: vec![Target::EVM, Target::default_polkadot()],
             doc: "Destroys current account and deposits any remaining balance to address",
             constant: false,
         },
@@ -129,7 +129,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             name: "blake2_128",
             params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(16)],
-            target: vec![Target::default_substrate()],
+            target: vec![Target::default_polkadot()],
             doc: "Calculates blake2-128 hash",
             constant: true,
         },
@@ -140,7 +140,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             name: "blake2_256",
             params: vec![Type::DynamicBytes],
             ret: vec![Type::Bytes(32)],
-            target: vec![Target::default_substrate()],
+            target: vec![Target::default_polkadot()],
             doc: "Calculates blake2-256 hash",
             constant: true,
         },
@@ -151,7 +151,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             name: "gasleft",
             params: vec![],
             ret: vec![Type::Uint(64)],
-            target: vec![Target::default_substrate(), Target::EVM],
+            target: vec![Target::default_polkadot(), Target::EVM],
             doc: "Return remaining gas left in current call",
             constant: false,
         },
@@ -395,7 +395,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
             name: "minimum_balance",
             params: vec![],
             ret: vec![Type::Value],
-            target: vec![Target::default_substrate()],
+            target: vec![Target::default_polkadot()],
             doc: "Minimum balance required for an account",
             constant: false,
         },
@@ -483,7 +483,7 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
             name: "gasprice",
             params: vec![],
             ret: vec![Type::Value],
-            target: vec![Target::default_substrate(), Target::EVM],
+            target: vec![Target::default_polkadot(), Target::EVM],
             doc: "gas price for one gas unit",
             constant: false,
         },
@@ -850,7 +850,7 @@ pub fn builtin_var(
         .find(|p| p.name == fname && p.namespace == namespace)
     {
         if p.target.is_empty() || p.target.contains(&ns.target) {
-            if ns.target.is_substrate() && p.builtin == Builtin::Gasprice {
+            if ns.target.is_polkadot() && p.builtin == Builtin::Gasprice {
                 diagnostics.push(Diagnostic::error(
                     *loc,
                     String::from(
@@ -990,7 +990,7 @@ pub(super) fn resolve_call(
             }
         } else {
             // tx.gasprice(1) is a bad idea, just like tx.gasprice. Warn about this
-            if ns.target.is_substrate() && func.builtin == Builtin::Gasprice {
+            if ns.target.is_polkadot() && func.builtin == Builtin::Gasprice {
                 if let Ok((_, val)) = eval_const_number(&cast_args[0], ns, diagnostics) {
                     if val == BigInt::one() {
                         diagnostics.push(Diagnostic::warning(
@@ -1636,7 +1636,7 @@ impl Namespace {
         ));
     }
 
-    pub fn add_substrate_builtins(&mut self) {
+    pub fn add_polkadot_builtins(&mut self) {
         let loc = pt::Loc::Builtin;
         let identifier = |name: &str| Identifier {
             name: name.into(),
@@ -1645,7 +1645,7 @@ impl Namespace {
 
         let file_no = self.files.len();
         self.files.push(File {
-            path: PathBuf::from("substrate"),
+            path: PathBuf::from("polkadot"),
             line_starts: Vec::new(),
             cache_no: None,
         });
@@ -1669,18 +1669,122 @@ impl Namespace {
         assert!(self.add_symbol(file_no, None, &identifier("Hash"), symbol));
 
         // Chain extensions
-        let mut func = Function::new(
-            loc,
-            "chain_extension".to_string(),
-            None,
-            Vec::new(),
-            pt::FunctionTy::Function,
-            None,
-            pt::Visibility::Public(Some(loc)),
-            vec![
-                Parameter {
+        for mut func in [
+            Function::new(
+                loc,
+                "chain_extension".to_string(),
+                None,
+                Vec::new(),
+                pt::FunctionTy::Function,
+                None,
+                pt::Visibility::Public(Some(loc)),
+                vec![
+                    Parameter {
+                        loc,
+                        id: Some(identifier("id")),
+                        ty: Type::Uint(32),
+                        ty_loc: Some(loc),
+                        readonly: false,
+                        indexed: false,
+                        infinite_size: false,
+                        recursive: false,
+                        annotation: None,
+                    },
+                    Parameter {
+                        loc,
+                        id: Some(identifier("input")),
+                        ty: Type::DynamicBytes,
+                        ty_loc: Some(loc),
+                        readonly: false,
+                        indexed: false,
+                        infinite_size: false,
+                        recursive: false,
+                        annotation: None,
+                    },
+                ],
+                vec![
+                    Parameter {
+                        loc,
+                        id: Some(identifier("return_value")),
+                        ty: Type::Uint(32),
+                        ty_loc: Some(loc),
+                        readonly: false,
+                        indexed: false,
+                        infinite_size: false,
+                        recursive: false,
+                        annotation: None,
+                    },
+                    Parameter {
+                        loc,
+                        id: Some(identifier("output")),
+                        ty: Type::DynamicBytes,
+                        ty_loc: Some(loc),
+                        readonly: false,
+                        indexed: false,
+                        infinite_size: false,
+                        recursive: false,
+                        annotation: None,
+                    },
+                ],
+                self,
+            ),
+            // is_contract API
+            Function::new(
+                loc,
+                "is_contract".to_string(),
+                None,
+                Vec::new(),
+                pt::FunctionTy::Function,
+                Some(pt::Mutability::View(loc)),
+                pt::Visibility::Public(Some(loc)),
+                vec![Parameter {
                     loc,
-                    id: Some(identifier("id")),
+                    id: Some(identifier("address")),
+                    ty: Type::Address(false),
+                    ty_loc: Some(loc),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                    annotation: None,
+                }],
+                vec![Parameter {
+                    loc,
+                    id: Some(identifier("is_contract")),
+                    ty: Type::Bool,
+                    ty_loc: Some(loc),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                    annotation: None,
+                }],
+                self,
+            ),
+            // set_code_hash API
+            Function::new(
+                loc,
+                "set_code_hash".to_string(),
+                None,
+                Vec::new(),
+                pt::FunctionTy::Function,
+                None,
+                pt::Visibility::Public(Some(loc)),
+                vec![Parameter {
+                    loc,
+                    id: Some(identifier("code_hash_ptr")),
+                    // FIXME: The hash length should be configurable
+                    ty: Type::Array(Type::Uint(8).into(), vec![ArrayLength::Fixed(32.into())]),
+                    ty_loc: Some(loc),
+                    readonly: false,
+                    indexed: false,
+                    infinite_size: false,
+                    recursive: false,
+                    annotation: None,
+                }],
+                vec![Parameter {
+                    loc,
+                    id: Some(identifier("return_code")),
                     ty: Type::Uint(32),
                     ty_loc: Some(loc),
                     readonly: false,
@@ -1688,92 +1792,15 @@ impl Namespace {
                     infinite_size: false,
                     recursive: false,
                     annotation: None,
-                },
-                Parameter {
-                    loc,
-                    id: Some(identifier("input")),
-                    ty: Type::DynamicBytes,
-                    ty_loc: Some(loc),
-                    readonly: false,
-                    indexed: false,
-                    infinite_size: false,
-                    recursive: false,
-                    annotation: None,
-                },
-            ],
-            vec![
-                Parameter {
-                    loc,
-                    id: Some(identifier("return_value")),
-                    ty: Type::Uint(32),
-                    ty_loc: Some(loc),
-                    readonly: false,
-                    indexed: false,
-                    infinite_size: false,
-                    recursive: false,
-                    annotation: None,
-                },
-                Parameter {
-                    loc,
-                    id: Some(identifier("output")),
-                    ty: Type::DynamicBytes,
-                    ty_loc: Some(loc),
-                    readonly: false,
-                    indexed: false,
-                    infinite_size: false,
-                    recursive: false,
-                    annotation: None,
-                },
-            ],
-            self,
-        );
-
-        func.has_body = true;
-        let func_no = self.functions.len();
-        let id = identifier(&func.name);
-        self.functions.push(func);
-
-        assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
-
-        // is_contract API
-        let mut func = Function::new(
-            loc,
-            "is_contract".to_string(),
-            None,
-            Vec::new(),
-            pt::FunctionTy::Function,
-            Some(pt::Mutability::View(loc)),
-            pt::Visibility::Public(Some(loc)),
-            vec![Parameter {
-                loc,
-                id: Some(identifier("address")),
-                ty: Type::Address(false),
-                ty_loc: Some(loc),
-                readonly: false,
-                indexed: false,
-                infinite_size: false,
-                recursive: false,
-                annotation: None,
-            }],
-            vec![Parameter {
-                loc,
-                id: Some(identifier("is_contract")),
-                ty: Type::Bool,
-                ty_loc: Some(loc),
-                readonly: false,
-                indexed: false,
-                infinite_size: false,
-                recursive: false,
-                annotation: None,
-            }],
-            self,
-        );
-
-        func.has_body = true;
-        let func_no = self.functions.len();
-        let id = identifier(&func.name);
-        self.functions.push(func);
-
-        assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
+                }],
+                self,
+            ),
+        ] {
+            func.has_body = true;
+            let func_no = self.functions.len();
+            let id = identifier(&func.name);
+            self.functions.push(func);
+            assert!(self.add_symbol(file_no, None, &id, Symbol::Function(vec![(loc, func_no)])));
+        }
     }
 }

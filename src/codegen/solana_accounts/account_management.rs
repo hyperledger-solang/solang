@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::dispatch::solana::SOLANA_DISPATCH_CFG_NAME;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::{ArrayLength, Function, Namespace, StructType, Type};
 use crate::sema::solana_accounts::BuiltinAccounts;
@@ -14,17 +15,30 @@ use std::collections::{HashSet, VecDeque};
 /// AccountMeta array with all the accounts the constructor needs.
 pub(crate) fn manage_contract_accounts(contract_no: usize, ns: &mut Namespace) {
     let contract_functions = ns.contracts[contract_no].functions.clone();
+    let mut constructor_no = None;
     for function_no in &contract_functions {
+        if ns.functions[*function_no].is_constructor() {
+            constructor_no = Some(*function_no);
+        }
         let cfg_no = ns.contracts[contract_no]
             .all_functions
             .get(function_no)
-            .cloned()
+            .copied()
             .unwrap();
         traverse_cfg(
             &mut ns.contracts[contract_no].cfg[cfg_no],
             &ns.functions,
             *function_no,
         );
+    }
+
+    if let Some(constructor) = constructor_no {
+        let dispatch = ns.contracts[contract_no]
+            .cfg
+            .iter_mut()
+            .find(|cfg| cfg.name == SOLANA_DISPATCH_CFG_NAME)
+            .expect("dispatch CFG is always generated");
+        traverse_cfg(dispatch, &ns.functions, constructor);
     }
 }
 
@@ -98,7 +112,7 @@ fn process_instruction(instr: &mut Instr, functions: &[Function], ast_no: usize)
                     .borrow()
                     .get_index_of(name)
                     .unwrap();
-                let ptr_to_address = index_accounts_vector(account_index);
+                let ptr_to_address = accounts_vector_key_at_index(account_index);
                 account_metas.push(account_meta_literal(
                     ptr_to_address,
                     account.is_signer,
@@ -118,11 +132,54 @@ fn process_instruction(instr: &mut Instr, functions: &[Function], ast_no: usize)
 
         *address = None;
         *accounts = Some(metas_vector);
+    } else if let Instr::AccountAccess { loc, name, var_no } = instr {
+        // This could have been an Expression::AccountAccess if we had a three-address form.
+        // The amount of code necessary to traverse all Instructions and all expressions recursively
+        // (Expressions form a tree) makes the usage of Expression::AccountAccess too burdensome.
+
+        // Alternatively, we can create a codegen::Expression::AccountAccess when we have the
+        // new SSA IR complete.
+        let account_index = functions[ast_no]
+            .solana_accounts
+            .borrow()
+            .get_index_of(name)
+            .unwrap();
+        let expr = index_accounts_vector(account_index);
+
+        *instr = Instr::Set {
+            loc: *loc,
+            res: *var_no,
+            expr,
+        };
     }
 }
 
 /// This function automates the process of retrieving 'tx.accounts[index].key'.
-pub(crate) fn index_accounts_vector(index: usize) -> Expression {
+pub(crate) fn accounts_vector_key_at_index(index: usize) -> Expression {
+    let payer_info = index_accounts_vector(index);
+
+    retrieve_key_from_account_info(payer_info)
+}
+
+/// This function retrieves the account key from the AccountInfo struct.
+/// The argument should be of type 'Type::Ref(Type::Struct(StructType::AccountInfo))'.
+pub(crate) fn retrieve_key_from_account_info(account_info: Expression) -> Expression {
+    let address = Expression::StructMember {
+        loc: Loc::Codegen,
+        ty: Type::Ref(Box::new(Type::Ref(Box::new(Type::Address(false))))),
+        expr: Box::new(account_info),
+        member: 0,
+    };
+
+    Expression::Load {
+        loc: Loc::Codegen,
+        ty: Type::Ref(Box::new(Type::Address(false))),
+        expr: Box::new(address),
+    }
+}
+
+/// This function automates the process of retrieving 'tx.accounts[index]'.
+fn index_accounts_vector(index: usize) -> Expression {
     let accounts_vector = Expression::Builtin {
         loc: Loc::Codegen,
         tys: vec![Type::Array(
@@ -133,7 +190,7 @@ pub(crate) fn index_accounts_vector(index: usize) -> Expression {
         args: vec![],
     };
 
-    let payer_info = Expression::Subscript {
+    Expression::Subscript {
         loc: Loc::Codegen,
         ty: Type::Ref(Box::new(Type::Struct(StructType::AccountInfo))),
         array_ty: Type::Array(
@@ -146,19 +203,6 @@ pub(crate) fn index_accounts_vector(index: usize) -> Expression {
             ty: Type::Uint(32),
             value: BigInt::from(index),
         }),
-    };
-
-    let address = Expression::StructMember {
-        loc: Loc::Codegen,
-        ty: Type::Ref(Box::new(Type::Ref(Box::new(Type::Address(false))))),
-        expr: Box::new(payer_info),
-        member: 0,
-    };
-
-    Expression::Load {
-        loc: Loc::Codegen,
-        ty: Type::Ref(Box::new(Type::Address(false))),
-        expr: Box::new(address),
     }
 }
 

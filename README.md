@@ -1,6 +1,6 @@
 <img src="https://raw.githubusercontent.com/hyperledger/solang/main/docs/hl_solang_horizontal-color.svg" alt="Solang Logo" width="75%"/>
 
-# solang - Solidity Compiler for Solana and Substrate
+# solang - Solidity Compiler for Solana and Polkadot
 
 [![Discord](https://img.shields.io/discord/905194001349627914?logo=Hyperledger&style=plastic)](https://discord.gg/hyperledger)
 [![CI](https://github.com/hyperledger/solang/workflows/test/badge.svg)](https://github.com/hyperledger/solang/actions)
@@ -10,8 +10,9 @@
 
 Welcome to Solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. Solang can compile Solidity for Solana and
-Substrate. Solang is source compatible with Solidity 0.8, with
-some caveats due to differences in the underlying blockchain.
+Polkadot Parachains with the `contracts` pallet.
+Solang is source compatible with Solidity 0.8, 
+with some caveats due to differences in the underlying blockchain.
 
 Solang is under active development right now, and has
 [extensive documentation](https://solang.readthedocs.io/en/latest/).
@@ -56,16 +57,16 @@ Now you can deploy the contract code using:
 solana program deploy flipper.so
 ```
 
-Now install `@project-serum/anchor`:
+Now install `@coral-xyz/anchor`:
 
 ```
-npm install @project-serum/anchor
+npm install @coral-xyz/anchor
 ```
 
 Save the following to `flipper.js`:
 ```javascript
 const { readFileSync } = require('fs');
-const anchor = require('@project-serum/anchor');
+const anchor = require('@coral-xyz/anchor');
 
 const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
 const PROGRAM_SO = readFileSync('./flipper.so');
@@ -109,18 +110,18 @@ export ANCHOR_PROVIDER_URL=http://127.0.0.1:8899
 node flipper.js
 ```
 
-### Build for Substrate
+### Build for Polkadot
 
 Run the following command, selecting the flipper example available on Solang's repository:
 
 ```bash
-solang compile --target substrate examples/substrate/flipper.sol
+solang compile --target polkadot examples/polkadot/flipper.sol
 ```
 
 Alternatively if you want to use the solang container, run:
 
 ```
-docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang compile -v -o /sources --target substrate /sources/flipper.sol
+docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang compile -v -o /sources --target polkadot /sources/flipper.sol
 ```
 You will have a file called flipper.contract. You can use this directly in
 the [Contracts UI](https://contracts-ui.substrate.io/),
@@ -139,8 +140,8 @@ Here is a brief description of what we envision for the next versions.
 |----------------------------------------------------|-------------|
 | Improve management over optimization passes        | Not started |
 | Adopt single static assignment for code generation | In progress |
-| Support openzeppelin on Substrate target           | In progress |
-| Provide Solidity -> Substrate porting guide        | Not started |
+| Support openzeppelin on Polkadot target            | In progress |
+| Provide Solidity -> Polkadot porting guide         | Not started |
 | Call Solidity from Solana's Rust contracts         | Not started |
 | Tooling for calls between ink! <> solidity         | In progress |
 | Provide CLI for node interactions                  | In progress |

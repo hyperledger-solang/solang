@@ -4,7 +4,7 @@ import { Keypair, Ed25519Program, SYSVAR_INSTRUCTIONS_PUBKEY, PublicKey } from '
 import expect from 'expect';
 import nacl from 'tweetnacl';
 import { loadContract } from './setup';
-import { Program } from '@project-serum/anchor';
+import { Program } from '@coral-xyz/anchor';
 
 describe('Signature Check', function () {
     this.timeout(150000);
@@ -30,8 +30,10 @@ describe('Signature Check', function () {
 
         const result = await program.methods.verify(payer.publicKey, message, Buffer.from(signature))
             .preInstructions([instr1])
-            .accounts({ dataAccount: storage.publicKey,
-                SysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY})
+            .accounts({
+                dataAccount: storage.publicKey,
+                SysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY
+            })
             .view();
 
         expect(result).toEqual(true);
@@ -54,8 +56,10 @@ describe('Signature Check', function () {
 
         const result = await program.methods.verify(payer.publicKey, message, Buffer.from(broken_signature))
             .preInstructions([instr1])
-            .accounts({ dataAccount: storage.publicKey,
-                SysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY})
+            .accounts({
+                dataAccount: storage.publicKey,
+                SysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY
+            })
             .view();
 
         expect(result).toEqual(false);

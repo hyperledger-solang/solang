@@ -7,4 +7,4 @@
         contract x {}
     
 // ---- Expect: diagnostics ----
-// error: 4:29-38: 'salt' not permitted for external calls or constructors on solana
+// error: 4:29-38: 'salt' not permitted for external calls or constructors on Solana

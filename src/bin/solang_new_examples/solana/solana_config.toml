@@ -1,4 +1,6 @@
 [package]
+authors = ["sesa"]
+version = "0.1.0"
 input_files = ["flipper.sol"]   # Files to be compiled. You can define multiple files as : input_files = ["file1", "file2", ..]
 contracts = ["flipper"] # Contracts to include from the compiled files
 import_path = []   
@@ -6,7 +8,7 @@ import_map = {}   # Maps to import. Define as  import_map = {map = "path/to/map1
 
 
 [target]
-name = "solana" # Valid targets are "solana" and "substrate"
+name = "solana" # Valid targets are "solana" and "polkadot"
 
 [debug-features]
 prints = true   # Log debug prints to the environment.

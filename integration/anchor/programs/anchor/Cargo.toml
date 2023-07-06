@@ -16,6 +16,5 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.27.0"
-# solana-program 1.16.0 is broken, it depends on getrandom, which does not build for bpf
-solana-program = "=1.14.18"
+anchor-lang = "0.28.0"
+solana-program = "1.16.1"

@@ -208,7 +208,7 @@ pub(super) fn address_literal(
     ns: &mut Namespace,
     diagnostics: &mut Diagnostics,
 ) -> Result<Expression, ()> {
-    if ns.target.is_substrate() {
+    if ns.target.is_polkadot() {
         match address.from_base58() {
             Ok(v) => {
                 if v.len() != ns.address_length + 3 {

@@ -2,7 +2,7 @@
 
 import expect from 'expect';
 import { loadContract, loadContractWithProvider } from './setup';
-import { BN } from '@project-serum/anchor';
+import { BN } from '@coral-xyz/anchor';
 
 describe('Testing calls', function () {
     this.timeout(100000);

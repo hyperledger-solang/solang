@@ -1228,6 +1228,8 @@ impl LanguageServer for SolangServer {
             self.files.lock().await.hovers.remove(&path);
             self.files.lock().await.text_buffers.remove(&path);
         }
+
+        self.client.publish_diagnostics(uri, vec![], None).await;
     }
 
     async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {

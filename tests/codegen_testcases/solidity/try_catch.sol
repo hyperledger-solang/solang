@@ -1,4 +1,4 @@
-// RUN: --target substrate --emit cfg
+// RUN: --target polkadot --emit cfg
 interface I {
 	function bar() external returns (int32, bool);
 }
