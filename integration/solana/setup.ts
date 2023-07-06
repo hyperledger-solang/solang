@@ -6,9 +6,23 @@ import fs from 'fs';
 
 const endpoint: string = process.env.RPC_URL || "http://127.0.0.1:8899";
 
-export async function loadContract(name: string, args: any[] = [], space: number = 8192):
+export async function loadContractAndCallConstructor(name: string, args: any[] = [], space: number = 8192):
     Promise<{ program: Program, payer: Keypair, provider: AnchorProvider, storage: Keypair, program_key: PublicKey }> {
 
+    const {program, payer, provider, program_key} = await loadContract(name);
+
+    const storage = Keypair.generate();
+    await create_account(storage, program_key, space);
+
+    await program.methods.new(...args)
+        .accounts({ dataAccount: storage.publicKey })
+        .rpc();
+
+    return { provider, program, payer, storage, program_key: program_key };
+}
+
+export async function loadContract(name: string):
+    Promise<{program: Program, payer: Keypair, provider: AnchorProvider, program_key: PublicKey}> {
     const idl = JSON.parse(fs.readFileSync(`${name}.json`, 'utf8'));
 
     const payer = loadKey('payer.key');
@@ -16,20 +30,9 @@ export async function loadContract(name: string, args: any[] = [], space: number
     process.env['ANCHOR_WALLET'] = 'payer.key';
 
     const provider = AnchorProvider.local(endpoint);
-
-    const storage = Keypair.generate();
-
     const program_key = loadKey(`${name}.key`);
-
-    await create_account(storage, program_key.publicKey, space);
-
-    const program = new Program(idl, program_key.publicKey, provider);
-
-    await program.methods.new(...args)
-        .accounts({ dataAccount: storage.publicKey })
-        .rpc();
-
-    return { provider, program, payer, storage, program_key: program_key.publicKey };
+    const program = new Program(idl, program_key.publicKey, provider)
+    return {program, payer, provider, program_key: program_key.publicKey};
 }
 
 export async function create_account(account: Keypair, programId: PublicKey, space: number) {

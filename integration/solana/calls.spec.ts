@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import expect from 'expect';
-import { loadContract, loadContractWithProvider } from './setup';
+import { loadContractAndCallConstructor, loadContractWithProvider } from './setup';
 import { BN } from '@coral-xyz/anchor';
 
 describe('Testing calls', function () {
     this.timeout(100000);
 
     it('external_call', async function () {
-        let caller = await loadContract('caller');
+        let caller = await loadContractAndCallConstructor('caller');
 
         const provider = caller.provider;
 

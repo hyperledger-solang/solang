@@ -2,7 +2,7 @@
 
 import { getOrCreateAssociatedTokenAccount, createMint, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Keypair } from '@solana/web3.js';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 import { BN } from '@coral-xyz/anchor';
 import expect from 'expect';
 
@@ -10,7 +10,7 @@ describe('Create spl-token and use from solidity', function () {
     this.timeout(500000);
 
     it('spl-token', async function name() {
-        const { provider, storage, payer, program } = await loadContract('Token');
+        const { provider, storage, payer, program } = await loadContractAndCallConstructor('Token');
         const connection = provider.connection;
 
         const mintAuthority = Keypair.generate();
