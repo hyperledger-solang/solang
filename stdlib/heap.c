@@ -21,8 +21,8 @@
 struct chunk
 {
     struct chunk *next, *prev;
-    size_t length;
-    size_t allocated;
+    uint32_t length;
+    uint32_t allocated;
 };
 
 #ifdef __wasm__
@@ -33,7 +33,7 @@ void __init_heap()
     struct chunk *first = HEAP_START;
     first->next = first->prev = NULL;
     first->allocated = false;
-    first->length = (size_t)(__builtin_wasm_memory_size(0) * 0x10000 - (size_t)first - sizeof(struct chunk));
+    first->length = (uint32_t)(__builtin_wasm_memory_size(0) * 0x10000 - (size_t)first - sizeof(struct chunk));
 }
 #else
 #define HEAP_START ((struct chunk *)0x300000000)
@@ -75,7 +75,7 @@ void __attribute__((noinline)) __free(void *m)
     }
 }
 
-static void shrink_chunk(struct chunk *cur, size_t size)
+static void shrink_chunk(struct chunk *cur, uint32_t size)
 {
     // round up to nearest 8 bytes
     size = (size + 7) & ~7;
@@ -121,7 +121,7 @@ void *__attribute__((noinline)) __malloc(uint32_t size)
     }
 }
 
-void *__realloc(void *m, size_t size)
+void *__realloc(void *m, uint32_t size)
 {
     struct chunk *cur = m;
 

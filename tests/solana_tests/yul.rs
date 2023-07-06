@@ -99,10 +99,10 @@ contract testing  {
     assert_eq!(
         returns,
         vec![
-            // the heap is 0x300000000. The header 32 bytes (sizeof(chunk) in heap.c)
+            // the heap is 0x300000000. The header 24 bytes (sizeof(chunk) in heap.c)
             BorshToken::Uint {
                 width: 256,
-                value: BigInt::from(0x300000020u64)
+                value: BigInt::from(0x300000018u64)
             },
             BorshToken::Uint {
                 width: 256,
