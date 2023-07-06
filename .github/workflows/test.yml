@@ -373,7 +373,7 @@ jobs:
         toolchain: stable
         default: true
         override: true
-    - run: 'parallel solang compile -v --target polkadot --release -o ./contracts/ ::: ../polkadot/*.sol ../polkadot/test/*.sol'
+    - run: 'parallel solang compile -v --target polkadot --wasm-opt z -o ./contracts/ ::: ../polkadot/*.sol ../polkadot/test/*.sol'
       working-directory: ./integration/subxt-tests
     - name: Deploy and test contracts
       run: cargo test -- --test-threads=1

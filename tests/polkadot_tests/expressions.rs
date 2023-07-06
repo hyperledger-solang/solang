@@ -247,21 +247,20 @@ fn expressions() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "IntegerDivisionByZero")]
 fn divisions_by_zero() {
     // parse
     let mut runtime = build_solidity(
         "
         contract test {
-            function do_test() public returns (uint){
-                uint256 val = 100;
-
-                return (val / 0);
+            uint256 divisor = 0;
+            function do_test() public returns (uint256 result){
+                result = 100 / divisor;
             }
         }",
     );
 
-    runtime.function("do_test", Vec::new());
+    runtime.function_expect_failure("do_test", Vec::new());
 }
 
 #[test]
@@ -1501,7 +1500,6 @@ fn bytes_bitwise() {
 }
 
 #[test]
-#[should_panic]
 fn bytesn_underflow_index_acccess() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct BytesArray([u8; 7], i32);
@@ -1511,16 +1509,15 @@ fn bytesn_underflow_index_acccess() {
         "
         contract test {
             function bytes_array(bytes7 foo, int32 index) public returns (bytes1) {
-                return foo[index];
+                return foo[uint(index)];
             }
         }",
     );
 
-    runtime.function("bytes_array", BytesArray(*b"nawabra", -1).encode());
+    runtime.function_expect_failure("bytes_array", BytesArray(*b"nawabra", -1).encode());
 }
 
 #[test]
-#[should_panic]
 fn bytesn_overflow_index_acccess() {
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct BytesArray([u8; 7], i32);
@@ -1530,12 +1527,12 @@ fn bytesn_overflow_index_acccess() {
         "
         contract test {
             function bytes_array(bytes7 foo, int32 index) public returns (byte) {
-                return foo[index];
+                return foo[uint(index)];
             }
         }",
     );
 
-    runtime.function("bytes_array", BytesArray(*b"nawabra", 7).encode());
+    runtime.function_expect_failure("bytes_array", BytesArray(*b"nawabra", 7).encode());
 }
 
 #[test]
@@ -1687,7 +1684,6 @@ fn destructure() {
 }
 
 #[test]
-#[should_panic]
 fn addition_overflow() {
     let mut runtime = build_solidity_with_options(
         r#"
@@ -1706,7 +1702,7 @@ fn addition_overflow() {
         false,
     );
 
-    runtime.function("bar", Vec::new());
+    runtime.function_expect_failure("bar", Vec::new());
 }
 
 #[test]
@@ -1734,7 +1730,6 @@ fn unchecked_addition_overflow() {
 }
 
 #[test]
-#[should_panic]
 fn subtraction_underflow() {
     let mut runtime = build_solidity_with_options(
         r#"
@@ -1753,7 +1748,7 @@ fn subtraction_underflow() {
         false,
     );
 
-    runtime.function("bar", Vec::new());
+    runtime.function_expect_failure("bar", Vec::new());
 }
 
 #[test]
@@ -1781,7 +1776,6 @@ fn unchecked_subtraction_underflow() {
 }
 
 #[test]
-#[should_panic]
 fn multiplication_overflow() {
     let mut runtime = build_solidity_with_options(
         r#"
@@ -1800,7 +1794,7 @@ fn multiplication_overflow() {
         false,
     );
 
-    runtime.function("bar", Vec::new());
+    runtime.function_expect_failure("bar", Vec::new());
 }
 
 #[test]

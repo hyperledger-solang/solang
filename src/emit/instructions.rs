@@ -789,15 +789,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 None
             };
 
-            let success = match success {
-                Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
-                None => None,
-            };
-
             target.create_contract(
                 bin,
                 function,
-                success,
+                success.map(|n| &mut w.vars.get_mut(&n).unwrap().value),
                 *contract_no,
                 address_stack,
                 encoded_args,

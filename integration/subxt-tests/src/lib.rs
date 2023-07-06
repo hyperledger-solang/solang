@@ -220,7 +220,8 @@ impl Execution for ReadContract {
             .map(|v| v.did_revert())
             .unwrap_or_else(|_| false)
         {
-            Err(anyhow::anyhow!("{:?}", rv.debug_message))
+            let msg = std::str::from_utf8(&rv.debug_message).unwrap();
+            Err(anyhow::anyhow!("{msg}"))
         } else {
             Ok(output::ReadSuccess {
                 return_value: rv.result.map(|v| v.data.to_vec()).unwrap_or_default(),

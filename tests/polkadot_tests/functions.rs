@@ -53,7 +53,6 @@ fn constructors() {
 }
 
 #[test]
-#[should_panic]
 fn constructor_wrong_selector() {
     let mut runtime = build_solidity(
         "
@@ -71,6 +70,7 @@ fn constructor_wrong_selector() {
     );
 
     runtime.raw_constructor(vec![0xaa, 0xbb, 0xcc, 0xdd]);
+    runtime.function("get", Vec::new());
 }
 
 #[test]
@@ -159,7 +159,6 @@ fn fallback() {
 }
 
 #[test]
-#[should_panic]
 fn function_wrong_selector() {
     let mut runtime = build_solidity(
         "
@@ -176,15 +175,11 @@ fn function_wrong_selector() {
         }",
     );
 
-    runtime.raw_function(vec![0xaa, 0xbb, 0xcc, 0xdd]);
+    runtime.raw_function_failure(vec![0xaa, 0xbb, 0xcc, 0xdd]);
 }
 
 #[test]
-#[should_panic]
 fn nofallback() {
-    #[derive(Debug, PartialEq, Eq, Encode, Decode)]
-    struct Val(u64);
-
     // parse
     let mut runtime = build_solidity(
         "
@@ -197,10 +192,12 @@ fn nofallback() {
         }",
     );
 
-    runtime.raw_function([0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec());
-    runtime.function("get", Vec::new());
+    runtime.constructor(0, vec![]);
 
-    assert_eq!(runtime.output(), Val(356).encode());
+    runtime.raw_function_failure([0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec());
+
+    runtime.function("get", Vec::new());
+    assert_eq!(runtime.output(), 102i64.encode());
 }
 
 #[test]
