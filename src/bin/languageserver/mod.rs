@@ -24,12 +24,18 @@ struct Hovers {
 
 type HoverEntry = Interval<usize, String>;
 
+/// Stores information used by language server for every opened file
+struct Files {
+    hovers: HashMap<PathBuf, Hovers>,
+    text_buffers: HashMap<PathBuf, String>,
+}
+
 pub struct SolangServer {
     client: Client,
     target: Target,
     importpaths: Vec<PathBuf>,
     importmaps: Vec<(String, PathBuf)>,
-    files: Mutex<HashMap<PathBuf, Hovers>>,
+    files: Mutex<Files>,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -57,7 +63,10 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
     let (service, socket) = LspService::new(|client| SolangServer {
         client,
         target,
-        files: Mutex::new(HashMap::new()),
+        files: Mutex::new(Files {
+            hovers: HashMap::new(),
+            text_buffers: HashMap::new(),
+        }),
         importpaths,
         importmaps,
     });
@@ -70,9 +79,11 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
 impl SolangServer {
     /// Parse file
     async fn parse_file(&self, uri: Url) {
+        let mut resolver = FileResolver::new();
+        for (path, contents) in self.files.lock().await.text_buffers.iter() {
+            resolver.set_file_contents(path.to_str().unwrap(), contents.clone());
+        }
         if let Ok(path) = uri.to_file_path() {
-            let mut resolver = FileResolver::new();
-
             let dir = path.parent().unwrap();
 
             let _ = resolver.add_import_path(dir);
@@ -154,7 +165,7 @@ impl SolangServer {
 
             let hovers = Builder::build(&ns);
 
-            self.files.lock().await.insert(path, hovers);
+            self.files.lock().await.hovers.insert(path, hovers);
 
             res.await;
         }
@@ -1158,17 +1169,54 @@ impl LanguageServer for SolangServer {
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         let uri = params.text_document.uri;
 
-        self.parse_file(uri).await;
+        match uri.to_file_path() {
+            Ok(path) => {
+                self.files
+                    .lock()
+                    .await
+                    .text_buffers
+                    .insert(path, params.text_document.text);
+                self.parse_file(uri).await;
+            }
+            Err(_) => {
+                self.client
+                    .log_message(MessageType::ERROR, format!("received invalid URI: {}", uri))
+                    .await;
+            }
+        }
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         let uri = params.text_document.uri;
 
-        self.parse_file(uri).await;
+        match uri.to_file_path() {
+            Ok(path) => {
+                if let Some(text_buf) = self.files.lock().await.text_buffers.get_mut(&path) {
+                    *text_buf = params
+                        .content_changes
+                        .into_iter()
+                        .fold(text_buf.clone(), update_file_contents);
+                }
+                self.parse_file(uri).await;
+            }
+            Err(_) => {
+                self.client
+                    .log_message(MessageType::ERROR, format!("received invalid URI: {}", uri))
+                    .await;
+            }
+        }
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
         let uri = params.text_document.uri;
+
+        if let Some(text) = params.text {
+            if let Ok(path) = uri.to_file_path() {
+                if let Some(text_buf) = self.files.lock().await.text_buffers.get_mut(&path) {
+                    *text_buf = text;
+                }
+            }
+        }
 
         self.parse_file(uri).await;
     }
@@ -1177,7 +1225,8 @@ impl LanguageServer for SolangServer {
         let uri = params.text_document.uri;
 
         if let Ok(path) = uri.to_file_path() {
-            self.files.lock().await.remove(&path);
+            self.files.lock().await.hovers.remove(&path);
+            self.files.lock().await.text_buffers.remove(&path);
         }
 
         self.client.publish_diagnostics(uri, vec![], None).await;
@@ -1194,8 +1243,8 @@ impl LanguageServer for SolangServer {
         let uri = txtdoc.uri;
 
         if let Ok(path) = uri.to_file_path() {
-            let files = self.files.lock().await;
-            if let Some(hovers) = files.get(&path) {
+            let files = &self.files.lock().await;
+            if let Some(hovers) = files.hovers.get(&path) {
                 let offset = hovers
                     .file
                     .get_offset(pos.line as usize, pos.character as usize);
@@ -1231,4 +1280,157 @@ fn loc_to_range(loc: &pt::Loc, file: &ast::File) -> Range {
     let end = Position::new(line as u32, column as u32);
 
     Range::new(start, end)
+}
+
+fn update_file_contents(
+    mut prev_content: String,
+    content_change: TextDocumentContentChangeEvent,
+) -> String {
+    if let Some(range) = content_change.range {
+        let start_line = range.start.line as usize;
+        let start_col = range.start.character as usize;
+        let end_line = range.end.line as usize;
+        let end_col = range.end.character as usize;
+
+        // Directly add the changes to the buffer when changes are present at the end of the file.
+        if start_line == prev_content.lines().count() {
+            prev_content.push_str(&content_change.text);
+            return prev_content;
+        }
+
+        let mut new_content = String::new();
+        for (i, line) in prev_content.lines().enumerate() {
+            if i < start_line {
+                new_content.push_str(line);
+                new_content.push('\n');
+                continue;
+            }
+
+            if i > end_line {
+                new_content.push_str(line);
+                new_content.push('\n');
+                continue;
+            }
+
+            if i == start_line {
+                new_content.push_str(&line[..start_col]);
+                new_content.push_str(&content_change.text);
+            }
+
+            if i == end_line {
+                new_content.push_str(&line[end_col..]);
+                new_content.push('\n');
+            }
+        }
+        new_content
+    } else {
+        // When no range is provided, entire file is sent in the request.
+        content_change.text
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn without_range() {
+        let initial_content = "contract foo {\n    function bar(Book y, Book x) public returns (bool) {\n        return y.available;\n    }\n}\n".to_string();
+        let new_content = "struct Book {\n    string name;\n    string writer;\n    uint id;\n    bool available;\n}\n".to_string();
+        assert_eq!(
+            new_content.clone(),
+            update_file_contents(
+                initial_content,
+                TextDocumentContentChangeEvent {
+                    range: None,
+                    range_length: None,
+                    text: new_content
+                }
+            )
+        );
+    }
+
+    #[test]
+    fn at_the_end_of_file() {
+        let initial_content = "contract foo {\n    function bar(Book y, Book x) public returns (bool) {\n        return y.available;\n    }\n}\n".to_string();
+        let new_content = "struct Book {\n    string name;\n    string writer;\n    uint id;\n    bool available;\n}\n".to_string();
+        let final_content = "\
+            contract foo {\n    function bar(Book y, Book x) public returns (bool) {\n        return y.available;\n    }\n}\n\
+            struct Book {\n    string name;\n    string writer;\n    uint id;\n    bool available;\n}\n\
+        ".to_string();
+        assert_eq!(
+            final_content,
+            update_file_contents(
+                initial_content,
+                TextDocumentContentChangeEvent {
+                    range: Some(Range {
+                        start: Position {
+                            line: 5,
+                            character: 0
+                        },
+                        end: Position {
+                            line: 5,
+                            character: 0
+                        }
+                    }),
+                    range_length: Some(0),
+                    text: new_content
+                }
+            ),
+        );
+    }
+
+    #[test]
+    fn remove_content() {
+        let initial_content = "struct Book {\n    string name;\n    string writer;\n    uint id;\n    bool available;\n}\n".to_string();
+        let final_content =
+            "struct Book {\n    string name;\n    string id;\n    bool available;\n}\n".to_string();
+        assert_eq!(
+            final_content,
+            update_file_contents(
+                initial_content,
+                TextDocumentContentChangeEvent {
+                    range: Some(Range {
+                        start: Position {
+                            line: 2,
+                            character: 11
+                        },
+                        end: Position {
+                            line: 3,
+                            character: 9
+                        }
+                    }),
+                    range_length: Some(17),
+                    text: "".to_string(),
+                }
+            ),
+        );
+    }
+
+    #[test]
+    fn add_content() {
+        let initial_content =
+            "struct Book {\n    string name;\n    string id;\n    bool available;\n}\n".to_string();
+        let final_content = "struct Book {\n    string name;\n    string writer;\n    uint id;\n    bool available;\n}\n".to_string();
+        assert_eq!(
+            final_content,
+            update_file_contents(
+                initial_content,
+                TextDocumentContentChangeEvent {
+                    range: Some(Range {
+                        start: Position {
+                            line: 2,
+                            character: 11
+                        },
+                        end: Position {
+                            line: 2,
+                            character: 11
+                        }
+                    }),
+                    range_length: Some(0),
+                    text: "writer;\n    uint ".to_string(),
+                }
+            ),
+        );
+    }
 }
