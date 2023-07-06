@@ -1636,23 +1636,7 @@ fn function_cfg(
     cfg.returns = func.returns.clone();
     cfg.selector = func.selector(ns, &contract_no);
 
-    // a function is public if is not a library and not a base constructor
-    cfg.public = if let Some(base_contract_no) = func.contract_no {
-        !(ns.contracts[base_contract_no].is_library()
-            || func.is_constructor() && contract_no != base_contract_no)
-            && func.is_public()
-    } else {
-        false
-    };
-
-    // if a function is virtual, and it is overriden, do not make it public
-    // Otherwise the runtime function dispatch will have two identical functions to dispatch to
-    if func.is_virtual
-        && Some(ns.contracts[contract_no].virtual_functions[&func.signature]) != function_no
-    {
-        cfg.public = false;
-    }
-
+    cfg.public = ns.function_externally_callable(contract_no, function_no);
     cfg.ty = func.ty;
     cfg.nonpayable = if ns.target.is_polkadot() {
         !func.is_constructor() && !func.is_payable()
@@ -2122,6 +2106,36 @@ impl Contract {
 }
 
 impl Namespace {
+    /// Determine whether a function should be included in the dispatacher and metadata,
+    /// taking inheritance into account.
+    ///
+    /// `function_no` is optional because default constructors require creating a CFG
+    /// without any corresponding function definition for default constructors.
+    pub fn function_externally_callable(
+        &self,
+        contract_no: usize,
+        function_no: Option<usize>,
+    ) -> bool {
+        let default_constructor = &self.default_constructor(contract_no);
+        let func = function_no
+            .map(|n| &self.functions[n])
+            .unwrap_or(default_constructor);
+
+        // If a function is virtual, and it is overriden, do not make it public;
+        // Otherwise the runtime function dispatch will have two identical functions to dispatch to.
+        if func.is_virtual
+            && Some(self.contracts[contract_no].virtual_functions[&func.signature]) != function_no
+        {
+            return false;
+        }
+
+        func.contract_no.is_some_and(|base_contract_no| {
+            !(self.contracts[base_contract_no].is_library()
+                || func.is_constructor() && contract_no != base_contract_no)
+                && func.is_public()
+        })
+    }
+
     /// Type storage
     pub fn storage_type(&self) -> Type {
         if self.target == Target::Solana {

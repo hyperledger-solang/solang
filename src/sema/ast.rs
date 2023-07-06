@@ -515,7 +515,6 @@ impl Function {
             pt::Visibility::Public(_) | pt::Visibility::External(_)
         )
     }
-
     /// Is this function accessable only from same contract
     pub fn is_private(&self) -> bool {
         matches!(self.visibility, pt::Visibility::Private(_))
