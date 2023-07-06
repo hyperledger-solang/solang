@@ -33,7 +33,7 @@ pub fn discriminator(namespace: &'static str, name: &str) -> Vec<u8> {
 }
 
 /// Generate an Anchor IDL for a Solidity contract.
-pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace) -> Idl {
+pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace, contract_version: &str) -> Idl {
     let contract = &ns.contracts[contract_no];
     let docs = idl_docs(&contract.tags);
     let mut type_manager = TypeManager::new(ns, contract_no);
@@ -48,9 +48,7 @@ pub fn generate_anchor_idl(contract_no: usize, ns: &Namespace) -> Idl {
         .map(|id| json!({"address": id.to_base58()}));
 
     Idl {
-        version: Version::parse(env!("CARGO_PKG_VERSION"))
-            .unwrap()
-            .to_string(),
+        version: Version::parse(contract_version).unwrap().to_string(),
         name: ns.contracts[contract_no].name.clone(),
         docs,
         constants: vec![],

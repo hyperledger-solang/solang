@@ -38,6 +38,8 @@ fn test_abstract() {
         false,
         false,
         true,
+        vec!["unknown".to_string()],
+        "0.0.1",
         #[cfg(feature = "wasm_opt")]
         Some(contract_build::OptimizationPasses::Z),
     );
@@ -80,6 +82,8 @@ fn test_abstract() {
         false,
         false,
         true,
+        vec!["unknown".to_string()],
+        "0.0.1",
         #[cfg(feature = "wasm_opt")]
         Some(contract_build::OptimizationPasses::Z),
     );

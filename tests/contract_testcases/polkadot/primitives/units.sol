@@ -8,6 +8,6 @@
             }
         }
 // ---- Expect: diagnostics ----
-// warning: 4:27-34: ethereum currency unit used while targeting polkadot
-// warning: 5:29-34: solana currency unit used while targeting polkadot
+// warning: 4:27-34: ethereum currency unit used while targeting Polkadot
+// warning: 5:29-34: solana currency unit used while targeting Polkadot
 // error: 7:29-34: unknown unit 'dot'

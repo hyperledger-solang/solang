@@ -31,7 +31,7 @@ impl EventEmitter for SolanaEventEmitter<'_> {
     ) {
         let discriminator_image = format!("event:{}", self.ns.events[self.event_no].name);
         let mut hasher = Sha256::new();
-        hasher.update(discriminator_image.as_bytes());
+        hasher.update(discriminator_image);
         let result = hasher.finalize();
 
         let discriminator = Expression::BytesLiteral {

@@ -39,4 +39,4 @@ contract DeleteTest {
 
 }
 // ---- Expect: diagnostics ----
-// error: 25:24-40: either 'address' or 'accounts' call argument is required on solana
+// error: 25:24-40: either 'address' or 'accounts' call argument is required on Solana

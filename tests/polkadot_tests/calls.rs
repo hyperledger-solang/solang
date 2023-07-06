@@ -202,7 +202,7 @@ fn try_catch_external_calls() {
                 try o.test() returns (int32 y, bool) {
                     x = y;
                 } catch (bytes c) {
-                    assert(c == hex"a079c3080c666f6f");
+                    assert(c == hex"08c379a00c666f6f");
                     x = 2;
                 }
                 assert(x == 2);
@@ -464,7 +464,7 @@ fn try_catch_constructor() {
                     x = 1;
                 } catch (bytes c) {
                     print("returns:{}".format(c));
-                    assert(c == hex"a079c3080c666f6f");
+                    assert(c == hex"08c379a00c666f6f");
                     x = 2;
                 }
                 assert(x == 2);

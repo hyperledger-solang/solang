@@ -13,6 +13,8 @@ pub fn generate_abi(
     ns: &Namespace,
     code: &[u8],
     verbose: bool,
+    default_authors: &Vec<String>,
+    version: &str,
 ) -> (String, &'static str) {
     match ns.target {
         Target::Polkadot { .. } => {
@@ -23,7 +25,7 @@ pub fn generate_abi(
                 );
             }
 
-            let metadata = polkadot::metadata(contract_no, code, ns);
+            let metadata = polkadot::metadata(contract_no, code, ns, default_authors, version);
 
             (serde_json::to_string_pretty(&metadata).unwrap(), "contract")
         }
@@ -35,7 +37,7 @@ pub fn generate_abi(
                 );
             }
 
-            let idl = anchor::generate_anchor_idl(contract_no, ns);
+            let idl = anchor::generate_anchor_idl(contract_no, ns, version);
 
             (serde_json::to_string_pretty(&idl).unwrap(), "json")
         }
