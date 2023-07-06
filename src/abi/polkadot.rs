@@ -15,7 +15,8 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use scale_info::{
     form::PortableForm, Field, Path, PortableRegistryBuilder, Type, TypeDef, TypeDefArray,
-    TypeDefComposite, TypeDefPrimitive, TypeDefSequence, TypeDefTuple, TypeDefVariant, Variant,
+    TypeDefComposite, TypeDefPrimitive, TypeDefSequence, TypeDefTuple, TypeDefVariant,
+    TypeParameter, Variant,
 };
 use semver::Version;
 use solang_parser::pt;
@@ -83,6 +84,69 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
     let path = path!(format!("{signed}{scalety}"));
     let ty = Type::new(path, vec![], TypeDef::Primitive(def), Default::default());
     registry.register_type(ty)
+}
+
+/// Build the error type of this contract.
+///
+/// `definitions` is a list of the error name and its type.
+fn error_type(
+    ns: &ast::Namespace,
+    registry: &mut PortableRegistryBuilder,
+    definitions: &[(&str, &ast::Type)],
+) -> u32 {
+    let selector_ty_ast = &ast::Type::Array(
+        ast::Type::Uint(8).into(),
+        vec![ArrayLength::Fixed(4.into())],
+    );
+    let selector = resolve_ast(selector_ty_ast, ns, registry).into();
+    let variants = definitions.iter().map(|(name, ty)| {
+        let tuple = TypeDefTuple::new_portable([selector, resolve_ast(ty, ns, registry).into()]);
+        let field = registry.register_type(tuple.into()).into();
+        Variant {
+            name: name.to_string(),
+            fields: vec![Field::new(None, field, None, Default::default())],
+            index: 0,
+            docs: Default::default(),
+        }
+    });
+    let type_def = TypeDefVariant::new(variants);
+    registry.register_type(Type::new(path!("Error"), vec![], type_def, vec![]))
+}
+
+fn wrap_result(
+    ok: Option<TypeSpec<PortableForm>>,
+    err: TypeSpec<PortableForm>,
+    registry: &mut PortableRegistryBuilder,
+) -> TypeSpec<PortableForm> {
+    let ok = ok.unwrap_or_else(|| {
+        let type_def = TypeDefTuple::new_portable([]);
+        let unit = Type::new(Default::default(), vec![], type_def, vec![]);
+        TypeSpec::new(registry.register_type(unit).into(), Default::default())
+    });
+
+    let params = vec![
+        TypeParameter::new_portable("T".into(), Some(*ok.ty())),
+        TypeParameter::new_portable("E".into(), Some(*err.ty())),
+    ];
+
+    let variants = [
+        Variant {
+            name: "Ok".to_string(),
+            index: 0,
+            docs: vec![],
+            fields: vec![Field::new(None, *ok.ty(), None, Default::default())],
+        },
+        Variant {
+            name: "Err".to_string(),
+            index: 0,
+            docs: vec![],
+            fields: vec![Field::new(None, *err.ty(), None, Default::default())],
+        },
+    ];
+    let type_def = TypeDefVariant::new(variants);
+    let ty = registry.register_type(Type::new(path!("Result"), params, type_def, vec![]));
+    let path = registry.get(ty).unwrap().path.clone();
+    TypeSpec::new(ty.into(), path)
 }
 
 /// Given an `ast::Type`, find and register the `scale_info::Type` definition in the registry
