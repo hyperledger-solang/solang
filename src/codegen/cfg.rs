@@ -20,9 +20,9 @@ use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_traits::One;
 use parse_display::Display;
-use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 use solang_parser::pt::Loc;
+use solang_parser::pt::{self, FunctionTy};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ops::AddAssign;
 use std::str;
@@ -2133,6 +2133,7 @@ impl Namespace {
             !(self.contracts[base_contract_no].is_library()
                 || func.is_constructor() && contract_no != base_contract_no)
                 && func.is_public()
+                && func.ty != FunctionTy::Modifier
         })
     }
 
