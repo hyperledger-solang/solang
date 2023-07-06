@@ -2129,12 +2129,14 @@ impl Namespace {
             return false;
         }
 
-        func.contract_no.is_some_and(|base_contract_no| {
-            !(self.contracts[base_contract_no].is_library()
+        if let Some(base_contract_no) = func.contract_no {
+            return !(self.contracts[base_contract_no].is_library()
                 || func.is_constructor() && contract_no != base_contract_no)
                 && func.is_public()
                 && func.ty != FunctionTy::Modifier
-        })
+        }
+
+        false
     }
 
     /// Type storage
