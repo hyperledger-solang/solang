@@ -40,7 +40,7 @@ fn revert() {
     runtime.function_expect_failure("a", Vec::new());
 
     let expected_error = (
-        0x08c379a0u32.to_le_bytes(), // "selector" of "Error(string)"
+        0x08c379a0u32.to_be_bytes(), // "selector" of "Error(string)"
         "revert value has to be passed down the stack".to_string(),
     );
     assert_eq!(runtime.output(), expected_error.encode());
