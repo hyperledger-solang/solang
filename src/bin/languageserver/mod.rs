@@ -1168,30 +1168,42 @@ impl LanguageServer for SolangServer {
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         let uri = params.text_document.uri;
 
-        if let Ok(path) = uri.to_file_path() {
-            self.files
-                .lock()
-                .await
-                .text_buffers
-                .insert(path, params.text_document.text);
+        match uri.to_file_path() {
+            Ok(path) => {
+                self.files
+                    .lock()
+                    .await
+                    .text_buffers
+                    .insert(path, params.text_document.text);
+                self.parse_file(uri).await;
+            }
+            Err(_) => {
+                self.client
+                    .log_message(MessageType::ERROR, format!("received invalid URI: {}", uri))
+                    .await;
+            }
         }
-
-        self.parse_file(uri).await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         let uri = params.text_document.uri;
 
-        if let Ok(path) = uri.to_file_path() {
-            if let Some(text_buf) = self.files.lock().await.text_buffers.get_mut(&path) {
-                *text_buf = params
-                    .content_changes
-                    .into_iter()
-                    .fold(text_buf.clone(), update_file_contents);
+        match uri.to_file_path() {
+            Ok(path) => {
+                if let Some(text_buf) = self.files.lock().await.text_buffers.get_mut(&path) {
+                    *text_buf = params
+                        .content_changes
+                        .into_iter()
+                        .fold(text_buf.clone(), update_file_contents);
+                }
+                self.parse_file(uri).await;
+            }
+            Err(_) => {
+                self.client
+                    .log_message(MessageType::ERROR, format!("received invalid URI: {}", uri))
+                    .await;
             }
         }
-
-        self.parse_file(uri).await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
