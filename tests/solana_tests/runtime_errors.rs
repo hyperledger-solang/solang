@@ -107,6 +107,10 @@ contract RuntimeErrors {
         return b32;
     }
 
+    function revert_with_message() public pure {
+        revert("I reverted!");
+    }
+
 }
 
 @program_id("Crea1hXZv5Snuvs38GW2SJ1vJQ2Z5uBavUnwPwpiaDiQ")
@@ -306,4 +310,11 @@ contract calle_contract {
     );
 
     vm.logs.clear();
+
+    _res = vm.function_must_fail("revert_with_message", &[]);
+    assert_eq!(
+        vm.logs,
+        "runtime_error: I reverted! revert encountered in test.sol:103:9-30,\n"
+    );
+    assert!(vm.return_data.is_none());
 }
