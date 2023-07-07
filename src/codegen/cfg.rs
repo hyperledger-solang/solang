@@ -2106,11 +2106,11 @@ impl Contract {
 }
 
 impl Namespace {
-    /// Determine whether a function should be included in the dispatacher and metadata,
+    /// Determine whether a function should be included in the dispatcher and metadata,
     /// taking inheritance into account.
     ///
     /// `function_no` is optional because default constructors require creating a CFG
-    /// without any corresponding function definition for default constructors.
+    /// without any corresponding function definition.
     pub fn function_externally_callable(
         &self,
         contract_no: usize,
