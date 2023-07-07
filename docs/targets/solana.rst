@@ -455,10 +455,10 @@ and `system_instruction.spec.ts <https://github.com/hyperledger/solang/blob/main
 Minimum balance
 +++++++++++++++
 
-In order to instantiate a contract, you need the minimum balance required for an Solana account for a given
+In order to instantiate a contract, you need the minimum balance required for a Solana account of a given
 size.  There is a function `minimum_balance(uint64 space)` defined in
 `minimum_balance.sol <https://github.com/hyperledger/solang/blob/main/solana-library/minimum_balance.sol>`_
-which calculates this.
+that calculates this.
 
 Solana Account Management
 _________________________
