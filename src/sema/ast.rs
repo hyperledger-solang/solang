@@ -512,7 +512,7 @@ impl Function {
     ///
     /// Due to inheritance, this alone does not determine whether a function is
     /// externally callable in the final contract artifact; for that use
-    /// `Namesapce::function_externally_callable()` instead.
+    /// `Namespace::function_externally_callable()` instead.
     pub fn is_public(&self) -> bool {
         matches!(
             self.visibility,
