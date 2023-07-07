@@ -30,7 +30,7 @@ pub struct ResolvedFile {
     /// Full path on the filesystem
     pub full_path: PathBuf,
     /// Which import path was used, if any
-    import_no: usize,
+    pub import_no: usize,
     // Base part relative to import
     base: PathBuf,
 }
@@ -58,6 +58,11 @@ impl FileResolver {
         Ok(())
     }
 
+    /// Get the import path and the optional mapping corresponding to `import_no`.
+    pub fn get_import_path(&self, import_no: usize) -> Option<&(Option<OsString>, PathBuf)> {
+        self.import_paths.get(import_no)
+    }
+
     /// Add import map
     pub fn add_import_map(&mut self, map: OsString, path: PathBuf) -> io::Result<()> {
         if self
@@ -72,6 +77,18 @@ impl FileResolver {
         } else {
             self.import_paths.push((Some(map), path.canonicalize()?));
             Ok(())
+        }
+    }
+
+    /// Get the import path corresponding to a map
+    pub fn get_import_map(&self, map: &OsString) -> Option<&PathBuf> {
+        match self
+            .import_paths
+            .iter()
+            .find(|(m, _)| m.as_ref() == Some(map))
+        {
+            Some((_, pb)) => Some(pb),
+            None => None,
         }
     }
 
@@ -92,6 +109,44 @@ impl FileResolver {
     /// Get the ResolvedFile associated with the `file_no`th `File`
     pub fn get_resolved_file(&self, file_no: usize) -> Option<ResolvedFile> {
         self.resolved_files.get(file_no).cloned()
+    }
+
+    /// Get the Solidity name of an `ast::File`. The Solidity name is the name
+    /// relative to the import path of this file.
+    pub fn get_solidity_name(&self, file: &ast::File) -> Option<String> {
+        let cache_no = match file.cache_no {
+            Some(cache_no) => cache_no,
+            _ => {
+                return None;
+            }
+        };
+
+        let import_no = if let Some(resolved_file) = self.resolved_files.get(cache_no) {
+            resolved_file.import_no
+        } else {
+            return None;
+        };
+
+        let full_path = &file.path;
+
+        return match self.import_paths.get(import_no) {
+            Some((map, import_path)) => {
+                let rel_path = if let Ok(rel_path) = full_path.strip_prefix(import_path) {
+                    rel_path
+                } else {
+                    panic!(
+                        "File at path {} should be prefixed by import path {}",
+                        full_path.display(),
+                        import_path.display()
+                    );
+                };
+                match map {
+                    Some(map) => Some(format!("{}/{}", map.to_str().unwrap(), rel_path.display())),
+                    None => Some(format!("{}", rel_path.display())),
+                }
+            }
+            None => None,
+        };
     }
 
     /// Get file with contents. This must be a file which was previously
