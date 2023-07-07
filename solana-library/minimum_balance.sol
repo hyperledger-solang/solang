@@ -3,6 +3,10 @@
 // Disclaimer: This library provides functions for working with storage rent. Although it is production ready,
 // it has not been audited for security, so use it at your own risk.
 
+// This is the Solidity version of the rust module rent:
+// https://github.com/solana-labs/solana/blob/master/sdk/program/src/rent.rs
+// As rent is currently not implemented on Solana, only the minimum balance is required.
+
 /// Default rental rate in lamports/byte-year.
 ///
 /// This calculation is based on:
@@ -14,7 +18,6 @@ uint64 constant DEFAULT_LAMPORTS_PER_BYTE_YEAR = 1_000_000_000 / 100 * 365 / (10
 
 /// Default amount of time (in years) the balance has to include rent for the
 /// account to be rent exempt.
-/// Note that rent is currently not
 uint64 constant DEFAULT_EXEMPTION_THRESHOLD = 2;
 
 /// Account storage overhead for calculation of base rent.
