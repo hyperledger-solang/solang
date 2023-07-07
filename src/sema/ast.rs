@@ -508,7 +508,11 @@ impl Function {
         matches!(self.mutability, Mutability::Pure(_))
     }
 
-    /// Is this function accessable externally
+    /// Is this function visible externally, based on it's visibilty modifiers.
+    ///
+    /// Due to inheritance, this alone does not determine whether a function is
+    /// externally callable in the final contract artifact; for that, use
+    /// `Namespace::function_externally_callable()` instead.
     pub fn is_public(&self) -> bool {
         matches!(
             self.visibility,

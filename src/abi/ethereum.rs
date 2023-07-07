@@ -79,29 +79,10 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
         .keys()
         .filter_map(|function_no| {
             let func = &ns.functions[*function_no];
-
-            if let Some(base_contract_no) = func.contract_no {
-                if ns.contracts[base_contract_no].is_library() {
-                    return None;
-                }
-
-                if func.ty == pt::FunctionTy::Constructor && base_contract_no != contract_no {
-                    return None;
-                }
+            if ns.function_externally_callable(contract_no, Some(*function_no)) {
+                return Some(func);
             }
-
-            if !matches!(
-                func.visibility,
-                pt::Visibility::Public(_) | pt::Visibility::External(_)
-            ) {
-                return None;
-            }
-
-            if func.ty == pt::FunctionTy::Modifier || !func.has_body {
-                return None;
-            }
-
-            Some(func)
+            None
         })
         .map(|func| ABI {
             name: func.name.to_owned(),
