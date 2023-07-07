@@ -189,19 +189,12 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let size = bin.builder.build_int_mul(elem_size, new_len, "");
             let size = bin.builder.build_int_add(size, vec_size, "");
 
-            let realloc_size = if ns.target == Target::Solana {
-                bin.builder
-                    .build_int_z_extend(size, bin.context.i64_type(), "")
-            } else {
-                size
-            };
-
             // Reallocate and reassign the array pointer
             let new = bin
                 .builder
                 .build_call(
                     bin.module.get_function("__realloc").unwrap(),
-                    &[arr.into(), realloc_size.into()],
+                    &[arr.into(), size.into()],
                     "",
                 )
                 .try_as_basic_value()
@@ -298,7 +291,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_conditional_branch(is_array_empty, error, pop);
 
             bin.builder.position_at_end(error);
-            target.log_runtime_error(bin, "pop from empty array".to_string(), Some(*loc), ns);
+            bin.log_runtime_error(target, "pop from empty array".to_string(), Some(*loc), ns);
             target.assert_failure(
                 bin,
                 bin.context
@@ -355,19 +348,11 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             }
 
             // Reallocate and reassign the array pointer
-
-            let realloc_size = if ns.target == Target::Solana {
-                bin.builder
-                    .build_int_z_extend(size, bin.context.i64_type(), "")
-            } else {
-                size
-            };
-
             let new = bin
                 .builder
                 .build_call(
                     bin.module.get_function("__realloc").unwrap(),
-                    &[a.into(), realloc_size.into()],
+                    &[a.into(), size.into()],
                     "",
                 )
                 .try_as_basic_value()
@@ -789,15 +774,10 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 None
             };
 
-            let success = match success {
-                Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
-                None => None,
-            };
-
             target.create_contract(
                 bin,
                 function,
-                success,
+                success.map(|n| &mut w.vars.get_mut(&n).unwrap().value),
                 *contract_no,
                 address_stack,
                 encoded_args,
@@ -1103,6 +1083,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
         }
 
         Instr::Unimplemented { .. } => unimplemented!(),
+        Instr::AccountAccess { .. } => {
+            unreachable!("Instr::AccountAccess shall never appear in the CFG")
+        }
     }
 }
 

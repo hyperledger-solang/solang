@@ -148,7 +148,7 @@ as a function argument, for instance, the length is unknown.
 ``wasm-opt`` optimization passes
 --------------------------------
 
-For the Substrate target, optimization passes from the `binaryen <https://github.com/WebAssembly/binaryen>`_ ``wasm-opt`` 
+For the Polkadot target, optimization passes from the `binaryen <https://github.com/WebAssembly/binaryen>`_ ``wasm-opt`` 
 tool can be applied. This may shrink the Wasm code size and makes it more efficient.
 
 Use the ``--wasm-opt`` compile flag to enable ``wasm-opt`` optimizations. Possible values are 
@@ -190,7 +190,7 @@ The contract will print the return code of runtime calls by default, and this fe
 
 .. note::
 
-    This is only implemented for the Substrate target.
+    This is only implemented for the Polkadot target.
 
 
 .. _no-log-runtime-errors:

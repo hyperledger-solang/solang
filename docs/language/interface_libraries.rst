@@ -7,7 +7,7 @@ __________
 An interface is a contract sugar type with restrictions. This type cannot be instantiated; it can only define the
 functions prototypes for a contract. This is useful as a generic interface.
 
-.. include:: ../examples/substrate/interface.sol
+.. include:: ../examples/polkadot/interface.sol
   :code: solidity
 
 - Interfaces can only have other interfaces as a base contract
@@ -36,10 +36,10 @@ When writing libraries there are restrictions compared to contracts:
 
 .. note::
 
-    When using the Ethereum Foundation Solidity compiler, library are a special contract type and libraries are
-    called using `delegatecall`. Parity Substrate has no ``delegatecall`` functionality so Solang statically
-    links the library calls into your contract code. This does make for larger contract code, however this
-    reduces the call overhead and make it possible to do compiler optimizations across library and contract code.
+    When using the Ethereum Foundation Solidity compiler, libraries are a special contract type and are
+    called using `delegatecall`. Solang statically links the library calls into your contract code.
+    This generates larger contract code, however it reduces the call overhead and make it possible to do
+    compiler optimizations across library and contract code.
 
 Library Using For
 _________________

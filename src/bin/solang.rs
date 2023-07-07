@@ -12,6 +12,7 @@ use solang::{
     file_resolver::FileResolver,
     sema::{ast::Namespace, file::PathDisplay},
     standard_json::{EwasmContract, JsonContract, JsonResult},
+    Target,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -81,7 +82,7 @@ fn read_toml_config(path: &OsString) -> Compile {
 fn new_command(args: New) {
     let target = args.target_name.as_str();
 
-    // Default project name is "solana_project" or "substrate_project"
+    // Default project name is "solana_project" or "polkadot_project"
     let default_path = OsString::from(format!("{target}_project"));
 
     let dir_path = args.project_name.unwrap_or(default_path);
@@ -93,7 +94,7 @@ fn new_command(args: New) {
 
     let flipper = match target {
         "solana" => include_str!("./solang_new_examples/solana/flipper.sol"),
-        "substrate" => include_str!("./solang_new_examples/substrate/flipper.sol"),
+        "polkadot" => include_str!("./solang_new_examples/polkadot/flipper.sol"),
         "evm" => {
             eprintln!("EVM target is not supported yet!");
             exit(1);
@@ -110,7 +111,7 @@ fn new_command(args: New) {
 
     let toml_content = match target {
         "solana" => include_str!("./solang_new_examples/solana/solana_config.toml"),
-        "substrate" => include_str!("./solang_new_examples/substrate/substrate_config.toml"),
+        "polkadot" => include_str!("./solang_new_examples/polkadot/polkadot_config.toml"),
         _ => unreachable!(),
     };
     toml_file
@@ -241,6 +242,21 @@ fn compile(compile_args: &Compile) {
     if !errors {
         let mut seen_contracts = HashMap::new();
 
+        let authors = if let Some(authors) = &compile_args.package.authors {
+            if target == Target::Solana {
+                eprintln!("warning: the `authors` flag will be ignored for solana target")
+            }
+            authors.clone()
+        } else {
+            vec!["unknown".to_string()]
+        };
+
+        let version = if let Some(version) = &compile_args.package.version {
+            version
+        } else {
+            "0.0.1"
+        };
+
         for ns in namespaces.iter_mut() {
             for contract_no in 0..ns.contracts.len() {
                 contract_results(
@@ -250,6 +266,8 @@ fn compile(compile_args: &Compile) {
                     &mut json_contracts,
                     &mut seen_contracts,
                     &opt,
+                    &authors,
+                    version,
                 );
             }
         }
@@ -326,6 +344,8 @@ fn contract_results(
     json_contracts: &mut HashMap<String, JsonContract>,
     seen_contracts: &mut HashMap<String, String>,
     opt: &Options,
+    default_authors: &Vec<String>,
+    version: &str,
 ) {
     let verbose = compiler_output.verbose;
     let std_json = compiler_output.std_json_output;
@@ -386,7 +406,7 @@ fn contract_results(
     let code = binary.code(Generate::Linked).expect("llvm build");
 
     #[cfg(feature = "wasm_opt")]
-    if let Some(level) = opt.wasm_opt.filter(|_| ns.target.is_substrate() && verbose) {
+    if let Some(level) = opt.wasm_opt.filter(|_| ns.target.is_polkadot() && verbose) {
         eprintln!(
             "info: wasm-opt level '{}' for contract {}",
             level, resolved_contract.name
@@ -424,7 +444,8 @@ fn contract_results(
 
         file.write_all(&code).unwrap();
 
-        let (metadata, meta_ext) = abi::generate_abi(contract_no, ns, &code, verbose);
+        let (metadata, meta_ext) =
+            abi::generate_abi(contract_no, ns, &code, verbose, default_authors, version);
         let meta_filename = output_file(compiler_output, &binary.name, meta_ext, true);
 
         if verbose {

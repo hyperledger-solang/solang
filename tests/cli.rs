@@ -109,14 +109,14 @@ fn basic_compilation_from_toml() {
         .assert()
         .success();
 
-    let substrate_test = tmp.path().join("substrate_test");
+    let polkadot_test = tmp.path().join("polkadot_test");
     let _new_cmd = Command::cargo_bin("solang")
         .unwrap()
         .arg("new")
-        .arg(substrate_test.clone())
+        .arg(polkadot_test.clone())
         .args(["--target", "solana"])
         .assert()
         .success();
 
-    compile_cmd.current_dir(substrate_test).assert().success();
+    compile_cmd.current_dir(polkadot_test).assert().success();
 }

@@ -88,7 +88,7 @@ pub fn strength_reduce(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
 
     // now we have all the reaching values for the top of each block
     // we can now step through each block and do any strength reduction where possible
-    for (block_no, vars) in block_vars.into_iter() {
+    for (block_no, vars) in block_vars {
         block_reduce(block_no, cfg, vars, ns);
     }
 }

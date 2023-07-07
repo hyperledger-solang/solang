@@ -365,7 +365,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
 
         let var_id = self.expr_map[&key];
         let var_node = self.expression_memory[&var_id].clone();
-        for (child_id, node) in &var_node.borrow_mut().children {
+        for (child_id, node) in &var_node.borrow().children {
             self.kill_child(node, var_id);
             self.expression_memory.remove(child_id);
         }

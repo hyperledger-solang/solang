@@ -30,8 +30,8 @@ You can choose between the following targets:
 solana
    Solidity for Solana
 
-substrate
-   Solidity for Substrate (Polkadot)
+polkadot
+   Solidity for Polkadot (Substrate contracts pallet)
 
 evm
    Solidity for any EVM based chain like Ethereum

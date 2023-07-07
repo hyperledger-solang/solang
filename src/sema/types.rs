@@ -837,10 +837,10 @@ fn event_decl(
                 loc: name.loc,
             })
         } else {
-            if ns.target.is_substrate() && field.indexed {
+            if ns.target.is_polkadot() && field.indexed {
                 ns.diagnostics.push(Diagnostic::error(
                     field.loc,
-                    "indexed event fields must have a name on substrate".into(),
+                    "indexed event fields must have a name on polkadot".into(),
                 ));
             }
             None

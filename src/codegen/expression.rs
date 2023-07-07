@@ -907,7 +907,7 @@ pub fn expression(
             if opt.log_prints {
                 let expr = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
 
-                let to_print = if ns.target.is_substrate() {
+                let to_print = if ns.target.is_polkadot() {
                     add_prefix_and_delimiter_to_print(expr)
                 } else {
                     expr
@@ -970,7 +970,7 @@ pub fn expression(
             args,
             ..
         } => abi_encode_call(args, cfg, contract_no, func, ns, vartab, loc, opt),
-        // The Substrate gas price builtin takes an argument; the others do not
+        // The Polkadot gas price builtin takes an argument; the others do not
         ast::Expression::Builtin {
             loc,
             kind: ast::Builtin::Gasprice,
@@ -1096,6 +1096,36 @@ pub fn expression(
                 loc: *loc,
                 ty: ty.clone(),
                 var_no: var,
+            }
+        }
+        ast::Expression::NamedMember {
+            loc, array, name, ..
+        } => {
+            // This expression should only exist for Solana's AccountInfo array
+            assert_eq!(
+                array.ty().deref_memory(),
+                &Type::Array(
+                    Box::new(Type::Struct(StructType::AccountInfo)),
+                    vec![ArrayLength::Dynamic]
+                )
+            );
+            // Variables do not really occupy space in the stack. We forward expressions in emit
+            // without allocating memory whenever we use a variable.
+            let ty = Type::Ref(Box::new(Type::Struct(StructType::AccountInfo)));
+            let var_placeholder = vartab.temp_anonymous(&ty);
+            cfg.add(
+                vartab,
+                Instr::AccountAccess {
+                    loc: *loc,
+                    name: name.clone(),
+                    var_no: var_placeholder,
+                },
+            );
+
+            Expression::Variable {
+                loc: *loc,
+                var_no: var_placeholder,
+                ty,
             }
         }
     }
@@ -1557,8 +1587,8 @@ fn require(
         .get(1)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
     match ns.target {
-        // On Solana and Substrate, print the reason, do not abi encode it
-        Target::Solana | Target::Substrate { .. } => {
+        // On Solana and Polkadot, print the reason, do not abi encode it
+        Target::Solana | Target::Polkadot { .. } => {
             if opt.log_runtime_errors {
                 if let Some(expr) = expr {
                     let prefix = b"runtime_error: ";
@@ -2516,7 +2546,7 @@ fn interfaceid(ns: &Namespace, contract_no: usize, loc: &pt::Loc) -> Expression 
     Expression::BytesLiteral {
         loc: *loc,
         ty: Type::Bytes(selector_len),
-        value: id.to_vec(),
+        value: id.clone(),
     }
 }
 
@@ -3590,7 +3620,7 @@ pub(super) fn assert_failure(
     let selector = 0x08c3_79a0u32;
     let selector = Expression::NumberLiteral {
         loc: Loc::Codegen,
-        ty: Type::Uint(32),
+        ty: Type::Bytes(4),
         value: BigInt::from(selector),
     };
     let args = vec![selector, arg.unwrap()];
@@ -3667,8 +3697,8 @@ pub(crate) fn log_runtime_error(
     ns: &Namespace,
 ) {
     if report_error {
-        let error_with_loc = error_msg_with_loc(ns, reason, Some(reason_loc));
-        let expr = string_to_expr(error_with_loc + ",\n");
+        let error_with_loc = error_msg_with_loc(ns, reason.to_string(), Some(reason_loc));
+        let expr = string_to_expr(error_with_loc);
         cfg.add(vartab, Instr::Print { expr });
     }
 }

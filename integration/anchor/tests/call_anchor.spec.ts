@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { AnchorProvider, Program } from '@project-serum/anchor';
+import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import {
     PublicKey, AccountMeta,
     Keypair, Signer,

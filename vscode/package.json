@@ -27,7 +27,7 @@
 					"type": "string",
 					"enum": [
 						"solana",
-						"substrate",
+						"polkadot",
 						"evm"
 					],
 					"default": "solana",
@@ -42,6 +42,16 @@
 					"type": "string",
 					"default": "",
 					"description": "Use the executable at this path and do not download or update solang. Leave this empty for automatic download."
+				},
+				"solidity.trace.server": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"default": "verbose"
 				}
 			}
 		},

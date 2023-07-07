@@ -48,6 +48,8 @@ contract Child {
     @payer(payer)
     @space(511 + 7)
     constructor() {
+        assert(tx.accounts.payer.is_signer);
+        assert(tx.accounts.payer.is_writable);
         print("In child constructor");
     }
 

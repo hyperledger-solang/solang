@@ -4,10 +4,10 @@ This directroy contains integration tests against a real node using `subxt`.
 
 ## How to execute the tests
 
-The test cases requires compiled versions of the contracts from the `substrate` integration test suite inside the `./outputs` dir. To compile everything, run:
+The test cases requires compiled versions of the contracts from the `polkadot` integration test suite inside the `./outputs` dir. To compile everything, run:
 
 ```bash
-parallel solang compile -v --target substrate --release -o ./contracts/ ::: ../substrate/*.sol ../substrate/test/*.sol
+parallel solang compile -v --target polkadot --wasm-opt z -o ./contracts/ ::: ../polkadot/*.sol ../polkadot/test/*.sol
 ```
 
 Make sure to start a [solang-substrate-ci node](https://github.com/hyperledger/solang-substrate-ci) or a [substrate-contracts-node](https://github.com/paritytech/substrate-contracts-node) on the test host.

@@ -442,7 +442,10 @@ fn collect_annotations_doccomments<'a>(
 
             for part in &contract.parts {
                 match part {
-                    pt::ContractPart::Annotation(note) => parts_annotations.push(note),
+                    pt::ContractPart::Annotation(note) => {
+                        parts_annotations.push(note);
+                        continue;
+                    }
                     _ => {
                         let tags =
                             parse_doccomments(comments, doc_comment_start, part.loc().start());

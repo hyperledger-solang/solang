@@ -15,7 +15,7 @@ mod tests {
 
     #[test]
     fn parse_compile_options() {
-        let mut command: Vec<&str> = "solang compile flipper.sol --target substrate --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ').collect();
+        let mut command: Vec<&str> = "solang compile flipper.sol --target polkadot --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ').collect();
         let mut cli = Cli::parse_from(command);
 
         if let Commands::Compile(compile_args) = cli.command {
@@ -23,7 +23,7 @@ mod tests {
                 compile_args.package.input.unwrap(),
                 vec![PathBuf::from("flipper.sol")]
             );
-            assert_eq!(compile_args.target_arg.name.unwrap(), "substrate");
+            assert_eq!(compile_args.target_arg.name.unwrap(), "polkadot");
             assert_eq!(compile_args.target_arg.address_length.unwrap(), 33_u64);
             assert_eq!(compile_args.target_arg.value_length.unwrap(), 31_u64);
             assert!(!compile_args.optimizations.common_subexpression_elimination,);
@@ -34,7 +34,7 @@ mod tests {
             assert_eq!(compile_args.optimizations.opt_level.unwrap(), "aggressive");
         }
 
-        command = "solang compile flipper.sol --target substrate --no-log-runtime-errors --no-prints --no-log-api-return-codes -g --release".split(' ').collect();
+        command = "solang compile flipper.sol --target polkadot --no-log-runtime-errors --no-prints --no-log-api-return-codes -g --release".split(' ').collect();
         cli = Cli::parse_from(command);
 
         if let Commands::Compile(compile_args) = cli.command {
@@ -127,13 +127,13 @@ mod tests {
     #[test]
     fn parse_target() {
         let target_toml = r#"
-        name = "substrate"  # Valid targets are "solana" and "substrate"
+        name = "polkadot"  # Valid targets are "solana" and "polkadot"
         address_length = 32
         value_length = 16"#;
 
         let target: cli::CompileTargetArg = toml::from_str(target_toml).unwrap();
 
-        assert_eq!(target.name.unwrap(), "substrate");
+        assert_eq!(target.name.unwrap(), "polkadot");
         assert_eq!(target.address_length.unwrap(), 32);
         assert_eq!(target.value_length.unwrap(), 16);
     }
@@ -175,7 +175,9 @@ mod tests {
                     input: Some(vec![PathBuf::from("flipper.sol")]),
                     contracts: Some(vec!["flipper".to_owned()]),
                     import_path: Some(vec![]),
-                    import_map: Some(vec![])
+                    import_map: Some(vec![]),
+                    authors: None,
+                    version: Some("0.1.0".to_string())
                 },
                 compiler_output: cli::CompilerOutput {
                     emit: None,
@@ -209,7 +211,7 @@ mod tests {
             }
         );
 
-        let command = "solang compile flipper.sol sesa.sol --config-file solang.toml --target substrate --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ');
+        let command = "solang compile flipper.sol sesa.sol --config-file solang.toml --contract-authors not_sesa --target polkadot --value-length=31 --address-length=33 --no-dead-storage --no-constant-folding --no-strength-reduce --no-vector-to-slice --no-cse -O aggressive".split(' ');
 
         let matches = Cli::command().get_matches_from(command);
 
@@ -228,7 +230,9 @@ mod tests {
                     ]),
                     contracts: Some(vec!["flipper".to_owned()]),
                     import_path: Some(vec![]),
-                    import_map: Some(vec![])
+                    import_map: Some(vec![]),
+                    authors: Some(vec!["not_sesa".to_owned()]),
+                    version: Some("0.1.0".to_string())
                 },
                 compiler_output: cli::CompilerOutput {
                     emit: None,
@@ -238,7 +242,7 @@ mod tests {
                     verbose: false
                 },
                 target_arg: cli::CompileTargetArg {
-                    name: Some("substrate".to_owned()),
+                    name: Some("polkadot".to_owned()),
                     address_length: Some(33),
                     value_length: Some(31)
                 },

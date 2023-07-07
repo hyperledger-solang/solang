@@ -90,15 +90,15 @@ fn assert_compile(dir: &str, target: Target) {
 }
 
 #[test]
-fn substrate_general() {
-    assert_compile("examples", Target::default_substrate());
-    assert_compile("docs/examples/", Target::default_substrate());
+fn polkadot_general() {
+    assert_compile("examples", Target::default_polkadot());
+    assert_compile("docs/examples/", Target::default_polkadot());
 }
 
 #[test]
-fn substrate_specific() {
-    assert_compile("docs/examples/substrate/", Target::default_substrate());
-    assert_compile("examples/substrate/", Target::default_substrate());
+fn polkadot_specific() {
+    assert_compile("docs/examples/polkadot/", Target::default_polkadot());
+    assert_compile("examples/polkadot/", Target::default_polkadot());
 }
 
 #[test]

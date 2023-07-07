@@ -1589,7 +1589,7 @@ contract foo {
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
-    assert!(ns.diagnostics.contains_message("builtin 'gaslimit' is not available for target solana. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
+    assert!(ns.diagnostics.contains_message("builtin 'gaslimit' is not available for target Solana. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
 
     let file = r#"
 contract foo {
@@ -1607,13 +1607,13 @@ contract foo {
     let ns = parse_and_resolve(
         OsStr::new("test.sol"),
         &mut cache,
-        Target::Substrate {
+        Target::Polkadot {
             address_length: 32,
             value_length: 16,
         },
     );
 
-    assert!(ns.diagnostics.contains_message("builtin 'coinbase' is not available for target substrate. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
+    assert!(ns.diagnostics.contains_message("builtin 'coinbase' is not available for target Polkadot. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
 
     let file = r#"
     contract foo {
@@ -1630,5 +1630,5 @@ contract foo {
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
 
-    assert!(ns.diagnostics.contains_message("builtin 'log0' is not available for target solana. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
+    assert!(ns.diagnostics.contains_message("builtin 'log0' is not available for target Solana. Please, open a GitHub issue at https://github.com/hyperledger/solang/issues if there is need to support this function"));
 }

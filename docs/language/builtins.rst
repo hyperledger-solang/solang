@@ -49,10 +49,10 @@ uint128 ``msg.value``
 bytes ``msg.data``
     The raw ABI encoded arguments passed to the current call.
 
-bytes4 (Substrate) or bytes8 (Solana) ``msg.sig``
+bytes4 (Polkadot) or bytes8 (Solana) ``msg.sig``
     Function selector (or discriminator for Solana) from the encoded calldata,
     e.g. the first four or eight bytes. This might be 0 if no function selector was present.
-    In Ethereum, constructor calls do not have function selectors but in Parity Substrate they do.
+    In Ethereum, constructor calls do not have function selectors but in Polkadot they do.
     On Solana, selectors are called discriminators.
 
 address ``msg.sender``
@@ -66,7 +66,7 @@ address ``msg.sender``
 .. _gasprice:
 
 uint128 ``tx.gasprice``
-    The price of one unit of gas. This field cannot be used on Parity Substrate,
+    The price of one unit of gas. This field cannot be used on Polkadot,
     see the warning box below.
 
 .. note::
@@ -79,7 +79,7 @@ uint128 ``tx.gasprice(uint64 gas)``
     The total price of `gas` units of gas.
 
 .. warning::
-    On Parity Substrate, the cost of one gas unit may not be an exact whole round value. In fact,
+    On Polkadot, the cost of one gas unit may not be an exact whole round value. In fact,
     if the gas price is less than 1 it may round down to 0, giving the incorrect appearance gas is free.
     Therefore, avoid the ``tx.gasprice`` member in favour of the function ``tx.gasprice(uint64 gas)``.
 
@@ -100,7 +100,7 @@ uint128 ``tx.gasprice(uint64 gas)``
     Note this function is not available on the Ethereum Foundation Solidity compiler.
 
 address ``tx.origin``
-    The address that started this transaction. Not available on Parity Substrate or Solana.
+    The address that started this transaction. Not available on Polkadot or Solana.
 
 AccountInfo[] ``tx.accounts``
     Only available on Solana. See :ref:`account_info`. Here is an example:
@@ -142,8 +142,8 @@ Solana
 uint64 ``block.slot``
     The current slot. This is an alias for ``block.number``.
 
-Parity Substrate
-~~~~~~~~~~~~~~~~
+Polkadot
+~~~~~~~~
 
 uint128 ``block.minimum_deposit``
     The minimum amonut needed to create a contract. This does not include
@@ -202,7 +202,7 @@ to identify what the problem is.
 ABI encoding and decoding
 _________________________
 
-The ABI encoding depends on the target being compiled for. Substrate uses the
+The ABI encoding depends on the target being compiled for. Polkadot uses the
 `SCALE Codec <https://docs.substrate.io/reference/scale-codec/>`_.
 
 abi.decode(bytes, (*type-list*))
@@ -233,7 +233,7 @@ ABI encodes the arguments to bytes. Any number of arguments can be provided.
     uint16 x = 241;
     bytes foo = abi.encode(x);
 
-On Substrate, foo will be ``hex"f100"``. On Ethereum this will be ``hex"00000000000000000000000000000000000000000000000000000000000000f1"``.
+On Polkadot, foo will be ``hex"f100"``. On Ethereum this will be ``hex"00000000000000000000000000000000000000000000000000000000000000f1"``.
 
 abi.encodeWithSelector(selector, ...)
 ++++++++++++++++++++++++++++++++++++++++++++
@@ -244,7 +244,7 @@ After the selector, any number of arguments can be provided.
 .. code-block:: solidity
 
     // An eight-byte selector (discriminator) is exclusive for Solana.
-    // On Substrate, the selector contains four bytes. hex"01020304" is an example.
+    // On Polkadot, the selector contains four bytes. hex"01020304" is an example.
     bytes foo = abi.encodeWithSelector(hex"0102030405060708", uint16(0xff00));
 
 On Solana, foo will be ``hex"080706050403020100ff"``. In addition, a discriminator for a Solidity function on Solana
@@ -261,7 +261,7 @@ abi.encodeWithSignature(string signature, ...)
 ABI encodes the arguments with the hash of the signature. After the signature, any number of arguments
 can be provided.
 
-On Substrate, the signature is the name of the function followed by its arguments, for example:
+On Polkadot, the signature is the name of the function followed by its arguments, for example:
 
 .. code-block:: solidity
 
@@ -291,7 +291,7 @@ bytes will be encoded, not the length. It is not possible to decode packed encod
 
     bytes foo = abi.encodePacked(uint16(0xff00), "ABCD");
 
-On Substrate, foo will be ``hex"00ff41424344"``. On Ethereum this will be ``hex"ff0041424344"``.
+On Polkadot, foo will be ``hex"00ff41424344"``. On Ethereum this will be ``hex"ff0041424344"``.
 
 abi.encodeCall(function, ...)
 +++++++++++++++++++++++++++++
@@ -305,16 +305,16 @@ are cast and checked against the function specified as the first argument.
 Hash
 ++++
 
-Only available on Substrate, it represents the ``Hash`` type from ``ink_primitives`` via user type definition.
+Only available on Polkadot, it represents the ``Hash`` type from ``ink_primitives`` via user type definition.
 Its underlying type is ``bytes32``, but it will be reported correctly as the ``Hash`` type in the metadata.
 
-.. include:: ../examples/substrate/hash_type.sol
+.. include:: ../examples/polkadot/hash_type.sol
   :code: solidity
 
 chain_extension(uint32 ID, bytes input) returns (uint32, bytes)
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Only available on Substrate. Call the chain extension with the given ``ID`` and ``input`` data.
+Only available on Polkadot. Call the chain extension with the given ``ID`` and ``input`` data.
 Returns the return value from the chain extension and the output data.
 
 This function is a low level interface.
@@ -338,13 +338,37 @@ The following example demonstrates the usage of this builtin function.
 It shows how the chain extension example from the `ink! documentation <https://use.ink/macros-attributes/chain-extension/>`_
 looks like in a solidity contract:
 
-.. include:: ../examples/substrate/call_chain_extension.sol
+.. include:: ../examples/polkadot/call_chain_extension.sol
   :code: solidity
 
 is_contract(address AccountId) returns (bool)
 +++++++++++++++++++++++++++++++++++++++++++++
 
-Only available on Substrate. Checks whether the given address is a contract address. 
+Only available on Polkadot. Checks whether the given address is a contract address. 
+
+set_code_hash(uint8[32] hash) returns (uint32)
+++++++++++++++++++++++++++++++++++++++++++++++
+
+Only available on Polkadot. Replace the contract's code with the code corresponding to ``hash``.
+Assumes that the new code was already uploaded, otherwise the operation fails.
+A return value of 0 indicates success; a return value of 7 indicates that there was no corresponding code found.
+
+.. note::
+
+    This is a low level function. We strongly advise consulting the underlying 
+    `API documentation <https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.set_code_hash>`_ 
+    to obtain a full understanding of its implications.
+
+This functionality is intended to be used for implementing upgradeable contracts. 
+Pitfalls generally applying to writing
+`upgradeable contracts <https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable>`_ 
+must be considered whenever using this builtin function, most notably:
+
+* The contract must safeguard access to this functionality, so that it is only callable by priviledged users.
+* The code you are upgrading to must be 
+  `storage compatible <https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies#storage-collisions-between-implementation-versions>`_
+  with the existing code.
+* Constructors and any other initializers, including initial storage value definitions, won't be executed.
 
 Cryptography
 ____________
@@ -371,7 +395,7 @@ This returns the ``bytes16`` blake2_128 hash of the bytes.
 
 .. note::
 
-    This function is only available on Parity Substrate.
+    This function is only available on Polkadot.
 
 blake2_256(bytes)
 +++++++++++++++++
@@ -380,7 +404,7 @@ This returns the ``bytes32`` blake2_256 hash of the bytes.
 
 .. note::
 
-    This function is only available on Parity Substrate.
+    This function is only available on Polkadot.
 
 signatureVerify(address public_key, bytes message, bytes signature)
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -586,7 +610,7 @@ print() takes a string argument.
 
   print() is not available with the Ethereum Foundation Solidity compiler.
 
-  When using Substrate, this function is only available on development chains.
+  When using Polkadot, this function is only available on development chains.
   If you use this function on a production chain, the contract will fail to load.
 
 .. _selfdestruct:
