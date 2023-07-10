@@ -16,8 +16,7 @@
 /// - $3.65 per megabyte year
 uint64 constant DEFAULT_LAMPORTS_PER_BYTE_YEAR = 1_000_000_000 / 100 * 365 / (1024 * 1024);
 
-/// Default amount of time (in years) the balance has to include rent for the
-/// account to be rent exempt.
+/// Default amount of time (in years) the balance needs in rent to be rent exempt.
 uint64 constant DEFAULT_EXEMPTION_THRESHOLD = 2;
 
 /// Account storage overhead for calculation of base rent.

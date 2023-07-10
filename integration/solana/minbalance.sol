@@ -1,7 +1,7 @@
 import '../../solana-library/minimum_balance.sol';
 
 contract minbalance {
-    /// Anchor requires view functions to have a return value
+    // Anchor requires view or pure functions to have a return value
     function test1() pure public returns (bool) {
         require(DEFAULT_LAMPORTS_PER_BYTE_YEAR == 3480, "lamports per byte year");
         require(DEFAULT_EXEMPTION_THRESHOLD == 2, "lamports per byte year");

@@ -454,9 +454,9 @@ Minimum balance
 +++++++++++++++
 
 In order to instantiate a contract, you need the minimum balance required for a Solana account of a given
-size.  There is a function ``minimum_balance(uint64 space)`` defined in
+size. There is a function ``minimum_balance(uint64 space)`` defined in
 `minimum_balance.sol <https://github.com/hyperledger/solang/blob/main/solana-library/minimum_balance.sol>`_
-that calculates this.
+to calculate this.
 
 .. _account_management:
 
