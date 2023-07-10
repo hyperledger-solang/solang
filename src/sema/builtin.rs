@@ -1464,6 +1464,7 @@ impl Namespace {
             path: PathBuf::from("solana"),
             line_starts: Vec::new(),
             cache_no: None,
+            import_no: None,
         });
 
         let id = pt::Identifier {
@@ -1648,6 +1649,7 @@ impl Namespace {
             path: PathBuf::from("polkadot"),
             line_starts: Vec::new(),
             cache_no: None,
+            import_no: None,
         });
 
         // The Hash type from ink primitives.
