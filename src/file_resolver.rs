@@ -17,8 +17,6 @@ pub struct FileResolver {
     cached_paths: HashMap<PathBuf, usize>,
     /// The actual file contents
     files: Vec<Arc<str>>,
-    /// The resolved files
-    resolved_files: Vec<ResolvedFile>,
 }
 
 /// When we resolve a file, we need to know its base compared to the import so
@@ -48,7 +46,6 @@ impl FileResolver {
             import_paths: Vec::new(),
             cached_paths: HashMap::new(),
             files: Vec::new(),
-            resolved_files: Vec::new(),
         }
     }
 
@@ -87,11 +84,6 @@ impl FileResolver {
     /// Get the file contents of `file_no`th file if it exists
     pub fn get_contents_of_file_no(&self, file_no: usize) -> Option<Arc<str>> {
         self.files.get(file_no).cloned()
-    }
-
-    /// Get the ResolvedFile associated with the `file_no`th `File`
-    pub fn get_resolved_file(&self, file_no: usize) -> Option<ResolvedFile> {
-        self.resolved_files.get(file_no).cloned()
     }
 
     /// Get file with contents. This must be a file which was previously
@@ -165,13 +157,11 @@ impl FileResolver {
                                 .expect("path should include filename")
                                 .to_path_buf();
 
-                            let resolved = ResolvedFile {
+                            return Ok(ResolvedFile {
                                 full_path,
                                 import_no,
                                 base,
-                            };
-                            self.resolved_files.push(resolved.clone());
-                            return Ok(resolved);
+                            });
                         }
                     }
                 }
@@ -193,13 +183,11 @@ impl FileResolver {
                     .expect("path should include filename")
                     .to_path_buf();
 
-                let resolved = ResolvedFile {
+                return Ok(ResolvedFile {
                     full_path,
                     base,
                     import_no: 0,
-                };
-                self.resolved_files.push(resolved.clone());
-                return Ok(resolved);
+                });
             } else if let Ok(full_path) = base.join(&path).canonicalize() {
                 self.load_file(&full_path)?;
                 let base = full_path
@@ -207,13 +195,11 @@ impl FileResolver {
                     .expect("path should include filename")
                     .to_path_buf();
 
-                let resolved = ResolvedFile {
+                return Ok(ResolvedFile {
                     full_path,
                     base,
                     import_no: 0,
-                };
-                self.resolved_files.push(resolved.clone());
-                return Ok(resolved);
+                });
             }
 
             // start with this import
@@ -227,13 +213,11 @@ impl FileResolver {
                 .expect("path should include filename")
                 .to_path_buf();
 
-            let resolved = ResolvedFile {
+            return Ok(ResolvedFile {
                 full_path,
                 base,
                 import_no: 0,
-            };
-            self.resolved_files.push(resolved.clone());
-            return Ok(resolved);
+            });
         }
 
         // walk over the import paths until we find one that resolves
@@ -248,13 +232,11 @@ impl FileResolver {
                         .to_path_buf();
                     self.load_file(&full_path)?;
 
-                    let resolved = ResolvedFile {
+                    return Ok(ResolvedFile {
                         full_path,
                         import_no,
                         base,
-                    };
-                    self.resolved_files.push(resolved.clone());
-                    return Ok(resolved);
+                    });
                 }
             }
         }
