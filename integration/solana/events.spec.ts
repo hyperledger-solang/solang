@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import expect from 'expect';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 
 describe('Test events', function () {
     this.timeout(500000);
 
     it('events', async function () {
-        const { program, storage } = await loadContract('MyContractEvents');
+        const { program, storage } = await loadContractAndCallConstructor('MyContractEvents');
 
         const res = await program.methods.test()
             .accounts({ dataAccount: storage.publicKey })

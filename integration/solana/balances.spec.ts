@@ -2,14 +2,14 @@
 
 import expect from 'expect';
 import { Transaction, SystemProgram, sendAndConfirmTransaction } from '@solana/web3.js';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 import { BN } from '@coral-xyz/anchor';
 
 describe('Deploy solang contract and test', function () {
     this.timeout(500000);
 
     it('balances', async function () {
-        let { program, storage, payer, provider } = await loadContract('balances', []);
+        let { program, storage, payer, provider } = await loadContractAndCallConstructor('balances', []);
 
         let res = await program.methods.getBalance(payer.publicKey)
             .accounts({ dataAccount: storage.publicKey })

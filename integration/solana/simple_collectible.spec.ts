@@ -3,7 +3,7 @@
 // DISCLAIMER: This file is an example of how to mint and transfer NFTs on Solana. It is not production ready and has not been audited for security.
 // Use it at your own risk.
 
-import { loadContract, newConnectionAndPayer } from "./setup";
+import { loadContractAndCallConstructor, newConnectionAndPayer } from "./setup";
 import { Keypair } from "@solana/web3.js";
 import { createMint, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import expect from "expect";
@@ -38,7 +38,7 @@ describe('Simple collectible', function () {
         );
 
         // Each contract in this example is a unique NFT
-        const { provider, program, storage } = await loadContract('SimpleCollectible', [mint, metadata_authority.publicKey]);
+        const { provider, program, storage } = await loadContractAndCallConstructor('SimpleCollectible', [mint, metadata_authority.publicKey]);
 
         const nft_uri = "www.nft.com";
 
