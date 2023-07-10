@@ -23,7 +23,7 @@ uint64 constant DEFAULT_EXEMPTION_THRESHOLD = 2;
 /// Account storage overhead for calculation of base rent.
 ///
 /// This is the number of bytes required to store an account with no data. It is
-/// added to an accounts data length when calculating [`Rent::minimum_balance`].
+/// added to an account's data length when calculating [`Rent::minimum_balance`].
 uint64 constant ACCOUNT_STORAGE_OVERHEAD = 128;
 
 /// Minimum balance due for rent-exemption of a given account data size.
