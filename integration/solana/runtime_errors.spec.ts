@@ -2,7 +2,7 @@
 
 import { Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from '@solana/web3.js';
 import expect from 'expect';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 import { Program, Provider, BN, AnchorProvider } from '@coral-xyz/anchor';
 import { createAccount } from "@solana/spl-token";
 
@@ -15,7 +15,7 @@ describe('Runtime Errors', function () {
     let provider: Provider;
 
     before(async function () {
-        ({ program, storage, payer, provider } = await loadContract('RuntimeErrors'));
+        ({ program, storage, payer, provider } = await loadContractAndCallConstructor('RuntimeErrors'));
     });
 
     it('Prints runtime errors', async function () {
