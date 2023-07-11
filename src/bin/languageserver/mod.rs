@@ -635,8 +635,13 @@ impl<'a> Builder<'a> {
                 self.expression(index, symtab);
             }
 
-            ast::Expression::StructMember {  expr, .. } => {
+            ast::Expression::StructMember { loc, ty, expr, .. } => {
                 self.expression(expr, symtab);
+                self.hovers.push(HoverEntry {
+                    start: loc.start(),
+                    stop: loc.end(),
+                    val: make_code_block(format!("{}", ty.to_string(self.ns))),
+                });
             }
 
             // Array operation expression
@@ -854,7 +859,7 @@ impl<'a> Builder<'a> {
         self.hovers.push(HoverEntry {
             start: field.loc.start(),
             stop: field.loc.end(),
-            val: format!("_{}_ {}", field.ty.to_string(self.ns), field.name_as_str()),
+            val: make_code_block(format!("{} {}", field.ty.to_string(self.ns), field.name_as_str())),
         });
     }
 
