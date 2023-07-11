@@ -198,5 +198,5 @@ pub fn render(tags: &[Tag]) -> String {
         write!(s, "Author: {}", tag.value).unwrap();
     }
 
-    s
+    s.trim().to_owned()
 }
