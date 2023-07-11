@@ -191,11 +191,7 @@ impl<'a> Builder<'a> {
                 if let Some(exp) = expr {
                     self.expression(exp, symtab);
                 }
-                let mut val = format!(
-                    "{} {}",
-                    self.expanded_ty(&param.ty, false),
-                    param.name_as_str()
-                );
+                let mut val = format!("{} {}", param.ty.to_string(self.ns), param.name_as_str());
                 if let Some(expr) = self.ns.var_constants.get(loc) {
                     match expr {
                         codegen::Expression::BytesLiteral {
@@ -303,7 +299,7 @@ impl<'a> Builder<'a> {
                             self.hovers.push(HoverEntry {
                                 start: param.loc.start(),
                                 stop: param.loc.end(),
-                                val: make_code_block(&self.expanded_ty(&param.ty, true)),
+                                val: make_code_block(&self.expanded_ty(&param.ty)),
                             });
                         }
                         ast::DestructureField::None => (),
@@ -395,7 +391,7 @@ impl<'a> Builder<'a> {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(self.expanded_ty(ty, true)),
+                    val: make_code_block(self.expanded_ty(ty)),
                 });
             }
             ast::Expression::CodeLiteral { loc, .. } => {
@@ -557,7 +553,7 @@ impl<'a> Builder<'a> {
 
             // Variable expression
             ast::Expression::Variable { loc, ty, var_no } => {
-                let mut val = self.expanded_ty(ty, false);
+                let mut val = ty.to_string(self.ns);
 
                 if let Some(expr) = self.ns.var_constants.get(loc) {
                     match expr {
@@ -589,7 +585,7 @@ impl<'a> Builder<'a> {
                 });
             }
             ast::Expression::ConstantVariable { loc, ty, .. } => {
-                let val = format!("constant ({})", self.expanded_ty(ty, false));
+                let val = format!("constant ({})", ty.to_string(self.ns));
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
@@ -600,7 +596,7 @@ impl<'a> Builder<'a> {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(self.expanded_ty(ty, true)),
+                    val: make_code_block(self.expanded_ty(ty)),
                 });
             }
             // Load expression
@@ -681,13 +677,13 @@ impl<'a> Builder<'a> {
                     let msg_tg = render(&fnc.tags[..]);
 
                     let params = itertools::Itertools::intersperse(
-                        fnc.params.iter().map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty, false))),
+                        fnc.params.iter().map(|parm| format!("{}: {}", parm.name_as_str(), parm.ty.to_string(self.ns))),
                         ", ".to_string(),
                     ).collect::<String>();
 
                     let rets = itertools::Itertools::intersperse(
                         fnc.returns.iter().map(|ret| {
-                            let mut msg = self.expanded_ty(&ret.ty, false);
+                            let mut msg = ret.ty.to_string(self.ns);
                             if ret.name_as_str() != "" {
                                 msg = format!("{}: {}", ret.name_as_str(), msg);
                             }
@@ -727,13 +723,13 @@ impl<'a> Builder<'a> {
                     let msg_tg = render(&fnc.tags[..]);
 
                     let params = itertools::Itertools::intersperse(
-                        fnc.params.iter().map(|parm| format!("{}: {}", parm.name_as_str(), self.expanded_ty(&parm.ty, false))),
+                        fnc.params.iter().map(|parm| format!("{}: {}", parm.name_as_str(), parm.ty.to_string(self.ns))),
                         ", ".to_string(),
                     ).collect::<String>();
 
                     let rets = itertools::Itertools::intersperse(
                         fnc.returns.iter().map(|ret| {
-                            let mut msg = self.expanded_ty(&ret.ty, false);
+                            let mut msg = ret.ty.to_string(self.ns);
                             if ret.name_as_str() != "" {
                                 msg = format!("{}: {}", ret.name_as_str(), msg);
                             }
@@ -802,11 +798,11 @@ impl<'a> Builder<'a> {
             ast::Expression::Builtin { loc, kind, args, .. } => {
                 let (rets, name, params, doc) = if let Some(protval) = get_prototype(*kind) {
                     let rets = itertools::Itertools::intersperse(
-                        protval.ret.iter().map(|ret| self.expanded_ty(ret, false)),
+                        protval.ret.iter().map(|ret| ret.to_string(self.ns)),
                         " ".to_string(),
                     ).collect::<String>();
                     let params = itertools::Itertools::intersperse(
-                        protval.params.iter().map(|param| self.expanded_ty(param, false)),
+                        protval.params.iter().map(|param| param.to_string(self.ns)),
                         " ".to_string(),
                     ).collect::<String>();
                     (rets, protval.name, params, protval.doc)
@@ -844,7 +840,7 @@ impl<'a> Builder<'a> {
             stop: contract.loc.end(),
             val: make_code_block(format!(
                 "{} {}",
-                self.expanded_ty(&contract.ty, false),
+                contract.ty.to_string(self.ns),
                 contract.name
             )),
         });
@@ -927,7 +923,7 @@ impl<'a> Builder<'a> {
                 builder.hovers.push(HoverEntry {
                     start: param.loc.start(),
                     stop: param.loc.end(),
-                    val: make_code_block(builder.expanded_ty(&param.ty, true)),
+                    val: make_code_block(builder.expanded_ty(&param.ty)),
                 });
             }
 
@@ -935,7 +931,7 @@ impl<'a> Builder<'a> {
                 builder.hovers.push(HoverEntry {
                     start: ret.loc.start(),
                     stop: ret.loc.end(),
-                    val: make_code_block(builder.expanded_ty(&ret.ty, true)),
+                    val: make_code_block(builder.expanded_ty(&ret.ty)),
                 });
             }
 
@@ -1003,17 +999,14 @@ impl<'a> Builder<'a> {
     }
 
     /// Render the type with struct/enum fields expanded
-    fn expanded_ty(&self, ty: &ast::Type, include_tags: bool) -> String {
+    fn expanded_ty(&self, ty: &ast::Type) -> String {
         match ty {
-            ast::Type::Ref(ty) => self.expanded_ty(ty, include_tags),
-            ast::Type::StorageRef(_, ty) => self.expanded_ty(ty, include_tags),
+            ast::Type::Ref(ty) => self.expanded_ty(ty),
+            ast::Type::StorageRef(_, ty) => self.expanded_ty(ty),
             ast::Type::Struct(struct_type) => {
                 let strct = struct_type.definition(self.ns);
-                let tags = if include_tags {
-                    render(&strct.tags)
-                } else {
-                    "".to_string()
-                };
+                let tags = render(&strct.tags);
+
                 let fields = itertools::Itertools::intersperse(
                     strct.fields.iter().map(|field| {
                         format!("\t{} {}", field.ty.to_string(self.ns), field.name_as_str())
@@ -1025,11 +1018,7 @@ impl<'a> Builder<'a> {
             }
             ast::Type::Enum(n) => {
                 let enm = &self.ns.enums[*n];
-                let tags = if include_tags {
-                    render(&enm.tags)
-                } else {
-                    "".to_string()
-                };
+                let tags = render(&enm.tags);
                 let values = itertools::Itertools::intersperse(
                     enm.values.iter().map(|value| format!("\t{}", value.0)),
                     ",\n".to_string(),
@@ -1395,4 +1384,3 @@ mod test {
         );
     }
 }
-
