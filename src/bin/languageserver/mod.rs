@@ -672,10 +672,13 @@ impl<'a> Builder<'a> {
             } => {
                 if let ast::Expression::InternalFunction { function_no, .. } = function.as_ref() {
                     let fnc = &self.ns.functions[*function_no];
-                    let msg_tg = render(&fnc.tags[..]);
+                    let mut msg_tg = render(&fnc.tags[..]);
+                    if !msg_tg.is_empty() {
+                        msg_tg.push('\n');
+                    }
 
                     let params = itertools::Itertools::intersperse(
-                        fnc.params.iter().map(|parm| format!("{}: {}", parm.name_as_str(), parm.ty.to_string(self.ns))),
+                        fnc.params.iter().map(|parm| format!("{} {}", parm.ty.to_string(self.ns), parm.name_as_str())),
                         ", ".to_string(),
                     ).collect::<String>();
 
@@ -683,18 +686,20 @@ impl<'a> Builder<'a> {
                         fnc.returns.iter().map(|ret| {
                             let mut msg = ret.ty.to_string(self.ns);
                             if ret.name_as_str() != "" {
-                                msg = format!("{}: {}", ret.name_as_str(), msg);
+                                msg = format!("{} {}", msg, ret.name_as_str());
                             }
                             msg
                         }),
                         ", ".to_string(),
                     ).collect::<String>();
 
-                    let val = format!("{}\n{} {} ( {} ) returns ( {} )\n", msg_tg, fnc.ty, fnc.name, params, rets);
+                    let contract = fnc.contract_no.map(|contract_no| format!("{}::", self.ns.contracts[contract_no].name)).unwrap_or_default();
+
+                    let val = format!("{}{} {}{}({}) returns ({})\n", msg_tg, fnc.ty, contract, fnc.name, params, rets);
 
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
-                        stop: loc.end(),
+                        stop: loc.end() + 1,
                         val: make_code_block(val),
                     });
                 }
@@ -718,10 +723,13 @@ impl<'a> Builder<'a> {
                 {
                     // modifiers do not have mutability, bases or modifiers itself
                     let fnc = &self.ns.functions[*function_no];
-                    let msg_tg = render(&fnc.tags[..]);
+                    let mut msg_tg = render(&fnc.tags[..]);
+                    if !msg_tg.is_empty() {
+                        msg_tg.push('\n');
+                    }
 
                     let params = itertools::Itertools::intersperse(
-                        fnc.params.iter().map(|parm| format!("{}: {}", parm.name_as_str(), parm.ty.to_string(self.ns))),
+                        fnc.params.iter().map(|parm| format!("{} {}", parm.ty.to_string(self.ns), parm.name_as_str())),
                         ", ".to_string(),
                     ).collect::<String>();
 
@@ -729,14 +737,16 @@ impl<'a> Builder<'a> {
                         fnc.returns.iter().map(|ret| {
                             let mut msg = ret.ty.to_string(self.ns);
                             if ret.name_as_str() != "" {
-                                msg = format!("{}: {}", ret.name_as_str(), msg);
+                                msg = format!("{} {}", msg, ret.name_as_str());
                             }
                             msg
                         }),
                         ", ".to_string(),
                     ).collect::<String>();
 
-                    let val = format!("{}\n{} {} ( {} ) returns ( {} )\n", msg_tg, fnc.ty, fnc.name, params, rets);
+                    let contract = fnc.contract_no.map(|contract_no| format!("{}::", self.ns.contracts[contract_no].name)).unwrap_or_default();
+
+                    let val = format!("{}{} {}{}({}) returns ({})\n", msg_tg, fnc.ty, contract, fnc.name, params, rets);
 
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
