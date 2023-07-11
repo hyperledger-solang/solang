@@ -38,11 +38,6 @@ impl ResolvedFile {
     pub fn get_import_no(&self) -> usize {
         self.import_no
     }
-
-    /// Get the base part of the relative import
-    pub fn get_base(&self) -> &PathBuf {
-        &self.base
-    }
 }
 
 impl Default for FileResolver {
