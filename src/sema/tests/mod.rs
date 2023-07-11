@@ -629,7 +629,7 @@ fn get_import_map() {
     let mut cache = FileResolver::new();
     let map = OsString::from("@openzepellin");
     let mut example_sol_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    example_sol_path.push("examples/example.sol");
+    example_sol_path.push("examples");
     assert!(cache
         .add_import_map(map.clone(), example_sol_path.clone())
         .is_ok());
