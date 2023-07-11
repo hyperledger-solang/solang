@@ -567,7 +567,7 @@ impl<'a> Builder<'a> {
             }
             ast::Expression::ConstantVariable { loc, ty, contract_no, .. } => {
                 let contract = match contract_no {
-                    Some(contract_no) => format!(": {}", self.ns.contracts[*contract_no].name),
+                    Some(contract_no) => format!("{}::", self.ns.contracts[*contract_no].name),
                     None => "".to_string(),
                 };
                 let constant = self
@@ -577,7 +577,7 @@ impl<'a> Builder<'a> {
                     .and_then(get_constants)
                     .map(|s| format!(" = {}", s))
                     .unwrap_or_default();
-                let val = format!("{} constant{}{}", ty.to_string(self.ns), contract, constant);
+                let val = format!("constant {} {}{}", ty.to_string(self.ns), contract, constant);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
@@ -674,7 +674,7 @@ impl<'a> Builder<'a> {
                     let fnc = &self.ns.functions[*function_no];
                     let mut msg_tg = render(&fnc.tags[..]);
                     if !msg_tg.is_empty() {
-                        msg_tg.push('\n');
+                        msg_tg.push_str("\n\n");
                     }
 
                     let params = itertools::Itertools::intersperse(
@@ -725,7 +725,7 @@ impl<'a> Builder<'a> {
                     let fnc = &self.ns.functions[*function_no];
                     let mut msg_tg = render(&fnc.tags[..]);
                     if !msg_tg.is_empty() {
-                        msg_tg.push('\n');
+                        msg_tg.push_str("\n\n");
                     }
 
                     let params = itertools::Itertools::intersperse(
@@ -809,18 +809,24 @@ impl<'a> Builder<'a> {
                         protval.ret.iter().map(|ret| ret.to_string(self.ns)),
                         " ".to_string(),
                     ).collect::<String>();
-                    let params = itertools::Itertools::intersperse(
+
+                    let mut params = itertools::Itertools::intersperse(
                         protval.params.iter().map(|param| param.to_string(self.ns)),
                         " ".to_string(),
                     ).collect::<String>();
-                    (rets, protval.name, params, protval.doc)
+                    if !params.is_empty() {
+                        params = format!("({})", params);
+                    }
+
+                    let doc = format!("{}\n\n", protval.doc);
+                    (rets, protval.name, params, doc)
                 } else {
-                    ("".to_string(), "", "".to_string(), "")
+                    ("".to_string(), "", "".to_string(), "".to_string())
                 };
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(format!("[built-in] {} {} ( {} ): {}", rets, name, params, doc)),
+                    val: make_code_block(format!("{}[built-in] {} {} {}", doc, rets, name, params)),
                 });
 
                 for expr in args {
