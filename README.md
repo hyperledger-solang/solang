@@ -142,7 +142,7 @@ Here is a brief description of what we envision for the next versions.
 | Adopt single static assignment for code generation | In progress |
 | Support openzeppelin on Polkadot target            | In progress |
 | Provide Solidity -> Polkadot porting guide         | Not started |
-| Call Solidity from Solana's Rust contracts         | Not started |
+| Declare accounts for a Solidity function on Solana | In progress |
 | Tooling for calls between ink! <> solidity         | In progress |
 | Provide CLI for node interactions                  | In progress |
 
