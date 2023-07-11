@@ -3,15 +3,15 @@
 use rust_lapper::{Interval, Lapper};
 use serde_json::Value;
 use solang::{
-    codegen,
     codegen::codegen,
+    codegen::{self, Expression},
     file_resolver::FileResolver,
     parse_and_resolve,
     sema::{ast, builtin::get_prototype, symtable, tags::render},
     Target,
 };
 use solang_parser::pt;
-use std::{collections::HashMap, ffi::OsString, fmt::Write, path::PathBuf};
+use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 use tokio::sync::Mutex;
 use tower_lsp::{jsonrpc::Result, lsp_types::*, Client, LanguageServer, LspService, Server};
 
@@ -191,49 +191,34 @@ impl<'a> Builder<'a> {
                 if let Some(exp) = expr {
                     self.expression(exp, symtab);
                 }
-                let mut val = format!("{} {}", param.ty.to_string(self.ns), param.name_as_str());
-                if let Some(expr) = self.ns.var_constants.get(loc) {
-                    match expr {
-                        codegen::Expression::BytesLiteral {
-                            ty: ast::Type::Bytes(_),
-                            value,
-                            ..
-                        }
-                        | codegen::Expression::BytesLiteral {
-                            ty: ast::Type::DynamicBytes,
-                            value,
-                            ..
-                        } => {
-                            write!(val, " = hex\"{}\"", hex::encode(value)).unwrap();
-                        }
-                        codegen::Expression::BytesLiteral {
-                            ty: ast::Type::String,
-                            value,
-                            ..
-                        } => {
-                            write!(val, " = \"{}\"", String::from_utf8_lossy(value)).unwrap();
-                        }
-                        codegen::Expression::NumberLiteral {
-                            ty: ast::Type::Uint(_),
-                            value,
-                            ..
-                        }
-                        | codegen::Expression::NumberLiteral {
-                            ty: ast::Type::Int(_),
-                            value,
-                            ..
-                        } => {
-                            write!(val, " = {value}").unwrap();
-                        }
-                        _ => (),
-                    }
-                }
 
-                if let Some(var) = symtab.vars.get(var_no) {
-                    if var.slice {
-                        val.push_str("\nreadonly: compiled to slice\n")
-                    }
-                }
+                let constant = self
+                    .ns
+                    .var_constants
+                    .get(loc)
+                    .and_then(get_constants)
+                    .map(|s| format!(" = {}", s))
+                    .unwrap_or_default();
+
+                let readonly = symtab
+                    .vars
+                    .get(var_no)
+                    .map(|var| {
+                        if var.slice {
+                            "\nreadonly: compiled to slice\n"
+                        } else {
+                            ""
+                        }
+                    })
+                    .unwrap_or_default();
+
+                let val = format!(
+                    "{} {}{}{}",
+                    param.ty.to_string(self.ns),
+                    param.name_as_str(),
+                    constant,
+                    readonly
+                );
 
                 self.hovers.push(HoverEntry {
                     start: param.loc.start(),
@@ -553,30 +538,26 @@ impl<'a> Builder<'a> {
 
             // Variable expression
             ast::Expression::Variable { loc, ty, var_no } => {
-                let mut val = ty.to_string(self.ns);
+                let constant = self
+                    .ns
+                    .var_constants
+                    .get(loc)
+                    .and_then(get_constants)
+                    .unwrap_or_default();
 
-                if let Some(expr) = self.ns.var_constants.get(loc) {
-                    match expr {
-                        codegen::Expression::BytesLiteral{ ty: ast::Type::Bytes(_), value, .. }
-                        | codegen::Expression::BytesLiteral{ ty: ast::Type::DynamicBytes, value, ..} => {
-                            write!(val, " hex\"{}\"", hex::encode(value)).unwrap();
+                let readonly = symtab
+                    .vars
+                    .get(var_no)
+                    .map(|var| {
+                        if var.slice {
+                            "\nreadonly: compiled to slice\n"
+                        } else {
+                            ""
                         }
-                        codegen::Expression::BytesLiteral{ ty: ast::Type::String, value, ..} => {
-                            write!(val, " \"{}\"", String::from_utf8_lossy(value)).unwrap();
-                        }
-                        codegen::Expression::NumberLiteral { ty: ast::Type::Uint(_), value, .. }
-                        | codegen::Expression::NumberLiteral { ty: ast::Type::Int(_), value, .. } => {
-                            write!(val, " {value}").unwrap();
-                        }
-                        _ => (),
-                    }
-                }
+                    })
+                    .unwrap_or_default();
 
-                if let Some(var) = symtab.vars.get(var_no) {
-                    if var.slice {
-                        val.push_str("\nreadonly: compiles to slice\n")
-                    }
-                }
+                let val = format!("{} {}{}", ty.to_string(self.ns), constant, readonly);
 
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
@@ -584,19 +565,31 @@ impl<'a> Builder<'a> {
                     val: make_code_block(val),
                 });
             }
-            ast::Expression::ConstantVariable { loc, ty, .. } => {
-                let val = format!("constant ({})", ty.to_string(self.ns));
+            ast::Expression::ConstantVariable { loc, ty, contract_no, .. } => {
+                let contract = match contract_no {
+                    Some(contract_no) => format!(": {}", self.ns.contracts[*contract_no].name),
+                    None => "".to_string(),
+                };
+                let constant = self
+                    .ns
+                    .var_constants
+                    .get(loc)
+                    .and_then(get_constants)
+                    .map(|s| format!(" = {}", s))
+                    .unwrap_or_default();
+                let val = format!("{} constant{}{}", ty.to_string(self.ns), contract, constant);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
                     val: make_code_block(val),
                 });
             }
-            ast::Expression::StorageVariable { loc, ty, .. } => {
+            ast::Expression::StorageVariable { loc, ty, contract_no, .. } => {
+                let val = format!("{}: {}", ty.to_string(self.ns), self.ns.contracts[*contract_no].name);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(self.expanded_ty(ty)),
+                    val: make_code_block(val),
                 });
             }
             // Load expression
@@ -640,7 +633,7 @@ impl<'a> Builder<'a> {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(format!("{}", ty.to_string(self.ns))),
+                    val: make_code_block(ty.to_string(self.ns)),
                 });
             }
 
@@ -859,7 +852,11 @@ impl<'a> Builder<'a> {
         self.hovers.push(HoverEntry {
             start: field.loc.start(),
             stop: field.loc.end(),
-            val: make_code_block(format!("{} {}", field.ty.to_string(self.ns), field.name_as_str())),
+            val: make_code_block(format!(
+                "{} {}",
+                field.ty.to_string(self.ns),
+                field.name_as_str()
+            )),
         });
     }
 
@@ -1235,6 +1232,44 @@ fn loc_to_range(loc: &pt::Loc, file: &ast::File) -> Range {
 
 fn make_code_block(s: impl AsRef<str>) -> String {
     format!("```solidity\n{}\n```", s.as_ref())
+}
+
+fn get_constants(expr: &Expression) -> Option<String> {
+    let val = match expr {
+        codegen::Expression::BytesLiteral {
+            ty: ast::Type::Bytes(_),
+            value,
+            ..
+        }
+        | codegen::Expression::BytesLiteral {
+            ty: ast::Type::DynamicBytes,
+            value,
+            ..
+        } => {
+            format!("hex\"{}\"", hex::encode(value))
+        }
+        codegen::Expression::BytesLiteral {
+            ty: ast::Type::String,
+            value,
+            ..
+        } => {
+            format!("\"{}\"", String::from_utf8_lossy(value))
+        }
+        codegen::Expression::NumberLiteral {
+            ty: ast::Type::Uint(_),
+            value,
+            ..
+        }
+        | codegen::Expression::NumberLiteral {
+            ty: ast::Type::Int(_),
+            value,
+            ..
+        } => {
+            format!("{value}")
+        }
+        _ => return None,
+    };
+    Some(val)
 }
 
 fn update_file_contents(
