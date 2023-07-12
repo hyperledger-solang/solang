@@ -309,7 +309,10 @@ impl<'a> Builder<'a> {
                 ..
             } => {
                 let event = &self.ns.events[*event_no];
-                let tags = render(&event.tags);
+                let mut tags = render(&event.tags);
+                if !tags.is_empty() {
+                    tags.push_str("\n\n");
+                }
                 let fields = itertools::Itertools::intersperse(
                     event.fields.iter().map(|field| {
                         format!(
@@ -323,8 +326,7 @@ impl<'a> Builder<'a> {
                 )
                 .collect::<String>();
                 let val = format!(
-                    "{}\nevent {} {{\n{}\n}}{}",
-                    tags,
+                    "event {} {{\n{}\n}}{}",
                     event.symbol_name(self.ns),
                     fields,
                     if event.anonymous { " anonymous" } else { "" }
@@ -332,7 +334,7 @@ impl<'a> Builder<'a> {
                 self.hovers.push(HoverEntry {
                     start: event_loc.start(),
                     stop: event_loc.end(),
-                    val: make_code_block(val),
+                    val: format!("{}{}", tags, make_code_block(val)),
                 });
 
                 for arg in args {
@@ -695,12 +697,12 @@ impl<'a> Builder<'a> {
 
                     let contract = fnc.contract_no.map(|contract_no| format!("{}::", self.ns.contracts[contract_no].name)).unwrap_or_default();
 
-                    let val = format!("{}{} {}{}({}) returns ({})\n", msg_tg, fnc.ty, contract, fnc.name, params, rets);
+                    let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
 
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
                         stop: loc.end() + 1,
-                        val: make_code_block(val),
+                        val: format!("{}{}", msg_tg, make_code_block(val)),
                     });
                 }
 
@@ -746,12 +748,12 @@ impl<'a> Builder<'a> {
 
                     let contract = fnc.contract_no.map(|contract_no| format!("{}::", self.ns.contracts[contract_no].name)).unwrap_or_default();
 
-                    let val = format!("{}{} {}{}({}) returns ({})\n", msg_tg, fnc.ty, contract, fnc.name, params, rets);
+                    let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
 
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
                         stop: loc.end(),
-                        val: make_code_block(val),
+                        val: format!("{}{}", msg_tg, make_code_block(val)),
                     });
 
                     self.expression(address, symtab);
@@ -823,10 +825,11 @@ impl<'a> Builder<'a> {
                 } else {
                     ("".to_string(), "", "".to_string(), "".to_string())
                 };
+                let val = make_code_block(format!("{}[built-in] {} {} {}", doc, rets, name, params));
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(format!("{}[built-in] {} {} {}", doc, rets, name, params)),
+                    val: format!("{}{}", doc, val),
                 });
 
                 for expr in args {
@@ -1023,7 +1026,10 @@ impl<'a> Builder<'a> {
             ast::Type::StorageRef(_, ty) => self.expanded_ty(ty),
             ast::Type::Struct(struct_type) => {
                 let strct = struct_type.definition(self.ns);
-                let tags = render(&strct.tags);
+                let mut tags = render(&strct.tags);
+                if !tags.is_empty() {
+                    tags.push_str("\n\n")
+                }
 
                 let fields = itertools::Itertools::intersperse(
                     strct.fields.iter().map(|field| {
@@ -1032,19 +1038,26 @@ impl<'a> Builder<'a> {
                     ",\n".to_string(),
                 )
                 .collect::<String>();
-                format!("{}\nstruct {} {{\n{}\n}}", tags, strct, fields)
+
+                let val = make_code_block(format!("struct {} {{\n{}\n}}", strct, fields));
+                format!("{}{}", tags, val)
             }
             ast::Type::Enum(n) => {
                 let enm = &self.ns.enums[*n];
-                let tags = render(&enm.tags);
+                let mut tags = render(&enm.tags);
+                if !tags.is_empty() {
+                    tags.push_str("\n\n")
+                }
                 let values = itertools::Itertools::intersperse(
                     enm.values.iter().map(|value| format!("\t{}", value.0)),
                     ",\n".to_string(),
                 )
                 .collect::<String>();
-                format!("{}\nenum {} {{\n{}\n}}", tags, enm, values)
+
+                let val = make_code_block(format!("enum {} {{\n{}\n}}", enm, values));
+                format!("{}{}", tags, val)
             }
-            _ => ty.to_string(self.ns),
+            _ => make_code_block(ty.to_string(self.ns)),
         }
     }
 }
