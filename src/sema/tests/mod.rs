@@ -628,8 +628,11 @@ contract Child {
 fn get_import_map() {
     let mut cache = FileResolver::new();
     let map = OsString::from("@openzepellin");
-    let mut example_sol_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    example_sol_path.push("examples");
+    let example_sol_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("examples")
+        .canonicalize()
+        .unwrap();
+
     assert!(cache
         .add_import_map(map.clone(), example_sol_path.clone())
         .is_ok());
@@ -641,8 +644,10 @@ fn get_import_map() {
 #[test]
 fn get_import_path() {
     let mut cache = FileResolver::new();
-    let mut examples = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    examples.push("examples");
+    let examples = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("examples")
+        .canonicalize()
+        .unwrap();
 
     let bad_path = PathBuf::from("/IDontExist.sol");
 
