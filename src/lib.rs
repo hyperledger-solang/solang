@@ -119,32 +119,19 @@ impl Target {
 pub fn compile(
     filename: &OsStr,
     resolver: &mut FileResolver,
-    opt_level: inkwell::OptimizationLevel,
     target: Target,
-    log_api_return_codes: bool,
-    log_runtime_errors: bool,
-    log_prints: bool,
+    opts: &codegen::Options,
     authors: Vec<String>,
     version: &str,
-    #[cfg(feature = "wasm_opt")] wasm_opt: Option<contract_build::OptimizationPasses>,
 ) -> (Vec<(Vec<u8>, String)>, sema::ast::Namespace) {
     let mut ns = parse_and_resolve(filename, resolver, target);
-    let opts = codegen::Options {
-        log_api_return_codes,
-        opt_level: opt_level.into(),
-        log_runtime_errors,
-        log_prints,
-        #[cfg(feature = "wasm_opt")]
-        wasm_opt,
-        ..Default::default()
-    };
 
     if ns.diagnostics.any_errors() {
         return (Vec::new(), ns);
     }
 
     // codegen all the contracts
-    codegen::codegen(&mut ns, &opts);
+    codegen::codegen(&mut ns, opts);
 
     if ns.diagnostics.any_errors() {
         return (Vec::new(), ns);
@@ -157,7 +144,7 @@ pub fn compile(
         let contract = &ns.contracts[contract_no];
 
         if contract.instantiable {
-            let code = contract.emit(&ns, &opts);
+            let code = contract.emit(&ns, opts);
 
             let (abistr, _) = abi::generate_abi(contract_no, &ns, &code, false, &authors, version);
 

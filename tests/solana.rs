@@ -20,7 +20,12 @@ use solana_rbpf::{
 };
 use solang::abi::anchor::discriminator;
 use solang::{
-    abi::anchor::generate_anchor_idl, compile, file_resolver::FileResolver, sema::ast, Target,
+    abi::anchor::generate_anchor_idl,
+    codegen::{OptimizationLevel, Options},
+    compile,
+    file_resolver::FileResolver,
+    sema::ast,
+    Target,
 };
 use std::{
     cell::{RefCell, RefMut},
@@ -139,15 +144,16 @@ fn build_solidity(src: &str) -> VirtualMachine {
     let (res, ns) = compile(
         OsStr::new("test.sol"),
         &mut cache,
-        inkwell::OptimizationLevel::Default,
         Target::Solana,
-        false,
-        true,
-        true,
+        &Options {
+            opt_level: OptimizationLevel::Default,
+            log_api_return_codes: false,
+            log_runtime_errors: true,
+            log_prints: true,
+            ..Default::default()
+        },
         vec!["unknown".to_string()],
         "0.0.1",
-        #[cfg(feature = "wasm_opt")]
-        None,
     );
 
     ns.print_diagnostics_in_plain(&cache, false);
