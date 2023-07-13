@@ -1,0 +1,43 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "set_string",
+      [
+        {
+          "String": "a"
+        },
+        {
+          "String": "This is a string which should be a little longer than 32 bytes so we the the abi encoder"
+        }
+      ]
+    ],
+    [
+      "add_int",
+      [
+        {
+          "String": "a"
+        },
+        {
+          "Int": {
+            "width": 64,
+            "value": [
+              1,
+              [
+                102
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "get",
+      [
+        {
+          "String": "a"
+        }
+      ]
+    ]
+  ]
+}

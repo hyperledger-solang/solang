@@ -1,0 +1,66 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "test_slot",
+      []
+    ],
+    [
+      "call_data_array",
+      [
+        {
+          "Array": [
+            {
+              "Uint": {
+                "width": 32,
+                "value": [
+                  1,
+                  [
+                    3
+                  ]
+                ]
+              }
+            },
+            {
+              "Uint": {
+                "width": 32,
+                "value": [
+                  1,
+                  [
+                    5
+                  ]
+                ]
+              }
+            },
+            {
+              "Uint": {
+                "width": 32,
+                "value": [
+                  1,
+                  [
+                    7
+                  ]
+                ]
+              }
+            },
+            {
+              "Uint": {
+                "width": 32,
+                "value": [
+                  1,
+                  [
+                    11
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    ],
+    [
+      "selector_address",
+      []
+    ]
+  ]
+}

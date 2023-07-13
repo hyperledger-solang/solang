@@ -1,0 +1,120 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "set_s2",
+      []
+    ],
+    [
+      "get_s1",
+      []
+    ],
+    [
+      "set_s1",
+      [
+        {
+          "Tuple": [
+            {
+              "Uint": {
+                "width": 8,
+                "value": [
+                  1,
+                  [
+                    127
+                  ]
+                ]
+              }
+            },
+            {
+              "String": "foobar foobar foobar foobar foobar foobar"
+            },
+            {
+              "Tuple": [
+                {
+                  "Bool": false
+                },
+                {
+                  "FixedBytes": [
+                    195,
+                    154,
+                    253
+                  ]
+                }
+              ]
+            },
+            {
+              "Uint": {
+                "width": 64,
+                "value": [
+                  1,
+                  [
+                    3944680146,
+                    2874452364
+                  ]
+                ]
+              }
+            },
+            {
+              "Tuple": [
+                {
+                  "Uint": {
+                    "width": 256,
+                    "value": [
+                      1,
+                      [
+                        653987207,
+                        632555168,
+                        2230943753,
+                        1231381549
+                      ]
+                    ]
+                  }
+                },
+                {
+                  "Bytes": [
+                    106,
+                    97,
+                    115,
+                    108,
+                    100,
+                    97,
+                    106,
+                    108,
+                    100,
+                    106,
+                    97,
+                    108,
+                    100,
+                    106,
+                    108,
+                    97,
+                    100,
+                    115
+                  ]
+                }
+              ]
+            },
+            {
+              "String": "be as honest as the day is long"
+            }
+          ]
+        },
+        {
+          "String": "yadayada"
+        }
+      ]
+    ],
+    [
+      "get_s1",
+      []
+    ],
+    [
+      "rm",
+      []
+    ],
+    [
+      "get_s1",
+      []
+    ]
+  ]
+}

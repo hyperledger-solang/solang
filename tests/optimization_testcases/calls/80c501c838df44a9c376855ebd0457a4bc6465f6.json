@@ -1,0 +1,41 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "mr_now",
+      []
+    ],
+    [
+      "mr_slot",
+      []
+    ],
+    [
+      "mr_blocknumber",
+      []
+    ],
+    [
+      "msg_data",
+      [
+        {
+          "Uint": {
+            "width": 32,
+            "value": [
+              1,
+              [
+                3735931646
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "sig",
+      []
+    ],
+    [
+      "prog",
+      []
+    ]
+  ]
+}
