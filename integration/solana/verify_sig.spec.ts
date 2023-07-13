@@ -3,7 +3,7 @@
 import { Keypair, Ed25519Program, SYSVAR_INSTRUCTIONS_PUBKEY, PublicKey } from '@solana/web3.js';
 import expect from 'expect';
 import nacl from 'tweetnacl';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 import { Program } from '@coral-xyz/anchor';
 
 describe('Signature Check', function () {
@@ -14,7 +14,7 @@ describe('Signature Check', function () {
     let payer: Keypair;
 
     before(async function () {
-        ({ program, storage, payer } = await loadContract('verify_sig'));
+        ({ program, storage, payer } = await loadContractAndCallConstructor('verify_sig'));
     });
 
     it('check valid signature', async function () {

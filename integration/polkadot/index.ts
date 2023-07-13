@@ -113,7 +113,7 @@ export async function query(
   const callResult = await api.call.contractsApi.call(account.address, contract.address, value ? value : 0, gasLimit ? gasLimit : null, null, msg.toU8a(args ? args : []));
   // Same logic as contracts UI, so should be fine.
   // Refernce implementation: https://github.com/paritytech/contracts-ui/blob/e343221a0d5c1ae67122fe99028246e5bdf38c46/src/ui/hooks/useDecodedOutput.ts
-  const output = callResult.result.isOk && msg.returnType
+  const output = callResult.result.isOk && msg.returnType && callResult.result.asOk.flags.isEmpty
     ? contract.abi.registry.createTypeUnsafe(
       msg.returnType.lookupName || msg.returnType.type,
       [callResult.result.asOk.data.toU8a(true)],

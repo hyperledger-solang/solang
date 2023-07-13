@@ -3612,7 +3612,8 @@ pub(super) fn assert_failure(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) {
-    if arg.is_none() {
+    // On Solana, returning the encoded arguments has no effect
+    if arg.is_none() || ns.target == Target::Solana {
         cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
         return;
     }

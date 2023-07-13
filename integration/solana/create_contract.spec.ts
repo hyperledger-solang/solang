@@ -3,7 +3,7 @@
 import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from '@solana/web3.js';
 import expect from 'expect';
 import { Program, Provider, BN } from '@coral-xyz/anchor';
-import { create_account, loadContract } from './setup';
+import { create_account, loadContractAndCallConstructor } from './setup';
 import fs from 'fs';
 
 describe('ChildContract', function () {
@@ -15,7 +15,7 @@ describe('ChildContract', function () {
     let provider: Provider;
 
     before(async function () {
-        ({ program, storage, payer, provider } = await loadContract('creator'));
+        ({ program, storage, payer, provider } = await loadContractAndCallConstructor('creator'));
     });
 
     it('Create Contract', async function () {

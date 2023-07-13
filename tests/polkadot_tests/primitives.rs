@@ -368,7 +368,6 @@ fn implicit_bytes_cast() {
 }
 
 #[test]
-#[should_panic]
 fn implicit_bytes_cast_incompatible_size() {
     let mut runtime = build_solidity(
         r#"
@@ -383,7 +382,7 @@ fn implicit_bytes_cast_incompatible_size() {
         "#,
     );
 
-    runtime.function("test", Vec::new());
+    runtime.function_expect_failure("test", Vec::new());
 }
 
 #[test]

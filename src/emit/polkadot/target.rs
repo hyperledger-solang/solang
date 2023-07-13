@@ -779,25 +779,19 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .build_return(Some(&binary.return_values[&ReturnCode::Success]));
     }
 
-    fn assert_failure(&self, binary: &Binary, _data: PointerValue, _length: IntValue) {
-        // insert "unreachable" instruction; not that build_unreachable() tells the compiler
-        // that this code path is not reachable and may be discarded.
-        let asm_fn = binary.context.void_type().fn_type(&[], false);
+    fn assert_failure(&self, binary: &Binary, data: PointerValue, length: IntValue) {
+        emit_context!(binary);
 
-        let asm = binary.context.create_inline_asm(
-            asm_fn,
-            "unreachable".to_string(),
-            "".to_string(),
-            true,
-            false,
-            None,
-            false,
-        );
+        let flags = i32_const!(1).into(); // First bit set means revert
+        call!("seal_return", &[flags, data.into(), length.into()]);
 
-        binary
-            .builder
-            .build_indirect_call(asm_fn, asm, &[], "unreachable");
-
+        // Inserting an "unreachable" instruction signals to the LLVM optimizer
+        // that any following code can not be reached.
+        //
+        // The contracts pallet guarantees to never return from "seal_return",
+        // and we want to provide this higher level knowledge to the compiler.
+        //
+        // https://llvm.org/docs/LangRef.html#unreachable-instruction
         binary.builder.build_unreachable();
     }
 
@@ -938,14 +932,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             binary.builder.position_at_end(bail_block);
 
             binary.log_runtime_error(self, "contract creation failed".to_string(), Some(loc), ns);
-            self.assert_failure(
-                binary,
-                scratch_buf,
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
-                    .into_int_value(),
-            );
+            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
             binary.builder.position_at_end(success_block);
         }
@@ -1101,14 +1088,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             binary.builder.position_at_end(bail_block);
 
             binary.log_runtime_error(self, "external call failed".to_string(), Some(loc), ns);
-            self.assert_failure(
-                binary,
-                scratch_buf,
-                binary
-                    .builder
-                    .build_load(binary.context.i32_type(), scratch_len, "string_len")
-                    .into_int_value(),
-            );
+            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
 
             binary.builder.position_at_end(success_block);
         }

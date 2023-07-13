@@ -122,7 +122,7 @@ fn idl_instructions(
     }
 
     for func_no in contract.all_functions.keys() {
-        if !ns.functions[*func_no].is_public()
+        if !ns.function_externally_callable(contract_no, Some(*func_no))
             || matches!(
                 ns.functions[*func_no].ty,
                 FunctionTy::Fallback | FunctionTy::Receive | FunctionTy::Modifier

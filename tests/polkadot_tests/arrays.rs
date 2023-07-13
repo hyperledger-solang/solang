@@ -604,7 +604,6 @@ fn memory_dynamic_array_deref() {
 }
 
 #[test]
-#[should_panic]
 fn array_bounds_dynamic_array() {
     let mut runtime = build_solidity(
         r#"
@@ -618,11 +617,10 @@ fn array_bounds_dynamic_array() {
         }"#,
     );
 
-    runtime.function("test", Vec::new());
+    runtime.function_expect_failure("test", Vec::new());
 }
 
 #[test]
-#[should_panic]
 fn empty_array_bounds_dynamic_array() {
     let mut runtime = build_solidity(
         r#"
@@ -636,7 +634,7 @@ fn empty_array_bounds_dynamic_array() {
         }"#,
     );
 
-    runtime.function("test", Vec::new());
+    runtime.function_expect_failure("test", Vec::new());
 }
 
 #[test]
@@ -943,7 +941,6 @@ fn dynamic_array_pop() {
 }
 
 #[test]
-#[should_panic]
 fn dynamic_array_pop_empty_array() {
     let mut runtime = build_solidity(
         r#"
@@ -957,11 +954,10 @@ fn dynamic_array_pop_empty_array() {
         }"#,
     );
 
-    runtime.function("test", Vec::new());
+    runtime.function_expect_failure("test", Vec::new());
 }
 
 #[test]
-#[should_panic]
 fn dynamic_array_pop_bounds() {
     let mut runtime = build_solidity(
         r#"
@@ -978,7 +974,7 @@ fn dynamic_array_pop_bounds() {
         }"#,
     );
 
-    runtime.function("test", Vec::new());
+    runtime.function_expect_failure("test", Vec::new());
 }
 
 #[test]

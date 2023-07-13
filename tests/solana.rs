@@ -465,6 +465,11 @@ impl<'a> SyscallContext<'a> {
             u64::from_le_bytes(heap[offset..offset + 8].try_into().unwrap())
         };
 
+        let read_u32 = |offset: u64| {
+            let offset = (offset - HEAP_START) as usize;
+            u32::from_le_bytes(heap[offset..offset + 4].try_into().unwrap())
+        };
+
         if VERBOSE {
             println!("heap verify:");
         }
@@ -472,14 +477,14 @@ impl<'a> SyscallContext<'a> {
         loop {
             let next: u64 = read_u64(current_elem);
             let prev: u64 = read_u64(current_elem + 8);
-            let length: u64 = read_u64(current_elem + 16);
-            let allocated: u64 = read_u64(current_elem + 24);
+            let length: u32 = read_u32(current_elem + 16);
+            let allocated: u32 = read_u32(current_elem + 20);
 
             if VERBOSE {
                 println!("next:{next:08x} prev:{prev:08x} length:{length} allocated:{allocated}");
             }
 
-            let start = (current_elem + 8 * 4 - HEAP_START) as usize;
+            let start = (current_elem + 24 - HEAP_START) as usize;
 
             let buf = &heap[start..start + length as usize];
 
