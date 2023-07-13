@@ -109,8 +109,7 @@ impl Target {
     }
 }
 
-/// Compile a solidity file to list of wasm files and their ABIs. The filename is only used for error messages;
-/// the contents of the file is provided in the `src` argument.
+/// Compile a solidity file to list of wasm files and their ABIs.
 ///
 /// This function only produces a single contract and abi, which is compiled for the `target` specified. Any
 /// compiler warnings, errors and informational messages are also provided.
