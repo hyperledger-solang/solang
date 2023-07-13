@@ -284,7 +284,7 @@ impl<'a> Builder<'a> {
                             self.hovers.push(HoverEntry {
                                 start: param.loc.start(),
                                 stop: param.loc.end(),
-                                val: make_code_block(&self.expanded_ty(&param.ty)),
+                                val: self.expanded_ty(&param.ty),
                             });
                         }
                         ast::DestructureField::None => (),
@@ -378,7 +378,7 @@ impl<'a> Builder<'a> {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
-                    val: make_code_block(self.expanded_ty(ty)),
+                    val: self.expanded_ty(ty),
                 });
             }
             ast::Expression::CodeLiteral { loc, .. } => {
@@ -540,13 +540,7 @@ impl<'a> Builder<'a> {
 
             // Variable expression
             ast::Expression::Variable { loc, ty, var_no } => {
-                let constant = self
-                    .ns
-                    .var_constants
-                    .get(loc)
-                    .and_then(get_constants)
-                    .unwrap_or_default();
-
+                // let name = self.ns.functions[*function_no].symtab.vars[*var_no].name;
                 let readonly = symtab
                     .vars
                     .get(var_no)
@@ -559,7 +553,8 @@ impl<'a> Builder<'a> {
                     })
                     .unwrap_or_default();
 
-                let val = format!("{} {}{}", ty.to_string(self.ns), constant, readonly);
+                // let val = format!("{} {}{}", ty.to_string(self.ns), name, readonly);
+                let val = format!("{} {}", ty.to_string(self.ns), readonly);
 
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
@@ -567,10 +562,15 @@ impl<'a> Builder<'a> {
                     val: make_code_block(val),
                 });
             }
-            ast::Expression::ConstantVariable { loc, ty, contract_no, .. } => {
-                let contract = match contract_no {
-                    Some(contract_no) => format!("{}::", self.ns.contracts[*contract_no].name),
-                    None => "".to_string(),
+            ast::Expression::ConstantVariable { loc, ty, contract_no, var_no } => {
+                let (contract, name) = if let Some(contract_no) = contract_no {
+                    let contract = format!("{}.", self.ns.contracts[*contract_no].name);
+                    let name = &self.ns.contracts[*contract_no].variables[*var_no].name;
+                    (contract, name)
+                } else {
+                    let contract = "".to_string();
+                    let name = &self.ns.constants[*var_no].name;
+                    (contract, name)
                 };
                 let constant = self
                     .ns
@@ -579,15 +579,17 @@ impl<'a> Builder<'a> {
                     .and_then(get_constants)
                     .map(|s| format!(" = {}", s))
                     .unwrap_or_default();
-                let val = format!("constant {} {}{}", ty.to_string(self.ns), contract, constant);
+                let val = format!("{} constant {}{}{}", ty.to_string(self.ns), contract, name, constant);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
                     val: make_code_block(val),
                 });
             }
-            ast::Expression::StorageVariable { loc, ty, contract_no, .. } => {
-                let val = format!("{}: {}", ty.to_string(self.ns), self.ns.contracts[*contract_no].name);
+            ast::Expression::StorageVariable { loc, ty, contract_no, var_no } => {
+                let contract = &self.ns.contracts[*contract_no];
+                let name = &contract.variables[*var_no].name;
+                let val = format!("{} {}.{}", ty.to_string(self.ns), contract.name, name);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
@@ -695,7 +697,7 @@ impl<'a> Builder<'a> {
                         ", ".to_string(),
                     ).collect::<String>();
 
-                    let contract = fnc.contract_no.map(|contract_no| format!("{}::", self.ns.contracts[contract_no].name)).unwrap_or_default();
+                    let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
 
                     let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
 
@@ -746,7 +748,7 @@ impl<'a> Builder<'a> {
                         ", ".to_string(),
                     ).collect::<String>();
 
-                    let contract = fnc.contract_no.map(|contract_no| format!("{}::", self.ns.contracts[contract_no].name)).unwrap_or_default();
+                    let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
 
                     let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
 
@@ -825,7 +827,7 @@ impl<'a> Builder<'a> {
                 } else {
                     ("".to_string(), "", "".to_string(), "".to_string())
                 };
-                let val = make_code_block(format!("{}[built-in] {} {} {}", doc, rets, name, params));
+                let val = make_code_block(format!("[built-in] {} {} {}", rets, name, params));
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end(),
@@ -944,7 +946,7 @@ impl<'a> Builder<'a> {
                 builder.hovers.push(HoverEntry {
                     start: param.loc.start(),
                     stop: param.loc.end(),
-                    val: make_code_block(builder.expanded_ty(&param.ty)),
+                    val: builder.expanded_ty(&param.ty),
                 });
             }
 
@@ -952,7 +954,7 @@ impl<'a> Builder<'a> {
                 builder.hovers.push(HoverEntry {
                     start: ret.loc.start(),
                     stop: ret.loc.end(),
-                    val: make_code_block(builder.expanded_ty(&ret.ty)),
+                    val: builder.expanded_ty(&ret.ty),
                 });
             }
 
