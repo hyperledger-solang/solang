@@ -468,6 +468,7 @@ pub(super) fn solana_deploy(
 
         // seeds
         let mut seeds = Vec::new();
+        let mut declared_bump = None;
 
         for note in &func.annotations {
             match note {
@@ -486,11 +487,14 @@ pub(super) fn solana_deploy(
                         }
                         .into(),
                     };
-
-                    seeds.push(expression(&expr, cfg, contract_no, None, ns, vartab, opt));
+                    declared_bump = Some(expr);
                 }
                 _ => (),
             }
+        }
+
+        if let Some(bump) = declared_bump {
+            seeds.push(expression(&bump, cfg, contract_no, None, ns, vartab, opt));
         }
 
         let seeds = if !seeds.is_empty() {
