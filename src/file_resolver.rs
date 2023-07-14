@@ -33,6 +33,13 @@ pub struct ResolvedFile {
     base: PathBuf,
 }
 
+impl ResolvedFile {
+    /// Get the import number associated with this `ResolvedFile`
+    pub fn get_import_no(&self) -> usize {
+        self.import_no
+    }
+}
+
 impl Default for FileResolver {
     fn default() -> Self {
         FileResolver::new()
@@ -70,6 +77,19 @@ impl FileResolver {
             self.import_paths.push((Some(map), path.canonicalize()?));
             Ok(())
         }
+    }
+
+    /// Get the import path and the optional mapping corresponding to `import_no`.
+    pub fn get_import_path(&self, import_no: usize) -> Option<&(Option<OsString>, PathBuf)> {
+        self.import_paths.get(import_no)
+    }
+
+    /// Get the import path corresponding to a map
+    pub fn get_import_map(&self, map: &OsString) -> Option<&PathBuf> {
+        self.import_paths
+            .iter()
+            .find(|(m, _)| m.as_ref() == Some(map))
+            .map(|(_, pb)| pb)
     }
 
     /// Update the cache for the filename with the given contents

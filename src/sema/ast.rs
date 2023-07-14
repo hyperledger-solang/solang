@@ -658,6 +658,9 @@ pub struct File {
     pub line_starts: Vec<usize>,
     /// Indicates the file number in FileResolver.files
     pub cache_no: Option<usize>,
+    /// Index into FileResolver.import_paths. This is `None` when this File was
+    /// created not during `parse_and_resolve` (e.g., builtins)
+    pub import_no: Option<usize>,
 }
 
 /// When resolving a Solidity file, this holds all the resolved items
