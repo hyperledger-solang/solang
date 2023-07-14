@@ -28,14 +28,14 @@ pub struct ResolvedFile {
     /// Full path on the filesystem
     pub full_path: PathBuf,
     /// Which import path was used, if any
-    import_no: usize,
+    import_no: Option<usize>,
     // Base part relative to import
     base: PathBuf,
 }
 
 impl ResolvedFile {
     /// Get the import number associated with this `ResolvedFile`
-    pub fn get_import_no(&self) -> usize {
+    pub fn get_import_no(&self) -> Option<usize> {
         self.import_no
     }
 }
@@ -179,7 +179,7 @@ impl FileResolver {
 
                             return Ok(ResolvedFile {
                                 full_path,
-                                import_no,
+                                import_no: Some(import_no),
                                 base,
                             });
                         }
@@ -206,7 +206,7 @@ impl FileResolver {
                 return Ok(ResolvedFile {
                     full_path,
                     base,
-                    import_no: 0,
+                    import_no: Some(0),
                 });
             } else if let Ok(full_path) = base.join(&path).canonicalize() {
                 self.load_file(&full_path)?;
@@ -218,12 +218,12 @@ impl FileResolver {
                 return Ok(ResolvedFile {
                     full_path,
                     base,
-                    import_no: 0,
+                    import_no: Some(0),
                 });
             }
 
             // start with this import
-            start_import_no = *import_no;
+            start_import_no = import_no.expect("Expected an import_no, got None instead");
         }
 
         if self.cached_paths.contains_key(&path) {
@@ -236,7 +236,7 @@ impl FileResolver {
             return Ok(ResolvedFile {
                 full_path,
                 base,
-                import_no: 0,
+                import_no: Some(0),
             });
         }
 
@@ -254,7 +254,7 @@ impl FileResolver {
 
                     return Ok(ResolvedFile {
                         full_path,
-                        import_no,
+                        import_no: Some(import_no),
                         base,
                     });
                 }

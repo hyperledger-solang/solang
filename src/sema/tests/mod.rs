@@ -628,17 +628,27 @@ contract Child {
 fn get_import_map() {
     let mut cache = FileResolver::new();
     let map = OsString::from("@openzepellin");
-    let example_sol_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("examples")
+    let cargo_manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .canonicalize()
         .unwrap();
 
-    assert!(cache
-        .add_import_map(map.clone(), example_sol_path.clone())
-        .is_ok());
+    let examples = cargo_manifest_dir.join("examples");
 
+    assert!(cache.add_import_map(map.clone(), examples.clone()).is_ok());
     let retrieved = cache.get_import_map(&map);
-    assert_eq!(Some(&example_sol_path), retrieved);
+    assert_eq!(Some(&examples), retrieved);
+
+    let mut cache = FileResolver::new();
+    let integration = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("integration");
+    let polkadot = integration.join("polkadot");
+    assert!(cache.add_import_path(polkadot.as_path()).is_ok());
+    let ns = parse_and_resolve(OsStr::new("createpair.sol"), &mut cache, Target::EVM);
+    for file in ns.files {
+        assert_eq!(
+            &polkadot,
+            &cache.get_import_path(file.import_no.unwrap()).unwrap().1
+        );
+    }
 }
 
 #[test]
