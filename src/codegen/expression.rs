@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::encoding::{abi_decode, abi_encode};
-use super::revert::{assert_failure, expr_assert, log_runtime_error, require};
+use super::revert::{
+    assert_failure, expr_assert, log_runtime_error, require, PanicCode, SolidityError,
+};
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
 };
@@ -1899,7 +1901,8 @@ fn expr_builtin(
                 vartab,
                 ns,
             );
-            assert_failure(loc, None, ns, cfg, vartab);
+            let error = SolidityError::Panic(PanicCode::Generic);
+            assert_failure(loc, error, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
 
@@ -1959,7 +1962,8 @@ fn expr_builtin(
                 vartab,
                 ns,
             );
-            assert_failure(loc, None, ns, cfg, vartab);
+            let error = SolidityError::Panic(PanicCode::Generic);
+            assert_failure(loc, error, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
             let advanced_ptr = Expression::AdvancePointer {
@@ -2036,7 +2040,8 @@ fn expr_builtin(
                 vartab,
                 ns,
             );
-            assert_failure(loc, None, ns, cfg, vartab);
+            let error = SolidityError::Panic(PanicCode::Generic);
+            assert_failure(loc, error, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
 
@@ -2300,7 +2305,8 @@ fn checking_trunc(
         vartab,
         ns,
     );
-    assert_failure(loc, None, ns, cfg, vartab);
+    let error = SolidityError::Panic(PanicCode::Generic);
+    assert_failure(loc, error, ns, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
 
@@ -3164,7 +3170,8 @@ fn array_subscript(
         vartab,
         ns,
     );
-    assert_failure(loc, None, ns, cfg, vartab);
+    let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
+    assert_failure(loc, error, ns, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
 

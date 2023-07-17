@@ -25,7 +25,7 @@ use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 #[non_exhaustive]
 #[allow(unused)] // TODO: Implement custom errors
 #[derive(Debug, PartialEq)]
-pub(crate) enum ErrorData {
+pub(crate) enum SolidityError {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
     Empty,
     /// The `Error(string)` selector
@@ -36,7 +36,7 @@ pub(crate) enum ErrorData {
     Custom([u8; 4], Expression),
 }
 
-impl ErrorData {
+impl SolidityError {
     /// Return the selector expression of the error.
     pub fn selector(&self) -> Expression {
         let selector = match self {
@@ -82,7 +82,7 @@ impl ErrorData {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum PanicCode {
     Generic = 0x00,
-    AssertFailed = 0x01,
+    Assertion = 0x01,
     MathOverflow = 0x11,
     DivisionByZero = 0x12,
     EnumCastOob = 0x21,
@@ -93,41 +93,38 @@ pub(crate) enum PanicCode {
     InternalFunctionUninitialized = 0x51,
 }
 
-impl Into<BigInt> for PanicCode {
-    fn into(self) -> BigInt {
-        BigInt::from_isize(self as isize).expect("Panic codes can always be represented as BigInt")
+impl From<PanicCode> for BigInt {
+    fn from(val: PanicCode) -> Self {
+        BigInt::from_isize(val as isize).expect("Panic codes can always be represented as BigInt")
     }
 }
 
-impl Into<Expression> for PanicCode {
-    fn into(self) -> Expression {
+impl From<PanicCode> for Expression {
+    fn from(val: PanicCode) -> Self {
         Expression::NumberLiteral {
             loc: Codegen,
             ty: Type::Uint(256),
-            value: self.into(),
+            value: val.into(),
         }
     }
 }
 
 /// This function encodes the arguments for the assert-failure instruction
 /// and inserts it in the CFG.
-///
-/// For errors with data, `data` contains the data which will get ABI encoded.
 pub(super) fn assert_failure(
     loc: &Loc,
-    //error: ErrorData,
-    data: Option<Expression>,
+    error: SolidityError,
     ns: &Namespace,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) {
     // On Solana, returning the encoded arguments has no effect
-    if data.is_none() || ns.target == Target::Solana {
+    if ns.target == Target::Solana {
         cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
         return;
     }
 
-    let encoded_args = ErrorData::String(data.unwrap()).abi_encode(loc, ns, vartab, cfg);
+    let encoded_args = error.abi_encode(loc, ns, vartab, cfg);
     cfg.add(vartab, Instr::AssertFailure { encoded_args })
 }
 
@@ -160,7 +157,8 @@ pub(super) fn expr_assert(
         vartab,
         ns,
     );
-    assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
+    let error = SolidityError::Panic(PanicCode::Assertion);
+    assert_failure(&Codegen, error, ns, cfg, vartab);
     cfg.set_basic_block(true_);
     Expression::Poison
 }
@@ -190,71 +188,57 @@ pub(super) fn require(
     let expr = args
         .get(1)
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
-    match ns.target {
-        // On Solana and Polkadot, print the reason, do not abi encode it
-        Target::Solana | Target::Polkadot { .. } => {
-            if opt.log_runtime_errors {
-                if let Some(expr) = expr {
-                    let prefix = b"runtime_error: ";
-                    let error_string = format!(
-                        " require condition failed in {},\n",
-                        ns.loc_to_string(PathDisplay::Filename, &expr.loc())
-                    );
-                    let print_expr = Expression::FormatString {
-                        loc: Loc::Codegen,
-                        args: vec![
-                            (
-                                FormatArg::StringLiteral,
-                                Expression::BytesLiteral {
-                                    loc: Loc::Codegen,
-                                    ty: Type::Bytes(prefix.len() as u8),
-                                    value: prefix.to_vec(),
-                                },
-                            ),
-                            (FormatArg::Default, expr),
-                            (
-                                FormatArg::StringLiteral,
-                                Expression::BytesLiteral {
-                                    loc: Loc::Codegen,
-                                    ty: Type::Bytes(error_string.as_bytes().len() as u8),
-                                    value: error_string.as_bytes().to_vec(),
-                                },
-                            ),
-                        ],
-                    };
-                    cfg.add(vartab, Instr::Print { expr: print_expr });
-                } else {
-                    log_runtime_error(
-                        opt.log_runtime_errors,
-                        "require condition failed",
-                        loc,
-                        cfg,
-                        vartab,
-                        ns,
-                    );
-                }
-            }
-            assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
+
+    // On Solana and Polkadot, print the reason
+    if opt.log_runtime_errors && (ns.target == Target::Solana || ns.target.is_polkadot()) {
+        if let Some(expr) = expr.clone() {
+            let prefix = b"runtime_error: ";
+            let error_string = format!(
+                " require condition failed in {},\n",
+                ns.loc_to_string(PathDisplay::Filename, &expr.loc())
+            );
+            let print_expr = Expression::FormatString {
+                loc: Loc::Codegen,
+                args: vec![
+                    (
+                        FormatArg::StringLiteral,
+                        Expression::BytesLiteral {
+                            loc: Loc::Codegen,
+                            ty: Type::Bytes(prefix.len() as u8),
+                            value: prefix.to_vec(),
+                        },
+                    ),
+                    (FormatArg::Default, expr),
+                    (
+                        FormatArg::StringLiteral,
+                        Expression::BytesLiteral {
+                            loc: Loc::Codegen,
+                            ty: Type::Bytes(error_string.as_bytes().len() as u8),
+                            value: error_string.as_bytes().to_vec(),
+                        },
+                    ),
+                ],
+            };
+            cfg.add(vartab, Instr::Print { expr: print_expr });
+        } else {
+            log_runtime_error(
+                opt.log_runtime_errors,
+                "require condition failed",
+                loc,
+                cfg,
+                vartab,
+                ns,
+            );
         }
-        _ => assert_failure(&Loc::Codegen, expr, ns, cfg, vartab),
     }
+
+    let error = expr
+        .map(SolidityError::String)
+        .unwrap_or(SolidityError::Empty);
+    assert_failure(&Codegen, error, ns, cfg, vartab);
+
     cfg.set_basic_block(true_);
     Expression::Poison
-}
-
-pub(crate) fn log_runtime_error(
-    report_error: bool,
-    reason: &str,
-    reason_loc: Loc,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-    ns: &Namespace,
-) {
-    if report_error {
-        let error_with_loc = error_msg_with_loc(ns, reason.to_string(), Some(reason_loc));
-        let expr = string_to_expr(error_with_loc);
-        cfg.add(vartab, Instr::Print { expr });
-    }
 }
 
 pub(super) fn revert(
@@ -313,7 +297,25 @@ pub(super) fn revert(
         }
     }
 
-    assert_failure(&Codegen, expr, ns, cfg, vartab);
+    let error = expr
+        .map(SolidityError::String)
+        .unwrap_or(SolidityError::Empty);
+    assert_failure(&Codegen, error, ns, cfg, vartab);
+}
+
+pub(crate) fn log_runtime_error(
+    report_error: bool,
+    reason: &str,
+    reason_loc: Loc,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) {
+    if report_error {
+        let error_with_loc = error_msg_with_loc(ns, reason.to_string(), Some(reason_loc));
+        let expr = string_to_expr(error_with_loc);
+        cfg.add(vartab, Instr::Print { expr });
+    }
 }
 
 pub(crate) fn error_msg_with_loc(ns: &Namespace, error: String, loc: Option<Loc>) -> String {
@@ -346,7 +348,7 @@ mod tests {
 
     use crate::{
         codegen::{
-            revert::{ErrorData, PanicCode},
+            revert::{PanicCode, SolidityError},
             Expression,
         },
         sema::ast::Type,
@@ -355,7 +357,7 @@ mod tests {
     #[test]
     fn panic_code_conversion() {
         assert_eq!(BigInt::from(0x00), PanicCode::Generic.into());
-        assert_eq!(BigInt::from(0x01), PanicCode::AssertFailed.into());
+        assert_eq!(BigInt::from(0x01), PanicCode::Assertion.into());
         assert_eq!(BigInt::from(0x11), PanicCode::MathOverflow.into());
         assert_eq!(BigInt::from(0x12), PanicCode::DivisionByZero.into());
         assert_eq!(BigInt::from(0x21), PanicCode::EnumCastOob.into());
@@ -377,15 +379,15 @@ mod tests {
         for (selector, expression) in [
             (
                 0x08c379a0u32, // Keccak256('Error(string)')[:4]
-                ErrorData::String(Expression::Poison).selector(),
+                SolidityError::String(Expression::Poison).selector(),
             ),
             (
                 0x4e487b71u32, // Keccak256('Panic(uint256)')[:4]
-                ErrorData::Panic(PanicCode::Generic).selector(),
+                SolidityError::Panic(PanicCode::Generic).selector(),
             ),
             (
                 0xdeadbeefu32,
-                ErrorData::Custom([0xde, 0xad, 0xbe, 0xef], Expression::Poison).selector(),
+                SolidityError::Custom([0xde, 0xad, 0xbe, 0xef], Expression::Poison).selector(),
             ),
         ] {
             match expression {

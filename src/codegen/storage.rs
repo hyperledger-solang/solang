@@ -8,6 +8,8 @@ use num_traits::One;
 use num_traits::Zero;
 
 use super::expression::{expression, load_storage};
+use super::revert::PanicCode;
+use super::revert::SolidityError;
 use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr},
@@ -252,7 +254,8 @@ pub fn storage_slots_array_pop(
         vartab,
         ns,
     );
-    assert_failure(loc, None, ns, cfg, vartab);
+    let error = SolidityError::Panic(PanicCode::EmptyArrayPop);
+    assert_failure(loc, error, ns, cfg, vartab);
 
     cfg.set_basic_block(has_elements);
     let new_length = vartab.temp_anonymous(&slot_ty);
