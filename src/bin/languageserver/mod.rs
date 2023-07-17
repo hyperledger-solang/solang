@@ -894,7 +894,10 @@ impl<'a> Builder<'a> {
                 builder.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.end() + 1,
-                    val: format!("_{nam}_ {discriminant}"),
+                    val: make_code_block(format!(
+                        "enum {}.{} {}",
+                        enum_decl.name, nam, discriminant
+                    )),
                 });
             }
 
