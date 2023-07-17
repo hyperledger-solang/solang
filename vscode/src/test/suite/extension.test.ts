@@ -89,7 +89,7 @@ async function testhover(docUri: vscode.Uri) {
 
   const contentarr1 = actualhover[0].contents as vscode.MarkdownString[];
 
-  assert.strictEqual(contentarr1[0].value, '```solidity\nmapping(address => uint256)\n```');
+  assert.strictEqual(contentarr1[0].value, '```solidity\nmapping(address => uint256) storage SimpleAuction.pendingReturns\n```');
 
   const pos2 = new vscode.Position(78, 19);
 
@@ -103,7 +103,7 @@ async function testhover(docUri: vscode.Uri) {
 
   assert.strictEqual(
     contentarr2[0].value,
-    '```solidity\n\nevent SimpleAuction.HighestBidIncreased {\n\taddress bidder,\n\tuint256 amount\n}\n```'
+    '```solidity\nevent SimpleAuction.HighestBidIncreased {\n\taddress bidder,\n\tuint256 amount\n}\n```'
   );
 
   const pos3 = new vscode.Position(53, 13);
@@ -116,7 +116,7 @@ async function testhover(docUri: vscode.Uri) {
 
   const contentarr3 = actualhover3[0].contents as vscode.MarkdownString[];
 
-  assert.strictEqual(contentarr3[0].value, '```solidity\n[built-in] void require ( bool ): Abort execution if argument evaulates to false\n```');
+  assert.strictEqual(contentarr3[0].value, 'Abort execution if argument evaulates to false\n\n```solidity\n[built-in] void require (bool)\n```');
 }
 
 async function testdiagnos(docUri: vscode.Uri, expecteddiag: vscode.Diagnostic[]) {
