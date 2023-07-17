@@ -25,36 +25,52 @@ use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 #[non_exhaustive]
 #[allow(unused)] // TODO: Implement custom errors
 #[derive(Debug, PartialEq)]
-pub(crate) enum ErrorSelector {
+pub(crate) enum ErrorData {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
     Empty,
     /// The `Error(string)` selector
-    String,
+    String(Expression),
     /// The `Panic(uint255)` selector
-    Panic,
+    Panic(PanicCode),
     /// The contract can define custom errors resulting in a custom selector
-    Custom([u8; 4]),
+    Custom([u8; 4], Expression),
 }
 
-impl Into<Expression> for ErrorSelector {
-    fn into(self) -> Expression {
+impl ErrorData {
+    /// Return the selector expression of the error.
+    pub fn selector(&self) -> Expression {
+        let selector = match self {
+            Self::Empty => unreachable!("empty return data has no selector"),
+            Self::String(_) => 0x08c379a0u32.into(),
+            Self::Panic(_) => 0x4e487b71u32.into(),
+            Self::Custom(selector, _) => u32::from_be_bytes(*selector).into(),
+        };
+
+        Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Type::Bytes(4),
+            value: selector,
+        }
+    }
+
+    /// ABI encode the selector and any error data.
+    pub fn abi_encode(
+        &self,
+        loc: &Loc,
+        ns: &Namespace,
+        vartab: &mut Vartable,
+        cfg: &mut ControlFlowGraph,
+    ) -> Option<Expression> {
         match self {
-            Self::Empty => unreachable!("empty return data can not be represented as Expression"),
-            Self::String => Expression::NumberLiteral {
-                loc: Codegen,
-                ty: Type::Bytes(4),
-                value: 0x08c379a0.into(),
-            },
-            Self::Panic => Expression::NumberLiteral {
-                loc: Codegen,
-                ty: Type::Bytes(4),
-                value: 0x4e487b71.into(),
-            },
-            Self::Custom(bytes) => Expression::NumberLiteral {
-                loc: Codegen,
-                ty: Type::Bytes(4),
-                value: u32::from_be_bytes(bytes).into(),
-            },
+            Self::Empty => None,
+            Self::String(data) | Self::Custom(_, data) => {
+                let args = vec![self.selector(), data.clone()];
+                abi_encode(loc, args, ns, vartab, cfg, false).0.into()
+            }
+            Self::Panic(code) => {
+                let args = vec![self.selector(), (*code).into()];
+                abi_encode(loc, args, ns, vartab, cfg, false).0.into()
+            }
         }
     }
 }
@@ -63,6 +79,7 @@ impl Into<Expression> for ErrorSelector {
 /// https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require
 #[allow(unused)]
 #[non_exhaustive]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum PanicCode {
     Generic = 0x00,
     AssertFailed = 0x01,
@@ -98,7 +115,7 @@ impl Into<Expression> for PanicCode {
 /// For errors with data, `data` contains the data which will get ABI encoded.
 pub(super) fn assert_failure(
     loc: &Loc,
-    //error: ErrorSelector,
+    //error: ErrorData,
     data: Option<Expression>,
     ns: &Namespace,
     cfg: &mut ControlFlowGraph,
@@ -110,17 +127,7 @@ pub(super) fn assert_failure(
         return;
     }
 
-    let error = ErrorSelector::String;
-    let encoded_args = if error == ErrorSelector::Empty {
-        None
-    } else {
-        let mut args = vec![error.into()];
-        if let Some(data) = data {
-            args.push(data)
-        }
-        abi_encode(loc, args, ns, vartab, cfg, false).0.into()
-    };
-
+    let encoded_args = ErrorData::String(data.unwrap()).abi_encode(loc, ns, vartab, cfg);
     cfg.add(vartab, Instr::AssertFailure { encoded_args })
 }
 
@@ -339,7 +346,7 @@ mod tests {
 
     use crate::{
         codegen::{
-            revert::{ErrorSelector, PanicCode},
+            revert::{ErrorData, PanicCode},
             Expression,
         },
         sema::ast::Type,
@@ -368,11 +375,17 @@ mod tests {
     #[test]
     fn function_selector_expression() {
         for (selector, expression) in [
-            (0x08c379a0u32, ErrorSelector::String.into()), // Keccak256('Error(string)')[:4]
-            (0x4e487b71u32, ErrorSelector::Panic.into()),  // Keccak256('Panic(uint256)')[:4]
+            (
+                0x08c379a0u32, // Keccak256('Error(string)')[:4]
+                ErrorData::String(Expression::Poison).selector(),
+            ),
+            (
+                0x4e487b71u32, // Keccak256('Panic(uint256)')[:4]
+                ErrorData::Panic(PanicCode::Generic).selector(),
+            ),
             (
                 0xdeadbeefu32,
-                ErrorSelector::Custom([0xde, 0xad, 0xbe, 0xef]).into(),
+                ErrorData::Custom([0xde, 0xad, 0xbe, 0xef], Expression::Poison).selector(),
             ),
         ] {
             match expression {
