@@ -16,12 +16,15 @@ use crate::sema::{
 };
 use crate::Target;
 use num_bigint::BigInt;
+use num_traits::FromPrimitive;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 
 /// Corresponds to the error types from the Solidity language.
 ///
 /// Marked as non-exhaustive because Solidity may add more variants in the future.
 #[non_exhaustive]
+#[allow(unused)] // TODO: Implement custom errors
+#[derive(Debug)]
 pub(crate) enum ErrorSelector {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
     Empty,
@@ -33,8 +36,33 @@ pub(crate) enum ErrorSelector {
     Custom([u8; 4]),
 }
 
+impl Into<Expression> for ErrorSelector {
+    fn into(self) -> Expression {
+        match self {
+            Self::Empty => unreachable!("empty return data can not be represented as Expression"),
+            Self::String => Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Type::Bytes(4),
+                value: 0x08c379a0.into(),
+            },
+            Self::Panic => Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Type::Bytes(4),
+                value: 0x4e487b71.into(),
+            },
+            Self::Custom(bytes) => Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Type::Bytes(4),
+                value: u32::from_be_bytes(bytes).into(),
+            },
+        }
+    }
+}
+
 /// Solidity `Panic` Codes. Source:
 /// https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require
+#[allow(unused)]
+#[non_exhaustive]
 pub(crate) enum PanicCode {
     Generic = 0x00,
     AssertFailed = 0x01,
@@ -46,6 +74,22 @@ pub(crate) enum PanicCode {
     ArrayIndexOob = 0x32,
     OutOfMemory = 0x41,
     InternalFunctionUninitialized = 0x51,
+}
+
+impl Into<BigInt> for PanicCode {
+    fn into(self) -> BigInt {
+        BigInt::from_isize(self as isize).expect("Panic codes can always be represented as BigInt")
+    }
+}
+
+impl Into<Expression> for PanicCode {
+    fn into(self) -> Expression {
+        Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Type::Uint(256),
+            value: self.into(),
+        }
+    }
 }
 
 /// This function encodes the arguments for the assert-failure instruction
@@ -287,5 +331,58 @@ fn string_to_expr(string: String) -> Expression {
                 value: string.as_bytes().to_vec(),
             },
         )],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use num_bigint::BigInt;
+
+    use crate::{
+        codegen::{
+            revert::{ErrorSelector, PanicCode},
+            Expression,
+        },
+        sema::ast::Type,
+    };
+
+    #[test]
+    fn panic_code_conversion() {
+        assert_eq!(BigInt::from(0x00), PanicCode::Generic.into());
+        assert_eq!(BigInt::from(0x01), PanicCode::AssertFailed.into());
+        assert_eq!(BigInt::from(0x11), PanicCode::MathOverflow.into());
+        assert_eq!(BigInt::from(0x12), PanicCode::DivisionByZero.into());
+        assert_eq!(BigInt::from(0x21), PanicCode::EnumCastOob.into());
+        assert_eq!(
+            BigInt::from(0x22),
+            PanicCode::StorageBytesEncodingIncorrect.into()
+        );
+        assert_eq!(BigInt::from(0x31), PanicCode::EmptyArrayPop.into());
+        assert_eq!(BigInt::from(0x32), PanicCode::ArrayIndexOob.into());
+        assert_eq!(BigInt::from(0x41), PanicCode::OutOfMemory.into());
+        assert_eq!(
+            BigInt::from(0x51),
+            PanicCode::InternalFunctionUninitialized.into()
+        );
+    }
+
+    #[test]
+    fn function_selector_expression() {
+        for (selector, expression) in [
+            (0x08c379a0u32, ErrorSelector::String.into()),
+            (0x4e487b71u32, ErrorSelector::Panic.into()),
+            (
+                0xdeadbeefu32,
+                ErrorSelector::Custom([0xde, 0xad, 0xbe, 0xef]).into(),
+            ),
+        ] {
+            match expression {
+                Expression::NumberLiteral { ty, value, .. } => {
+                    assert_eq!(ty, Type::Bytes(4));
+                    assert_eq!(value, selector.into());
+                }
+                _ => panic!("invalid selector expression generated for {:?}", expression),
+            }
+        }
     }
 }
