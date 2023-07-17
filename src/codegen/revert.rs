@@ -24,7 +24,7 @@ use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 /// Marked as non-exhaustive because Solidity may add more variants in the future.
 #[non_exhaustive]
 #[allow(unused)] // TODO: Implement custom errors
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum ErrorSelector {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
     Empty,
@@ -94,35 +94,34 @@ impl Into<Expression> for PanicCode {
 
 /// This function encodes the arguments for the assert-failure instruction
 /// and inserts it in the CFG.
+///
+/// For errors with data, `data` contains the data which will get ABI encoded.
 pub(super) fn assert_failure(
     loc: &Loc,
-    arg: Option<Expression>,
+    //error: ErrorSelector,
+    data: Option<Expression>,
     ns: &Namespace,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) {
     // On Solana, returning the encoded arguments has no effect
-    if arg.is_none() || ns.target == Target::Solana {
+    if data.is_none() || ns.target == Target::Solana {
         cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
         return;
     }
 
-    let selector = 0x08c3_79a0u32;
-    let selector = Expression::NumberLiteral {
-        loc: Loc::Codegen,
-        ty: Type::Bytes(4),
-        value: BigInt::from(selector),
+    let error = ErrorSelector::String;
+    let encoded_args = if error == ErrorSelector::Empty {
+        None
+    } else {
+        let mut args = vec![error.into()];
+        if let Some(data) = data {
+            args.push(data)
+        }
+        abi_encode(loc, args, ns, vartab, cfg, false).0.into()
     };
-    let args = vec![selector, arg.unwrap()];
 
-    let (encoded_buffer, _) = abi_encode(loc, args, ns, vartab, cfg, false);
-
-    cfg.add(
-        vartab,
-        Instr::AssertFailure {
-            encoded_args: Some(encoded_buffer),
-        },
-    )
+    cfg.add(vartab, Instr::AssertFailure { encoded_args })
 }
 
 pub(super) fn expr_assert(
@@ -369,8 +368,8 @@ mod tests {
     #[test]
     fn function_selector_expression() {
         for (selector, expression) in [
-            (0x08c379a0u32, ErrorSelector::String.into()),
-            (0x4e487b71u32, ErrorSelector::Panic.into()),
+            (0x08c379a0u32, ErrorSelector::String.into()), // Keccak256('Error(string)')[:4]
+            (0x4e487b71u32, ErrorSelector::Panic.into()),  // Keccak256('Panic(uint256)')[:4]
             (
                 0xdeadbeefu32,
                 ErrorSelector::Custom([0xde, 0xad, 0xbe, 0xef]).into(),
