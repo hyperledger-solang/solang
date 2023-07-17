@@ -18,6 +18,36 @@ use crate::Target;
 use num_bigint::BigInt;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 
+/// Corresponds to the error types from the Solidity language.
+///
+/// Marked as non-exhaustive because Solidity may add more variants in the future.
+#[non_exhaustive]
+pub(crate) enum ErrorSelector {
+    /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
+    Empty,
+    /// The `Error(string)` selector
+    String,
+    /// The `Panic(uint255)` selector
+    Panic,
+    /// The contract can define custom errors resulting in a custom selector
+    Custom([u8; 4]),
+}
+
+/// Solidity `Panic` Codes. Source:
+/// https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require
+pub(crate) enum PanicCode {
+    Generic = 0x00,
+    AssertFailed = 0x01,
+    MathOverflow = 0x11,
+    DivisionByZero = 0x12,
+    EnumCastOob = 0x21,
+    StorageBytesEncodingIncorrect = 0x22,
+    EmptyArrayPop = 0x31,
+    ArrayIndexOob = 0x32,
+    OutOfMemory = 0x41,
+    InternalFunctionUninitialized = 0x51,
+}
+
 /// This function encodes the arguments for the assert-failure instruction
 /// and inserts it in the CFG.
 pub(super) fn assert_failure(
