@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::codegen::revert::error_msg_with_loc;
 use crate::sema::ast::{ArrayLength, Contract, Namespace, StructType, Type};
 use std::cell::RefCell;
 use std::path::Path;
@@ -13,7 +14,7 @@ use tempfile::tempdir;
 #[cfg(feature = "wasm_opt")]
 use wasm_opt::OptimizationOptions;
 
-use crate::codegen::{cfg::ReturnCode, error_msg_with_loc, Options};
+use crate::codegen::{cfg::ReturnCode, Options};
 use crate::emit::{polkadot, TargetRuntime};
 use crate::emit::{solana, BinaryOp, Generate};
 use crate::linker::link;

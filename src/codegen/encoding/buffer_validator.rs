@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::expression::assert_failure;
+use crate::codegen::revert::assert_failure;
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, Type};

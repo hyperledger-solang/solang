@@ -7,13 +7,13 @@ use num_traits::FromPrimitive;
 use num_traits::One;
 use num_traits::Zero;
 
-use super::expression::{expression, load_storage, log_runtime_error};
+use super::expression::{expression, load_storage};
 use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
-use crate::codegen::expression::assert_failure;
+use crate::codegen::revert::{assert_failure, log_runtime_error};
 use crate::sema::ast::{Function, Namespace, RetrieveType, Type};
 use solang_parser::pt;
 

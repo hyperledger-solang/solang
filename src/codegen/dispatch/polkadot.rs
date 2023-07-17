@@ -4,7 +4,7 @@ use crate::{
     codegen::{
         cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
         encoding::{abi_decode, abi_encode},
-        expression::log_runtime_error,
+        revert::log_runtime_error,
         vartable::Vartable,
         Builtin, Expression, Options,
     },

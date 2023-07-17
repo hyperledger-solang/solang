@@ -11,6 +11,9 @@ mod events;
 mod expression;
 mod external_functions;
 mod reaching_definitions;
+/// Releated to code that ultimately compiles to the target
+/// equivalent instruction of EVM revert (0xfd).
+pub(crate) mod revert;
 mod solana_accounts;
 mod solana_deploy;
 mod statements;
@@ -34,10 +37,7 @@ use self::{
 use crate::sema::ast::{
     FormatArg, Function, Layout, Namespace, RetrieveType, StringLocation, Type,
 };
-use crate::{
-    sema::{ast, file::PathDisplay},
-    Target,
-};
+use crate::{sema::ast, Target};
 use std::cmp::Ordering;
 
 use crate::codegen::cfg::ASTFunction;
@@ -49,7 +49,7 @@ use contract_build::OptimizationPasses;
 use num_bigint::{BigInt, Sign};
 use num_rational::BigRational;
 use num_traits::{FromPrimitive, Zero};
-use solang_parser::{pt, pt::CodeLocation, pt::Loc};
+use solang_parser::{pt, pt::CodeLocation};
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
@@ -1829,15 +1829,5 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::PrevRandao => Builtin::PrevRandao,
             _ => panic!("Builtin should not be in the cfg"),
         }
-    }
-}
-
-pub(super) fn error_msg_with_loc(ns: &Namespace, error: String, loc: Option<Loc>) -> String {
-    match &loc {
-        Some(loc @ Loc::File(..)) => {
-            let loc_from_file = ns.loc_to_string(PathDisplay::Filename, loc);
-            format!("runtime_error: {error} in {loc_from_file},\n")
-        }
-        _ => error + ",\n",
     }
 }

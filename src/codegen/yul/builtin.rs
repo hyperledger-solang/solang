@@ -3,7 +3,7 @@
 use crate::{
     codegen::{
         cfg::{ControlFlowGraph, Instr},
-        expression::{assert_failure, log_runtime_error},
+        revert::{assert_failure, log_runtime_error},
         vartable::Vartable,
         yul::expression::expression,
         {Builtin, Expression, Options},
