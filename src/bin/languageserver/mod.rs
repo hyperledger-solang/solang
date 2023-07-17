@@ -981,6 +981,14 @@ impl<'a> Builder<'a> {
                 val: render(&contract.tags[..]),
             });
 
+            for base in &contract.bases {
+                builder.hovers.push(HoverEntry {
+                    start: base.loc.start(),
+                    stop: base.loc.end() + 1,
+                    val: make_code_block(format!("contract {}", builder.ns.contracts[base.contract_no].name)),
+                });
+            }
+
             for variable in &contract.variables {
                 let symtable = symtable::Symtable::new();
                 builder.contract_variable(variable, &symtable);
