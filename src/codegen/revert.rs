@@ -38,11 +38,11 @@ pub(crate) enum SolidityError {
 
 impl SolidityError {
     /// Return the selector expression of the error.
-    pub fn selector(&self) -> Expression {
+    pub fn selector_expression(&self) -> Expression {
         let selector = match self {
             Self::Empty => unreachable!("empty return data has no selector"),
-            Self::String(_) => 0x08c379a0u32.into(),
-            Self::Panic(_) => 0x4e487b71u32.into(),
+            Self::String(_) => self.selector().into(),
+            Self::Panic(_) => self.selector().into(),
             Self::Custom(selector, _) => u32::from_be_bytes(*selector).into(),
         };
 
@@ -50,6 +50,16 @@ impl SolidityError {
             loc: Codegen,
             ty: Type::Bytes(4),
             value: selector,
+        }
+    }
+
+    /// Return the selector of the error.
+    pub fn selector(&self) -> u32 {
+        match self {
+            Self::Empty => unreachable!("empty return data has no selector"),
+            Self::String(_) => 0x08c379a0u32.into(),
+            Self::Panic(_) => 0x4e487b71u32.into(),
+            Self::Custom(selector, _) => u32::from_be_bytes(*selector).into(),
         }
     }
 
@@ -64,12 +74,55 @@ impl SolidityError {
         match self {
             Self::Empty => None,
             Self::String(data) | Self::Custom(_, data) => {
-                let args = vec![self.selector(), data.clone()];
-                abi_encode(loc, args, ns, vartab, cfg, false).0.into()
+                match data {
+                    Expression::AllocDynamicBytes {
+                        ty: Type::String,
+                        initializer: Some(data),
+                        ..
+                    } => {
+                        // FIXME have to do it this way to avoid unnecessary abi encoding
+                        assert!(ns.target.is_polkadot());
+
+                        let mut bytes = self.selector().to_be_bytes().to_vec();
+                        bytes.extend_from_slice(data);
+
+                        let size = Expression::NumberLiteral {
+                            loc: Codegen,
+                            ty: Type::Uint(32),
+                            value: 36.into(),
+                        };
+                        Some(Expression::AllocDynamicBytes {
+                            loc: Codegen,
+                            ty: Type::Slice(Type::Bytes(1).into()).into(),
+                            size: size.into(),
+                            initializer: bytes.into(),
+                        })
+                    }
+                    _ => {
+                        let args = vec![self.selector_expression(), data.clone()];
+                        abi_encode(loc, args, ns, vartab, cfg, false).0.into()
+                    }
+                }
             }
             Self::Panic(code) => {
-                let args = vec![self.selector(), (*code).into()];
-                abi_encode(loc, args, ns, vartab, cfg, false).0.into()
+                // FIXME have to do it this way to avoid unnecessary abi encoding
+                assert!(ns.target.is_polkadot());
+
+                let mut bytes = self.selector().to_be_bytes().to_vec();
+                bytes.push(*code as u8);
+                bytes.resize(36, 0);
+
+                let size = Expression::NumberLiteral {
+                    loc: Codegen,
+                    ty: Type::Uint(32),
+                    value: 36.into(),
+                };
+                Some(Expression::AllocDynamicBytes {
+                    loc: Codegen,
+                    ty: Type::Slice(Type::Bytes(1).into()).into(),
+                    size: size.into(),
+                    initializer: bytes.into(),
+                })
             }
         }
     }
@@ -93,21 +146,21 @@ pub(crate) enum PanicCode {
     InternalFunctionUninitialized = 0x51,
 }
 
-impl From<PanicCode> for BigInt {
-    fn from(val: PanicCode) -> Self {
-        BigInt::from_isize(val as isize).expect("Panic codes can always be represented as BigInt")
-    }
-}
+//impl From<PanicCode> for BigInt {
+//    fn from(val: PanicCode) -> Self {
+//        BigInt::from_isize(val as isize).expect("Panic codes can always be represented as BigInt")
+//    }
+//}
 
-impl From<PanicCode> for Expression {
-    fn from(val: PanicCode) -> Self {
-        Expression::NumberLiteral {
-            loc: Codegen,
-            ty: Type::Uint(256),
-            value: val.into(),
-        }
-    }
-}
+//impl From<PanicCode> for Expression {
+//    fn from(val: PanicCode) -> Self {
+//        Expression::NumberLiteral {
+//            loc: Codegen,
+//            ty: Type::Uint(256),
+//            value: val.into(),
+//        }
+//    }
+//}
 
 /// This function encodes the arguments for the assert-failure instruction
 /// and inserts it in the CFG.
