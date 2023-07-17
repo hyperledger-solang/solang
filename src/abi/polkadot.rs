@@ -341,13 +341,11 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .functions
         .iter()
         .filter_map(|i| {
-            // include functions of type constructor
             let f = &ns.functions[*i];
-            if f.is_constructor() {
-                Some(f)
-            } else {
-                None
+            if f.is_constructor() && ns.function_externally_callable(contract_no, Some(*i)) {
+                return Some(f);
             }
+            None
         })
         .chain(
             // include default constructor if exists
@@ -429,23 +427,9 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
     let messages = ns.contracts[contract_no]
         .all_functions
         .keys()
-        .filter_map(|function_no| {
-            let func = &ns.functions[*function_no];
-            // libraries are never in the public interface
-            if let Some(base_contract_no) = func.contract_no {
-                if ns.contracts[base_contract_no].is_library() {
-                    return None;
-                }
-            }
-            Some(func)
-        })
-        .filter(|f| match f.visibility {
-            pt::Visibility::Public(_) | pt::Visibility::External(_) => matches!(
-                f.ty,
-                pt::FunctionTy::Function | pt::FunctionTy::Fallback | pt::FunctionTy::Receive
-            ),
-            _ => false,
-        })
+        .filter(|i| ns.function_externally_callable(contract_no, Some(**i)))
+        .map(|i| &ns.functions[*i])
+        .filter(|f| !f.is_constructor())
         .map(message_spec)
         .collect::<Vec<MessageSpec<PortableForm>>>();
 

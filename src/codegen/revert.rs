@@ -20,14 +20,15 @@ use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 
 /// This function encodes the arguments for the assert-failure instruction
 /// and inserts it in the CFG.
-pub(crate) fn assert_failure(
+pub(super) fn assert_failure(
     loc: &Loc,
     arg: Option<Expression>,
     ns: &Namespace,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) {
-    if arg.is_none() {
+    // On Solana, returning the encoded arguments has no effect
+    if arg.is_none() || ns.target == Target::Solana {
         cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
         return;
     }
@@ -38,8 +39,8 @@ pub(crate) fn assert_failure(
         ty: Type::Bytes(4),
         value: BigInt::from(selector),
     };
-
     let args = vec![selector, arg.unwrap()];
+
     let (encoded_buffer, _) = abi_encode(loc, args, ns, vartab, cfg, false);
 
     cfg.add(

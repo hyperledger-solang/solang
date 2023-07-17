@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import expect from 'expect';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 import { AccountMeta, SYSVAR_CLOCK_PUBKEY, PublicKey } from '@solana/web3.js';
 
 describe('Testing builtins', function () {
     this.timeout(500000);
 
     it('builtins', async function () {
-        let { program, provider, storage } = await loadContract('builtins');
+        let { program, provider, storage } = await loadContractAndCallConstructor('builtins');
 
         let res = await program.methods.hashRipemd160(Buffer.from('Call me Ishmael.', 'utf8')).view();
         expect(Buffer.from(res).toString("hex")).toBe("0c8b641c461e3c7abbdabd7f12a8905ee480dadf");

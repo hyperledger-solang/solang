@@ -1,5 +1,5 @@
 import expect from 'expect';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 import crypto from 'crypto';
 import { BN } from '@coral-xyz/anchor';
 
@@ -7,7 +7,7 @@ describe('Simple solang tests', function () {
     this.timeout(500000);
 
     it('flipper', async function () {
-        let { program, storage } = await loadContract('flipper', [true]);
+        let { program, storage } = await loadContractAndCallConstructor('flipper', [true]);
 
         // make sure we can't run the constructor twice
         await expect(program.methods.new(false)
@@ -24,7 +24,7 @@ describe('Simple solang tests', function () {
     });
 
     it('primitives', async function () {
-        let { program, payer, storage } = await loadContract('primitives', []);
+        let { program, payer, storage } = await loadContractAndCallConstructor('primitives', []);
 
         // TEST Basic enums
         // in ethereum, an enum is described as an uint8 so can't use the enum
@@ -152,7 +152,7 @@ describe('Simple solang tests', function () {
     });
 
     it('store', async function () {
-        const { storage, program } = await loadContract('store', []);
+        const { storage, program } = await loadContractAndCallConstructor('store', []);
 
         let res = await program.methods.getValues1().accounts({ dataAccount: storage.publicKey }).view();
 
@@ -237,7 +237,7 @@ describe('Simple solang tests', function () {
     });
 
     it('structs', async function () {
-        const { program, storage } = await loadContract('store', []);
+        const { program, storage } = await loadContractAndCallConstructor('store', []);
 
         await program.methods.setFoo1().accounts({ dataAccount: storage.publicKey }).rpc();
 
@@ -347,13 +347,13 @@ describe('Simple solang tests', function () {
 
 
     it('account storage too small constructor', async function () {
-        await expect(loadContract('store', [], 100))
+        await expect(loadContractAndCallConstructor('store', [], 100))
             .rejects
             .toThrowError(new Error('failed to send transaction: Transaction simulation failed: Error processing Instruction 0: account data too small for instruction'));
     });
 
     it('account storage too small dynamic alloc', async function () {
-        const { program, storage } = await loadContract('store', [], 233);
+        const { program, storage } = await loadContractAndCallConstructor('store', [], 233);
 
         // storage.sol needs 168 bytes on constructor, more for string data
 
@@ -364,7 +364,7 @@ describe('Simple solang tests', function () {
     });
 
     it('account storage too small dynamic realloc', async function () {
-        const { program, storage } = await loadContract('store', [], 233);
+        const { program, storage } = await loadContractAndCallConstructor('store', [], 233);
 
         async function push_until_bang() {
             for (let i = 0; i < 100; i++) {
@@ -379,7 +379,7 @@ describe('Simple solang tests', function () {
     });
 
     it('arrays in account storage', async function () {
-        const { program, storage } = await loadContract('arrays', []);
+        const { program, storage } = await loadContractAndCallConstructor('arrays', []);
 
         let users = [];
 

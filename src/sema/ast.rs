@@ -508,7 +508,11 @@ impl Function {
         matches!(self.mutability, Mutability::Pure(_))
     }
 
-    /// Is this function accessable externally
+    /// Is this function visible externally, based on it's visibilty modifiers.
+    ///
+    /// Due to inheritance, this alone does not determine whether a function is
+    /// externally callable in the final contract artifact; for that, use
+    /// `Namespace::function_externally_callable()` instead.
     pub fn is_public(&self) -> bool {
         matches!(
             self.visibility,
@@ -654,6 +658,9 @@ pub struct File {
     pub line_starts: Vec<usize>,
     /// Indicates the file number in FileResolver.files
     pub cache_no: Option<usize>,
+    /// Index into FileResolver.import_paths. This is `None` when this File was
+    /// created not during `parse_and_resolve` (e.g., builtins)
+    pub import_no: Option<usize>,
 }
 
 /// When resolving a Solidity file, this holds all the resolved items

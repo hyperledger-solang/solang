@@ -75,3 +75,34 @@ fn hash_type_path_exists() {
     let ink_hash = &ink.types[1].ty.path;
     assert!(solang.types.iter().any(|t| &t.ty.path == ink_hash));
 }
+
+#[test]
+fn inherited_externally_callable_functions() {
+    let src = r##"
+    interface IERC165 {
+        function supportsInterface(bytes4 interfaceId) external view returns (bool);
+    }
+    
+    interface IERC1155 is IERC165 {}
+    
+    contract ERC165 is IERC165 {
+        function supportsInterface(
+            bytes4 interfaceId
+        ) public view virtual override returns (bool) {}
+    }
+    
+    contract ERC1155 is ERC165, IERC1155 {
+        function supportsInterface(
+            bytes4 interfaceId
+        ) public view virtual override(ERC165, IERC165) returns (bool) {}
+    }
+    
+    contract MyToken is ERC1155 {}
+    "##;
+
+    let abi = load_abi(&build_wasm(src, false, false)[0].1);
+    let messages = abi.spec().messages();
+
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].label(), "supportsInterface");
+}

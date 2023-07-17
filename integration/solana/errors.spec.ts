@@ -2,13 +2,13 @@
 
 import { BN } from '@coral-xyz/anchor';
 import expect from 'expect';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 
 describe('Testing errors', function () {
     this.timeout(500000);
 
     it('errors', async function () {
-        const { program, storage } = await loadContract('errors');
+        const { program, storage } = await loadContractAndCallConstructor('errors');
 
         let res = await program.methods.doRevert(false).view();
 
