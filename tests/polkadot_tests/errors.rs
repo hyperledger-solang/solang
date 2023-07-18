@@ -299,6 +299,7 @@ fn byte_cast_fail() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: bytes cast error in test.sol"));
+    assert_eq!(runtime.output(), Panic::from(PanicCode::Generic).encode())
 }
 
 #[test]

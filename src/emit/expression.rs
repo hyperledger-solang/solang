@@ -1125,14 +1125,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(error);
             bin.log_runtime_error(target, "bytes cast error".to_string(), Some(*loc), ns);
-            target.assert_failure(
-                bin,
-                bin.context
-                    .i8_type()
-                    .ptr_type(AddressSpace::default())
-                    .const_null(),
-                bin.context.i32_type().const_zero(),
-            );
+            let (data, length) = bin.error_data_const(ns, PanicCode::Generic);
+            target.assert_failure(bin, data, length);
 
             bin.builder.position_at_end(cast);
             let bytes_ptr = bin.vector_bytes(array);
