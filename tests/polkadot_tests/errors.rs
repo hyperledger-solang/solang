@@ -2,6 +2,7 @@
 
 use crate::build_solidity;
 use parity_scale_codec::Encode;
+use primitive_types::U256;
 
 #[test]
 fn constructor_buf_too_small() {
@@ -37,6 +38,10 @@ fn math_overflow() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: math overflow in test.sol"));
+    assert_eq!(
+        runtime.output(),
+        (0x4e487b71u32.to_be_bytes(), U256::from(0x11u8)).encode()
+    )
 }
 
 #[test]
@@ -328,7 +333,7 @@ fn external_call() {
 }
 
 #[test]
-fn errors_() {
+fn non_payable_function_with_value() {
     let mut runtime =
         build_solidity(r#"contract RuntimeErrors { function dont_pay_me() public {} }"#);
 
@@ -337,4 +342,29 @@ fn errors_() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: non payable function dont_pay_me received value"));
+}
+
+#[test]
+fn multiplication_overflow() {
+    let mut runtime = build_solidity(
+        r#"contract RuntimeErrors {
+            function pow(uint bar) public pure returns(uint) {
+                return bar ** 2;
+            }
+
+            function mul(uint bar) public pure returns(uint) {
+                return bar ** 2;
+            }
+        }"#,
+    );
+    let expected_debug_output = "runtime_error: multiplication overflow";
+    let expected_output = (0x4e487b71u32.to_be_bytes(), U256::from(0x11u8)).encode();
+
+    runtime.function_expect_failure("pow", U256::MAX.encode());
+    assert!(runtime.debug_buffer().contains(expected_debug_output));
+    assert_eq!(runtime.output(), expected_output);
+
+    runtime.function_expect_failure("mul", U256::MAX.encode());
+    assert!(runtime.debug_buffer().contains(expected_debug_output));
+    assert_eq!(runtime.output(), expected_output)
 }
