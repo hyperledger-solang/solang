@@ -4,10 +4,11 @@ use anchor_syn::idl::{IdlType, IdlTypeDefinition, IdlTypeDefinitionTy};
 use byte_slice_cast::AsByteSlice;
 use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
+use serde::Deserialize;
 use std::cmp::Ordering;
 
 /// This is the token that should be used for each function call in Solana runtime tests
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Deserialize)]
 pub enum BorshToken {
     Address([u8; 32]),
     Int { width: u16, value: BigInt },

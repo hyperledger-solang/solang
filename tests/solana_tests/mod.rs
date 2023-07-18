@@ -22,6 +22,7 @@ mod mappings;
 mod math;
 mod metas;
 mod modifiers;
+mod optimizations;
 mod primitives;
 mod rational;
 mod returns;

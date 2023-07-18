@@ -18,7 +18,7 @@ cc = "1.0"
 [dependencies]
 regex = "1"
 rand = "0.8"
-num-bigint = { version = "0.4", features = ["rand"]}
+num-bigint = { version = "0.4", features = ["rand", "serde"]}
 num-traits = "0.2"
 num-integer = "0.1"
 clap = {version = "4.1", features = ["derive"]}
