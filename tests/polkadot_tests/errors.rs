@@ -345,14 +345,14 @@ fn non_payable_function_with_value() {
 }
 
 #[test]
-fn multiplication_overflow() {
+fn multiplication_overflow_big_u256() {
     let mut runtime = build_solidity(
         r#"contract RuntimeErrors {
-            function pow(uint bar) public pure returns(uint) {
+            function pow(uint256 bar) public pure returns(uint256) {
                 return bar ** 2;
             }
 
-            function mul(uint bar) public pure returns(uint) {
+            function mul(uint256 bar) public pure returns(uint256) {
                 return bar ** 2;
             }
         }"#,
@@ -365,6 +365,31 @@ fn multiplication_overflow() {
     assert_eq!(runtime.output(), expected_output);
 
     runtime.function_expect_failure("mul", U256::MAX.encode());
+    assert!(runtime.debug_buffer().contains(expected_debug_output));
+    assert_eq!(runtime.output(), expected_output)
+}
+
+#[test]
+fn multiplication_overflow_u8() {
+    let mut runtime = build_solidity(
+        r#"contract RuntimeErrors {
+            function pow(uint8 bar) public pure returns(uint8) {
+                return bar ** 2;
+            }
+
+            function mul(uint8 bar) public pure returns(uint8) {
+                return bar ** 2;
+            }
+        }"#,
+    );
+    let expected_debug_output = "runtime_error: math overflow";
+    let expected_output = (0x4e487b71u32.to_be_bytes(), U256::from(0x11u8)).encode();
+
+    runtime.function_expect_failure("pow", u8::MAX.encode());
+    assert!(runtime.debug_buffer().contains(expected_debug_output));
+    assert_eq!(runtime.output(), expected_output);
+
+    runtime.function_expect_failure("mul", u8::MAX.encode());
     assert!(runtime.debug_buffer().contains(expected_debug_output));
     assert_eq!(runtime.output(), expected_output)
 }

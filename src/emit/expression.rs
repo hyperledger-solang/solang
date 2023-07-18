@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{HashTy, ReturnCode};
+use crate::codegen::revert::PanicCode;
 use crate::codegen::{Builtin, Expression};
 use crate::emit::binary::Binary;
 use crate::emit::math::{build_binary_op_with_overflow_check, multiply, power};
@@ -713,39 +714,28 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             // Load the result pointer
             let res = bin.builder.build_load(left.get_type(), o, "");
 
-            if *overflowing || ns.target.is_polkadot() {
-                // In Polkadot, overflow case will hit an unreachable expression, so no additional checks are needed.
-                res
-            } else {
-                // In Solana, a return other than zero will abort execution. We need to check if power() returned a zero or not.
-                let error_block = bin.context.append_basic_block(function, "error");
-                let return_block = bin.context.append_basic_block(function, "return_block");
+            // A return other than zero will abort execution. We need to check if power() returned a zero or not.
+            let error_block = bin.context.append_basic_block(function, "error");
+            let return_block = bin.context.append_basic_block(function, "return_block");
 
-                let error_ret = bin.builder.build_int_compare(
-                    IntPredicate::NE,
-                    error_return.into_int_value(),
-                    error_return.get_type().const_zero().into_int_value(),
-                    "",
-                );
+            let error_ret = bin.builder.build_int_compare(
+                IntPredicate::NE,
+                error_return.into_int_value(),
+                error_return.get_type().const_zero().into_int_value(),
+                "",
+            );
 
-                bin.builder
-                    .build_conditional_branch(error_ret, error_block, return_block);
-                bin.builder.position_at_end(error_block);
+            bin.builder
+                .build_conditional_branch(error_ret, error_block, return_block);
+            bin.builder.position_at_end(error_block);
 
-                bin.log_runtime_error(target, "math overflow".to_string(), Some(*loc), ns);
-                target.assert_failure(
-                    bin,
-                    bin.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::default())
-                        .const_null(),
-                    bin.context.i32_type().const_zero(),
-                );
+            bin.log_runtime_error(target, "math overflow".to_string(), Some(*loc), ns);
+            let (data, length) = bin.error_data_const(ns, PanicCode::MathOverflow);
+            target.assert_failure(bin, data, length);
 
-                bin.builder.position_at_end(return_block);
+            bin.builder.position_at_end(return_block);
 
-                res
-            }
+            res
         }
         Expression::Equal { left, right, .. } => {
             if left.ty().is_address() {
