@@ -2,7 +2,7 @@
 
 use parity_scale_codec::{Decode, Encode};
 
-use crate::build_solidity;
+use crate::{build_solidity, build_wasm, load_abi};
 
 #[test]
 fn constructors() {
@@ -598,4 +598,36 @@ fn global_functions() {
     );
 
     runtime.function("test", Vec::new());
+}
+
+#[test]
+fn virtual_function_member_access() {
+    let src = r##"
+        interface IERC1155Receiver {
+            @selector([1, 2, 3, 4])
+            function onERC1155Received() external returns (bytes4);
+        }
+    
+        abstract contract ERC1155 {
+            function _doSafeTransferAcceptanceCheck() internal pure returns (bytes4) {
+                return IERC1155Receiver.onERC1155Received.selector;
+            }
+        }
+
+        contract C is ERC1155 {
+            function create() public pure returns (bytes4) {
+                return _doSafeTransferAcceptanceCheck();
+            }
+        }"##;
+
+    // The create function is the only one appearing in the metadata.
+    let abi = load_abi(&build_wasm(src, false, false)[0].1);
+    let messages = abi.spec().messages();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].label(), "create");
+
+    // The create function returns the selector of IERC1155Receiver.onERC1155Received
+    let mut runtime = build_solidity(src);
+    runtime.function("create", vec![]);
+    assert_eq!(runtime.output(), vec![1, 2, 3, 4]);
 }
