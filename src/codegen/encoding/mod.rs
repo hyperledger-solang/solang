@@ -10,7 +10,7 @@
 ///   Any such helper function should work fine regardless of the encoding scheme being used.
 mod borsh_encoding;
 mod buffer_validator;
-mod scale_encoding;
+pub(super) mod scale_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;

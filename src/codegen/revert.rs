@@ -15,9 +15,9 @@ use crate::sema::{
     file::PathDisplay,
 };
 use crate::Target;
-use num_bigint::BigInt;
-use num_traits::FromPrimitive;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
+
+pub(crate) use super::encoding::scale_encoding::encode_error_data_const;
 
 /// Corresponds to the error types from the Solidity language.
 ///
@@ -57,9 +57,9 @@ impl SolidityError {
     pub fn selector(&self) -> u32 {
         match self {
             Self::Empty => unreachable!("empty return data has no selector"),
-            Self::String(_) => 0x08c379a0u32.into(),
-            Self::Panic(_) => 0x4e487b71u32.into(),
-            Self::Custom(selector, _) => u32::from_be_bytes(*selector).into(),
+            Self::String(_) => 0x08c379a0u32,
+            Self::Panic(_) => 0x4e487b71u32,
+            Self::Custom(selector, _) => u32::from_be_bytes(*selector),
         }
     }
 
@@ -74,56 +74,12 @@ impl SolidityError {
         match self {
             Self::Empty => None,
             Self::String(data) | Self::Custom(_, data) => {
-                match data {
-                    Expression::AllocDynamicBytes {
-                        ty: Type::String,
-                        initializer: Some(data),
-                        ..
-                    } => {
-                        // FIXME have to do it this way to avoid unnecessary abi encoding
-                        assert!(ns.target.is_polkadot());
-
-                        let mut bytes = self.selector().to_be_bytes().to_vec();
-                        bytes.extend_from_slice(data);
-
-                        let size = Expression::NumberLiteral {
-                            loc: Codegen,
-                            ty: Type::Uint(32),
-                            value: 36.into(),
-                        };
-                        Some(Expression::AllocDynamicBytes {
-                            loc: Codegen,
-                            ty: Type::Slice(Type::Bytes(1).into()).into(),
-                            size: size.into(),
-                            initializer: bytes.into(),
-                        })
-                    }
-                    _ => {
-                        let args = vec![self.selector_expression(), data.clone()];
-                        abi_encode(loc, args, ns, vartab, cfg, false).0.into()
-                    }
-                }
-            }
-            Self::Panic(code) => {
-                // FIXME have to do it this way to avoid unnecessary abi encoding
-                assert!(ns.target.is_polkadot());
-
-                let mut bytes = self.selector().to_be_bytes().to_vec();
-                bytes.push(*code as u8);
-                bytes.resize(36, 0);
-
-                let size = Expression::NumberLiteral {
-                    loc: Codegen,
-                    ty: Type::Uint(32),
-                    value: 36.into(),
-                };
-                Some(Expression::AllocDynamicBytes {
-                    loc: Codegen,
-                    ty: Type::Slice(Type::Bytes(1).into()).into(),
-                    size: size.into(),
-                    initializer: bytes.into(),
+                encode_error_data_const(self).or_else(|| {
+                    let args = vec![self.selector_expression(), data.clone()];
+                    abi_encode(loc, args, ns, vartab, cfg, false).0.into()
                 })
             }
+            Self::Panic(_) => encode_error_data_const(self),
         }
     }
 }
@@ -145,22 +101,6 @@ pub(crate) enum PanicCode {
     OutOfMemory = 0x41,
     InternalFunctionUninitialized = 0x51,
 }
-
-//impl From<PanicCode> for BigInt {
-//    fn from(val: PanicCode) -> Self {
-//        BigInt::from_isize(val as isize).expect("Panic codes can always be represented as BigInt")
-//    }
-//}
-
-//impl From<PanicCode> for Expression {
-//    fn from(val: PanicCode) -> Self {
-//        Expression::NumberLiteral {
-//            loc: Codegen,
-//            ty: Type::Uint(256),
-//            value: val.into(),
-//        }
-//    }
-//}
 
 /// This function encodes the arguments for the assert-failure instruction
 /// and inserts it in the CFG.
@@ -397,59 +337,38 @@ fn string_to_expr(string: String) -> Expression {
 
 #[cfg(test)]
 mod tests {
-    use num_bigint::BigInt;
-
-    use crate::{
-        codegen::{
-            revert::{PanicCode, SolidityError},
-            Expression,
-        },
-        sema::ast::Type,
+    use crate::codegen::{
+        revert::{PanicCode, SolidityError},
+        Expression,
     };
 
     #[test]
-    fn panic_code_conversion() {
-        assert_eq!(BigInt::from(0x00), PanicCode::Generic.into());
-        assert_eq!(BigInt::from(0x01), PanicCode::Assertion.into());
-        assert_eq!(BigInt::from(0x11), PanicCode::MathOverflow.into());
-        assert_eq!(BigInt::from(0x12), PanicCode::DivisionByZero.into());
-        assert_eq!(BigInt::from(0x21), PanicCode::EnumCastOob.into());
-        assert_eq!(
-            BigInt::from(0x22),
-            PanicCode::StorageBytesEncodingIncorrect.into()
-        );
-        assert_eq!(BigInt::from(0x31), PanicCode::EmptyArrayPop.into());
-        assert_eq!(BigInt::from(0x32), PanicCode::ArrayIndexOob.into());
-        assert_eq!(BigInt::from(0x41), PanicCode::OutOfMemory.into());
-        assert_eq!(
-            BigInt::from(0x51),
-            PanicCode::InternalFunctionUninitialized.into()
-        );
+    fn panic_code_as_byte() {
+        assert_eq!(0x00, PanicCode::Generic as u8);
+        assert_eq!(0x01, PanicCode::Assertion as u8);
+        assert_eq!(0x11, PanicCode::MathOverflow as u8);
+        assert_eq!(0x12, PanicCode::DivisionByZero as u8);
+        assert_eq!(0x21, PanicCode::EnumCastOob as u8);
+        assert_eq!(0x22, PanicCode::StorageBytesEncodingIncorrect as u8);
+        assert_eq!(0x31, PanicCode::EmptyArrayPop as u8);
+        assert_eq!(0x32, PanicCode::ArrayIndexOob as u8);
+        assert_eq!(0x41, PanicCode::OutOfMemory as u8);
+        assert_eq!(0x51, PanicCode::InternalFunctionUninitialized as u8);
     }
 
     #[test]
     fn function_selector_expression() {
-        for (selector, expression) in [
-            (
-                0x08c379a0u32, // Keccak256('Error(string)')[:4]
-                SolidityError::String(Expression::Poison).selector(),
-            ),
-            (
-                0x4e487b71u32, // Keccak256('Panic(uint256)')[:4]
-                SolidityError::Panic(PanicCode::Generic).selector(),
-            ),
-            (
-                0xdeadbeefu32,
-                SolidityError::Custom([0xde, 0xad, 0xbe, 0xef], Expression::Poison).selector(),
-            ),
-        ] {
-            match expression {
-                Expression::NumberLiteral { ty, value, .. } => {
-                    assert_eq!(ty, Type::Bytes(4));
-                    assert_eq!(value, selector.into());
-                }
-                _ => panic!("invalid selector expression generated for {:?}", expression),
-            }
-        }
+        assert_eq!(
+            0x08c379a0u32, // Keccak256('Error(string)')[:4]
+            SolidityError::String(Expression::Poison).selector(),
+        );
+        assert_eq!(
+            0x4e487b71u32, // Keccak256('Panic(uint256)')[:4]
+            SolidityError::Panic(PanicCode::Generic).selector(),
+        );
+        assert_eq!(
+            0xdeadbeefu32,
+            SolidityError::Custom([0xde, 0xad, 0xbe, 0xef], Expression::Poison).selector(),
+        );
     }
 }

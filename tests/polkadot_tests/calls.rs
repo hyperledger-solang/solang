@@ -61,26 +61,27 @@ fn revert() {
 
 #[test]
 fn require() {
-    let mut runtime = build_solidity(
+    let msg = "Program testing can be used to show the presence of bugs, but never to show their absence!".to_string();
+    let src = format!(
         r##"
-        contract c {
-            function test1() public {
-                require(false, "Program testing can be used to show the presence of bugs, but never to show their absence!");
-            }
+        contract c {{
+            function test1() public {{
+                require(false, "{}");
+            }}
 
-            function test2() public {
-                require(true, "Program testing can be used to show the presence of bugs, but never to show their absence!");
-            }
-        }"##,
+            function test2() public {{
+                require(true, "{}");
+            }}
+        }}"##,
+        &msg, &msg
     );
+    let mut runtime = build_solidity(&src);
 
     runtime.function_expect_failure("test1", Vec::new());
-
-    // The reason is lost
-    assert_eq!(runtime.output().len(), 0);
+    let selector = 0x08c379a0u32.to_be_bytes();
+    assert_eq!(runtime.output(), (selector, msg).encode());
 
     runtime.function("test2", Vec::new());
-
     assert_eq!(runtime.output().len(), 0);
 }
 
