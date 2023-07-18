@@ -293,7 +293,17 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(error);
             bin.log_runtime_error(target, "pop from empty array".to_string(), Some(*loc), ns);
-            let (data, length) = bin.error_data_const(ns, PanicCode::EmptyArrayPop);
+            let (data, length) = if ns.target == Target::Solana {
+                (
+                    bin.context
+                        .i8_type()
+                        .ptr_type(AddressSpace::default())
+                        .const_null(),
+                    bin.context.i32_type().const_zero(),
+                )
+            } else {
+                bin.error_data_const(ns, PanicCode::EmptyArrayPop)
+            };
             target.assert_failure(bin, data, length);
 
             bin.builder.position_at_end(pop);

@@ -24,7 +24,6 @@ impl From<PanicCode> for Panic {
 fn constructor_buf_too_small() {
     let mut runtime = build_solidity(
         r#"contract RuntimeErrors {
-
         function write_bytes_failure(uint8 buf_size) public pure {
             bytes data = new bytes(10);
             bytes smol_buf = new bytes(buf_size);
@@ -458,7 +457,11 @@ fn int256_div_by_zero() {
     }"#,
     );
 
-    runtime.function_expect_failure("div_zero", U256::zero().encode());
+    runtime.function_expect_failure("div_by_zero", U256::zero().encode());
+    assert!(runtime.debug_buffer().contains("division by zero"));
+    assert_eq!(runtime.output(), Panic::from(DivisionByZero).encode());
+
+    runtime.function_expect_failure("mod_zero", U256::zero().encode());
     assert!(runtime.debug_buffer().contains("division by zero"));
     assert_eq!(runtime.output(), Panic::from(DivisionByZero).encode());
 }
