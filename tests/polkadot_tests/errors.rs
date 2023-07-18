@@ -1,8 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::build_solidity;
-use parity_scale_codec::Encode;
+use parity_scale_codec::{Decode, Encode};
 use primitive_types::U256;
+use solang::codegen::revert::{PanicCode, PanicCode::*, SolidityError};
+
+#[derive(Encode, Decode)]
+struct Panic {
+    selector: [u8; 4],
+    data: U256,
+}
+
+impl From<PanicCode> for Panic {
+    fn from(value: PanicCode) -> Self {
+        Self {
+            selector: SolidityError::Panic(value).selector().to_be_bytes(),
+            data: U256::from(value as u8),
+        }
+    }
+}
 
 #[test]
 fn constructor_buf_too_small() {
@@ -38,10 +54,7 @@ fn math_overflow() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: math overflow in test.sol"));
-    assert_eq!(
-        runtime.output(),
-        (0x4e487b71u32.to_be_bytes(), U256::from(0x11u8)).encode()
-    )
+    assert_eq!(runtime.output(), Panic::from(MathOverflow).encode());
 }
 
 #[test]
@@ -358,7 +371,7 @@ fn multiplication_overflow_big_u256() {
         }"#,
     );
     let expected_debug_output = "runtime_error: multiplication overflow";
-    let expected_output = (0x4e487b71u32.to_be_bytes(), U256::from(0x11u8)).encode();
+    let expected_output = Panic::from(MathOverflow).encode();
 
     runtime.function_expect_failure("pow", U256::MAX.encode());
     assert!(runtime.debug_buffer().contains(expected_debug_output));
@@ -383,7 +396,7 @@ fn multiplication_overflow_u8() {
         }"#,
     );
     let expected_debug_output = "runtime_error: math overflow";
-    let expected_output = (0x4e487b71u32.to_be_bytes(), U256::from(0x11u8)).encode();
+    let expected_output = Panic::from(MathOverflow).encode();
 
     runtime.function_expect_failure("pow", u8::MAX.encode());
     assert!(runtime.debug_buffer().contains(expected_debug_output));
@@ -406,8 +419,5 @@ fn empty_array_pop() {
 
     runtime.function_expect_failure("pop_empty_array", vec![]);
     assert!(runtime.debug_buffer().contains("pop from empty array"));
-    assert_eq!(
-        runtime.output(),
-        (0x4e487b71u32.to_be_bytes(), U256::from(0x31)).encode()
-    );
+    assert_eq!(runtime.output(), Panic::from(EmptyArrayPop).encode());
 }

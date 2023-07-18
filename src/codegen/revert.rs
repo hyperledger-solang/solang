@@ -24,7 +24,7 @@ use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 #[non_exhaustive]
 #[allow(unused)] // TODO: Implement custom errors
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) enum SolidityError {
+pub enum SolidityError {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
     Empty,
     /// The `Error(string)` selector
@@ -88,7 +88,7 @@ impl SolidityError {
 #[allow(unused)]
 #[non_exhaustive]
 #[derive(Display, Debug, PartialEq, Clone, Copy)]
-pub(crate) enum PanicCode {
+pub enum PanicCode {
     Generic = 0x00,
     Assertion = 0x01,
     MathOverflow = 0x11,

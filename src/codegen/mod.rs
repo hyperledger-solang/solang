@@ -13,7 +13,7 @@ mod external_functions;
 mod reaching_definitions;
 /// Releated to code that ultimately compiles to the target
 /// equivalent instruction of EVM revert (0xfd).
-pub(crate) mod revert;
+pub mod revert;
 mod solana_accounts;
 mod solana_deploy;
 mod statements;
