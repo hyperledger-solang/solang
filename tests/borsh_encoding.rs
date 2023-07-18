@@ -369,3 +369,55 @@ fn integer_byte_width(ty: &IdlType) -> usize {
         _ => unreachable!("Not an integer"),
     }
 }
+
+pub trait VisitorMut {
+    fn visit_address(&mut self, _a: &mut [u8; 32]) {}
+    fn visit_int(&mut self, _width: &mut u16, _value: &mut BigInt) {}
+    fn visit_uint(&mut self, _width: &mut u16, _value: &mut BigInt) {}
+    fn visit_fixed_bytes(&mut self, _v: &mut Vec<u8>) {}
+    fn visit_bytes(&mut self, _v: &mut Vec<u8>) {}
+    fn visit_bool(&mut self, _b: &mut bool) {}
+    fn visit_string(&mut self, _s: &mut String) {}
+    fn visit_fixed_array(&mut self, v: &mut Vec<BorshToken>) {
+        visit_fixed_array(self, v)
+    }
+    fn visit_array(&mut self, v: &mut Vec<BorshToken>) {
+        visit_array(self, v)
+    }
+    fn visit_tuple(&mut self, v: &mut Vec<BorshToken>) {
+        visit_tuple(self, v)
+    }
+}
+
+pub fn visit_mut(visitor: &mut (impl VisitorMut + ?Sized), token: &mut BorshToken) {
+    match token {
+        BorshToken::Address(a) => visitor.visit_address(a),
+        BorshToken::Int { width, value } => visitor.visit_int(width, value),
+        BorshToken::Uint { width, value } => visitor.visit_uint(width, value),
+        BorshToken::FixedBytes(v) => visitor.visit_fixed_bytes(v),
+        BorshToken::Bytes(v) => visitor.visit_bytes(v),
+        BorshToken::Bool(b) => visitor.visit_bool(b),
+        BorshToken::String(s) => visitor.visit_string(s),
+        BorshToken::FixedArray(v) => visitor.visit_fixed_array(v),
+        BorshToken::Array(v) => visitor.visit_array(v),
+        BorshToken::Tuple(v) => visitor.visit_tuple(v),
+    }
+}
+
+pub fn visit_fixed_array(visitor: &mut (impl VisitorMut + ?Sized), v: &mut Vec<BorshToken>) {
+    for token in v.iter_mut() {
+        visit_mut(visitor, token);
+    }
+}
+
+pub fn visit_array(visitor: &mut (impl VisitorMut + ?Sized), v: &mut Vec<BorshToken>) {
+    for token in v.iter_mut() {
+        visit_mut(visitor, token);
+    }
+}
+
+pub fn visit_tuple(visitor: &mut (impl VisitorMut + ?Sized), v: &mut Vec<BorshToken>) {
+    for token in v.iter_mut() {
+        visit_mut(visitor, token);
+    }
+}
