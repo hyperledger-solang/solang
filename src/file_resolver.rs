@@ -206,7 +206,7 @@ impl FileResolver {
                 return Ok(ResolvedFile {
                     full_path,
                     base,
-                    import_no: Some(0),
+                    import_no: import_no.clone(),
                 });
             } else if let Ok(full_path) = base.join(&path).canonicalize() {
                 self.load_file(&full_path)?;
@@ -218,7 +218,7 @@ impl FileResolver {
                 return Ok(ResolvedFile {
                     full_path,
                     base,
-                    import_no: Some(0),
+                    import_no: import_no.clone(),
                 });
             }
 
