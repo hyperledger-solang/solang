@@ -1685,6 +1685,13 @@ impl<'a, 'b> VmFunction<'a, 'b> {
     }
 
     fn call(&mut self) -> Option<BorshToken> {
+        match self.call_with_error_code() {
+            Ok(output) => output,
+            Err(num) => panic!("unexpected return {num:#x}"),
+        }
+    }
+
+    fn call_with_error_code(&mut self) -> Result<Option<BorshToken>, u64> {
         self.vm.return_data = None;
         let idl_instr = self.vm.stack[0].idl.as_ref().unwrap().instructions[self.idx].clone();
         let mut calldata = discriminator("global", &idl_instr.name);
@@ -1719,7 +1726,7 @@ impl<'a, 'b> VmFunction<'a, 'b> {
 
         match res {
             ProgramResult::Ok(num) if num == self.expected => (),
-            ProgramResult::Ok(num) => panic!("unexpected return {num:#x}"),
+            ProgramResult::Ok(num) => return Err(num),
             ProgramResult::Err(e) => panic!("error {e:?}"),
         }
 
@@ -1738,10 +1745,10 @@ impl<'a, 'b> VmFunction<'a, 'b> {
                 &self.vm.stack[0].idl.as_ref().unwrap().types,
             );
             assert_eq!(offset, return_data.len());
-            Some(decoded)
+            Ok(Some(decoded))
         } else {
             assert_eq!(return_data.len(), 0);
-            None
+            Ok(None)
         }
     }
 
