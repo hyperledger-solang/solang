@@ -2124,7 +2124,10 @@ impl Namespace {
         // If a function is virtual, and it is overriden, do not make it public;
         // Otherwise the runtime function dispatch will have two identical functions to dispatch to.
         if func.is_virtual
-            && Some(self.contracts[contract_no].virtual_functions[&func.signature]) != function_no
+            && self.contracts[contract_no]
+                .virtual_functions
+                .get(&func.signature)
+                != function_no.as_ref()
         {
             return false;
         }
