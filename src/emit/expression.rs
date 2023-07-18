@@ -278,14 +278,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 // throw division by zero error should be an assert
                 bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
-                target.assert_failure(
-                    bin,
-                    bin.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::default())
-                        .const_null(),
-                    bin.context.i32_type().const_zero(),
-                );
+                let (data, length) = bin.error_data_const(ns, PanicCode::DivisionByZero);
+                target.assert_failure(bin, data, length);
 
                 bin.builder.position_at_end(success_block);
 
@@ -375,14 +369,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 // throw division by zero error should be an assert
                 bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
-                target.assert_failure(
-                    bin,
-                    bin.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::default())
-                        .const_null(),
-                    bin.context.i32_type().const_zero(),
-                );
+                let (data, length) = bin.error_data_const(ns, PanicCode::DivisionByZero);
+                target.assert_failure(bin, data, length);
 
                 bin.builder.position_at_end(success_block);
 
@@ -520,14 +508,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 // throw division by zero error should be an assert
                 bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
-                target.assert_failure(
-                    bin,
-                    bin.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::default())
-                        .const_null(),
-                    bin.context.i32_type().const_zero(),
-                );
+                let (data, length) = bin.error_data_const(ns, PanicCode::DivisionByZero);
+                target.assert_failure(bin, data, length);
 
                 bin.builder.position_at_end(success_block);
 
@@ -614,14 +596,8 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 // throw division by zero error should be an assert
                 bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
-                target.assert_failure(
-                    bin,
-                    bin.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::default())
-                        .const_null(),
-                    bin.context.i32_type().const_zero(),
-                );
+                let (data, length) = bin.error_data_const(ns, PanicCode::DivisionByZero);
+                target.assert_failure(bin, data, length);
 
                 bin.builder.position_at_end(success_block);
 

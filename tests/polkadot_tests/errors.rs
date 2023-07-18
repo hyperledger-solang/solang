@@ -422,3 +422,43 @@ fn empty_array_pop() {
     assert!(runtime.debug_buffer().contains("pop from empty array"));
     assert_eq!(runtime.output(), Panic::from(EmptyArrayPop).encode());
 }
+
+#[test]
+fn uint256_div_by_zero() {
+    let mut runtime = build_solidity(
+        r#"contract RuntimeErrors {
+        function div_by_zero(uint256 div) public pure returns(uint256 ret) {
+            ret = ret / div;
+        }
+        function mod_zero(uint256 div) public pure returns(uint256 ret) {
+            ret = ret % div;
+        }
+    }"#,
+    );
+
+    runtime.function_expect_failure("div_by_zero", U256::zero().encode());
+    assert!(runtime.debug_buffer().contains("division by zero"));
+    assert_eq!(runtime.output(), Panic::from(DivisionByZero).encode());
+
+    runtime.function_expect_failure("mod_zero", U256::zero().encode());
+    assert!(runtime.debug_buffer().contains("division by zero"));
+    assert_eq!(runtime.output(), Panic::from(DivisionByZero).encode());
+}
+
+#[test]
+fn int256_div_by_zero() {
+    let mut runtime = build_solidity(
+        r#"contract RuntimeErrors {
+        function div_by_zero(int256 div) public pure returns(int256 ret) {
+            ret = ret / div;
+        }
+        function mod_zero(int256 div) public pure returns(int256 ret) {
+            ret = ret % div;
+        }
+    }"#,
+    );
+
+    runtime.function_expect_failure("div_zero", U256::zero().encode());
+    assert!(runtime.debug_buffer().contains("division by zero"));
+    assert_eq!(runtime.output(), Panic::from(DivisionByZero).encode());
+}
