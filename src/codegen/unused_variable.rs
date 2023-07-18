@@ -73,6 +73,15 @@ pub fn should_remove_variable(pos: usize, func: &Function, opt: &Options) -> boo
         return true;
     }
 
+    // The unused variable elimination pass does not deal with pointers correctly, so we
+    // cannot eliminate them.
+    // e.g.
+    // AccountInfo ai = tx.accounts[0]; // ai holds a pointer. If we modify it, we should
+    // not eliminate the modification.
+    if matches!(var.usage_type, VariableUsage::Pointer) {
+        return false;
+    }
+
     // If the variable has been assigned, we must detect special cases
     // Parameters and return variables cannot be removed
     if !var.read

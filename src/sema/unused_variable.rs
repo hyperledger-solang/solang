@@ -435,7 +435,8 @@ pub fn emit_warning_local_variable(
             }
             None
         }
-        VariableUsage::AnonymousReturnVariable => None,
+
+        VariableUsage::Pointer | VariableUsage::AnonymousReturnVariable => None,
     }
 }
 

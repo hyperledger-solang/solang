@@ -74,6 +74,7 @@ pub enum VariableUsage {
     TryCatchErrorString,
     TryCatchErrorBytes,
     YulLocalVariable,
+    Pointer,
 }
 
 #[derive(Debug, Clone)]

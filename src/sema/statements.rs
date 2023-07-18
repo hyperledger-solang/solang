@@ -384,7 +384,17 @@ fn statement(
                 var_ty.clone(),
                 ns,
                 VariableInitializer::Solidity(initializer.clone()),
-                VariableUsage::LocalVariable,
+                match &initializer {
+                    Some(init)
+                        if *init.ty().deref_memory() == Type::Struct(StructType::AccountInfo) =>
+                    {
+                        // If the type is AccountInfo, it is a pointer to that struct, as we
+                        // cannot instantiate this struct in Solidity.
+                        // Unused variable elimination cannot remove this.
+                        VariableUsage::Pointer
+                    }
+                    _ => VariableUsage::LocalVariable,
+                },
                 decl.storage.clone(),
             ) {
                 ns.check_shadowing(
