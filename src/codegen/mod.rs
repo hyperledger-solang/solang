@@ -6,7 +6,7 @@ mod constant_folding;
 mod constructor;
 mod dead_storage;
 pub(crate) mod dispatch;
-mod encoding;
+pub(crate) mod encoding;
 mod events;
 mod expression;
 mod external_functions;

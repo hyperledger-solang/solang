@@ -23,10 +23,13 @@ use crate::Target;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::{One, Zero};
+use parity_scale_codec::Encode;
 use solang_parser::pt::{Loc, Loc::Codegen};
 use std::ops::{AddAssign, MulAssign, Sub};
 
 use self::buffer_validator::BufferValidator;
+
+use super::revert::{PanicCode, SolidityError};
 
 /// Insert encoding instructions into the `cfg` for any `Expression` in `args`.
 /// Returns a pointer to the encoded data and the size as a 32bit integer.
@@ -180,7 +183,7 @@ fn calculate_size_args(
 /// However, this might be less suitable for schemas vastly different than SCALE or Borsh.
 /// In the worst case scenario, you need to provide your own implementation of `fn encode(..)`,
 /// which effectively means implementing the encoding logic for any given sema `Type` on your own.
-pub(super) trait AbiEncoding {
+pub(crate) trait AbiEncoding {
     /// The width (in bits) used in size hints for dynamic size types.
     fn size_width(
         &self,
@@ -1732,10 +1735,57 @@ pub(super) trait AbiEncoding {
 
     /// Returns if the we are packed encoding
     fn is_packed(&self) -> bool;
+
+    /// Encode "Panic(uint256)" error data.
+    fn const_error_panic(&self, code: PanicCode) -> Vec<u8> {
+        let mut bytes = SolidityError::Panic(code).selector().to_be_bytes().to_vec();
+        bytes.push(code as u8);
+        bytes.resize(36, 0);
+        bytes
+    }
+
+    /// Encode "Error(string)" error data where the contents are compile time constant.
+    fn const_error_string(&self, data: String) -> Vec<u8> {
+        let mut bytes = SolidityError::String(Expression::Poison)
+            .selector()
+            .to_be_bytes()
+            .to_vec();
+        bytes.extend_from_slice(&data.encode());
+        bytes
+    }
+
+    /// Encode the error data at compile time.
+    ///
+    /// Returns`None` if the error data is not a compile time constant value.
+    fn encode_error_data_const(&self, error: SolidityError) -> Option<Expression> {
+        let bytes = match error {
+            SolidityError::Empty => return None,
+            SolidityError::String(data) | SolidityError::Custom(_, data) => match data {
+                Expression::AllocDynamicBytes {
+                    ty: Type::String,
+                    initializer: Some(data),
+                    ..
+                } => self.const_error_string(String::from_utf8(data).unwrap()),
+                _ => return None,
+            },
+            SolidityError::Panic(code) => self.const_error_panic(code),
+        };
+        let size = Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Type::Uint(32),
+            value: bytes.len().into(),
+        };
+        Some(Expression::AllocDynamicBytes {
+            loc: Codegen,
+            ty: Type::Slice(Type::Bytes(1).into()),
+            size: size.into(),
+            initializer: bytes.into(),
+        })
+    }
 }
 
 /// This function should return the correct encoder, given the target
-pub(super) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
+pub(crate) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
     match &ns.target {
         Target::Solana => Box::new(BorshEncoding::new(packed)),
         // Solana utilizes Borsh encoding and Polkadot, SCALE encoding.

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::codegen::revert::PanicCode;
 use crate::emit::binary::Binary;
 use crate::emit::{BinaryOp, TargetRuntime};
 use crate::sema::ast::Namespace;
@@ -359,14 +360,8 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.position_at_end(error_block);
 
             bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc), ns);
-            target.assert_failure(
-                bin,
-                bin.context
-                    .i8_type()
-                    .ptr_type(AddressSpace::default())
-                    .const_null(),
-                bin.context.i32_type().const_zero(),
-            );
+            let (data, length) = bin.error_data_const(ns, PanicCode::MathOverflow);
+            target.assert_failure(bin, data, length);
 
             bin.builder.position_at_end(return_block);
 

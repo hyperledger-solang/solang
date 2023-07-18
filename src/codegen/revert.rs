@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::encoding::abi_encode;
+use super::encoding::{abi_encode, create_encoder};
 use super::expression::expression;
 use super::Options;
 use super::{
@@ -15,16 +15,15 @@ use crate::sema::{
     file::PathDisplay,
 };
 use crate::Target;
+use parse_display::Display;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
-
-pub(crate) use super::encoding::scale_encoding::encode_error_data_const;
 
 /// Corresponds to the error types from the Solidity language.
 ///
 /// Marked as non-exhaustive because Solidity may add more variants in the future.
 #[non_exhaustive]
 #[allow(unused)] // TODO: Implement custom errors
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) enum SolidityError {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
     Empty,
@@ -73,13 +72,13 @@ impl SolidityError {
     ) -> Option<Expression> {
         match self {
             Self::Empty => None,
-            Self::String(data) | Self::Custom(_, data) => {
-                encode_error_data_const(self).or_else(|| {
+            Self::String(data) | Self::Custom(_, data) => create_encoder(ns, false)
+                .encode_error_data_const(self.clone())
+                .or_else(|| {
                     let args = vec![self.selector_expression(), data.clone()];
                     abi_encode(loc, args, ns, vartab, cfg, false).0.into()
-                })
-            }
-            Self::Panic(_) => encode_error_data_const(self),
+                }),
+            Self::Panic(_) => create_encoder(ns, false).encode_error_data_const(self.clone()),
         }
     }
 }
@@ -88,7 +87,7 @@ impl SolidityError {
 /// https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require
 #[allow(unused)]
 #[non_exhaustive]
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Display, Debug, PartialEq, Clone, Copy)]
 pub(crate) enum PanicCode {
     Generic = 0x00,
     Assertion = 0x01,
