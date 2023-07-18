@@ -107,6 +107,7 @@ fn set_storage_bytes_oob() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: storage index out of bounds in test.sol"));
+    assert_eq!(runtime.output(), Panic::from(ArrayIndexOob).encode());
 }
 
 #[test]
@@ -127,6 +128,7 @@ fn get_storage_bytes_oob() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: storage array index out of bounds in test.sol"));
+    assert_eq!(runtime.output(), Panic::from(ArrayIndexOob).encode());
 }
 
 #[test]
@@ -162,6 +164,7 @@ fn empty_storage_array_pop() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: pop from empty storage array in test.sol"));
+    assert_eq!(runtime.output(), Panic::from(EmptyArrayPop).encode());
 }
 
 #[test]

@@ -183,7 +183,7 @@ fn signed_ovf_detect<'a, T: TargetRuntime<'a> + ?Sized>(
     bin.builder.position_at_end(error_block);
 
     bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc), ns);
-    let (data, length) = if ns.target == Target::Solana {
+    let (revert_out, revert_out_len) = if ns.target == Target::Solana {
         (
             bin.context
                 .i8_type()
@@ -194,7 +194,7 @@ fn signed_ovf_detect<'a, T: TargetRuntime<'a> + ?Sized>(
     } else {
         bin.error_data_const(ns, PanicCode::MathOverflow)
     };
-    target.assert_failure(bin, data, length);
+    target.assert_failure(bin, revert_out, revert_out_len);
 
     bin.builder.position_at_end(return_block);
 
@@ -366,7 +366,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc), ns);
 
-            let (data, length) = if ns.target == Target::Solana {
+            let (revert_out, revert_out_len) = if ns.target == Target::Solana {
                 (
                     bin.context
                         .i8_type()
@@ -377,7 +377,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
             } else {
                 bin.error_data_const(ns, PanicCode::MathOverflow)
             };
-            target.assert_failure(bin, data, length);
+            target.assert_failure(bin, revert_out, revert_out_len);
 
             bin.builder.position_at_end(return_block);
 
@@ -599,7 +599,7 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
     bin.builder.position_at_end(error_block);
 
     bin.log_runtime_error(target, "math overflow".to_string(), Some(loc), ns);
-    let (data, length) = if ns.target == Target::Solana {
+    let (revert_out, revert_out_len) = if ns.target == Target::Solana {
         (
             bin.context
                 .i8_type()
@@ -610,7 +610,7 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
     } else {
         bin.error_data_const(ns, PanicCode::MathOverflow)
     };
-    target.assert_failure(bin, data, length);
+    target.assert_failure(bin, revert_out, revert_out_len);
 
     bin.builder.position_at_end(success_block);
 

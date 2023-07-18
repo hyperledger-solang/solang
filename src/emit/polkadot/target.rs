@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{HashTy, ReturnCode};
+use crate::codegen::revert::PanicCode;
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::polkadot::{log_return_code, PolkadotTarget, SCRATCH_SIZE};
@@ -357,7 +358,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             Some(loc),
             ns,
         );
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
+        let (revert_out, revert_out_len) = binary.error_data_const(ns, PanicCode::ArrayIndexOob);
+        self.assert_failure(binary, revert_out, revert_out_len);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -445,7 +447,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             Some(loc),
             ns,
         );
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
+        let (revert_out, revert_out_len) = binary.error_data_const(ns, PanicCode::ArrayIndexOob);
+        self.assert_failure(binary, revert_out, revert_out_len);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -625,7 +628,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             Some(loc),
             ns,
         );
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
+        let (revert_out, revert_out_len) = binary.error_data_const(ns, PanicCode::EmptyArrayPop);
+        self.assert_failure(binary, revert_out, revert_out_len);
 
         binary.builder.position_at_end(retrieve_block);
 

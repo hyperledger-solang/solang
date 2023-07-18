@@ -1082,7 +1082,7 @@ impl<'a> Binary<'a> {
         &self,
         ns: &Namespace,
         code: PanicCode,
-    ) -> (PointerValue<'_>, IntValue<'_>) {
+    ) -> (PointerValue<'a>, IntValue<'a>) {
         let bytes = create_encoder(ns, false).const_error_panic(code);
         (
             self.emit_global_string(&code.to_string(), &bytes, true),

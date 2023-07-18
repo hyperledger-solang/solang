@@ -278,7 +278,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 // throw division by zero error should be an assert
                 bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
-                let (data, length) = if ns.target == Target::Solana {
+                let (revert_out, revert_out_len) = if ns.target == Target::Solana {
                     (
                         bin.context
                             .i8_type()
@@ -289,7 +289,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 } else {
                     bin.error_data_const(ns, PanicCode::DivisionByZero)
                 };
-                target.assert_failure(bin, data, length);
+                target.assert_failure(bin, revert_out, revert_out_len);
 
                 bin.builder.position_at_end(success_block);
 
@@ -379,7 +379,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 // throw division by zero error should be an assert
                 bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
-                let (data, length) = if ns.target == Target::Solana {
+                let (revert_out, revert_out_len) = if ns.target == Target::Solana {
                     (
                         bin.context
                             .i8_type()
@@ -390,7 +390,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 } else {
                     bin.error_data_const(ns, PanicCode::DivisionByZero)
                 };
-                target.assert_failure(bin, data, length);
+                target.assert_failure(bin, revert_out, revert_out_len);
 
                 bin.builder.position_at_end(success_block);
 
@@ -528,7 +528,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 // throw division by zero error should be an assert
                 bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
-                let (data, length) = if ns.target == Target::Solana {
+                let (revert_out, revert_out_len) = if ns.target == Target::Solana {
                     (
                         bin.context
                             .i8_type()
@@ -539,7 +539,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 } else {
                     bin.error_data_const(ns, PanicCode::DivisionByZero)
                 };
-                target.assert_failure(bin, data, length);
+                target.assert_failure(bin, revert_out, revert_out_len);
 
                 bin.builder.position_at_end(success_block);
 
@@ -626,7 +626,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
                 // throw division by zero error should be an assert
                 bin.log_runtime_error(target, "division by zero".to_string(), Some(*loc), ns);
-                let (data, length) = if ns.target == Target::Solana {
+                let (revert_out, revert_out_len) = if ns.target == Target::Solana {
                     (
                         bin.context
                             .i8_type()
@@ -637,7 +637,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 } else {
                     bin.error_data_const(ns, PanicCode::DivisionByZero)
                 };
-                target.assert_failure(bin, data, length);
+                target.assert_failure(bin, revert_out, revert_out_len);
 
                 bin.builder.position_at_end(success_block);
 
@@ -746,7 +746,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.builder.position_at_end(error_block);
 
             bin.log_runtime_error(target, "math overflow".to_string(), Some(*loc), ns);
-            let (data, length) = if ns.target == Target::Solana {
+            let (revert_out, revert_out_len) = if ns.target == Target::Solana {
                 (
                     bin.context
                         .i8_type()
@@ -757,7 +757,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             } else {
                 bin.error_data_const(ns, PanicCode::MathOverflow)
             };
-            target.assert_failure(bin, data, length);
+            target.assert_failure(bin, revert_out, revert_out_len);
 
             bin.builder.position_at_end(return_block);
 
@@ -1151,7 +1151,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(error);
             bin.log_runtime_error(target, "bytes cast error".to_string(), Some(*loc), ns);
-            let (data, length) = if ns.target == Target::Solana {
+            let (revert_out, revert_out_len) = if ns.target == Target::Solana {
                 (
                     bin.context
                         .i8_type()
@@ -1162,7 +1162,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
             } else {
                 bin.error_data_const(ns, PanicCode::Generic)
             };
-            target.assert_failure(bin, data, length);
+            target.assert_failure(bin, revert_out, revert_out_len);
 
             bin.builder.position_at_end(cast);
             let bytes_ptr = bin.vector_bytes(array);
