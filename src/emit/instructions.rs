@@ -2,6 +2,7 @@
 
 use crate::codegen::{
     cfg::{ControlFlowGraph, Instr, InternalCallTy, ReturnCode},
+    revert::PanicCode,
     Expression,
 };
 use crate::emit::binary::Binary;
@@ -292,14 +293,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(error);
             bin.log_runtime_error(target, "pop from empty array".to_string(), Some(*loc), ns);
-            target.assert_failure(
-                bin,
-                bin.context
-                    .i8_type()
-                    .ptr_type(AddressSpace::default())
-                    .const_null(),
-                bin.context.i32_type().const_zero(),
-            );
+            let (data, length) = bin.error_data_const(ns, PanicCode::EmptyArrayPop);
+            target.assert_failure(bin, data, length);
 
             bin.builder.position_at_end(pop);
             let llvm_ty = bin.llvm_type(ty, ns);

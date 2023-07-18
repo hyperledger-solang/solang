@@ -368,3 +368,21 @@ fn multiplication_overflow() {
     assert!(runtime.debug_buffer().contains(expected_debug_output));
     assert_eq!(runtime.output(), expected_output)
 }
+
+#[test]
+fn empty_array_pop() {
+    let mut runtime = build_solidity(
+        r#"contract RuntimeErrors {
+        function pop_empty_array() public pure returns(uint256[] arr) {
+            arr.pop();
+        }
+    }"#,
+    );
+
+    runtime.function_expect_failure("pop_empty_array", vec![]);
+    assert!(runtime.debug_buffer().contains("pop from empty array"));
+    assert_eq!(
+        runtime.output(),
+        (0x4e487b71u32.to_be_bytes(), U256::from(0x31)).encode()
+    );
+}
