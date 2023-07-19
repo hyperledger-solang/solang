@@ -14,6 +14,6 @@
         }
 // ---- Expect: diagnostics ----
 // warning: 3:13-35: function can be declared 'view'
-// warning: 4:57-58: local variable 'x' has been assigned, but never read
+// warning: 4:57-58: local variable 'x' is unused
 // warning: 7:13-54: function can be declared 'pure'
 // warning: 11:13-54: function can be declared 'pure'

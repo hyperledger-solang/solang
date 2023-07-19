@@ -19,29 +19,34 @@ pub struct SideEffectsCheckParameters<'a> {
 
 /// Check if we should remove an assignment. The expression in the argument is the left-hand side
 /// of the assignment
-pub fn should_remove_assignment(exp: &Expression, func: &Function, opt: &Options) -> bool {
+pub fn should_remove_assignment(
+    exp: &Expression,
+    func: &Function,
+    opt: &Options,
+    ns: &Namespace,
+) -> bool {
     if opt.opt_level == OptimizationLevel::None {
         return false;
     }
 
     match &exp {
-        Expression::Variable { var_no, .. } => should_remove_variable(*var_no, func, opt),
+        Expression::Variable { var_no, .. } => should_remove_variable(*var_no, func, opt, ns),
 
-        Expression::StructMember { expr, .. } => should_remove_assignment(expr, func, opt),
+        Expression::StructMember { expr, .. } => should_remove_assignment(expr, func, opt, ns),
 
-        Expression::Subscript { array, .. } => should_remove_assignment(array, func, opt),
+        Expression::Subscript { array, .. } => should_remove_assignment(array, func, opt, ns),
 
         Expression::StorageLoad { expr, .. }
         | Expression::Load { expr, .. }
         | Expression::Trunc { expr, .. }
         | Expression::Cast { expr, .. }
-        | Expression::BytesCast { expr, .. } => should_remove_assignment(expr, func, opt),
+        | Expression::BytesCast { expr, .. } => should_remove_assignment(expr, func, opt, ns),
 
         Expression::Builtin {
             kind: Builtin::ArrayLength,
             args,
             ..
-        } => should_remove_assignment(&args[0], func, opt),
+        } => should_remove_assignment(&args[0], func, opt, ns),
 
         Expression::Builtin {
             kind: Builtin::ArrayPop | Builtin::ArrayPush,
@@ -53,7 +58,7 @@ pub fn should_remove_assignment(exp: &Expression, func: &Function, opt: &Options
                 return false;
             }
 
-            should_remove_assignment(&args[0], func, opt)
+            should_remove_assignment(&args[0], func, opt, ns)
         }
 
         _ => false,
@@ -61,7 +66,7 @@ pub fn should_remove_assignment(exp: &Expression, func: &Function, opt: &Options
 }
 
 /// Checks if we should remove a variable
-pub fn should_remove_variable(pos: usize, func: &Function, opt: &Options) -> bool {
+pub fn should_remove_variable(pos: usize, func: &Function, opt: &Options, ns: &Namespace) -> bool {
     if opt.opt_level == OptimizationLevel::None {
         return false;
     }
@@ -71,15 +76,6 @@ pub fn should_remove_variable(pos: usize, func: &Function, opt: &Options) -> boo
     //If the variable has never been read nor assigned, we can remove it right away.
     if !var.read && !var.assigned {
         return true;
-    }
-
-    // The unused variable elimination pass does not deal with pointers correctly, so we
-    // cannot eliminate them.
-    // e.g.
-    // AccountInfo ai = tx.accounts[0]; // ai holds a pointer. If we modify it, we should
-    // not eliminate the modification.
-    if matches!(var.usage_type, VariableUsage::Pointer) {
-        return false;
     }
 
     // If the variable has been assigned, we must detect special cases
@@ -92,7 +88,7 @@ pub fn should_remove_variable(pos: usize, func: &Function, opt: &Options) -> boo
         )
     {
         // Variables that are reference to other cannot be removed
-        return !var.is_reference();
+        return !var.is_reference(ns);
     }
 
     false
