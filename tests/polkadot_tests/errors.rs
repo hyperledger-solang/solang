@@ -268,7 +268,7 @@ fn revert() {
     assert!(runtime.output().is_empty());
 
     let msg = "hello \"\n\0world!".to_string();
-    runtime.function_expect_failure("revert_dyn", (&msg).encode());
+    runtime.function_expect_failure("revert_dyn", msg.encode());
     assert!(runtime.debug_buffer().contains("revert encountered"));
     assert!(runtime.debug_buffer().contains(&msg));
     assert_eq!(runtime.output(), ErrorData::from(msg).encode());

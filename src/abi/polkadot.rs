@@ -103,7 +103,7 @@ fn lang_error(
             Default::default(),
         );
         Variant {
-            name: format!("{:x}", selector),
+            name: format!("0x{}", hex::encode(selector.to_be_bytes())),
             fields: vec![Field::new(None, reg.register_type(ty).into(), None, vec![])],
             index: n.try_into().expect("we do not allow custome error types"),
             docs: Default::default(),
