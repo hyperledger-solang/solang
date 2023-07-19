@@ -3,19 +3,39 @@
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 use primitive_types::U256;
-use solang::codegen::revert::{PanicCode, PanicCode::*, SolidityError};
+use solang::codegen::{
+    revert::{PanicCode, PanicCode::*, SolidityError},
+    Expression,
+};
 
 #[derive(Encode, Decode)]
-struct Panic {
+struct PanicData {
     selector: [u8; 4],
     data: U256,
 }
 
-impl From<PanicCode> for Panic {
+impl From<PanicCode> for PanicData {
     fn from(value: PanicCode) -> Self {
         Self {
             selector: SolidityError::Panic(value).selector().to_be_bytes(),
             data: U256::from(value as u8),
+        }
+    }
+}
+
+#[derive(Encode, Decode)]
+struct ErrorData {
+    selector: [u8; 4],
+    msg: String,
+}
+
+impl From<String> for ErrorData {
+    fn from(msg: String) -> Self {
+        Self {
+            selector: SolidityError::String(Expression::Poison)
+                .selector()
+                .to_be_bytes(),
+            msg,
         }
     }
 }
@@ -36,6 +56,7 @@ fn constructor_buf_too_small() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: data does not fit into buffer in test.sol"));
+    assert_eq!(runtime.output(), PanicData::from(Generic).encode());
 }
 
 #[test]
@@ -53,7 +74,7 @@ fn math_overflow() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: math overflow in test.sol"));
-    assert_eq!(runtime.output(), Panic::from(MathOverflow).encode());
+    assert_eq!(runtime.output(), PanicData::from(MathOverflow).encode());
 }
 
 #[test]
@@ -71,7 +92,30 @@ fn require() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: sesa require condition failed in test.sol"));
+    assert_eq!(
+        runtime.output(),
+        ErrorData::from("sesa".to_string()).encode()
+    );
 }
+
+#[test]
+fn require_without_message() {
+    let mut runtime = build_solidity(
+        r#"contract RuntimeErrors {
+        function require_test(int8 num) public pure returns (int8) {
+            require(num > 10);
+            return 0;
+        }
+    }"#,
+    );
+
+    runtime.function_expect_failure("require_test", 9u8.encode());
+    assert!(runtime
+        .debug_buffer()
+        .contains("runtime_error: require condition failed in test.sol"));
+    assert!(runtime.output().is_empty());
+}
+
 #[test]
 fn assert() {
     let mut runtime = build_solidity(
@@ -87,6 +131,7 @@ fn assert() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: assert failure in test.sol"));
+    assert_eq!(runtime.output(), PanicData::from(Assertion).encode());
 }
 
 #[test]
@@ -107,7 +152,7 @@ fn set_storage_bytes_oob() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: storage index out of bounds in test.sol"));
-    assert_eq!(runtime.output(), Panic::from(ArrayIndexOob).encode());
+    assert_eq!(runtime.output(), PanicData::from(ArrayIndexOob).encode());
 }
 
 #[test]
@@ -128,7 +173,7 @@ fn get_storage_bytes_oob() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: storage array index out of bounds in test.sol"));
-    assert_eq!(runtime.output(), Panic::from(ArrayIndexOob).encode());
+    assert_eq!(runtime.output(), PanicData::from(ArrayIndexOob).encode());
 }
 
 #[test]
@@ -146,6 +191,7 @@ fn transfor_fails() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: value transfer failure in test.sol"));
+    assert!(runtime.output().is_empty());
 }
 
 #[test]
@@ -164,7 +210,7 @@ fn empty_storage_array_pop() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: pop from empty storage array in test.sol"));
-    assert_eq!(runtime.output(), Panic::from(EmptyArrayPop).encode());
+    assert_eq!(runtime.output(), PanicData::from(EmptyArrayPop).encode());
 }
 
 #[test]
@@ -198,22 +244,38 @@ fn contract_instantiatoin_fail() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: contract creation failed in test.sol:6"));
+    assert!(runtime.output().is_empty());
 }
 
 #[test]
 fn revert() {
     let mut runtime = build_solidity(
         r#"contract RuntimeErrors {
-            function i_will_revert() public {
+            function i_will_revert() public pure {
                 revert();
+            }
+            function revert_dyn(string s) public pure {
+                revert(s);
+            }
+            function revert_static() public pure {
+                revert("hi");
             }
     }"#,
     );
 
     runtime.function_expect_failure("i_will_revert", Vec::new());
-    assert!(runtime
-        .debug_buffer()
-        .contains("runtime_error: revert encountered in test.sol"));
+    assert!(runtime.debug_buffer().contains("runtime_error: revert"));
+    assert!(runtime.output().is_empty());
+
+    let msg = "hello \"\n\0world!".to_string();
+    runtime.function_expect_failure("revert_dyn", (&msg).encode());
+    assert!(runtime.debug_buffer().contains("revert encountered"));
+    assert!(runtime.debug_buffer().contains(&msg));
+    assert_eq!(runtime.output(), ErrorData::from(msg).encode());
+
+    runtime.function_expect_failure("revert_static", Vec::new());
+    assert!(runtime.debug_buffer().contains("runtime_error: hi revert"));
+    assert_eq!(runtime.output(), ErrorData::from("hi".to_string()).encode());
 }
 
 #[test]
@@ -231,6 +293,7 @@ fn int_too_large_for_bytes() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: integer too large to write in buffer in test.sol"));
+    assert_eq!(runtime.output(), PanicData::from(Generic).encode());
 }
 
 #[test]
@@ -249,6 +312,7 @@ fn invalid_instruction() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: reached invalid instruction in test.sol"));
+    assert_eq!(runtime.output(), PanicData::from(Generic).encode());
 }
 
 #[test]
@@ -266,6 +330,7 @@ fn array_index_oob() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: array index out of bounds in test.sol"));
+    assert_eq!(runtime.output(), PanicData::from(ArrayIndexOob).encode());
 }
 
 #[test]
@@ -283,6 +348,7 @@ fn truncated_type_overflow() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: truncated type overflows in test.sol"));
+    assert_eq!(runtime.output(), PanicData::from(Generic).encode());
 }
 
 #[test]
@@ -301,7 +367,10 @@ fn byte_cast_fail() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: bytes cast error in test.sol"));
-    assert_eq!(runtime.output(), Panic::from(PanicCode::Generic).encode())
+    assert_eq!(
+        runtime.output(),
+        PanicData::from(PanicCode::Generic).encode()
+    )
 }
 
 #[test]
@@ -319,6 +388,7 @@ fn int_read_oob() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: read integer out of bounds in test.sol"));
+    assert_eq!(runtime.output(), PanicData::from(Generic).encode());
 }
 
 #[test]
@@ -346,6 +416,7 @@ fn external_call() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: external call failed in test.sol"));
+    assert!(runtime.output().is_empty());
 }
 
 #[test]
@@ -358,6 +429,7 @@ fn non_payable_function_with_value() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: non payable function dont_pay_me received value"));
+    assert!(runtime.output().is_empty());
 }
 
 #[test]
@@ -374,7 +446,7 @@ fn multiplication_overflow_big_u256() {
         }"#,
     );
     let expected_debug_output = "runtime_error: multiplication overflow";
-    let expected_output = Panic::from(MathOverflow).encode();
+    let expected_output = PanicData::from(MathOverflow).encode();
 
     runtime.function_expect_failure("pow", U256::MAX.encode());
     assert!(runtime.debug_buffer().contains(expected_debug_output));
@@ -399,7 +471,7 @@ fn multiplication_overflow_u8() {
         }"#,
     );
     let expected_debug_output = "runtime_error: math overflow";
-    let expected_output = Panic::from(MathOverflow).encode();
+    let expected_output = PanicData::from(MathOverflow).encode();
 
     runtime.function_expect_failure("pow", u8::MAX.encode());
     assert!(runtime.debug_buffer().contains(expected_debug_output));
@@ -422,7 +494,7 @@ fn empty_array_pop() {
 
     runtime.function_expect_failure("pop_empty_array", vec![]);
     assert!(runtime.debug_buffer().contains("pop from empty array"));
-    assert_eq!(runtime.output(), Panic::from(EmptyArrayPop).encode());
+    assert_eq!(runtime.output(), PanicData::from(EmptyArrayPop).encode());
 }
 
 #[test]
@@ -440,11 +512,11 @@ fn uint256_div_by_zero() {
 
     runtime.function_expect_failure("div_by_zero", U256::zero().encode());
     assert!(runtime.debug_buffer().contains("division by zero"));
-    assert_eq!(runtime.output(), Panic::from(DivisionByZero).encode());
+    assert_eq!(runtime.output(), PanicData::from(DivisionByZero).encode());
 
     runtime.function_expect_failure("mod_zero", U256::zero().encode());
     assert!(runtime.debug_buffer().contains("division by zero"));
-    assert_eq!(runtime.output(), Panic::from(DivisionByZero).encode());
+    assert_eq!(runtime.output(), PanicData::from(DivisionByZero).encode());
 }
 
 #[test]
@@ -462,9 +534,9 @@ fn int256_div_by_zero() {
 
     runtime.function_expect_failure("div_by_zero", U256::zero().encode());
     assert!(runtime.debug_buffer().contains("division by zero"));
-    assert_eq!(runtime.output(), Panic::from(DivisionByZero).encode());
+    assert_eq!(runtime.output(), PanicData::from(DivisionByZero).encode());
 
     runtime.function_expect_failure("mod_zero", U256::zero().encode());
     assert!(runtime.debug_buffer().contains("division by zero"));
-    assert_eq!(runtime.output(), Panic::from(DivisionByZero).encode());
+    assert_eq!(runtime.output(), PanicData::from(DivisionByZero).encode());
 }
