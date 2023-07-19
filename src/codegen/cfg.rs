@@ -32,7 +32,7 @@ use std::{fmt, fmt::Write};
 // IndexMap <ArrayVariable res , res of temp variable>
 pub type ArrayLengthVars = IndexMap<usize, usize>;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum Instr {
     /// Set variable
@@ -392,7 +392,7 @@ impl fmt::Display for HashTy {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct BasicBlock {
     pub phis: Option<BTreeSet<usize>>,
     pub name: String,
@@ -402,7 +402,7 @@ pub struct BasicBlock {
     pub transfers: Vec<Vec<reaching_definitions::Transfer>>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ControlFlowGraph {
     pub name: String,
     pub function_no: ASTFunction,
@@ -419,7 +419,7 @@ pub struct ControlFlowGraph {
     pub array_lengths_temps: ArrayLengthVars,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ASTFunction {
     SolidityFunction(usize),
     YulFunction(usize),

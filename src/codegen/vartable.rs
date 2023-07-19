@@ -8,7 +8,7 @@ use num_bigint::BigInt;
 use solang_parser::pt;
 use std::collections::BTreeSet;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Variable {
     pub id: pt::Identifier,
     pub ty: Type,
@@ -29,7 +29,7 @@ pub struct DirtyTracker {
     set: BTreeSet<usize>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Storage {
     Constant(usize),
     Contract(BigInt),
