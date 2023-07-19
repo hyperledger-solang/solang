@@ -72,7 +72,6 @@ is supplied as the contracts output (if any). Solidity contracts can also revert
 Uncaught exceptions from calling and instantiating contracts or transferring funds will be bubbled 
 up back to the caller.
 
-
 The metadata contains all error variants that the contract knows about in the ``lang_error`` field.
 The 4 bytes `selector` of the error data can be seen as the enum discriminator. However, because 
 SCALE encoding does not allow discriminators larger than 1 byte, the hex-encoded error selector 
@@ -91,6 +90,6 @@ The general process of decoding the output data for Solang Solidity contracts is
 
     Solidity contracts may return empty error data, for example if ``revert()`` without arguments is used.
 
-    Additionally, Solidity contracts do bubble up uncought errors. This can lead to situations where the 
+    Additionally, Solidity contracts do bubble up uncaught errors. This can lead to situations where the 
     contract reverts with error data unknown to the contracts metadata. Examples of this include 
     bubbling up custom error data from the callee or error data from an ``ink!`` contract.
