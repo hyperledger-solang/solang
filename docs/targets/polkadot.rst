@@ -65,18 +65,16 @@ The following example shows how call flags can be used:
 Reverts and error data decoding
 _______________________________
 
-`assert()`, `require()`, or `revert()` will revert the contract execution, where the revert reason 
-is supplied as the contracts output. Solidity contracts can also revert with a ``Panic(uint256)``.
-Uncought exceptions from calling and instantiating contracts or transferring funds will be bubbled 
-up back to the caller.
-
-Whenever the contract decides to revert the execution, it may return error data back to the caller.
-The error data generally corresponds to what a contract on 
+When the contract decides to revert its execution, returned error data corresponds to what contracts on 
 `EVM would return <https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require>`_.
+``assert()``, ``require()``, or ``revert()`` will revert the contract execution, where the revert reason 
+is supplied as the contracts output (if any). Solidity contracts can also revert with a `Panic`.
+Uncaught exceptions from calling and instantiating contracts or transferring funds will be bubbled 
+up back to the caller.
 
 
 The metadata contains all error variants that the contract knows about in the ``lang_error`` field.
-The 4 bytes "selector" of the error data can be seen as the enum discriminator. However, because 
+The 4 bytes `selector` of the error data can be seen as the enum discriminator. However, because 
 SCALE encoding does not allow discriminators larger than 1 byte, the hex-encoded error selector 
 is provided as the enum variant name in the metadata (the selector could also be calculated by
 reconstructing and hashing the error signature based on the enum Variant types).
@@ -84,14 +82,14 @@ reconstructing and hashing the error signature based on the enum Variant types).
 The general process of decoding the output data for Solang Solidity contracts is as follows:
 
 1. If the revert flag is **not** set, the contract didn't revert and the output should be encoded as specified in the message spec.
-2. The compiler version must be solang > 0.3.1, or the data can't be decoded (check the ``compiler`` field in the contract metadata).
+2. The compiler version must be solang > 0.3.1, or the error data can't be decoded (check the ``compiler`` field in the contract metadata).
 3. If the output length is smaller than 4 bytes, the error data can't be decoded (see the note below).
 4. If the first 4 bytes of the output do **not** match any of the selectors found in ``lang_error``, the error can't be decoded.
 5. **Skip** over the selector (first 4 bytes) and decode the remaining data according to the corresponding variant type found in `lang_error`.
 
 .. note::
 
-    Solidity contracts may return empty error data, for example when ``revert()`` without arguments is used.
+    Solidity contracts may return empty error data, for example if ``revert()`` without arguments is used.
 
     Additionally, Solidity contracts do bubble up uncought errors. This can lead to situations where the 
     contract reverts with error data unknown to the contracts metadata. Examples of this include 
