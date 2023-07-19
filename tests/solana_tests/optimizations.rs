@@ -121,6 +121,12 @@ fn run_one_test(program: &str, calls: &Calls, opts: impl IntoIterator<Item = Opt
     }
 }
 
+// If `AddressEraser` were not used above, one would see failures with programs that return
+// addresses, e.g.:
+//   thread 'solana_tests::optimizations::optimizations' panicked at 'assertion failed: `(left == right)`
+//     left: `[Ok(Some(Address([/* one sequence of random bytes */])))]`,
+//    right: `[Ok(Some(Address([/* another sequence of random bytes */])))]`', tests/solana_tests/optimizations.rs:105:13
+// d55b66a2225baa2bd6cd3641fff28de6fdf9b30e.sol is an example of such a program.
 struct AddressEraser;
 
 impl VisitorMut for AddressEraser {
