@@ -22,7 +22,6 @@ use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 ///
 /// Marked as non-exhaustive because Solidity may add more variants in the future.
 #[non_exhaustive]
-#[allow(unused)] // TODO: Implement custom errors
 #[derive(Debug, PartialEq, Clone)]
 pub enum SolidityError {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
@@ -81,9 +80,9 @@ impl SolidityError {
 
 /// Solidity `Panic` Codes. Source:
 /// https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require
-#[allow(unused)]
-#[non_exhaustive]
 #[derive(Display, Debug, PartialEq, Clone, Copy)]
+#[non_exhaustive]
+#[repr(u8)]
 pub enum PanicCode {
     Generic = 0x00,
     Assertion = 0x01,
