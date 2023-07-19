@@ -29,10 +29,8 @@ pub enum SolidityError {
     Empty,
     /// The `Error(string)` selector
     String(Expression),
-    /// The `Panic(uint255)` selector
+    /// The `Panic(uint256)` selector
     Panic(PanicCode),
-    /// The contract can define custom errors resulting in a custom selector
-    Custom([u8; 4], Expression),
 }
 
 impl SolidityError {
@@ -42,7 +40,6 @@ impl SolidityError {
             Self::Empty => unreachable!("empty return data has no selector"),
             Self::String(_) => self.selector().into(),
             Self::Panic(_) => self.selector().into(),
-            Self::Custom(selector, _) => u32::from_be_bytes(*selector).into(),
         };
 
         Expression::NumberLiteral {
@@ -58,7 +55,6 @@ impl SolidityError {
             Self::Empty => unreachable!("empty return data has no selector"),
             Self::String(_) => 0x08c379a0u32,
             Self::Panic(_) => 0x4e487b71u32,
-            Self::Custom(selector, _) => u32::from_be_bytes(*selector),
         }
     }
 
@@ -72,7 +68,7 @@ impl SolidityError {
     ) -> Option<Expression> {
         match self {
             Self::Empty => None,
-            Self::String(data) | Self::Custom(_, data) => create_encoder(ns, false)
+            Self::String(data) => create_encoder(ns, false)
                 .encode_error_data_const(self.clone())
                 .or_else(|| {
                     let args = vec![self.selector_expression(), data.clone()];
@@ -364,10 +360,6 @@ mod tests {
         assert_eq!(
             0x4e487b71u32, // Keccak256('Panic(uint256)')[:4]
             SolidityError::Panic(PanicCode::Generic).selector(),
-        );
-        assert_eq!(
-            0xdeadbeefu32,
-            SolidityError::Custom([0xde, 0xad, 0xbe, 0xef], Expression::Poison).selector(),
         );
     }
 }

@@ -52,12 +52,12 @@ fn primitive_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u3
 
 fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
     let (signed, scalety) = match ty {
-        ast::Type::Uint(n) => ('u', n.next_power_of_two()),
-        ast::Type::Int(n) => ('i', n.next_power_of_two()),
+        ast::Type::Uint(n) => ("uint", n.next_power_of_two()),
+        ast::Type::Int(n) => ("int", n.next_power_of_two()),
         _ => unreachable!(),
     };
     let def = match (signed, scalety) {
-        ('u', n) => match n {
+        ("uint", n) => match n {
             8 => TypeDefPrimitive::U8,
             16 => TypeDefPrimitive::U16,
             32 => TypeDefPrimitive::U32,
@@ -66,19 +66,16 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
             256 => TypeDefPrimitive::U256,
             _ => unreachable!(),
         },
-        ('i', n) => match n {
+        ("int", n) => match n {
             8 => TypeDefPrimitive::I8,
             16 => TypeDefPrimitive::I16,
             32 => TypeDefPrimitive::I32,
             64 => TypeDefPrimitive::I64,
             128 => TypeDefPrimitive::I128,
             256 => TypeDefPrimitive::I256,
-
             _ => unreachable!(),
         },
-        _ => {
-            unreachable!()
-        }
+        _ => unreachable!(),
     };
     let path = path!(format!("{signed}{scalety}"));
     let ty = Type::new(path, vec![], TypeDef::Primitive(def), Default::default());
@@ -86,31 +83,35 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
 }
 
 /// Build the `lang_error` type of this contract, where `errors` is a list
-/// containing each error name and its type. Returns a `TypeSpec` of
-/// `TypeDefVariant` with each error as a variant.
+/// containing each error name, the selector and its types. Returns a `TypeSpec`
+/// of `TypeDefVariant` with each error as a variant.
 fn lang_error(
     ns: &ast::Namespace,
-    registry: &mut PortableRegistryBuilder,
-    errors: &[(&str, &ast::Type)],
+    reg: &mut PortableRegistryBuilder,
+    errors: &[(&str, u32, Vec<ast::Type>)],
 ) -> TypeSpec<PortableForm> {
-    let selector_ast_ty = &ast::Type::Array(
-        ast::Type::Uint(8).into(),
-        vec![ArrayLength::Fixed(4.into())],
-    );
-    let selector = resolve_ast(selector_ast_ty, ns, registry).into();
-    let variants = errors.iter().enumerate().map(|(n, (name, ty))| {
-        let tuple = TypeDefTuple::new_portable([selector, resolve_ast(ty, ns, registry).into()]);
-        let field = registry.register_type(tuple.into()).into();
+    let variants = errors.iter().enumerate().map(|(n, (name, selector, ty))| {
+        let struct_fields = ty
+            .iter()
+            .map(|ty| resolve_ast(ty, ns, reg).into())
+            .map(|field| Field::new(None, field, None, Default::default()))
+            .collect::<Vec<_>>();
+        let ty = Type::new(
+            path!(name),
+            vec![],
+            TypeDef::Composite(TypeDefComposite::new(struct_fields)),
+            Default::default(),
+        );
         Variant {
-            name: name.to_string(),
-            fields: vec![Field::new(None, field, None, Default::default())],
-            index: n.try_into().expect("currently there are only two variants"),
+            name: format!("{:x}", selector),
+            fields: vec![Field::new(None, reg.register_type(ty).into(), None, vec![])],
+            index: n.try_into().expect("we do not allow custome error types"),
             docs: Default::default(),
         }
     });
     let type_def = TypeDefVariant::new(variants);
-    let path = path!("RevertReason");
-    let id = registry.register_type(Type::new(path.clone(), vec![], type_def, vec![]));
+    let path = path!("SolidityError");
+    let id = reg.register_type(Type::new(path.clone(), vec![], type_def, vec![]));
     TypeSpec::new(id.into(), path)
 }
 
@@ -501,10 +502,9 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .done();
 
     let error_definitions = &[
-        ("String", &ast::Type::String),
-        ("Panic", &ast::Type::Uint(8)),
+        ("Error", 0x08c379a0, vec![ast::Type::String]),
+        ("Panic", 0x4e487b71, vec![ast::Type::Uint(256)]),
     ];
-    let error_ty = lang_error(ns, &mut registry, error_definitions);
 
     let spec = ContractSpec::new()
         .constructors(constructors)
@@ -512,7 +512,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .events(events)
         .docs(vec![render(&ns.contracts[contract_no].tags)])
         .environment(environment)
-        .lang_error(error_ty)
+        .lang_error(lang_error(ns, &mut registry, error_definitions))
         .done();
 
     InkProject::new_portable(storage, spec, registry.finish())

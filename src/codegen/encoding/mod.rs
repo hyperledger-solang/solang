@@ -1760,7 +1760,7 @@ pub(crate) trait AbiEncoding {
     fn encode_error_data_const(&self, error: SolidityError) -> Option<Expression> {
         let bytes = match error {
             SolidityError::Empty => return None,
-            SolidityError::String(data) | SolidityError::Custom(_, data) => match data {
+            SolidityError::String(data) => match data {
                 Expression::AllocDynamicBytes {
                     ty: Type::String,
                     initializer: Some(data),
