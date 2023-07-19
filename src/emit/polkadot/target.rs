@@ -960,7 +960,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         // do the actual call
-        let ret = match call_type {
+        *success.unwrap() = match call_type {
             ast::CallTy::Regular => {
                 let value_ptr = binary
                     .builder
@@ -1066,32 +1066,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 ret.as_basic_value().into_int_value()
             }
             ast::CallTy::Static => unreachable!("sema does not allow this"),
-        };
-
-        let is_success =
-            binary
-                .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "success");
-
-        if let Some(success) = success {
-            // we're in a try statement. This means:
-            // do not abort execution; return success or not in success variable
-            *success = is_success.into();
-        } else {
-            let success_block = binary.context.append_basic_block(function, "success");
-            let bail_block = binary.context.append_basic_block(function, "bail");
-
-            binary
-                .builder
-                .build_conditional_branch(is_success, success_block, bail_block);
-
-            binary.builder.position_at_end(bail_block);
-
-            binary.log_runtime_error(self, "external call failed".to_string(), Some(loc), ns);
-            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
-
-            binary.builder.position_at_end(success_block);
         }
+        .into();
     }
 
     /// Send value to address

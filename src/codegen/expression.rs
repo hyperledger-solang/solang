@@ -2872,14 +2872,16 @@ pub fn emit_function_call(
                 },
             );
 
-            vec![
+            let success = if ns.target.is_polkadot() {
+                polkadot_check_ret(loc, success, cfg, ns, opt, vartab)
+            } else {
                 Expression::Variable {
                     loc: *loc,
                     ty: Type::Bool,
                     var_no: success,
-                },
-                Expression::ReturnData { loc: *loc },
-            ]
+                }
+            };
+            vec![success, Expression::ReturnData { loc: *loc }]
         }
         ast::Expression::ExternalFunctionCall {
             loc,
@@ -2950,10 +2952,17 @@ pub fn emit_function_call(
                     .as_ref()
                     .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
+                let success = ns.target.is_polkadot().then_some(vartab.temp(
+                    &pt::Identifier {
+                        loc: *loc,
+                        name: "success".to_owned(),
+                    },
+                    &Type::Bool,
+                ));
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
-                        success: None,
+                        success,
                         accounts,
                         address: Some(address),
                         payload,
@@ -2965,6 +2974,10 @@ pub fn emit_function_call(
                         flags,
                     },
                 );
+
+                if ns.target.is_polkadot() {
+                    polkadot_check_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
+                }
 
                 // If the first element of returns is Void, we can discard the returns
                 if !dest_func.returns.is_empty() && returns[0] != Type::Void {
@@ -3023,11 +3036,17 @@ pub fn emit_function_call(
                     .flags
                     .as_ref()
                     .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
-
+                let success = ns.target.is_polkadot().then_some(vartab.temp(
+                    &pt::Identifier {
+                        loc: *loc,
+                        name: "success".to_owned(),
+                    },
+                    &Type::Bool,
+                ));
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
-                        success: None,
+                        success,
                         accounts: None,
                         seeds: None,
                         address: Some(address),
@@ -3039,6 +3058,10 @@ pub fn emit_function_call(
                         flags,
                     },
                 );
+
+                if ns.target.is_polkadot() {
+                    polkadot_check_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
+                }
 
                 if !func_returns.is_empty() && returns[0] != Type::Void {
                     abi_decode(
@@ -3755,5 +3778,73 @@ fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
                 ),
             ],
         }
+    }
+}
+
+fn polkadot_check_ret(
+    loc: &Loc,
+    success: usize,
+    cfg: &mut ControlFlowGraph,
+    ns: &Namespace,
+    opt: &Options,
+    vartab: &mut Vartable,
+) -> Expression {
+    let cond = Expression::Variable {
+        loc: *loc,
+        ty: Type::Uint(32),
+        var_no: success,
+    };
+
+    let ret_success_block = cfg.new_basic_block("ret_success".into());
+    let ret_empty_block = cfg.new_basic_block("ret_empty".into());
+    let ret_bubble_block = cfg.new_basic_block("ret_bubble".into());
+    let cases = vec![
+        (
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Uint(32),
+                value: 0.into(),
+            },
+            ret_success_block,
+        ),
+        (
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Uint(32),
+                value: 2.into(),
+            },
+            ret_bubble_block,
+        ),
+    ];
+    cfg.add(
+        vartab,
+        Instr::Switch {
+            cond,
+            cases,
+            default: ret_empty_block,
+        },
+    );
+
+    cfg.set_basic_block(ret_empty_block);
+    log_runtime_error(
+        opt.log_runtime_errors,
+        "external_call_failed",
+        *loc,
+        cfg,
+        vartab,
+        ns,
+    );
+    cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
+
+    cfg.set_basic_block(ret_bubble_block);
+    let encoded_args = Expression::ReturnData { loc: *loc }.into();
+    cfg.add(vartab, Instr::AssertFailure { encoded_args });
+
+    cfg.set_basic_block(ret_success_block);
+
+    Expression::NumberLiteral {
+        loc: *loc,
+        ty: Type::Bool,
+        value: 1.into(),
     }
 }

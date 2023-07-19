@@ -1162,13 +1162,23 @@ fn try_catch(
                     },
                 );
 
+                let ret_val = Expression::Variable {
+                    loc: *loc,
+                    ty: Type::Uint(32),
+                    var_no: success,
+                };
+                let ret_success_code = Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Uint(32),
+                    value: 0.into(),
+                };
                 cfg.add(
                     vartab,
                     Instr::BranchCond {
-                        cond: Expression::Variable {
+                        cond: Expression::Equal {
                             loc: try_stmt.expr.loc(),
-                            ty: Type::Bool,
-                            var_no: success,
+                            left: ret_val.into(),
+                            right: ret_success_code.into(),
                         },
                         true_block: success_block,
                         false_block: catch_block,
