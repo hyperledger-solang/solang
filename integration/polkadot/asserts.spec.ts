@@ -31,6 +31,10 @@ describe('Deploy asserts contract and test', () => {
         expect(res1.result.asOk.flags.isRevert).toStrictEqual(true);
         expect(res1.result.asOk.data.toString()).toStrictEqual("0x08c379a0204920726566757365");
 
+        res1 = await query(conn, alice, contract, "testAssert");
+        expect(res1.result.asOk.flags.isRevert).toStrictEqual(true);
+        expect(res1.result.asOk.data.toString()).toStrictEqual("0x4e487b710100000000000000000000000000000000000000000000000000000000000000");
+
         let gasLimit = await weight(conn, contract, "testAssert");
         let tx = contract.tx.testAssert({ gasLimit });
 
