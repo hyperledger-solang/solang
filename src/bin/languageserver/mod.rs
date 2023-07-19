@@ -855,14 +855,19 @@ impl<'a> Builder<'a> {
 
     // Constructs contract fields and stores it in the lookup table.
     fn contract_variable(&mut self, contract: &ast::Variable, symtab: &symtable::Symtable) {
-        self.hovers.push(HoverEntry {
-            start: contract.loc.start(),
-            stop: contract.loc.end() + 1,
-            val: make_code_block(format!(
+        let mut tags = render(&contract.tags[..]);
+        if !tags.is_empty() {
+            tags.push_str("\n\n");
+        }
+        let val =  make_code_block(format!(
                 "{} {}",
                 contract.ty.to_string(self.ns),
                 contract.name
-            )),
+        ));
+        self.hovers.push(HoverEntry {
+            start: contract.loc.start(),
+            stop: contract.loc.start() + contract.name.len(),
+            val: format!("{}{}", tags, val),
         });
         if let Some(expr) = &contract.initializer {
             self.expression(expr, symtab);
@@ -970,12 +975,6 @@ impl<'a> Builder<'a> {
         for constant in &builder.ns.constants {
             let samptb = symtable::Symtable::new();
             builder.contract_variable(constant, &samptb);
-
-            builder.hovers.push(HoverEntry {
-                start: constant.loc.start(),
-                stop: constant.loc.start() + constant.name.len(),
-                val: render(&constant.tags[..]),
-            });
         }
 
         for contract in &builder.ns.contracts {
@@ -999,12 +998,6 @@ impl<'a> Builder<'a> {
             for variable in &contract.variables {
                 let symtable = symtable::Symtable::new();
                 builder.contract_variable(variable, &symtable);
-
-                builder.hovers.push(HoverEntry {
-                    start: variable.loc.start(),
-                    stop: variable.loc.start() + variable.name.len(),
-                    val: render(&variable.tags[..]),
-                });
             }
         }
 
