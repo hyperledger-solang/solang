@@ -540,8 +540,11 @@ impl<'a> Builder<'a> {
 
             // Variable expression
             ast::Expression::Variable { loc, ty, var_no } => {
-                // TODO
-                // let name = &symtab.vars[*var_no].id.name;
+                let name = if let Some(var) = symtab.vars.get(var_no) {
+                    &var.id.name
+                } else {
+                    ""
+                };
                 let readonly = symtab
                     .vars
                     .get(var_no)
@@ -554,8 +557,7 @@ impl<'a> Builder<'a> {
                     })
                     .unwrap_or_default();
 
-                // let val = format!("{} {}{}", ty.to_string(self.ns), name, readonly);
-                let val = format!("{} {}", ty.to_string(self.ns), readonly);
+                let val = format!("{} {}{}", ty.to_string(self.ns), name, readonly);
 
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
@@ -859,10 +861,10 @@ impl<'a> Builder<'a> {
         if !tags.is_empty() {
             tags.push_str("\n\n");
         }
-        let val =  make_code_block(format!(
-                "{} {}",
-                contract.ty.to_string(self.ns),
-                contract.name
+        let val = make_code_block(format!(
+            "{} {}",
+            contract.ty.to_string(self.ns),
+            contract.name
         ));
         self.hovers.push(HoverEntry {
             start: contract.loc.start(),
