@@ -216,6 +216,7 @@ impl fmt::Display for StructDecl {
     }
 }
 
+#[derive(Debug)]
 pub struct EnumDecl {
     pub tags: Vec<Tag>,
     pub name: String,
@@ -298,6 +299,7 @@ impl fmt::Display for Mutability {
     }
 }
 
+#[derive(Debug)]
 pub struct Function {
     pub tags: Vec<Tag>,
     /// The location of the prototype (not body)
@@ -349,6 +351,7 @@ pub struct SolanaAccount {
     pub generated: bool,
 }
 
+#[derive(Debug)]
 pub enum ConstructorAnnotation {
     Seed(Expression),
     Payer(pt::Loc, String),
@@ -577,6 +580,7 @@ impl fmt::Display for UserTypeDecl {
     }
 }
 
+#[derive(Debug)]
 pub struct Variable {
     pub tags: Vec<Tag>,
     pub name: String,
@@ -590,7 +594,7 @@ pub struct Variable {
     pub read: bool,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Symbol {
     Enum(pt::Loc, usize),
     Function(Vec<(pt::Loc, usize)>),
@@ -664,6 +668,7 @@ pub struct File {
 }
 
 /// When resolving a Solidity file, this holds all the resolved items
+#[derive(Debug)]
 pub struct Namespace {
     pub target: Target,
     pub files: Vec<File>,
@@ -700,6 +705,7 @@ pub struct Namespace {
     pub hover_overrides: HashMap<pt::Loc, String>,
 }
 
+#[derive(Debug)]
 pub struct Layout {
     pub slot: BigInt,
     pub contract_no: usize,
@@ -707,30 +713,35 @@ pub struct Layout {
     pub ty: Type,
 }
 
+#[derive(Debug)]
 pub struct Base {
     pub loc: pt::Loc,
     pub contract_no: usize,
     pub constructor: Option<(usize, Vec<Expression>)>,
 }
 
+#[derive(Debug)]
 pub struct Using {
     pub list: UsingList,
     pub ty: Option<Type>,
     pub file_no: Option<usize>,
 }
 
+#[derive(Debug)]
 pub enum UsingList {
     Library(usize),
     Functions(Vec<UsingFunction>),
 }
 
 /// Using binding for a function, optionally for an operator
+#[derive(Debug)]
 pub struct UsingFunction {
     pub loc: pt::Loc,
     pub function_no: usize,
     pub oper: Option<pt::UserDefinedOperator>,
 }
 
+#[derive(Debug)]
 pub struct Contract {
     pub tags: Vec<Tag>,
     pub loc: pt::Loc,
