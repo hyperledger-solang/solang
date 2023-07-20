@@ -441,7 +441,7 @@ fn multiplication_overflow_big_u256() {
             }
 
             function mul(uint256 bar) public pure returns(uint256) {
-                return bar ** 2;
+                return bar * 2;
             }
         }"#,
     );
