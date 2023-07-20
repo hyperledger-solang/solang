@@ -1671,17 +1671,9 @@ fn payable_send(
         },
         &Type::Bool,
     );
-    if ns.target != Target::EVM {
-        cfg.add(
-            vartab,
-            Instr::ValueTransfer {
-                success: Some(success),
-                address,
-                value,
-            },
-        );
-    } else {
-        // Ethereum can only transfer via external call
+
+    // Ethereum can only transfer via external call
+    if ns.target == Target::EVM {
         cfg.add(
             vartab,
             Instr::ExternalCall {
@@ -1710,11 +1702,30 @@ fn payable_send(
                 flags: None,
             },
         );
+        return Expression::Variable {
+            loc: *loc,
+            ty: Type::Bool,
+            var_no: success,
+        };
     }
-    Expression::Variable {
-        loc: *loc,
-        ty: Type::Bool,
-        var_no: success,
+
+    cfg.add(
+        vartab,
+        Instr::ValueTransfer {
+            success: Some(success),
+            address,
+            value,
+        },
+    );
+
+    if ns.target.is_polkadot() {
+        polkadot_check_transfer_ret(loc, success, cfg, ns, opt, vartab)
+    } else {
+        Expression::Variable {
+            loc: *loc,
+            ty: Type::Bool,
+            var_no: success,
+        }
     }
 }
 
@@ -1730,16 +1741,7 @@ fn payable_transfer(
 ) -> Expression {
     let address = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
     let value = expression(&args[1], cfg, contract_no, func, ns, vartab, opt);
-    if ns.target != Target::EVM {
-        cfg.add(
-            vartab,
-            Instr::ValueTransfer {
-                success: None,
-                address,
-                value,
-            },
-        );
-    } else {
+    if ns.target == Target::EVM {
         // Ethereum can only transfer via external call
         cfg.add(
             vartab,
@@ -1769,7 +1771,24 @@ fn payable_transfer(
                 flags: None,
             },
         );
+        return Expression::Poison;
     }
+
+    let success = ns
+        .target
+        .is_polkadot()
+        .then_some(vartab.temp_name("success", &Type::Bool));
+    let ins = Instr::ValueTransfer {
+        success,
+        address,
+        value,
+    };
+    cfg.add(vartab, ins);
+
+    if ns.target.is_polkadot() {
+        polkadot_check_transfer_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
+    }
+
     Expression::Poison
 }
 
@@ -2873,7 +2892,7 @@ pub fn emit_function_call(
             );
 
             let success = if ns.target.is_polkadot() {
-                polkadot_check_ret(loc, success, cfg, ns, opt, vartab)
+                polkadot_check_ext_call_ret(loc, success, cfg, ns, opt, vartab)
             } else {
                 Expression::Variable {
                     loc: *loc,
@@ -2952,13 +2971,10 @@ pub fn emit_function_call(
                     .as_ref()
                     .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
-                let success = ns.target.is_polkadot().then_some(vartab.temp(
-                    &pt::Identifier {
-                        loc: *loc,
-                        name: "success".to_owned(),
-                    },
-                    &Type::Bool,
-                ));
+                let success = ns
+                    .target
+                    .is_polkadot()
+                    .then_some(vartab.temp_name("success", &Type::Bool));
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
@@ -2976,7 +2992,7 @@ pub fn emit_function_call(
                 );
 
                 if ns.target.is_polkadot() {
-                    polkadot_check_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
+                    polkadot_check_ext_call_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
                 }
 
                 // If the first element of returns is Void, we can discard the returns
@@ -3060,7 +3076,7 @@ pub fn emit_function_call(
                 );
 
                 if ns.target.is_polkadot() {
-                    polkadot_check_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
+                    polkadot_check_ext_call_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
                 }
 
                 if !func_returns.is_empty() && returns[0] != Type::Void {
@@ -3781,7 +3797,7 @@ fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
     }
 }
 
-fn polkadot_check_ret(
+fn polkadot_check_ext_call_ret(
     loc: &Loc,
     success: usize,
     cfg: &mut ControlFlowGraph,
@@ -3838,6 +3854,54 @@ fn polkadot_check_ret(
 
     cfg.set_basic_block(ret_success_block);
 
+    Expression::NumberLiteral {
+        loc: *loc,
+        ty: Type::Bool,
+        value: 1.into(),
+    }
+}
+
+fn polkadot_check_transfer_ret(
+    loc: &Loc,
+    success: usize,
+    cfg: &mut ControlFlowGraph,
+    ns: &Namespace,
+    opt: &Options,
+    vartab: &mut Vartable,
+) -> Expression {
+    let ret_code = Expression::Variable {
+        loc: *loc,
+        ty: Type::Uint(32),
+        var_no: success,
+    };
+    let ret_ok = Expression::NumberLiteral {
+        loc: *loc,
+        ty: Type::Uint(32),
+        value: 0.into(),
+    };
+    let cond = Expression::Equal {
+        loc: *loc,
+        left: ret_code.into(),
+        right: ret_ok.into(),
+    };
+
+    let success_block = cfg.new_basic_block("transfer_success".into());
+    let fail_block = cfg.new_basic_block("transfer_fail".into());
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond,
+            true_block: success_block,
+            false_block: fail_block,
+        },
+    );
+
+    cfg.set_basic_block(fail_block);
+    let msg = "value transfer failure";
+    log_runtime_error(opt.log_runtime_errors, msg, *loc, cfg, vartab, ns);
+    cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
+
+    cfg.set_basic_block(success_block);
     Expression::NumberLiteral {
         loc: *loc,
         ty: Type::Bool,

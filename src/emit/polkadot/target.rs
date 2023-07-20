@@ -1074,12 +1074,12 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
     fn value_transfer<'b>(
         &self,
         binary: &Binary<'b>,
-        function: FunctionValue,
+        _function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
         address: PointerValue<'b>,
         value: IntValue<'b>,
         ns: &ast::Namespace,
-        loc: Loc,
+        _loc: Loc,
     ) {
         emit_context!(binary);
 
@@ -1105,31 +1105,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         .into_int_value();
 
         log_return_code(binary, "seal_transfer", ret);
-
-        let is_success =
-            binary
-                .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "success");
-
-        if let Some(success) = success {
-            // we're in a try statement. This means:
-            // do not abort execution; return success or not in success variable
-            *success = is_success.into();
-        } else {
-            let success_block = binary.context.append_basic_block(function, "success");
-            let bail_block = binary.context.append_basic_block(function, "bail");
-
-            binary
-                .builder
-                .build_conditional_branch(is_success, success_block, bail_block);
-
-            binary.builder.position_at_end(bail_block);
-
-            binary.log_runtime_error(self, "value transfer failure".to_string(), Some(loc), ns);
-            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
-
-            binary.builder.position_at_end(success_block);
-        }
+        *success.unwrap() = ret.into();
     }
 
     fn return_data<'b>(&self, binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {

@@ -208,7 +208,7 @@ fn errors() {
 
     assert_eq!(
         runtime.debug_buffer(),
-        "runtime_error: value transfer failure in test.sol:48:33-35,\n"
+        "runtime_error: value transfer failure in test.sol:48:13-36,\n"
     );
 
     runtime.debug_buffer().clear();
