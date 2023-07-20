@@ -1027,3 +1027,48 @@ fn constructors_and_messages_distinct_in_dispatcher() {
     // Expect calling the function via "deploy" to trap the contract
     runtime.raw_constructor_failure(function);
 }
+
+#[test]
+fn error_bubbling() {
+    let mut runtime = build_solidity(
+        r##"contract C {
+        function raw_call() public payable returns (bytes ret) {
+            B b = new B();
+            (bool ok, ret) = address(b).call{value: 5000}(bytes4(0x00000000));
+        }
+    
+        function normal_call() public payable {
+            B b = new B();
+            b.b();
+        }
+    
+        function ext_func_call() public payable {
+            B b = new B();
+            function() external payable func = b.b;
+            func();
+        }
+    
+    }
+    
+    contract B {
+        @selector([0, 0, 0, 0])
+        function b() public payable {
+            A a = new A();
+            a.a();
+        }
+    }
+    
+    contract A {
+        function a() public payable {
+            require(false, "no");
+        }
+    }
+    "##,
+    );
+    runtime.set_transferred_value(10000);
+    //let expected_output = vec![0x08, 0xc3, 0x79, 0xa0, ..];
+
+    runtime.function_expect_failure("raw_call", vec![]);
+    //assert_eq!(runtime.output(), expected_output);
+    assert!(runtime.debug_buffer().contains("external call failed"));
+}
