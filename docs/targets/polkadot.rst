@@ -84,7 +84,7 @@ The general process of decoding the output data for Solang Solidity contracts is
 2. The compiler version must be solang > 0.3.1, or the error data can't be decoded (check the ``compiler`` field in the contract metadata).
 3. If the output length is smaller than 4 bytes, the error data can't be decoded (see the note below).
 4. If the first 4 bytes of the output do **not** match any of the selectors found in ``lang_error``, the error can't be decoded.
-5. **Skip** over the selector (first 4 bytes) and decode the remaining data according to the corresponding variant type found in `lang_error`.
+5. **Skip** the selector (first 4 bytes) and decode the remaining data according to the corresponding variant type found in `lang_error`.
 
 .. note::
 

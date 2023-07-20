@@ -83,7 +83,7 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
 }
 
 /// Build the `lang_error` type of this contract, where `errors` is a list
-/// containing each error name, the selector and its types. Returns a `TypeSpec`
+/// containing each error's name, selector and types. Returns a `TypeSpec`
 /// of `TypeDefVariant` with each error as a variant.
 fn lang_error(
     ns: &ast::Namespace,
