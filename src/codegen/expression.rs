@@ -3825,18 +3825,14 @@ fn polkadot_check_ret(
         },
     );
 
+    let msg = "external call failed";
+
     cfg.set_basic_block(ret_empty_block);
-    log_runtime_error(
-        opt.log_runtime_errors,
-        "external_call_failed",
-        *loc,
-        cfg,
-        vartab,
-        ns,
-    );
+    log_runtime_error(opt.log_runtime_errors, msg, *loc, cfg, vartab, ns);
     cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
 
     cfg.set_basic_block(ret_bubble_block);
+    log_runtime_error(opt.log_runtime_errors, msg, *loc, cfg, vartab, ns);
     let encoded_args = Expression::ReturnData { loc: *loc }.into();
     cfg.add(vartab, Instr::AssertFailure { encoded_args });
 
