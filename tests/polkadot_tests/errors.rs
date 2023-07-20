@@ -177,7 +177,7 @@ fn get_storage_bytes_oob() {
 }
 
 #[test]
-fn transfor_fails() {
+fn transfer_fails() {
     let mut runtime = build_solidity(
         r#"contract RuntimeErrors {
             function transfer_abort() public {
@@ -466,7 +466,7 @@ fn multiplication_overflow_u8() {
             }
 
             function mul(uint8 bar) public pure returns(uint8) {
-                return bar ** 2;
+                return bar * 2;
             }
         }"#,
     );
