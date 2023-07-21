@@ -1043,9 +1043,10 @@ fn error_bubbling() {
         }
     
         function ext_func_call() public payable {
-            B b = new B();
-            function() external payable func = b.b;
-            func();
+            A a = new A();
+            function() external payable func = a.a;
+            func{value: 1000}();
+            a.a();
         }
     
     }
@@ -1066,17 +1067,25 @@ fn error_bubbling() {
     "##,
     );
 
-    runtime.set_transferred_value(10000);
-    runtime.function_expect_failure("raw_call", vec![]);
-
+    runtime.set_transferred_value(20000);
     let expected_output = ([0x08u8, 0xc3, 0x79, 0xa0], "no".to_string()).encode();
+
+    runtime.function_expect_failure("raw_call", vec![]);
+    assert_eq!(runtime.output(), expected_output);
+    assert!(runtime.debug_buffer().contains("external call failed"));
+
+    runtime.function_expect_failure("normal_call", vec![]);
+    assert_eq!(runtime.output(), expected_output);
+    assert!(runtime.debug_buffer().contains("external call failed"));
+
+    runtime.function_expect_failure("ext_func_call", vec![]);
     assert_eq!(runtime.output(), expected_output);
     assert!(runtime.debug_buffer().contains("external call failed"));
 }
 
 #[test]
 fn constructor_reverts_bubbling() {
-    let mut runtime = build_solidity_with_options(
+    let mut runtime = build_solidity(
         r##"
         contract A {
             B public b;
@@ -1098,8 +1107,6 @@ fn constructor_reverts_bubbling() {
                 if (!r) revert("no");
             }
         }"##,
-        true,
-        true,
     );
 
     runtime.set_transferred_value(20000);
@@ -1111,4 +1118,38 @@ fn constructor_reverts_bubbling() {
 
     let expected_output = ([0x08u8, 0xc3, 0x79, 0xa0], "no".to_string()).encode();
     assert_eq!(runtime.output(), expected_output);
+}
+
+#[test]
+fn try_catch_uncaught_bubbles_up() {
+    let mut runtime = build_solidity(
+        r##"contract C {
+        function c() public payable {
+            B b = new B();
+            b.b();
+        }
+    }
+    
+    contract B {
+        function b() public payable {
+            A a = new A();
+            try a.a(0) {} catch Error(string) {}
+        }
+    }
+    
+    contract A {
+        function a(uint8 div) public returns(uint8) {
+            return 123 / div;
+        }
+    }
+    "##,
+    );
+
+    runtime.set_transferred_value(10000);
+    runtime.function_expect_failure("c", vec![]);
+
+    assert!(runtime.output().is_empty());
+    // TODO: Can be tested after support for Panic
+    //assert_eq!(runtime.output(), expected_output);
+    //assert!(runtime.debug_buffer().contains("external call failed"));
 }

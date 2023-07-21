@@ -7,11 +7,11 @@ use super::expression::{
     assert_failure, assign_single, default_gas, emit_function_call, expression, log_runtime_error,
     polkadot_ret_switch,
 };
-use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr},
     vartable::Vartable,
 };
+use super::{Builtin, Options};
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::events::new_event_emitter;
 use crate::codegen::unused_variable::{
@@ -1218,7 +1218,7 @@ fn try_catch(
             res: error_ret_data_var,
             expr: Expression::AllocDynamicBytes {
                 loc: Codegen,
-                ty: Type::Bytes(1),
+                ty: Type::DynamicBytes,
                 size: Expression::NumberLiteral {
                     loc: Codegen,
                     ty: Uint(32),
@@ -1243,7 +1243,7 @@ fn try_catch(
     cfg.add(vartab, Instr::Branch { block: catch_block });
 
     vartab.set_dirty(error_ret_data_var);
-    vartab.pop_dirty_tracker();
+    cfg.set_phis(catch_block, vartab.pop_dirty_tracker());
 
     cfg.set_basic_block(cases.success);
     if !try_stmt.returns.is_empty() {
@@ -1307,10 +1307,45 @@ fn try_catch(
             _ => vartab.temp_anonymous(&Type::String),
         };
 
+        let buf = Expression::Variable {
+            loc: Codegen,
+            ty: Type::DynamicBytes,
+            var_no: error_ret_data_var,
+        };
+
+        // Expect the returned data to contain at least the selector + 1 byte of data
+        let ret_data_len = Expression::Builtin {
+            loc: Codegen,
+            tys: vec![Type::Uint(32)],
+            kind: Builtin::ArrayLength,
+            args: vec![buf.clone()],
+        };
+        let enough_data_block = cfg.new_basic_block("enough_data".into());
+        let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
+        let selector_data_len = Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Type::Uint(32),
+            value: 4.into(),
+        };
+        let cond_enough_data = Expression::More {
+            loc: Codegen,
+            signed: false,
+            left: ret_data_len.into(),
+            right: selector_data_len.into(),
+        };
+        cfg.add(
+            vartab,
+            Instr::BranchCond {
+                cond: cond_enough_data,
+                true_block: enough_data_block,
+                false_block: no_match_err_id,
+            },
+        );
+
+        cfg.set_basic_block(enough_data_block);
         // Expect the returned data to match the 4 bytes function selector for "Error(string)"
-        let buf = &Expression::ReturnData { loc: Codegen };
         let tys = &[Type::Bytes(4), error_param.ty.clone()];
-        let decoded = abi_decode(&Codegen, buf, tys, ns, vartab, cfg, None);
+        let decoded = abi_decode(&Codegen, &buf, tys, ns, vartab, cfg, None);
         let err_id = Expression::NumberLiteral {
             loc: Codegen,
             ty: Type::Bytes(4),
@@ -1323,17 +1358,17 @@ fn try_catch(
             right: err_id,
         };
         let match_err_id = cfg.new_basic_block("match_err_id".into());
-        let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
         let instruction = Instr::BranchCond {
             cond,
             true_block: match_err_id,
             false_block: no_match_err_id,
         };
-
         cfg.add(vartab, instruction);
-        cfg.set_basic_block(no_match_err_id);
 
-        cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
+        cfg.set_basic_block(no_match_err_id);
+        let encoded_args = Some(buf);
+        cfg.add(vartab, Instr::AssertFailure { encoded_args });
+
         cfg.set_basic_block(match_err_id);
         let instruction = Instr::Set {
             loc: Codegen,
