@@ -5,6 +5,7 @@ use num_bigint::BigInt;
 use super::encoding::{abi_decode, abi_encode};
 use super::expression::{
     assert_failure, assign_single, default_gas, emit_function_call, expression, log_runtime_error,
+    polkadot_ret_switch,
 };
 use super::Options;
 use super::{
@@ -1081,6 +1082,10 @@ fn try_catch(
     return_override: Option<&Instr>,
     opt: &Options,
 ) {
+    if !ns.target.is_polkadot() {
+        unimplemented!()
+    }
+
     let success = vartab.temp(
         &pt::Identifier {
             loc: try_stmt.expr.loc(),
@@ -1089,11 +1094,10 @@ fn try_catch(
         &Type::Bool,
     );
 
-    let success_block = cfg.new_basic_block("success".to_string());
     let catch_block = cfg.new_basic_block("catch".to_string());
     let finally_block = cfg.new_basic_block("finally".to_string());
 
-    match &try_stmt.expr {
+    let (cases, func_returns) = match &try_stmt.expr {
         ast::Expression::ExternalFunctionCall {
             loc,
             function,
@@ -1162,51 +1166,7 @@ fn try_catch(
                     },
                 );
 
-                let ret_val = Expression::Variable {
-                    loc: *loc,
-                    ty: Type::Uint(32),
-                    var_no: success,
-                };
-                let ret_success_code = Expression::NumberLiteral {
-                    loc: *loc,
-                    ty: Type::Uint(32),
-                    value: 0.into(),
-                };
-                cfg.add(
-                    vartab,
-                    Instr::BranchCond {
-                        cond: Expression::Equal {
-                            loc: try_stmt.expr.loc(),
-                            left: ret_val.into(),
-                            right: ret_success_code.into(),
-                        },
-                        true_block: success_block,
-                        false_block: catch_block,
-                    },
-                );
-
-                cfg.set_basic_block(success_block);
-
-                if !try_stmt.returns.is_empty() {
-                    let mut res = Vec::new();
-
-                    for ret in &try_stmt.returns {
-                        res.push(match ret {
-                            (Some(pos), _) => *pos,
-                            (None, param) => vartab.temp_anonymous(&param.ty),
-                        });
-                    }
-
-                    let buf = &Expression::ReturnData { loc: Codegen };
-                    let decoded = abi_decode(&Codegen, buf, &func_returns, ns, vartab, cfg, None);
-                    for instruction in res.iter().zip(decoded).map(|(var, expr)| Instr::Set {
-                        loc: Codegen,
-                        res: *var,
-                        expr,
-                    }) {
-                        cfg.add(vartab, instruction)
-                    }
-                }
+                (polkadot_ret_switch(loc, success, cfg, vartab), func_returns)
             } else {
                 // dynamic dispatch
                 unimplemented!();
@@ -1241,22 +1201,71 @@ fn try_catch(
                 opt,
             );
 
-            cfg.add(
-                vartab,
-                Instr::BranchCond {
-                    cond: Expression::Variable {
-                        loc: try_stmt.expr.loc(),
-                        ty: Type::Bool,
-                        var_no: success,
-                    },
-                    true_block: success_block,
-                    false_block: catch_block,
-                },
-            );
-
-            cfg.set_basic_block(success_block);
+            (polkadot_ret_switch(loc, success, cfg, vartab), vec![])
         }
         _ => unreachable!(),
+    };
+
+    let error_ret_data_var = vartab.temp_name("error_ret_data", &Type::DynamicBytes);
+
+    vartab.new_dirty_tracker();
+
+    cfg.set_basic_block(cases.error_no_data);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Codegen,
+            res: error_ret_data_var,
+            expr: Expression::AllocDynamicBytes {
+                loc: Codegen,
+                ty: Type::Bytes(1),
+                size: Expression::NumberLiteral {
+                    loc: Codegen,
+                    ty: Uint(32),
+                    value: 0.into(),
+                }
+                .into(),
+                initializer: Some(vec![]),
+            },
+        },
+    );
+    cfg.add(vartab, Instr::Branch { block: catch_block });
+
+    cfg.set_basic_block(cases.revert);
+    cfg.add(
+        vartab,
+        Instr::Set {
+            loc: Codegen,
+            res: error_ret_data_var,
+            expr: Expression::ReturnData { loc: Codegen },
+        },
+    );
+    cfg.add(vartab, Instr::Branch { block: catch_block });
+
+    vartab.set_dirty(error_ret_data_var);
+    vartab.pop_dirty_tracker();
+
+    cfg.set_basic_block(cases.success);
+
+    if !try_stmt.returns.is_empty() {
+        let mut res = Vec::new();
+
+        for ret in &try_stmt.returns {
+            res.push(match ret {
+                (Some(pos), _) => *pos,
+                (None, param) => vartab.temp_anonymous(&param.ty),
+            });
+        }
+
+        let buf = &Expression::ReturnData { loc: Codegen };
+        let decoded = abi_decode(&Codegen, buf, &func_returns, ns, vartab, cfg, None);
+        for instruction in res.iter().zip(decoded).map(|(var, expr)| Instr::Set {
+            loc: Codegen,
+            res: *var,
+            expr,
+        }) {
+            cfg.add(vartab, instruction)
+        }
     }
 
     vartab.new_dirty_tracker();

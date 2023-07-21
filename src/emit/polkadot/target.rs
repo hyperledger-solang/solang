@@ -818,7 +818,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         encoded_args_len: BasicValueEnum<'b>,
         contract_args: ContractArgs<'b>,
         ns: &ast::Namespace,
-        loc: Loc,
+        _loc: Loc,
     ) {
         emit_context!(binary);
 
@@ -912,30 +912,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         log_return_code(binary, "seal_instantiate", ret);
 
-        let is_success =
-            binary
-                .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "success");
-
-        if let Some(success) = success {
-            // we're in a try statement. This means:
-            // return success or not in success variable; do not abort execution
-            *success = is_success.into();
-        } else {
-            let success_block = binary.context.append_basic_block(function, "success");
-            let bail_block = binary.context.append_basic_block(function, "bail");
-
-            binary
-                .builder
-                .build_conditional_branch(is_success, success_block, bail_block);
-
-            binary.builder.position_at_end(bail_block);
-
-            binary.log_runtime_error(self, "contract creation failed".to_string(), Some(loc), ns);
-            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
-
-            binary.builder.position_at_end(success_block);
-        }
+        *success.unwrap() = ret.into();
     }
 
     /// Call external binary

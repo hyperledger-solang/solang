@@ -1072,3 +1072,37 @@ fn error_bubbling() {
     //assert_eq!(runtime.output(), expected_output);
     assert!(runtime.debug_buffer().contains("external call failed"));
 }
+
+#[test]
+fn constructor_reverts_bubbling() {
+    let mut runtime = build_solidity(
+        r##"
+        contract A {
+            B public b;
+            @selector([0, 0, 0, 0])
+            constructor(bool r) payable {
+                b = new B(r);
+            }
+        }
+    
+        contract B {
+            C public c;
+            constructor(bool r) payable {
+                c = new C(r);
+            }
+        }
+    
+        contract C {
+            uint public foo;
+            constructor(bool r) {
+                require(r, "no");
+            }
+        }"##,
+    );
+
+    runtime.set_transferred_value(20000);
+    runtime.constructor(0, true.encode());
+
+    runtime.raw_constructor_failure(([0, 0, 0, 0], false).encode());
+    dbg!(runtime.output());
+}

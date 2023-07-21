@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use super::constructor::polkadot_check_constructor_ret;
 use super::encoding::{abi_decode, abi_encode};
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
@@ -440,7 +441,10 @@ pub fn expression(
             call_args,
         } => {
             let address_res = vartab.temp_anonymous(&Type::Contract(*constructor_contract));
-
+            let success = ns
+                .target
+                .is_polkadot()
+                .then_some(vartab.temp_name("success", &Type::Bool));
             call_constructor(
                 loc,
                 *constructor_contract,
@@ -449,13 +453,17 @@ pub fn expression(
                 args,
                 call_args,
                 address_res,
-                None,
+                success,
                 func,
                 ns,
                 vartab,
                 cfg,
                 opt,
             );
+            if ns.target.is_polkadot() {
+                let ret = polkadot_ret_switch(loc, success.unwrap(), cfg, vartab);
+                polkadot_check_constructor_ret(loc, ret, cfg, ns, opt, vartab);
+            }
             Expression::Variable {
                 loc: *loc,
                 ty: Type::Contract(*constructor_contract),
@@ -2892,7 +2900,8 @@ pub fn emit_function_call(
             );
 
             let success = if ns.target.is_polkadot() {
-                polkadot_check_ext_call_ret(loc, success, cfg, ns, opt, vartab)
+                let ret = polkadot_ret_switch(loc, success, cfg, vartab);
+                polkadot_check_ext_call_ret(loc, ret, cfg, ns, opt, vartab)
             } else {
                 Expression::Variable {
                     loc: *loc,
@@ -2992,7 +3001,8 @@ pub fn emit_function_call(
                 );
 
                 if ns.target.is_polkadot() {
-                    polkadot_check_ext_call_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
+                    let ret = polkadot_ret_switch(loc, success.unwrap(), cfg, vartab);
+                    polkadot_check_ext_call_ret(loc, ret, cfg, ns, opt, vartab);
                 }
 
                 // If the first element of returns is Void, we can discard the returns
@@ -3052,13 +3062,10 @@ pub fn emit_function_call(
                     .flags
                     .as_ref()
                     .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
-                let success = ns.target.is_polkadot().then_some(vartab.temp(
-                    &pt::Identifier {
-                        loc: *loc,
-                        name: "success".to_owned(),
-                    },
-                    &Type::Bool,
-                ));
+                let success = ns
+                    .target
+                    .is_polkadot()
+                    .then_some(vartab.temp_name("success", &Type::Bool));
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
@@ -3076,7 +3083,8 @@ pub fn emit_function_call(
                 );
 
                 if ns.target.is_polkadot() {
-                    polkadot_check_ext_call_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
+                    let ret = polkadot_ret_switch(loc, success.unwrap(), cfg, vartab);
+                    polkadot_check_ext_call_ret(loc, ret, cfg, ns, opt, vartab);
                 }
 
                 if !func_returns.is_empty() && returns[0] != Type::Void {
@@ -3799,60 +3807,24 @@ fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
 
 fn polkadot_check_ext_call_ret(
     loc: &Loc,
-    success: usize,
+    ret: RetBlocks,
     cfg: &mut ControlFlowGraph,
     ns: &Namespace,
     opt: &Options,
     vartab: &mut Vartable,
 ) -> Expression {
-    let cond = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(32),
-        var_no: success,
-    };
-
-    let ret_success_block = cfg.new_basic_block("ret_success".into());
-    let ret_empty_block = cfg.new_basic_block("ret_empty".into());
-    let ret_bubble_block = cfg.new_basic_block("ret_bubble".into());
-    let cases = vec![
-        (
-            Expression::NumberLiteral {
-                loc: *loc,
-                ty: Type::Uint(32),
-                value: 0.into(),
-            },
-            ret_success_block,
-        ),
-        (
-            Expression::NumberLiteral {
-                loc: *loc,
-                ty: Type::Uint(32),
-                value: 2.into(),
-            },
-            ret_bubble_block,
-        ),
-    ];
-    cfg.add(
-        vartab,
-        Instr::Switch {
-            cond,
-            cases,
-            default: ret_empty_block,
-        },
-    );
-
     let msg = "external call failed";
 
-    cfg.set_basic_block(ret_empty_block);
+    cfg.set_basic_block(ret.error_no_data);
     log_runtime_error(opt.log_runtime_errors, msg, *loc, cfg, vartab, ns);
     cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
 
-    cfg.set_basic_block(ret_bubble_block);
+    cfg.set_basic_block(ret.revert);
     log_runtime_error(opt.log_runtime_errors, msg, *loc, cfg, vartab, ns);
     let encoded_args = Expression::ReturnData { loc: *loc }.into();
     cfg.add(vartab, Instr::AssertFailure { encoded_args });
 
-    cfg.set_basic_block(ret_success_block);
+    cfg.set_basic_block(ret.success);
 
     Expression::NumberLiteral {
         loc: *loc,
@@ -3907,4 +3879,54 @@ fn polkadot_check_transfer_ret(
         ty: Type::Bool,
         value: 1.into(),
     }
+}
+
+pub(super) struct RetBlocks {
+    pub success: usize,
+    pub revert: usize,
+    pub error_no_data: usize,
+}
+
+pub(super) fn polkadot_ret_switch(
+    loc: &Loc,
+    success: usize,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Vartable,
+) -> RetBlocks {
+    let cond = Expression::Variable {
+        loc: *loc,
+        ty: Type::Uint(32),
+        var_no: success,
+    };
+    let ret = RetBlocks {
+        success: cfg.new_basic_block("ret_success".into()),
+        revert: cfg.new_basic_block("ret_empty".into()),
+        error_no_data: cfg.new_basic_block("ret_bubble".into()),
+    };
+    let cases = vec![
+        (
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Uint(32),
+                value: 0.into(),
+            },
+            ret.success,
+        ),
+        (
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Uint(32),
+                value: 2.into(),
+            },
+            ret.revert,
+        ),
+    ];
+    let ins = Instr::Switch {
+        cond,
+        cases,
+        default: ret.error_no_data,
+    };
+    cfg.add(vartab, ins);
+
+    ret
 }

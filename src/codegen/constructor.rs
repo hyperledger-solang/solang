@@ -11,6 +11,7 @@ use crate::sema::{
 use solang_parser::pt::Loc;
 
 use super::encoding::abi_encode;
+use super::expression::{log_runtime_error, RetBlocks};
 
 /// This function encodes the constructor arguments and place an instruction in the CFG to
 /// call the constructor of a contract.
@@ -81,7 +82,6 @@ pub(super) fn call_constructor(
     args.append(&mut constructor_args);
 
     let (encoded_args, _) = abi_encode(loc, args, ns, vartab, cfg, false);
-
     cfg.add(
         vartab,
         Instr::Constructor {
@@ -99,4 +99,28 @@ pub(super) fn call_constructor(
             accounts,
         },
     );
+}
+
+pub(super) fn polkadot_check_constructor_ret(
+    loc: &Loc,
+    ret: RetBlocks,
+    cfg: &mut ControlFlowGraph,
+    ns: &Namespace,
+    opt: &Options,
+    vartab: &mut Vartable,
+) -> Option<RetBlocks> {
+    let msg = "contract creation failed";
+
+    cfg.set_basic_block(ret.error_no_data);
+    log_runtime_error(opt.log_runtime_errors, msg, *loc, cfg, vartab, ns);
+    cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
+
+    cfg.set_basic_block(ret.revert);
+    log_runtime_error(opt.log_runtime_errors, msg, *loc, cfg, vartab, ns);
+    let encoded_args = Expression::ReturnData { loc: *loc }.into();
+    cfg.add(vartab, Instr::AssertFailure { encoded_args });
+
+    cfg.set_basic_block(ret.success);
+
+    None
 }
