@@ -23,7 +23,7 @@ describe('Deploy runtime_errors.sol and test the debug buffer', () => {
         expect(res).toContain(`runtime_error: storage array index out of bounds in runtime_errors.sol:46:19-23`)
 
         let res1 = await debug_buffer(conn, contract, `transfer_abort`, [])
-        expect(res1).toContain(`runtime_error: value transfer failure in runtime_errors.sol:53:29-31`)
+        expect(res1).toContain(`runtime_error: value transfer failure in runtime_errors.sol:53:9-32`)
 
         let res2 = await debug_buffer(conn, contract, `pop_empty_storage`, [])
         expect(res2).toContain(`runtime_error: pop from empty storage array in runtime_errors.sol:58:13-16`)
