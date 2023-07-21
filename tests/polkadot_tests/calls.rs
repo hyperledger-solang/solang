@@ -1060,26 +1060,26 @@ fn error_bubbling() {
     
     contract A {
         function a() public payable {
-            require(false, "no");
+            revert("no");
         }
     }
     "##,
     );
-    runtime.set_transferred_value(10000);
-    //let expected_output = vec![0x08, 0xc3, 0x79, 0xa0, ..];
 
+    runtime.set_transferred_value(10000);
     runtime.function_expect_failure("raw_call", vec![]);
-    //assert_eq!(runtime.output(), expected_output);
+
+    let expected_output = ([0x08u8, 0xc3, 0x79, 0xa0], "no".to_string()).encode();
+    assert_eq!(runtime.output(), expected_output);
     assert!(runtime.debug_buffer().contains("external call failed"));
 }
 
 #[test]
 fn constructor_reverts_bubbling() {
-    let mut runtime = build_solidity(
+    let mut runtime = build_solidity_with_options(
         r##"
         contract A {
             B public b;
-            @selector([0, 0, 0, 0])
             constructor(bool r) payable {
                 b = new B(r);
             }
@@ -1095,14 +1095,20 @@ fn constructor_reverts_bubbling() {
         contract C {
             uint public foo;
             constructor(bool r) {
-                require(r, "no");
+                if (!r) revert("no");
             }
         }"##,
+        true,
+        true,
     );
 
     runtime.set_transferred_value(20000);
     runtime.constructor(0, true.encode());
 
-    runtime.raw_constructor_failure(([0, 0, 0, 0], false).encode());
-    dbg!(runtime.output());
+    let mut input = runtime.contracts()[0].code.constructors[0].clone();
+    input.push(0);
+    runtime.raw_constructor_failure(input);
+
+    let expected_output = ([0x08u8, 0xc3, 0x79, 0xa0], "no".to_string()).encode();
+    assert_eq!(runtime.output(), expected_output);
 }

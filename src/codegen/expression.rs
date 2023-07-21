@@ -3900,8 +3900,8 @@ pub(super) fn polkadot_ret_switch(
     };
     let ret = RetBlocks {
         success: cfg.new_basic_block("ret_success".into()),
-        revert: cfg.new_basic_block("ret_empty".into()),
-        error_no_data: cfg.new_basic_block("ret_bubble".into()),
+        revert: cfg.new_basic_block("ret_bubble".into()),
+        error_no_data: cfg.new_basic_block("ret_no_data".into()),
     };
     let cases = vec![
         (

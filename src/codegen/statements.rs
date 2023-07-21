@@ -1246,7 +1246,6 @@ fn try_catch(
     vartab.pop_dirty_tracker();
 
     cfg.set_basic_block(cases.success);
-
     if !try_stmt.returns.is_empty() {
         let mut res = Vec::new();
 

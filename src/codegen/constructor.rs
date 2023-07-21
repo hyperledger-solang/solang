@@ -108,7 +108,7 @@ pub(super) fn polkadot_check_constructor_ret(
     ns: &Namespace,
     opt: &Options,
     vartab: &mut Vartable,
-) -> Option<RetBlocks> {
+) {
     let msg = "contract creation failed";
 
     cfg.set_basic_block(ret.error_no_data);
@@ -121,6 +121,4 @@ pub(super) fn polkadot_check_constructor_ret(
     cfg.add(vartab, Instr::AssertFailure { encoded_args });
 
     cfg.set_basic_block(ret.success);
-
-    None
 }

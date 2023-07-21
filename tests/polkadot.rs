@@ -545,8 +545,9 @@ impl Runtime {
 
         if ret == 0 {
             vm.accept_state(state.into_data(), value);
+            return Ok(0);
         }
-        Ok(ret)
+        Ok(2) // Callee reverted
     }
 
     #[seal(0)]
@@ -601,8 +602,9 @@ impl Runtime {
 
         if flags == 0 {
             vm.accept_state(state.into_data(), value);
+            return Ok(0);
         }
-        Ok(flags)
+        Ok(2) // Callee reverted
     }
 
     #[seal(0)]
@@ -895,6 +897,9 @@ impl MockSubstrate {
     pub fn raw_constructor(&mut self, input: Vec<u8>) {
         self.0.data_mut().transferred_value = 20000;
         self.invoke("deploy", input).unwrap();
+        if let HostReturn::Data(flags, _) = self.0.data().output {
+            assert!(flags == 0)
+        }
     }
 
     /// Call the contract function `name` with the given input `args`.
