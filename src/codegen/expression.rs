@@ -444,7 +444,7 @@ pub fn expression(
             let success = ns
                 .target
                 .is_polkadot()
-                .then_some(vartab.temp_name("success", &Type::Bool));
+                .then(|| vartab.temp_name("success", &Type::Bool));
             call_constructor(
                 loc,
                 *constructor_contract,
@@ -1785,7 +1785,7 @@ fn payable_transfer(
     let success = ns
         .target
         .is_polkadot()
-        .then_some(vartab.temp_name("success", &Type::Bool));
+        .then(|| vartab.temp_name("success", &Type::Bool));
     let ins = Instr::ValueTransfer {
         success,
         address,
@@ -2983,7 +2983,7 @@ pub fn emit_function_call(
                 let success = ns
                     .target
                     .is_polkadot()
-                    .then_some(vartab.temp_name("success", &Type::Bool));
+                    .then(|| vartab.temp_name("success", &Type::Bool));
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
@@ -3065,7 +3065,7 @@ pub fn emit_function_call(
                 let success = ns
                     .target
                     .is_polkadot()
-                    .then_some(vartab.temp_name("success", &Type::Bool));
+                    .then(|| vartab.temp_name("success", &Type::Bool));
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
