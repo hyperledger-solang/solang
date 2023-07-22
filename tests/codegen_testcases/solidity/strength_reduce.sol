@@ -43,10 +43,17 @@ contract test {
 // BEGIN-CHECK: test::function::f4
     function f4() pure public {
         for (uint i = 0; i < 10; i++) {
-            // this multiply can be done with a 64 bit instruction
-            print("i:{}".format(i * 32768));
+            unchecked {
+                // this multiply can be done with a 64 bit instruction
+                print("i:{}".format(i * 32768));
+            }
         }
 // CHECK: (%i << uint256 15)
+        for (uint i = 0; i < 10; i++) {
+            // Do not disable overflow checks
+            print("i:{}".format(i * 32768));
+        }
+// NOT CHECK: (%i << uint256 15)
     }
 
 // BEGIN-CHECK: test::function::f5
@@ -114,6 +121,6 @@ contract test {
         for (int i = 0; i != 102; i++) {
             print("i:{}".format(i % 0x1_0000_0001));
         }
-// CHECK: (signed modulo %i % int256 4294967297)
+                // CHECK: (signed modulo %i % int256 4294967297)
     }
 }
