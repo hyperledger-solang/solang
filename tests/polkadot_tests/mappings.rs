@@ -9,7 +9,7 @@ use crate::build_solidity;
 #[test]
 fn basic() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract c {
             mapping(uint => bytes4) data;
 
@@ -19,7 +19,7 @@ fn basic() {
                 assert(data[1] == hex"cafedead");
             }
         }
-        "##,
+        "#,
     );
 
     runtime.function("test", Vec::new());
@@ -206,7 +206,7 @@ fn test_user() {
     struct GetRet(bool, [u8; 32]);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract b {
             struct user {
                 bool exists;
@@ -238,7 +238,7 @@ fn test_user() {
 
                 return (s.exists, s.addr);
             }
-        }"##,
+        }"#,
     );
 
     let mut rng = rand::thread_rng();

@@ -21,13 +21,13 @@ fn global_constants() {
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         string constant foo = "FOO";
         contract error {
             function test() public payable {
                 assert(foo == "FOO");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -35,14 +35,14 @@ fn global_constants() {
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         string constant foo = "FOO";
         contract a {
             function test(uint64 error) public payable {
                 assert(error == 0);
                 assert(foo == "FOO");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());

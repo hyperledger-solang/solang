@@ -824,11 +824,7 @@ fn power() {
     );
 
     // 4**5 = 1024
-    let args = Val(4)
-        .encode()
-        .into_iter()
-        .chain(Val(5).encode().into_iter())
-        .collect();
+    let args = Val(4).encode().into_iter().chain(Val(5).encode()).collect();
 
     runtime.function("power", args);
 
@@ -838,7 +834,7 @@ fn power() {
     let args = Val(2345)
         .encode()
         .into_iter()
-        .chain(Val(1).encode().into_iter())
+        .chain(Val(1).encode())
         .collect();
 
     runtime.function("power", args);
@@ -849,7 +845,7 @@ fn power() {
     let args = Val(0xdead_beef)
         .encode()
         .into_iter()
-        .chain(Val(0).encode().into_iter())
+        .chain(Val(0).encode())
         .collect();
 
     runtime.function("power", args);
@@ -860,7 +856,7 @@ fn power() {
     let args = Val(0)
         .encode()
         .into_iter()
-        .chain(Val(0xdead_beef).encode().into_iter())
+        .chain(Val(0xdead_beef).encode())
         .collect();
 
     runtime.function("power", args);
@@ -888,11 +884,7 @@ fn large_power() {
     );
 
     // 4**5 = 1024
-    let args = Val(4)
-        .encode()
-        .into_iter()
-        .chain(Val(5).encode().into_iter())
-        .collect();
+    let args = Val(4).encode().into_iter().chain(Val(5).encode()).collect();
 
     runtime.function("power", args);
 
@@ -902,7 +894,7 @@ fn large_power() {
     let args = Val(2345)
         .encode()
         .into_iter()
-        .chain(Val(1).encode().into_iter())
+        .chain(Val(1).encode())
         .collect();
 
     runtime.function("power", args);
@@ -913,7 +905,7 @@ fn large_power() {
     let args = Val(0xdeadbeef)
         .encode()
         .into_iter()
-        .chain(Val(0).encode().into_iter())
+        .chain(Val(0).encode())
         .collect();
 
     runtime.function("power", args);
@@ -924,7 +916,7 @@ fn large_power() {
     let args = Val(0)
         .encode()
         .into_iter()
-        .chain(Val(0xdeadbeef).encode().into_iter())
+        .chain(Val(0xdeadbeef).encode())
         .collect();
 
     runtime.function("power", args);
@@ -935,7 +927,7 @@ fn large_power() {
     let args = Val(10)
         .encode()
         .into_iter()
-        .chain(Val(36).encode().into_iter())
+        .chain(Val(36).encode())
         .collect();
 
     runtime.function("power", args);
@@ -972,11 +964,7 @@ fn test_power_overflow_boundaries() {
 
         contract.function(
             "pow",
-            base_data
-                .clone()
-                .into_iter()
-                .chain(exp_data.into_iter())
-                .collect(),
+            base_data.clone().into_iter().chain(exp_data).collect(),
         );
 
         let res = BigUint::from(2_usize).pow((width - 1).try_into().unwrap());
@@ -989,10 +977,7 @@ fn test_power_overflow_boundaries() {
         let mut exp_data = exp.to_bytes_le();
         exp_data.resize(width_rounded, 0);
 
-        contract.function_expect_failure(
-            "pow",
-            base_data.into_iter().chain(exp_data.into_iter()).collect(),
-        );
+        contract.function_expect_failure("pow", base_data.into_iter().chain(exp_data).collect());
     }
 }
 
@@ -1038,10 +1023,7 @@ fn multiply() {
 
         println!("in: a:{a_data:?} b:{b_data:?}");
 
-        runtime.function(
-            "multiply",
-            a_data.into_iter().chain(b_data.into_iter()).collect(),
-        );
+        runtime.function("multiply", a_data.into_iter().chain(b_data).collect());
 
         println!("out: res:{:?}", runtime.output());
 
@@ -1079,7 +1061,7 @@ fn test_mul_within_range_signed() {
         let a_sign = a.sign();
         let mut a_data = a.to_signed_bytes_le();
 
-        let side = vec![-1, 0, 1];
+        let side = [-1, 0, 1];
         let b = BigInt::from(*side.choose(&mut rng).unwrap());
         let b_sign = b.sign();
         let mut b_data = b.to_signed_bytes_le();
@@ -1087,10 +1069,7 @@ fn test_mul_within_range_signed() {
         a_data.resize(width_rounded, sign_extend(a_sign));
         b_data.resize(width_rounded, sign_extend(b_sign));
 
-        runtime.function(
-            "mul",
-            a_data.into_iter().chain(b_data.into_iter()).collect(),
-        );
+        runtime.function("mul", a_data.into_iter().chain(b_data).collect());
 
         let value = a * b;
         let value_sign = value.sign();
@@ -1128,10 +1107,7 @@ fn test_mul_within_range() {
         a_data.resize(width_rounded, 0);
         b_data.resize(width_rounded, 0);
 
-        runtime.function(
-            "mul",
-            a_data.into_iter().chain(b_data.into_iter()).collect(),
-        );
+        runtime.function("mul", a_data.into_iter().chain(b_data).collect());
 
         let value = a * b;
 
@@ -1176,7 +1152,7 @@ fn test_overflow_boundaries() {
             up_data
                 .clone()
                 .into_iter()
-                .chain(sec_data.clone().into_iter())
+                .chain(sec_data.clone())
                 .collect(),
         );
 
@@ -1191,7 +1167,7 @@ fn test_overflow_boundaries() {
             low_data
                 .clone()
                 .into_iter()
-                .chain(sec_data.clone().into_iter())
+                .chain(sec_data.clone())
                 .collect(),
         );
 
@@ -1224,7 +1200,7 @@ fn test_overflow_boundaries() {
             upper_second_op_data
                 .clone()
                 .into_iter()
-                .chain(two_data.clone().into_iter())
+                .chain(two_data.clone())
                 .collect(),
         );
 
@@ -1234,18 +1210,14 @@ fn test_overflow_boundaries() {
             lower_second_op_data
                 .clone()
                 .into_iter()
-                .chain(two_data.clone().into_iter())
+                .chain(two_data.clone())
                 .collect(),
         );
 
         // Upper boundary * Upper boundary
         contract.function_expect_failure(
             "mul",
-            up_data
-                .clone()
-                .into_iter()
-                .chain(up_data.clone().into_iter())
-                .collect(),
+            up_data.clone().into_iter().chain(up_data.clone()).collect(),
         );
 
         // Lower boundary * Lower boundary
@@ -1254,7 +1226,7 @@ fn test_overflow_boundaries() {
             low_data
                 .clone()
                 .into_iter()
-                .chain(low_data.clone().into_iter())
+                .chain(low_data.clone())
                 .collect(),
         );
 
@@ -1264,7 +1236,7 @@ fn test_overflow_boundaries() {
             low_data
                 .clone()
                 .into_iter()
-                .chain(up_data.clone().into_iter())
+                .chain(up_data.clone())
                 .collect(),
         );
     }
@@ -1307,7 +1279,7 @@ fn test_overflow_detect_signed() {
             "mul",
             first_op_data
                 .into_iter()
-                .chain(second_op_data.clone().into_iter())
+                .chain(second_op_data.clone())
                 .collect(),
         );
 
@@ -1324,10 +1296,7 @@ fn test_overflow_detect_signed() {
 
         contract.function_expect_failure(
             "mul",
-            first_op_data
-                .into_iter()
-                .chain(second_op_data.into_iter())
-                .collect(),
+            first_op_data.into_iter().chain(second_op_data).collect(),
         );
     }
 }
@@ -1365,10 +1334,7 @@ fn test_overflow_detect_unsigned() {
 
         contract.function_expect_failure(
             "mul",
-            first_op_data
-                .into_iter()
-                .chain(second_op_data.into_iter())
-                .collect(),
+            first_op_data.into_iter().chain(second_op_data).collect(),
         );
     }
 }

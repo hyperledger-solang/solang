@@ -14,7 +14,7 @@ struct Val8(u8);
 #[test]
 fn struct_members() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         pragma solidity 0;
         pragma experimental ABIEncoderV2;
 
@@ -47,7 +47,7 @@ fn struct_members() {
                         assert(f3.y == 102);
                         assert(f3.d == hex"00dead");
                     }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -99,7 +99,7 @@ fn structs_encode() {
     }
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract test_struct_parsing {
             struct foo {
                 bytes3 f1;
@@ -110,7 +110,7 @@ fn structs_encode() {
                 assert(f.f1 == "ABC");
                 assert(f.f2 == true);
             }
-        }"##,
+        }"#,
     );
 
     runtime.function(
@@ -132,7 +132,7 @@ fn structs_decode() {
     }
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract test_struct_parsing {
             struct foo {
                 bytes3 f1;
@@ -147,7 +147,7 @@ fn structs_decode() {
 
                 return f;
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -166,7 +166,7 @@ fn structs_decode() {
     // the allocation and also that the abi encoder can
     // an struct when the pointer is still null
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract test_struct_parsing {
             struct foo {
                 bytes3 f1;
@@ -181,7 +181,7 @@ fn structs_decode() {
 
                 return f;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -263,7 +263,7 @@ fn structs_decode() {
 #[test]
 fn struct_in_struct() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         pragma solidity 0;
 
         contract struct_in_struct {
@@ -288,7 +288,7 @@ fn struct_in_struct() {
 
                 return f.b;
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -309,7 +309,7 @@ fn structs_in_structs_decode() {
     }
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract test_struct_parsing {
             struct foo {
                 bytes3 f1;
@@ -327,7 +327,7 @@ fn structs_in_structs_decode() {
 
                 return f;
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -364,7 +364,7 @@ fn structs_in_structs_encode() {
     }
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract test_struct_parsing {
             struct foo {
                 bytes3 f1;
@@ -383,7 +383,7 @@ fn structs_in_structs_encode() {
                 test_struct_parsing.foo b;
                 test_struct_parsing.foo c;
             }
-        }"##,
+        }"#,
     );
 
     runtime.function(
@@ -406,7 +406,7 @@ fn structs_in_structs_encode() {
 #[test]
 fn struct_storage_to_memory() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract test_struct_parsing {
             struct foo {
                 bytes3 f1;
@@ -425,7 +425,7 @@ fn struct_storage_to_memory() {
                 assert(f.f1 == hex"123456");
                 assert(f.f2 == 81985529216486895);
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -442,7 +442,7 @@ fn return_from_struct_storage() {
     }
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         struct foo {
             bytes3 f1;
             uint32 f2;
@@ -458,7 +458,7 @@ fn return_from_struct_storage() {
             function test() public returns (foo) {
                 return bar;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -600,7 +600,7 @@ fn encode_decode_bytes_in_field() {
     struct Foo([u8; 4]);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract encode_decode_bytes_in_field {
             struct foo { bytes4 f1; }
             function test() public pure returns(foo) {
@@ -608,7 +608,7 @@ fn encode_decode_bytes_in_field() {
                 assert(abi.encode(f) == hex"41424344");
                 return f;
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", vec![]);

@@ -69,7 +69,7 @@ fn more_tests() {
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function test() public {
                 bytes s = "ABCD";
@@ -81,7 +81,7 @@ fn more_tests() {
                 s[2] = 0x43;
                 s[3] = 0x44;
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -91,20 +91,20 @@ fn more_tests() {
 fn string_compare() {
     // compare literal to literal. This should be compile-time thing
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function test() public {
                 assert(hex"414243" == 'ABC');
 
                 assert(hex'414243' != "ABD");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function lets_compare1(string s) private returns (bool) {
                 return s == unicode'the quick brown fox jumps over the lazy dog';
@@ -131,7 +131,7 @@ fn string_compare() {
 
                 assert(s1 == s2);
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -141,18 +141,18 @@ fn string_compare() {
 fn string_concat() {
     // concat literal and literal. This should be compile-time thing
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function test() public {
                 assert(hex"41424344" == "AB" + "CD");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function test() public {
                 string s1 = "x";
@@ -163,7 +163,7 @@ fn string_concat() {
 
                 assert(s1 + s2 == "xasdfasdf");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -181,12 +181,12 @@ fn string_abi_encode() {
     struct RetStringArray(Vec<String>);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function test() public returns (string) {
                 return "foobar";
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -194,13 +194,13 @@ fn string_abi_encode() {
     assert_eq!(runtime.output(), Val("foobar".to_string()).encode());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function test() public returns (int8[4], string, bool) {
                 return ([ int8(120), 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.",
                 true);
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -208,7 +208,7 @@ fn string_abi_encode() {
     assert_eq!(runtime.output(), Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         struct s {
             int8[4] f1;
             string f2;
@@ -220,7 +220,7 @@ fn string_abi_encode() {
                 return s({ f1: [ int8(120), 3, -127, 64], f2: "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.",
                 f3: true});
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -228,7 +228,7 @@ fn string_abi_encode() {
     assert_eq!(runtime.output(), Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function test() public returns (string[]) {
                 string[] x = new string[](3);
@@ -239,7 +239,7 @@ fn string_abi_encode() {
 
                 return x;
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -264,23 +264,23 @@ fn string_abi_decode() {
     struct ValB(Vec<u8>);
 
     let mut runtime = build_solidity(
-        r##"contract foo {
+        r#"contract foo {
             function test() public {
                 string dec = abi.decode(hex"0c414141", (string));
                 assert(dec == "AAA");
             }
-        }"##,
+        }"#,
     );
     runtime.function("test", vec![]);
 
     // we should try lengths: 0 to 63, 64 to 0x800
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function test(string s) public returns (string){
                 return " " + s + " ";
             }
-        }"##,
+        }"#,
     );
 
     let moby_dick_first_para = "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.";
@@ -305,12 +305,12 @@ fn string_abi_decode() {
         rng.fill(&mut s[..]);
 
         let mut runtime = build_solidity(
-            r##"
+            r#"
             contract foo {
                 function test(bytes s) public returns (bytes){
                     return hex"fe" + s;
                 }
-            }"##,
+            }"#,
         );
 
         let arg = ValB(s.clone()).encode();
@@ -331,7 +331,7 @@ fn string_storage() {
     struct Val(String);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             string bar;
 
@@ -343,7 +343,7 @@ fn string_storage() {
                 return bar;
             }
 
-        }"##,
+        }"#,
     );
 
     runtime.function("set_bar", Vec::new());
@@ -370,7 +370,7 @@ fn bytes_storage() {
     struct Arg64(u64);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             bytes bar = hex"aabbccddeeff";
 
@@ -381,7 +381,7 @@ fn bytes_storage() {
             function get_index64(uint64 index) public returns (bytes1) {
                 return bar[index];
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -449,7 +449,7 @@ fn bytes_storage_subscript() {
     struct Arg(u32, u8);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             bytes bar = hex"aabbccddeeff";
 
@@ -460,7 +460,7 @@ fn bytes_storage_subscript() {
             function get_bar() public returns (bytes) {
                 return bar;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -473,7 +473,7 @@ fn bytes_storage_subscript() {
     );
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             bytes bar = hex"deadcafe";
 
@@ -492,7 +492,7 @@ fn bytes_storage_subscript() {
             function get() public returns (bytes) {
                 return bar;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -519,7 +519,7 @@ fn bytes_memory_subscript() {
     struct Ret(Vec<u8>);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function set_index(uint32 index, bytes1 val) public returns (bytes) {
                 bytes bar = hex"aabbccddeeff";
@@ -528,7 +528,7 @@ fn bytes_memory_subscript() {
 
                 return bar;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -541,7 +541,7 @@ fn bytes_memory_subscript() {
     );
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract foo {
             function or(uint32 index, bytes1 val) public returns (bytes) {
                 bytes bar = hex"deadcafe";
@@ -566,7 +566,7 @@ fn bytes_memory_subscript() {
 
                 return bar;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -587,12 +587,12 @@ fn bytes_memory_subscript() {
 #[test]
 fn string_escape() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract カラス {
             function カラス$() public {
                 print(" \u20ac \x41 \f\b\r\n\v\\\'\"\t");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -610,7 +610,7 @@ fn long_string() {
     // String used here (containing some UTF-8 chars, which is why bytes length != string length):
     // "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me."
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract LongString {
             function decode() pure public {
                 bytes enc = hex"6d1143616c6c206d65204973686d61656c2e20536f6d652079656172732061676fe280946e65766572206d696e6420686f77206c6f6e6720707265636973656c79e28094686176696e67206c6974746c65206f72206e6f206d6f6e657920696e206d792070757273652c20616e64206e6f7468696e6720706172746963756c617220746f20696e746572657374206d65206f6e2073686f72652c20492074686f75676874204920776f756c64207361696c2061626f75742061206c6974746c6520616e642073656520746865207761746572792070617274206f662074686520776f726c642e20497420697320612077617920492068617665206f662064726976696e67206f6666207468652073706c65656e20616e6420726567756c6174696e67207468652063697263756c6174696f6e2e205768656e6576657220492066696e64206d7973656c662067726f77696e67206772696d2061626f757420746865206d6f7574683b207768656e6576657220697420697320612064616d702c206472697a7a6c79204e6f76656d62657220696e206d7920736f756c3b207768656e6576657220492066696e64206d7973656c6620696e766f6c756e746172696c792070617573696e67206265666f726520636f6666696e2077617265686f757365732c20616e64206272696e67696e67207570207468652072656172206f662065766572792066756e6572616c2049206d6565743b20616e6420657370656369616c6c79207768656e65766572206d79206879706f7320676574207375636820616e2075707065722068616e64206f66206d652c20746861742069742072657175697265732061207374726f6e67206d6f72616c207072696e6369706c6520746f2070726576656e74206d652066726f6d2064656c696265726174656c79207374657070696e6720696e746f20746865207374726565742c20616e64206d6574686f646963616c6c79206b6e6f636b696e672070656f706c65e28099732068617473206f6666e280947468656e2c2049206163636f756e7420697420686967682074696d6520746f2067657420746f2073656120617320736f6f6e20617320492063616e2e2054686973206973206d79207375627374697475746520666f7220706973746f6c20616e642062616c6c2e20576974682061207068696c6f736f70686963616c20666c6f7572697368204361746f207468726f77732068696d73656c662075706f6e206869732073776f72643b20492071756965746c792074616b6520746f2074686520736869702e205468657265206973206e6f7468696e672073757270726973696e6720696e20746869732e204966207468657920627574206b6e65772069742c20616c6d6f737420616c6c206d656e20696e207468656972206465677265652c20736f6d652074696d65206f72206f746865722c20636865726973682076657279206e6561726c79207468652073616d65206665656c696e677320746f776172647320746865206f6365616e2077697468206d652e";
@@ -624,7 +624,7 @@ fn long_string() {
                 assert(dec2 == "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.");
             }
         }
-        "##,
+        "#,
     );
     runtime.constructor(0, vec![]);
     runtime.function("decode", vec![]);
@@ -633,7 +633,7 @@ fn long_string() {
 #[test]
 fn string_encoded_length() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract StrLen {
             function strlen() public pure {
                     // Length < 0x40 is expected to have 1 byte length width
@@ -655,7 +655,7 @@ fn string_encoded_length() {
                     assert(e16384[2] == 0x01);
                     assert(e16384[3] == 0x00);
             }
-        }"##,
+        }"#,
     );
     runtime.function("strlen", vec![]);
 }

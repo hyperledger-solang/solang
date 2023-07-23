@@ -1005,7 +1005,7 @@ fn test_mul_within_range_signed() {
         let first_operand_rand = rng.gen_bigint(width - 1).sub(1_u32);
         println!("First op : {first_operand_rand:?}");
 
-        let side = vec![-1, 0, 1];
+        let side = [-1, 0, 1];
         // -1, 1 or 0
         let second_op = BigInt::from(*side.choose(&mut rng).unwrap());
         println!("second op : {second_op:?}");
