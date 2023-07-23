@@ -78,18 +78,25 @@ SCALE encoding does not allow discriminators larger than 1 byte, the hex-encoded
 is provided as the enum variant name in the metadata (the selector could also be calculated by
 reconstructing and hashing the error signature based on the enum Variant types).
 
+.. note::
+
+    Solidity knows about `Error`, `Panic` and 
+    `custom errors <https://docs.soliditylang.org/en/latest/abi-spec.html#errors>`_.
+    Solang does not yet support custom errors. For now, only `Error` (selector of `0x08c379a0`) 
+    and `Panic` (selector of `4e487b71`) will be returned and occur in the metadata.
+
 The general process of decoding the output data for Solang Solidity contracts is as follows:
 
 1. If the revert flag is **not** set, the contract didn't revert and the output should be encoded as specified in the message spec.
 2. The compiler version must be solang > 0.3.1, or the error data can't be decoded (check the ``compiler`` field in the contract metadata).
-3. If the output length is smaller than 4 bytes, the error data can't be decoded (see the note below).
+3. If the output length is smaller than 4 bytes, the error data can't be decoded (contracts may return empty error data, for example if ``revert()`` without arguments is used).
 4. If the first 4 bytes of the output do **not** match any of the selectors found in ``lang_error``, the error can't be decoded.
 5. **Skip** the selector (first 4 bytes) and decode the remaining data according to the corresponding variant type found in `lang_error`.
 
-.. note::
+.. warning::
 
-    Solidity contracts may return empty error data, for example if ``revert()`` without arguments is used.
+    Do not trust the error data.
 
-    Additionally, Solidity contracts do bubble up uncaught errors. This can lead to situations where the 
-    contract reverts with error data unknown to the contracts metadata. Examples of this include 
+    Solidity contracts do bubble up uncaught errors. This can lead to situations where the 
+    contract reverts with error data unknown to the contracts. Examples of this include 
     bubbling up custom error data from the callee or error data from an ``ink!`` contract.

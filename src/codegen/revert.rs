@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//! Releated to code that ultimately compiles to the target
+//! equivalent instruction of EVM revert (0xfd).
+
 use super::encoding::{abi_encode, create_encoder};
 use super::expression::expression;
 use super::Options;

@@ -56,7 +56,7 @@ fn constructor_buf_too_small() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: data does not fit into buffer in test.sol"));
-    assert_eq!(runtime.output(), PanicData::from(Generic).encode());
+    assert_eq!(runtime.output(), PanicData::from(ArrayIndexOob).encode());
 }
 
 #[test]
@@ -293,7 +293,7 @@ fn int_too_large_for_bytes() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: integer too large to write in buffer in test.sol"));
-    assert_eq!(runtime.output(), PanicData::from(Generic).encode());
+    assert_eq!(runtime.output(), PanicData::from(ArrayIndexOob).encode());
 }
 
 #[test]
@@ -348,7 +348,7 @@ fn truncated_type_overflow() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: truncated type overflows in test.sol"));
-    assert_eq!(runtime.output(), PanicData::from(Generic).encode());
+    assert_eq!(runtime.output(), PanicData::from(MathOverflow).encode());
 }
 
 #[test]
@@ -388,7 +388,7 @@ fn int_read_oob() {
     assert!(runtime
         .debug_buffer()
         .contains("runtime_error: read integer out of bounds in test.sol"));
-    assert_eq!(runtime.output(), PanicData::from(Generic).encode());
+    assert_eq!(runtime.output(), PanicData::from(ArrayIndexOob).encode());
 }
 
 #[test]

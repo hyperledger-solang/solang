@@ -1901,7 +1901,7 @@ fn expr_builtin(
                 vartab,
                 ns,
             );
-            let error = SolidityError::Panic(PanicCode::Generic);
+            let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
             assert_failure(loc, error, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
@@ -1962,7 +1962,7 @@ fn expr_builtin(
                 vartab,
                 ns,
             );
-            let error = SolidityError::Panic(PanicCode::Generic);
+            let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
             assert_failure(loc, error, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
@@ -2040,7 +2040,7 @@ fn expr_builtin(
                 vartab,
                 ns,
             );
-            let error = SolidityError::Panic(PanicCode::Generic);
+            let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
             assert_failure(loc, error, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
@@ -2305,7 +2305,7 @@ fn checking_trunc(
         vartab,
         ns,
     );
-    let error = SolidityError::Panic(PanicCode::Generic);
+    let error = SolidityError::Panic(PanicCode::MathOverflow);
     assert_failure(loc, error, ns, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
