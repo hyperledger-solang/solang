@@ -76,7 +76,7 @@ The metadata contains all error variants that the contract knows about in the ``
 The 4 bytes `selector` of the error data can be seen as the enum discriminator. However, because 
 SCALE encoding does not allow discriminators larger than 1 byte, the hex-encoded error selector 
 is provided as the enum variant name in the metadata (the selector could also be calculated by
-reconstructing and hashing the error signature based on the enum Variant types).
+reconstructing and hashing the error signature based on the enum variant types).
 
 .. note::
 

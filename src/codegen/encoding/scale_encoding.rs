@@ -2,10 +2,12 @@
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::AbiEncoding;
+use crate::codegen::revert::{PanicCode, SolidityError};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::StructType;
 use crate::sema::ast::{Namespace, Type, Type::Uint};
+use parity_scale_codec::Encode;
 use solang_parser::pt::Loc::Codegen;
 use std::collections::HashMap;
 
@@ -577,5 +579,47 @@ impl AbiEncoding for ScaleEncoding {
 
     fn is_packed(&self) -> bool {
         self.packed_encoder
+    }
+
+    fn const_error_panic(&self, code: PanicCode) -> Vec<u8> {
+        let mut bytes = SolidityError::Panic(code).selector().to_be_bytes().to_vec();
+        bytes.push(code as u8);
+        bytes.resize(36, 0);
+        bytes
+    }
+
+    fn const_error_string(&self, data: String) -> Vec<u8> {
+        let mut bytes = SolidityError::String(Expression::Poison)
+            .selector()
+            .to_be_bytes()
+            .to_vec();
+        bytes.extend_from_slice(&data.encode());
+        bytes
+    }
+
+    fn encode_error_data_const(&self, error: SolidityError) -> Option<Expression> {
+        let bytes = match error {
+            SolidityError::Empty => return None,
+            SolidityError::String(data) => match data {
+                Expression::AllocDynamicBytes {
+                    ty: Type::String,
+                    initializer: Some(data),
+                    ..
+                } => self.const_error_string(String::from_utf8(data).unwrap()),
+                _ => return None,
+            },
+            SolidityError::Panic(code) => self.const_error_panic(code),
+        };
+        let size = Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Type::Uint(32),
+            value: bytes.len().into(),
+        };
+        Some(Expression::AllocDynamicBytes {
+            loc: Codegen,
+            ty: Type::Slice(Type::Bytes(1).into()),
+            size: size.into(),
+            initializer: bytes.into(),
+        })
     }
 }
