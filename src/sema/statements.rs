@@ -2503,13 +2503,10 @@ fn try_catch(
                 Ok(())
             }
             CatchClause::Named(_, id, param, stmt) => {
-                if !matches!(id.name.as_str(), "Error" | "Panic") {
+                if !matches!(id.name.as_str(), "Error") {
                     ns.diagnostics.push(Diagnostic::error(
                         id.loc,
-                        format!(
-                            "only catch 'Error' or 'Panic' is supported, not '{}'",
-                            id.name
-                        ),
+                        format!("only catch 'Error' is supported, not '{}'", id.name),
                     ));
                     return Err(());
                 } else if let Some(annotation) = &param.annotation {
@@ -2520,20 +2517,11 @@ fn try_catch(
                 let (error_ty, ty_loc) =
                     resolve_var_decl_ty(&param.ty, &param.storage, context, ns, diagnostics)?;
 
-                if id.name == "Error" && error_ty != Type::String {
+                if error_ty != Type::String {
                     ns.diagnostics.push(Diagnostic::error(
                         param.ty.loc(),
                         format!(
                             "catch Error(...) can only take 'string memory', not '{}'",
-                            error_ty.to_string(ns)
-                        ),
-                    ));
-                }
-                if id.name == "Panic" && error_ty != Type::Uint(256) {
-                    ns.diagnostics.push(Diagnostic::error(
-                        param.ty.loc(),
-                        format!(
-                            "catch Panic(...) can only take 'uint256', not '{}'",
                             error_ty.to_string(ns)
                         ),
                     ));
