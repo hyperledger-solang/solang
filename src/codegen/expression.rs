@@ -1727,7 +1727,7 @@ fn payable_send(
     );
 
     if ns.target.is_polkadot() {
-        polkadot_check_transfer_ret(loc, success, cfg, ns, opt, vartab)
+        polkadot_check_transfer_ret(loc, success, cfg, ns, opt, vartab, false).unwrap()
     } else {
         Expression::Variable {
             loc: *loc,
@@ -1794,7 +1794,7 @@ fn payable_transfer(
     cfg.add(vartab, ins);
 
     if ns.target.is_polkadot() {
-        polkadot_check_transfer_ret(loc, success.unwrap(), cfg, ns, opt, vartab);
+        polkadot_check_transfer_ret(loc, success.unwrap(), cfg, ns, opt, vartab, true);
     }
 
     Expression::Poison
@@ -2900,8 +2900,21 @@ pub fn emit_function_call(
             );
 
             let success = if ns.target.is_polkadot() {
-                let ret = polkadot_ret_switch(loc, success, cfg, vartab);
-                polkadot_check_ext_call_ret(loc, ret, cfg, ns, opt, vartab)
+                let ret_code = Expression::Variable {
+                    loc: *loc,
+                    ty: Type::Uint(32),
+                    var_no: success,
+                };
+                let ret_ok = Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Uint(32),
+                    value: 0.into(),
+                };
+                Expression::Equal {
+                    loc: *loc,
+                    left: ret_code.into(),
+                    right: ret_ok.into(),
+                }
             } else {
                 Expression::Variable {
                     loc: *loc,
@@ -3805,6 +3818,10 @@ fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
     }
 }
 
+/// Handles all cases from the [RetBlock] accordingly.
+/// * On success, nothing is done and the execution continues at the success block.
+/// If the callee reverted and output was supplied, it will be bubble up.
+/// Otherwise, a revert without data will be inserted.
 fn polkadot_check_ext_call_ret(
     loc: &Loc,
     ret: RetBlocks,
@@ -3812,7 +3829,7 @@ fn polkadot_check_ext_call_ret(
     ns: &Namespace,
     opt: &Options,
     vartab: &mut Vartable,
-) -> Expression {
+) {
     let msg = "external call failed";
 
     cfg.set_basic_block(ret.error_no_data);
@@ -3825,14 +3842,12 @@ fn polkadot_check_ext_call_ret(
     cfg.add(vartab, Instr::AssertFailure { encoded_args });
 
     cfg.set_basic_block(ret.success);
-
-    Expression::NumberLiteral {
-        loc: *loc,
-        ty: Type::Bool,
-        value: 1.into(),
-    }
 }
 
+/// Check the return code of `transfer`.
+///
+/// If `bubble_up` is set to true, this will revert the contract execution on failure.
+/// Otherwise, the comparison if the return code equals `0` is returned.
 fn polkadot_check_transfer_ret(
     loc: &Loc,
     success: usize,
@@ -3840,7 +3855,8 @@ fn polkadot_check_transfer_ret(
     ns: &Namespace,
     opt: &Options,
     vartab: &mut Vartable,
-) -> Expression {
+    bubble_up: bool,
+) -> Option<Expression> {
     let ret_code = Expression::Variable {
         loc: *loc,
         ty: Type::Uint(32),
@@ -3856,6 +3872,10 @@ fn polkadot_check_transfer_ret(
         left: ret_code.into(),
         right: ret_ok.into(),
     };
+
+    if !bubble_up {
+        return Some(cond);
+    }
 
     let success_block = cfg.new_basic_block("transfer_success".into());
     let fail_block = cfg.new_basic_block("transfer_fail".into());
@@ -3874,11 +3894,8 @@ fn polkadot_check_transfer_ret(
     cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
 
     cfg.set_basic_block(success_block);
-    Expression::NumberLiteral {
-        loc: *loc,
-        ty: Type::Bool,
-        value: 1.into(),
-    }
+
+    None
 }
 
 pub(super) struct RetBlocks {
@@ -3887,6 +3904,10 @@ pub(super) struct RetBlocks {
     pub error_no_data: usize,
 }
 
+/// Insert a switch instruction into the CFG based on `success` returncode:
+/// * `0` will branch into the success block.
+/// * `2` will branch into the revert block.
+/// * Everything else will branch into the default block.
 pub(super) fn polkadot_ret_switch(
     loc: &Loc,
     success: usize,

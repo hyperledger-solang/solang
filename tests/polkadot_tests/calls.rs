@@ -1070,9 +1070,9 @@ fn error_bubbling() {
     runtime.set_transferred_value(20000);
     let expected_output = ([0x08u8, 0xc3, 0x79, 0xa0], "no".to_string()).encode();
 
-    runtime.function_expect_failure("raw_call", vec![]);
-    assert_eq!(runtime.output(), expected_output);
-    assert!(runtime.debug_buffer().contains("external call failed"));
+    // The raw call must not bubble up
+    runtime.function("raw_call", vec![]);
+    assert_eq!(runtime.output(), expected_output.encode());
 
     runtime.function_expect_failure("normal_call", vec![]);
     assert_eq!(runtime.output(), expected_output);

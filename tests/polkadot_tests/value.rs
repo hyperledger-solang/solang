@@ -480,3 +480,54 @@ fn send_and_transfer() {
 
     assert_eq!(runtime.balance(2), 1011);
 }
+
+#[test]
+fn transfer_bubble_up() {
+    let mut runtime = build_solidity(
+        r##"
+        contract C {
+            function c(uint128 amount) public payable {
+                Other o = new Other{value: 1000}();
+                o.payback(amount);
+            }
+        }
+
+        contract Other {
+            function payback(uint128 amount) public payable {
+                payable(msg.sender).transfer(amount);
+            }
+        }"##,
+    );
+
+    runtime.set_transferred_value(2000);
+    runtime.function("c", 100u128.encode());
+
+    runtime.function_expect_failure("c", 1000000u128.encode());
+    assert!(runtime.output().is_empty());
+}
+
+#[test]
+fn send_does_not_bubble_up() {
+    let mut runtime = build_solidity(
+        r##"
+        contract C {
+            function c(uint128 amount) public payable returns(bool) {
+                Other o = new Other{value: 1000}();
+                return o.payback(amount);
+            }
+        }
+
+        contract Other {
+            function payback(uint128 amount) public payable returns(bool) {
+                return payable(msg.sender).send(amount);
+            }
+        }"##,
+    );
+
+    runtime.set_transferred_value(2000);
+    runtime.function("c", 100u128.encode());
+    assert_eq!(runtime.output(), true.encode());
+
+    runtime.function("c", 1000000u128.encode());
+    assert_eq!(runtime.output(), false.encode());
+}
