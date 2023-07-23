@@ -30,15 +30,6 @@ pub fn should_remove_assignment(
     }
 
     match &exp {
-        Expression::StorageVariable {
-            contract_no,
-            var_no,
-            ..
-        } => {
-            let var = &ns.contracts[*contract_no].variables[*var_no];
-            !var.read
-        }
-
         Expression::Variable { var_no, .. } => should_remove_variable(*var_no, func, opt),
 
         Expression::StructMember { expr, .. } => should_remove_assignment(ns, expr, func, opt),

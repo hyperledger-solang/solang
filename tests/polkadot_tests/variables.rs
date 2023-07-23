@@ -49,3 +49,22 @@ fn global_constants() {
 
     runtime.function("test", 0u64.encode());
 }
+
+#[test]
+fn ensure_unread_storage_vars_write() {
+    let mut runtime = build_solidity(
+        r##"import "polkadot";
+        contract C {
+            uint8 foo;
+            function c(uint8[32] code) public payable {
+                foo = 123;
+                require(set_code_hash(code) == 0);
+            }
+        }
+        contract A { uint8 public foo; }"##,
+    );
+
+    runtime.function("c", runtime.contracts()[1].code.hash.encode());
+    runtime.raw_function(runtime.blobs()[1].messages["foo"].to_vec());
+    assert_eq!(runtime.output(), 123u8.encode());
+}
