@@ -540,3 +540,25 @@ fn int256_div_by_zero() {
     assert!(runtime.debug_buffer().contains("division by zero"));
     assert_eq!(runtime.output(), PanicData::from(DivisionByZero).encode());
 }
+
+#[test]
+fn internal_dyn_call_on_nil() {
+    let mut runtime = build_solidity(
+        r#"contract RuntimeErrors {
+        function() internal x;
+        function f() public returns (uint r) {
+            x();
+            return 2;
+        } 
+    }"#,
+    );
+
+    runtime.function_expect_failure("f", vec![]);
+    assert!(runtime
+        .debug_buffer()
+        .contains("internal function uninitialized"));
+    assert_eq!(
+        runtime.output(),
+        PanicData::from(InternalFunctionUninitialized).encode()
+    );
+}

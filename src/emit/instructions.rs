@@ -606,6 +606,40 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
             let callable =
                 expression(target, bin, call_expr, &w.vars, function, ns).into_pointer_value();
 
+            let ptr_ok = bin.context.append_basic_block(function, "fn_ptr_ok");
+            let ptr_nil = bin.context.append_basic_block(function, "fn_ptr_nil");
+            let nil_ptr = bin
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::default())
+                .const_null();
+            let is_ptr_nil =
+                bin.builder
+                    .build_int_compare(IntPredicate::EQ, nil_ptr, callable, "check_nil_ptr");
+            bin.builder
+                .build_conditional_branch(is_ptr_nil, ptr_nil, ptr_ok);
+
+            bin.builder.position_at_end(ptr_nil);
+            bin.log_runtime_error(
+                target,
+                "internal function uninitialized".to_string(),
+                None,
+                ns,
+            );
+            let (revert_out, revert_out_len) = if ns.target == Target::Solana {
+                (
+                    bin.context
+                        .i8_type()
+                        .ptr_type(AddressSpace::default())
+                        .const_null(),
+                    bin.context.i32_type().const_zero(),
+                )
+            } else {
+                bin.error_data_const(ns, PanicCode::InternalFunctionUninitialized)
+            };
+            target.assert_failure(bin, revert_out, revert_out_len);
+
+            bin.builder.position_at_end(ptr_ok);
             let ret = bin
                 .builder
                 .build_indirect_call(llvm_func, callable, &parms, "")
