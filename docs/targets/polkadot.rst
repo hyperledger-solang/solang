@@ -65,7 +65,7 @@ The following example shows how call flags can be used:
 Reverts and error data decoding
 _______________________________
 
-When the contract decides to revert its execution, returned error data corresponds to what contracts on 
+When a contract reverts, the returned error data is what
 `EVM would return <https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require>`_.
 ``assert()``, ``require()``, or ``revert()`` will revert the contract execution, where the revert reason 
 is supplied as the contracts output (if any). Solidity contracts can also revert with a `Panic`.
