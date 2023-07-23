@@ -65,6 +65,8 @@ fn ensure_unread_storage_vars_write() {
     );
 
     runtime.function("c", runtime.contracts()[1].code.hash.encode());
+    assert_eq!(runtime.storage().values().next().unwrap(), &123u8.encode());
+
     runtime.raw_function(runtime.blobs()[1].messages["foo"].to_vec());
     assert_eq!(runtime.output(), 123u8.encode());
 }
