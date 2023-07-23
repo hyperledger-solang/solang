@@ -49,3 +49,26 @@ fn global_constants() {
 
     runtime.function("test", 0u64.encode());
 }
+
+#[test]
+fn ext_fn_call_is_reading_variable() {
+    let mut runtime = build_solidity(
+        r##"contract C {
+            function ext_func_call(uint32 arg) public payable returns (uint32) {
+                A a = new A();
+                function(uint32) external returns (uint32) func = a.a;
+                return func(arg);
+            }
+        }
+        
+        contract A {
+            function a(uint32 arg) public pure returns (uint32) {
+                return arg;
+            }
+        }"##,
+    );
+
+    runtime.set_transferred_value(1000);
+    runtime.function("ext_func_call", 0xdeadbeefu32.encode());
+    assert_eq!(runtime.output(), 0xdeadbeefu32.encode())
+}
