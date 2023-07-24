@@ -52,7 +52,7 @@ pub struct New {
     #[arg(name = "TARGETNAME",required= true, long = "target", value_parser = ["solana", "polkadot", "evm"], help = "Target to build for [possible values: solana, polkadot]", num_args = 1, hide_possible_values = true)]
     pub target_name: String,
 
-    #[arg(name = "INPUT", help = "Name of the project", num_args = 1, value_parser =  ValueParser::os_string())]
+    #[arg(name = "INPUT", help = "Name of the project", num_args = 1, value_parser = ValueParser::os_string())]
     pub project_name: Option<OsString>,
 }
 
@@ -70,10 +70,10 @@ pub struct LanguageServerCommand {
     #[clap(flatten)]
     pub target: TargetArg,
 
-    #[arg(name = "IMPORTPATH", help = "Directory to search for solidity files", value_parser = ValueParser::path_buf() , action = ArgAction::Append, long = "importpath", short = 'I', num_args = 1)]
+    #[arg(name = "IMPORTPATH", help = "Directory to search for solidity files", value_parser = ValueParser::path_buf(), action = ArgAction::Append, long = "importpath", short = 'I', num_args = 1)]
     pub import_path: Option<Vec<PathBuf>>,
 
-    #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map) , action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
+    #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map), action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
     pub import_map: Option<Vec<(String, PathBuf)>>,
 }
 
@@ -245,7 +245,7 @@ pub struct CompilerOutput {
     #[serde(deserialize_with = "deserialize_emit", default)]
     pub emit: Option<String>,
 
-    #[arg(name = "STD-JSON",help = "mimic solidity json output on stdout", conflicts_with_all = ["VERBOSE", "OUTPUT", "EMIT"] , action = ArgAction::SetTrue, long = "standard-json")]
+    #[arg(name = "STD-JSON",help = "mimic solidity json output on stdout", conflicts_with_all = ["VERBOSE", "OUTPUT", "EMIT"], action = ArgAction::SetTrue, long = "standard-json")]
     #[serde(default)]
     pub std_json_output: bool,
 
@@ -294,30 +294,30 @@ pub struct DocPackage {
     #[arg(name = "CONTRACT", help = "Contract names to compile (defaults to all)", value_delimiter = ',', action = ArgAction::Append, long = "contract")]
     pub contracts: Option<Vec<String>>,
 
-    #[arg(name = "IMPORTPATH", help = "Directory to search for solidity files",value_parser = ValueParser::path_buf() , action = ArgAction::Append, long = "importpath", short = 'I', num_args = 1)]
+    #[arg(name = "IMPORTPATH", help = "Directory to search for solidity files",value_parser = ValueParser::path_buf(), action = ArgAction::Append, long = "importpath", short = 'I', num_args = 1)]
     pub import_path: Option<Vec<PathBuf>>,
 
-    #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map) , action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
+    #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map), action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
     pub import_map: Option<Vec<(String, PathBuf)>>,
 }
 
 #[derive(Args, Deserialize, Debug, PartialEq)]
 pub struct CompilePackage {
-    #[arg(name = "INPUT", help = "Solidity input files",value_parser = ValueParser::path_buf(), num_args = 1..,)]
+    #[arg(name = "INPUT", help = "Solidity input files",value_parser = ValueParser::path_buf(), num_args = 1..)]
     #[serde(rename(deserialize = "input_files"))]
     pub input: Option<Vec<PathBuf>>,
 
     #[arg(name = "CONTRACT", help = "Contract names to compile (defaults to all)", value_delimiter = ',', action = ArgAction::Append, long = "contract")]
     pub contracts: Option<Vec<String>>,
 
-    #[arg(name = "IMPORTPATH", help = "Directory to search for solidity files",value_parser = ValueParser::path_buf() , action = ArgAction::Append, long = "importpath", short = 'I', num_args = 1)]
+    #[arg(name = "IMPORTPATH", help = "Directory to search for solidity files", value_parser = ValueParser::path_buf(), action = ArgAction::Append, long = "importpath", short = 'I', num_args = 1)]
     pub import_path: Option<Vec<PathBuf>>,
 
-    #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map) , action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
+    #[arg(name = "IMPORTMAP", help = "Map directory to search for solidity files [format: map=path]",value_parser = ValueParser::new(parse_import_map), action = ArgAction::Append, long = "importmap", short = 'm', num_args = 1)]
     #[serde(deserialize_with = "deserialize_inline_table", default)]
     pub import_map: Option<Vec<(String, PathBuf)>>,
 
-    #[arg(name = "AUTHOR", help = "specify contracts authors" , long = "contract-authors", value_delimiter = ',', action = ArgAction::Append)]
+    #[arg(name = "AUTHOR", help = "specify contracts authors", long = "contract-authors", value_delimiter = ',', action = ArgAction::Append)]
     #[serde(default)]
     pub authors: Option<Vec<String>>,
 
@@ -513,17 +513,12 @@ impl PackageTrait for DocPackage {
 }
 
 pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
-    let mut resolver = FileResolver::new();
+    let mut resolver = FileResolver::default();
 
     for filename in package.get_input() {
         if let Ok(path) = PathBuf::from(filename).canonicalize() {
             let _ = resolver.add_import_path(path.parent().unwrap());
         }
-    }
-
-    if let Err(e) = resolver.add_import_path(&PathBuf::from(".")) {
-        eprintln!("error: cannot add current directory to import path: {e}");
-        exit(1);
     }
 
     if let Some(paths) = package.get_import_path() {
@@ -651,7 +646,7 @@ where
     match str {
         Some(value) => {
             match value.as_str() {
-                "ast-dot"|"cfg"|"llvm-ir"|"llvm-bc" |"object"| "asm" => 
+                "ast-dot"|"cfg"|"llvm-ir"|"llvm-bc"|"object"|"asm" =>
                     Ok(Some(value))
                 ,
                 _ => Err(serde::de::Error::custom("Invalid option for `emit`. Valid options are: `ast-dot`, `cfg`, `llvm-ir`, `llvm-bc`, `object`, `asm`"))

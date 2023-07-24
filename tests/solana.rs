@@ -156,7 +156,7 @@ impl<'a> VirtualMachineBuilder<'a> {
     }
 
     pub(crate) fn build(self) -> VirtualMachine {
-        let mut cache = FileResolver::new();
+        let mut cache = FileResolver::default();
 
         cache.set_file_contents("test.sol", self.src.to_string());
 
@@ -1620,7 +1620,7 @@ impl VirtualMachine {
 }
 
 pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents("test.sol", src.to_string());
 

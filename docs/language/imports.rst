@@ -26,8 +26,9 @@ or just a select few items. You can also rename the imports. The following direc
 
     import {foo, bar} from "defines.sol";
 
-Solang will look for the file `defines.sol` in the same directory as the current file. You can specify
-more directories to search with the ``--importpath`` commandline option.
+Solang will look for the file `defines.sol` in the paths specified with the ``--importpath``
+commandline option. If the file is relative, e.g. ``import "./defines.sol";`` or
+``import "../defines.sol";``, then the directory relative to the parent file is used.
 Just like with ES6, ``import`` is hoisted to the top and both `foo` and `bar` are usuable
 even before the ``import`` statement. It is also possible to import everything from
 `defines.sol` by leaving the list out. Note that this is different than ES6, which would import nothing

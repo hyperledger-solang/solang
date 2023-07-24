@@ -1,4 +1,4 @@
-import "type_decl_broken.sol";
+import "./type_decl_broken.sol";
 
 struct S {
 	in f1;

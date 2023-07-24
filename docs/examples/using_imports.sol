@@ -1,4 +1,4 @@
-import {User} from "user.sol";
+import {User} from "./user.sol";
 
 contract c {
     function foo(User memory user) public {

@@ -9,7 +9,7 @@ use std::ffi::OsStr;
 
 #[test]
 fn test_abstract() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -52,7 +52,7 @@ fn test_abstract() {
 
     assert_eq!(contracts.len(), 1);
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",

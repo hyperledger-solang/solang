@@ -99,7 +99,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
         file.full_path.clone(),
         &source_code,
         file_cache_no,
-        Some(file.get_import_no()),
+        file.import_no,
     ));
 
     let (pt, comments) = match parse(&source_code, file_no) {
@@ -232,6 +232,14 @@ fn resolve_import(
             return;
         }
     };
+
+    if filename.string.is_empty() {
+        ns.diagnostics.push(ast::Diagnostic::error(
+            filename.loc,
+            "import path empty".into(),
+        ));
+        return;
+    }
 
     let os_filename = OsStr::new(&filename.string);
 
