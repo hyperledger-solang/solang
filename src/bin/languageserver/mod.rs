@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use itertools::Itertools;
 use rust_lapper::{Interval, Lapper};
 use serde_json::Value;
 use solang::{
@@ -313,18 +314,18 @@ impl<'a> Builder<'a> {
                 if !tags.is_empty() {
                     tags.push_str("\n\n");
                 }
-                let fields = itertools::Itertools::intersperse(
-                    event.fields.iter().map(|field| {
+                let fields = event
+                    .fields
+                    .iter()
+                    .map(|field| {
                         format!(
                             "\t{}{}{}",
                             field.ty.to_string(self.ns),
                             if field.indexed { " indexed " } else { " " },
                             field.name_as_str()
                         )
-                    }),
-                    ",\n".to_string(),
-                )
-                .collect::<String>();
+                    })
+                    .join(",\n");
                 let val = format!(
                     "event {} {{\n{}\n}}{}",
                     event.symbol_name(self.ns),
@@ -684,21 +685,15 @@ impl<'a> Builder<'a> {
                         msg_tg.push_str("\n\n");
                     }
 
-                    let params = itertools::Itertools::intersperse(
-                        fnc.params.iter().map(|parm| format!("{} {}", parm.ty.to_string(self.ns), parm.name_as_str())),
-                        ", ".to_string(),
-                    ).collect::<String>();
+                    let params = fnc.params.iter().map(|parm| format!("{} {}", parm.ty.to_string(self.ns), parm.name_as_str())).join(", ");
 
-                    let rets = itertools::Itertools::intersperse(
-                        fnc.returns.iter().map(|ret| {
+                    let rets = fnc.returns.iter().map(|ret| {
                             let mut msg = ret.ty.to_string(self.ns);
                             if ret.name_as_str() != "" {
                                 msg = format!("{} {}", msg, ret.name_as_str());
                             }
                             msg
-                        }),
-                        ", ".to_string(),
-                    ).collect::<String>();
+                        }).join(", ");
 
                     let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
 
@@ -735,21 +730,15 @@ impl<'a> Builder<'a> {
                         msg_tg.push_str("\n\n");
                     }
 
-                    let params = itertools::Itertools::intersperse(
-                        fnc.params.iter().map(|parm| format!("{} {}", parm.ty.to_string(self.ns), parm.name_as_str())),
-                        ", ".to_string(),
-                    ).collect::<String>();
+                    let params = fnc.params.iter().map(|parm| format!("{} {}", parm.ty.to_string(self.ns), parm.name_as_str())).join(", ");
 
-                    let rets = itertools::Itertools::intersperse(
-                        fnc.returns.iter().map(|ret| {
+                    let rets = fnc.returns.iter().map(|ret| {
                             let mut msg = ret.ty.to_string(self.ns);
                             if ret.name_as_str() != "" {
                                 msg = format!("{} {}", msg, ret.name_as_str());
                             }
                             msg
-                        }),
-                        ", ".to_string(),
-                    ).collect::<String>();
+                        }).join(", ");
 
                     let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
 
@@ -812,15 +801,10 @@ impl<'a> Builder<'a> {
             }
             ast::Expression::Builtin { loc, kind, args, .. } => {
                 let (rets, name, params, doc) = if let Some(protval) = get_prototype(*kind) {
-                    let rets = itertools::Itertools::intersperse(
-                        protval.ret.iter().map(|ret| ret.to_string(self.ns)),
-                        " ".to_string(),
-                    ).collect::<String>();
+                    let rets = protval.ret.iter().map(|ret| ret.to_string(self.ns)).join(" ");
 
-                    let mut params = itertools::Itertools::intersperse(
-                        protval.params.iter().map(|param| param.to_string(self.ns)),
-                        " ".to_string(),
-                    ).collect::<String>();
+                    let mut params = protval.params.iter().map(|param| param.to_string(self.ns)).join(" ");
+
                     if !params.is_empty() {
                         params = format!("({})", params);
                     }
@@ -1043,13 +1027,13 @@ impl<'a> Builder<'a> {
                     tags.push_str("\n\n")
                 }
 
-                let fields = itertools::Itertools::intersperse(
-                    strct.fields.iter().map(|field| {
+                let fields = strct
+                    .fields
+                    .iter()
+                    .map(|field| {
                         format!("\t{} {}", field.ty.to_string(self.ns), field.name_as_str())
-                    }),
-                    ",\n".to_string(),
-                )
-                .collect::<String>();
+                    })
+                    .join(",\n");
 
                 let val = make_code_block(format!("struct {} {{\n{}\n}}", strct, fields));
                 format!("{}{}", tags, val)
@@ -1060,11 +1044,11 @@ impl<'a> Builder<'a> {
                 if !tags.is_empty() {
                     tags.push_str("\n\n")
                 }
-                let values = itertools::Itertools::intersperse(
-                    enm.values.iter().map(|value| format!("\t{}", value.0)),
-                    ",\n".to_string(),
-                )
-                .collect::<String>();
+                let values = enm
+                    .values
+                    .iter()
+                    .map(|value| format!("\t{}", value.0))
+                    .join(",\n");
 
                 let val = make_code_block(format!("enum {} {{\n{}\n}}", enm, values));
                 format!("{}{}", tags, val)
