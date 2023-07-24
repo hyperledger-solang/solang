@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use super::constructor::polkadot_check_constructor_ret;
 use super::encoding::{abi_decode, abi_encode};
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
@@ -461,8 +460,12 @@ pub fn expression(
                 opt,
             );
             if ns.target.is_polkadot() {
-                let ret = polkadot_ret_switch(loc, success.unwrap(), cfg, vartab);
-                polkadot_check_constructor_ret(loc, ret, cfg, ns, opt, vartab);
+                polkadot::RetCodeCheckBuilder::default()
+                    .loc(*loc)
+                    .msg("contract creation failed")
+                    .success_var(success.unwrap())
+                    .insert(cfg, vartab)
+                    .handle_cases(cfg, ns, opt, vartab);
             }
             Expression::Variable {
                 loc: *loc,
@@ -3014,8 +3017,12 @@ pub fn emit_function_call(
                 );
 
                 if ns.target.is_polkadot() {
-                    let ret = polkadot_ret_switch(loc, success.unwrap(), cfg, vartab);
-                    polkadot_check_ext_call_ret(loc, ret, cfg, ns, opt, vartab);
+                    polkadot::RetCodeCheckBuilder::default()
+                        .loc(*loc)
+                        .msg("external call failed")
+                        .success_var(success.unwrap())
+                        .insert(cfg, vartab)
+                        .handle_cases(cfg, ns, opt, vartab);
                 }
 
                 // If the first element of returns is Void, we can discard the returns
@@ -3096,8 +3103,12 @@ pub fn emit_function_call(
                 );
 
                 if ns.target.is_polkadot() {
-                    let ret = polkadot_ret_switch(loc, success.unwrap(), cfg, vartab);
-                    polkadot_check_ext_call_ret(loc, ret, cfg, ns, opt, vartab);
+                    polkadot::RetCodeCheckBuilder::default()
+                        .loc(*loc)
+                        .msg("external call failed")
+                        .success_var(success.unwrap())
+                        .insert(cfg, vartab)
+                        .handle_cases(cfg, ns, opt, vartab);
                 }
 
                 if !func_returns.is_empty() && returns[0] != Type::Void {
@@ -3818,32 +3829,6 @@ fn add_prefix_and_delimiter_to_print(mut expr: Expression) -> Expression {
     }
 }
 
-/// Handles all cases from the [RetBlock] accordingly.
-/// * On success, nothing is done and the execution continues at the success block.
-/// If the callee reverted and output was supplied, it will be bubble up.
-/// Otherwise, a revert without data will be inserted.
-fn polkadot_check_ext_call_ret(
-    loc: &Loc,
-    ret: RetBlocks,
-    cfg: &mut ControlFlowGraph,
-    ns: &Namespace,
-    opt: &Options,
-    vartab: &mut Vartable,
-) {
-    let msg = "external call failed";
-
-    cfg.set_basic_block(ret.error_no_data);
-    log_runtime_error(opt.log_runtime_errors, msg, *loc, cfg, vartab, ns);
-    cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
-
-    cfg.set_basic_block(ret.revert);
-    log_runtime_error(opt.log_runtime_errors, msg, *loc, cfg, vartab, ns);
-    let encoded_args = Expression::ReturnData { loc: *loc }.into();
-    cfg.add(vartab, Instr::AssertFailure { encoded_args });
-
-    cfg.set_basic_block(ret.success);
-}
-
 /// Check the return code of `transfer`.
 ///
 /// If `bubble_up` is set to true, this will revert the contract execution on failure.
@@ -3898,56 +3883,131 @@ fn polkadot_check_transfer_ret(
     None
 }
 
-pub(super) struct RetBlocks {
-    pub success: usize,
-    pub revert: usize,
-    pub error_no_data: usize,
-}
+pub(super) mod polkadot {
+    use solang_parser::pt::Loc;
 
-/// Insert a switch instruction into the CFG based on `success` returncode:
-/// * `0` will branch into the success block.
-/// * `2` will branch into the revert block.
-/// * Everything else will branch into the default block.
-pub(super) fn polkadot_ret_switch(
-    loc: &Loc,
-    success: usize,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-) -> RetBlocks {
-    let cond = Expression::Variable {
-        loc: *loc,
-        ty: Type::Uint(32),
-        var_no: success,
+    use crate::{
+        codegen::{
+            cfg::{ControlFlowGraph, Instr},
+            vartable::Vartable,
+            Expression, Options,
+        },
+        sema::ast::{Namespace, Type},
     };
-    let ret = RetBlocks {
-        success: cfg.new_basic_block("ret_success".into()),
-        revert: cfg.new_basic_block("ret_bubble".into()),
-        error_no_data: cfg.new_basic_block("ret_no_data".into()),
-    };
-    let cases = vec![
-        (
-            Expression::NumberLiteral {
-                loc: *loc,
-                ty: Type::Uint(32),
-                value: 0.into(),
-            },
-            ret.success,
-        ),
-        (
-            Expression::NumberLiteral {
-                loc: *loc,
-                ty: Type::Uint(32),
-                value: 2.into(),
-            },
-            ret.revert,
-        ),
-    ];
-    let ins = Instr::Switch {
-        cond,
-        cases,
-        default: ret.error_no_data,
-    };
-    cfg.add(vartab, ins);
 
-    ret
+    use super::log_runtime_error;
+
+    /// Helper to handle error cases from external function and constructor calls.
+    pub(crate) struct RetCodeCheck {
+        pub success: usize,
+        pub revert: usize,
+        pub error_no_data: usize,
+        msg: &'static str,
+        loc: Loc,
+    }
+
+    #[derive(Default)]
+    pub(crate) struct RetCodeCheckBuilder<Success = ()> {
+        loc: Loc,
+        msg: &'static str,
+        success_var: Success,
+    }
+
+    impl RetCodeCheckBuilder {
+        pub(crate) fn loc(self, loc: Loc) -> Self {
+            Self {
+                loc,
+                msg: self.msg,
+                success_var: self.success_var,
+            }
+        }
+
+        pub(crate) fn msg(self, msg: &'static str) -> Self {
+            Self {
+                loc: self.loc,
+                msg,
+                success_var: self.success_var,
+            }
+        }
+
+        pub(crate) fn success_var(self, success_var: usize) -> RetCodeCheckBuilder<usize> {
+            RetCodeCheckBuilder {
+                loc: self.loc,
+                msg: self.msg,
+                success_var,
+            }
+        }
+    }
+
+    impl RetCodeCheckBuilder<usize> {
+        pub(crate) fn insert(
+            self,
+            cfg: &mut ControlFlowGraph,
+            vartab: &mut Vartable,
+        ) -> RetCodeCheck {
+            let cond = Expression::Variable {
+                loc: self.loc,
+                ty: Type::Uint(32),
+                var_no: self.success_var,
+            };
+            let ret = RetCodeCheck {
+                success: cfg.new_basic_block("ret_success".into()),
+                revert: cfg.new_basic_block("ret_bubble".into()),
+                error_no_data: cfg.new_basic_block("ret_no_data".into()),
+                msg: self.msg,
+                loc: self.loc,
+            };
+            let cases = vec![
+                (
+                    Expression::NumberLiteral {
+                        loc: self.loc,
+                        ty: Type::Uint(32),
+                        value: 0.into(),
+                    },
+                    ret.success,
+                ),
+                (
+                    Expression::NumberLiteral {
+                        loc: self.loc,
+                        ty: Type::Uint(32),
+                        value: 2.into(),
+                    },
+                    ret.revert,
+                ),
+            ];
+            let ins = Instr::Switch {
+                cond,
+                cases,
+                default: ret.error_no_data,
+            };
+            cfg.add(vartab, ins);
+
+            ret
+        }
+    }
+
+    impl RetCodeCheck {
+        /// Handles all cases from the [RetBlock] accordingly.
+        /// * On success, nothing is done and the execution continues at the success block.
+        /// If the callee reverted and output was supplied, it will be bubble up.
+        /// Otherwise, a revert without data will be inserted.
+        pub(crate) fn handle_cases(
+            &self,
+            cfg: &mut ControlFlowGraph,
+            ns: &Namespace,
+            opt: &Options,
+            vartab: &mut Vartable,
+        ) {
+            cfg.set_basic_block(self.error_no_data);
+            log_runtime_error(opt.log_runtime_errors, self.msg, self.loc, cfg, vartab, ns);
+            cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
+
+            cfg.set_basic_block(self.revert);
+            log_runtime_error(opt.log_runtime_errors, self.msg, self.loc, cfg, vartab, ns);
+            let encoded_args = Expression::ReturnData { loc: self.loc }.into();
+            cfg.add(vartab, Instr::AssertFailure { encoded_args });
+
+            cfg.set_basic_block(self.success);
+        }
+    }
 }

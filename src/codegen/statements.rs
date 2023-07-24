@@ -5,7 +5,7 @@ use num_bigint::BigInt;
 use super::encoding::{abi_decode, abi_encode};
 use super::expression::{
     assert_failure, assign_single, default_gas, emit_function_call, expression, log_runtime_error,
-    polkadot_ret_switch,
+    polkadot::RetCodeCheckBuilder,
 };
 use super::{
     cfg::{ControlFlowGraph, Instr},
@@ -1166,7 +1166,11 @@ fn try_catch(
                     },
                 );
 
-                (polkadot_ret_switch(loc, success, cfg, vartab), func_returns)
+                let cases = RetCodeCheckBuilder::default()
+                    .loc(*loc)
+                    .success_var(success)
+                    .insert(cfg, vartab);
+                (cases, func_returns)
             } else {
                 // dynamic dispatch
                 unimplemented!();
@@ -1201,7 +1205,11 @@ fn try_catch(
                 opt,
             );
 
-            (polkadot_ret_switch(loc, success, cfg, vartab), vec![])
+            let cases = RetCodeCheckBuilder::default()
+                .loc(*loc)
+                .success_var(success)
+                .insert(cfg, vartab);
+            (cases, vec![])
         }
         _ => unreachable!(),
     };
