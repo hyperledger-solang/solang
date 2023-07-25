@@ -196,7 +196,7 @@ fn constructor_salt() {
     runtime.function("step1", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract b {
             function step1() public {
                 a f = new a{salt: hex"01"}();
@@ -206,7 +206,7 @@ fn constructor_salt() {
         contract a {
             function test(int32 l) public payable {
             }
-        }"##,
+        }"#,
     );
     runtime.constructor(0, Vec::new());
 
@@ -214,7 +214,7 @@ fn constructor_salt() {
 
     // we can instantiate the same contract if we provide a different contract
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract b {
             function step1() public {
                 a f = new a{salt: hex"01"}();
@@ -225,7 +225,7 @@ fn constructor_salt() {
         contract a {
             function test(int32 l) public payable {
             }
-        }"##,
+        }"#,
     );
     runtime.constructor(0, Vec::new());
 

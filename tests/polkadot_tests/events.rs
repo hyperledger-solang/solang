@@ -50,7 +50,7 @@ fn emit() {
     }
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract a {
             event foo(bool,uint32,int64 indexed i);
             event bar(uint32,uint64,string indexed s);
@@ -58,7 +58,7 @@ fn emit() {
                 emit foo(true, 102, 1);
                 emit bar(0xdeadcafe, 102, "foobar");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());

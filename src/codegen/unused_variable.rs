@@ -19,43 +19,29 @@ pub struct SideEffectsCheckParameters<'a> {
 
 /// Check if we should remove an assignment. The expression in the argument is the left-hand side
 /// of the assignment
-pub fn should_remove_assignment(
-    ns: &Namespace,
-    exp: &Expression,
-    func: &Function,
-    opt: &Options,
-) -> bool {
+pub fn should_remove_assignment(exp: &Expression, func: &Function, opt: &Options) -> bool {
     if opt.opt_level == OptimizationLevel::None {
         return false;
     }
 
     match &exp {
-        Expression::StorageVariable {
-            contract_no,
-            var_no,
-            ..
-        } => {
-            let var = &ns.contracts[*contract_no].variables[*var_no];
-            !var.read
-        }
-
         Expression::Variable { var_no, .. } => should_remove_variable(*var_no, func, opt),
 
-        Expression::StructMember { expr, .. } => should_remove_assignment(ns, expr, func, opt),
+        Expression::StructMember { expr, .. } => should_remove_assignment(expr, func, opt),
 
-        Expression::Subscript { array, .. } => should_remove_assignment(ns, array, func, opt),
+        Expression::Subscript { array, .. } => should_remove_assignment(array, func, opt),
 
         Expression::StorageLoad { expr, .. }
         | Expression::Load { expr, .. }
         | Expression::Trunc { expr, .. }
         | Expression::Cast { expr, .. }
-        | Expression::BytesCast { expr, .. } => should_remove_assignment(ns, expr, func, opt),
+        | Expression::BytesCast { expr, .. } => should_remove_assignment(expr, func, opt),
 
         Expression::Builtin {
             kind: Builtin::ArrayLength,
             args,
             ..
-        } => should_remove_assignment(ns, &args[0], func, opt),
+        } => should_remove_assignment(&args[0], func, opt),
 
         Expression::Builtin {
             kind: Builtin::ArrayPop | Builtin::ArrayPush,
@@ -67,7 +53,7 @@ pub fn should_remove_assignment(
                 return false;
             }
 
-            should_remove_assignment(ns, &args[0], func, opt)
+            should_remove_assignment(&args[0], func, opt)
         }
 
         _ => false,

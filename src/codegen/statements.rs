@@ -168,7 +168,7 @@ pub(crate) fn statement(
         }
         Statement::Expression(_, _, expr) => {
             if let ast::Expression::Assign { left, right, .. } = &expr {
-                if should_remove_assignment(ns, left, func, opt) {
+                if should_remove_assignment(left, func, opt) {
                     let mut params = SideEffectsCheckParameters {
                         cfg,
                         contract_no,
@@ -183,7 +183,7 @@ pub(crate) fn statement(
                 }
             } else if let ast::Expression::Builtin { args, .. } = expr {
                 // When array pop and push are top-level expressions, they can be removed
-                if should_remove_assignment(ns, expr, func, opt) {
+                if should_remove_assignment(expr, func, opt) {
                     let mut params = SideEffectsCheckParameters {
                         cfg,
                         contract_no,
@@ -828,7 +828,7 @@ fn returns(
     let cast_values = func
         .returns
         .iter()
-        .zip(uncast_values.into_iter())
+        .zip(uncast_values)
         .map(|(left, right)| try_load_and_cast(&right.loc(), &right, &left.ty, ns, cfg, vartab))
         .collect();
 
@@ -942,7 +942,7 @@ fn destructure(
             DestructureField::Expression(left) => {
                 let expr = try_load_and_cast(&left.loc(), &right, &left.ty(), ns, cfg, vartab);
 
-                if should_remove_assignment(ns, left, func, opt) {
+                if should_remove_assignment(left, func, opt) {
                     continue;
                 }
 

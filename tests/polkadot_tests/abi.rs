@@ -16,7 +16,7 @@ macro_rules! path {
 
 /// Partially mimicking the ink! "mother" integration test.
 static MOTHER: Lazy<Mutex<(InkProject, InkProject)>> = Lazy::new(|| {
-    let src = r##"
+    let src = r#"
 import "polkadot";
 
 contract Mother {
@@ -40,7 +40,7 @@ contract Mother {
     function echo_auction(Auction _auction) public pure returns (Auction) {
         return _auction;
     }
-}"##;
+}"#;
 
     let solang_abi = load_abi(&build_wasm(src, false, false)[0].1);
     let ink_str = std::fs::read_to_string("testdata/ink/mother.json").unwrap();

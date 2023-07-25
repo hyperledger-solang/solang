@@ -99,7 +99,7 @@ fn bytes() {
 
     // parse
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract test {
             function const3() public returns (bytes3) {
                 return hex"112233";
@@ -142,7 +142,7 @@ fn bytes() {
                     hex"00d4f4fc2f5752f06faf7ece82edbdcd093e8ee1144d482ea5820899b3520315"
                 );
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("const3", Vec::new());
@@ -225,7 +225,7 @@ fn address() {
 fn type_name() {
     // parse
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract test {
             function foo() public returns (uint32) {
                 assert(type(foobar).name == "foobar");
@@ -239,7 +239,7 @@ fn type_name() {
 
         abstract contract foobar {
             int32 a;
-        }"##,
+        }"#,
     );
 
     runtime.function("foo", Vec::new());
@@ -315,7 +315,7 @@ fn units() {
 fn literal_bytes_cast() {
     // parse
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract test {
             function foo() public {
                 bytes4 x = bytes4(hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
@@ -327,7 +327,7 @@ fn literal_bytes_cast() {
 
                 assert(bytes4(x) == hex"acaf_3289");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("foo", Vec::new());
