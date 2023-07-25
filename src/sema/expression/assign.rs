@@ -116,6 +116,19 @@ pub(super) fn assign_single(
             right: Box::new(val.cast(&right.loc(), var_ty, true, ns, diagnostics)?),
         }),
         _ => match &var_ty {
+            // If the variable is a Type::Ref(Type::Ref(..)), we must load it.
+            Type::Ref(inner) if matches!(**inner, Type::Ref(_)) => Ok(Expression::Assign {
+                loc: *loc,
+                ty: inner.deref_memory().clone(),
+                left: Box::new(var.cast(loc, inner, true, ns, diagnostics)?),
+                right: Box::new(val.cast(
+                    &right.loc(),
+                    inner.deref_memory(),
+                    true,
+                    ns,
+                    diagnostics,
+                )?),
+            }),
             Type::Ref(r_ty) => Ok(Expression::Assign {
                 loc: *loc,
                 ty: *r_ty.clone(),
@@ -360,6 +373,22 @@ pub(super) fn assign_expr(
                         diagnostics,
                     )?),
                 }),
+                // If the variable is a Type::Ref(Type::Ref(..)), we must load it first.
+                Type::Ref(inner)
+                    if matches!(**inner, Type::Bytes(_) | Type::Int(_) | Type::Uint(_)) =>
+                {
+                    Ok(Expression::Assign {
+                        loc: *loc,
+                        ty: *inner.clone(),
+                        left: Box::new(var.cast(loc, r_ty, true, ns, diagnostics)?),
+                        right: Box::new(assign_operation(
+                            var.cast(loc, inner, true, ns, diagnostics)?,
+                            inner,
+                            ns,
+                            diagnostics,
+                        )?),
+                    })
+                }
                 _ => {
                     diagnostics.push(Diagnostic::error(
                         var.loc(),

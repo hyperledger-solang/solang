@@ -77,7 +77,7 @@ contract c3 {
         c2 ct = new c2();
 
         return 3;
-// CHECK: constructor(no: ) salt: value: gas:uint64 0 address: seeds: c2 encoded buffer: %abi_encoded.temp.117 accounts: 
+// CHECK: constructor(no: ) salt: value: gas:uint64 0 address: seeds: c2 encoded buffer: %abi_encoded.temp.117 accounts:
     }
 
 // BEGIN-CHECK: c3::function::test7
