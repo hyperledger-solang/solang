@@ -2503,18 +2503,30 @@ fn try_catch(
                 Ok(())
             }
             CatchClause::Named(_, id, param, stmt) => {
-                if !matches!(id.name.as_str(), "Error" | "Panic") {
-                    ns.diagnostics.push(Diagnostic::error(
-                        id.loc,
-                        format!(
-                            "only catch 'Error' or 'Panic' is supported, not '{}'",
-                            id.name
-                        ),
-                    ));
-                    return Err(());
-                } else if let Some(annotation) = &param.annotation {
-                    ns.diagnostics
-                        .push(unexpected_parameter_annotation(annotation.loc));
+                match ns.target {
+                    Target::Polkadot { .. } if id.name != "Error" => {
+                        ns.diagnostics.push(Diagnostic::error(
+                            id.loc,
+                            format!("only catch 'Error' is supported, not '{}'", id.name),
+                        ));
+                        return Err(());
+                    }
+                    Target::EVM if id.name != "Error" && id.name != "Panic" => {
+                        ns.diagnostics.push(Diagnostic::error(
+                            id.loc,
+                            format!(
+                                "only catch 'Error' or 'Panic' is supported, not '{}'",
+                                id.name
+                            ),
+                        ));
+                        return Err(());
+                    }
+                    _ => {
+                        if let Some(annotation) = &param.annotation {
+                            ns.diagnostics
+                                .push(unexpected_parameter_annotation(annotation.loc))
+                        }
+                    }
                 }
 
                 let (error_ty, ty_loc) =
