@@ -1638,11 +1638,7 @@ fn function_cfg(
 
     cfg.public = ns.function_externally_callable(contract_no, function_no);
     cfg.ty = func.ty;
-    cfg.nonpayable = if ns.target.is_polkadot() {
-        !func.is_constructor() && !func.is_payable()
-    } else {
-        !func.is_payable()
-    };
+    cfg.nonpayable = !func.is_payable();
 
     // populate the argument variables
     populate_arguments(func, &mut cfg, &mut vartab);

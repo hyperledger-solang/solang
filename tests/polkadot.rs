@@ -893,7 +893,6 @@ impl MockSubstrate {
     ///
     /// `input` must contain the selector fo the constructor.
     pub fn raw_constructor(&mut self, input: Vec<u8>) {
-        self.0.data_mut().transferred_value = 20000;
         self.invoke("deploy", input).unwrap();
     }
 

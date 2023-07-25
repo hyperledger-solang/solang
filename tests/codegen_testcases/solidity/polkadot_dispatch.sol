@@ -262,8 +262,8 @@ contract overloaded {
 	// CHECK: 	 = call overloaded::overloaded::receive 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 
-	constructor foo() {}
-	constructor bar() {}
+	constructor foo() payable {}
+	constructor bar() payable {}
 	function f() public payable {}
 	function f(uint256 i) public pure {}
 	fallback() external {}
