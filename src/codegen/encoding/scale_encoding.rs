@@ -2,7 +2,6 @@
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::AbiEncoding;
-use crate::codegen::revert::{PanicCode, SolidityError};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::StructType;
@@ -601,7 +600,7 @@ impl AbiEncoding for ScaleEncoding {
                     value,
                     ..
                 } => {
-                    let mut bytes = value.to_bytes_be().1;
+                    let bytes = value.to_bytes_be().1;
                     result.extend_from_slice(&bytes[..]);
                 }
                 Expression::NumberLiteral {
@@ -610,10 +609,7 @@ impl AbiEncoding for ScaleEncoding {
                     ..
                 } => {
                     let bytes = value.to_bytes_be().1;
-                    let mut bytes = U256::from_big_endian(&bytes).encode();
-                    //let mut bytes = value.to_bytes_le().1;
-                    //bytes.resize(bytes.len().max(*n as usize), 0);
-                    result.extend_from_slice(&bytes[..]);
+                    result.extend_from_slice(&U256::from_big_endian(&bytes).encode()[..]);
                 }
                 _ => return None,
             }

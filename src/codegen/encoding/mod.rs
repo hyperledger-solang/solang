@@ -1736,7 +1736,7 @@ pub(crate) trait AbiEncoding {
     /// Encode constant data at compile time.
     ///
     /// Returns `None` if the data can not be encoded at compile time.
-    fn const_encode(&self, args: &[Expression]) -> Option<Vec<u8>> {
+    fn const_encode(&self, _args: &[Expression]) -> Option<Vec<u8>> {
         None
     }
 }
