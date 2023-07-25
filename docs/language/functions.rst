@@ -163,7 +163,6 @@ constructor.
 
 .. note::
     If value is sent to a non-payable function on Polkadot, the call will be reverted.
-    However there is no refund performed, so value will remain with the callee.
 
 
 Overriding function selector
