@@ -396,7 +396,7 @@ pub fn generate_docs(outdir: &OsString, files: &[ast::Namespace], verbose: bool)
 
     reg.register_template_string(
         "soldoc",
-        r##"<!doctype html><head><title>soldoc</title><meta charset="utf-8"></head><body>
+        r#"<!doctype html><head><title>soldoc</title><meta charset="utf-8"></head><body>
 <h2>Contracts</h2>
 {{#each contracts}}
 <h3>{{ty}} {{name}}</h3>
@@ -470,7 +470,7 @@ Fields:<dl>
 {{#if author}}Author: {{author}}<p>{{/if}}
 Values: {{field}}
 {{/each}}
-</body></html>"##,
+</body></html>"#,
     )
     .expect("template should be good");
 

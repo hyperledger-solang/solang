@@ -21,13 +21,13 @@ fn global_constants() {
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         string constant foo = "FOO";
         contract error {
             function test() public payable {
                 assert(foo == "FOO");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -35,14 +35,14 @@ fn global_constants() {
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         string constant foo = "FOO";
         contract a {
             function test(uint64 error) public payable {
                 assert(error == 0);
                 assert(foo == "FOO");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -69,4 +69,27 @@ fn ensure_unread_storage_vars_write() {
 
     runtime.raw_function(runtime.blobs()[1].messages["foo"].to_vec());
     assert_eq!(runtime.output(), 123u8.encode());
+}
+
+#[test]
+fn ext_fn_call_is_reading_variable() {
+    let mut runtime = build_solidity(
+        r##"contract C {
+            function ext_func_call(uint32 arg) public payable returns (uint32) {
+                A a = new A();
+                function(uint32) external returns (uint32) func = a.a;
+                return func(arg);
+            }
+        }
+        
+        contract A {
+            function a(uint32 arg) public pure returns (uint32) {
+                return arg;
+            }
+        }"##,
+    );
+
+    runtime.set_transferred_value(1000);
+    runtime.function("ext_func_call", 0xdeadbeefu32.encode());
+    assert_eq!(runtime.output(), 0xdeadbeefu32.encode())
 }

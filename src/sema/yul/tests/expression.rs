@@ -273,7 +273,7 @@ fn resolve_string_literal() {
         StringLiteral {
             loc,
             unicode: false,
-            string: r#"ab\xffa\u00e0g"#.to_string(),
+            string: r"ab\xffa\u00e0g".to_string(),
         },
         Some(Identifier {
             loc,
