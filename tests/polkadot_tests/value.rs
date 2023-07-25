@@ -514,3 +514,29 @@ fn send_and_transfer() {
 
     assert_eq!(runtime.balance(2), 511);
 }
+
+#[test]
+fn nonpayable_constructor_reverts() {
+    let mut runtime = build_solidity(
+        r#"contract C {
+        uint8 public c;
+        constructor (uint8 val) {
+            c = val;
+        }
+    }"#,
+    );
+
+    let mut input = runtime.blobs()[0].constructors[0].to_vec();
+    let storage_value = 123;
+    input.push(storage_value);
+
+    // Expect the deploy to fail with value
+    runtime.set_transferred_value(1);
+    runtime.raw_constructor_failure(input.clone());
+
+    // The same input should work without value
+    runtime.set_transferred_value(0);
+    runtime.raw_constructor(input.clone());
+    runtime.function("c", Vec::new());
+    assert_eq!(runtime.output(), storage_value.encode());
+}
