@@ -28,8 +28,6 @@ use std::ops::{AddAssign, MulAssign, Sub};
 
 use self::buffer_validator::BufferValidator;
 
-use super::revert::{PanicCode, SolidityError};
-
 /// Insert encoding instructions into the `cfg` for any `Expression` in `args`.
 /// Returns a pointer to the encoded data and the size as a 32bit integer.
 pub(super) fn abi_encode(
@@ -1735,16 +1733,12 @@ pub(crate) trait AbiEncoding {
     /// Returns if the we are packed encoding
     fn is_packed(&self) -> bool;
 
-    /// Encode "Panic(uint256)" error data.
-    fn const_error_panic(&self, code: PanicCode) -> Vec<u8>;
-
-    /// Encode "Error(string)" error data where the contents are compile time constant.
-    fn const_error_string(&self, data: String) -> Vec<u8>;
-
-    /// Encode the error data at compile time.
+    /// Encode constant data at compile time.
     ///
-    /// Returns`None` if the error data is not a compile time constant value.
-    fn encode_error_data_const(&self, error: SolidityError) -> Option<Expression>;
+    /// Returns `None` if the data can not be encoded at compile time.
+    fn const_encode(&self, args: &[Expression]) -> Option<Vec<u8>> {
+        None
+    }
 }
 
 /// This function should return the correct encoder, given the target

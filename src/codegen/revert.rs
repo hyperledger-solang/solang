@@ -61,6 +61,8 @@ impl SolidityError {
     }
 
     /// ABI encode the selector and any error data.
+    ///
+    /// Returns `None` if the data can't be ABI encoded.
     pub fn abi_encode(
         &self,
         loc: &Loc,
@@ -70,13 +72,47 @@ impl SolidityError {
     ) -> Option<Expression> {
         match self {
             Self::Empty => None,
-            Self::String(data) => create_encoder(ns, false)
-                .encode_error_data_const(self.clone())
-                .or_else(|| {
-                    let args = vec![self.selector_expression(), data.clone()];
-                    abi_encode(loc, args, ns, vartab, cfg, false).0.into()
-                }),
-            Self::Panic(_) => create_encoder(ns, false).encode_error_data_const(self.clone()),
+            Self::String(data) => {
+                let args = vec![self.selector_expression(), data.clone()];
+                create_encoder(ns, false)
+                    .const_encode(&args)
+                    .map(|bytes| {
+                        let size = Expression::NumberLiteral {
+                            loc: Codegen,
+                            ty: Type::Uint(32),
+                            value: bytes.len().into(),
+                        };
+                        Expression::AllocDynamicBytes {
+                            loc: Codegen,
+                            ty: Type::Slice(Type::Bytes(1).into()),
+                            size: size.into(),
+                            initializer: bytes.into(),
+                        }
+                    })
+                    .or_else(|| abi_encode(loc, args, ns, vartab, cfg, false).0.into())
+            }
+            Self::Panic(code) => {
+                let code = Expression::NumberLiteral {
+                    loc: Codegen,
+                    ty: Type::Uint(256),
+                    value: (*code as u8).into(),
+                };
+                create_encoder(ns, false)
+                    .const_encode(&[self.selector_expression(), code])
+                    .map(|bytes| {
+                        let size = Expression::NumberLiteral {
+                            loc: Codegen,
+                            ty: Type::Uint(32),
+                            value: bytes.len().into(),
+                        };
+                        Expression::AllocDynamicBytes {
+                            loc: Codegen,
+                            ty: Type::Slice(Type::Bytes(1).into()),
+                            size: size.into(),
+                            initializer: bytes.into(),
+                        }
+                    })
+            }
         }
     }
 }

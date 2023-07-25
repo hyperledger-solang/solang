@@ -192,7 +192,7 @@ fn signed_ovf_detect<'a, T: TargetRuntime<'a> + ?Sized>(
             bin.context.i32_type().const_zero(),
         )
     } else {
-        bin.error_data_const(ns, PanicCode::MathOverflow)
+        bin.panic_data_const(ns, PanicCode::MathOverflow)
     };
     target.assert_failure(bin, revert_out, revert_out_len);
 
@@ -375,7 +375,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.context.i32_type().const_zero(),
                 )
             } else {
-                bin.error_data_const(ns, PanicCode::MathOverflow)
+                bin.panic_data_const(ns, PanicCode::MathOverflow)
             };
             target.assert_failure(bin, revert_out, revert_out_len);
 
@@ -608,7 +608,7 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
             bin.context.i32_type().const_zero(),
         )
     } else {
-        bin.error_data_const(ns, PanicCode::MathOverflow)
+        bin.panic_data_const(ns, PanicCode::MathOverflow)
     };
     target.assert_failure(bin, revert_out, revert_out_len);
 

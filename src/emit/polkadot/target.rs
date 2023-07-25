@@ -358,7 +358,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             Some(loc),
             ns,
         );
-        let (revert_out, revert_out_len) = binary.error_data_const(ns, PanicCode::ArrayIndexOob);
+        let (revert_out, revert_out_len) = binary.panic_data_const(ns, PanicCode::ArrayIndexOob);
         self.assert_failure(binary, revert_out, revert_out_len);
 
         binary.builder.position_at_end(retrieve_block);
@@ -447,7 +447,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             Some(loc),
             ns,
         );
-        let (revert_out, revert_out_len) = binary.error_data_const(ns, PanicCode::ArrayIndexOob);
+        let (revert_out, revert_out_len) = binary.panic_data_const(ns, PanicCode::ArrayIndexOob);
         self.assert_failure(binary, revert_out, revert_out_len);
 
         binary.builder.position_at_end(retrieve_block);
@@ -628,7 +628,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             Some(loc),
             ns,
         );
-        let (revert_out, revert_out_len) = binary.error_data_const(ns, PanicCode::EmptyArrayPop);
+        let (revert_out, revert_out_len) = binary.panic_data_const(ns, PanicCode::EmptyArrayPop);
         self.assert_failure(binary, revert_out, revert_out_len);
 
         binary.builder.position_at_end(retrieve_block);

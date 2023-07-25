@@ -8,6 +8,7 @@ use crate::codegen::{Builtin, Expression};
 use crate::sema::ast::StructType;
 use crate::sema::ast::{Namespace, Type, Type::Uint};
 use parity_scale_codec::Encode;
+use primitive_types::U256;
 use solang_parser::pt::Loc::Codegen;
 use std::collections::HashMap;
 
@@ -581,45 +582,84 @@ impl AbiEncoding for ScaleEncoding {
         self.packed_encoder
     }
 
-    fn const_error_panic(&self, code: PanicCode) -> Vec<u8> {
-        let mut bytes = SolidityError::Panic(code).selector().to_be_bytes().to_vec();
-        bytes.push(code as u8);
-        bytes.resize(36, 0);
-        bytes
-    }
-
-    fn const_error_string(&self, data: String) -> Vec<u8> {
-        let mut bytes = SolidityError::String(Expression::Poison)
-            .selector()
-            .to_be_bytes()
-            .to_vec();
-        bytes.extend_from_slice(&data.encode());
-        bytes
-    }
-
-    fn encode_error_data_const(&self, error: SolidityError) -> Option<Expression> {
-        let bytes = match error {
-            SolidityError::Empty => return None,
-            SolidityError::String(data) => match data {
+    fn const_encode(&self, args: &[Expression]) -> Option<Vec<u8>> {
+        let mut result = vec![];
+        for arg in args {
+            match arg {
                 Expression::AllocDynamicBytes {
-                    ty: Type::String,
                     initializer: Some(data),
+                    ty: Type::String,
                     ..
-                } => self.const_error_string(String::from_utf8(data).unwrap()),
+                } => result.extend_from_slice(&String::from_utf8(data.to_vec()).unwrap().encode()),
+                Expression::AllocDynamicBytes {
+                    initializer: Some(data),
+                    ty: Type::Slice(_),
+                    ..
+                } => result.extend_from_slice(data),
+                Expression::NumberLiteral {
+                    ty: Type::Bytes(4),
+                    value,
+                    ..
+                } => {
+                    let mut bytes = value.to_bytes_be().1;
+                    result.extend_from_slice(&bytes[..]);
+                }
+                Expression::NumberLiteral {
+                    ty: Type::Uint(256),
+                    value,
+                    ..
+                } => {
+                    let bytes = value.to_bytes_be().1;
+                    let mut bytes = U256::from_big_endian(&bytes).encode();
+                    //let mut bytes = value.to_bytes_le().1;
+                    //bytes.resize(bytes.len().max(*n as usize), 0);
+                    result.extend_from_slice(&bytes[..]);
+                }
                 _ => return None,
-            },
-            SolidityError::Panic(code) => self.const_error_panic(code),
-        };
-        let size = Expression::NumberLiteral {
-            loc: Codegen,
-            ty: Type::Uint(32),
-            value: bytes.len().into(),
-        };
-        Some(Expression::AllocDynamicBytes {
-            loc: Codegen,
-            ty: Type::Slice(Type::Bytes(1).into()),
-            size: size.into(),
-            initializer: bytes.into(),
-        })
+            }
+        }
+        result.into()
     }
 }
+
+//fn const_error_panic(code: PanicCode) -> Vec<u8> {
+//    let mut bytes = SolidityError::Panic(code).selector().to_be_bytes().to_vec();
+//    bytes.push(code as u8);
+//    bytes.resize(36, 0);
+//    bytes
+//}
+//
+//fn const_error_string(data: String) -> Vec<u8> {
+//    let mut bytes = SolidityError::String(Expression::Poison)
+//        .selector()
+//        .to_be_bytes()
+//        .to_vec();
+//    bytes.extend_from_slice(&data.encode());
+//    bytes
+//}
+//
+//fn encode_error_data_const(error: SolidityError) -> Option<Expression> {
+//    let bytes = match error {
+//        SolidityError::Empty => return None,
+//        SolidityError::String(data) => match data {
+//            Expression::AllocDynamicBytes {
+//                ty: Type::String,
+//                initializer: Some(data),
+//                ..
+//            } => const_error_string(String::from_utf8(data).unwrap()),
+//            _ => return None,
+//        },
+//        SolidityError::Panic(code) => const_error_panic(code),
+//    };
+//    let size = Expression::NumberLiteral {
+//        loc: Codegen,
+//        ty: Type::Uint(32),
+//        value: bytes.len().into(),
+//    };
+//    Some(Expression::AllocDynamicBytes {
+//        loc: Codegen,
+//        ty: Type::Slice(Type::Bytes(1).into()),
+//        size: size.into(),
+//        initializer: bytes.into(),
+//    })
+//}

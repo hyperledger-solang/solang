@@ -211,21 +211,6 @@ impl AbiEncoding for BorshEncoding {
     fn is_packed(&self) -> bool {
         self.packed_encoder
     }
-
-    fn const_error_panic(&self, _code: crate::codegen::revert::PanicCode) -> Vec<u8> {
-        unimplemented!()
-    }
-
-    fn const_error_string(&self, _data: String) -> Vec<u8> {
-        unimplemented!()
-    }
-
-    fn encode_error_data_const(
-        &self,
-        _error: crate::codegen::revert::SolidityError,
-    ) -> Option<Expression> {
-        unimplemented!()
-    }
 }
 
 impl BorshEncoding {

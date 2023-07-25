@@ -287,7 +287,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.i32_type().const_zero(),
                     )
                 } else {
-                    bin.error_data_const(ns, PanicCode::DivisionByZero)
+                    bin.panic_data_const(ns, PanicCode::DivisionByZero)
                 };
                 target.assert_failure(bin, revert_out, revert_out_len);
 
@@ -388,7 +388,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.i32_type().const_zero(),
                     )
                 } else {
-                    bin.error_data_const(ns, PanicCode::DivisionByZero)
+                    bin.panic_data_const(ns, PanicCode::DivisionByZero)
                 };
                 target.assert_failure(bin, revert_out, revert_out_len);
 
@@ -537,7 +537,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.i32_type().const_zero(),
                     )
                 } else {
-                    bin.error_data_const(ns, PanicCode::DivisionByZero)
+                    bin.panic_data_const(ns, PanicCode::DivisionByZero)
                 };
                 target.assert_failure(bin, revert_out, revert_out_len);
 
@@ -635,7 +635,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                         bin.context.i32_type().const_zero(),
                     )
                 } else {
-                    bin.error_data_const(ns, PanicCode::DivisionByZero)
+                    bin.panic_data_const(ns, PanicCode::DivisionByZero)
                 };
                 target.assert_failure(bin, revert_out, revert_out_len);
 
@@ -755,7 +755,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.context.i32_type().const_zero(),
                 )
             } else {
-                bin.error_data_const(ns, PanicCode::MathOverflow)
+                bin.panic_data_const(ns, PanicCode::MathOverflow)
             };
             target.assert_failure(bin, revert_out, revert_out_len);
 
@@ -1160,7 +1160,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.context.i32_type().const_zero(),
                 )
             } else {
-                bin.error_data_const(ns, PanicCode::Generic)
+                bin.panic_data_const(ns, PanicCode::Generic)
             };
             target.assert_failure(bin, revert_out, revert_out_len);
 

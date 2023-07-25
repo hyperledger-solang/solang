@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::encoding::create_encoder;
-use crate::codegen::revert::{error_msg_with_loc, PanicCode};
+use crate::codegen::revert::{error_msg_with_loc, PanicCode, SolidityError};
+use crate::codegen::Expression;
 use crate::sema::ast::{ArrayLength, Contract, Namespace, StructType, Type};
 use std::cell::RefCell;
 use std::path::Path;
@@ -1078,12 +1079,19 @@ impl<'a> Binary<'a> {
     }
 
     /// Emit encoded error data of "Panic(uint256)" as interned global string.
-    pub(super) fn error_data_const(
+    pub(super) fn panic_data_const(
         &self,
         ns: &Namespace,
         code: PanicCode,
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        let bytes = create_encoder(ns, false).const_error_panic(code);
+        let expr = Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(256),
+            value: (code as u8).into(),
+        };
+        let bytes = create_encoder(ns, false)
+            .const_encode(&[SolidityError::Panic(code).selector_expression(), expr])
+            .unwrap();
         (
             self.emit_global_string(&code.to_string(), &bytes, true),
             self.context.i32_type().const_int(bytes.len() as u64, false),

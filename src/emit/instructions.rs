@@ -302,7 +302,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.context.i32_type().const_zero(),
                 )
             } else {
-                bin.error_data_const(ns, PanicCode::EmptyArrayPop)
+                bin.panic_data_const(ns, PanicCode::EmptyArrayPop)
             };
             target.assert_failure(bin, revert_out, revert_out_len);
 
@@ -635,7 +635,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                     bin.context.i32_type().const_zero(),
                 )
             } else {
-                bin.error_data_const(ns, PanicCode::InternalFunctionUninitialized)
+                bin.panic_data_const(ns, PanicCode::InternalFunctionUninitialized)
             };
             target.assert_failure(bin, revert_out, revert_out_len);
 
