@@ -891,7 +891,7 @@ fn returns(
     let cast_values = func
         .returns
         .iter()
-        .zip(uncast_values.into_iter())
+        .zip(uncast_values)
         .map(|(left, right)| try_load_and_cast(&right.loc(), &right, &left.ty, ns, cfg, vartab))
         .collect();
 
