@@ -68,4 +68,5 @@ contract Swap_ETH_TO_USDX {
     }
 }
 // ---- Expect: diagnostics ----
+// warning: 60:23-30: local variable 'amounts' is unused
 // warning: 61:20-53: conversion truncates uint256 to uint128, as value is type uint128 on target Polkadot

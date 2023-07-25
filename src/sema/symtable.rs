@@ -39,13 +39,14 @@ impl VariableInitializer {
 }
 
 impl Variable {
-    pub fn is_reference(&self) -> bool {
+    pub fn is_reference(&self, ns: &Namespace) -> bool {
         // If the variable has the memory or storage keyword, it can be a reference to another variable.
         // In this case, an assigment may change the value of the variable it is referencing.
         if matches!(
             self.storage_location,
-            Some(pt::StorageLocation::Memory(_)) | Some(pt::StorageLocation::Storage(_))
-        ) {
+            Some(pt::StorageLocation::Memory(_)) | Some(pt::StorageLocation::Storage(_)) | None
+        ) && self.ty.is_reference_type(ns)
+        {
             if let VariableInitializer::Solidity(Some(expr)) = &self.initializer {
                 // If the initializer is an array allocation, a constructor or a struct literal,
                 // the variable is not a reference to another.

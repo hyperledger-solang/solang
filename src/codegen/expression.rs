@@ -364,7 +364,7 @@ pub fn expression(
             // If we reach this condition, the assignment is inside an expression.
 
             if let Some(function) = func {
-                if should_remove_assignment(left, function, opt) {
+                if should_remove_assignment(left, function, opt, ns) {
                     return expression(right, cfg, contract_no, func, ns, vartab, opt);
                 }
             }
