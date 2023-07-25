@@ -171,7 +171,9 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             used_variable(ns, expr, symtable);
         }
 
-        Expression::InternalFunctionCall { .. } | Expression::ExternalFunctionCall { .. } => {
+        Expression::ExternalFunction { .. }
+        | Expression::InternalFunctionCall { .. }
+        | Expression::ExternalFunctionCall { .. } => {
             check_function_call(ns, exp, symtable);
         }
 
@@ -255,7 +257,6 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
                 used_variable(ns, expr, symtable);
             }
         }
-
         _ => {}
     }
 }
