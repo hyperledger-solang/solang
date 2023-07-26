@@ -581,6 +581,7 @@ impl AbiEncoding for ScaleEncoding {
         self.packed_encoder
     }
 
+    /// TODO: This is used and tested for error data (Error and Panic) only.
     fn const_encode(&self, args: &[Expression]) -> Option<Vec<u8>> {
         let mut result = vec![];
         for arg in args {
@@ -590,6 +591,11 @@ impl AbiEncoding for ScaleEncoding {
                     ty: Type::String,
                     ..
                 } => result.extend_from_slice(&String::from_utf8(data.to_vec()).unwrap().encode()),
+                Expression::AllocDynamicBytes {
+                    initializer: Some(data),
+                    ty: Type::DynamicBytes,
+                    ..
+                } => result.extend_from_slice(&data.encode()),
                 Expression::AllocDynamicBytes {
                     initializer: Some(data),
                     ty: Type::Slice(_),
@@ -616,4 +622,18 @@ impl AbiEncoding for ScaleEncoding {
         }
         result.into()
     }
+}
+
+#[test]
+fn const_encode_dynamic_bytes() {
+    let data = vec![0x41, 0x41];
+    let encoder = ScaleEncoding::new(false);
+    let expr = Expression::AllocDynamicBytes {
+        loc: Codegen,
+        ty: Type::DynamicBytes,
+        size: Expression::Poison.into(),
+        initializer: data.clone().into(),
+    };
+    let encoded = encoder.const_encode(&[expr]).unwrap();
+    assert_eq!(encoded, data.encode());
 }

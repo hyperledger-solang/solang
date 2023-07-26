@@ -68,7 +68,10 @@ _______________________________
 When a contract reverts, the returned error data is what
 `EVM would return <https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require>`_.
 ``assert()``, ``require()``, or ``revert()`` will revert the contract execution, where the revert reason 
-is supplied as the contracts output (if any). Solidity contracts can also revert with a `Panic`.
+is supplied as the contracts output (if any). Solidity contracts can also revert with a `Panic` 
+(please refer to the 
+`Solidity language documentation <https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require>`_.
+for more information about when `Panic` might be returned).
 Uncaught exceptions from calling and instantiating contracts or transferring funds will be bubbled 
 up back to the caller.
 
