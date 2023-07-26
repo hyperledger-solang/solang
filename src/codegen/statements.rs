@@ -56,7 +56,7 @@ pub(crate) fn statement(
             }
         }
         Statement::VariableDecl(loc, pos, _, Some(init)) => {
-            if should_remove_variable(*pos, func, opt) {
+            if should_remove_variable(*pos, func, opt, ns) {
                 let mut params = SideEffectsCheckParameters {
                     cfg,
                     contract_no,
@@ -121,7 +121,7 @@ pub(crate) fn statement(
             );
         }
         Statement::VariableDecl(loc, pos, param, None) => {
-            if should_remove_variable(*pos, func, opt) {
+            if should_remove_variable(*pos, func, opt, ns) {
                 return;
             }
 
@@ -168,7 +168,7 @@ pub(crate) fn statement(
         }
         Statement::Expression(_, _, expr) => {
             if let ast::Expression::Assign { left, right, .. } = &expr {
-                if should_remove_assignment(left, func, opt) {
+                if should_remove_assignment(left, func, opt, ns) {
                     let mut params = SideEffectsCheckParameters {
                         cfg,
                         contract_no,
@@ -183,7 +183,7 @@ pub(crate) fn statement(
                 }
             } else if let ast::Expression::Builtin { args, .. } = expr {
                 // When array pop and push are top-level expressions, they can be removed
-                if should_remove_assignment(expr, func, opt) {
+                if should_remove_assignment(expr, func, opt, ns) {
                     let mut params = SideEffectsCheckParameters {
                         cfg,
                         contract_no,
@@ -926,7 +926,7 @@ fn destructure(
             DestructureField::VariableDecl(res, param) => {
                 let expr = try_load_and_cast(&param.loc, &right, &param.ty, ns, cfg, vartab);
 
-                if should_remove_variable(*res, func, opt) {
+                if should_remove_variable(*res, func, opt, ns) {
                     continue;
                 }
 
@@ -942,7 +942,7 @@ fn destructure(
             DestructureField::Expression(left) => {
                 let expr = try_load_and_cast(&left.loc(), &right, &left.ty(), ns, cfg, vartab);
 
-                if should_remove_assignment(left, func, opt) {
+                if should_remove_assignment(left, func, opt, ns) {
                     continue;
                 }
 
