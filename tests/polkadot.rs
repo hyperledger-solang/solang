@@ -1018,7 +1018,7 @@ impl MockSubstrate {
 /// Build all contracts foud in `src` and set up a mock runtime.
 ///
 /// The mock runtime will contain a contract account for each contract in `src`.
-/// Constructors are _not_ called, therefor the storage will not be initialized.
+/// Constructors are _not_ called, therefore the storage will not be initialized.
 pub fn build_solidity(src: &str) -> MockSubstrate {
     build_solidity_with_options(src, false, true)
 }
