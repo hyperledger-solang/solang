@@ -598,9 +598,9 @@ impl AbiEncoding for ScaleEncoding {
                 } => result.extend_from_slice(&data.encode()),
                 Expression::AllocDynamicBytes {
                     initializer: Some(data),
-                    ty: Type::Slice(_),
+                    ty: Type::Slice(inner),
                     ..
-                } => result.extend_from_slice(data),
+                } if matches!(**inner, Type::Bytes(1)) => result.extend_from_slice(data),
                 Expression::NumberLiteral {
                     ty: Type::Bytes(4),
                     value,
@@ -624,16 +624,49 @@ impl AbiEncoding for ScaleEncoding {
     }
 }
 
-#[test]
-fn const_encode_dynamic_bytes() {
-    let data = vec![0x41, 0x41];
-    let encoder = ScaleEncoding::new(false);
-    let expr = Expression::AllocDynamicBytes {
-        loc: Codegen,
-        ty: Type::DynamicBytes,
-        size: Expression::Poison.into(),
-        initializer: data.clone().into(),
+#[cfg(test)]
+mod tests {
+    use num_bigint::{BigInt, Sign};
+    use parity_scale_codec::Encode;
+    use primitive_types::U256;
+
+    use crate::{
+        codegen::{
+            encoding::{scale_encoding::ScaleEncoding, AbiEncoding},
+            Expression,
+        },
+        sema::ast::Type,
     };
-    let encoded = encoder.const_encode(&[expr]).unwrap();
-    assert_eq!(encoded, data.encode());
+
+    #[test]
+    fn const_encode_dynamic_bytes() {
+        let data = vec![0x41, 0x41];
+        let encoder = ScaleEncoding::new(false);
+        let expr = Expression::AllocDynamicBytes {
+            loc: Default::default(),
+            ty: Type::DynamicBytes,
+            size: Expression::Poison.into(),
+            initializer: data.clone().into(),
+        };
+        let encoded = encoder.const_encode(&[expr]).unwrap();
+        assert_eq!(encoded, data.encode());
+    }
+
+    #[test]
+    fn const_encode_uint() {
+        let encoder = ScaleEncoding::new(false);
+        let values = [U256::MAX, U256::zero(), U256::one()];
+        for value in values {
+            let mut bytes = [0u8; 32].to_vec();
+            value.to_big_endian(&mut bytes);
+            let data = BigInt::from_bytes_be(Sign::Plus, &bytes);
+            let expr = Expression::NumberLiteral {
+                loc: Default::default(),
+                ty: Type::Uint(256),
+                value: data,
+            };
+            let encoded = encoder.const_encode(&[expr]).unwrap();
+            assert_eq!(encoded, value.encode());
+        }
+    }
 }

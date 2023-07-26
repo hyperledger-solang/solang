@@ -63,7 +63,7 @@ impl SolidityError {
     /// ABI encode the selector and any error data.
     ///
     /// Returns `None` if the data can't be ABI encoded.
-    pub fn abi_encode(
+    pub(super) fn abi_encode(
         &self,
         loc: &Loc,
         ns: &Namespace,
