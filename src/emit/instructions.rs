@@ -293,17 +293,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.builder.position_at_end(error);
             bin.log_runtime_error(target, "pop from empty array".to_string(), Some(*loc), ns);
-            let (revert_out, revert_out_len) = if ns.target == Target::Solana {
-                (
-                    bin.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::default())
-                        .const_null(),
-                    bin.context.i32_type().const_zero(),
-                )
-            } else {
-                bin.panic_data_const(ns, PanicCode::EmptyArrayPop)
-            };
+            let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::EmptyArrayPop);
             target.assert_failure(bin, revert_out, revert_out_len);
 
             bin.builder.position_at_end(pop);
@@ -626,17 +616,8 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 None,
                 ns,
             );
-            let (revert_out, revert_out_len) = if ns.target == Target::Solana {
-                (
-                    bin.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::default())
-                        .const_null(),
-                    bin.context.i32_type().const_zero(),
-                )
-            } else {
-                bin.panic_data_const(ns, PanicCode::InternalFunctionUninitialized)
-            };
+            let (revert_out, revert_out_len) =
+                bin.panic_data_const(ns, PanicCode::InternalFunctionUninitialized);
             target.assert_failure(bin, revert_out, revert_out_len);
 
             bin.builder.position_at_end(ptr_ok);

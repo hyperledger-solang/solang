@@ -4,10 +4,9 @@ use crate::codegen::revert::PanicCode;
 use crate::emit::binary::Binary;
 use crate::emit::{BinaryOp, TargetRuntime};
 use crate::sema::ast::Namespace;
-use crate::Target;
 use inkwell::types::IntType;
 use inkwell::values::{FunctionValue, IntValue, PointerValue};
-use inkwell::{AddressSpace, IntPredicate};
+use inkwell::IntPredicate;
 use solang_parser::pt::Loc;
 
 /// Signed overflow detection is handled by the following steps:
@@ -183,17 +182,7 @@ fn signed_ovf_detect<'a, T: TargetRuntime<'a> + ?Sized>(
     bin.builder.position_at_end(error_block);
 
     bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc), ns);
-    let (revert_out, revert_out_len) = if ns.target == Target::Solana {
-        (
-            bin.context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null(),
-            bin.context.i32_type().const_zero(),
-        )
-    } else {
-        bin.panic_data_const(ns, PanicCode::MathOverflow)
-    };
+    let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::MathOverflow);
     target.assert_failure(bin, revert_out, revert_out_len);
 
     bin.builder.position_at_end(return_block);
@@ -366,17 +355,7 @@ pub(super) fn multiply<'a, T: TargetRuntime<'a> + ?Sized>(
 
             bin.log_runtime_error(target, "multiplication overflow".to_string(), Some(loc), ns);
 
-            let (revert_out, revert_out_len) = if ns.target == Target::Solana {
-                (
-                    bin.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::default())
-                        .const_null(),
-                    bin.context.i32_type().const_zero(),
-                )
-            } else {
-                bin.panic_data_const(ns, PanicCode::MathOverflow)
-            };
+            let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::MathOverflow);
             target.assert_failure(bin, revert_out, revert_out_len);
 
             bin.builder.position_at_end(return_block);
@@ -599,17 +578,7 @@ pub(super) fn build_binary_op_with_overflow_check<'a, T: TargetRuntime<'a> + ?Si
     bin.builder.position_at_end(error_block);
 
     bin.log_runtime_error(target, "math overflow".to_string(), Some(loc), ns);
-    let (revert_out, revert_out_len) = if ns.target == Target::Solana {
-        (
-            bin.context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null(),
-            bin.context.i32_type().const_zero(),
-        )
-    } else {
-        bin.panic_data_const(ns, PanicCode::MathOverflow)
-    };
+    let (revert_out, revert_out_len) = bin.panic_data_const(ns, PanicCode::MathOverflow);
     target.assert_failure(bin, revert_out, revert_out_len);
 
     bin.builder.position_at_end(success_block);

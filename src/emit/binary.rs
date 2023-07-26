@@ -1079,11 +1079,23 @@ impl<'a> Binary<'a> {
     }
 
     /// Emit encoded error data of "Panic(uint256)" as interned global string.
+    ///
+    /// On Solana, because reverts do not return data, a nil ptr is returned.
     pub(super) fn panic_data_const(
         &self,
         ns: &Namespace,
         code: PanicCode,
     ) -> (PointerValue<'a>, IntValue<'a>) {
+        if ns.target == Target::Solana {
+            return (
+                self.context
+                    .i8_type()
+                    .ptr_type(AddressSpace::default())
+                    .const_null(),
+                self.context.i32_type().const_zero(),
+            );
+        }
+
         let expr = Expression::NumberLiteral {
             loc: pt::Loc::Codegen,
             ty: Type::Uint(256),
