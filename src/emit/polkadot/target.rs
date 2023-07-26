@@ -853,9 +853,10 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .builder
             .build_alloca(binary.value_type(ns), "balance");
 
-        binary
-            .builder
-            .build_store(value_ptr, contract_args.value.unwrap_or(i32_const!(0)));
+        let value = contract_args
+            .value
+            .unwrap_or_else(|| binary.value_type(ns).const_zero());
+        binary.builder.build_store(value_ptr, value);
 
         // code hash
         let codehash = binary.emit_global_string(
