@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sema::ast::{DestructureField, Expression, Namespace, Statement};
+use crate::sema::ast::{Builtin, DestructureField, Expression, Namespace, Statement};
 use crate::sema::Recurse;
 use indexmap::IndexSet;
 use solang_parser::pt;
@@ -46,6 +46,19 @@ pub fn add_external_functions(contract_no: usize, ns: &mut Namespace) {
         // add functions to contract functions list
         for function_no in &call_list.solidity {
             if ns.functions[*function_no].loc != pt::Loc::Builtin {
+                let func = &ns.functions[*function_no];
+
+                // make sure we are not adding a public function which is not a base or library
+                if func.is_public() {
+                    // free function are not public, else this unwrap would panic
+                    let func_contract = func.contract_no.unwrap();
+
+                    assert!(
+                        ns.contract_bases(contract_no).contains(&func_contract)
+                            || ns.contracts[func_contract].is_library()
+                    );
+                }
+
                 ns.contracts[contract_no]
                     .all_functions
                     .insert(*function_no, usize::MAX);
@@ -98,6 +111,20 @@ fn check_expression(expr: &Expression, call_list: &mut CallList) -> bool {
         | Expression::InternalFunction { function_no, .. } => {
             call_list.solidity.insert(*function_no);
         }
+        Expression::Builtin {
+            kind: Builtin::AbiEncodeCall,
+            args,
+            ..
+        } => {
+            for expr in &args[1..] {
+                check_expression(expr, call_list);
+            }
+            return false;
+        }
+        Expression::Builtin {
+            kind: Builtin::FunctionSelector,
+            ..
+        } => return false,
         _ => (),
     }
 

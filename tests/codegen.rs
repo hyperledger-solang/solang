@@ -35,6 +35,7 @@ fn run_test_for_path(path: &str) {
 #[derive(Debug)]
 enum Test {
     Check(String),
+    CheckAbsent(String),
     NotCheck(String),
     Fail(String),
     Rewind,
@@ -54,18 +55,30 @@ fn testcase(path: PathBuf) {
     for line in reader.lines() {
         let mut line = line.unwrap();
         line = line.trim().parse().unwrap();
+        // The first line should be a command line (excluding "solang compile") after // RUN:
         if let Some(args) = line.strip_prefix("// RUN: ") {
             assert_eq!(command_line, None);
 
             command_line = Some(String::from(args));
+
+        // Read the contents of a file, e.g. the llvm-ir output of // RUN: --emit llvm-ir
+        // rather than the stdout of the command
         } else if let Some(check) = line.strip_prefix("// READ:") {
             read_from = Some(check.trim().to_string());
+        // Read more input until you find a line that contains the needle // CHECK: needle
         } else if let Some(check) = line.strip_prefix("// CHECK:") {
             checks.push(Test::Check(check.trim().to_string()));
+        //
         } else if let Some(fail) = line.strip_prefix("// FAIL:") {
             fails.push(Test::Fail(fail.trim().to_string()));
+        // Ensure that the following line in the input does not match
         } else if let Some(not_check) = line.strip_prefix("// NOT-CHECK:") {
             checks.push(Test::NotCheck(not_check.trim().to_string()));
+        // Check the output from here until the end of the file does not contain the needle
+        } else if let Some(check_absent) = line.strip_prefix("// CHECK-ABSENT:") {
+            checks.push(Test::CheckAbsent(check_absent.trim().to_string()));
+        // Go back to the beginning and find the needle from there, like // CHECK: but from
+        // the beginning of the file.
         } else if let Some(check) = line.strip_prefix("// BEGIN-CHECK:") {
             checks.push(Test::Rewind);
             checks.push(Test::Check(check.trim().to_string()));
@@ -112,6 +125,18 @@ fn testcase(path: PathBuf) {
                     // We should not advance line during a not check
                     current_line -= 1;
                 }
+            }
+            Some(Test::CheckAbsent(needle)) => {
+                for line in lines.iter().skip(current_line) {
+                    if line.contains(needle) {
+                        panic!(
+                            "FOUND CHECK-ABSENT: {:?}, {}",
+                            checks[current_check],
+                            path.display()
+                        );
+                    }
+                }
+                current_check += 1;
             }
             Some(Test::Rewind) => {
                 current_line = 0;
