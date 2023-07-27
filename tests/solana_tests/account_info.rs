@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{build_solidity, BorshToken};
+use crate::{account_new, build_solidity, AccountMeta, AccountState, BorshToken, Pubkey};
 use num_bigint::BigInt;
 
 #[test]
@@ -150,4 +150,101 @@ fn data() {
             }
         ]),
     );
+}
+
+#[test]
+fn modify_lamports() {
+    let mut vm = build_solidity(
+        r#"
+import 'solana';
+
+contract starter {
+    function createNewAccount(uint64 lamport1, uint64 lamport2, uint64 lamport3) public {
+        AccountInfo acc1 = tx.accounts[1];
+        AccountInfo acc2 = tx.accounts[2];
+        AccountInfo acc3 = tx.accounts[3];
+
+        acc1.lamports -= lamport1;
+        acc2.lamports = lamport2;
+        acc3.lamports = acc3.lamports + lamport3;
+    }
+}
+        "#,
+    );
+
+    vm.constructor(&[]);
+
+    let acc1 = account_new();
+    let acc2 = account_new();
+    let acc3 = account_new();
+    vm.account_data.insert(
+        acc1,
+        AccountState {
+            data: vec![],
+            owner: None,
+            lamports: 25,
+        },
+    );
+    vm.account_data.insert(
+        acc2,
+        AccountState {
+            data: vec![],
+            owner: None,
+            lamports: 0,
+        },
+    );
+    vm.account_data.insert(
+        acc3,
+        AccountState {
+            data: vec![],
+            owner: None,
+            lamports: 2,
+        },
+    );
+
+    let metas = vec![
+        AccountMeta {
+            pubkey: Pubkey(vm.stack[0].data),
+            is_writable: false,
+            is_signer: false,
+        },
+        AccountMeta {
+            pubkey: Pubkey(acc1),
+            is_writable: true,
+            is_signer: false,
+        },
+        AccountMeta {
+            pubkey: Pubkey(acc2),
+            is_writable: true,
+            is_signer: false,
+        },
+        AccountMeta {
+            pubkey: Pubkey(acc3),
+            is_writable: true,
+            is_signer: false,
+        },
+    ];
+
+    let _ = vm.function_metas(
+        "createNewAccount",
+        &metas,
+        &[
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(20u8),
+            },
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(7u8),
+            },
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(9u8),
+            },
+        ],
+    );
+
+    assert_eq!(vm.account_data.get(&acc1).unwrap().lamports, 5);
+    assert_eq!(vm.account_data.get(&acc2).unwrap().lamports, 7);
+    assert_eq!(vm.account_data.get(&acc3).unwrap().lamports, 11);
 }

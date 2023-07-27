@@ -6,4 +6,4 @@
         }
 // ---- Expect: diagnostics ----
 // warning: 3:13-52: function can be declared 'pure'
-// warning: 4:25-26: local variable 'b' has been assigned, but never read
+// warning: 4:25-26: local variable 'b' is unused

@@ -364,7 +364,7 @@ pub fn expression(
             // If we reach this condition, the assignment is inside an expression.
 
             if let Some(function) = func {
-                if should_remove_assignment(ns, left, function, opt) {
+                if should_remove_assignment(left, function, opt, ns) {
                     return expression(right, cfg, contract_no, func, ns, vartab, opt);
                 }
             }
@@ -3612,7 +3612,8 @@ pub(super) fn assert_failure(
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
 ) {
-    if arg.is_none() {
+    // On Solana, returning the encoded arguments has no effect
+    if arg.is_none() || ns.target == Target::Solana {
         cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
         return;
     }

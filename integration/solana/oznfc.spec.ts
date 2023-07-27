@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import expect from 'expect';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 
 describe('Deploy solang contract and test', function () {
     this.timeout(500000);
 
     it('Events', async function () {
-        const { program, storage } = await loadContract('Events');
+        const { program, storage } = await loadContractAndCallConstructor('Events');
 
         let res = await program.methods.getName()
             .accounts({ dataAccount: storage.publicKey })

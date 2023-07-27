@@ -230,38 +230,41 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                     let left_values = expression_values(left, vars, ns);
                     let right_values = expression_values(right, vars, ns);
 
-                    if let Some(right) = is_single_constant(&right_values) {
-                        // is it a power of two
-                        // replace with a shift
-                        let mut shift = BigInt::one();
-                        let mut cmp = BigInt::from(2);
+                    match is_single_constant(&right_values) {
+                        Some(right) if *overflowing => {
+                            // is it a power of two
+                            // replace with a shift
+                            let mut shift = BigInt::one();
+                            let mut cmp = BigInt::from(2);
 
-                        for _ in 1..bits {
-                            if cmp == right {
-                                ns.hover_overrides.insert(
-                                    *loc,
-                                    format!(
-                                        "{} multiply optimized to shift left {}",
-                                        ty.to_string(ns),
-                                        shift
-                                    ),
-                                );
+                            for _ in 1..bits {
+                                if cmp == right {
+                                    ns.hover_overrides.insert(
+                                        *loc,
+                                        format!(
+                                            "{} multiply optimized to shift left {}",
+                                            ty.to_string(ns),
+                                            shift
+                                        ),
+                                    );
 
-                                return Expression::ShiftLeft {
-                                    loc: *loc,
-                                    ty: ty.clone(),
-                                    left: left.clone(),
-                                    right: Box::new(Expression::NumberLiteral {
+                                    return Expression::ShiftLeft {
                                         loc: *loc,
                                         ty: ty.clone(),
-                                        value: shift,
-                                    }),
-                                };
-                            }
+                                        left: left.clone(),
+                                        right: Box::new(Expression::NumberLiteral {
+                                            loc: *loc,
+                                            ty: ty.clone(),
+                                            value: shift,
+                                        }),
+                                    };
+                                }
 
-                            cmp *= 2;
-                            shift += 1;
+                                cmp *= 2;
+                                shift += 1;
+                            }
                         }
+                        _ => (), // SHL would disable overflow check
                     }
 
                     if ty.is_signed_int(ns) {

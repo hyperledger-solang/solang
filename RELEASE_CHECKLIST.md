@@ -22,6 +22,9 @@
 - Mention release in Discord (Solana, Hyperledger)
 - Update solana installer to use latest solang,
   e.g. https://github.com/solana-labs/solana/pull/31756
+- Update the Solang parser version on Anchor,
+  e.g. https://github.com/coral-xyz/anchor/pull/2569
+- Ensure ReadTheDocs defaults to the latest version
 - Update the version number and the MacOS binaries' sha256 hash in `Casks/solang.rb` under
   the repository `hyperledger/homebrew-solang`,
   e.g. https://github.com/hyperledger/homebrew-solang/pull/11

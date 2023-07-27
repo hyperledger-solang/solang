@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import expect from 'expect';
-import { loadContract } from './setup';
+import { loadContractAndCallConstructor } from './setup';
 import { BN } from '@coral-xyz/anchor';
 
 describe('Testing math overflow', function () {
     this.timeout(500000);
 
     it('overflow', async function () {
-        let { program } = await loadContract('overflow');
+        let { program } = await loadContractAndCallConstructor('overflow');
 
         let res = await program.methods.addu32(new BN(1), new BN(3)).view();
         expect(res).toEqual(4);

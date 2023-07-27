@@ -7,7 +7,7 @@ use crate::build_solidity;
 #[test]
 fn abi_decode() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract bar {
             function test() public {
                 (int16 a, bool b) = abi.decode(hex"7f0001", (int16, bool));
@@ -15,20 +15,20 @@ fn abi_decode() {
                 assert(a == 127);
                 assert(b == true);
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract bar {
             function test() public {
                 uint8 a = abi.decode(hex"40", (uint8));
 
                 assert(a == 64);
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -37,7 +37,7 @@ fn abi_decode() {
 #[test]
 fn abi_encode() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         struct s {
             int32 f1;
             uint8 f2;
@@ -65,7 +65,7 @@ fn abi_encode() {
 
                 assert(abi.encode(x) == hex"ff010000f71874657374696504000500");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -81,7 +81,7 @@ fn abi_encode() {
 #[test]
 fn abi_encode_packed() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         struct s {
             int32 f1;
             uint8 f2;
@@ -110,7 +110,7 @@ fn abi_encode_packed() {
 
                 assert(abi.encodePacked(x) == hex"ff010000f774657374696504000500");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -123,7 +123,7 @@ fn abi_encode_packed() {
 #[test]
 fn abi_encode_with_selector() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract bar {
             function test1() public {
                 uint16 a = 0xfd01;
@@ -143,7 +143,7 @@ fn abi_encode_with_selector() {
 
                 assert(abi.encodeWithSelector(hex"01020304", arr) == hex"010203040cfefcf8");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test1", Vec::new());
@@ -154,7 +154,7 @@ fn abi_encode_with_selector() {
 #[test]
 fn abi_encode_with_signature() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract bar {
             string bla = "Hello, World!";
 
@@ -174,7 +174,7 @@ fn abi_encode_with_signature() {
 
                 assert(abi.encodeWithSelector(hex"01020304", arr) == hex"010203040cfefcf8");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -185,7 +185,7 @@ fn abi_encode_with_signature() {
 #[test]
 fn call() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract superior {
             function test1() public {
                 inferior i = new inferior();
@@ -228,7 +228,7 @@ fn call() {
             function test2(uint64 x) public returns (uint64) {
                 return x ^ 1;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -236,7 +236,7 @@ fn call() {
     runtime.function("test2", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract superior {
             function test1() public {
                 inferior i = new inferior();
@@ -287,7 +287,7 @@ fn call() {
             function test2(uint64 x) public returns (uint64) {
                 return x ^ 1;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -430,7 +430,7 @@ fn data() {
     struct String(Vec<u8>);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract bar {
             constructor(string memory s) public {
                 assert(msg.data == hex"98dd1bb318666f6f626172");
@@ -441,7 +441,7 @@ fn data() {
                 assert(msg.data == hex"e3cff634addeadde");
                 assert(msg.sig == hex"e3cf_f634");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, String(b"foobar".to_vec()).encode());
@@ -713,7 +713,7 @@ fn my_token() {
 #[test]
 fn hash() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         import "polkadot";
 
         contract Foo {
@@ -735,7 +735,7 @@ fn hash() {
                 assert(abi.encode(current2) == abi.encode(h));
             }
         }
-        "##,
+        "#,
     );
 
     #[derive(Encode)]
@@ -759,14 +759,14 @@ fn hash() {
 #[test]
 fn call_chain_extension() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         import {chain_extension as ChainExtension} from "polkadot";
 
         contract Foo {
             function chain_extension(bytes input) public returns (uint32, bytes) {
                 return ChainExtension(123, input);
             }
-        }"##,
+        }"#,
     );
 
     let data = 0xdeadbeefu32.to_be_bytes().to_vec();
@@ -779,13 +779,13 @@ fn call_chain_extension() {
 #[test]
 fn is_contract() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         import "polkadot";
         contract Foo {
             function test(address _a) public view returns (bool) {
                 return is_contract(_a);
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", runtime.0.data().accounts[0].address.to_vec());
@@ -798,7 +798,7 @@ fn is_contract() {
 #[test]
 fn set_code_hash() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         import "polkadot";
 
         abstract contract SetCode {
@@ -821,7 +821,7 @@ fn set_code_hash() {
             function inc() external {
                 count -= 1;
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("inc", vec![]);

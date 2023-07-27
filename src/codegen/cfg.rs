@@ -20,9 +20,9 @@ use indexmap::IndexMap;
 use num_bigint::BigInt;
 use num_traits::One;
 use parse_display::Display;
-use solang_parser::pt;
 use solang_parser::pt::CodeLocation;
 use solang_parser::pt::Loc;
+use solang_parser::pt::{self, FunctionTy};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ops::AddAssign;
 use std::str;
@@ -32,7 +32,7 @@ use std::{fmt, fmt::Write};
 // IndexMap <ArrayVariable res , res of temp variable>
 pub type ArrayLengthVars = IndexMap<usize, usize>;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum Instr {
     /// Set variable
@@ -392,7 +392,7 @@ impl fmt::Display for HashTy {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct BasicBlock {
     pub phis: Option<BTreeSet<usize>>,
     pub name: String,
@@ -402,7 +402,7 @@ pub struct BasicBlock {
     pub transfers: Vec<Vec<reaching_definitions::Transfer>>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ControlFlowGraph {
     pub name: String,
     pub function_no: ASTFunction,
@@ -419,7 +419,7 @@ pub struct ControlFlowGraph {
     pub array_lengths_temps: ArrayLengthVars,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ASTFunction {
     SolidityFunction(usize),
     YulFunction(usize),
@@ -1636,23 +1636,7 @@ fn function_cfg(
     cfg.returns = func.returns.clone();
     cfg.selector = func.selector(ns, &contract_no);
 
-    // a function is public if is not a library and not a base constructor
-    cfg.public = if let Some(base_contract_no) = func.contract_no {
-        !(ns.contracts[base_contract_no].is_library()
-            || func.is_constructor() && contract_no != base_contract_no)
-            && func.is_public()
-    } else {
-        false
-    };
-
-    // if a function is virtual, and it is overriden, do not make it public
-    // Otherwise the runtime function dispatch will have two identical functions to dispatch to
-    if func.is_virtual
-        && Some(ns.contracts[contract_no].virtual_functions[&func.signature]) != function_no
-    {
-        cfg.public = false;
-    }
-
+    cfg.public = ns.function_externally_callable(contract_no, function_no);
     cfg.ty = func.ty;
     cfg.nonpayable = if ns.target.is_polkadot() {
         !func.is_constructor() && !func.is_payable()
@@ -2122,6 +2106,42 @@ impl Contract {
 }
 
 impl Namespace {
+    /// Determine whether a function should be included in the dispatcher and metadata,
+    /// taking inheritance into account.
+    ///
+    /// `function_no` is optional because default constructors require creating a CFG
+    /// without any corresponding function definition.
+    pub fn function_externally_callable(
+        &self,
+        contract_no: usize,
+        function_no: Option<usize>,
+    ) -> bool {
+        let default_constructor = &self.default_constructor(contract_no);
+        let func = function_no
+            .map(|n| &self.functions[n])
+            .unwrap_or(default_constructor);
+
+        // If a function is virtual, and it is overriden, do not make it public;
+        // Otherwise the runtime function dispatch will have two identical functions to dispatch to.
+        if func.is_virtual
+            && self.contracts[contract_no]
+                .virtual_functions
+                .get(&func.signature)
+                != function_no.as_ref()
+        {
+            return false;
+        }
+
+        if let Some(base_contract_no) = func.contract_no {
+            return !(self.contracts[base_contract_no].is_library()
+                || func.is_constructor() && contract_no != base_contract_no)
+                && func.is_public()
+                && func.ty != FunctionTy::Modifier;
+        }
+
+        false
+    }
+
     /// Type storage
     pub fn storage_type(&self) -> Type {
         if self.target == Target::Solana {

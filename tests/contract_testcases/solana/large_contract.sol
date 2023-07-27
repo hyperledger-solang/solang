@@ -897,4 +897,5 @@ contract ServiceRegistrySolana {
 // ---- Expect: diagnostics ----
 // warning: 204:5-209:14: function can be declared 'pure'
 // warning: 500:22-26: function parameter 'data' is unused
+// warning: 525:26-40: local variable 'agentInstances' is unused
 // warning: 867:31-35: function parameter 'data' is unused

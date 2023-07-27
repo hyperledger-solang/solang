@@ -268,7 +268,7 @@ fn return_values() {
     assert_eq!(runtime.output(), Val(5).encode());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         struct S {
             int64 f1;
             string f2;
@@ -288,7 +288,7 @@ fn return_values() {
                     _;
                     s2 += 2;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -307,7 +307,7 @@ fn return_values() {
 #[test]
 fn repeated_modifier() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract Test {
             modifier notZero(uint64 num) {
                 require(num != 0, "invalid number");
@@ -317,7 +317,7 @@ fn repeated_modifier() {
             function contfunc(uint64 num1, uint64 num2) public notZero(num1) notZero(num2) {
                 // any code
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());

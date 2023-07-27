@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { loadContract } from "./setup";
+import { loadContractAndCallConstructor } from "./setup";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { BN } from '@coral-xyz/anchor';
@@ -14,7 +14,7 @@ describe('Test system instructions', function () {
     const seed = 'my_seed_is_tea';
 
     it('create account', async function create_account() {
-        const { program, storage, payer } = await loadContract('TestingInstruction');
+        const { program, storage, payer } = await loadContractAndCallConstructor('TestingInstruction');
         const to_key_pair = Keypair.generate();
 
         await program.methods.createAccount(
@@ -33,7 +33,7 @@ describe('Test system instructions', function () {
     });
 
     it('create account with seed', async function create_account_with_seed() {
-        const { storage, payer, program } = await loadContract('TestingInstruction');
+        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
         const base_keypair = Keypair.generate();
         const to_key_pair = await PublicKey.createWithSeed(base_keypair.publicKey, seed, TOKEN_PROGRAM_ID);
 
@@ -56,7 +56,7 @@ describe('Test system instructions', function () {
     });
 
     it('assign', async function assign() {
-        const { storage, payer, program } = await loadContract('TestingInstruction');
+        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
         const to_key_pair = Keypair.generate();
 
         const assign_account = new PublicKey('AddressLookupTab1e1111111111111111111111111');
@@ -72,7 +72,7 @@ describe('Test system instructions', function () {
     });
 
     it('assign with seed', async function assign_with_with_seed() {
-        const { storage, payer, program } = await loadContract('TestingInstruction');
+        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
         const assign_account = new PublicKey('AddressLookupTab1e1111111111111111111111111');
         const to_key_pair = await PublicKey.createWithSeed(payer.publicKey, seed, assign_account);
 
@@ -91,7 +91,7 @@ describe('Test system instructions', function () {
     });
 
     it('transfer', async function transfer() {
-        const { storage, payer, program } = await loadContract('TestingInstruction');
+        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
         const dest = new Keypair();
 
         await program.methods.transfer(
@@ -107,7 +107,7 @@ describe('Test system instructions', function () {
     });
 
     it('transfer with seed', async function transfer_with_seed() {
-        const { storage, payer, provider, program } = await loadContract('TestingInstruction');
+        const { storage, payer, provider, program } = await loadContractAndCallConstructor('TestingInstruction');
         const dest = new Keypair();
         const assign_account = new PublicKey('AddressLookupTab1e1111111111111111111111111');
         const derived_payer = await PublicKey.createWithSeed(payer.publicKey, seed, assign_account);
@@ -133,7 +133,7 @@ describe('Test system instructions', function () {
     });
 
     it('allocate', async function allocate() {
-        const { storage, payer, program } = await loadContract('TestingInstruction');
+        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
         const account = Keypair.generate();
 
         await program.methods.allocate(
@@ -147,7 +147,7 @@ describe('Test system instructions', function () {
     });
 
     it('allocate with seed', async function allocate_with_seed() {
-        const { storage, payer, program } = await loadContract('TestingInstruction');
+        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
         const account = Keypair.generate();
         const owner = new PublicKey('Stake11111111111111111111111111111111111111');
         const derived_key = await PublicKey.createWithSeed(account.publicKey, seed, owner);
@@ -168,7 +168,7 @@ describe('Test system instructions', function () {
     });
 
     it('create nonce account with seed', async function create_nonce_account_with_seed() {
-        const { storage, payer, program } = await loadContract('TestingInstruction');
+        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
         const base_address = Keypair.generate();
         const derived_account = await PublicKey.createWithSeed(base_address.publicKey, seed, system_account);
         const authority = Keypair.generate();
@@ -192,7 +192,7 @@ describe('Test system instructions', function () {
     });
 
     it('nonce accounts', async function nonce_accounts() {
-        const { storage, payer, program } = await loadContract('TestingInstruction');
+        const { storage, payer, program } = await loadContractAndCallConstructor('TestingInstruction');
         const nonce = Keypair.generate();
         const authority = Keypair.generate();
 

@@ -11,7 +11,12 @@ pub enum PathDisplay {
 }
 
 impl File {
-    pub fn new(path: path::PathBuf, contents: &str, cache_no: usize) -> Self {
+    pub fn new(
+        path: path::PathBuf,
+        contents: &str,
+        cache_no: usize,
+        import_no: Option<usize>,
+    ) -> Self {
         let mut line_starts = Vec::new();
 
         for (ind, c) in contents.char_indices() {
@@ -24,6 +29,7 @@ impl File {
             path,
             line_starts,
             cache_no: Some(cache_no),
+            import_no,
         }
     }
 
