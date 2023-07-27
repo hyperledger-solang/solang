@@ -223,7 +223,7 @@ impl<'a> Builder<'a> {
 
                 self.hovers.push(HoverEntry {
                     start: param.loc.start(),
-                    stop: param.loc.end() + 1,
+                    stop: param.loc.exclusive_end(),
                     val: make_code_block(val),
                 });
             }
@@ -284,7 +284,7 @@ impl<'a> Builder<'a> {
                         ast::DestructureField::VariableDecl(_, param) => {
                             self.hovers.push(HoverEntry {
                                 start: param.loc.start(),
-                                stop: param.loc.end() + 1,
+                                stop: param.loc.exclusive_end(),
                                 val: self.expanded_ty(&param.ty),
                             });
                         }
@@ -334,7 +334,7 @@ impl<'a> Builder<'a> {
                 );
                 self.hovers.push(HoverEntry {
                     start: event_loc.start(),
-                    stop: event_loc.end() + 1,
+                    stop: event_loc.exclusive_end(),
                     val: format!("{}{}", tags, make_code_block(val)),
                 });
 
@@ -371,28 +371,28 @@ impl<'a> Builder<'a> {
             ast::Expression::BoolLiteral { loc, .. } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: make_code_block("bool"),
                 });
             }
             ast::Expression::BytesLiteral { loc, ty, .. } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: self.expanded_ty(ty),
                 });
             }
             ast::Expression::CodeLiteral { loc, .. } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: make_code_block("bytes"),
                 });
             }
             ast::Expression::NumberLiteral { loc, ty, .. } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: make_code_block(ty.to_string(self.ns)),
                 });
             }
@@ -414,7 +414,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: format!(
                         "{} {} addition",
                         if *unchecked { "unchecked " } else { "" },
@@ -434,7 +434,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: format!(
                         "{} {} subtraction",
                         if *unchecked { "unchecked " } else { "" },
@@ -454,7 +454,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: format!(
                         "{} {} multiply",
                         if *unchecked { "unchecked " } else { "" },
@@ -473,7 +473,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: format!("{} divide", ty.to_string(self.ns)),
                 });
 
@@ -488,7 +488,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: format!("{} modulo", ty.to_string(self.ns)),
                 });
 
@@ -504,7 +504,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: format!(
                         "{} {}power",
                         if *unchecked { "unchecked " } else { "" },
@@ -562,7 +562,7 @@ impl<'a> Builder<'a> {
 
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: make_code_block(val),
                 });
             }
@@ -586,7 +586,7 @@ impl<'a> Builder<'a> {
                 let val = format!("{} constant {}{}{}", ty.to_string(self.ns), contract, name, constant);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: make_code_block(val),
                 });
             }
@@ -596,7 +596,7 @@ impl<'a> Builder<'a> {
                 let val = format!("{} {}.{}", ty.to_string(self.ns), contract.name, name);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: make_code_block(val),
                 });
             }
@@ -640,7 +640,7 @@ impl<'a> Builder<'a> {
                 self.expression(expr, symtab);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: make_code_block(ty.to_string(self.ns)),
                 });
             }
@@ -701,7 +701,7 @@ impl<'a> Builder<'a> {
 
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
-                        stop: loc.end() + 1,
+                        stop: loc.exclusive_end(),
                         val: format!("{}{}", msg_tg, make_code_block(val)),
                     });
                 }
@@ -746,7 +746,7 @@ impl<'a> Builder<'a> {
 
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
-                        stop: loc.end() + 1,
+                        stop: loc.exclusive_end(),
                         val: format!("{}{}", msg_tg, make_code_block(val)),
                     });
 
@@ -817,7 +817,7 @@ impl<'a> Builder<'a> {
                 let val = make_code_block(format!("[built-in] {} {} {}", rets, name, params));
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: format!("{}{}", doc, val),
                 });
 
@@ -864,7 +864,7 @@ impl<'a> Builder<'a> {
     fn field(&mut self, field: &ast::Parameter) {
         self.hovers.push(HoverEntry {
             start: field.loc.start(),
-            stop: field.loc.end() + 1,
+            stop: field.loc.exclusive_end(),
             val: make_code_block(format!(
                 "{} {}",
                 field.ty.to_string(self.ns),
@@ -884,7 +884,7 @@ impl<'a> Builder<'a> {
             for (discriminant, (nam, loc)) in enum_decl.values.iter().enumerate() {
                 builder.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end() + 1,
+                    stop: loc.exclusive_end(),
                     val: make_code_block(format!(
                         "enum {}.{} {}",
                         enum_decl.name, nam, discriminant
@@ -930,7 +930,7 @@ impl<'a> Builder<'a> {
                     ast::ConstructorAnnotation::Payer(loc, name) => {
                         builder.hovers.push(HoverEntry {
                             start: loc.start(),
-                            stop: loc.end() + 1,
+                            stop: loc.exclusive_end(),
                             val: format!("payer account: {}", name),
                         });
                     }
@@ -940,7 +940,7 @@ impl<'a> Builder<'a> {
             for param in &*func.params {
                 builder.hovers.push(HoverEntry {
                     start: param.loc.start(),
-                    stop: param.loc.end() + 1,
+                    stop: param.loc.exclusive_end(),
                     val: builder.expanded_ty(&param.ty),
                 });
             }
@@ -948,7 +948,7 @@ impl<'a> Builder<'a> {
             for ret in &*func.returns {
                 builder.hovers.push(HoverEntry {
                     start: ret.loc.start(),
-                    stop: ret.loc.end() + 1,
+                    stop: ret.loc.exclusive_end(),
                     val: builder.expanded_ty(&ret.ty),
                 });
             }
@@ -973,7 +973,7 @@ impl<'a> Builder<'a> {
             for base in &contract.bases {
                 builder.hovers.push(HoverEntry {
                     start: base.loc.start(),
-                    stop: base.loc.end() + 1,
+                    stop: base.loc.exclusive_end(),
                     val: make_code_block(format!(
                         "contract {}",
                         builder.ns.contracts[base.contract_no].name
