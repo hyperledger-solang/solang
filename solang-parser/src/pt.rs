@@ -112,6 +112,19 @@ impl Loc {
         }
     }
 
+    /// Returns this location's end.
+    /// The returned endpoint is not part of the range.
+    /// This is used when a half-open range is needed.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
+    #[inline]
+    pub fn exclusive_end(&self) -> usize {
+        self.end() + 1
+    }
+
     /// Replaces this location's start with `other`'s.
     ///
     /// # Panics
