@@ -13,9 +13,16 @@ fn types() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("f1", &[]).unwrap();
+    let returns = vm
+        .function("f1")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -32,16 +39,19 @@ fn types() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function(
-            "f1",
-            &[BorshToken::Uint {
-                width: 256,
-                value: BigInt::from(2u8),
-            }],
-        )
+        .function("f1")
+        .arguments(&[BorshToken::Uint {
+            width: 256,
+            value: BigInt::from(2u8),
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -66,22 +76,25 @@ fn types() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function(
-            "f1",
-            &[
-                BorshToken::Uint {
-                    width: 256,
-                    value: BigInt::one(),
-                },
-                BorshToken::Uint {
-                    width: 256,
-                    value: BigInt::from(2u8),
-                },
-            ],
-        )
+        .function("f1")
+        .arguments(&[
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::one(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from(2u8),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -104,16 +117,19 @@ fn types() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function(
-            "f1",
-            &[BorshToken::Int {
-                width: 64,
-                value: BigInt::from(4000u16),
-            }],
-        )
+        .function("f1")
+        .arguments(&[BorshToken::Int {
+            width: 64,
+            value: BigInt::from(4000u16),
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -139,9 +155,16 @@ fn interfaces() {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("f1", &[]).unwrap();
+    let returns = vm
+        .function("f1")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(returns, BorshToken::uint8_fixed_array(b"ab".to_vec()));
 }
@@ -155,9 +178,16 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("z", &[]).unwrap();
+    let returns = vm
+        .function("z")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -174,9 +204,16 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("z", &[]).unwrap();
+    let returns = vm
+        .function("z")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -193,9 +230,16 @@ fn constant() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("z", &[]).unwrap();
+    let returns = vm
+        .function("z")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -242,7 +286,15 @@ fn struct_accessor() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.function("f", &[]);
+    vm.function("f")
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call();
 }

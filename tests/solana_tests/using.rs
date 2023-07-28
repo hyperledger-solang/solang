@@ -29,8 +29,15 @@ fn using_for_contracts() {
         }"#,
     );
 
-    runtime.constructor(&[]);
-    runtime.function("test", &[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    runtime
+        .function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(runtime.logs, "Hello");
 
@@ -72,8 +79,18 @@ fn using_for_contracts() {
         }"#,
     );
 
-    runtime.constructor(&[]);
-    runtime.function("test", &[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    runtime
+        .function("test")
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call();
 
     assert_eq!(runtime.logs, "X libX contractx:2");
 }
@@ -202,9 +219,22 @@ fn user_defined_oper() {
         }"#,
     );
 
-    runtime.constructor(&[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    runtime.function("test_cmp", &[]);
-    runtime.function("test_arith", &[]);
-    runtime.function("test_bit", &[]);
+    runtime
+        .function("test_cmp")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    runtime
+        .function("test_arith")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    runtime
+        .function("test_bit")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }

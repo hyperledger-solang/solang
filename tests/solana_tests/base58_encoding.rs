@@ -20,11 +20,17 @@ contract Base58 {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     for _ in 0..10 {
         let account = account_new();
-        let _ = vm.function("print_this", &[BorshToken::Address(account)]);
+        let _ = vm
+            .function("print_this")
+            .arguments(&[BorshToken::Address(account)])
+            .call();
         let mut base_58 = account.to_base58();
         while base_58.len() < 44 {
             // Rust's to_base58() ignores leading zeros in the byte array,
@@ -35,7 +41,10 @@ contract Base58 {
         }
         assert_eq!(vm.logs, base_58);
         vm.logs.clear();
-        let _ = vm.function("print_as_hex", &[BorshToken::Address(account)]);
+        let _ = vm
+            .function("print_as_hex")
+            .arguments(&[BorshToken::Address(account)])
+            .call();
         let decoded = hex::decode(vm.logs.as_str()).unwrap();
         assert_eq!(account, decoded.as_ref());
         vm.logs.clear();

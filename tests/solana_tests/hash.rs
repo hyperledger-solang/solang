@@ -15,8 +15,16 @@ fn constants_hash_tests() {
         }"#,
     );
 
-    runtime.constructor(&[]);
-    runtime.function("test", &[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    runtime
+        .function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let mut runtime = build_solidity(
         r#"
@@ -29,8 +37,15 @@ fn constants_hash_tests() {
         }"#,
     );
 
-    runtime.constructor(&[]);
-    runtime.function("test", &[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    runtime
+        .function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let mut runtime = build_solidity(
         r#"
@@ -43,8 +58,15 @@ fn constants_hash_tests() {
         }"#,
     );
 
-    runtime.constructor(&[]);
-    runtime.function("test", &[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    runtime
+        .function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }
 
 #[test]
@@ -60,9 +82,19 @@ fn hash_tests() {
         }"##,
     );
 
-    runtime.constructor(&[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
     let hash = runtime
-        .function("test", &[BorshToken::Bytes(b"Hello, World!".to_vec())])
+        .function("test")
+        .arguments(&[BorshToken::Bytes(b"Hello, World!".to_vec())])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -83,9 +115,19 @@ fn hash_tests() {
         }"##,
     );
 
-    runtime.constructor(&[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
     let hash = runtime
-        .function("test", &[BorshToken::Bytes(b"Hello, World!".to_vec())])
+        .function("test")
+        .arguments(&[BorshToken::Bytes(b"Hello, World!".to_vec())])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -107,9 +149,19 @@ fn hash_tests() {
         }"##,
     );
 
-    runtime.constructor(&[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
     let hash = runtime
-        .function("test", &[BorshToken::Bytes(b"Hello, World!".to_vec())])
+        .function("test")
+        .arguments(&[BorshToken::Bytes(b"Hello, World!".to_vec())])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(

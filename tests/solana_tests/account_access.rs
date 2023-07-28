@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::borsh_encoding::BorshToken;
-use crate::{account_new, build_solidity, AccountMeta, AccountState, Pubkey};
+use crate::{account_new, build_solidity, create_program_address, AccountState};
 
 #[test]
 fn access_payer() {
@@ -20,6 +20,8 @@ fn access_payer() {
         "#,
     );
     let payer = account_new();
+    let pda = create_program_address(&vm.stack[0].id, &[b"sunflower"]);
+
     vm.account_data.insert(
         payer,
         AccountState {
@@ -28,19 +30,21 @@ fn access_payer() {
             lamports: 10,
         },
     );
-
-    let metas = vec![
-        AccountMeta {
-            pubkey: Pubkey(vm.stack[0].data),
-            is_writable: true,
-            is_signer: false,
+    vm.account_data.insert(
+        pda.0,
+        AccountState {
+            data: [0; 4096].to_vec(),
+            owner: Some(vm.stack[0].id),
+            lamports: 0,
         },
-        AccountMeta {
-            pubkey: Pubkey(payer),
-            is_writable: true,
-            is_signer: true,
-        },
-    ];
+    );
 
-    vm.constructor_expected(0, &metas, &[BorshToken::Address(payer)]);
+    vm.function("new")
+        .arguments(&[BorshToken::Address(payer)])
+        .accounts(vec![
+            ("dataAccount", pda.0),
+            ("payer", payer),
+            ("systemProgram", [0; 32]),
+        ])
+        .call();
 }
