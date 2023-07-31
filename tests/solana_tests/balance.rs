@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_new, build_solidity, AccountState, BorshToken};
+use crate::{account_new, build_solidity, AccountMeta, AccountState, BorshToken, Pubkey};
 use anchor_syn::idl::IdlInstruction;
 use num_bigint::BigInt;
 
@@ -15,7 +15,10 @@ fn get_balance() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let new = account_new();
 
@@ -28,7 +31,17 @@ fn get_balance() {
         },
     );
 
-    let returns = vm.function("test", &[BorshToken::Address(new)]).unwrap();
+    let returns = vm
+        .function("test")
+        .arguments(&[BorshToken::Address(new)])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: false,
+        }])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -50,7 +63,10 @@ fn send_fails() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let new = account_new();
 
@@ -64,16 +80,21 @@ fn send_fails() {
     );
 
     let returns = vm
-        .function(
-            "send",
-            &[
-                BorshToken::FixedBytes(new.to_vec()),
-                BorshToken::Uint {
-                    width: 64,
-                    value: BigInt::from(102u8),
-                },
-            ],
-        )
+        .function("send")
+        .arguments(&[
+            BorshToken::Address(new),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: true,
+        }])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(false));
@@ -92,12 +113,15 @@ fn send_succeeds() {
         }"#,
     );
 
-    vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
+    let data_account = vm.initialize_data_account();
 
-    vm.constructor(&[]);
+    vm.account_data.get_mut(&data_account).unwrap().lamports = 103;
+
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let new = account_new();
-
     vm.account_data.insert(
         new,
         AccountState {
@@ -108,26 +132,28 @@ fn send_succeeds() {
     );
 
     let returns = vm
-        .function(
-            "send",
-            &[
-                BorshToken::FixedBytes(new.to_vec()),
-                BorshToken::Uint {
-                    width: 64,
-                    value: BigInt::from(102u8),
-                },
-            ],
-        )
+        .function("send")
+        .arguments(&[
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: true,
+        }])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(true));
 
     assert_eq!(vm.account_data.get_mut(&new).unwrap().lamports, 107);
 
-    assert_eq!(
-        vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports,
-        1
-    );
+    assert_eq!(vm.account_data.get_mut(&data_account).unwrap().lamports, 1);
 }
 
 #[test]
@@ -141,9 +167,13 @@ fn send_overflows() {
         }"#,
     );
 
-    vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
+    let data_account = vm.initialize_data_account();
 
-    vm.constructor(&[]);
+    vm.account_data.get_mut(&data_account).unwrap().lamports = 103;
+
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let new = account_new();
 
@@ -157,16 +187,21 @@ fn send_overflows() {
     );
 
     let returns = vm
-        .function(
-            "send",
-            &[
-                BorshToken::FixedBytes(new.to_vec()),
-                BorshToken::Uint {
-                    width: 64,
-                    value: BigInt::from(102u8),
-                },
-            ],
-        )
+        .function("send")
+        .arguments(&[
+            BorshToken::Address(new),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(102u8),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: true,
+        }])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(false));
@@ -177,7 +212,7 @@ fn send_overflows() {
     );
 
     assert_eq!(
-        vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports,
+        vm.account_data.get_mut(&data_account).unwrap().lamports,
         103
     );
 }
@@ -193,9 +228,12 @@ fn transfer_succeeds() {
         }"#,
     );
 
-    vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
+    let data_account = vm.initialize_data_account();
+    vm.account_data.get_mut(&data_account).unwrap().lamports = 103;
 
-    vm.constructor(&[]);
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let new = account_new();
 
@@ -208,23 +246,25 @@ fn transfer_succeeds() {
         },
     );
 
-    vm.function(
-        "transfer",
-        &[
-            BorshToken::FixedBytes(new.to_vec()),
+    vm.function("transfer")
+        .arguments(&[
+            BorshToken::Address(new),
             BorshToken::Uint {
                 width: 64,
                 value: BigInt::from(102u8),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: true,
+        }])
+        .call();
 
     assert_eq!(vm.account_data.get_mut(&new).unwrap().lamports, 107);
 
-    assert_eq!(
-        vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports,
-        1
-    );
+    assert_eq!(vm.account_data.get_mut(&data_account).unwrap().lamports, 1);
 }
 
 #[test]
@@ -238,9 +278,12 @@ fn transfer_fails_not_enough() {
         }"#,
     );
 
-    vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
+    let data_account = vm.initialize_data_account();
+    vm.account_data.get_mut(&data_account).unwrap().lamports = 103;
 
-    vm.constructor(&[]);
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let new = account_new();
 
@@ -253,16 +296,22 @@ fn transfer_fails_not_enough() {
         },
     );
 
-    let res = vm.function_must_fail(
-        "transfer",
-        &[
-            BorshToken::FixedBytes(new.to_vec()),
+    let res = vm
+        .function("transfer")
+        .arguments(&[
+            BorshToken::Address(new),
             BorshToken::Uint {
                 width: 64,
                 value: BigInt::from(104u8),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: true,
+        }])
+        .must_fail();
     assert!(res.is_err());
 }
 
@@ -279,9 +328,12 @@ fn transfer_fails_overflow() {
         }"#,
     );
 
-    vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
+    let data_account = vm.initialize_data_account();
+    vm.account_data.get_mut(&data_account).unwrap().lamports = 103;
 
-    vm.constructor(&[]);
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let new = account_new();
 
@@ -294,16 +346,22 @@ fn transfer_fails_overflow() {
         },
     );
 
-    let res = vm.function_must_fail(
-        "transfer",
-        &[
+    let res = vm
+        .function("transfer")
+        .arguments(&[
             BorshToken::FixedBytes(new.to_vec()),
             BorshToken::Uint {
                 width: 64,
                 value: BigInt::from(104u8),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_writable: false,
+            is_signer: true,
+        }])
+        .must_fail();
     assert!(res.is_err());
 }
 
@@ -318,9 +376,10 @@ fn fallback() {
         }"#,
     );
 
-    vm.account_data.get_mut(&vm.origin).unwrap().lamports = 312;
-
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     if let Some(idl) = &vm.stack[0].idl {
         let mut idl = idl.clone();
@@ -336,7 +395,7 @@ fn fallback() {
         vm.stack[0].idl = Some(idl);
     }
 
-    vm.function("extinct", &[]);
+    vm.function("extinct").call();
 
     assert_eq!(vm.logs, "fallback");
 }
@@ -354,9 +413,12 @@ fn value_overflows() {
         }"#,
     );
 
-    vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports = 103;
+    let data_account = vm.initialize_data_account();
+    vm.account_data.get_mut(&data_account).unwrap().lamports = 103;
 
-    vm.constructor(&[]);
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let new = account_new();
 
@@ -369,42 +431,59 @@ fn value_overflows() {
         },
     );
 
-    let res = vm.function_must_fail(
-        "send",
-        &[
-            BorshToken::FixedBytes(new.to_vec()),
+    let res = vm
+        .function("send")
+        .arguments(&[
+            BorshToken::Address(new),
             BorshToken::Uint {
                 width: 128,
                 value: BigInt::from(u64::MAX as u128 + 1),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: true,
+        }])
+        .must_fail();
     assert_eq!(res.unwrap(), 4294967296);
 
-    let res = vm.function_must_fail(
-        "send",
-        &[
-            BorshToken::FixedBytes(new.to_vec()),
+    let res = vm
+        .function("send")
+        .arguments(&[
+            BorshToken::Address(new),
             BorshToken::Uint {
                 width: 128,
                 value: BigInt::from(u128::MAX),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: true,
+        }])
+        .must_fail();
 
     assert_eq!(res.unwrap(), 4294967296);
 
     let returns = vm
-        .function(
-            "send",
-            &[
-                BorshToken::FixedBytes(new.to_vec()),
-                BorshToken::Uint {
-                    width: 128,
-                    value: BigInt::from(102u8),
-                },
-            ],
-        )
+        .function("send")
+        .arguments(&[
+            BorshToken::Address(new),
+            BorshToken::Uint {
+                width: 128,
+                value: BigInt::from(102u8),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: true,
+        }])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(false));
@@ -415,7 +494,7 @@ fn value_overflows() {
     );
 
     assert_eq!(
-        vm.account_data.get_mut(&vm.stack[0].data).unwrap().lamports,
+        vm.account_data.get_mut(&data_account).unwrap().lamports,
         103
     );
 }

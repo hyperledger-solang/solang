@@ -18,10 +18,16 @@ fn conditional_destructure() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function("f", &[BorshToken::Bool(true), BorshToken::Bool(true)])
+        .function("f")
+        .arguments(&[BorshToken::Bool(true), BorshToken::Bool(true)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -40,7 +46,10 @@ fn conditional_destructure() {
     );
 
     let returns = vm
-        .function("f", &[BorshToken::Bool(true), BorshToken::Bool(false)])
+        .function("f")
+        .arguments(&[BorshToken::Bool(true), BorshToken::Bool(false)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -59,7 +68,10 @@ fn conditional_destructure() {
     );
 
     let returns = vm
-        .function("f", &[BorshToken::Bool(false), BorshToken::Bool(false)])
+        .function("f")
+        .arguments(&[BorshToken::Bool(false), BorshToken::Bool(false)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -78,7 +90,10 @@ fn conditional_destructure() {
     );
 
     let returns = vm
-        .function("f", &[BorshToken::Bool(false), BorshToken::Bool(true)])
+        .function("f")
+        .arguments(&[BorshToken::Bool(false), BorshToken::Bool(true)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -113,9 +128,17 @@ fn casting_destructure() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
+    let returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -141,9 +164,16 @@ fn casting_destructure() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("f", &[]).unwrap();
+    let returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(returns, BorshToken::String(String::from("Hello")));
 }
@@ -177,7 +207,12 @@ fn casting_storage_destructure() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.function("bar", &[]);
+    vm.function("bar")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }

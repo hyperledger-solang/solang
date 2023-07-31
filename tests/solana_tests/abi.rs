@@ -45,12 +45,27 @@ fn packed() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let account = vm.initialize_data_account();
 
-    vm.function("test", &[]);
-    vm.function("test2", &[]);
-    vm.function("test3", &[]);
-    vm.function("test4", &[]);
+    vm.function("new")
+        .accounts(vec![("dataAccount", account)])
+        .call();
+
+    vm.function("test")
+        .accounts(vec![("dataAccount", account)])
+        .call();
+
+    vm.function("test2")
+        .accounts(vec![("dataAccount", account)])
+        .call();
+
+    vm.function("test3")
+        .accounts(vec![("dataAccount", account)])
+        .call();
+
+    vm.function("test4")
+        .accounts(vec![("dataAccount", account)])
+        .call();
 }
 
 #[test]
@@ -65,9 +80,14 @@ fn inherited() {
         contract bar is foo { }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.function("test", &[]);
+    vm.function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let mut vm = build_solidity(
         r#"
@@ -78,7 +98,12 @@ fn inherited() {
             contract bar is foo { }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.function("test", &[]);
+    vm.function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }

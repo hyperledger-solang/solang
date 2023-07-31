@@ -39,22 +39,25 @@ fn safe_math() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function(
-            "mul_test",
-            &[
-                BorshToken::Uint {
-                    width: 256,
-                    value: BigInt::from_str("1000000000000000000").unwrap(),
-                },
-                BorshToken::Uint {
-                    width: 256,
-                    value: BigInt::from_str("4000000000000000000").unwrap(),
-                },
-            ],
-        )
+        .function("mul_test")
+        .arguments(&[
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("1000000000000000000").unwrap(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("4000000000000000000").unwrap(),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -66,19 +69,19 @@ fn safe_math() {
     );
 
     let returns = vm
-        .function(
-            "add_test",
-            &[
-                BorshToken::Uint {
-                    width: 256,
-                    value: BigInt::from_str("1000000000000000000").unwrap(),
-                },
-                BorshToken::Uint {
-                    width: 256,
-                    value: BigInt::from_str("4000000000000000000").unwrap(),
-                },
-            ],
-        )
+        .function("add_test")
+        .arguments(&[
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("1000000000000000000").unwrap(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("4000000000000000000").unwrap(),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -90,19 +93,19 @@ fn safe_math() {
     );
 
     let returns = vm
-        .function(
-            "sub_test",
-            &[
-                BorshToken::Uint {
-                    width: 256,
-                    value: BigInt::from_str("4000000000000000000").unwrap(),
-                },
-                BorshToken::Uint {
-                    width: 256,
-                    value: BigInt::from_str("1000000000000000000").unwrap(),
-                },
-            ],
-        )
+        .function("sub_test")
+        .arguments(&[
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("4000000000000000000").unwrap(),
+            },
+            BorshToken::Uint {
+                width: 256,
+                value: BigInt::from_str("1000000000000000000").unwrap(),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -113,9 +116,9 @@ fn safe_math() {
         },
     );
 
-    let res = vm.function_must_fail(
-        "mul_test",
-        &[
+    let res = vm
+        .function("mul_test")
+        .arguments(&[
             BorshToken::Uint {
                 width: 256,
                 value: BigInt::from_str("400000000000000000000000000000000000000").unwrap(),
@@ -124,13 +127,15 @@ fn safe_math() {
                 width: 256,
                 value: BigInt::from_str("400000000000000000000000000000000000000").unwrap(),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_ne!(res.unwrap(), 0);
 
-    let res = vm.function_must_fail(
-        "add_test",
+    let res = vm.function(
+        "add_test")
+        .arguments(
         &[
             BorshToken::Uint {
                 width: 256,
@@ -141,13 +146,15 @@ fn safe_math() {
                 value: BigInt::from_str("100000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap(),
             },
         ],
-    );
+    )
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_ne!(res.unwrap(), 0);
 
-    let res = vm.function_must_fail(
-        "sub_test",
-        &[
+    let res = vm
+        .function("sub_test")
+        .arguments(&[
             BorshToken::Uint {
                 width: 256,
                 value: BigInt::from_str("1000000000000000000").unwrap(),
@@ -156,8 +163,9 @@ fn safe_math() {
                 width: 256,
                 value: BigInt::from_str("4000000000000000000").unwrap(),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_ne!(res.unwrap(), 0);
 }

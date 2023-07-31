@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::borsh_encoding::{decode_at_offset, encode_arguments, BorshToken};
-use anchor_syn::idl::Idl;
+use anchor_syn::idl::{Idl, IdlAccountItem};
 use base58::{FromBase58, ToBase58};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use itertools::Itertools;
 use libc::c_char;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -17,12 +18,9 @@ use solana_rbpf::{
     verifier::{RequisiteVerifier, TautologyVerifier},
     vm::{BuiltinProgram, Config, ContextObject, EbpfVm, ProgramResult, StableResult},
 };
+use solang::abi::anchor::discriminator;
 use solang::{
-    abi::anchor::{discriminator, generate_anchor_idl},
-    compile,
-    file_resolver::FileResolver,
-    sema::ast,
-    Target,
+    abi::anchor::generate_anchor_idl, compile, file_resolver::FileResolver, sema::ast, Target,
 };
 use std::{
     cell::{RefCell, RefMut},
@@ -80,9 +78,8 @@ type CallParametersCheck = fn(vm: &VirtualMachine, instr: &Instruction, pda: &[P
 
 struct VirtualMachine {
     account_data: HashMap<Account, AccountState>,
-    origin: Account,
-    programs: Vec<Contract>,
-    stack: Vec<Contract>,
+    programs: Vec<Program>,
+    stack: Vec<Program>,
     logs: String,
     events: Vec<Vec<Vec<u8>>>,
     return_data: Option<(Account, Vec<u8>)>,
@@ -90,10 +87,9 @@ struct VirtualMachine {
 }
 
 #[derive(Clone)]
-struct Contract {
-    program: Account,
+struct Program {
+    id: Account,
     idl: Option<Idl>,
-    data: Account,
 }
 
 #[derive(Serialize)]
@@ -186,21 +182,9 @@ fn build_solidity(src: &str) -> VirtualMachine {
             },
         );
 
-        let data = account_new();
-
-        account_data.insert(
-            data,
-            AccountState {
-                data: [0u8; 4096].to_vec(),
-                owner: Some(program),
-                lamports: 0,
-            },
-        );
-
-        programs.push(Contract {
-            program,
+        programs.push(Program {
+            id: program,
             idl: Some(idl),
-            data,
         });
     }
 
@@ -228,22 +212,12 @@ fn build_solidity(src: &str) -> VirtualMachine {
         },
     );
 
+    account_data.insert([0; 32], AccountState::default());
+
     let cur = programs.last().unwrap().clone();
-
-    let origin = account_new();
-
-    account_data.insert(
-        origin,
-        AccountState {
-            data: Vec::new(),
-            owner: None,
-            lamports: 0,
-        },
-    );
 
     VirtualMachine {
         account_data,
-        origin,
         programs,
         stack: vec![cur],
         logs: String::new(),
@@ -365,7 +339,7 @@ fn serialize_parameters(
     v.write_all(input).unwrap();
 
     // program id
-    v.write_all(&vm.stack[0].program).unwrap();
+    v.write_all(&vm.stack[0].id).unwrap();
 
     (v, refs)
 }
@@ -835,7 +809,7 @@ fn sol_set_return_data(
         if len == 0 {
             vm.return_data = None;
         } else {
-            vm.return_data = Some((vm.stack[0].program, buf.to_vec()));
+            vm.return_data = Some((vm.stack[0].id, buf.to_vec()));
         }
 
         *result = ProgramResult::Ok(0);
@@ -1163,7 +1137,7 @@ fn sol_invoke_signed_c(
                         })
                         .collect();
 
-                let pda = create_program_address(&vm.stack[0].program, &seeds);
+                let pda = create_program_address(&vm.stack[0].id, &seeds);
 
                 println!(
                     "pda: {} seeds {}",
@@ -1281,10 +1255,9 @@ fn sol_invoke_signed_c(
                         },
                     );
 
-                    vm.programs.push(Contract {
-                        program: create_account.program_id,
+                    vm.programs.push(Program {
+                        id: create_account.program_id,
                         idl: None,
-                        data: new_address,
                     });
                 }
                 8 => {
@@ -1323,24 +1296,17 @@ fn sol_invoke_signed_c(
                 instruction => panic!("instruction {instruction} not supported"),
             }
         } else {
-            let data_id: Account = instruction.accounts[0].pubkey.0;
-
             println!(
-                "calling {} program_id {}",
-                data_id.to_base58(),
+                "calling program_id {}",
                 instruction.program_id.0.to_base58()
             );
 
-            assert_eq!(data_id, instruction.accounts[0].pubkey.0);
-
-            let mut p = vm
+            let p = vm
                 .programs
                 .iter()
-                .find(|p| p.program == instruction.program_id.0)
+                .find(|p| p.id == instruction.program_id.0)
                 .unwrap()
                 .clone();
-
-            p.data = data_id;
 
             vm.stack.insert(0, p);
 
@@ -1427,10 +1393,10 @@ impl VirtualMachine {
             .unwrap();
 
         // program.program
-        println!("program: {}", program.program.to_base58());
+        println!("program: {}", program.id.to_base58());
 
         let executable = Executable::<TautologyVerifier, SyscallContext>::from_elf(
-            &self.account_data[&program.program].data,
+            &self.account_data[&program.id].data,
             Arc::new(loader),
         )
         .expect("should work");
@@ -1465,8 +1431,6 @@ impl VirtualMachine {
 
         deserialize_parameters(&parameter_bytes, &refs, &mut self.account_data);
 
-        self.validate_account_data_heap();
-
         if let Some((_, return_data)) = &self.return_data {
             println!("return: {}", hex::encode(return_data));
         }
@@ -1474,163 +1438,29 @@ impl VirtualMachine {
         res
     }
 
-    fn constructor(&mut self, args: &[BorshToken]) {
-        let default_metas = self.default_metas();
-        self.constructor_expected(0, &default_metas, args)
-    }
-
-    fn constructor_expected(&mut self, expected: u64, metas: &[AccountMeta], args: &[BorshToken]) {
-        self.return_data = None;
-
-        let program = &self.stack[0];
-        println!("constructor for {}", hex::encode(program.data));
-
-        let mut calldata = discriminator("global", "new");
-        if program
+    fn function(&mut self, name: &str) -> VmFunction {
+        let idx = if let Some((idx, _)) = self.stack[0]
             .idl
             .as_ref()
             .unwrap()
             .instructions
             .iter()
-            .any(|instr| instr.name == "new")
+            .find_position(|instr| instr.name == name)
         {
-            let mut encoded_data = encode_arguments(args);
-            calldata.append(&mut encoded_data);
+            idx
+        } else {
+            panic!("Function not found")
         };
 
-        let res = self.execute(metas, &calldata);
-
-        if let ProgramResult::Ok(res) = res {
-            assert_eq!(res, expected);
-        } else {
-            panic!("{res:?}");
+        VmFunction {
+            vm: self,
+            idx,
+            expected: 0,
+            accounts: Vec::new(),
+            has_remaining: false,
+            arguments: None,
+            data_account: None,
         }
-        if let Some((_, return_data)) = &self.return_data {
-            assert_eq!(return_data.len(), 0);
-        }
-    }
-
-    fn function(&mut self, name: &str, args: &[BorshToken]) -> Option<BorshToken> {
-        let default_metas = self.default_metas();
-
-        self.function_metas(name, &default_metas, args)
-    }
-
-    fn function_metas(
-        &mut self,
-        name: &str,
-        metas: &[AccountMeta],
-        args: &[BorshToken],
-    ) -> Option<BorshToken> {
-        self.return_data = None;
-        let program = &self.stack[0];
-
-        println!("function {} for {}", name, hex::encode(program.data));
-
-        let mut calldata = discriminator("global", name);
-
-        let instruction = if let Some(instr) = program
-            .idl
-            .as_ref()
-            .unwrap()
-            .instructions
-            .iter()
-            .find(|item| item.name == name)
-        {
-            instr.clone()
-        } else {
-            panic!("Function '{name}' not found");
-        };
-
-        let mut encoded_args = encode_arguments(args);
-        calldata.append(&mut encoded_args);
-
-        println!("input: {}", hex::encode(&calldata));
-
-        let res = self.execute(metas, &calldata);
-        match res {
-            ProgramResult::Ok(0) => (),
-            ProgramResult::Ok(error_code) => panic!("unexpected return {error_code:#x}"),
-            ProgramResult::Err(e) => panic!("error: {e:?}"),
-        };
-
-        let return_data = if let Some((_, return_data)) = &self.return_data {
-            return_data.as_slice()
-        } else {
-            &[]
-        };
-
-        if let Some(ret) = &instruction.returns {
-            let mut offset: usize = 0;
-            let decoded = decode_at_offset(
-                return_data,
-                &mut offset,
-                ret,
-                &self.stack[0].idl.as_ref().unwrap().types,
-            );
-            assert_eq!(offset, return_data.len());
-            Some(decoded)
-        } else {
-            assert_eq!(return_data.len(), 0);
-            None
-        }
-    }
-
-    fn function_must_fail(&mut self, name: &str, args: &[BorshToken]) -> ProgramResult {
-        let program = &self.stack[0];
-
-        println!("function for {}", hex::encode(program.data));
-
-        let mut calldata = Vec::new();
-
-        if !self.stack[0]
-            .idl
-            .as_ref()
-            .unwrap()
-            .instructions
-            .iter()
-            .any(|item| item.name == name)
-        {
-            panic!("Function '{name}' not found");
-        }
-
-        let selector = discriminator("global", name);
-        calldata.extend_from_slice(&selector);
-        let mut encoded = encode_arguments(args);
-        calldata.append(&mut encoded);
-
-        let default_metas = self.default_metas();
-
-        println!("input: {}", hex::encode(&calldata));
-
-        self.execute(&default_metas, &calldata)
-    }
-
-    fn default_metas(&self) -> Vec<AccountMeta> {
-        // Just include everything
-        let mut accounts = vec![AccountMeta {
-            pubkey: Pubkey(self.stack[0].data),
-            is_writable: true,
-            is_signer: false,
-        }];
-
-        for acc in self.account_data.keys() {
-            if *acc != accounts[0].pubkey.0 {
-                accounts.push(AccountMeta {
-                    pubkey: Pubkey(*acc),
-                    is_signer: false,
-                    is_writable: true,
-                });
-            }
-        }
-
-        accounts
-    }
-
-    fn data(&self) -> &Vec<u8> {
-        let program = &self.stack[0];
-
-        &self.account_data[&program.data].data
     }
 
     fn set_program(&mut self, no: usize) {
@@ -1671,15 +1501,14 @@ impl VirtualMachine {
             },
         );
 
-        self.programs.push(Contract {
-            program: *program_id,
+        self.programs.push(Program {
+            id: *program_id,
             idl: None,
-            data: *account,
         });
     }
 
-    fn validate_account_data_heap(&self) -> usize {
-        if let Some(acc) = self.account_data.get(&self.stack[0].data) {
+    fn validate_account_data_heap(&self, account: &Pubkey) -> usize {
+        if let Some(acc) = self.account_data.get(&account.0) {
             let data = &acc.data;
 
             let mut count = 0;
@@ -1748,6 +1577,20 @@ impl VirtualMachine {
             0
         }
     }
+
+    fn initialize_data_account(&mut self) -> Account {
+        let address = account_new();
+        self.account_data.insert(
+            address,
+            AccountState {
+                lamports: 0,
+                data: vec![0; 4096],
+                owner: Some(self.stack[0].id),
+            },
+        );
+
+        address
+    }
 }
 
 pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
@@ -1756,4 +1599,150 @@ pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
     cache.set_file_contents("test.sol", src.to_string());
 
     solang::parse_and_resolve(OsStr::new("test.sol"), &mut cache, target)
+}
+
+struct VmFunction<'a, 'b> {
+    vm: &'a mut VirtualMachine,
+    idx: usize,
+    expected: u64,
+    accounts: Vec<AccountMeta>,
+    has_remaining: bool,
+    arguments: Option<&'b [BorshToken]>,
+    data_account: Option<usize>,
+}
+
+impl<'a, 'b> VmFunction<'a, 'b> {
+    fn accounts(&mut self, accounts: Vec<(&str, Account)>) -> &mut Self {
+        let accounts = accounts.into_iter().collect::<HashMap<&str, Account>>();
+        let mut metas: Vec<AccountMeta> = Vec::new();
+
+        for account in &self.vm.stack[0].idl.as_ref().unwrap().instructions[self.idx].accounts {
+            match account {
+                IdlAccountItem::IdlAccount(account) => {
+                    if account.name == "dataAccount" {
+                        self.data_account = Some(metas.len());
+                    }
+
+                    metas.push(AccountMeta {
+                        pubkey: Pubkey(
+                            accounts
+                                .get(account.name.as_str())
+                                .cloned()
+                                .expect("an account is missing"),
+                        ),
+                        is_writable: account.is_mut,
+                        is_signer: account.is_signer,
+                    });
+                }
+                IdlAccountItem::IdlAccounts(_) => unimplemented!("Solang does not use IdlAccounts"),
+            }
+        }
+
+        self.accounts = metas;
+        self
+    }
+
+    fn remaining_accounts(&mut self, accounts: &[AccountMeta]) -> &mut Self {
+        self.has_remaining = true;
+        self.accounts.extend_from_slice(accounts);
+        self
+    }
+
+    fn expected(&mut self, expected: u64) -> &mut Self {
+        self.expected = expected;
+        self
+    }
+
+    fn arguments(&mut self, args: &'b [BorshToken]) -> &mut Self {
+        self.arguments = Some(args);
+        self
+    }
+
+    fn call(&mut self) -> Option<BorshToken> {
+        self.vm.return_data = None;
+        let idl_instr = self.vm.stack[0].idl.as_ref().unwrap().instructions[self.idx].clone();
+        let mut calldata = discriminator("global", &idl_instr.name);
+
+        if !self.has_remaining {
+            assert_eq!(
+                idl_instr.accounts.len(),
+                self.accounts.len(),
+                "Incorrect number of accounts"
+            );
+        }
+
+        println!(
+            "function {} for {}",
+            idl_instr.name,
+            self.vm.stack[0].id.to_base58()
+        );
+
+        if let Some(args) = self.arguments {
+            let mut encoded_data = encode_arguments(args);
+            calldata.append(&mut encoded_data);
+        }
+
+        println!("input: {}", hex::encode(&calldata));
+
+        let res = self.vm.execute(&self.accounts, &calldata);
+
+        if let Some(idx) = self.data_account {
+            self.vm
+                .validate_account_data_heap(&self.accounts[idx].pubkey);
+        }
+
+        match res {
+            ProgramResult::Ok(num) if num == self.expected => (),
+            ProgramResult::Ok(num) => panic!("unexpected return {num:#x}"),
+            ProgramResult::Err(e) => panic!("error {e:?}"),
+        }
+
+        let return_data = if let Some((_, return_data)) = &self.vm.return_data {
+            return_data.as_slice()
+        } else {
+            &[]
+        };
+
+        if let Some(ret) = &idl_instr.returns {
+            let mut offset = 0;
+            let decoded = decode_at_offset(
+                return_data,
+                &mut offset,
+                ret,
+                &self.vm.stack[0].idl.as_ref().unwrap().types,
+            );
+            assert_eq!(offset, return_data.len());
+            Some(decoded)
+        } else {
+            assert_eq!(return_data.len(), 0);
+            None
+        }
+    }
+
+    fn must_fail(&mut self) -> ProgramResult {
+        self.vm.return_data = None;
+        let idl_instr = self.vm.stack[0].idl.as_ref().unwrap().instructions[self.idx].clone();
+        if !self.has_remaining {
+            assert_eq!(
+                idl_instr.accounts.len(),
+                self.accounts.len(),
+                "Incorrect number of accounts"
+            );
+        }
+
+        let mut calldata = discriminator("global", &idl_instr.name);
+        if let Some(args) = self.arguments {
+            let mut encoded_data = encode_arguments(args);
+            calldata.append(&mut encoded_data);
+        }
+
+        let result = self.vm.execute(&self.accounts, &calldata);
+
+        if let Some(idx) = self.data_account {
+            self.vm
+                .validate_account_data_heap(&self.accounts[idx].pubkey);
+        }
+
+        result
+    }
 }

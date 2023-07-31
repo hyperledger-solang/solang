@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_new, build_solidity, AccountState, BorshToken};
+use crate::{account_new, build_solidity, AccountMeta, AccountState, BorshToken, Pubkey};
 
 #[test]
 fn use_authority() {
@@ -17,12 +17,24 @@ fn use_authority() {
         },
     );
 
-    vm.constructor(&[BorshToken::Address(authority)]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .arguments(&[BorshToken::Address(authority)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let res = vm.function_must_fail("inc", &[]).unwrap();
+    let res = vm
+        .function("inc")
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail()
+        .unwrap();
     assert_ne!(res, 0);
 
-    let res = vm.function("get", &[]).unwrap();
+    let res = vm
+        .function("get")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         res,
         BorshToken::Uint {
@@ -31,16 +43,20 @@ fn use_authority() {
         }
     );
 
-    let mut metas = vm.default_metas();
+    vm.function("inc")
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(authority),
+            is_signer: true,
+            is_writable: false,
+        }])
+        .call();
 
-    // "sign" the transaction with the authority
-    if let Some(meta) = metas.iter_mut().find(|e| e.pubkey.0 == authority) {
-        meta.is_signer = true;
-    }
-
-    vm.function_metas("inc", &metas, &[]);
-
-    let res = vm.function("get", &[]).unwrap();
+    let res = vm
+        .function("get")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         res,
         BorshToken::Uint {
