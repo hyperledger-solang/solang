@@ -96,7 +96,7 @@ describe('Create spl-token and use from solidity', function () {
             .remainingAccounts([
                 { pubkey: otherTokenAccount.address, isSigner: false, isWritable: true },
                 { pubkey: tokenAccount.address, isSigner: false, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+                { pubkey: payer.publicKey, isSigner: true, isWritable: false },
             ])
             .signers([payer])
             .rpc();

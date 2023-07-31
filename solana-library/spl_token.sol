@@ -79,7 +79,7 @@ library SplToken {
 		AccountMeta[3] metas = [
 			AccountMeta({pubkey: from, is_writable: true, is_signer: false}),
 			AccountMeta({pubkey: to, is_writable: true, is_signer: false}),
-			AccountMeta({pubkey: owner, is_writable: true, is_signer: true})
+			AccountMeta({pubkey: owner, is_writable: false, is_signer: true})
 		];
 
 		tokenProgramId.call{accounts: metas}(instr);
@@ -90,7 +90,7 @@ library SplToken {
 	/// @param account the acount for which tokens should be burned
 	/// @param mint the mint for this token
 	/// @param owner the publickey of the account owner keypair
-	/// @param amount the amount to transfer
+	/// @param amount the amount to burn
 	function burn(address account, address mint, address owner, uint64 amount) internal {
 		bytes instr = new bytes(9);
 
@@ -276,10 +276,10 @@ library SplToken {
 			AccountMeta({pubkey: mintAuthority, is_signer: true, is_writable: false})
 		];
 
-		bytes data = new bytes(9);
+		bytes data = new bytes(3);
 		data[0] = uint8(TokenInstruction.SetAuthority);
 		data[1] = uint8(AuthorityType.MintTokens);
-		data[3] = 0;
+		data[2] = 0;
 		
 		tokenProgramId.call{accounts: metas}(data);
 	}
