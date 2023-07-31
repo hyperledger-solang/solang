@@ -222,10 +222,10 @@ impl Compile {
                 "TARGET" => self.target_arg.name = matches.get_one::<String>("TARGET").cloned(),
                 "ADDRESS_LENGTH" => {
                     self.target_arg.address_length =
-                        matches.get_one::<u64>("ADDRESS_LENGTH").cloned()
+                        matches.get_one::<u64>("ADDRESS_LENGTH").copied()
                 }
                 "VALUE_LENGTH" => {
-                    self.target_arg.value_length = matches.get_one::<u64>("VALUE_LENGTH").cloned()
+                    self.target_arg.value_length = matches.get_one::<u64>("VALUE_LENGTH").copied()
                 }
 
                 _ => {}
@@ -466,7 +466,7 @@ pub(crate) fn target_arg<T: TargetArgTrait>(target_arg: &T) -> Target {
 }
 
 /// This trait is used to avoid code repetition when dealing with two implementations of the Package type:
-/// CompilePackage and DocPackage. Each struct represents a group of arguments for the compile and doc commands.
+/// `CompilePackage` and `DocPackage`. Each struct represents a group of arguments for the compile and doc commands.
 /// Throughout the code, these two structs are treated the same, and this trait allows for unified handling.
 pub trait PackageTrait {
     fn get_input(&self) -> &Vec<PathBuf>;
@@ -565,9 +565,9 @@ pub fn options_arg(debug: &DebugFeatures, optimizations: &Optimizations) -> Opti
         common_subexpression_elimination: optimizations.common_subexpression_elimination,
         generate_debug_information: debug.generate_debug_info,
         opt_level,
-        log_api_return_codes: debug.log_api_return_codes & !debug.release,
-        log_runtime_errors: debug.log_runtime_errors & !debug.release,
-        log_prints: debug.log_prints & !debug.release,
+        log_api_return_codes: debug.log_api_return_codes && !debug.release,
+        log_runtime_errors: debug.log_runtime_errors && !debug.release,
+        log_prints: debug.log_prints && !debug.release,
         #[cfg(feature = "wasm_opt")]
         wasm_opt: optimizations.wasm_opt_passes.or(if debug.release {
             Some(OptimizationPasses::Z)
