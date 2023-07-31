@@ -43,11 +43,6 @@ fn run_tests(iter: impl Iterator<Item = PathBuf>) {
     for path in iter {
         let file_stem = path.file_stem().unwrap();
 
-        // Fixed by #1452.
-        if file_stem == "572f0106bd96bcf394009386fdc5185cd575cbf3" {
-            continue;
-        }
-
         // Known problematic test.
         if file_stem == "a467d917a5158b613f94954d4a558a5cb61e6773" {
             continue;
