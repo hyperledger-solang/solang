@@ -1743,6 +1743,10 @@ impl<'a, 'b> VmFunction<'a, 'b> {
                 .validate_account_data_heap(&self.accounts[idx].pubkey);
         }
 
+        if let ProgramResult::Ok(num) = result {
+            assert_ne!(num, 0);
+        }
+
         result
     }
 }

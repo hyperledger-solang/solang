@@ -967,7 +967,7 @@ fn test_overflow_boundaries() {
 
         let lower_second_op = lower_boundary_minus_two.div(2);
 
-        let res = contract
+        contract
             .function("mul")
             .arguments(&[
                 BorshToken::Int {
@@ -982,9 +982,7 @@ fn test_overflow_boundaries() {
             .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
-        assert_ne!(res.unwrap(), 0);
-
-        let res = contract
+        contract
             .function("mul")
             .arguments(&[
                 BorshToken::Int {
@@ -999,9 +997,7 @@ fn test_overflow_boundaries() {
             .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
-        assert_ne!(res.unwrap(), 0);
-
-        let res = contract
+        contract
             .function("mul")
             .arguments(&[
                 BorshToken::Int {
@@ -1016,9 +1012,7 @@ fn test_overflow_boundaries() {
             .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
-        assert_ne!(res.unwrap(), 0);
-
-        let res = contract
+        contract
             .function("mul")
             .arguments(&[
                 BorshToken::Int {
@@ -1033,9 +1027,7 @@ fn test_overflow_boundaries() {
             .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
-        assert_ne!(res.unwrap(), 0);
-
-        let res = contract
+        contract
             .function("mul")
             .arguments(&[
                 BorshToken::Int {
@@ -1049,8 +1041,6 @@ fn test_overflow_boundaries() {
             ])
             .accounts(vec![("dataAccount", data_account)])
             .must_fail();
-
-        assert_ne!(res.unwrap(), 0);
     }
 }
 
@@ -1199,7 +1189,7 @@ fn test_overflow_detect_signed() {
         // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
         let second_operand_rand = rng.gen_bigint_range(&BigInt::from(2usize), &limit);
 
-        let res = contract
+        contract
             .function("mul")
             .arguments(&[
                 BorshToken::Int {
@@ -1213,8 +1203,6 @@ fn test_overflow_detect_signed() {
             ])
             .accounts(vec![("dataAccount", data_account)])
             .must_fail();
-
-        assert_ne!(res.unwrap(), 0);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
         let mut lower_limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1225,7 +1213,7 @@ fn test_overflow_detect_signed() {
         let first_operand_rand =
             rng.gen_bigint_range(&lower_limit, &(lower_limit.clone().div(2usize)).add(1usize));
 
-        let res = contract
+        contract
             .function("mul")
             .arguments(&[
                 BorshToken::Int {
@@ -1239,8 +1227,6 @@ fn test_overflow_detect_signed() {
             ])
             .accounts(vec![("dataAccount", data_account)])
             .must_fail();
-
-        assert_ne!(res.unwrap(), 0);
     }
 }
 
@@ -1275,7 +1261,7 @@ fn test_overflow_detect_unsigned() {
             // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
             let second_operand_rand = rng.gen_biguint_range(&BigUint::from(2usize), &limit);
 
-            let res = contract
+            contract
                 .function("mul")
                 .arguments(&[
                     BorshToken::Uint {
@@ -1289,7 +1275,6 @@ fn test_overflow_detect_unsigned() {
                 ])
                 .accounts(vec![("dataAccount", data_account)])
                 .must_fail();
-            assert_ne!(res.unwrap(), 0);
         }
     }
 }
