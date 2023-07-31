@@ -405,18 +405,21 @@ pub fn visit_mut(visitor: &mut (impl VisitorMut + ?Sized), token: &mut BorshToke
     }
 }
 
+#[allow(clippy::ptr_arg)]
 pub fn visit_fixed_array(visitor: &mut (impl VisitorMut + ?Sized), v: &mut Vec<BorshToken>) {
     for token in v.iter_mut() {
         visit_mut(visitor, token);
     }
 }
 
+#[allow(clippy::ptr_arg)]
 pub fn visit_array(visitor: &mut (impl VisitorMut + ?Sized), v: &mut Vec<BorshToken>) {
     for token in v.iter_mut() {
         visit_mut(visitor, token);
     }
 }
 
+#[allow(clippy::ptr_arg)]
 pub fn visit_tuple(visitor: &mut (impl VisitorMut + ?Sized), v: &mut Vec<BorshToken>) {
     for token in v.iter_mut() {
         visit_mut(visitor, token);

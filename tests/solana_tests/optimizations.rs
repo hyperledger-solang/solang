@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     borsh_encoding::{visit_mut, VisitorMut},
     BorshToken, VirtualMachineBuilder,
