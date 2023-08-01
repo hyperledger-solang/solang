@@ -126,14 +126,14 @@ fn add_file(cache: &mut FileResolver, path: &Path, target: Target) -> io::Result
 
     for line in source.lines() {
         if line.starts_with("import") {
-            let start = line.find('"').unwrap();
-            let end = line.rfind('"').unwrap();
-            let file = &line[start + 1..end];
-            if file != "solana" {
-                let mut import_path = path.parent().unwrap().to_path_buf();
-                import_path.push(file);
-                println!("adding import {}", import_path.display());
-                add_file(cache, &import_path, target)?;
+            if let (Some(start), Some(end)) = (line.find('"'), line.rfind('"')) {
+                let file = &line[start + 1..end];
+                if file != "solana" {
+                    let mut import_path = path.parent().unwrap().to_path_buf();
+                    import_path.push(file);
+                    println!("adding import {}", import_path.display());
+                    add_file(cache, &import_path, target)?;
+                }
             }
         }
     }
