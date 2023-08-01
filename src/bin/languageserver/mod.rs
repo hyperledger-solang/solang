@@ -14,7 +14,21 @@ use solang::{
 use solang_parser::pt;
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 use tokio::sync::Mutex;
-use tower_lsp::{jsonrpc::Result, lsp_types::*, Client, LanguageServer, LspService, Server};
+use tower_lsp::{
+    jsonrpc::Result,
+    lsp_types::{
+        CompletionOptions, CompletionParams, CompletionResponse, Diagnostic,
+        DiagnosticRelatedInformation, DiagnosticSeverity, DidChangeConfigurationParams,
+        DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams,
+        DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
+        ExecuteCommandOptions, ExecuteCommandParams, Hover, HoverContents, HoverParams,
+        HoverProviderCapability, InitializeParams, InitializeResult, InitializedParams, Location,
+        MarkedString, MessageType, OneOf, Position, Range, ServerCapabilities,
+        SignatureHelpOptions, TextDocumentContentChangeEvent, TextDocumentSyncCapability,
+        TextDocumentSyncKind, Url, WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
+    },
+    Client, LanguageServer, LspService, Server,
+};
 
 use crate::cli::{target_arg, LanguageServerCommand};
 
@@ -81,7 +95,7 @@ impl SolangServer {
     /// Parse file
     async fn parse_file(&self, uri: Url) {
         let mut resolver = FileResolver::new();
-        for (path, contents) in self.files.lock().await.text_buffers.iter() {
+        for (path, contents) in &self.files.lock().await.text_buffers {
             resolver.set_file_contents(path.to_str().unwrap(), contents.clone());
         }
         if let Ok(path) = uri.to_file_path() {
@@ -198,7 +212,7 @@ impl<'a> Builder<'a> {
                     .var_constants
                     .get(loc)
                     .and_then(get_constants)
-                    .map(|s| format!(" = {}", s))
+                    .map(|s| format!(" = {s}"))
                     .unwrap_or_default();
 
                 let readonly = symtab
@@ -572,7 +586,7 @@ impl<'a> Builder<'a> {
                     let name = &self.ns.contracts[*contract_no].variables[*var_no].name;
                     (contract, name)
                 } else {
-                    let contract = "".to_string();
+                    let contract = String::new();
                     let name = &self.ns.constants[*var_no].name;
                     (contract, name)
                 };
@@ -581,7 +595,7 @@ impl<'a> Builder<'a> {
                     .var_constants
                     .get(loc)
                     .and_then(get_constants)
-                    .map(|s| format!(" = {}", s))
+                    .map(|s| format!(" = {s}"))
                     .unwrap_or_default();
                 let val = format!("{} constant {}{}{}", ty.to_string(self.ns), contract, name, constant);
                 self.hovers.push(HoverEntry {
@@ -806,19 +820,19 @@ impl<'a> Builder<'a> {
                     let mut params = protval.params.iter().map(|param| param.to_string(self.ns)).join(" ");
 
                     if !params.is_empty() {
-                        params = format!("({})", params);
+                        params = format!("({params})");
                     }
 
                     let doc = format!("{}\n\n", protval.doc);
                     (rets, protval.name, params, doc)
                 } else {
-                    ("".to_string(), "", "".to_string(), "".to_string())
+                    (String::new(), "", String::new(), String::new())
                 };
-                let val = make_code_block(format!("[built-in] {} {} {}", rets, name, params));
+                let val = make_code_block(format!("[built-in] {rets} {name} {params}"));
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
                     stop: loc.exclusive_end(),
-                    val: format!("{}{}", doc, val),
+                    val: format!("{doc}{val}"),
                 });
 
                 for expr in args {
@@ -853,7 +867,7 @@ impl<'a> Builder<'a> {
         self.hovers.push(HoverEntry {
             start: contract.loc.start(),
             stop: contract.loc.start() + contract.name.len(),
-            val: format!("{}{}", tags, val),
+            val: format!("{tags}{val}"),
         });
         if let Some(expr) = &contract.initializer {
             self.expression(expr, symtab);
@@ -931,7 +945,7 @@ impl<'a> Builder<'a> {
                         builder.hovers.push(HoverEntry {
                             start: loc.start(),
                             stop: loc.exclusive_end(),
-                            val: format!("payer account: {}", name),
+                            val: format!("payer account: {name}"),
                         });
                     }
                 }
@@ -998,7 +1012,7 @@ impl<'a> Builder<'a> {
             });
         }
 
-        for lookup in builder.hovers.iter_mut() {
+        for lookup in &mut builder.hovers {
             if let Some(msg) =
                 builder
                     .ns
@@ -1035,8 +1049,8 @@ impl<'a> Builder<'a> {
                     })
                     .join(",\n");
 
-                let val = make_code_block(format!("struct {} {{\n{}\n}}", strct, fields));
-                format!("{}{}", tags, val)
+                let val = make_code_block(format!("struct {strct} {{\n{fields}\n}}"));
+                format!("{tags}{val}")
             }
             ast::Type::Enum(n) => {
                 let enm = &self.ns.enums[*n];
@@ -1050,8 +1064,8 @@ impl<'a> Builder<'a> {
                     .map(|value| format!("\t{}", value.0))
                     .join(",\n");
 
-                let val = make_code_block(format!("enum {} {{\n{}\n}}", enm, values));
-                format!("{}{}", tags, val)
+                let val = make_code_block(format!("enum {enm} {{\n{values}\n}}"));
+                format!("{tags}{val}")
             }
             _ => make_code_block(ty.to_string(self.ns)),
         }
@@ -1153,7 +1167,7 @@ impl LanguageServer for SolangServer {
             }
             Err(_) => {
                 self.client
-                    .log_message(MessageType::ERROR, format!("received invalid URI: {}", uri))
+                    .log_message(MessageType::ERROR, format!("received invalid URI: {uri}"))
                     .await;
             }
         }
@@ -1174,7 +1188,7 @@ impl LanguageServer for SolangServer {
             }
             Err(_) => {
                 self.client
-                    .log_message(MessageType::ERROR, format!("received invalid URI: {}", uri))
+                    .log_message(MessageType::ERROR, format!("received invalid URI: {uri}"))
                     .await;
             }
         }
@@ -1262,12 +1276,7 @@ fn make_code_block(s: impl AsRef<str>) -> String {
 fn get_constants(expr: &Expression) -> Option<String> {
     let val = match expr {
         codegen::Expression::BytesLiteral {
-            ty: ast::Type::Bytes(_),
-            value,
-            ..
-        }
-        | codegen::Expression::BytesLiteral {
-            ty: ast::Type::DynamicBytes,
+            ty: ast::Type::Bytes(_) | ast::Type::DynamicBytes,
             value,
             ..
         } => {
@@ -1281,12 +1290,7 @@ fn get_constants(expr: &Expression) -> Option<String> {
             format!("\"{}\"", String::from_utf8_lossy(value))
         }
         codegen::Expression::NumberLiteral {
-            ty: ast::Type::Uint(_),
-            value,
-            ..
-        }
-        | codegen::Expression::NumberLiteral {
-            ty: ast::Type::Int(_),
+            ty: ast::Type::Uint(_) | ast::Type::Int(_),
             value,
             ..
         } => {
@@ -1416,7 +1420,7 @@ mod test {
                         }
                     }),
                     range_length: Some(17),
-                    text: "".to_string(),
+                    text: String::new(),
                 }
             ),
         );

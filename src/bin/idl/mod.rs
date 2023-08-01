@@ -359,7 +359,7 @@ fn idltype_to_solidity(ty: &IdlType, ty_names: &[(String, String)]) -> Result<St
         )),
         IdlType::Defined(ty) => {
             if let Some(e) = ty_names.iter().find(|rename| rename.0 == *ty) {
-                Ok(e.1.to_owned())
+                Ok(e.1.clone())
             } else {
                 Ok(ty.into())
             }
@@ -393,7 +393,7 @@ fn rename_keywords(name_map: &mut Vec<(String, String)>) {
         let name = &name_map[i].0;
 
         if is_keyword(name) {
-            let mut name = name.to_owned();
+            let mut name = name.clone();
             loop {
                 name = format!("_{name}");
                 if name_map.iter().all(|(_, n)| *n != name) {
