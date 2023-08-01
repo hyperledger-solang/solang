@@ -57,7 +57,7 @@ library SplToken {
 		AccountMeta[3] metas = [
 			AccountMeta({pubkey: mint, is_writable: true, is_signer: false}),
 			AccountMeta({pubkey: account, is_writable: true, is_signer: false}),
-			AccountMeta({pubkey: authority, is_writable: true, is_signer: true})
+			AccountMeta({pubkey: authority, is_writable: false, is_signer: true})
 		];
 
 		tokenProgramId.call{accounts: metas}(instr);
@@ -100,7 +100,7 @@ library SplToken {
 		AccountMeta[3] metas = [
 			AccountMeta({pubkey: account, is_writable: true, is_signer: false}),
 			AccountMeta({pubkey: mint, is_writable: true, is_signer: false}),
-			AccountMeta({pubkey: owner, is_writable: true, is_signer: true})
+			AccountMeta({pubkey: owner, is_writable: false, is_signer: true})
 		];
 
 		tokenProgramId.call{accounts: metas}(instr);
