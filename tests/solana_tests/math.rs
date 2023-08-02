@@ -116,8 +116,7 @@ fn safe_math() {
         },
     );
 
-    let res = vm
-        .function("mul_test")
+    vm.function("mul_test")
         .arguments(&[
             BorshToken::Uint {
                 width: 256,
@@ -131,9 +130,7 @@ fn safe_math() {
         .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
-    assert_ne!(res.unwrap(), 0);
-
-    let res = vm.function(
+    vm.function(
         "add_test")
         .arguments(
         &[
@@ -150,10 +147,7 @@ fn safe_math() {
         .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
-    assert_ne!(res.unwrap(), 0);
-
-    let res = vm
-        .function("sub_test")
+    vm.function("sub_test")
         .arguments(&[
             BorshToken::Uint {
                 width: 256,
@@ -166,6 +160,4 @@ fn safe_math() {
         ])
         .accounts(vec![("dataAccount", data_account)])
         .must_fail();
-
-    assert_ne!(res.unwrap(), 0);
 }

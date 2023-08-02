@@ -428,7 +428,7 @@ pub enum ASTFunction {
 
 impl BasicBlock {
     /// Fetch the blocks that can be executed after the block passed as argument
-    pub fn edges(&self) -> Vec<usize> {
+    pub fn successors(&self) -> Vec<usize> {
         let mut out = Vec::new();
 
         // out cfg has edge as the last instruction in a block

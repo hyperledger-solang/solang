@@ -27,7 +27,7 @@ fn test_highest_bit() {
 }
 
 #[test]
-fn expresson_known_bits() {
+fn expression_known_bits() {
     use crate::Target;
     use solang_parser::pt::Loc;
 
