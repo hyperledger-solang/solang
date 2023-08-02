@@ -390,7 +390,7 @@ pub trait VisitorMut {
     }
 }
 
-pub fn visit_mut(visitor: &mut (impl VisitorMut + ?Sized), token: &mut BorshToken) {
+pub fn visit_mut<T: VisitorMut + ?Sized>(visitor: &mut T, token: &mut BorshToken) {
     match token {
         BorshToken::Address(a) => visitor.visit_address(a),
         BorshToken::Int { width, value } => visitor.visit_int(width, value),
@@ -406,21 +406,21 @@ pub fn visit_mut(visitor: &mut (impl VisitorMut + ?Sized), token: &mut BorshToke
 }
 
 #[allow(clippy::ptr_arg)]
-pub fn visit_fixed_array(visitor: &mut (impl VisitorMut + ?Sized), v: &mut Vec<BorshToken>) {
+pub fn visit_fixed_array<T: VisitorMut + ?Sized>(visitor: &mut T, v: &mut Vec<BorshToken>) {
     for token in v.iter_mut() {
         visit_mut(visitor, token);
     }
 }
 
 #[allow(clippy::ptr_arg)]
-pub fn visit_array(visitor: &mut (impl VisitorMut + ?Sized), v: &mut Vec<BorshToken>) {
+pub fn visit_array<T: VisitorMut + ?Sized>(visitor: &mut T, v: &mut Vec<BorshToken>) {
     for token in v.iter_mut() {
         visit_mut(visitor, token);
     }
 }
 
 #[allow(clippy::ptr_arg)]
-pub fn visit_tuple(visitor: &mut (impl VisitorMut + ?Sized), v: &mut Vec<BorshToken>) {
+pub fn visit_tuple<T: VisitorMut + ?Sized>(visitor: &mut T, v: &mut Vec<BorshToken>) {
     for token in v.iter_mut() {
         visit_mut(visitor, token);
     }

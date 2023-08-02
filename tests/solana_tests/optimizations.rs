@@ -6,13 +6,14 @@ use crate::{
 };
 use anchor_syn::idl::IdlInstruction;
 use once_cell::sync::Lazy;
+use rayon::prelude::*;
 use serde::Deserialize;
 use solang::codegen::Options;
 use std::{
     env::var,
     fs::{read_dir, read_to_string, File},
     io::BufReader,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 #[derive(Debug, Deserialize)]
@@ -35,45 +36,48 @@ fn optimizations() {
     let calls = Path::new("tests/optimization_testcases/calls");
 
     if let Ok(testname) = var("TESTNAME") {
-        run_tests(std::iter::once(calls.join(testname).with_extension("json")));
+        run_test(&calls.join(testname).with_extension("json"));
     } else {
-        run_tests(read_dir(calls).unwrap().map(|entry| entry.unwrap().path()));
+        let tests = read_dir(calls)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect::<Vec<_>>();
+        tests.into_par_iter().for_each(|path| run_test(&path));
     }
 }
 
-fn run_tests(iter: impl Iterator<Item = PathBuf>) {
-    for path in iter {
-        let file_stem = path.file_stem().unwrap();
+fn run_test(path: &Path) {
+    let file_stem = path.file_stem().unwrap();
 
-        // Known problematic test.
-        if file_stem == "b6339ad75e9175a6bf332a2881001b6c928734e2" {
-            continue;
-        }
-
-        dbg!(file_stem);
-
-        let file = File::open(&path).unwrap();
-        let reader = BufReader::new(file);
-        let calls: Calls = serde_json::from_reader(reader).unwrap();
-
-        let path = Path::new("tests/optimization_testcases/programs")
-            .join(file_stem)
-            .with_extension("sol");
-        let program = read_to_string(path).unwrap();
-
-        run_one_test(
-            &program,
-            &calls,
-            [Options::default(), NO_OPTIMIZATIONS.clone()],
-        );
+    // Known problematic test.
+    if file_stem == "b6339ad75e9175a6bf332a2881001b6c928734e2" {
+        return;
     }
+
+    println!("testcase: {:?}", file_stem);
+
+    let file =
+        File::open(path).unwrap_or_else(|error| panic!("failed to open {path:?}: {error:?}"));
+    let reader = BufReader::new(file);
+    let calls: Calls = serde_json::from_reader(reader).unwrap();
+
+    let path = Path::new("tests/optimization_testcases/programs")
+        .join(file_stem)
+        .with_extension("sol");
+    let program = read_to_string(path).unwrap();
+
+    run_test_with_opts(
+        &program,
+        &calls,
+        [Options::default(), NO_OPTIMIZATIONS.clone()],
+    );
 }
 
-fn run_one_test(program: &str, calls: &Calls, opts: impl IntoIterator<Item = Options>) {
+fn run_test_with_opts<T: IntoIterator<Item = Options>>(program: &str, calls: &Calls, opts: T) {
     let mut results_prev: Option<Vec<Result<Option<BorshToken>, u64>>> = None;
 
     for (i, opts) in opts.into_iter().enumerate() {
-        dbg!(i);
+        println!("iteration: {i}");
 
         let mut results_curr = Vec::new();
 
