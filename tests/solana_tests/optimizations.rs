@@ -4,7 +4,6 @@ use crate::{
     borsh_encoding::{visit_mut, VisitorMut},
     BorshToken, VirtualMachineBuilder,
 };
-use anchor_syn::idl::IdlInstruction;
 use once_cell::sync::Lazy;
 use rayon::prelude::*;
 use serde::Deserialize;
@@ -93,20 +92,6 @@ fn run_test_with_opts<T: IntoIterator<Item = Options>>(program: &str, calls: &Ca
         );
 
         for (name, args) in &calls.function {
-            if let Some(idl) = &vm.stack[0].idl {
-                let mut idl = idl.clone();
-
-                idl.instructions.push(IdlInstruction {
-                    name: name.clone(),
-                    docs: None,
-                    accounts: vec![],
-                    args: vec![],
-                    returns: None,
-                });
-
-                vm.stack[0].idl = Some(idl);
-            }
-
             results_curr.push(
                 vm.function(name)
                     .arguments(args)
