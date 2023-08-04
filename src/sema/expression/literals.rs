@@ -679,8 +679,11 @@ pub(super) fn array_literal(
 
                 let ty = expr.ty();
 
-                if let Type::Array(elem, dims) = &ty {
-                    if elem != slice || dims.len() != 1 {
+                if let Type::Array(elem, _) = &ty {
+                    if expr
+                        .cast(loc, slice, true, ns, &mut Diagnostics::default())
+                        .is_err()
+                    {
                         diagnostics.push(Diagnostic::error(
                             expr.loc(),
                             format!(
@@ -691,6 +694,7 @@ pub(super) fn array_literal(
                         ));
                         has_errors = true;
                     }
+                    used_variable(ns, &expr, symtable);
                 } else {
                     diagnostics.push(Diagnostic::error(
                         expr.loc(),
@@ -753,6 +757,8 @@ pub(super) fn array_literal(
     )?;
 
     let ty = if let ResolveTo::Type(ty) = resolve_to {
+        let ty = ty.strip_slices();
+
         first = first.cast(&first.loc(), ty, true, ns, diagnostics)?;
 
         ty.clone()

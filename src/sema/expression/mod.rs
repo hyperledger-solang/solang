@@ -1210,14 +1210,28 @@ impl Expression {
             {
                 Ok(self.clone())
             }
-            (Type::DynamicBytes | Type::Address(_) | Type::Bytes(_), Type::Slice(ty))
-                if ty.as_ref() == &Type::Bytes(1) =>
-            {
+            // bytes/address/bytesN -> slice bytes1
+            (_, Type::Slice(ty)) if from.slice_types() && ty.as_ref() == &Type::Bytes(1) => {
                 Ok(Expression::Cast {
                     loc: *loc,
                     to: to.clone(),
                     expr: Box::new(self.clone()),
                 })
+            }
+            // bytes[] -> slice slice bytes1
+            (Type::Array(from, dims), Type::Slice(to))
+                if dims.len() == 1
+                    && (from == to
+                        || (from.slice_types() && to.slice_depth() == (1, &Type::Bytes(1)))) =>
+            {
+                Ok(self.clone())
+            }
+            // bytes[][] -> slice slice slice bytes1
+            (Type::Array(from, dims), Type::Slice(to))
+                if dims.len() == 2
+                    && (from.slice_types() && to.slice_depth() == (2, &Type::Bytes(1))) =>
+            {
+                Ok(self.clone())
             }
             (Type::FunctionSelector, Type::Bytes(n)) => {
                 let selector_length = ns.target.selector_length();

@@ -1963,7 +1963,9 @@ pub(super) fn parse_call_args(
                     return Err(());
                 }
 
-                let ty = Type::Slice(Box::new(Type::Slice(Box::new(Type::Bytes(1)))));
+                let ty = Type::Slice(Box::new(Type::Slice(Box::new(Type::Slice(Box::new(
+                    Type::Bytes(1),
+                ))))));
 
                 let expr = expression(
                     &arg.expr,
@@ -1974,7 +1976,7 @@ pub(super) fn parse_call_args(
                     ResolveTo::Type(&ty),
                 )?;
 
-                res.seeds = Some(Box::new(expr));
+                res.seeds = Some(expr.cast(&expr.loc(), &ty, true, ns, diagnostics)?.into());
             }
             "program_id" => {
                 if ns.target != Target::Solana {
