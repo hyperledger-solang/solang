@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{build_solidity, BorshToken};
-use base58::ToBase58;
+use base58::{FromBase58, ToBase58};
 use num_bigint::BigInt;
 
 #[test]
@@ -30,9 +30,25 @@ fn builtins() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("mr_now", &[]).unwrap();
+    let clock_account = <[u8; 32]>::try_from(
+        "SysvarC1ock11111111111111111111111111111111"
+            .from_base58()
+            .unwrap(),
+    )
+    .unwrap();
+    let returns = vm
+        .function("mr_now")
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("clock", clock_account),
+        ])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -42,7 +58,14 @@ fn builtins() {
         }
     );
 
-    let returns = vm.function("mr_slot", &[]).unwrap();
+    let returns = vm
+        .function("mr_slot")
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("clock", clock_account),
+        ])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -52,7 +75,14 @@ fn builtins() {
         }
     );
 
-    let returns = vm.function("mr_blocknumber", &[]).unwrap();
+    let returns = vm
+        .function("mr_blocknumber")
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("clock", clock_account),
+        ])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -63,13 +93,13 @@ fn builtins() {
     );
 
     let returns = vm
-        .function(
-            "msg_data",
-            &[BorshToken::Uint {
-                width: 32,
-                value: BigInt::from(0xdeadcafeu32),
-            }],
-        )
+        .function("msg_data")
+        .arguments(&[BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(0xdeadcafeu32),
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     if let BorshToken::Bytes(v) = &returns {
@@ -81,7 +111,11 @@ fn builtins() {
         BorshToken::Bytes(hex::decode("a73fcaa3b216e85afecaadde").unwrap())
     );
 
-    let returns = vm.function("sig", &[]).unwrap();
+    let returns = vm
+        .function("sig")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     if let Some(v) = returns.clone().into_fixed_bytes() {
         println!("{}", hex::encode(v));
@@ -92,9 +126,13 @@ fn builtins() {
         BorshToken::uint8_fixed_array(hex::decode("4b22101a3c98d6cb").unwrap())
     );
 
-    let returns = vm.function("prog", &[]).unwrap();
+    let returns = vm
+        .function("prog")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
-    assert_eq!(returns, BorshToken::Address(vm.stack[0].program));
+    assert_eq!(returns, BorshToken::Address(vm.stack[0].id));
 }
 
 #[test]
@@ -133,10 +171,19 @@ fn pda() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function("create_pda", &[BorshToken::Bool(true)])
+        .function("create_pda")
+        .arguments(&[BorshToken::Bool(true)])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call()
         .unwrap();
 
     if let Some(bs) = returns.clone().into_fixed_bytes() {
@@ -149,7 +196,13 @@ fn pda() {
     }
 
     let returns = vm
-        .function("create_pda", &[BorshToken::Bool(false)])
+        .function("create_pda")
+        .arguments(&[BorshToken::Bool(false)])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call()
         .unwrap();
 
     if let Some(bs) = returns.clone().into_fixed_bytes() {
@@ -162,13 +215,16 @@ fn pda() {
     }
 
     let returns = vm
-        .function(
-            "create_pda2",
-            &[
-                BorshToken::Bytes(b"Talking".to_vec()),
-                BorshToken::Bytes(b"Squirrels".to_vec()),
-            ],
-        )
+        .function("create_pda2")
+        .arguments(&[
+            BorshToken::Bytes(b"Talking".to_vec()),
+            BorshToken::Bytes(b"Squirrels".to_vec()),
+        ])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call()
         .unwrap();
 
     if let Some(bs) = returns.clone().into_fixed_bytes() {
@@ -181,7 +237,10 @@ fn pda() {
     }
 
     let returns = vm
-        .function("create_pda2_bump", &[BorshToken::Bool(true)])
+        .function("create_pda2_bump")
+        .arguments(&[BorshToken::Bool(true)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -197,7 +256,10 @@ fn pda() {
     }
 
     let returns = vm
-        .function("create_pda2_bump", &[BorshToken::Bool(false)])
+        .function("create_pda2_bump")
+        .arguments(&[BorshToken::Bool(false)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -229,8 +291,11 @@ fn test_string_bytes_buffer_write() {
     }
         "#,
     );
-    vm.constructor(&[]);
-    let returns = vm.function("testStringAndBytes", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm.function("testStringAndBytes").call().unwrap();
     let bytes = returns.into_bytes().unwrap();
 
     assert_eq!(bytes.len(), 9);
@@ -254,8 +319,11 @@ fn out_of_bounds_bytes_write() {
         "#,
     );
 
-    vm.constructor(&[]);
-    let _ = vm.function("testBytesOut", &[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let _ = vm.function("testBytesOut").call();
 }
 
 #[test]
@@ -274,6 +342,9 @@ fn out_of_bounds_string_write() {
         "#,
     );
 
-    vm.constructor(&[]);
-    let _ = vm.function("testStringOut", &[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let _ = vm.function("testStringOut").call();
 }

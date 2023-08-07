@@ -27,12 +27,31 @@ fn lamports() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.account_data.get_mut(&vm.origin).unwrap().lamports = 17672630920854456917u64;
+    let acc = account_new();
+    vm.account_data.insert(
+        acc,
+        AccountState {
+            data: vec![],
+            owner: None,
+            lamports: 17672630920854456917u64,
+        },
+    );
 
     let returns = vm
-        .function("test", &[BorshToken::Address(vm.origin)])
+        .function("test")
+        .arguments(&[BorshToken::Address(acc)])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(acc),
+            is_writable: true,
+            is_signer: false,
+        }])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -64,11 +83,18 @@ fn owner() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("test", &[]).unwrap();
+    let returns = vm
+        .function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
-    let owner = vm.stack[0].program;
+    let owner = vm.stack[0].id;
 
     assert_eq!(returns, BorshToken::Address(owner));
 }
@@ -105,22 +131,23 @@ fn data() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     for i in 0..10 {
         let returns = vm
-            .function(
-                "test",
-                &[BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(i),
-                }],
-            )
+            .function("test")
+            .arguments(&[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(i),
+            }])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
 
-        let this = &vm.stack[0].data;
-
-        let val = vm.account_data[this].data[i];
+        let val = vm.account_data[&data_account].data[i];
 
         assert_eq!(
             returns,
@@ -131,11 +158,17 @@ fn data() {
         );
     }
 
-    let returns = vm.function("test2", &[]).unwrap();
+    let returns = vm
+        .function("test2")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
-    let this = &vm.stack[0].data;
-
-    let val = u32::from_le_bytes(vm.account_data[this].data[1..5].try_into().unwrap());
+    let val = u32::from_le_bytes(
+        vm.account_data[&data_account].data[1..5]
+            .try_into()
+            .unwrap(),
+    );
 
     assert_eq!(
         returns,
@@ -172,7 +205,10 @@ contract starter {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let acc1 = account_new();
     let acc2 = account_new();
@@ -204,11 +240,6 @@ contract starter {
 
     let metas = vec![
         AccountMeta {
-            pubkey: Pubkey(vm.stack[0].data),
-            is_writable: false,
-            is_signer: false,
-        },
-        AccountMeta {
             pubkey: Pubkey(acc1),
             is_writable: true,
             is_signer: false,
@@ -225,10 +256,9 @@ contract starter {
         },
     ];
 
-    let _ = vm.function_metas(
-        "createNewAccount",
-        &metas,
-        &[
+    let _ = vm
+        .function("createNewAccount")
+        .arguments(&[
             BorshToken::Uint {
                 width: 64,
                 value: BigInt::from(20u8),
@@ -241,8 +271,10 @@ contract starter {
                 width: 64,
                 value: BigInt::from(9u8),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&metas)
+        .call();
 
     assert_eq!(vm.account_data.get(&acc1).unwrap().lamports, 5);
     assert_eq!(vm.account_data.get(&acc2).unwrap().lamports, 7);

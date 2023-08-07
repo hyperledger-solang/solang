@@ -37,9 +37,19 @@ fn test_returns() {
     "#;
 
     let mut vm = build_solidity(file);
-    vm.constructor(&[]);
-    let _ = vm.function("assign", &[]);
-    let returns = vm.function("pb1", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let _ = vm
+        .function("assign")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("pb1")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -49,7 +59,11 @@ fn test_returns() {
         }
     );
 
-    let returns = vm.function("test1", &[]).unwrap();
+    let returns = vm
+        .function("test1")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         returns,
         BorshToken::Int {
@@ -57,7 +71,11 @@ fn test_returns() {
             value: BigInt::from(52u8)
         }
     );
-    let returns = vm.function("test2", &[]).unwrap();
+    let returns = vm
+        .function("test2")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         returns,
         BorshToken::Int {

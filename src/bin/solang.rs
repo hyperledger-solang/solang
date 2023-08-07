@@ -257,7 +257,7 @@ fn compile(compile_args: &Compile) {
             "0.0.1"
         };
 
-        for ns in namespaces.iter_mut() {
+        for ns in &mut namespaces {
             for contract_no in 0..ns.contracts.len() {
                 contract_results(
                     contract_no,

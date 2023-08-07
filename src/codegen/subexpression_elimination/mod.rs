@@ -191,7 +191,7 @@ fn add_neighbor_blocks<'b>(
         if let Some(set) = sets.get_mut(edge) {
             set.intersect_sets(&cur_set, cst);
         } else {
-            sets.insert(*edge, cur_set.clone_for_parent_block());
+            sets.insert(*edge, cur_set.deep_clone());
         }
     }
 }
@@ -238,7 +238,7 @@ fn find_visiting_order(cfg: &ControlFlowGraph) -> CfgAsDag {
 
     while let Some(block_no) = queue.pop_front() {
         order.push((block_no, has_cycle[block_no]));
-        for edge in cfg.blocks[block_no].edges() {
+        for edge in cfg.blocks[block_no].successors() {
             degrees[edge] -= 1;
             if degrees[edge] == 0 {
                 queue.push_back(edge);
@@ -279,7 +279,7 @@ fn cfg_dfs(
 
     stack.insert(block_no);
 
-    for edge in cfg.blocks[block_no].edges() {
+    for edge in cfg.blocks[block_no].successors() {
         degrees[edge] += 1;
         if cfg_dfs(
             edge,

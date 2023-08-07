@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    build_solidity, create_program_address, BorshToken, Instruction, Pubkey, VirtualMachine,
+    build_solidity, create_program_address, AccountMeta, AccountState, BorshToken, Instruction,
+    Pubkey, VirtualMachine,
 };
 use base58::FromBase58;
 use num_bigint::BigInt;
@@ -28,30 +29,56 @@ fn simple_external_call() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let bar1_account = vm.initialize_data_account();
+    let bar1_program_id = vm.stack[0].id;
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar1_account)])
+        .call();
 
-    vm.function("test_bar", &[BorshToken::String(String::from("yo"))]);
+    vm.function("test_bar")
+        .accounts(vec![("dataAccount", bar1_account)])
+        .arguments(&[BorshToken::String(String::from("yo"))])
+        .call();
 
     assert_eq!(vm.logs, "bar1 says: yo");
 
     vm.logs.truncate(0);
 
-    let bar1_account = vm.stack[0].data;
-
     vm.set_program(0);
 
-    vm.constructor(&[]);
+    let bar0_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar0_account)])
+        .call();
 
-    vm.function(
-        "test_bar",
-        &[BorshToken::String(String::from("uncle beau"))],
-    );
+    vm.function("test_bar")
+        .accounts(vec![("dataAccount", bar0_account)])
+        .arguments(&[BorshToken::String(String::from("uncle beau"))])
+        .call();
 
     assert_eq!(vm.logs, "bar0 says: uncle beau");
 
     vm.logs.truncate(0);
 
-    vm.function("test_other", &[BorshToken::Address(bar1_account)]);
+    vm.function("test_other")
+        .accounts(vec![
+            ("dataAccount", bar0_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(bar1_account),
+                is_writable: false,
+                is_signer: false,
+            },
+            AccountMeta {
+                pubkey: Pubkey(bar1_program_id),
+                is_signer: false,
+                is_writable: false,
+            },
+        ])
+        .arguments(&[BorshToken::Address(bar1_account)])
+        .call();
 
     assert_eq!(vm.logs, "bar1 says: cross contract call");
 }
@@ -73,16 +100,20 @@ fn external_call_with_returns() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let bar1_account = vm.initialize_data_account();
+    let bar1_program_id = vm.stack[0].id;
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar1_account)])
+        .call();
 
     let res = vm
-        .function(
-            "test_bar",
-            &[BorshToken::Int {
-                width: 64,
-                value: BigInt::from(21),
-            }],
-        )
+        .function("test_bar")
+        .accounts(vec![("dataAccount", bar1_account)])
+        .arguments(&[BorshToken::Int {
+            width: 64,
+            value: BigInt::from(21),
+        }])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -93,14 +124,33 @@ fn external_call_with_returns() {
         }
     );
 
-    let bar1_account = vm.stack[0].data;
-
     vm.set_program(0);
 
-    vm.constructor(&[]);
+    let bar0_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar0_account)])
+        .call();
 
     let res = vm
-        .function("test_other", &[BorshToken::Address(bar1_account)])
+        .function("test_other")
+        .arguments(&[BorshToken::Address(bar1_account)])
+        .accounts(vec![
+            ("dataAccount", bar0_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(bar1_account),
+                is_writable: false,
+                is_signer: false,
+            },
+            AccountMeta {
+                pubkey: Pubkey(bar1_program_id),
+                is_signer: false,
+                is_writable: false,
+            },
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -136,16 +186,20 @@ fn external_raw_call_with_returns() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let bar1_account = vm.initialize_data_account();
+    let bar1_program_id = vm.stack[0].id;
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar1_account)])
+        .call();
 
     let res = vm
-        .function(
-            "test_bar",
-            &[BorshToken::Int {
-                width: 64,
-                value: BigInt::from(21u8),
-            }],
-        )
+        .function("test_bar")
+        .arguments(&[BorshToken::Int {
+            width: 64,
+            value: BigInt::from(21u8),
+        }])
+        .accounts(vec![("dataAccount", bar1_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -156,14 +210,33 @@ fn external_raw_call_with_returns() {
         }
     );
 
-    let bar1_account = vm.stack[0].data;
-
     vm.set_program(0);
 
-    vm.constructor(&[]);
+    let bar0_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar0_account)])
+        .call();
 
     let res = vm
-        .function("test_other", &[BorshToken::Address(bar1_account)])
+        .function("test_other")
+        .arguments(&[BorshToken::Address(bar1_account)])
+        .accounts(vec![
+            ("dataAccount", bar0_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(bar1_account),
+                is_writable: false,
+                is_signer: false,
+            },
+            AccountMeta {
+                pubkey: Pubkey(bar1_program_id),
+                is_signer: false,
+                is_writable: false,
+            },
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -195,9 +268,20 @@ fn call_external_func_type() {
     "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let res = vm.function("doTest", &[]).unwrap().unwrap_tuple();
+    let res = vm
+        .function("doTest")
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         res,
@@ -242,33 +326,74 @@ fn external_call_with_string_returns() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let bar1_account = vm.initialize_data_account();
+    let bar1_program_id = vm.stack[0].id;
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar1_account)])
+        .call();
 
     let res = vm
-        .function(
-            "test_bar",
-            &[BorshToken::Int {
-                width: 64,
-                value: BigInt::from(22u8),
-            }],
-        )
+        .function("test_bar")
+        .arguments(&[BorshToken::Int {
+            width: 64,
+            value: BigInt::from(22u8),
+        }])
+        .accounts(vec![("dataAccount", bar1_account)])
+        .call()
         .unwrap();
 
     assert_eq!(res, BorshToken::String(String::from("foo:22")));
 
-    let bar1_account = vm.stack[0].data;
-
     vm.set_program(0);
 
-    vm.constructor(&[]);
+    let bar0_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar0_account)])
+        .call();
 
     let res = vm
-        .function("test_other", &[BorshToken::Address(bar1_account)])
+        .function("test_other")
+        .arguments(&[BorshToken::Address(bar1_account)])
+        .accounts(vec![
+            ("dataAccount", bar0_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(bar1_account),
+                is_writable: false,
+                is_signer: false,
+            },
+            AccountMeta {
+                pubkey: Pubkey(bar1_program_id),
+                is_signer: false,
+                is_writable: false,
+            },
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(res, BorshToken::String(String::from("foo:7")));
 
-    vm.function("test_this", &[BorshToken::Address(bar1_account)]);
+    vm.function("test_this")
+        .arguments(&[BorshToken::Address(bar1_account)])
+        .accounts(vec![
+            ("dataAccount", bar0_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(bar1_account),
+                is_writable: false,
+                is_signer: false,
+            },
+            AccountMeta {
+                pubkey: Pubkey(bar1_program_id),
+                is_signer: false,
+                is_writable: false,
+            },
+        ])
+        .call();
 }
 
 #[test]
@@ -295,16 +420,20 @@ fn encode_call() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let bar1_account = vm.initialize_data_account();
+    let bar1_program_id = vm.stack[0].id;
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar1_account)])
+        .call();
 
     let res = vm
-        .function(
-            "test_bar",
-            &[BorshToken::Int {
-                width: 64,
-                value: BigInt::from(21u8),
-            }],
-        )
+        .function("test_bar")
+        .arguments(&[BorshToken::Int {
+            width: 64,
+            value: BigInt::from(21u8),
+        }])
+        .accounts(vec![("dataAccount", bar1_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -315,14 +444,33 @@ fn encode_call() {
         }
     );
 
-    let bar1_account = vm.stack[0].data;
-
     vm.set_program(0);
 
-    vm.constructor(&[]);
+    let bar0_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", bar0_account)])
+        .call();
 
     let res = vm
-        .function("test_other", &[BorshToken::Address(bar1_account)])
+        .function("test_other")
+        .arguments(&[BorshToken::Address(bar1_account)])
+        .accounts(vec![
+            ("dataAccount", bar0_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(bar1_account),
+                is_writable: false,
+                is_signer: false,
+            },
+            AccountMeta {
+                pubkey: Pubkey(bar1_program_id),
+                is_signer: false,
+                is_writable: false,
+            },
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -363,26 +511,33 @@ fn internal_function_storage() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let res = vm.function("set_op", &[BorshToken::Bool(true)]);
+    let res = vm
+        .function("set_op")
+        .arguments(&[BorshToken::Bool(true)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert!(res.is_none());
 
     let res = vm
-        .function(
-            "test",
-            &[
-                BorshToken::Int {
-                    width: 32,
-                    value: BigInt::from(3u8),
-                },
-                BorshToken::Int {
-                    width: 32,
-                    value: BigInt::from(5u8),
-                },
-            ],
-        )
+        .function("test")
+        .arguments(&[
+            BorshToken::Int {
+                width: 32,
+                value: BigInt::from(3u8),
+            },
+            BorshToken::Int {
+                width: 32,
+                value: BigInt::from(5u8),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -393,24 +548,28 @@ fn internal_function_storage() {
         }
     );
 
-    let res = vm.function("set_op", &[BorshToken::Bool(false)]);
+    let res = vm
+        .function("set_op")
+        .arguments(&[BorshToken::Bool(false)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert!(res.is_none());
 
     let res = vm
-        .function(
-            "test",
-            &[
-                BorshToken::Int {
-                    width: 32,
-                    value: BigInt::from(3u8),
-                },
-                BorshToken::Int {
-                    width: 32,
-                    value: BigInt::from(5u8),
-                },
-            ],
-        )
+        .function("test")
+        .arguments(&[
+            BorshToken::Int {
+                width: 32,
+                value: BigInt::from(3u8),
+            },
+            BorshToken::Int {
+                width: 32,
+                value: BigInt::from(5u8),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -459,7 +618,10 @@ fn raw_call_accounts() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let token = Pubkey(
         "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
@@ -468,6 +630,7 @@ fn raw_call_accounts() {
             .try_into()
             .unwrap(),
     );
+    vm.account_data.insert(token.0, AccountState::default());
 
     let test_args = |_vm: &VirtualMachine, instr: &Instruction, _signers: &[Pubkey]| {
         let sysvar_rent = Pubkey(
@@ -503,19 +666,23 @@ fn raw_call_accounts() {
         assert_eq!(instr.accounts[1].pubkey, sysvar_rent);
     };
 
-    vm.call_params_check.insert(token, test_args);
+    vm.call_params_check.insert(token.clone(), test_args);
 
-    vm.function(
-        "create_mint_with_freezeauthority",
-        &[
+    vm.function("create_mint_with_freezeauthority")
+        .arguments(&[
             BorshToken::Uint {
                 width: 8,
                 value: BigInt::from(11u8),
             },
             BorshToken::Address(b"quinquagintaquadringentilliardth".to_owned()),
             BorshToken::Address(b"quinquagintaquadringentillionths".to_owned()),
-        ],
-    );
+        ])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("tokenProgram", token.0),
+            ("systemProgram", [0; 32]),
+        ])
+        .call();
 }
 
 #[test]
@@ -540,16 +707,19 @@ fn pda() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let test_args = |vm: &VirtualMachine, _instr: &Instruction, signers: &[Pubkey]| {
         assert_eq!(
             signers[0],
-            create_program_address(&vm.stack[0].program, &[b"foo"])
+            create_program_address(&vm.stack[0].id, &[b"foo"])
         );
         assert_eq!(
             signers[1],
-            create_program_address(&vm.stack[0].program, &[b"bar"])
+            create_program_address(&vm.stack[0].id, &[b"bar"])
         );
     };
 
@@ -561,7 +731,14 @@ fn pda() {
             .unwrap(),
     );
 
-    vm.call_params_check.insert(token, test_args);
+    vm.account_data.insert(token.0, AccountState::default());
+    vm.call_params_check.insert(token.clone(), test_args);
 
-    vm.function("test", &[]);
+    vm.function("test")
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("tokenProgram", token.0),
+            ("systemProgram", [0; 32]),
+        ])
+        .call();
 }

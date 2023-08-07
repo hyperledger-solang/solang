@@ -63,7 +63,7 @@ pub fn find(cfg: &mut ControlFlowGraph) {
             apply_transfers(transfers, &mut vars);
         }
 
-        for edge in cfg.blocks[block_no].edges() {
+        for edge in cfg.blocks[block_no].successors() {
             if cfg.blocks[edge].defs != vars {
                 blocks_todo.insert(edge);
                 // merge incoming set

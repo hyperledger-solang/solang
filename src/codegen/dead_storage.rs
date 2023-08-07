@@ -140,34 +140,33 @@ fn reaching_definitions(cfg: &mut ControlFlowGraph) -> (Vec<Vec<Vec<Transfer>>>,
             &mut block_vars,
         );
 
-        for edge in cfg.blocks[block_no].edges() {
+        for edge in cfg.blocks[block_no].successors() {
             if !block_vars.contains_key(&edge) {
                 blocks_todo.insert(edge);
                 block_vars.insert(edge, vec![vars.clone()]);
             } else if block_vars[&edge][0] != vars {
                 blocks_todo.insert(edge);
-                if let Some(block_vars) = block_vars.get_mut(&edge) {
-                    // merge incoming vars
-                    for (var_no, defs) in &vars.vars {
-                        if let Some(entry) = block_vars[0].vars.get_mut(var_no) {
-                            for (incoming_def, storage) in defs {
-                                if !entry.contains_key(incoming_def) {
-                                    entry.insert(*incoming_def, storage.clone());
-                                }
+                let block_vars = block_vars
+                    .get_mut(&edge)
+                    .expect("block vars must contain edge");
+                // merge incoming vars
+                for (var_no, defs) in &vars.vars {
+                    if let Some(entry) = block_vars[0].vars.get_mut(var_no) {
+                        for (incoming_def, storage) in defs {
+                            if !entry.contains_key(incoming_def) {
+                                entry.insert(*incoming_def, storage.clone());
                             }
-                        } else {
-                            block_vars[0].vars.insert(*var_no, defs.clone());
                         }
+                    } else {
+                        block_vars[0].vars.insert(*var_no, defs.clone());
                     }
+                }
 
-                    // merge storage stores
-                    for store in &vars.stores {
-                        if !block_vars[0].stores.iter().any(|(def, _)| *def == store.0) {
-                            block_vars[0].stores.push(store.clone());
-                        }
+                // merge storage stores
+                for store in &vars.stores {
+                    if !block_vars[0].stores.iter().any(|(def, _)| *def == store.0) {
+                        block_vars[0].stores.push(store.clone());
                     }
-                } else {
-                    unreachable!();
                 }
             }
         }

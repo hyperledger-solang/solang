@@ -201,7 +201,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
         }
     }
 
-    /// Regenerate instructions after that we exchanged common subexpressions for temporaries
+    /// Regenerate instructions after that we exchange common subexpressions for temporaries
     pub fn regenerate_instruction(
         &mut self,
         instr: &'b Instr,
