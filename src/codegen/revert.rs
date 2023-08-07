@@ -119,6 +119,13 @@ impl SolidityError {
 
 /// Solidity `Panic` Codes. Source:
 /// https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require
+///
+/// FIXME: Currently, not all panic variants are wired up yet in Solang:
+/// * EnumCastOob
+/// * StorageBytesEncodingIncorrect
+/// * OutOfMemory
+///
+/// Tracking issue: <https://github.com/hyperledger/solang/issues/1477>
 #[derive(Display, Debug, PartialEq, Clone, Copy)]
 #[non_exhaustive]
 #[repr(u8)]
