@@ -23,9 +23,14 @@ fn simple_event() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.function("go", &[]);
+    vm.function("go")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(vm.events.len(), 1);
     assert_eq!(vm.events[0].len(), 1);
@@ -77,9 +82,14 @@ fn less_simple_event() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.function("go", &[]);
+    vm.function("go")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(vm.events.len(), 1);
     assert_eq!(vm.events[0].len(), 1);

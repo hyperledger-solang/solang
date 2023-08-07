@@ -24,10 +24,15 @@ SourceUnitPart: SourceUnitPart = {
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::File(file_no, l, r)),
 }
 
+ImportPath: ImportPath = {
+    StringLiteral => ImportPath::Filename(<>),
+    SolIdentifierPath => ImportPath::Path(<>),
+}
+
 ImportDirective: SourceUnitPart = {
-    <l:@L> "import" <s:StringLiteral> <r:@R> ";" => SourceUnitPart::ImportDirective(Import::Plain(s, Loc::File(file_no, l, r))),
-    <l:@L> "import" <s:StringLiteral> "as" <id:SolIdentifier> <r:@R> ";" => SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))),
-    <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" => {
+    <l:@L> "import" <s:ImportPath> <r:@R> ";" => SourceUnitPart::ImportDirective(Import::Plain(s, Loc::File(file_no, l, r))),
+    <l:@L> "import" <s:ImportPath> "as" <id:SolIdentifier> <r:@R> ";" => SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r))),
+    <l:@L> "import" "*" "as" <id:SolIdentifier> <from:SolIdentifier> <s:ImportPath> <r:@R> ";" => {
         if from.name != "from" {
             let error = ErrorRecovery {
                 error: ParseError::User {
@@ -39,7 +44,7 @@ ImportDirective: SourceUnitPart = {
         }
         SourceUnitPart::ImportDirective(Import::GlobalSymbol(s, id, Loc::File(file_no, l, r)))
     },
-    <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:SolIdentifier> <s:StringLiteral> <r:@R> ";" =>? {
+    <l:@L> "import" "{" <rename:CommaOne<ImportRename>> "}" <from:SolIdentifier> <s:ImportPath> <r:@R> ";" =>? {
         if from.name != "from" {
             let error = ErrorRecovery {
                 error: ParseError::User {

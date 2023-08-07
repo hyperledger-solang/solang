@@ -43,7 +43,18 @@ fn verify() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let instructions_account: Account = "Sysvar1nstructions1111111111111111111111111"
+        .from_base58()
+        .unwrap()
+        .try_into()
+        .unwrap();
+    vm.account_data
+        .insert(instructions_account, AccountState::default());
 
     let mut csprng = rand_07::thread_rng();
     let keypair: Keypair = Keypair::generate(&mut csprng);
@@ -60,14 +71,17 @@ fn verify() {
     println!("T: MES: {}", hex::encode(message));
 
     let returns = vm
-        .function(
-            "verify",
-            &[
-                BorshToken::Address(keypair.public.to_bytes()),
-                BorshToken::Bytes(message.to_vec()),
-                BorshToken::Bytes(signature_bs.clone()),
-            ],
-        )
+        .function("verify")
+        .arguments(&[
+            BorshToken::Address(keypair.public.to_bytes()),
+            BorshToken::Bytes(message.to_vec()),
+            BorshToken::Bytes(signature_bs.clone()),
+        ])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("SysvarInstruction", instructions_account),
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(false));
@@ -91,14 +105,17 @@ fn verify() {
     println!("Now try for real");
 
     let returns = vm
-        .function(
-            "verify",
-            &[
-                BorshToken::Address(keypair.public.to_bytes()),
-                BorshToken::Bytes(message.to_vec()),
-                BorshToken::Bytes(signature_bs.clone()),
-            ],
-        )
+        .function("verify")
+        .arguments(&[
+            BorshToken::Address(keypair.public.to_bytes()),
+            BorshToken::Bytes(message.to_vec()),
+            BorshToken::Bytes(signature_bs.clone()),
+        ])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("SysvarInstruction", instructions_account),
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(true));
@@ -121,14 +138,17 @@ fn verify() {
     );
 
     let returns = vm
-        .function(
-            "verify",
-            &[
-                BorshToken::Address(keypair.public.to_bytes()),
-                BorshToken::Bytes(message.to_vec()),
-                BorshToken::Bytes(signature_bs),
-            ],
-        )
+        .function("verify")
+        .arguments(&[
+            BorshToken::Address(keypair.public.to_bytes()),
+            BorshToken::Bytes(message.to_vec()),
+            BorshToken::Bytes(signature_bs),
+        ])
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("SysvarInstruction", instructions_account),
+        ])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(false));

@@ -19,7 +19,10 @@ fn deserialize_duplicate_account() {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let random_key = account_new();
     vm.account_data.insert(
@@ -40,29 +43,24 @@ fn deserialize_duplicate_account() {
             lamports: 0,
         },
     );
-    let metas = vec![
-        AccountMeta {
-            pubkey: Pubkey(vm.stack[0].data),
-            is_writable: true,
-            is_signer: false,
-        },
-        AccountMeta {
-            pubkey: Pubkey(random_key),
-            is_signer: true,
-            is_writable: false,
-        },
-        AccountMeta {
-            pubkey: Pubkey(random_key),
-            is_signer: true,
-            is_writable: false,
-        },
-    ];
 
-    vm.function_metas(
-        "check_deserialization",
-        &metas,
-        &[BorshToken::Address(vm.stack[0].program)],
-    );
+    let program_id = vm.stack[0].id;
+    vm.function("check_deserialization")
+        .arguments(&[BorshToken::Address(program_id)])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(random_key),
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: Pubkey(random_key),
+                is_signer: true,
+                is_writable: false,
+            },
+        ])
+        .call();
 }
 
 #[test]
@@ -79,14 +77,12 @@ fn more_than_10_accounts() {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let mut metas: Vec<AccountMeta> = Vec::new();
-    metas.push(AccountMeta {
-        pubkey: Pubkey(vm.stack[0].data),
-        is_writable: true,
-        is_signer: false,
-    });
     for i in 0..11 {
         let account = account_new();
         metas.push(AccountMeta {
@@ -120,9 +116,10 @@ fn more_than_10_accounts() {
         },
     );
 
-    vm.function_metas(
-        "check_deserialization",
-        &metas,
-        &[BorshToken::Address(vm.stack[0].program)],
-    );
+    let program_id = vm.stack[0].id;
+    vm.function("check_deserialization")
+        .arguments(&[BorshToken::Address(program_id)])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&metas)
+        .call();
 }

@@ -20,9 +20,16 @@ fn constant() {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("f", &[]).unwrap();
+    let returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         returns,
         BorshToken::Uint {
@@ -46,9 +53,16 @@ fn constant() {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("f", &[]).unwrap();
+    let returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         returns,
         BorshToken::Uint {

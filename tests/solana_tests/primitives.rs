@@ -27,9 +27,14 @@ fn assert_false() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.function("assert_fails", &[]);
+    vm.function("assert_fails")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }
 
 #[test]
@@ -44,9 +49,14 @@ fn assert_true() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.function("assert_fails", &[]);
+    vm.function("assert_fails")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }
 
 #[test]
@@ -76,18 +86,35 @@ fn boolean() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("return_true", &[]).unwrap();
+    let returns = vm
+        .function("return_true")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(true));
 
-    let returns = vm.function("return_false", &[]).unwrap();
+    let returns = vm
+        .function("return_false")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(false));
 
-    vm.function("true_arg", &[BorshToken::Bool(true)]);
-    vm.function("false_arg", &[BorshToken::Bool(false)]);
+    vm.function("true_arg")
+        .arguments(&[BorshToken::Bool(true)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    vm.function("false_arg")
+        .arguments(&[BorshToken::Bool(false)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }
 
 #[test]
@@ -110,9 +137,16 @@ fn address() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("return_address", &[]).unwrap();
+    let returns = vm
+        .function("return_address")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -122,13 +156,13 @@ fn address() {
         ]),
     );
 
-    vm.function(
-        "address_arg",
-        &[BorshToken::Address([
+    vm.function("address_arg")
+        .arguments(&[BorshToken::Address([
             75, 161, 209, 89, 47, 84, 50, 13, 23, 127, 94, 21, 50, 249, 250, 185, 117, 49, 186,
             134, 82, 130, 112, 97, 218, 24, 157, 198, 40, 105, 118, 27,
-        ])],
-    );
+        ])])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }
 
 #[test]
@@ -152,9 +186,16 @@ fn test_enum() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("return_enum", &[]).unwrap();
+    let returns = vm
+        .function("return_enum")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -164,13 +205,13 @@ fn test_enum() {
         }
     );
 
-    vm.function(
-        "enum_arg",
-        &[BorshToken::Uint {
+    vm.function("enum_arg")
+        .arguments(&[BorshToken::Uint {
             width: 8,
             value: BigInt::from(6u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }
 
 #[test]
@@ -212,9 +253,17 @@ fn bytes() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor(&[]);
+        let data_account = vm.initialize_data_account();
 
-        let returns = vm.function("return_literal", &[]).unwrap();
+        vm.function("new")
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
+
+        let returns = vm
+            .function("return_literal")
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
+            .unwrap();
 
         assert_eq!(
             returns,
@@ -222,10 +271,10 @@ fn bytes() {
         );
 
         let returns = vm
-            .function(
-                "return_arg",
-                &[BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])],
-            )
+            .function("return_arg")
+            .arguments(&[BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
 
         assert_eq!(
@@ -244,13 +293,13 @@ fn bytes() {
             rng.fill(&mut b[..]);
 
             let or = vm
-                .function(
-                    "or",
-                    &[
-                        BorshToken::FixedBytes(a.to_vec()),
-                        BorshToken::FixedBytes(b.to_vec()),
-                    ],
-                )
+                .function("or")
+                .arguments(&[
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::FixedBytes(b.to_vec()),
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a | b).collect();
@@ -265,13 +314,13 @@ fn bytes() {
             assert_eq!(or, BorshToken::uint8_fixed_array(res));
 
             let and = vm
-                .function(
-                    "and",
-                    &[
-                        BorshToken::FixedBytes(a.to_vec()),
-                        BorshToken::FixedBytes(b.to_vec()),
-                    ],
-                )
+                .function("and")
+                .arguments(&[
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::FixedBytes(b.to_vec()),
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a & b).collect();
@@ -279,13 +328,13 @@ fn bytes() {
             assert_eq!(and, BorshToken::uint8_fixed_array(res));
 
             let xor = vm
-                .function(
-                    "xor",
-                    &[
-                        BorshToken::FixedBytes(a.to_vec()),
-                        BorshToken::FixedBytes(b.to_vec()),
-                    ],
-                )
+                .function("xor")
+                .arguments(&[
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::FixedBytes(b.to_vec()),
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let res: Vec<u8> = a.iter().zip(b.iter()).map(|(a, b)| a ^ b).collect();
@@ -297,16 +346,16 @@ fn bytes() {
             println!("w = {width} r = {r}");
 
             let shl = vm
-                .function(
-                    "shift_left",
-                    &[
-                        BorshToken::FixedBytes(a.to_vec()),
-                        BorshToken::Uint {
-                            width: 32,
-                            value: BigInt::from(r),
-                        },
-                    ],
-                )
+                .function("shift_left")
+                .arguments(&[
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = (BigUint::from_bytes_be(&a) << r).to_bytes_be();
@@ -322,16 +371,16 @@ fn bytes() {
             assert_eq!(shl, BorshToken::uint8_fixed_array(res));
 
             let shr = vm
-                .function(
-                    "shift_right",
-                    &[
-                        BorshToken::FixedBytes(a.to_vec()),
-                        BorshToken::Uint {
-                            width: 32,
-                            value: BigInt::from(r),
-                        },
-                    ],
-                )
+                .function("shift_right")
+                .arguments(&[
+                    BorshToken::FixedBytes(a.to_vec()),
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = (BigUint::from_bytes_be(&a) >> r).to_bytes_be();
@@ -417,7 +466,10 @@ fn uint() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor(&[]);
+        let data_account = vm.initialize_data_account();
+        vm.function("new")
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
 
         println!("width:{width}");
         let returned_width = width.next_power_of_two();
@@ -429,30 +481,31 @@ fn uint() {
                 std::mem::swap(&mut a, &mut b);
             }
 
-            let res = vm.function(
-                "pass",
-                &[BorshToken::Uint {
+            let res = vm
+                .function("pass")
+                .arguments(&[BorshToken::Uint {
                     width,
                     value: a.to_bigint().unwrap(),
-                }],
-            );
+                }])
+                .accounts(vec![("dataAccount", data_account)])
+                .call();
 
             println!("{a:x} = {res:?} o");
 
             let add = vm
-                .function(
-                    "add",
-                    &[
-                        BorshToken::Uint {
-                            width,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width,
-                            value: b.to_bigint().unwrap(),
-                        },
-                    ],
-                )
+                .function("add")
+                .arguments(&[
+                    BorshToken::Uint {
+                        width,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().add(&b);
@@ -469,19 +522,19 @@ fn uint() {
             );
 
             let sub = vm
-                .function(
-                    "sub",
-                    &[
-                        BorshToken::Uint {
-                            width,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width,
-                            value: b.to_bigint().unwrap(),
-                        },
-                    ],
-                )
+                .function("sub")
+                .arguments(&[
+                    BorshToken::Uint {
+                        width,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().sub(&b);
@@ -496,19 +549,19 @@ fn uint() {
             );
 
             let mul = vm
-                .function(
-                    "mul",
-                    &[
-                        BorshToken::Uint {
-                            width,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width,
-                            value: b.to_bigint().unwrap(),
-                        },
-                    ],
-                )
+                .function("mul")
+                .arguments(&[
+                    BorshToken::Uint {
+                        width,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().mul(&b);
@@ -525,19 +578,19 @@ fn uint() {
             if let Some(mut n) = b.to_u32() {
                 n %= 65536;
                 let pow = vm
-                    .function(
-                        "pow",
-                        &[
-                            BorshToken::Uint {
-                                width,
-                                value: a.to_bigint().unwrap(),
-                            },
-                            BorshToken::Uint {
-                                width,
-                                value: BigInt::from(n),
-                            },
-                        ],
-                    )
+                    .function("pow")
+                    .arguments(&[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width,
+                            value: BigInt::from(n),
+                        },
+                    ])
+                    .accounts(vec![("dataAccount", data_account)])
+                    .call()
                     .unwrap();
 
                 let mut res = a.clone().pow(n);
@@ -554,19 +607,19 @@ fn uint() {
 
             if b != BigUint::zero() {
                 let div = vm
-                    .function(
-                        "div",
-                        &[
-                            BorshToken::Uint {
-                                width,
-                                value: a.to_bigint().unwrap(),
-                            },
-                            BorshToken::Uint {
-                                width,
-                                value: b.to_bigint().unwrap(),
-                            },
-                        ],
-                    )
+                    .function("div")
+                    .arguments(&[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ])
+                    .accounts(vec![("dataAccount", data_account)])
+                    .call()
                     .unwrap();
 
                 let mut res = a.clone().div(&b);
@@ -582,19 +635,19 @@ fn uint() {
                 );
 
                 let add = vm
-                    .function(
-                        "mod",
-                        &[
-                            BorshToken::Uint {
-                                width,
-                                value: a.to_bigint().unwrap(),
-                            },
-                            BorshToken::Uint {
-                                width,
-                                value: b.to_bigint().unwrap(),
-                            },
-                        ],
-                    )
+                    .function("mod")
+                    .arguments(&[
+                        BorshToken::Uint {
+                            width,
+                            value: a.to_bigint().unwrap(),
+                        },
+                        BorshToken::Uint {
+                            width,
+                            value: b.to_bigint().unwrap(),
+                        },
+                    ])
+                    .accounts(vec![("dataAccount", data_account)])
+                    .call()
                     .unwrap();
 
                 let mut res = a.clone().rem(&b);
@@ -611,19 +664,19 @@ fn uint() {
             }
 
             let or = vm
-                .function(
-                    "or",
-                    &[
-                        BorshToken::Uint {
-                            width,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width,
-                            value: b.to_bigint().unwrap(),
-                        },
-                    ],
-                )
+                .function("or")
+                .arguments(&[
+                    BorshToken::Uint {
+                        width,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().bitor(&b);
@@ -638,19 +691,19 @@ fn uint() {
             );
 
             let and = vm
-                .function(
-                    "and",
-                    &[
-                        BorshToken::Uint {
-                            width,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width,
-                            value: b.to_bigint().unwrap(),
-                        },
-                    ],
-                )
+                .function("and")
+                .arguments(&[
+                    BorshToken::Uint {
+                        width,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().bitand(&b);
@@ -665,19 +718,19 @@ fn uint() {
             );
 
             let xor = vm
-                .function(
-                    "xor",
-                    &[
-                        BorshToken::Uint {
-                            width,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width,
-                            value: b.to_bigint().unwrap(),
-                        },
-                    ],
-                )
+                .function("xor")
+                .arguments(&[
+                    BorshToken::Uint {
+                        width,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width,
+                        value: b.to_bigint().unwrap(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().bitxor(&b);
@@ -694,19 +747,19 @@ fn uint() {
             let r = rng.gen::<u32>() % (width as u32);
 
             let shl = vm
-                .function(
-                    "shift_left",
-                    &[
-                        BorshToken::Uint {
-                            width,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width: 32,
-                            value: BigInt::from(r),
-                        },
-                    ],
-                )
+                .function("shift_left")
+                .arguments(&[
+                    BorshToken::Uint {
+                        width,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone();
@@ -722,19 +775,19 @@ fn uint() {
             );
 
             let shr = vm
-                .function(
-                    "shift_right",
-                    &[
-                        BorshToken::Uint {
-                            width,
-                            value: a.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width: 32,
-                            value: BigInt::from(r),
-                        },
-                    ],
-                )
+                .function("shift_right")
+                .arguments(&[
+                    BorshToken::Uint {
+                        width,
+                        value: a.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone();
@@ -778,22 +831,26 @@ fn test_power_overflow_boundaries() {
         .replace("intN", &format!("int{width}"));
 
         let mut contract = build_solidity(&src);
-        contract.constructor(&[]);
+        let data_account = contract.initialize_data_account();
+        contract
+            .function("new")
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
 
         let return_value = contract
-            .function(
-                "pow",
-                &[
-                    BorshToken::Uint {
-                        width,
-                        value: BigInt::from(2u8),
-                    },
-                    BorshToken::Uint {
-                        width,
-                        value: BigInt::from(width - 1),
-                    },
-                ],
-            )
+            .function("pow")
+            .arguments(&[
+                BorshToken::Uint {
+                    width,
+                    value: BigInt::from(2u8),
+                },
+                BorshToken::Uint {
+                    width,
+                    value: BigInt::from(width - 1),
+                },
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
 
         let res = BigUint::from(2_u32).pow((width - 1) as u32);
@@ -806,9 +863,9 @@ fn test_power_overflow_boundaries() {
             }
         );
 
-        let sesa = contract.function_must_fail(
-            "pow",
-            &[
+        let sesa = contract
+            .function("pow")
+            .arguments(&[
                 BorshToken::Uint {
                     width,
                     value: BigInt::from(2u8),
@@ -817,8 +874,9 @@ fn test_power_overflow_boundaries() {
                     width,
                     value: BigInt::from(width + 1),
                 },
-            ],
-        );
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .must_fail();
 
         assert_ne!(sesa.unwrap(), 0);
     }
@@ -845,22 +903,27 @@ fn test_overflow_boundaries() {
 
         let returned_width = (width as u16).next_power_of_two();
 
+        let data_account = contract.initialize_data_account();
+        contract
+            .function("new")
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
+
         // Multiply the boundaries by 1.
-        contract.constructor(&[]);
         let return_value = contract
-            .function(
-                "mul",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: upper_boundary.clone(),
-                    },
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: second_op.clone(),
-                    },
-                ],
-            )
+            .function("mul")
+            .arguments(&[
+                BorshToken::Int {
+                    width: width as u16,
+                    value: upper_boundary.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: second_op.clone(),
+                },
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
         assert_eq!(
             return_value,
@@ -871,19 +934,19 @@ fn test_overflow_boundaries() {
         );
 
         let return_value = contract
-            .function(
-                "mul",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: lower_boundary.clone(),
-                    },
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: second_op.clone(),
-                    },
-                ],
-            )
+            .function("mul")
+            .arguments(&[
+                BorshToken::Int {
+                    width: width as u16,
+                    value: lower_boundary.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: second_op.clone(),
+                },
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
         assert_eq!(
             return_value,
@@ -904,9 +967,9 @@ fn test_overflow_boundaries() {
 
         let lower_second_op = lower_boundary_minus_two.div(2);
 
-        let res = contract.function_must_fail(
-            "mul",
-            &[
+        contract
+            .function("mul")
+            .arguments(&[
                 BorshToken::Int {
                     width: width as u16,
                     value: upper_second_op,
@@ -915,14 +978,13 @@ fn test_overflow_boundaries() {
                     width: width as u16,
                     value: BigInt::from(2u8),
                 },
-            ],
-        );
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .must_fail();
 
-        assert_ne!(res.unwrap(), 0);
-
-        let res = contract.function_must_fail(
-            "mul",
-            &[
+        contract
+            .function("mul")
+            .arguments(&[
                 BorshToken::Int {
                     width: width as u16,
                     value: lower_second_op,
@@ -931,14 +993,13 @@ fn test_overflow_boundaries() {
                     width: width as u16,
                     value: BigInt::from(2),
                 },
-            ],
-        );
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .must_fail();
 
-        assert_ne!(res.unwrap(), 0);
-
-        let res = contract.function_must_fail(
-            "mul",
-            &[
+        contract
+            .function("mul")
+            .arguments(&[
                 BorshToken::Int {
                     width: width as u16,
                     value: upper_boundary.clone(),
@@ -947,14 +1008,13 @@ fn test_overflow_boundaries() {
                     width: width as u16,
                     value: upper_boundary.clone(),
                 },
-            ],
-        );
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .must_fail();
 
-        assert_ne!(res.unwrap(), 0);
-
-        let res = contract.function_must_fail(
-            "mul",
-            &[
+        contract
+            .function("mul")
+            .arguments(&[
                 BorshToken::Int {
                     width: width as u16,
                     value: lower_boundary.clone(),
@@ -963,14 +1023,13 @@ fn test_overflow_boundaries() {
                     width: width as u16,
                     value: lower_boundary.clone(),
                 },
-            ],
-        );
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .must_fail();
 
-        assert_ne!(res.unwrap(), 0);
-
-        let res = contract.function_must_fail(
-            "mul",
-            &[
+        contract
+            .function("mul")
+            .arguments(&[
                 BorshToken::Int {
                     width: width as u16,
                     value: upper_boundary.clone(),
@@ -979,10 +1038,9 @@ fn test_overflow_boundaries() {
                     width: width as u16,
                     value: lower_boundary.clone(),
                 },
-            ],
-        );
-
-        assert_ne!(res.unwrap(), 0);
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .must_fail();
     }
 }
 
@@ -1010,21 +1068,26 @@ fn test_mul_within_range_signed() {
         let second_op = BigInt::from(*side.choose(&mut rng).unwrap());
         println!("second op : {second_op:?}");
 
-        contract.constructor(&[]);
+        let data_account = contract.initialize_data_account();
+        contract
+            .function("new")
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
+
         let return_value = contract
-            .function(
-                "mul",
-                &[
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: first_operand_rand.clone(),
-                    },
-                    BorshToken::Int {
-                        width: width as u16,
-                        value: second_op.clone(),
-                    },
-                ],
-            )
+            .function("mul")
+            .arguments(&[
+                BorshToken::Int {
+                    width: width as u16,
+                    value: first_operand_rand.clone(),
+                },
+                BorshToken::Int {
+                    width: width as u16,
+                    value: second_op.clone(),
+                },
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
 
         let res = first_operand_rand.mul(second_op);
@@ -1051,7 +1114,12 @@ fn test_mul_within_range() {
         .replace("intN", &format!("int{width}"));
 
         let mut contract = build_solidity(&src);
-        contract.constructor(&[]);
+        let data_account = contract.initialize_data_account();
+        contract
+            .function("new")
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
+
         for _ in 0..10 {
             // Max number to fit unsigned N bits is (2^N)-1
             let mut limit: BigUint = BigUint::from(2_u32).pow(width as u32);
@@ -1064,19 +1132,19 @@ fn test_mul_within_range() {
             let second_operand_rand = limit.div(&first_operand_rand);
 
             let return_value = contract
-                .function(
-                    "mul",
-                    &[
-                        BorshToken::Uint {
-                            width: width as u16,
-                            value: first_operand_rand.to_bigint().unwrap(),
-                        },
-                        BorshToken::Uint {
-                            width: width as u16,
-                            value: second_operand_rand.to_bigint().unwrap(),
-                        },
-                    ],
-                )
+                .function("mul")
+                .arguments(&[
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: first_operand_rand.to_bigint().unwrap(),
+                    },
+                    BorshToken::Uint {
+                        width: width as u16,
+                        value: second_operand_rand.to_bigint().unwrap(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
             let res = first_operand_rand * second_operand_rand;
 
@@ -1104,7 +1172,11 @@ fn test_overflow_detect_signed() {
         .replace("intN", &format!("int{width}"));
         let mut contract = build_solidity(&src);
 
-        contract.constructor(&[]);
+        let data_account = contract.initialize_data_account();
+        contract
+            .function("new")
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
         let mut limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1117,9 +1189,9 @@ fn test_overflow_detect_signed() {
         // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
         let second_operand_rand = rng.gen_bigint_range(&BigInt::from(2usize), &limit);
 
-        let res = contract.function_must_fail(
-            "mul",
-            &[
+        contract
+            .function("mul")
+            .arguments(&[
                 BorshToken::Int {
                     width: width as u16,
                     value: first_operand_rand.clone(),
@@ -1128,10 +1200,9 @@ fn test_overflow_detect_signed() {
                     width: width as u16,
                     value: second_operand_rand.clone(),
                 },
-            ],
-        );
-
-        assert_ne!(res.unwrap(), 0);
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .must_fail();
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
         let mut lower_limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
@@ -1142,9 +1213,9 @@ fn test_overflow_detect_signed() {
         let first_operand_rand =
             rng.gen_bigint_range(&lower_limit, &(lower_limit.clone().div(2usize)).add(1usize));
 
-        let res = contract.function_must_fail(
-            "mul",
-            &[
+        contract
+            .function("mul")
+            .arguments(&[
                 BorshToken::Int {
                     width: width as u16,
                     value: first_operand_rand.clone(),
@@ -1153,10 +1224,9 @@ fn test_overflow_detect_signed() {
                     width: width as u16,
                     value: second_operand_rand.clone(),
                 },
-            ],
-        );
-
-        assert_ne!(res.unwrap(), 0);
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .must_fail();
     }
 }
 
@@ -1173,7 +1243,11 @@ fn test_overflow_detect_unsigned() {
         .replace("intN", &format!("int{width}"));
         let mut contract = build_solidity(&src);
 
-        contract.constructor(&[]);
+        let data_account = contract.initialize_data_account();
+        contract
+            .function("new")
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
 
         for _ in 0..10 {
             // N bits can hold the range [0, (2^N)-1]. Generate a value that overflows N bits
@@ -1187,9 +1261,9 @@ fn test_overflow_detect_unsigned() {
             // Calculate a number that when multiplied by first_operand_rand, the result will overflow N bits
             let second_operand_rand = rng.gen_biguint_range(&BigUint::from(2usize), &limit);
 
-            let res = contract.function_must_fail(
-                "mul",
-                &[
+            contract
+                .function("mul")
+                .arguments(&[
                     BorshToken::Uint {
                         width: width as u16,
                         value: first_operand_rand.to_bigint().unwrap(),
@@ -1198,9 +1272,9 @@ fn test_overflow_detect_unsigned() {
                         width: width as u16,
                         value: second_operand_rand.to_bigint().unwrap(),
                     },
-                ],
-            );
-            assert_ne!(res.unwrap(), 0);
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .must_fail();
         }
     }
 }
@@ -1264,7 +1338,10 @@ fn int() {
 
         let mut vm = build_solidity(&src);
 
-        vm.constructor(&[]);
+        let data_account = vm.initialize_data_account();
+        vm.function("new")
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
 
         let returned_width = (width as u16).next_power_of_two();
 
@@ -1273,19 +1350,19 @@ fn int() {
             let b = rng.gen_bigint(width - 1);
 
             let add = vm
-                .function(
-                    "add",
-                    &[
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: a.clone(),
-                        },
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: b.clone(),
-                        },
-                    ],
-                )
+                .function("add")
+                .arguments(&[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().add(&b);
@@ -1300,19 +1377,19 @@ fn int() {
             );
 
             let sub = vm
-                .function(
-                    "sub",
-                    &[
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: a.clone(),
-                        },
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: b.clone(),
-                        },
-                    ],
-                )
+                .function("sub")
+                .arguments(&[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().sub(&b);
@@ -1327,19 +1404,19 @@ fn int() {
             );
 
             let mul = vm
-                .function(
-                    "mul",
-                    &[
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: a.clone(),
-                        },
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: b.clone(),
-                        },
-                    ],
-                )
+                .function("mul")
+                .arguments(&[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().mul(&b);
@@ -1355,19 +1432,19 @@ fn int() {
 
             if b != BigInt::zero() {
                 let div = vm
-                    .function(
-                        "div",
-                        &[
-                            BorshToken::Int {
-                                width: width as u16,
-                                value: a.clone(),
-                            },
-                            BorshToken::Int {
-                                width: width as u16,
-                                value: b.clone(),
-                            },
-                        ],
-                    )
+                    .function("div")
+                    .arguments(&[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: b.clone(),
+                        },
+                    ])
+                    .accounts(vec![("dataAccount", data_account)])
+                    .call()
                     .unwrap();
 
                 let mut res = a.clone().div(&b);
@@ -1382,19 +1459,19 @@ fn int() {
                 );
 
                 let add = vm
-                    .function(
-                        "mod",
-                        &[
-                            BorshToken::Int {
-                                width: width as u16,
-                                value: a.clone(),
-                            },
-                            BorshToken::Int {
-                                width: width as u16,
-                                value: b.clone(),
-                            },
-                        ],
-                    )
+                    .function("mod")
+                    .arguments(&[
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: a.clone(),
+                        },
+                        BorshToken::Int {
+                            width: width as u16,
+                            value: b.clone(),
+                        },
+                    ])
+                    .accounts(vec![("dataAccount", data_account)])
+                    .call()
                     .unwrap();
 
                 let mut res = a.clone().rem(&b);
@@ -1410,19 +1487,19 @@ fn int() {
             }
 
             let or = vm
-                .function(
-                    "or",
-                    &[
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: a.clone(),
-                        },
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: b.clone(),
-                        },
-                    ],
-                )
+                .function("or")
+                .arguments(&[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().bitor(&b);
@@ -1437,19 +1514,19 @@ fn int() {
             );
 
             let and = vm
-                .function(
-                    "and",
-                    &[
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: a.clone(),
-                        },
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: b.clone(),
-                        },
-                    ],
-                )
+                .function("and")
+                .arguments(&[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().bitand(&b);
@@ -1464,19 +1541,19 @@ fn int() {
             );
 
             let xor = vm
-                .function(
-                    "xor",
-                    &[
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: a.clone(),
-                        },
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: b.clone(),
-                        },
-                    ],
-                )
+                .function("xor")
+                .arguments(&[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: b.clone(),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().bitxor(&b);
@@ -1493,19 +1570,19 @@ fn int() {
             let r = rng.gen::<u32>() % (width as u32);
 
             let shl = vm
-                .function(
-                    "shift_left",
-                    &[
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: a.clone(),
-                        },
-                        BorshToken::Uint {
-                            width: 32,
-                            value: BigInt::from(r),
-                        },
-                    ],
-                )
+                .function("shift_left")
+                .arguments(&[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.clone().shl(r);
@@ -1521,19 +1598,19 @@ fn int() {
             );
 
             let shr = vm
-                .function(
-                    "shift_right",
-                    &[
-                        BorshToken::Int {
-                            width: width as u16,
-                            value: a.clone(),
-                        },
-                        BorshToken::Uint {
-                            width: 32,
-                            value: BigInt::from(r),
-                        },
-                    ],
-                )
+                .function("shift_right")
+                .arguments(&[
+                    BorshToken::Int {
+                        width: width as u16,
+                        value: a.clone(),
+                    },
+                    BorshToken::Uint {
+                        width: 32,
+                        value: BigInt::from(r),
+                    },
+                ])
+                .accounts(vec![("dataAccount", data_account)])
+                .call()
                 .unwrap();
 
             let mut res = a.shr(r);
@@ -1577,16 +1654,25 @@ fn bytes_cast() {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function("to_bytes", &[BorshToken::FixedBytes(b"abcd".to_vec())])
+        .function("to_bytes")
+        .arguments(&[BorshToken::FixedBytes(b"abcd".to_vec())])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bytes(b"abcd".to_vec()));
 
     let returns = vm
-        .function("to_bytes5", &[BorshToken::Bytes(b"abcde".to_vec())])
+        .function("to_bytes5")
+        .arguments(&[BorshToken::Bytes(b"abcde".to_vec())])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::uint8_fixed_array(b"abcde".to_vec()));
@@ -1606,7 +1692,10 @@ fn shift_after_load() {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
     let args = BorshToken::Array(vec![
         BorshToken::Uint {
             width: 256,
@@ -1617,7 +1706,12 @@ fn shift_after_load() {
             value: BigInt::from(4u8),
         },
     ]);
-    let returns = vm.function("testIt", &[args]).unwrap().unwrap_tuple();
+    let returns = vm
+        .function("testIt")
+        .arguments(&[args])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(returns.len(), 2);
     assert_eq!(

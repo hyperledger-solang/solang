@@ -28,10 +28,16 @@ fn returns_and_phis_needed() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function("func", &[BorshToken::Bool(false)])
+        .function("func")
+        .arguments(&[BorshToken::Bool(false)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -47,7 +53,10 @@ fn returns_and_phis_needed() {
     );
 
     let returns = vm
-        .function("func", &[BorshToken::Bool(true)])
+        .function("func")
+        .arguments(&[BorshToken::Bool(true)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 

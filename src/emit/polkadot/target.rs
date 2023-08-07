@@ -857,22 +857,10 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .builder
             .build_alloca(binary.value_type(ns), "balance");
 
-        // balance is a u128, make sure it's enough to cover existential_deposit
-        if let Some(value) = contract_args.value {
-            binary.builder.build_store(value_ptr, value);
-        } else {
-            let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
-
-            binary
-                .builder
-                .build_store(scratch_len, i32_const!(ns.value_length as u64));
-
-            call!(
-                "minimum_balance",
-                &[value_ptr.into(), scratch_len.into()],
-                "minimum_balance"
-            );
-        }
+        let value = contract_args
+            .value
+            .unwrap_or_else(|| binary.value_type(ns).const_zero());
+        binary.builder.build_store(value_ptr, value);
 
         // code hash
         let codehash = binary.emit_global_string(

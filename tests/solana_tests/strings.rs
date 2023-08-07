@@ -20,13 +20,21 @@ fn storage_string_length() {
     }
     "#,
     );
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let _ = vm.function(
-        "setString",
-        &[BorshToken::String("coffee_tastes_good".to_string())],
-    );
-    let returns = vm.function("getLength", &[]).unwrap();
+    let _ = vm
+        .function("setString")
+        .arguments(&[BorshToken::String("coffee_tastes_good".to_string())])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("getLength")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -59,8 +67,17 @@ fn load_string_vector() {
       "#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("testLength", &[]).unwrap().unwrap_tuple();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("testLength")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
+
     assert_eq!(
         returns[0],
         BorshToken::Uint {
@@ -84,35 +101,35 @@ fn load_string_vector() {
     );
 
     let returns = vm
-        .function(
-            "getString",
-            &[BorshToken::Uint {
-                width: 32,
-                value: BigInt::zero(),
-            }],
-        )
+        .function("getString")
+        .arguments(&[BorshToken::Uint {
+            width: 32,
+            value: BigInt::zero(),
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
     assert_eq!(returns, BorshToken::String("tea".to_string()));
 
     let returns = vm
-        .function(
-            "getString",
-            &[BorshToken::Uint {
-                width: 32,
-                value: BigInt::one(),
-            }],
-        )
+        .function("getString")
+        .arguments(&[BorshToken::Uint {
+            width: 32,
+            value: BigInt::one(),
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
     assert_eq!(returns, BorshToken::String("coffe".to_string()));
 
     let returns = vm
-        .function(
-            "getString",
-            &[BorshToken::Uint {
-                width: 32,
-                value: BigInt::from(2u8),
-            }],
-        )
+        .function("getString")
+        .arguments(&[BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(2u8),
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
     assert_eq!(returns, BorshToken::String("sixsix".to_string()));
 }

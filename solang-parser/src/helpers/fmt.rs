@@ -764,6 +764,15 @@ impl Display for pt::Import {
     }
 }
 
+impl Display for pt::ImportPath {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Self::Filename(lit) => lit.fmt(f),
+            Self::Path(path) => path.fmt(f),
+        }
+    }
+}
+
 impl Display for pt::Mutability {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str(self.as_str())
@@ -2192,15 +2201,25 @@ mod tests {
             }
 
             pt::Import: {
-                pt::Import::Plain(lit!("path/to/import"), loc!()) => "import \"path/to/import\";",
+                pt::Import::Plain(pt::ImportPath::Filename(lit!("path/to/import")), loc!()) => "import \"path/to/import\";",
 
-                pt::Import::GlobalSymbol(lit!("path-to-import"), id("ImportedContract"), loc!())
+                pt::Import::GlobalSymbol(pt::ImportPath::Filename(lit!("path-to-import")), id("ImportedContract"), loc!())
                     => "import \"path-to-import\" as ImportedContract;",
 
-                pt::Import::Rename(lit!("import\\to\\path"), vec![], loc!())
+                pt::Import::Rename(pt::ImportPath::Filename(lit!("import\\to\\path")), vec![], loc!())
                     => "import {} from \"import\\to\\path\";",
-                pt::Import::Rename(lit!("import\\to\\path"), vec![(id("A"), None), (id("B"), Some(id("C")))], loc!())
+                pt::Import::Rename(pt::ImportPath::Filename(lit!("import\\to\\path")), vec![(id("A"), None), (id("B"), Some(id("C")))], loc!())
                     => "import {A, B as C} from \"import\\to\\path\";",
+
+                pt::Import::Plain(pt::ImportPath::Path(idp!("std", "stub")), loc!()) => "import std.stub;",
+
+                pt::Import::GlobalSymbol(pt::ImportPath::Path(idp!("a", "b", "c")), id("ImportedContract"), loc!())
+                    => "import a.b.c as ImportedContract;",
+
+                pt::Import::Rename(pt::ImportPath::Path(idp!("std", "stub")), vec![], loc!())
+                    => "import {} from std.stub;",
+                pt::Import::Rename(pt::ImportPath::Path(idp!("std", "stub")), vec![(id("A"), None), (id("B"), Some(id("C")))], loc!())
+                    => "import {A, B as C} from std.stub;",
             }
 
             pt::Mutability: {

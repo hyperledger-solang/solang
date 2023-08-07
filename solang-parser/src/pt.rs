@@ -112,6 +112,19 @@ impl Loc {
         }
     }
 
+    /// Returns this location's end.
+    /// The returned endpoint is not part of the range.
+    /// This is used when a half-open range is needed.
+    ///
+    /// # Panics
+    ///
+    /// If this location is not a file.
+    #[track_caller]
+    #[inline]
+    pub fn exclusive_end(&self) -> usize {
+        self.end() + 1
+    }
+
     /// Replaces this location's start with `other`'s.
     ///
     /// # Panics
@@ -364,27 +377,38 @@ pub enum SourceUnitPart {
 #[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
 pub enum Import {
     /// `import <0>;`
-    Plain(StringLiteral, Loc),
+    Plain(ImportPath, Loc),
 
     /// `import * as <1> from <0>;`
     ///
     /// or
     ///
     /// `import <0> as <1>;`
-    GlobalSymbol(StringLiteral, Identifier, Loc),
+    GlobalSymbol(ImportPath, Identifier, Loc),
 
     /// `import { <<1.0> [as <1.1>]>,* } from <0>;`
-    Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>, Loc),
+    Rename(ImportPath, Vec<(Identifier, Option<Identifier>)>, Loc),
+}
+
+/// An import statement.
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "pt-serde", derive(Serialize, Deserialize))]
+pub enum ImportPath {
+    /// "foo.sol"
+    Filename(StringLiteral),
+    /// std.stub (experimental Solidity feature)
+    Path(IdentifierPath),
 }
 
 impl Import {
     /// Returns the import string.
     #[inline]
-    pub const fn literal(&self) -> &StringLiteral {
+    pub const fn literal(&self) -> Option<&StringLiteral> {
         match self {
-            Self::Plain(literal, _)
-            | Self::GlobalSymbol(literal, _, _)
-            | Self::Rename(literal, _, _) => literal,
+            Self::Plain(ImportPath::Filename(literal), _)
+            | Self::GlobalSymbol(ImportPath::Filename(literal), _, _)
+            | Self::Rename(ImportPath::Filename(literal), _, _) => Some(literal),
+            _ => None,
         }
     }
 }

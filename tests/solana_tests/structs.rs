@@ -24,7 +24,10 @@ fn struct_as_reference() {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
     let input = BorshToken::Array(vec![
         BorshToken::Tuple(vec![
             BorshToken::Uint {
@@ -48,7 +51,7 @@ fn struct_as_reference() {
         ]),
     ]);
 
-    let res = vm.function("try_ref", &[input]).unwrap();
+    let res = vm.function("try_ref").arguments(&[input]).call().unwrap();
     assert_eq!(
         res,
         BorshToken::Array(vec![

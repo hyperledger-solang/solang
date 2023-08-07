@@ -201,7 +201,7 @@ fn check_function(cfg: &ControlFlowGraph, data: &mut RecurseData) {
         // TODO: Block edges is an expensive function, we use it six times throughout the code,
         // perhaps we can just use the dag I calculate during cse.
         // Changes in constant folding would be necessary
-        for edge in cfg.blocks[cur_block].edges() {
+        for edge in cfg.blocks[cur_block].successors() {
             if !visited.contains(&edge) {
                 queue.push_back(edge);
                 visited.insert(edge);

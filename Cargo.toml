@@ -71,7 +71,6 @@ num-derive = "0.4"
 wasmi = "0.30"
 # rand version 0.7 is needed for ed25519_dalek::keypair::generate, used in solana_tests/signature_verify.rs
 rand_07 = { package = "rand", version = "0.7" }
-sha2 = "0.10"
 # solana_rbpf makes api changes in patch versions
 solana_rbpf = "=0.5.0"
 byteorder = "1.4"
@@ -82,7 +81,6 @@ path-slash = "0.2"
 pretty_assertions = "1.3"
 byte-slice-cast = "1.2"
 borsh = "0.10"
-tempfile = "3.3"
 rayon = "1"
 walkdir = "2.3.3"
 ink_primitives = "4.2.0"
