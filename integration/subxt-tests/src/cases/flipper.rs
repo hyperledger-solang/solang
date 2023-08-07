@@ -19,7 +19,7 @@ async fn case() -> anyhow::Result<()> {
         .deploy(
             &api,
             sp_keyring::AccountKeyring::Alice,
-            10_u128.pow(16),
+            0_u128,
             &|t: &ContractMessageTranscoder| t.encode::<_, String>("new", ["true".into()]).unwrap(),
         )
         .await?;
