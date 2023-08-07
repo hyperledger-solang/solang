@@ -63,9 +63,9 @@ contract RuntimeErrors {
         e.callee_func();
     }
 
-    // contract creation failed (contract was deplyed with no value)
+    // contract creation failed (nonpayable constructor received value)
     function create_child() public {
-        c = new child_runtime_errors();
+        c = new child_runtime_errors{value: 1}();
     }
 
     // non payable function dont_pay_me received value
@@ -126,7 +126,7 @@ contract callee_error {
 }
 
 contract child_runtime_errors {
-    constructor() payable {}
+    constructor() {}
 
     function say_my_name() public pure returns (string memory) {
         return "child_runtime_errors";

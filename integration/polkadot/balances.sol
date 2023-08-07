@@ -1,4 +1,6 @@
 contract balances {
+    constructor() payable {}
+
     function get_balance() public view returns (uint128) {
         return address(this).balance;
     }

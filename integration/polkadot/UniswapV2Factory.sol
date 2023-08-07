@@ -12,7 +12,7 @@ contract UniswapV2Factory is IUniswapV2Factory {
 
     event PairCreated(address token0, address token1, address pair, uint);
 
-    constructor(address _feeToSetter) public {
+    constructor(address _feeToSetter) public payable {
         feeToSetter = _feeToSetter;
     }
 
