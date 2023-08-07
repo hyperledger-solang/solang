@@ -82,83 +82,10 @@ Solidity for Solana incompatibilities with Solidity for Ethereum
 - External calls on Solana require that accounts be specified, as in :ref:`this example <solana_external_call>`.
 - The ERC-20 interface is not compatible with Solana at the moment.
 
-Build your Solidity for Solana
-______________________________
+Getting started on Solana
+_________________________
 
-
-.. code-block:: bash
-
-  solang compile --target solana flipper.sol -v
-
-This will produce two files called ``flipper.json`` and ``flipper.so``. The former is an Anchor style IDL file and the latter is
-the Solana ELF shared object containing the program. For each contract in the source code, Solang will create both an IDL file
-and a binary file.
-
-Each program will need to be deployed to a program_id. Usually, the program_id is a well-known account which is specified
-in the Solidity source code using the ``@program_id("F1ipperKF9EfD821ZbbYjS319LXYiBmjhzkkf5a26rC")`` annotation on the contract.
-A private key for the account is needed to deploy. You can generate your own private key using the command line tool
-``solana-keygen``.
-
-.. code-block:: bash
-
-    echo "[4,10,246,143,43,1,234,17,159,249,41,16,230,9,198,162,107,221,233,124,34,15,16,57,205,53,237,217,149,17,229,195,3,150,242,90,91,222,117,26,196,224,214,105,82,62,237,137,92,67,213,23,14,206,230,155,43,36,85,254,247,11,226,145]" > flipper-keypair.json
-    solana program deploy flipper.so
-
-After deploying the program, you can start on the client side, which needs the anchor npm library:
-
-.. code-block:: bash
-
-    npm install @coral-xyz/anchor
-
-Write the following javascript to a file called ``flipper.js``.
-
-.. code-block:: javascript
-
-    const { readFileSync } = require('fs');
-    const anchor = require('@coral-xyz/anchor');
-
-    const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
-    const PROGRAM_SO = readFileSync('./flipper.so');
-
-    (async function () {
-        const provider = anchor.AnchorProvider.env();
-
-        const dataAccount = anchor.web3.Keypair.generate();
-
-        const programId = new anchor.web3.PublicKey(IDL.metadata.address);
-
-        const wallet = provider.wallet.publicKey;
-
-        const program = new anchor.Program(IDL, programId, provider);
-
-        await program.methods.new(wallet, true)
-            .accounts({ dataAccount: dataAccount.publicKey })
-            .signers([dataAccount]).rpc();
-
-        const val1 = await program.methods.get()
-            .accounts({ dataAccount: dataAccount.publicKey })
-            .view();
-
-        console.log(`state: ${val1}`);
-
-        await program.methods.flip()
-            .accounts({ dataAccount: dataAccount.publicKey })
-            .rpc();
-
-        const val2 = await program.methods.get()
-            .accounts({ dataAccount: dataAccount.publicKey })
-            .view();
-
-        console.log(`state: ${val2}`);
-    })();
-
-Now you'll have to set the ``ANCHOR_WALLET`` and ``ANCHOR_PROVIDER_URL`` environment variables to the correct values in order to run the example.
-
-.. code-block:: bash
-
-    export ANCHOR_WALLET=$HOME/.config/solana/id.json
-    export ANCHOR_PROVIDER_URL=http://127.0.0.1:8899
-    node flipper.js
+Please follow the `Solang Getting Started Guide <https://solana.com/developers/guides/solang/getting-started>`_.
 
 For more examples, see the
 `solang's integration tests <https://github.com/hyperledger/solang/tree/main/integration/solana>`_.
