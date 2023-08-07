@@ -1,4 +1,6 @@
 contract creator {
+    constructor() payable {}
+
     child_create_contract public c;
 
     function create_child() public {

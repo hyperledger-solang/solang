@@ -262,8 +262,8 @@ contract overloaded {
 	// CHECK: 	 = call overloaded::overloaded::receive 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 
-	constructor foo() {}
-	constructor bar() {}
+	constructor foo() payable {}
+	constructor bar() payable {}
 	function f() public payable {}
 	function f(uint256 i) public pure {}
 	fallback() external {}
@@ -319,5 +319,26 @@ contract simple {
 	// CHECK: 	 = call simple::simple::function::foo 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 
+	function foo() public pure {}
+}
+
+contract nonpayableConstructor {
+	// BEGIN-CHECK: Contract: nonpayableConstructor
+	
+	// CHECK: # function polkadot_deploy_dispatch public:false selector: nonpayable:false
+
+	// CHECK: switch %selector.temp.54:
+    // CHECK: case uint32 2371928013: goto block #3
+
+	// CHECK: block3: # func_0_dispatch
+	// CHCEK: branchcond (unsigned more %value.temp.52 > uint128 0), block4, block5
+
+	// CHECK: block4: # func_0_got_value
+ 	// CHECK: print 
+ 	// CHECK: assert-failure
+	// CHECK: block5: # func_0_no_value
+ 	// CHECK: = call nonpayableConstructor::nonpayableConstructor::constructor::cdbf608d 
+	
+	constructor () {}
 	function foo() public pure {}
 }

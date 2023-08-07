@@ -375,10 +375,8 @@ impl<'a> Dispatch<'a> {
     }
 
     /// Insert a trap into the cfg, if the function `func_no` is not payable but received value anyways.
-    /// Constructors always receive endowment.
     fn abort_if_value_transfer(&mut self, func_no: usize) {
-        if !self.all_cfg[func_no].nonpayable || self.all_cfg[func_no].ty == FunctionTy::Constructor
-        {
+        if !self.all_cfg[func_no].nonpayable {
             return;
         }
 
