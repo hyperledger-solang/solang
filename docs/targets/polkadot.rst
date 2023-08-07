@@ -88,7 +88,7 @@ reconstructing and hashing the error signature based on the enum variant types).
     Solang does not yet support custom errors. For now, only `Error` (selector of `0x08c379a0`) 
     and `Panic` (selector of `4e487b71`) will be returned and occur in the metadata.
 
-The general process of decoding the output data for Solang Solidity contracts is as follows:
+The general process of decoding the output data of Solang Solidity contracts is as follows:
 
 1. If the revert flag is **not** set, the contract didn't revert and the output should be encoded as specified in the message spec.
 2. The compiler version must be solang > 0.3.1, or the error data can't be decoded (check the ``compiler`` field in the contract metadata).
