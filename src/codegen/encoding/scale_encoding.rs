@@ -588,12 +588,7 @@ impl AbiEncoding for ScaleEncoding {
             match arg {
                 Expression::AllocDynamicBytes {
                     initializer: Some(data),
-                    ty: Type::DynamicBytes,
-                    ..
-                }
-                | Expression::AllocDynamicBytes {
-                    initializer: Some(data),
-                    ty: Type::String,
+                    ty: Type::String | Type::DynamicBytes,
                     ..
                 } => result.extend_from_slice(&data.encode()),
                 Expression::AllocDynamicBytes {
