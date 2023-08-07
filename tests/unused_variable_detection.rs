@@ -248,10 +248,10 @@ fn state_variable() {
         .warning_contains("local variable 'b' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("local variable 'a' has been assigned, but never read"));
+        .warning_contains("local variable 'a' is unused"));
     assert!(ns
         .diagnostics
-        .warning_contains("local variable 'c' has never been read nor assigned"));
+        .warning_contains("local variable 'c' is unused"));
 }
 
 #[test]
@@ -295,7 +295,7 @@ fn struct_usage() {
         .warning_contains("storage variable 't1' has been assigned, but never read"));
     assert!(ns
         .diagnostics
-        .warning_contains("local variable 't5' has never been read nor assigned"));
+        .warning_contains("local variable 't5' is unused"));
     assert!(ns
         .diagnostics
         .warning_contains("storage variable 't6' has never been used"));
@@ -546,7 +546,7 @@ fn statements() {
         .warning_contains("function parameter 'a' is unused"));
     assert!(ns
         .diagnostics
-        .warning_contains("local variable 'ct' has been assigned, but never read",));
+        .warning_contains("local variable 'ct' is unused"));
 }
 
 #[test]

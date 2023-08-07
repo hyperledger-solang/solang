@@ -135,28 +135,33 @@ contract calle_contract {
     );
 
     vm.set_program(0);
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let mut _res = vm.function_must_fail(
-        "math_overflow",
-        &[BorshToken::Int {
+    let mut _res = vm
+        .function("math_overflow")
+        .arguments(&[BorshToken::Int {
             width: 8,
             value: BigInt::from(10u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
     assert_eq!(
         vm.logs,
         "runtime_error: math overflow in test.sol:22:20-29,\n"
     );
     vm.logs.clear();
 
-    _res = vm.function_must_fail(
-        "require_test",
-        &[BorshToken::Int {
+    _res = vm
+        .function("require_test")
+        .arguments(&[BorshToken::Int {
             width: 256,
             value: BigInt::from(9u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -165,7 +170,10 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm.function_must_fail("get_storage_bytes", &[]);
+    _res = vm
+        .function("get_storage_bytes")
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -174,7 +182,10 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm.function_must_fail("set_storage_bytes", &[]);
+    _res = vm
+        .function("set_storage_bytes")
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -182,13 +193,14 @@ contract calle_contract {
     );
     vm.logs.clear();
 
-    _res = vm.function_must_fail(
-        "read_integer_failure",
-        &[BorshToken::Uint {
+    _res = vm
+        .function("read_integer_failure")
+        .arguments(&[BorshToken::Uint {
             width: 32,
             value: BigInt::from(2u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -196,13 +208,14 @@ contract calle_contract {
     );
     vm.logs.clear();
 
-    _res = vm.function_must_fail(
-        "trunc_failure",
-        &[BorshToken::Uint {
+    _res = vm
+        .function("trunc_failure")
+        .arguments(&[BorshToken::Uint {
             width: 256,
             value: BigInt::from(u128::MAX),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -210,7 +223,10 @@ contract calle_contract {
     );
     vm.logs.clear();
 
-    _res = vm.function_must_fail("invalid_instruction", &[]);
+    _res = vm
+        .function("invalid_instruction")
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -219,7 +235,10 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm.function_must_fail("pop_empty_storage", &[]);
+    _res = vm
+        .function("pop_empty_storage")
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -228,13 +247,14 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm.function_must_fail(
-        "write_bytes_failure",
-        &[BorshToken::Uint {
+    _res = vm
+        .function("write_bytes_failure")
+        .arguments(&[BorshToken::Uint {
             width: 256,
             value: BigInt::from(9u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -243,13 +263,14 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm.function_must_fail(
-        "assert_test",
-        &[BorshToken::Uint {
+    _res = vm
+        .function("assert_test")
+        .arguments(&[BorshToken::Uint {
             width: 256,
             value: BigInt::from(9u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
     println!("{}", vm.logs);
     assert_eq!(
         vm.logs,
@@ -257,13 +278,14 @@ contract calle_contract {
     );
     vm.logs.clear();
 
-    _res = vm.function_must_fail(
-        "out_of_bounds",
-        &[BorshToken::Uint {
+    _res = vm
+        .function("out_of_bounds")
+        .arguments(&[BorshToken::Uint {
             width: 256,
             value: BigInt::from(19u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -272,13 +294,14 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm.function_must_fail(
-        "write_integer_failure",
-        &[BorshToken::Uint {
+    _res = vm
+        .function("write_integer_failure")
+        .arguments(&[BorshToken::Uint {
             width: 256,
             value: BigInt::from(1u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -287,13 +310,14 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm.function_must_fail(
-        "byte_cast_failure",
-        &[BorshToken::Uint {
+    _res = vm
+        .function("byte_cast_failure")
+        .arguments(&[BorshToken::Uint {
             width: 256,
             value: BigInt::from(33u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -302,7 +326,10 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm.function_must_fail("i_will_revert", &[]);
+    _res = vm
+        .function("i_will_revert")
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
 
     assert_eq!(
         vm.logs,
@@ -311,7 +338,7 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm.function_must_fail("revert_with_message", &[]);
+    _res = vm.function("revert_with_message").must_fail();
     assert_eq!(
         vm.logs,
         "runtime_error: I reverted! revert encountered in test.sol:103:9-30,\n"

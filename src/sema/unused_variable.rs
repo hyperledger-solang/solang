@@ -171,7 +171,9 @@ pub fn used_variable(ns: &mut Namespace, exp: &Expression, symtable: &mut Symtab
             used_variable(ns, expr, symtable);
         }
 
-        Expression::InternalFunctionCall { .. } | Expression::ExternalFunctionCall { .. } => {
+        Expression::ExternalFunction { .. }
+        | Expression::InternalFunctionCall { .. }
+        | Expression::ExternalFunctionCall { .. } => {
             check_function_call(ns, exp, symtable);
         }
 
@@ -255,7 +257,6 @@ pub fn check_function_call(ns: &mut Namespace, exp: &Expression, symtable: &mut 
                 used_variable(ns, expr, symtable);
             }
         }
-
         _ => {}
     }
 }
@@ -339,15 +340,12 @@ pub fn emit_warning_local_variable(
 
         VariableUsage::LocalVariable => {
             let assigned = variable.initializer.has_initializer() || variable.assigned;
-            if !assigned && !variable.read {
+            if !variable.assigned && !variable.read {
                 return Some(Diagnostic::warning(
                     variable.id.loc,
-                    format!(
-                        "local variable '{}' has never been read nor assigned",
-                        variable.id.name
-                    ),
+                    format!("local variable '{}' is unused", variable.id.name),
                 ));
-            } else if assigned && !variable.read && !variable.is_reference() {
+            } else if assigned && !variable.read && !variable.is_reference(ns) {
                 // Values assigned to variables that reference others change the value of its reference
                 // No warning needed in this case
                 return Some(Diagnostic::warning(

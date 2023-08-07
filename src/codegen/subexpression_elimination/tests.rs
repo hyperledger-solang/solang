@@ -648,7 +648,7 @@ fn clone() {
     let mut cst = CommonSubExpressionTracker::default();
 
     set.process_instruction(&instr, &mut ave, &mut Some(&mut cst));
-    let set_2 = set.clone_for_parent_block();
+    let set_2 = set.deep_clone();
 
     // Available expressions
     assert!(set_2.find_expression(&unary).is_some());
@@ -810,7 +810,7 @@ fn intersect() {
     cst.set_cur_block(0);
     set.process_instruction(&instr, &mut ave, &mut Some(&mut cst));
     set.process_instruction(&instr2, &mut ave, &mut Some(&mut cst));
-    let mut set_2 = set.clone().clone_for_parent_block();
+    let mut set_2 = set.clone().deep_clone();
     cst.set_cur_block(2);
     ave.set_cur_block(2);
     set.kill(1);

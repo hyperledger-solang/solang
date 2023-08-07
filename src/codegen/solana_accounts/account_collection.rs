@@ -34,6 +34,13 @@ struct RecurseData<'a> {
 impl RecurseData<'_> {
     /// Add an account to the function's indexmap
     fn add_account(&mut self, account_name: String, account: SolanaAccount) {
+        let (is_signer, is_writer) = self.functions[self.ast_no]
+            .solana_accounts
+            .borrow()
+            .get(&account_name)
+            .map(|acc| (acc.is_signer, acc.is_writer))
+            .unwrap_or((false, false));
+
         if self.functions[self.ast_no]
             .solana_accounts
             .borrow_mut()
@@ -41,8 +48,8 @@ impl RecurseData<'_> {
                 account_name,
                 SolanaAccount {
                     loc: account.loc,
-                    is_signer: account.is_signer,
-                    is_writer: account.is_writer,
+                    is_signer: account.is_signer || is_signer,
+                    is_writer: account.is_writer || is_writer,
                     generated: true,
                 },
             )
@@ -194,7 +201,7 @@ fn check_function(cfg: &ControlFlowGraph, data: &mut RecurseData) {
         // TODO: Block edges is an expensive function, we use it six times throughout the code,
         // perhaps we can just use the dag I calculate during cse.
         // Changes in constant folding would be necessary
-        for edge in cfg.blocks[cur_block].edges() {
+        for edge in cfg.blocks[cur_block].successors() {
             if !visited.contains(&edge) {
                 queue.push_back(edge);
                 visited.insert(edge);

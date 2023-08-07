@@ -15,7 +15,7 @@ use num_traits::{One, ToPrimitive};
 use reaching_values::{reaching_values, transfer};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
-use value::{is_single_constant, set_max_signed, set_max_unsigned, Value};
+use value::{get_max_signed, get_max_unsigned, is_single_constant, Value};
 
 /**
   Strength Reduce optimization pass - replace expensive arithmetic operations with cheaper ones
@@ -230,43 +230,46 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                     let left_values = expression_values(left, vars, ns);
                     let right_values = expression_values(right, vars, ns);
 
-                    if let Some(right) = is_single_constant(&right_values) {
-                        // is it a power of two
-                        // replace with a shift
-                        let mut shift = BigInt::one();
-                        let mut cmp = BigInt::from(2);
+                    match is_single_constant(&right_values) {
+                        Some(right) if *overflowing => {
+                            // is it a power of two
+                            // replace with a shift
+                            let mut shift = BigInt::one();
+                            let mut cmp = BigInt::from(2);
 
-                        for _ in 1..bits {
-                            if cmp == right {
-                                ns.hover_overrides.insert(
-                                    *loc,
-                                    format!(
-                                        "{} multiply optimized to shift left {}",
-                                        ty.to_string(ns),
-                                        shift
-                                    ),
-                                );
+                            for _ in 1..bits {
+                                if cmp == right {
+                                    ns.hover_overrides.insert(
+                                        *loc,
+                                        format!(
+                                            "{} multiply optimized to shift left {}",
+                                            ty.to_string(ns),
+                                            shift
+                                        ),
+                                    );
 
-                                return Expression::ShiftLeft {
-                                    loc: *loc,
-                                    ty: ty.clone(),
-                                    left: left.clone(),
-                                    right: Box::new(Expression::NumberLiteral {
+                                    return Expression::ShiftLeft {
                                         loc: *loc,
                                         ty: ty.clone(),
-                                        value: shift,
-                                    }),
-                                };
-                            }
+                                        left: left.clone(),
+                                        right: Box::new(Expression::NumberLiteral {
+                                            loc: *loc,
+                                            ty: ty.clone(),
+                                            value: shift,
+                                        }),
+                                    };
+                                }
 
-                            cmp *= 2;
-                            shift += 1;
+                                cmp *= 2;
+                                shift += 1;
+                            }
                         }
+                        _ => (), // SHL would disable overflow check
                     }
 
                     if ty.is_signed_int(ns) {
                         if let (Some(left_max), Some(right_max)) =
-                            (set_max_signed(&left_values), set_max_signed(&right_values))
+                            (get_max_signed(&left_values), get_max_signed(&right_values))
                         {
                             // We can safely replace this with a 64 bit multiply which can be encoded in a single wasm/bpf instruction
                             if (left_max * right_max).to_i64().is_some() {
@@ -296,8 +299,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                             }
                         }
                     } else {
-                        let left_max = set_max_unsigned(&left_values);
-                        let right_max = set_max_unsigned(&right_values);
+                        let left_max = get_max_unsigned(&left_values);
+                        let right_max = get_max_unsigned(&right_values);
 
                         // We can safely replace this with a 64 bit multiply which can be encoded in a single wasm/bpf instruction
                         if left_max * right_max <= BigInt::from(u64::MAX) {
@@ -383,7 +386,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
 
                     if ty.is_signed_int(ns) {
                         if let (Some(left_max), Some(right_max)) =
-                            (set_max_signed(&left_values), set_max_signed(&right_values))
+                            (get_max_signed(&left_values), get_max_signed(&right_values))
                         {
                             if left_max.to_i64().is_some() && right_max.to_i64().is_some() {
                                 ns.hover_overrides.insert(
@@ -411,8 +414,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                             }
                         }
                     } else {
-                        let left_max = set_max_unsigned(&left_values);
-                        let right_max = set_max_unsigned(&right_values);
+                        let left_max = get_max_unsigned(&left_values);
+                        let right_max = get_max_unsigned(&right_values);
 
                         // If both values fit into u64, then the result must too
                         if left_max.to_u64().is_some() && right_max.to_u64().is_some() {
@@ -492,7 +495,7 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
 
                     if ty.is_signed_int(ns) {
                         if let (Some(left_max), Some(right_max)) =
-                            (set_max_signed(&left_values), set_max_signed(&right_values))
+                            (get_max_signed(&left_values), get_max_signed(&right_values))
                         {
                             if left_max.to_i64().is_some() && right_max.to_i64().is_some() {
                                 ns.hover_overrides.insert(
@@ -520,8 +523,8 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
                             }
                         }
                     } else {
-                        let left_max = set_max_unsigned(&left_values);
-                        let right_max = set_max_unsigned(&right_values);
+                        let left_max = get_max_unsigned(&left_values);
+                        let right_max = get_max_unsigned(&right_values);
 
                         // If both values fit into u64, then the result must too
                         if left_max.to_u64().is_some() && right_max.to_u64().is_some() {

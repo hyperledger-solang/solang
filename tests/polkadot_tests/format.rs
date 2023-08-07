@@ -6,12 +6,12 @@ use parity_scale_codec::Encode;
 #[test]
 fn output() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             function foo(bool x) public {
                 print("val:{}".format(x));
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -27,12 +27,12 @@ fn output() {
     assert_eq!(runtime.debug_buffer(), "print: val:false,\n");
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             function foo(bytes bar) public {
                 print("bar:{}".format(bar));
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -42,12 +42,12 @@ fn output() {
     assert_eq!(runtime.debug_buffer(), "print: bar:41424344,\n");
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             function foo(bytes5 bar) public {
                 print("bar:{}".format(bar));
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -57,12 +57,12 @@ fn output() {
     assert_eq!(runtime.debug_buffer(), "print: bar:0103fe0709,\n");
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             function foo(string bar) public {
                 print("bar:{} address:{}".format(bar, this));
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -78,12 +78,12 @@ fn output() {
     );
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             function foo(uint64 bar) public {
                 print("bar:{:x}".format(bar));
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -105,12 +105,12 @@ fn output() {
     assert_eq!(runtime.debug_buffer(), "print: bar:0x0,\n");
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             function foo(int128 bar) public {
                 print("bar:{:x}".format(bar));
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -123,12 +123,12 @@ fn output() {
     );
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             function foo(int128 bar) public {
                 print("there is an old android joke which goes {:b} ".format(bar));
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -140,12 +140,12 @@ fn output() {
     assert!(runtime.debug_buffer().contains("goes -0b111111 ,"));
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             function foo(int64 bar) public {
                 print("number:{} ".format(bar));
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -157,12 +157,12 @@ fn output() {
     assert!(runtime.debug_buffer().contains("print: number:-102 ,"));
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             function foo(int128 bar) public {
                 print("number:{} ".format(bar));
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -197,7 +197,7 @@ fn output() {
     runtime.debug_buffer().truncate(0);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract format {
             enum enum1 { bar1, bar2, bar3 }
             function foo(int256 bar) public {
@@ -212,7 +212,7 @@ fn output() {
             function e() public returns (string) {
                 return "number<{}>".format(enum1.bar3);
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());

@@ -13,8 +13,8 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
-    /// Clone a set for a given parent block
-    pub fn clone_for_parent_block(&self) -> AvailableExpressionSet<'a> {
+    /// Deep clone a set
+    pub fn deep_clone(&self) -> AvailableExpressionSet<'a> {
         let mut new_set = AvailableExpressionSet {
             expression_memory: HashMap::default(),
             expr_map: self.expr_map.clone(),
@@ -355,7 +355,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
         }
     }
 
-    /// When a reaching definition change, we remove the variable node and all its descendants from
+    /// When a reaching definition changes, we remove the variable node and all its descendants from
     /// the graph
     pub fn kill(&mut self, var_no: usize) {
         let key = ExpressionType::Variable(var_no);

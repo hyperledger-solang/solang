@@ -66,8 +66,8 @@ pub(super) fn is_single_constant(set: &HashSet<Value>) -> Option<BigInt> {
     None
 }
 
-/// Get the maximum unsigned value in a set
-pub(super) fn set_max_signed(set: &HashSet<Value>) -> Option<BigInt> {
+/// Get the maximum signed value in a set
+pub(super) fn get_max_signed(set: &HashSet<Value>) -> Option<BigInt> {
     let mut m = BigInt::zero();
 
     for v in set {
@@ -91,8 +91,8 @@ pub(super) fn set_max_signed(set: &HashSet<Value>) -> Option<BigInt> {
     Some(m)
 }
 
-/// Get the maximum signed value in a set
-pub(super) fn set_max_unsigned(set: &HashSet<Value>) -> BigInt {
+/// Get the maximum unsigned value in a set
+pub(super) fn get_max_unsigned(set: &HashSet<Value>) -> BigInt {
     let mut m = BigInt::zero();
 
     for v in set {

@@ -9,7 +9,7 @@ contract c {
     function bar3() foo3() public {}
 }
 // ---- Expect: diagnostics ----
-// warning: 3:31-32: local variable 'x' has been assigned, but never read
+// warning: 3:31-32: local variable 'x' is unused
 // error: 7:21-27: function declared 'pure' but modifier reads from state
 // 	note 3:35-38: read to state
 // error: 8:21-27: function declared 'view' but modifier writes to state

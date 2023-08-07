@@ -1459,7 +1459,7 @@ fn alloc_size_from_storage() {
 #[test]
 fn fixed_bytes() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract Storage {
             bytes32[] data;
             constructor() {
@@ -1470,7 +1470,7 @@ fn fixed_bytes() {
                 return(data[j][i]);
             }
         }
-        "##,
+        "#,
     );
 
     runtime.constructor(0, vec![]);
@@ -1484,7 +1484,7 @@ fn fixed_bytes() {
     }
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract Memory {
             constructor() {
             }
@@ -1495,7 +1495,7 @@ fn fixed_bytes() {
                 return(data[j][i]);
             }
         }
-        "##,
+        "#,
     );
 
     runtime.constructor(0, vec![]);

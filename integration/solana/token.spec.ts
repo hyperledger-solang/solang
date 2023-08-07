@@ -58,7 +58,7 @@ describe('Create spl-token and use from solidity', function () {
             .remainingAccounts([
                 { pubkey: mint, isSigner: false, isWritable: true },
                 { pubkey: tokenAccount.address, isSigner: false, isWritable: true },
-                { pubkey: mintAuthority.publicKey, isSigner: true, isWritable: true },
+                { pubkey: mintAuthority.publicKey, isSigner: true, isWritable: false },
             ])
             .signers([mintAuthority])
             .rpc();
@@ -96,7 +96,7 @@ describe('Create spl-token and use from solidity', function () {
             .remainingAccounts([
                 { pubkey: otherTokenAccount.address, isSigner: false, isWritable: true },
                 { pubkey: tokenAccount.address, isSigner: false, isWritable: true },
-                { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+                { pubkey: payer.publicKey, isSigner: true, isWritable: false },
             ])
             .signers([payer])
             .rpc();
@@ -130,7 +130,7 @@ describe('Create spl-token and use from solidity', function () {
             .remainingAccounts([
                 { pubkey: otherTokenAccount.address, isSigner: false, isWritable: true },
                 { pubkey: mint, isSigner: false, isWritable: true },
-                { pubkey: theOutsider.publicKey, isSigner: true, isWritable: true },
+                { pubkey: theOutsider.publicKey, isSigner: true, isWritable: false },
             ])
             .signers([theOutsider])
             .rpc();

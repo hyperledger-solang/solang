@@ -20,13 +20,18 @@ fn simple() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(vm.logs, "Hello from constructor");
 
     vm.logs.truncate(0);
 
-    vm.function("test", &[]);
+    vm.function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(vm.logs, "Hello from function");
 }
@@ -44,7 +49,10 @@ fn format() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(
         vm.logs,
@@ -69,11 +77,13 @@ fn parameters() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    vm.function(
-        "test",
-        &[
+    vm.function("test")
+        .arguments(&[
             BorshToken::Uint {
                 width: 32,
                 value: BigInt::from(10u8),
@@ -82,16 +92,16 @@ fn parameters() {
                 width: 64,
                 value: BigInt::from(10u8),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(vm.logs, "x is 10");
 
     vm.logs.truncate(0);
 
-    vm.function(
-        "test",
-        &[
+    vm.function("test")
+        .arguments(&[
             BorshToken::Uint {
                 width: 32,
                 value: BigInt::from(99u8),
@@ -100,8 +110,9 @@ fn parameters() {
                 width: 64,
                 value: BigInt::from(102u8),
             },
-        ],
-    );
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(vm.logs, "y is 102");
 }
@@ -117,16 +128,19 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function(
-            "test",
-            &[BorshToken::Uint {
-                width: 32,
-                value: BigInt::from(10u8),
-            }],
-        )
+        .function("test")
+        .arguments(&[BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(10u8),
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(
@@ -146,16 +160,19 @@ fn returns() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function(
-            "test",
-            &[BorshToken::Uint {
-                width: 64,
-                value: BigInt::from(982451653u64),
-            }],
-        )
+        .function("test")
+        .arguments(&[BorshToken::Uint {
+            width: 64,
+            value: BigInt::from(982451653u64),
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -197,25 +214,39 @@ fn flipper() {
         }"#,
     );
 
-    vm.constructor(&[BorshToken::Bool(true)]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .arguments(&[BorshToken::Bool(true)])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(
-        vm.data()[0..17].to_vec(),
+        vm.account_data[&data_account].data[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000001").unwrap()
     );
 
-    let returns = vm.function("get", &[]).unwrap();
+    let returns = vm
+        .function("get")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(true));
 
-    vm.function("flip", &[]);
+    vm.function("flip")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     assert_eq!(
-        vm.data()[0..17].to_vec(),
+        vm.account_data[&data_account].data[0..17].to_vec(),
         hex::decode("6fc90ec500000000000000001800000000").unwrap()
     );
 
-    let returns = vm.function("get", &[]).unwrap();
+    let returns = vm
+        .function("get")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(false));
 }
@@ -251,12 +282,21 @@ fn incrementer() {
         }"#,
     );
 
-    vm.constructor(&[BorshToken::Uint {
-        width: 32,
-        value: BigInt::from(5u8),
-    }]);
+    let data_account = vm.initialize_data_account();
 
-    let returns = vm.function("get", &[]).unwrap();
+    vm.function("new")
+        .arguments(&[BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(5u8),
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let returns = vm
+        .function("get")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -266,15 +306,19 @@ fn incrementer() {
         }
     );
 
-    vm.function(
-        "inc",
-        &[BorshToken::Uint {
+    vm.function("inc")
+        .arguments(&[BorshToken::Uint {
             width: 32,
             value: BigInt::from(5u8),
-        }],
-    );
+        }])
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("get", &[]).unwrap();
+    let returns = vm
+        .function("get")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -329,7 +373,10 @@ fn two_arrays() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 }
 
 #[test]
@@ -354,9 +401,16 @@ fn dead_storage_bug() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("v", &[]).unwrap();
+    let returns = vm
+        .function("v")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -415,19 +469,23 @@ contract test3 {
     );
 
     // call constructor
-    runtime.constructor(&[]);
+    let data_account = runtime.initialize_data_account();
+    runtime
+        .function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     for i in 0..=50 {
         let res = ((50 - i) * 100 + 5) + i * 1000;
 
         let returns = runtime
-            .function(
-                "foo",
-                &[BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(i),
-                }],
-            )
+            .function("foo")
+            .arguments(&[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(i),
+            }])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
 
         assert_eq!(
@@ -443,16 +501,16 @@ contract test3 {
         let res = (i + 1) * 10 + 1;
 
         let returns = runtime
-            .function(
-                "bar",
-                &[
-                    BorshToken::Uint {
-                        width: 32,
-                        value: BigInt::from(i),
-                    },
-                    BorshToken::Bool(true),
-                ],
-            )
+            .function("bar")
+            .arguments(&[
+                BorshToken::Uint {
+                    width: 32,
+                    value: BigInt::from(i),
+                },
+                BorshToken::Bool(true),
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
 
         assert_eq!(
@@ -472,16 +530,16 @@ contract test3 {
         }
 
         let returns = runtime
-            .function(
-                "bar",
-                &[
-                    BorshToken::Uint {
-                        width: 32,
-                        value: BigInt::from(i),
-                    },
-                    BorshToken::Bool(false),
-                ],
-            )
+            .function("bar")
+            .arguments(&[
+                BorshToken::Uint {
+                    width: 32,
+                    value: BigInt::from(i),
+                },
+                BorshToken::Bool(false),
+            ])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
 
         assert_eq!(
@@ -505,13 +563,13 @@ contract test3 {
         }
 
         let returns = runtime
-            .function(
-                "baz",
-                &[BorshToken::Uint {
-                    width: 32,
-                    value: BigInt::from(i),
-                }],
-            )
+            .function("baz")
+            .arguments(&[BorshToken::Uint {
+                width: 32,
+                value: BigInt::from(i),
+            }])
+            .accounts(vec![("dataAccount", data_account)])
+            .call()
             .unwrap();
 
         assert_eq!(

@@ -5,7 +5,8 @@ use crate::sema::ast::{Expression, Parameter, Statement, TryCatch, Type};
 use crate::sema::yul::ast::InlineAssembly;
 use crate::{parse_and_resolve, sema::ast, FileResolver, Target};
 use solang_parser::pt::Loc;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
+use std::path::PathBuf;
 
 pub(crate) fn parse(src: &'static str) -> ast::Namespace {
     let mut cache = FileResolver::new();
@@ -621,4 +622,52 @@ contract Child {
         errors[0].message,
         "either 'address' or 'accounts' call argument is required on Solana"
     );
+}
+
+#[test]
+fn get_import_map() {
+    let mut cache = FileResolver::new();
+    let map = OsString::from("@openzepellin");
+    let example_sol_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("examples")
+        .canonicalize()
+        .unwrap();
+
+    assert!(cache
+        .add_import_map(map.clone(), example_sol_path.clone())
+        .is_ok());
+
+    let retrieved = cache.get_import_map(&map);
+    assert_eq!(Some(&example_sol_path), retrieved);
+}
+
+#[test]
+fn get_import_path() {
+    let mut cache = FileResolver::new();
+    let examples = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("examples")
+        .canonicalize()
+        .unwrap();
+
+    let bad_path = PathBuf::from("/IDontExist.sol");
+
+    assert!(cache.add_import_path(&examples).is_ok());
+    assert!(cache.add_import_path(&bad_path).is_err());
+
+    let ns = parse_and_resolve(OsStr::new("example.sol"), &mut cache, Target::EVM);
+
+    let file = ns.files.get(0);
+    assert!(file.is_some());
+    if let Some(file) = file {
+        let import_path = cache.get_import_path(file.import_no.unwrap());
+        assert_eq!(Some(&(None, examples.clone())), import_path);
+    }
+
+    let ns = parse_and_resolve(OsStr::new("incrementer.sol"), &mut cache, Target::EVM);
+    let file = ns.files.get(0);
+    assert!(file.is_some());
+    if let Some(file) = file {
+        let import_path = cache.get_import_path(file.import_no.unwrap());
+        assert_eq!(Some(&(None, examples.clone())), import_path);
+    }
 }

@@ -96,8 +96,7 @@ impl<'a> AnticipatedExpressions<'a> {
                     // of all a block's descendants can be anticipated there.
                     set.union_sets(&cur_set);
                 } else {
-                    self.reverse_sets
-                        .insert(*edge, cur_set.clone_for_parent_block());
+                    self.reverse_sets.insert(*edge, cur_set.deep_clone());
                 }
             }
         }

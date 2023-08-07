@@ -20,8 +20,15 @@ fn test_slice_in_phi() {
     "#;
 
     let mut vm = build_solidity(file);
-    vm.constructor(&[]);
-    let returns = vm.function("test", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(returns, BorshToken::String(String::from("Hello!")));
 }

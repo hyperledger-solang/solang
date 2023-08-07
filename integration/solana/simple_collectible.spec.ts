@@ -51,7 +51,7 @@ describe('Simple collectible', function () {
             .remainingAccounts([
                 { pubkey: mint, isSigner: false, isWritable: true },
                 { pubkey: owner_token_account.address, isSigner: false, isWritable: true },
-                { pubkey: mint_authority.publicKey, isSigner: true, isWritable: true },
+                { pubkey: mint_authority.publicKey, isSigner: true, isWritable: false },
                 { pubkey: metadata_authority.publicKey, isSigner: true, isWritable: true }
             ])
             .signers([mint_authority, metadata_authority])
@@ -76,7 +76,7 @@ describe('Simple collectible', function () {
             .remainingAccounts([
                 { pubkey: new_owner_token_account.address, isSigner: false, isWritable: true },
                 { pubkey: owner_token_account.address, isSigner: false, isWritable: true },
-                { pubkey: nft_owner.publicKey, isSigner: true, isWritable: true },
+                { pubkey: nft_owner.publicKey, isSigner: true, isWritable: false },
             ])
             .signers([nft_owner])
             .rpc();

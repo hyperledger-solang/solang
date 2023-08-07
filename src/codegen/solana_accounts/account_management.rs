@@ -58,7 +58,7 @@ fn traverse_cfg(cfg: &mut ControlFlowGraph, functions: &[Function], ast_no: usiz
             process_instruction(instr, functions, ast_no);
         }
 
-        for edge in cfg.blocks[cur_block].edges() {
+        for edge in cfg.blocks[cur_block].successors() {
             if !visited.contains(&edge) {
                 queue.push_back(edge);
                 visited.insert(edge);

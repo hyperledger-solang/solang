@@ -203,7 +203,7 @@ fn virtual_contract_function() {
 #[test]
 fn ext() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract ft {
             function test() public {
                 function(int32) external returns (bool) func = this.foo;
@@ -215,7 +215,7 @@ fn ext() {
             function foo(int32) public returns (bool) {
                 return false;
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -335,7 +335,7 @@ fn ext() {
 #[test]
 fn encode_decode_ext_func() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract A {
             @selector([0,0,0,0])
             function a() public pure returns (uint8) {
@@ -362,7 +362,7 @@ fn encode_decode_ext_func() {
                 return dec2{flags: 8}();
             }
         }
-        "##,
+        "#,
     );
 
     runtime.function("it", vec![]);

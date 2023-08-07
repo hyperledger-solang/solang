@@ -99,6 +99,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
         file.full_path.clone(),
         &source_code,
         file_cache_no,
+        Some(file.get_import_no()),
     ));
 
     let (pt, comments) = match parse(&source_code, file_no) {
@@ -214,10 +215,22 @@ fn resolve_import(
     resolver: &mut FileResolver,
     ns: &mut ast::Namespace,
 ) {
-    let filename = match import {
+    let path = match import {
         pt::Import::Plain(f, _)
         | pt::Import::GlobalSymbol(f, _, _)
         | pt::Import::Rename(f, _, _) => f,
+    };
+
+    let filename = match path {
+        pt::ImportPath::Filename(f) => f,
+        pt::ImportPath::Path(path) => {
+            ns.diagnostics.push(ast::Diagnostic::error(
+                path.loc,
+                "experimental import paths not supported".into(),
+            ));
+
+            return;
+        }
     };
 
     let os_filename = OsStr::new(&filename.string);
@@ -395,6 +408,11 @@ fn resolve_pragma(
         ns.diagnostics.push(ast::Diagnostic::debug(
             *loc,
             "pragma 'experimental' with value 'ABIEncoderV2' is ignored".to_string(),
+        ));
+    } else if name.name == "experimental" && value.string == "solidity" {
+        ns.diagnostics.push(ast::Diagnostic::error(
+            *loc,
+            "experimental solidity features are not supported".to_string(),
         ));
     } else if name.name == "abicoder" && value.string == "v2" {
         ns.diagnostics.push(ast::Diagnostic::debug(

@@ -44,7 +44,7 @@ fn external_call() {
 #[test]
 fn revert_external_call() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract c {
             b x;
             constructor() public {
@@ -63,7 +63,7 @@ fn revert_external_call() {
             function get_x(int32 t) public returns (int32) {
                 revert("The reason why");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -74,7 +74,7 @@ fn revert_external_call() {
 #[test]
 fn revert_constructor() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract c {
             b x;
             constructor() public {
@@ -95,7 +95,7 @@ fn revert_constructor() {
             function get_x(int32 t) public returns (int32) {
                 return x * t;
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -108,7 +108,7 @@ fn external_datatypes() {
     struct Ret(u64);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract c {
             b x;
             constructor() public {
@@ -144,7 +144,7 @@ fn external_datatypes() {
             bytes4 f1;
             address f2;
             int f3;
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -191,7 +191,7 @@ fn creation_code() {
 #[test]
 fn issue666() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract Flipper {
             function flip () pure public {
                 print("flip");
@@ -208,7 +208,7 @@ fn issue666() {
             function superFlip () pure public {
                 _flipper.flip();
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());

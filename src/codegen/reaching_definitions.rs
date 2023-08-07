@@ -13,7 +13,7 @@ pub struct Def {
     pub assignment_no: usize,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Transfer {
     Gen { def: Def, var_no: usize },
     Mod { var_no: usize },
@@ -63,7 +63,7 @@ pub fn find(cfg: &mut ControlFlowGraph) {
             apply_transfers(transfers, &mut vars);
         }
 
-        for edge in cfg.blocks[block_no].edges() {
+        for edge in cfg.blocks[block_no].successors() {
             if cfg.blocks[edge].defs != vars {
                 blocks_todo.insert(edge);
                 // merge incoming set

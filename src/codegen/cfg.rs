@@ -32,7 +32,7 @@ use std::{fmt, fmt::Write};
 // IndexMap <ArrayVariable res , res of temp variable>
 pub type ArrayLengthVars = IndexMap<usize, usize>;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum Instr {
     /// Set variable
@@ -392,7 +392,7 @@ impl fmt::Display for HashTy {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct BasicBlock {
     pub phis: Option<BTreeSet<usize>>,
     pub name: String,
@@ -402,7 +402,7 @@ pub struct BasicBlock {
     pub transfers: Vec<Vec<reaching_definitions::Transfer>>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ControlFlowGraph {
     pub name: String,
     pub function_no: ASTFunction,
@@ -419,7 +419,7 @@ pub struct ControlFlowGraph {
     pub array_lengths_temps: ArrayLengthVars,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ASTFunction {
     SolidityFunction(usize),
     YulFunction(usize),
@@ -428,7 +428,7 @@ pub enum ASTFunction {
 
 impl BasicBlock {
     /// Fetch the blocks that can be executed after the block passed as argument
-    pub fn edges(&self) -> Vec<usize> {
+    pub fn successors(&self) -> Vec<usize> {
         let mut out = Vec::new();
 
         // out cfg has edge as the last instruction in a block
@@ -2124,7 +2124,10 @@ impl Namespace {
         // If a function is virtual, and it is overriden, do not make it public;
         // Otherwise the runtime function dispatch will have two identical functions to dispatch to.
         if func.is_virtual
-            && Some(self.contracts[contract_no].virtual_functions[&func.signature]) != function_no
+            && self.contracts[contract_no]
+                .virtual_functions
+                .get(&func.signature)
+                != function_no.as_ref()
         {
             return false;
         }

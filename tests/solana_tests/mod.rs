@@ -30,6 +30,7 @@ mod signature_verify;
 mod simple;
 mod storage;
 mod strings;
+mod structs;
 mod tags;
 mod unused_variable_elimination;
 mod using;
