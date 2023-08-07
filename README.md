@@ -11,12 +11,18 @@
 Welcome to Solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. Solang can compile Solidity for Solana and
 Polkadot Parachains with the `contracts` pallet.
-Solang is source compatible with Solidity 0.8, 
+Solang is source compatible with Solidity 0.8,
 with some caveats due to differences in the underlying blockchain.
 
 Solang is under active development right now, and has
 [extensive documentation](https://solang.readthedocs.io/en/latest/).
 
+## Solana
+
+Please follow the [Solang Getting Started Guide](https://solana.com/developers/guides/solang/getting-started).
+
+Solang is part of the [Solana Tools Suite](https://docs.solana.com/cli/install-solana-cli-tools) (version v1.16.3 and higher).
+There is no need to install it separately.
 
 ## Installation
 
@@ -28,89 +34,7 @@ brew install hyperledger/solang/solang
 
 For other operating systems, please check the [installation guide](https://solang.readthedocs.io/en/latest/installing.html).
 
-## Simple examples
-
-### Build for Solana
-
-Run the following command, selecting the flipper example available in Solang's repository:
-
-```bash
-solang compile --target solana examples/solana/flipper.sol
-```
-
-Alternatively if you want to use the solang container, run:
-
-```bash
-docker run --rm -it -v $(pwd):/sources ghcr.io/hyperledger/solang compile -v -o /sources --target solana /sources/solana/flipper.sol
-```
-
-This generates a file called `flipper.json` and `flipper.so`. In order to deploy the contract code to the account
-`F1ipperKF9EfD821ZbbYjS319LXYiBmjhzkkf5a26rC`, save the private key to the file `flipper-keypair.json`:
-
-```bash
-echo "[4,10,246,143,43,1,234,17,159,249,41,16,230,9,198,162,107,221,233,124,34,15,16,57,205,53,237,217,149,17,229,195,3,150,242,90,91,222,117,26,196,224,214,105,82,62,237,137,92,67,213,23,14,206,230,155,43,36,85,254,247,11,226,145]" > flipper-keypair.json
- ```
-
-Now you can deploy the contract code using:
-
-```bash
-solana program deploy flipper.so
-```
-
-Now install `@coral-xyz/anchor`:
-
-```
-npm install @coral-xyz/anchor
-```
-
-Save the following to `flipper.js`:
-```javascript
-const { readFileSync } = require('fs');
-const anchor = require('@coral-xyz/anchor');
-
-const IDL = JSON.parse(readFileSync('./flipper.json', 'utf8'));
-const PROGRAM_SO = readFileSync('./flipper.so');
-
-(async function () {
-	const provider = anchor.AnchorProvider.env();
-
-	const dataAccount = anchor.web3.Keypair.generate();
-
-	const programId = new anchor.web3.PublicKey(IDL.metadata.address);
-
-	const wallet = provider.wallet.publicKey;
-
-	const program = new anchor.Program(IDL, programId, provider);
-
-	await program.methods.new(wallet, true)
-		.accounts({ dataAccount: dataAccount.publicKey })
-		.signers([dataAccount]).rpc();
-
-	const val1 = await program.methods.get()
-		.accounts({ dataAccount: dataAccount.publicKey })
-		.view();
-
-	console.log(`state: ${val1}`);
-
-	await program.methods.flip()
-		.accounts({ dataAccount: dataAccount.publicKey })
-		.rpc();
-
-	const val2 = await program.methods.get()
-		.accounts({ dataAccount: dataAccount.publicKey })
-		.view();
-
-	console.log(`state: ${val2}`);
-})();
-```
-And now run:
-```
-export ANCHOR_WALLET=$HOME/.config/solana/id.json
-export ANCHOR_PROVIDER_URL=http://127.0.0.1:8899
-node flipper.js
-```
-
-### Build for Polkadot
+## Build for Polkadot
 
 Run the following command, selecting the flipper example available on Solang's repository:
 
