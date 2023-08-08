@@ -38,8 +38,8 @@ describe('Deploy asserts contract and test', () => {
             throw new Error("should not succeed");
         }, (res) => res);
 
-        // Error 24 is ContractReverted
-        expect(res2.dispatchError.toHuman()).toEqual({ "Module": { "error": "0x18000000", "index": "8" } });
+        // Error 25 is ContractReverted
+        expect(res2.dispatchError.toHuman()).toEqual({ "Module": { "error": "0x19000000", "index": "8" } });
 
         let res3 = await query(conn, alice, contract, "var");
 
