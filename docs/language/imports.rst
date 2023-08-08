@@ -74,3 +74,14 @@ There is another syntax, which does exactly the same.
 .. code-block:: solidity
 
     import * as defs from "defines.sol";
+
+Just like string literals, import paths can have escape sequences. This is a confusing way of
+writing `a.sol`:
+
+.. code-block:: solidity
+
+    import "\x61.sol";
+
+It is possible to use ``\`` Windows style path separators on Windows, but it is not recommended
+as they do not work on platforms other than Windows (they do not work on WSL either).
+Note they have to be written as ``\\`` due to escape sequences.

@@ -69,7 +69,7 @@ pub(crate) fn resolve_yul_expression(
 
         pt::YulExpression::StringLiteral(value, ty) => {
             let mut diagnostics = Diagnostics::default();
-            let unescaped_string =
+            let (_, unescaped_string) =
                 unescape(&value.string[..], 0, value.loc.file_no(), &mut diagnostics);
             ns.diagnostics.extend(diagnostics);
             resolve_string_literal(&value.loc, unescaped_string, ty, ns)

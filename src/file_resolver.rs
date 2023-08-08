@@ -103,7 +103,10 @@ impl FileResolver {
         (self.files[file_no].contents.clone(), file_no)
     }
 
-    /// Atempt to resolve a file, either from the cache or from the filesystem
+    /// Atempt to resolve a file, either from the cache or from the filesystem.
+    /// Returns Ok(Some(..)) if the file is found and loaded
+    /// Returns Ok(None) if no file by this path can be found.
+    /// Returns Err(..) if a file could be found but not could not be read.
     fn try_file(
         &mut self,
         filename: &OsStr,
@@ -181,7 +184,9 @@ impl FileResolver {
     ) -> Result<ResolvedFile, String> {
         let path = PathBuf::from(filename);
 
-        // relative path
+        // Only when the path starts with ./ or ../ are relative paths considered; this means
+        // that `import "b.sol";` will check the import paths for b.sol, while `import "./b.sol";`
+        // will only the path relative to the current file.
         if path.starts_with("./") || path.starts_with("../") {
             if let Some(ResolvedFile {
                 import_no,
