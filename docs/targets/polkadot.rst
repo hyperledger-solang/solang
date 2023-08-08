@@ -86,7 +86,7 @@ reconstructing and hashing the error signature based on the enum variant types).
     Solidity knows about `Error`, `Panic` and 
     `custom errors <https://docs.soliditylang.org/en/latest/abi-spec.html#errors>`_.
     Solang does not yet support custom errors. For now, only `Error` (selector of `0x08c379a0`) 
-    and `Panic` (selector of `4e487b71`) will be returned and occur in the metadata.
+    and `Panic` (selector of `4e487b71`) are returned and occur in the metadata.
 
 The general process of decoding the output data of Solang Solidity contracts is as follows:
 
