@@ -97,13 +97,13 @@ fn lang_error(
             .map(|field| Field::new(None, field, None, Default::default()))
             .collect::<Vec<_>>();
         let ty = Type::new(
-            path!(name),
+            path!(format!("0x{}", hex::encode(selector.to_be_bytes()))),
             vec![],
             TypeDef::Composite(TypeDefComposite::new(struct_fields)),
             Default::default(),
         );
         Variant {
-            name: format!("0x{}", hex::encode(selector.to_be_bytes())),
+            name: name.to_string(),
             fields: vec![Field::new(None, reg.register_type(ty).into(), None, vec![])],
             index: n.try_into().expect("we do not allow custome error types"),
             docs: Default::default(),

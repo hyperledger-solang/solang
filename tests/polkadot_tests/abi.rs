@@ -132,8 +132,8 @@ fn error_and_panic_in_lang_error() {
         .type_def
     {
         TypeDef::<PortableForm>::Variant(TypeDefVariant::<PortableForm> { variants }) => {
-            let error = variants.iter().find(|v| v.name == "0x08c379a0").unwrap();
-            let panic = variants.iter().find(|v| v.name == "0x4e487b71").unwrap();
+            let error = variants.iter().find(|v| v.name == "Error").unwrap();
+            let panic = variants.iter().find(|v| v.name == "Panic").unwrap();
             (error.fields[0].ty.id, panic.fields[0].ty.id)
         }
         _ => panic!("unexpected lang_err type def"),
@@ -143,7 +143,7 @@ fn error_and_panic_in_lang_error() {
     let error_ty = abi.registry().resolve(error_ty_id).unwrap();
     let error_ty_id = match &error_ty.type_def {
         TypeDef::<PortableForm>::Composite(TypeDefComposite::<PortableForm> { fields }) => {
-            assert_eq!(error_ty.path, path!("Error"));
+            assert_eq!(error_ty.path, path!("0x08c379a0"));
             fields[0].ty.id
         }
         _ => panic!("expected Error(string) type"),
@@ -160,7 +160,7 @@ fn error_and_panic_in_lang_error() {
     let panic_ty = abi.registry().resolve(panic_ty_id).unwrap();
     let panic_ty_id = match &panic_ty.type_def {
         TypeDef::<PortableForm>::Composite(TypeDefComposite::<PortableForm> { fields }) => {
-            assert_eq!(panic_ty.path, path!("Panic"));
+            assert_eq!(panic_ty.path, path!("0x4e487b71"));
             fields[0].ty.id
         }
         _ => panic!("expected Panic(uint256) type"),

@@ -65,7 +65,7 @@ The following example shows how call flags can be used:
 Reverts and error data decoding
 _______________________________
 
-When a contract reverts, the returned error data is what
+When a contract reverts, the returned error data is what the
 `EVM would return <https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require>`_.
 ``assert()``, ``require()``, or ``revert()`` will revert the contract execution, where the revert reason 
 is supplied as the contracts output (if any). Solidity contracts can also revert with a `Panic` 
@@ -76,10 +76,34 @@ Uncaught exceptions from calling and instantiating contracts or transferring fun
 up back to the caller.
 
 The metadata contains all error variants that the contract knows about in the ``lang_error`` field.
-The 4 bytes `selector` of the error data can be seen as the enum discriminator. However, because 
-SCALE encoding does not allow discriminators larger than 1 byte, the hex-encoded error selector 
-is provided as the enum variant name in the metadata (the selector could also be calculated by
-reconstructing and hashing the error signature based on the enum variant types).
+The 4 bytes `selector` of the error data can be seen as the enum discriminator or index. However, 
+because SCALE encoding does not allow index larger than 1 byte, the hex-encoded error selector 
+is provided as the path of the error variant type in the metadata.
+
+In the following example, the `Panic` variant of `lang_error` is of type `10`, which looks like this:
+
+. code-block:: json
+
+    {
+      "id": 10,
+      "type": {
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "type": 9
+              }
+            ]
+          }
+        },
+        "path": [
+          "0x4e487b71"
+        ]
+      }
+    }
+
+From this follows that error data matching the selector of `0x4e487b71` can be decoded according to 
+type `10` (the decoding must exclude the first 4 selector bytes).
 
 .. note::
 

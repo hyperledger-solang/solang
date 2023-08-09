@@ -655,8 +655,7 @@ mod tests {
     #[test]
     fn const_encode_uint() {
         let encoder = ScaleEncoding::new(false);
-        let values = [U256::MAX, U256::zero(), U256::one()];
-        for value in values {
+        for value in [U256::MAX, U256::zero(), U256::one()] {
             let mut bytes = [0u8; 32].to_vec();
             value.to_big_endian(&mut bytes);
             let data = BigInt::from_bytes_be(Sign::Plus, &bytes);
@@ -673,7 +672,7 @@ mod tests {
     #[test]
     fn const_encode_bytes4() {
         let encoder = ScaleEncoding::new(false);
-        let values = [
+        for value in [
             [0x00, 0x00, 0xff, 0xff],
             [0x00, 0xff, 0xff, 0x00],
             [0xff, 0xff, 0x00, 0x00],
@@ -682,9 +681,7 @@ mod tests {
             [0xde, 0xad, 0xbe, 0xef],
             [0x01, 0x00, 0x00, 0x00],
             [0x00, 0x00, 0x00, 0x01],
-        ];
-
-        for value in values {
+        ] {
             let expr = Expression::NumberLiteral {
                 ty: Type::Bytes(4),
                 value: BigInt::from_bytes_be(Sign::Plus, &value),
