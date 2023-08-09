@@ -1,0 +1,17 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "encode",
+      []
+    ],
+    [
+      "insertStrings",
+      []
+    ],
+    [
+      "encode",
+      []
+    ]
+  ]
+}

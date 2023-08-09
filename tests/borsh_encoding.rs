@@ -4,10 +4,11 @@ use anchor_syn::idl::{IdlType, IdlTypeDefinition, IdlTypeDefinitionTy};
 use byte_slice_cast::AsByteSlice;
 use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
+use serde::Deserialize;
 use std::cmp::Ordering;
 
 /// This is the token that should be used for each function call in Solana runtime tests
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Deserialize)]
 pub enum BorshToken {
     Address([u8; 32]),
     Int { width: u16, value: BigInt },
@@ -367,5 +368,60 @@ fn integer_byte_width(ty: &IdlType) -> usize {
         IdlType::U128 | IdlType::I128 => 16,
         IdlType::U256 | IdlType::I256 => 32,
         _ => unreachable!("Not an integer"),
+    }
+}
+
+pub trait VisitorMut {
+    fn visit_address(&mut self, _a: &mut [u8; 32]) {}
+    fn visit_int(&mut self, _width: &mut u16, _value: &mut BigInt) {}
+    fn visit_uint(&mut self, _width: &mut u16, _value: &mut BigInt) {}
+    fn visit_fixed_bytes(&mut self, _v: &mut Vec<u8>) {}
+    fn visit_bytes(&mut self, _v: &mut Vec<u8>) {}
+    fn visit_bool(&mut self, _b: &mut bool) {}
+    fn visit_string(&mut self, _s: &mut String) {}
+    fn visit_fixed_array(&mut self, v: &mut Vec<BorshToken>) {
+        visit_fixed_array(self, v)
+    }
+    fn visit_array(&mut self, v: &mut Vec<BorshToken>) {
+        visit_array(self, v)
+    }
+    fn visit_tuple(&mut self, v: &mut Vec<BorshToken>) {
+        visit_tuple(self, v)
+    }
+}
+
+pub fn visit_mut<T: VisitorMut + ?Sized>(visitor: &mut T, token: &mut BorshToken) {
+    match token {
+        BorshToken::Address(a) => visitor.visit_address(a),
+        BorshToken::Int { width, value } => visitor.visit_int(width, value),
+        BorshToken::Uint { width, value } => visitor.visit_uint(width, value),
+        BorshToken::FixedBytes(v) => visitor.visit_fixed_bytes(v),
+        BorshToken::Bytes(v) => visitor.visit_bytes(v),
+        BorshToken::Bool(b) => visitor.visit_bool(b),
+        BorshToken::String(s) => visitor.visit_string(s),
+        BorshToken::FixedArray(v) => visitor.visit_fixed_array(v),
+        BorshToken::Array(v) => visitor.visit_array(v),
+        BorshToken::Tuple(v) => visitor.visit_tuple(v),
+    }
+}
+
+#[allow(clippy::ptr_arg)]
+pub fn visit_fixed_array<T: VisitorMut + ?Sized>(visitor: &mut T, v: &mut Vec<BorshToken>) {
+    for token in v.iter_mut() {
+        visit_mut(visitor, token);
+    }
+}
+
+#[allow(clippy::ptr_arg)]
+pub fn visit_array<T: VisitorMut + ?Sized>(visitor: &mut T, v: &mut Vec<BorshToken>) {
+    for token in v.iter_mut() {
+        visit_mut(visitor, token);
+    }
+}
+
+#[allow(clippy::ptr_arg)]
+pub fn visit_tuple<T: VisitorMut + ?Sized>(visitor: &mut T, v: &mut Vec<BorshToken>) {
+    for token in v.iter_mut() {
+        visit_mut(visitor, token);
     }
 }

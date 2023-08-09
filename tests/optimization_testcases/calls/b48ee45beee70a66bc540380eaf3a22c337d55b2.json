@@ -1,0 +1,21 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "test",
+      [
+        {
+          "Uint": {
+            "width": 32,
+            "value": [
+              1,
+              [
+                10
+              ]
+            ]
+          }
+        }
+      ]
+    ]
+  ]
+}

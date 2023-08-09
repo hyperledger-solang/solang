@@ -1,0 +1,117 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "switch_default",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                1
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "switch_default",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                2
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "switch_default",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                6
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "switch_no_default",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                1
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "switch_no_default",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                2
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "switch_no_default",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                6
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "switch_no_case",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                3
+              ]
+            ]
+          }
+        }
+      ]
+    ]
+  ]
+}
