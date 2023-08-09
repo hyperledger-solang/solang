@@ -70,7 +70,7 @@ When a contract reverts, the returned error data is what
 ``assert()``, ``require()``, or ``revert()`` will revert the contract execution, where the revert reason 
 is supplied as the contracts output (if any). Solidity contracts can also revert with a `Panic` 
 (please refer to the 
-`Solidity language documentation <https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require>`_.
+`Ethereum Solidity language documentation <https://docs.soliditylang.org/en/v0.8.20/control-structures.html#panic-via-assert-and-error-via-require>`_.
 for more information about when `Panic` might be returned).
 Uncaught exceptions from calling and instantiating contracts or transferring funds will be bubbled 
 up back to the caller.
@@ -83,10 +83,10 @@ reconstructing and hashing the error signature based on the enum variant types).
 
 .. note::
 
-    Solidity knows about `Error`, `Panic` and 
+    Ethereum Solidity knows about `Error`, `Panic` and 
     `custom errors <https://docs.soliditylang.org/en/latest/abi-spec.html#errors>`_.
     Solang does not yet support custom errors. For now, only `Error` (selector of `0x08c379a0`) 
-    and `Panic` (selector of `4e487b71`) are returned and occur in the metadata.
+    and `Panic` (selector of `0x4e487b71`) are returned and occur in the metadata.
 
 The general process of decoding the output data of Solang Solidity contracts is as follows:
 
