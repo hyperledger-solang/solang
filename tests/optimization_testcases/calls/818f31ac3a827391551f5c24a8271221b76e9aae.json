@@ -1,0 +1,45 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "get",
+      []
+    ],
+    [
+      "set",
+      [
+        {
+          "String": "Hello, World!"
+        }
+      ]
+    ],
+    [
+      "get",
+      []
+    ],
+    [
+      "set",
+      [
+        {
+          "String": "Hallo, Werld!"
+        }
+      ]
+    ],
+    [
+      "get",
+      []
+    ],
+    [
+      "set",
+      [
+        {
+          "String": ""
+        }
+      ]
+    ],
+    [
+      "get",
+      []
+    ]
+  ]
+}

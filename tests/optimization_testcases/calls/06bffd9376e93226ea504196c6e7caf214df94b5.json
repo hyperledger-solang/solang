@@ -1,0 +1,17 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "setString",
+      [
+        {
+          "String": "coffee_tastes_good"
+        }
+      ]
+    ],
+    [
+      "getLength",
+      []
+    ]
+  ]
+}

@@ -13,6 +13,7 @@ use tiny_keccak::{Hasher, Keccak};
 use wasmi::core::{HostError, Trap, TrapCode};
 use wasmi::{Engine, Error, Instance, Linker, Memory, MemoryType, Module, Store};
 
+use solang::codegen::Options;
 use solang::file_resolver::FileResolver;
 use solang::{compile, Target};
 
@@ -1044,15 +1045,18 @@ pub fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, Stri
     let (wasm, ns) = compile(
         tmp_file,
         &mut cache,
-        opt,
         target,
-        log_ret,
-        log_err,
-        true,
+        &Options {
+            opt_level: opt.into(),
+            log_api_return_codes: log_ret,
+            log_runtime_errors: log_err,
+            log_prints: true,
+            #[cfg(feature = "wasm_opt")]
+            wasm_opt: Some(contract_build::OptimizationPasses::Z),
+            ..Default::default()
+        },
         vec!["unknown".to_string()],
         "0.0.1",
-        #[cfg(feature = "wasm_opt")]
-        Some(contract_build::OptimizationPasses::Z),
     );
     ns.print_diagnostics_in_plain(&cache, false);
     assert!(!wasm.is_empty());

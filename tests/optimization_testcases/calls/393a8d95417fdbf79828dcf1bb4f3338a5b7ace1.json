@@ -1,0 +1,21 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "addData",
+      []
+    ],
+    [
+      "encodeArray",
+      []
+    ],
+    [
+      "encodeComplex",
+      []
+    ],
+    [
+      "multiDimArrays",
+      []
+    ]
+  ]
+}

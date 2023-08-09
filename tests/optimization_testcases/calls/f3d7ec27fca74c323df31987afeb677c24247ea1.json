@@ -1,0 +1,73 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "set_string",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                1576026333,
+                1036925363,
+                42656
+              ]
+            ]
+          }
+        },
+        {
+          "String": "This is a string which should be a little longer than 32 bytes so we the the abi encoder"
+        }
+      ]
+    ],
+    [
+      "add_int",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                1576026333,
+                1036925363,
+                42656
+              ]
+            ]
+          }
+        },
+        {
+          "Int": {
+            "width": 64,
+            "value": [
+              1,
+              [
+                102
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "get",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                1576026333,
+                1036925363,
+                42656
+              ]
+            ]
+          }
+        }
+      ]
+    ]
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "pow",
+      [
+        {
+          "Uint": {
+            "width": 48,
+            "value": [
+              1,
+              [
+                2
+              ]
+            ]
+          }
+        },
+        {
+          "Uint": {
+            "width": 48,
+            "value": [
+              1,
+              [
+                47
+              ]
+            ]
+          }
+        }
+      ]
+    ]
+  ]
+}

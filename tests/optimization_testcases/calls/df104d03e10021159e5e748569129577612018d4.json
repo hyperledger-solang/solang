@@ -1,0 +1,29 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "return_true",
+      []
+    ],
+    [
+      "return_false",
+      []
+    ],
+    [
+      "true_arg",
+      [
+        {
+          "Bool": true
+        }
+      ]
+    ],
+    [
+      "false_arg",
+      [
+        {
+          "Bool": false
+        }
+      ]
+    ]
+  ]
+}

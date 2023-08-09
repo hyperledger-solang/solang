@@ -1,0 +1,52 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "set_s2",
+      []
+    ],
+    [
+      "get_s1",
+      []
+    ],
+    [
+      "set_s1",
+      [
+        {
+          "Tuple": [
+            {
+              "Uint": {
+                "width": 8,
+                "value": [
+                  1,
+                  [
+                    127
+                  ]
+                ]
+              }
+            },
+            {
+              "String": "foobar foobar foobar foobar foobar foobar"
+            },
+            {
+              "Uint": {
+                "width": 64,
+                "value": [
+                  1,
+                  [
+                    3944680146,
+                    2874452364
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    ],
+    [
+      "get_s1",
+      []
+    ]
+  ]
+}

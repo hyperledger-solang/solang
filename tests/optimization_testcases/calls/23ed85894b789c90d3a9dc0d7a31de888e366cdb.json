@@ -1,0 +1,96 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "set_elem",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                2
+              ]
+            ]
+          }
+        },
+        {
+          "String": "abcd"
+        }
+      ]
+    ],
+    [
+      "set_elem",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                3
+              ]
+            ]
+          }
+        },
+        {
+          "String": "you can lead a horse to water but you can’t make him drink"
+        }
+      ]
+    ],
+    [
+      "get_elem",
+      [
+        {
+          "Uint": {
+            "width": 256,
+            "value": [
+              1,
+              [
+                2
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "get",
+      []
+    ],
+    [
+      "set",
+      [
+        {
+          "FixedArray": [
+            {
+              "String": "a"
+            },
+            {
+              "String": "b"
+            },
+            {
+              "String": "c"
+            },
+            {
+              "String": "d"
+            }
+          ]
+        }
+      ]
+    ],
+    [
+      "get",
+      []
+    ],
+    [
+      "del",
+      []
+    ],
+    [
+      "get",
+      []
+    ]
+  ]
+}
