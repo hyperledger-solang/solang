@@ -1,0 +1,72 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "get",
+      []
+    ],
+    [
+      "set",
+      [
+        {
+          "Tuple": [
+            {
+              "Bool": true
+            },
+            {
+              "FixedArray": [
+                {
+                  "Uint": {
+                    "width": 32,
+                    "value": [
+                      1,
+                      [
+                        3
+                      ]
+                    ]
+                  }
+                },
+                {
+                  "Uint": {
+                    "width": 32,
+                    "value": [
+                      1,
+                      [
+                        5
+                      ]
+                    ]
+                  }
+                },
+                {
+                  "Uint": {
+                    "width": 32,
+                    "value": [
+                      1,
+                      [
+                        7
+                      ]
+                    ]
+                  }
+                },
+                {
+                  "Uint": {
+                    "width": 32,
+                    "value": [
+                      1,
+                      [
+                        11
+                      ]
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "Bool": true
+            }
+          ]
+        }
+      ]
+    ]
+  ]
+}

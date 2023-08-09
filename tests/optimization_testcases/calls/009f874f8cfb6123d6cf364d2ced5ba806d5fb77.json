@@ -1,0 +1,49 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "f",
+      [
+        {
+          "Bool": true
+        },
+        {
+          "Bool": true
+        }
+      ]
+    ],
+    [
+      "f",
+      [
+        {
+          "Bool": true
+        },
+        {
+          "Bool": false
+        }
+      ]
+    ],
+    [
+      "f",
+      [
+        {
+          "Bool": false
+        },
+        {
+          "Bool": false
+        }
+      ]
+    ],
+    [
+      "f",
+      [
+        {
+          "Bool": false
+        },
+        {
+          "Bool": true
+        }
+      ]
+    ]
+  ]
+}

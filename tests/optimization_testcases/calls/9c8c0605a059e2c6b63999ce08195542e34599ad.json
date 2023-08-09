@@ -1,0 +1,21 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "addData",
+      []
+    ],
+    [
+      "encodeStruct",
+      []
+    ],
+    [
+      "primitiveStruct",
+      []
+    ],
+    [
+      "primitiveDynamicArray",
+      []
+    ]
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "testIt",
+      [
+        {
+          "Array": [
+            {
+              "Uint": {
+                "width": 256,
+                "value": [
+                  1,
+                  [
+                    1
+                  ]
+                ]
+              }
+            },
+            {
+              "Uint": {
+                "width": 256,
+                "value": [
+                  1,
+                  [
+                    4
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    ]
+  ]
+}

@@ -108,7 +108,10 @@ pub struct Compile {
     pub package: CompilePackage,
 
     #[clap(flatten)]
-    #[serde(default = "CompilerOutput::default")]
+    #[serde(
+        default = "CompilerOutput::default",
+        rename(deserialize = "compiler-output")
+    )]
     pub compiler_output: CompilerOutput,
 
     #[clap(flatten)]

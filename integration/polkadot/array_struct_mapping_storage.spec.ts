@@ -20,10 +20,12 @@ describe('Deploy array_struct_mapping_storage contract and test', () => {
         await transaction(tx, alice);
 
         // let's add two elements to our array
+        gasLimit = await weight(conn, contract, "push", []);
         tx = contract.tx.push({ gasLimit });
 
         await transaction(tx, alice);
 
+        gasLimit = await weight(conn, contract, "push", []);
         tx = contract.tx.push({ gasLimit });
 
         await transaction(tx, alice);
@@ -31,7 +33,10 @@ describe('Deploy array_struct_mapping_storage contract and test', () => {
         // set some values
         for (let array_no = 0; array_no < 2; array_no += 1) {
             for (let i = 0; i < 10; i += 1) {
-                tx = contract.tx.set({ gasLimit }, array_no, 102 + i + array_no * 500, 300331 + i);
+                let index = 102 + i + array_no * 500;
+                let val = 300331 + i;
+                gasLimit = await weight(conn, contract, "set", [array_no, index, val]);
+                tx = contract.tx.set({ gasLimit }, array_no, index, val);
 
                 await transaction(tx, alice);
             }
@@ -49,6 +54,7 @@ describe('Deploy array_struct_mapping_storage contract and test', () => {
         }
 
         // delete one and try again
+        gasLimit = await weight(conn, contract, "rm", [0, 104]);
         tx = contract.tx.rm({ gasLimit }, 0, 104);
 
         await transaction(tx, alice);

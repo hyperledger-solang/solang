@@ -1,0 +1,55 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "testLength",
+      []
+    ],
+    [
+      "getString",
+      [
+        {
+          "Uint": {
+            "width": 32,
+            "value": [
+              0,
+              []
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "getString",
+      [
+        {
+          "Uint": {
+            "width": 32,
+            "value": [
+              1,
+              [
+                1
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "getString",
+      [
+        {
+          "Uint": {
+            "width": 32,
+            "value": [
+              1,
+              [
+                2
+              ]
+            ]
+          }
+        }
+      ]
+    ]
+  ]
+}
