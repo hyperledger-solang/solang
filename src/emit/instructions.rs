@@ -597,7 +597,7 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 expression(target, bin, call_expr, &w.vars, function, ns).into_pointer_value();
 
             let ptr_ok = bin.context.append_basic_block(function, "fn_ptr_ok");
-            let ptr_nil = bin.context.append_basic_block(function, "fn_ptr_nil");
+            let ptr_nil_block = bin.context.append_basic_block(function, "fn_ptr_nil");
             let nil_ptr = bin
                 .context
                 .i8_type()
@@ -607,9 +607,9 @@ pub(super) fn process_instruction<'a, T: TargetRuntime<'a> + ?Sized>(
                 bin.builder
                     .build_int_compare(IntPredicate::EQ, nil_ptr, callable, "check_nil_ptr");
             bin.builder
-                .build_conditional_branch(is_ptr_nil, ptr_nil, ptr_ok);
+                .build_conditional_branch(is_ptr_nil, ptr_nil_block, ptr_ok);
 
-            bin.builder.position_at_end(ptr_nil);
+            bin.builder.position_at_end(ptr_nil_block);
             bin.log_runtime_error(
                 target,
                 "internal function uninitialized".to_string(),
