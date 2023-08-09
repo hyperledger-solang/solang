@@ -162,12 +162,8 @@ A constructor can be marked ``payable``, in which case value can be passed with 
 constructor.
 
 .. note::
-    If value is sent to a non-payable function on Polkadot, the call will be
-    reverted. However there is no refund performed, so value will remain with the callee.
+    If value is sent to a non-payable function on Polkadot, the call will be reverted.
 
-    ``payable`` on constructors is not enforced on Polkadot,. Funds are needed
-    for storage rent and there is a minimum deposit needed for the contract. As a result,
-    constructors always receive value on Polkadot.
 
 Overriding function selector
 ____________________________

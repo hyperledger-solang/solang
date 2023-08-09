@@ -32,7 +32,7 @@ describe('Deploy runtime_errors.sol and test the debug buffer', () => {
         expect(res3).toContain(`runtime_error: external call failed in runtime_errors.sol:63:9-24`)
 
         let res4 = await debug_buffer(conn, contract, `create_child`);
-        expect(res4).toContain(`runtime_error: contract creation failed in runtime_errors.sol:68:13-39`)
+        expect(res4).toContain(`runtime_error: contract creation failed in runtime_errors.sol:68`)
 
         let res5 = await debug_buffer(conn, contract, `set_storage_bytes`, [])
         expect(res5).toContain(`runtime_error: storage index out of bounds in runtime_errors.sol:39:11-12`)

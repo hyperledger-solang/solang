@@ -11,6 +11,7 @@ fn external_call_value() {
         contract b {
             a f;
 
+            constructor() payable {}
             function step1() public {
                 f = new a();
             }
@@ -26,17 +27,20 @@ fn external_call_value() {
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
     runtime.function("step2", Vec::new());
 
-    // Minimum balance + transferred value = 500 + 1023
-    assert_eq!(runtime.balance(2), 1523);
+    // Transferred value = 1023
+    assert_eq!(runtime.balance(2), 1023);
 
     let mut runtime = build_solidity(
         r##"
         contract b {
+            constructor() payable {}
             function step1() public {
                 a f = new a();
                 try f.test{value: 1023}(501) {
@@ -54,12 +58,14 @@ fn external_call_value() {
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
 
-    // Minimum balance + transferred value = 500 + 1023
-    assert_eq!(runtime.balance(2), 1523);
+    // Transferred value = 1023
+    assert_eq!(runtime.balance(2), 1023);
 }
 
 #[test]
@@ -67,26 +73,30 @@ fn constructor_value() {
     let mut runtime = build_solidity(
         r##"
         contract b {
+            constructor() payable {}
             function step1() public {
-                a f = new a();
+                a f = new a{value: 500}();
             }
         }
 
         contract a {
+            constructor() payable {}
             function test(int32 l) public payable {
             }
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
-
     assert_eq!(runtime.balance(2), 500);
 
     let mut runtime = build_solidity(
         r##"
         contract b {
+            constructor() payable {}
             function step1() public {
                 a f = (new a){value: 0}();
             }
@@ -98,35 +108,40 @@ fn constructor_value() {
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
-
     assert_eq!(runtime.balance(2), 0);
 
     let mut runtime = build_solidity(
         r##"
         contract b {
+            constructor() payable {}
             function step1() public {
                 a f = new a{value: 499}();
             }
         }
 
         contract a {
+            constructor() payable {}
             function test(int32 l) public payable {
             }
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
-
     assert_eq!(runtime.balance(2), 499);
 
     let mut runtime = build_solidity(
         r##"
         contract b {
+            constructor() payable {}
             function step1() public {
                 try (new a{value: 511})() {
                     //
@@ -138,20 +153,23 @@ fn constructor_value() {
         }
 
         contract a {
+            constructor() payable {}
             function test(int32 l) public payable {
             }
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
-
     assert_eq!(runtime.balance(2), 511);
 
     let mut runtime = build_solidity(
         r##"
         contract b {
+            constructor() payable {}
             function step1() public {
                 try (new a){value: 511}() returns (a) {
                     //
@@ -163,15 +181,17 @@ fn constructor_value() {
         }
 
         contract a {
+            constructor() payable {}
             function test(int32 l) public payable {
             }
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
-
     assert_eq!(runtime.balance(2), 511)
 }
 
@@ -312,7 +332,7 @@ fn balance() {
         contract b {
             other o;
 
-            constructor() public {
+            constructor() public payable {
                 o = new other();
             }
 
@@ -332,14 +352,16 @@ fn balance() {
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
+
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
-    // Constructor received 20000 by default, however 500 were sent to "o"
-    assert_eq!(runtime.output(), 19500u128.to_le_bytes());
+    // Constructor received 20000, 0 were sent to "o"
+    assert_eq!(runtime.output(), 20000u128.to_le_bytes());
 
     runtime.function("step2", Vec::new());
-
-    assert_eq!(runtime.output(), 500u128.to_le_bytes());
+    assert_eq!(runtime.output(), 0u128.to_le_bytes());
 }
 
 #[test]
@@ -348,6 +370,7 @@ fn selfdestruct() {
         r##"
         contract c {
             other o;
+            constructor() payable {}
             function step1() public {
                 o = new other{value: 511}();
             }
@@ -358,13 +381,17 @@ fn selfdestruct() {
         }
 
         contract other {
+            constructor() payable {}
             function goaway(address payable recipient) public returns (bool) {
                 selfdestruct(recipient);
             }
         }"##,
     );
+
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
     assert_eq!(runtime.balance(0), 20000 - 511);
 
@@ -379,7 +406,7 @@ fn send_and_transfer() {
         contract c {
             other o;
 
-            constructor() public {
+            constructor() public payable {
                 o = new other();
             }
 
@@ -394,20 +421,21 @@ fn send_and_transfer() {
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
 
     // no receive() required for send/transfer
     assert_eq!(runtime.output(), true.encode());
-    assert_eq!(runtime.balance(2), 1011);
+    assert_eq!(runtime.balance(2), 511);
 
     let mut runtime = build_solidity(
         r##"
         contract c {
             other o;
 
-            constructor() public {
+            constructor() public payable {
                 o = new other();
             }
 
@@ -422,19 +450,21 @@ fn send_and_transfer() {
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
 
     assert_eq!(runtime.output(), true.encode());
-    assert_eq!(runtime.balance(2), 1011);
+    assert_eq!(runtime.balance(2), 511);
 
     let mut runtime = build_solidity(
         r##"
         contract c {
             other o;
 
-            constructor() public {
+            constructor() public payable {
                 o = new other();
             }
 
@@ -449,17 +479,19 @@ fn send_and_transfer() {
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
-    assert_eq!(runtime.balance(2), 1011);
+    assert_eq!(runtime.balance(2), 511);
 
     let mut runtime = build_solidity(
         r##"
         contract c {
             other o;
 
-            constructor() public {
+            constructor() public payable {
                 o = new other();
             }
 
@@ -474,9 +506,37 @@ fn send_and_transfer() {
         }"##,
     );
 
+    runtime.set_transferred_value(20000);
     runtime.constructor(0, Vec::new());
 
+    runtime.set_transferred_value(0);
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.balance(2), 1011);
+    assert_eq!(runtime.balance(2), 511);
+}
+
+#[test]
+fn nonpayable_constructor_reverts() {
+    let mut runtime = build_solidity(
+        r#"contract C {
+        uint8 public c;
+        constructor (uint8 val) {
+            c = val;
+        }
+    }"#,
+    );
+
+    let mut input = runtime.blobs()[0].constructors[0].to_vec();
+    let storage_value = 123;
+    input.push(storage_value);
+
+    // Expect the deploy to fail with value
+    runtime.set_transferred_value(1);
+    runtime.raw_constructor_failure(input.clone());
+
+    // The same input should work without value
+    runtime.set_transferred_value(0);
+    runtime.raw_constructor(input.clone());
+    runtime.function("c", Vec::new());
+    assert_eq!(runtime.output(), storage_value.encode());
 }
