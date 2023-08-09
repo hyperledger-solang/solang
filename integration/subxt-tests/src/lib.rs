@@ -7,19 +7,23 @@
 
 use contract_transcode::ContractMessageTranscoder;
 
-use node::runtime_types::pallet_contracts::wasm::Determinism;
+use node::runtime_types::{
+    contracts_node_runtime::RuntimeEvent,
+    frame_system::EventRecord,
+    pallet_contracts::wasm::Determinism,
+    sp_weights::weight_v2::{self, Weight},
+};
 use pallet_contracts_primitives::{
     ContractExecResult, ContractResult, ExecReturnValue, GetStorageResult,
 };
 use parity_scale_codec::{Decode, Encode};
 
 use sp_core::{crypto::AccountId32, hexdisplay::AsBytesRef, Bytes};
-use sp_weights::Weight;
+use sp_runtime::{DispatchError, ModuleError};
 use subxt::{
     blocks::ExtrinsicEvents as TxEvents,
-    ext::sp_runtime::DispatchError,
     tx::PairSigner,
-    utils::{MultiAddress, Static},
+    utils::{MultiAddress, Static, H256},
     Config, OnlineClient, PolkadotConfig,
 };
 
@@ -30,13 +34,7 @@ use tokio::time::timeout;
 mod cases;
 
 // metadata file obtained from the latest substrate-contracts-node
-#[subxt::subxt(
-    runtime_metadata_path = "./metadata.scale",
-    substitute_type(
-        type = "sp_weights::weight_v2::Weight",
-        with = "::subxt::utils::Static<::sp_weights::Weight>"
-    )
-)]
+#[subxt::subxt(runtime_metadata_path = "./metadata.scale")]
 pub mod node {}
 
 pub type API = OnlineClient<PolkadotConfig>;
@@ -175,12 +173,6 @@ impl Execution for WriteContract {
                 .ok()
                 .flatten()
         }) {
-            if let node::runtime_types::sp_runtime::DispatchError::Module(e) = &e.dispatch_error {
-                if let Ok(details) = api.metadata().error(e.index, e.error[0]) {
-                    return Err(anyhow::anyhow!("{details:?}"));
-                }
-            }
-
             return Err(anyhow::anyhow!("{e:?}"));
         }
 
@@ -268,7 +260,10 @@ async fn raw_instantiate_and_upload(
 
     let payload = node::tx().contracts().instantiate_with_code(
         value,
-        Static::from(sp_weights::Weight::from(gas_limit)),
+        Weight {
+            ref_time: gas_limit,
+            proof_size: 1000000,
+        },
         storage_deposit_limit.map(Into::into),
         code,
         data,
@@ -329,7 +324,10 @@ async fn raw_call(
     let payload = node::tx().contracts().call(
         MultiAddress::Id(<_ as Decode>::decode(&mut dest.encode().as_bytes_ref())?),
         value,
-        Static::from(sp_weights::Weight::from(gas_limit)),
+        Weight {
+            ref_time: gas_limit,
+            proof_size: 1000000,
+        },
         storage_deposit_limit.map(Into::into),
         data,
     );
@@ -355,12 +353,14 @@ async fn query_call(
 ) -> anyhow::Result<GetStorageResult> {
     let rv = api
         .rpc()
-        .state_call(
+        .state_call::<GetStorageResult>(
             "ContractsApi_get_storage",
             Some((contract_address, key).encode().as_bytes_ref()),
             None,
         )
-        .await?;
+        .await?
+        .unwrap()
+        .unwrap();
 
     <GetStorageResult>::decode(&mut rv.as_bytes_ref()).map_err(|e| anyhow::anyhow!("{e:?}"))
 }
@@ -371,24 +371,29 @@ async fn read_call(
     contract_address: AccountId32,
     value: u128,
     selector: Vec<u8>,
-) -> anyhow::Result<ContractExecResult<u128>> {
+) -> anyhow::Result<
+    ContractResult<Result<ExecReturnValue, DispatchError>, u128, EventRecord<RuntimeEvent, H256>>,
+> {
     let req = CallRequest {
         origin: <subxt::utils::AccountId32 as Decode>::decode(&mut caller.encode().as_bytes_ref())?,
         dest: <_ as Decode>::decode(&mut contract_address.encode().as_bytes_ref())?,
         value,
-        gas_limit: Some(Weight::from(GAS_LIMIT)),
+        gas_limit: Some(Weight {
+            ref_time: GAS_LIMIT,
+            proof_size: 100000,
+        }),
         storage_deposit_limit: None,
         input_data: selector,
     };
 
     let rv = api
         .rpc()
-        .state_call("ContractsApi_call", Some(req.encode().as_bytes_ref()), None)
+        .state_call::<ContractExecResult<u128, EventRecord<RuntimeEvent, H256>>>(
+            "ContractsApi_call",
+            Some(req.encode().as_bytes_ref()),
+            None,
+        )
         .await?;
-
-    let rv = ContractResult::<Result<ExecReturnValue, DispatchError>, u128>::decode(
-        &mut rv.as_bytes_ref(),
-    )?;
 
     Ok(rv)
 }
