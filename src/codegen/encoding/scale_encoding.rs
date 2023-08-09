@@ -602,6 +602,11 @@ impl AbiEncoding for ScaleEncoding {
                     ..
                 } => {
                     let bytes = value.to_bytes_be().1;
+                    if bytes.len() < 4 {
+                        let mut buf = Vec::new();
+                        buf.resize(4 - bytes.len(), 0);
+                        result.extend_from_slice(&buf);
+                    }
                     result.extend_from_slice(&bytes[..]);
                 }
                 Expression::NumberLiteral {
@@ -662,6 +667,30 @@ mod tests {
             };
             let encoded = encoder.const_encode(&[expr]).unwrap();
             assert_eq!(encoded, value.encode());
+        }
+    }
+
+    #[test]
+    fn const_encode_bytes4() {
+        let encoder = ScaleEncoding::new(false);
+        let values = [
+            [0x00, 0x00, 0xff, 0xff],
+            [0x00, 0xff, 0xff, 0x00],
+            [0xff, 0xff, 0x00, 0x00],
+            [0xff, 0xff, 0xff, 0xff],
+            [0x00, 0x00, 0x00, 0x00],
+            [0xde, 0xad, 0xbe, 0xef],
+            [0x01, 0x00, 0x00, 0x00],
+            [0x00, 0x00, 0x00, 0x01],
+        ];
+
+        for value in values {
+            let expr = Expression::NumberLiteral {
+                ty: Type::Bytes(4),
+                value: BigInt::from_bytes_be(Sign::Plus, &value),
+                loc: Default::default(),
+            };
+            assert_eq!(&encoder.const_encode(&[expr]).unwrap(), &value.encode());
         }
     }
 }
