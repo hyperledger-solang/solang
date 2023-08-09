@@ -70,7 +70,7 @@ describe('Deploy UniswapV2ERC20 contract and test', () => {
     })
 
     it('transfer', async () => {
-        let gasLimit = await weight(conn, token, "approve", [dave.address, TEST_AMOUNT]);
+        let gasLimit = await weight(conn, token, "transfer", [dave.address, TEST_AMOUNT]);
         let tx = token.tx.transfer({ gasLimit }, dave.address, TEST_AMOUNT);
         await transaction(tx, alice);
 
@@ -90,7 +90,15 @@ describe('Deploy UniswapV2ERC20 contract and test', () => {
         let tx = token.tx.approve({ gasLimit }, dave.address, TEST_AMOUNT);
         await transaction(tx, alice);
 
-        tx = token.tx.transferFrom({ gasLimit }, alice.address, dave.address, TEST_AMOUNT);
+        const dryRun = await conn.call.contractsApi.call(
+            dave.address,
+            token.address,
+            0,
+            null,
+            null,
+            token.abi.findMessage("transferFrom").toU8a([alice.address, dave.address, TEST_AMOUNT])
+        );
+        tx = token.tx.transferFrom({ gasLimit: dryRun.gasRequired }, alice.address, dave.address, TEST_AMOUNT);
         await transaction(tx, dave);
 
         const { output: allowance } = await query(conn, alice, token, "allowance", [alice.address, dave.address]);
@@ -106,7 +114,15 @@ describe('Deploy UniswapV2ERC20 contract and test', () => {
         let tx = token.tx.approve({ gasLimit }, dave.address, MAX_UINT256);
         await transaction(tx, alice);
 
-        tx = token.tx.transferFrom({ gasLimit }, alice.address, dave.address, TEST_AMOUNT);
+        const dryRun = await conn.call.contractsApi.call(
+            dave.address,
+            token.address,
+            0,
+            null,
+            null,
+            token.abi.findMessage("transferFrom").toU8a([alice.address, dave.address, TEST_AMOUNT])
+        );
+        tx = token.tx.transferFrom({ gasLimit: dryRun.gasRequired }, alice.address, dave.address, TEST_AMOUNT);
         await transaction(tx, dave);
 
         const { output: allowance } = await query(conn, alice, token, "allowance", [alice.address, dave.address]);
