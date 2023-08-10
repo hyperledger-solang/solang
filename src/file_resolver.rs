@@ -106,7 +106,7 @@ impl FileResolver {
     /// Atempt to resolve a file, either from the cache or from the filesystem.
     /// Returns Ok(Some(..)) if the file is found and loaded
     /// Returns Ok(None) if no file by this path can be found.
-    /// Returns Err(..) if a file could be found but not could not be read.
+    /// Returns Err(..) if a file was found but could not be read.
     fn try_file(
         &mut self,
         filename: &OsStr,
