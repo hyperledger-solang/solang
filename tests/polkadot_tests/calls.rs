@@ -510,20 +510,20 @@ fn local_destructure_call() {
 #[test]
 fn payable_constructors() {
     // no contructors means constructor is not payable
-    // however there is no check for value transfers on constructor so endowment can be received
     let mut runtime = build_solidity(
         r##"
         contract c {
-            function test(string a) public {
-            }
+            function test(string a) public {}
         }"##,
     );
 
     runtime.set_transferred_value(1);
-    runtime.constructor(0, Vec::new());
+    runtime.raw_constructor_failure(runtime.contracts()[0].code.constructors[0].clone());
+    assert!(runtime
+        .debug_buffer()
+        .contains("runtime_error: non payable constructor"));
 
     // contructors w/o payable means can't send value
-    // however there is no check for value transfers on constructor so endowment can be received
     let mut runtime = build_solidity(
         r##"
         contract c {
@@ -531,13 +531,15 @@ fn payable_constructors() {
                 int32 a = 0;
             }
 
-            function test(string a) public {
-            }
+            function test(string a) public {}
         }"##,
     );
 
     runtime.set_transferred_value(1);
-    runtime.constructor(0, Vec::new());
+    runtime.raw_constructor_failure(runtime.contracts()[0].code.constructors[0].clone());
+    assert!(runtime
+        .debug_buffer()
+        .contains("runtime_error: non payable constructor"));
 
     // contructors w/ payable means can send value
     let mut runtime = build_solidity(
@@ -547,8 +549,7 @@ fn payable_constructors() {
                 int32 a = 0;
             }
 
-            function test(string a) public {
-            }
+            function test(string a) public {}
         }"##,
     );
 

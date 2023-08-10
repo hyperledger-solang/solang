@@ -553,6 +553,7 @@ fn transfer_bubble_up() {
         }
 
         contract Other {
+            constructor() payable {}
             function payback(uint128 amount) public payable {
                 payable(msg.sender).transfer(amount);
             }
@@ -578,6 +579,7 @@ fn send_does_not_bubble_up() {
         }
 
         contract Other {
+            constructor() payable {}
             function payback(uint128 amount) public payable returns(bool) {
                 return payable(msg.sender).send(amount);
             }
