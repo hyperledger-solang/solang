@@ -16,7 +16,7 @@ use serde_json::json;
 use std::ffi::OsStr;
 
 fn generate_namespace(src: &'static str) -> Namespace {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", src.to_string());
     parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana)
 }

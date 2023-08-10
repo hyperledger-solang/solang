@@ -331,7 +331,7 @@ fn incrementer() {
 
 #[test]
 fn infinite_loop() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     let src = String::from(
         r#"

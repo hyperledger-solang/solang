@@ -16,7 +16,7 @@ use solang::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    ffi::{OsStr, OsString},
+    ffi::OsString,
     fs::{self, create_dir, create_dir_all, File},
     io::prelude::*,
     path::{Path, PathBuf},
@@ -186,7 +186,7 @@ fn compile(compile_args: &Compile) {
     for filename in compile_args.package.get_input() {
         // TODO: this could be parallelized using e.g. rayon
         let ns = process_file(
-            filename.as_os_str(),
+            filename,
             &mut resolver,
             target,
             &compile_args.compiler_output,
@@ -301,7 +301,7 @@ fn output_file(compiler_output: &CompilerOutput, stem: &str, ext: &str, meta: bo
 }
 
 fn process_file(
-    filename: &OsStr,
+    filename: &Path,
     resolver: &mut FileResolver,
     target: solang::Target,
     compiler_output: &CompilerOutput,
@@ -309,14 +309,18 @@ fn process_file(
 ) -> Namespace {
     let verbose = compiler_output.verbose;
 
+    let filepath = match filename.canonicalize() {
+        Ok(filename) => filename,
+        Err(_) => filename.to_path_buf(),
+    };
+
     // resolve phase
-    let mut ns = solang::parse_and_resolve(filename, resolver, target);
+    let mut ns = solang::parse_and_resolve(filepath.as_os_str(), resolver, target);
 
     // codegen all the contracts; some additional errors/warnings will be detected here
     codegen(&mut ns, opt);
 
     if let Some("ast-dot") = compiler_output.emit.as_deref() {
-        let filepath = PathBuf::from(filename);
         let stem = filepath.file_stem().unwrap().to_string_lossy();
         let dot_filename = output_file(compiler_output, &stem, "dot", false);
 

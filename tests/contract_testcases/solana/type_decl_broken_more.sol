@@ -1,4 +1,4 @@
-import "type_decl.sol";
+import "./type_decl.sol";
 
 function foo(Addr.X x) {}
 

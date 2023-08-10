@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::codegen::encoding::create_encoder;
+use crate::codegen::revert::{error_msg_with_loc, PanicCode, SolidityError};
+use crate::codegen::Expression;
 use crate::sema::ast::{ArrayLength, Contract, Namespace, StructType, Type};
 use std::cell::RefCell;
 use std::path::Path;
@@ -13,7 +16,7 @@ use tempfile::tempdir;
 #[cfg(feature = "wasm_opt")]
 use wasm_opt::OptimizationOptions;
 
-use crate::codegen::{cfg::ReturnCode, error_msg_with_loc, Options};
+use crate::codegen::{cfg::ReturnCode, Options};
 use crate::emit::{polkadot, TargetRuntime};
 use crate::emit::{solana, BinaryOp, Generate};
 use crate::linker::link;
@@ -1073,6 +1076,38 @@ impl<'a> Binary<'a> {
                 .i32_type()
                 .const_int(error_with_loc.len() as u64, false),
         );
+    }
+
+    /// Emit encoded error data of "Panic(uint256)" as interned global string.
+    ///
+    /// On Solana, because reverts do not return data, a nil ptr is returned.
+    pub(super) fn panic_data_const(
+        &self,
+        ns: &Namespace,
+        code: PanicCode,
+    ) -> (PointerValue<'a>, IntValue<'a>) {
+        if ns.target == Target::Solana {
+            return (
+                self.context
+                    .i8_type()
+                    .ptr_type(AddressSpace::default())
+                    .const_null(),
+                self.context.i32_type().const_zero(),
+            );
+        }
+
+        let expr = Expression::NumberLiteral {
+            loc: pt::Loc::Codegen,
+            ty: Type::Uint(256),
+            value: (code as u8).into(),
+        };
+        let bytes = create_encoder(ns, false)
+            .const_encode(&[SolidityError::Panic(code).selector_expression(), expr])
+            .unwrap();
+        (
+            self.emit_global_string(&code.to_string(), &bytes, true),
+            self.context.i32_type().const_int(bytes.len() as u64, false),
+        )
     }
 }
 
