@@ -9,7 +9,7 @@ use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 
 pub(crate) fn parse(src: &'static str) -> ast::Namespace {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", src.to_string());
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::EVM);
@@ -484,7 +484,7 @@ contract runner {
 }
     "#;
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", file.to_string());
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
@@ -517,7 +517,7 @@ fn solana_discriminator_type() {
 }
     "#;
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", src.to_string());
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
@@ -571,7 +571,7 @@ contract Child {
     }
 }
     "#;
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", src.to_string());
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
@@ -611,7 +611,7 @@ contract Child {
     }
 }
     "#;
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", src.to_string());
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
@@ -626,7 +626,7 @@ contract Child {
 
 #[test]
 fn get_import_map() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     let map = OsString::from("@openzepellin");
     let example_sol_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("examples")
@@ -643,7 +643,7 @@ fn get_import_map() {
 
 #[test]
 fn get_import_path() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     let examples = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("examples")
         .canonicalize()

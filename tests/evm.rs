@@ -6,7 +6,7 @@ use std::{ffi::OsStr, fs, path::Path};
 use walkdir::WalkDir;
 
 fn test_solidity(src: &str) -> ast::Namespace {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents("test.sol", src.to_string());
 
@@ -210,7 +210,7 @@ fn ethereum_solidity_tests() {
                 .captures(&source)
                 .map(|captures| captures.get(3).unwrap().as_str());
 
-            let (mut cache, names) = set_file_contents(&source, path);
+            let (mut cache, names) = set_file_contents(&source, entry.path());
 
             cache.add_import_path(path).unwrap();
 
@@ -221,7 +221,7 @@ fn ethereum_solidity_tests() {
 
                     if ns.diagnostics.any_errors() {
                         if expect_error.is_none() {
-                            println!("file: {}", entry.path().display());
+                            println!("file: {} name:{}", entry.path().display(), name);
 
                             ns.print_diagnostics_in_plain(&cache, false);
 
@@ -230,7 +230,7 @@ fn ethereum_solidity_tests() {
                             0
                         }
                     } else if let Some(error) = expect_error {
-                        println!("file: {}", entry.path().display());
+                        println!("file: {} name:{}", entry.path().display(), name);
 
                         println!("expecting error {error}");
 
@@ -245,12 +245,12 @@ fn ethereum_solidity_tests() {
         })
         .sum();
 
-    assert_eq!(errors, 1038);
+    assert_eq!(errors, 1036);
 }
 
 fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
-    let mut cache = FileResolver::new();
-    let mut name = "test.sol".to_owned();
+    let mut cache = FileResolver::default();
+    let mut name = path.to_string_lossy().to_string();
     let mut names = Vec::new();
     let mut contents = String::new();
     let source_delimiter = regex::Regex::new(r"==== Source: (.*) ====").unwrap();
@@ -271,7 +271,7 @@ fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
         } else if let Some(cap) = external_source_delimiter.captures(line) {
             let mut name = cap.get(1).unwrap().as_str().to_owned();
             if let Some(cap) = equals.captures(&name) {
-                let mut ext = path.to_path_buf();
+                let mut ext = path.parent().unwrap().to_path_buf();
                 ext.push(cap.get(2).unwrap().as_str());
                 name = cap.get(1).unwrap().as_str().to_owned();
                 let source = fs::read_to_string(ext).unwrap();

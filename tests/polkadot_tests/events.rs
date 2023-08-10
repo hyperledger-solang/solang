@@ -95,7 +95,7 @@ fn emit() {
 
 #[test]
 fn event_imported() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -123,7 +123,7 @@ fn event_imported() {
 
     assert!(!ns.diagnostics.any_errors());
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -153,7 +153,7 @@ fn event_imported() {
 
     assert!(!ns.diagnostics.any_errors());
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -183,7 +183,7 @@ fn event_imported() {
 
     assert!(!ns.diagnostics.any_errors());
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -235,7 +235,7 @@ fn erc20_ink_example() {
                 address indexed to,
                 uint128 value
             );
-        
+
             function emit_event(address from, address to, uint128 value) public {
                 emit Transfer(from, to, value);
             }

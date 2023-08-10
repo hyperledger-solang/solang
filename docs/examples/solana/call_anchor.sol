@@ -1,4 +1,4 @@
-import "bobcat.sol";
+import "./bobcat.sol";
 import "solana";
 
 contract example {

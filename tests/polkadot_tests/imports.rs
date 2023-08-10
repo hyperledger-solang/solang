@@ -6,7 +6,7 @@ use std::ffi::OsStr;
 
 #[test]
 fn enum_import() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -32,7 +32,7 @@ fn enum_import() {
 
     assert!(!ns.diagnostics.any_errors());
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -58,7 +58,7 @@ fn enum_import() {
 
     assert!(!ns.diagnostics.any_errors());
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -84,7 +84,7 @@ fn enum_import() {
 
     assert!(!ns.diagnostics.any_errors());
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -110,7 +110,7 @@ fn enum_import() {
     );
 
     // from has special handling to avoid making it a keyword
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -127,7 +127,7 @@ fn enum_import() {
         "'frum' found where 'from' expected"
     );
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -147,7 +147,7 @@ fn enum_import() {
 
 #[test]
 fn struct_import() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -173,7 +173,7 @@ fn struct_import() {
 
     assert!(!ns.diagnostics.any_errors());
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -202,7 +202,7 @@ fn struct_import() {
 
 #[test]
 fn contract_import() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -237,7 +237,7 @@ fn contract_import() {
     assert!(!ns.diagnostics.any_errors());
 
     // lets try a importing an import
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -280,7 +280,7 @@ fn contract_import() {
     assert!(!ns.diagnostics.any_errors());
 
     // now let's rename an import in a chain
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -325,7 +325,7 @@ fn contract_import() {
 
 #[test]
 fn circular_import() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "self.sol",
@@ -349,7 +349,7 @@ fn circular_import() {
 
     assert!(!ns.diagnostics.any_errors());
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -394,7 +394,7 @@ fn circular_import() {
 #[test]
 fn import_symbol() {
     // import struct via import symbol
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -425,7 +425,7 @@ fn import_symbol() {
     assert!(!ns.diagnostics.any_errors());
 
     // import contract via import symbol
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -460,7 +460,7 @@ fn import_symbol() {
     assert!(!ns.diagnostics.any_errors());
 
     // import enum in contract via import symbol
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -495,7 +495,7 @@ fn import_symbol() {
     assert!(!ns.diagnostics.any_errors());
 
     // import struct in contract via import symbol chain
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -543,7 +543,7 @@ fn import_symbol() {
 #[test]
 fn enum_import_chain() {
     // import struct in contract via import symbol chain
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -590,7 +590,7 @@ fn enum_import_chain() {
     assert!(!ns.diagnostics.any_errors());
 
     // now with error
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -643,7 +643,7 @@ fn enum_import_chain() {
 #[test]
 fn import_base_dir() {
     // if a imports x/b.sol then when x/b.sol imports, it should use x/ as a base
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -664,7 +664,7 @@ fn import_base_dir() {
     cache.set_file_contents(
         "x/b.sol",
         r#"
-        import "c.sol";
+        import "x/c.sol";
         "#
         .to_string(),
     );
@@ -688,7 +688,7 @@ fn import_base_dir() {
 
 #[test]
 fn event_resolve() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "IThing.sol",

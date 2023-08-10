@@ -51,7 +51,7 @@ mod tests {
         let mut package_toml = r#"
         input_files = ["flipper.sol"]   # Files to be compiled. You can define multiple files as : input_files = ["file1", "file2", ..]
         contracts = ["flipper"] # Contracts to include from the compiled files
-        import_path = ["path1", "path2"]   
+        import_path = ["path1", "path2"]
         import_map = {map1="path", map2="path2"}    # Maps to import. Define as : import_paths = ["map=path/to/map", "map2=path/to/map2", ..]"#;
 
         let package: cli::CompilePackage = toml::from_str(package_toml).unwrap();

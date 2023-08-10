@@ -2,6 +2,12 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
+## Unreleased
+
+### Fixed
+- **breaking** Resolving import paths now matches solc more closely, and only resolves relative
+  paths when specified as `./foo` or `../foo`. [seanyoung](https://github.com/seanyoung)
+
 ## v0.3.1 Göttingen
 
 ### Added
@@ -11,7 +17,7 @@ will be documented here.
 - The `wasm-opt` optimizer now optimizes the Wasm bytecode on the Substrate target. [xermicus](https://github.com/xermicus)
 - Call flags are now available for Substrate. [xermicus](https://github.com/xermicus)
 - Read compiler configurations from toml file. [salaheldinsoliman](https://github.com/salaheldinsoliman)
-- Accounts declared with `@payer(my_account)` can be accessed with the 
+- Accounts declared with `@payer(my_account)` can be accessed with the
   syntax `tx.accounts.my_account`. [LucasSte](https://github.com/LucasSte)
 - `delegatecall()` builtin has been added for Substrate. [xermicus](https://github.com/xermicus)
 - `get_contents_of_file_no` for Solang parser. [BenTheKush](https://github.com/BenTheKush)
@@ -52,7 +58,7 @@ will be documented here.
   contract MyContract {
     @payer(acc) // Declares account acc
     @space(2+3) // Only literals or constant expressions allowed
-    constructor(@seed bytes myseed) {} 
+    constructor(@seed bytes myseed) {}
     // When an annotations refers to a parameter, the former must appear right before the latter.
   }
   ```
