@@ -2,7 +2,7 @@
 
 use crate::{build_solidity, BorshToken};
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt};
-use num_traits::{One, ToPrimitive, Zero};
+use num_traits::{One, Pow, ToPrimitive, Zero};
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::ops::BitAnd;
@@ -593,8 +593,9 @@ fn uint() {
                     .call()
                     .unwrap();
 
-                let mut res = a.clone().pow(n);
-                truncate_biguint(&mut res, width);
+                let res = a
+                    .clone()
+                    .modpow(&BigUint::from(n), &BigUint::from(2u64).pow(width as u32));
 
                 assert_eq!(
                     pow,
@@ -1047,7 +1048,7 @@ fn test_overflow_boundaries() {
 #[test]
 fn test_mul_within_range_signed() {
     let mut rng = rand::thread_rng();
-    for width in (8..=256).step_by(8) {
+    for width in (8u16..=256).step_by(8) {
         let src = r#"
         contract test {
             function mul(intN a, intN b) public returns (intN) {
@@ -1060,7 +1061,9 @@ fn test_mul_within_range_signed() {
         let mut contract = build_solidity(&src);
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1]. Here we generate a random number within this range and multiply it by -1, 1 or 0.
-        let first_operand_rand = rng.gen_bigint(width - 1).sub(1_u32);
+        let upper_bound = BigInt::from(2).pow(width - 1); // Upper bound is exclusive
+        let lower_bound = upper_bound.clone().mul(-1);
+        let first_operand_rand = rng.gen_bigint_range(&lower_bound, &upper_bound);
         println!("First op : {first_operand_rand:?}");
 
         let side = [-1, 0, 1];
@@ -1078,11 +1081,11 @@ fn test_mul_within_range_signed() {
             .function("mul")
             .arguments(&[
                 BorshToken::Int {
-                    width: width as u16,
+                    width,
                     value: first_operand_rand.clone(),
                 },
                 BorshToken::Int {
-                    width: width as u16,
+                    width,
                     value: second_op.clone(),
                 },
             ])
@@ -1094,7 +1097,7 @@ fn test_mul_within_range_signed() {
         assert_eq!(
             return_value,
             BorshToken::Int {
-                width: width.next_power_of_two() as u16,
+                width: width.next_power_of_two(),
                 value: res,
             }
         );
