@@ -1,4 +1,4 @@
-FROM ghcr.io/hyperledger/solang-llvm:ci-4 as builder
+FROM ghcr.io/hyperledger/solang-llvm:ci-5 as builder
 
 COPY . src
 WORKDIR /src/stdlib/
@@ -9,7 +9,7 @@ RUN rustup default 1.68.0
 WORKDIR /src
 RUN cargo build --release
 
-FROM ubuntu:22.04
+FROM ubuntu:20.04
 COPY --from=builder /src/target/release/solang /usr/bin/solang
 
 LABEL org.opencontainers.image.title="Solang Solidity Compiler" \
