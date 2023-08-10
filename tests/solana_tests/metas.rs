@@ -74,7 +74,7 @@ fn use_authority() {
 
 #[test]
 fn token_account() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents(
         "spl_token.sol",
         include_str!("../../solana-library/spl_token.sol").to_string(),
@@ -232,7 +232,7 @@ contract Foo {
 
 #[test]
 fn mint_account() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents(
         "spl_token.sol",
         include_str!("../../solana-library/spl_token.sol").to_string(),

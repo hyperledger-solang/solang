@@ -141,7 +141,7 @@ fn build_solidity(src: &str) -> VirtualMachine {
 }
 
 fn build_solidity_with_cache(cache: FileResolver) -> VirtualMachine {
-    VirtualMachine::new_with_cache(cache).build()
+    VirtualMachineBuilder::new_with_cache(cache).build()
 }
 
 pub(crate) struct VirtualMachineBuilder {
@@ -153,17 +153,11 @@ impl VirtualMachineBuilder {
     pub(crate) fn new(src: &str) -> Self {
         let mut cache = FileResolver::default();
         cache.set_file_contents("test.sol", src.to_string());
-        Self {
-            cache,
-            opts: None
-        }
+        Self { cache, opts: None }
     }
 
     pub(crate) fn new_with_cache(cache: FileResolver) -> Self {
-        Self {
-            cache,
-            opts: None,
-        }
+        Self { cache, opts: None }
     }
 
     pub(crate) fn opts(mut self, opts: Options) -> Self {
@@ -172,7 +166,6 @@ impl VirtualMachineBuilder {
     }
 
     pub(crate) fn build(mut self) -> VirtualMachine {
-
         let (res, ns) = compile(
             OsStr::new("test.sol"),
             &mut self.cache,
