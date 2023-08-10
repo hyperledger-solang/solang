@@ -19,7 +19,7 @@ async fn case() -> anyhow::Result<()> {
         .deploy(
             &api,
             sp_keyring::AccountKeyring::Alice,
-            10_u128.pow(16),
+            0_u128,
             &|t: &ContractMessageTranscoder| t.encode::<_, String>("new", ["true".into()]).unwrap(),
         )
         .await?;
@@ -59,6 +59,5 @@ async fn case() -> anyhow::Result<()> {
         .and_then(|v| <bool>::decode(&mut v.as_bytes_ref()).map_err(Into::into))?;
 
     assert!(!updated);
-
     Ok(())
 }

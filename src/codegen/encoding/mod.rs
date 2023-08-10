@@ -10,7 +10,7 @@
 ///   Any such helper function should work fine regardless of the encoding scheme being used.
 mod borsh_encoding;
 mod buffer_validator;
-mod scale_encoding;
+pub(super) mod scale_encoding;
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
 use crate::codegen::encoding::borsh_encoding::BorshEncoding;
@@ -180,7 +180,7 @@ fn calculate_size_args(
 /// However, this might be less suitable for schemas vastly different than SCALE or Borsh.
 /// In the worst case scenario, you need to provide your own implementation of `fn encode(..)`,
 /// which effectively means implementing the encoding logic for any given sema `Type` on your own.
-pub(super) trait AbiEncoding {
+pub(crate) trait AbiEncoding {
     /// The width (in bits) used in size hints for dynamic size types.
     fn size_width(
         &self,
@@ -1732,10 +1732,17 @@ pub(super) trait AbiEncoding {
 
     /// Returns if the we are packed encoding
     fn is_packed(&self) -> bool;
+
+    /// Encode constant data at compile time.
+    ///
+    /// Returns `None` if the data can not be encoded at compile time.
+    fn const_encode(&self, _args: &[Expression]) -> Option<Vec<u8>> {
+        None
+    }
 }
 
 /// This function should return the correct encoder, given the target
-pub(super) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
+pub(crate) fn create_encoder(ns: &Namespace, packed: bool) -> Box<dyn AbiEncoding> {
     match &ns.target {
         Target::Solana => Box::new(BorshEncoding::new(packed)),
         // Solana utilizes Borsh encoding and Polkadot, SCALE encoding.

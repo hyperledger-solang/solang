@@ -10,4 +10,4 @@ contract A {
 }
 
 // ---- Expect: diagnostics ----
-// warning: 4:37-41: local variable 'func' has been assigned, but never read
+// warning: 4:37-41: local variable 'func' is unused

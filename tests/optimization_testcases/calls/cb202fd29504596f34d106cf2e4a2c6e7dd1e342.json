@@ -1,0 +1,75 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "set_op",
+      [
+        {
+          "Bool": true
+        }
+      ]
+    ],
+    [
+      "test",
+      [
+        {
+          "Int": {
+            "width": 32,
+            "value": [
+              1,
+              [
+                3
+              ]
+            ]
+          }
+        },
+        {
+          "Int": {
+            "width": 32,
+            "value": [
+              1,
+              [
+                5
+              ]
+            ]
+          }
+        }
+      ]
+    ],
+    [
+      "set_op",
+      [
+        {
+          "Bool": false
+        }
+      ]
+    ],
+    [
+      "test",
+      [
+        {
+          "Int": {
+            "width": 32,
+            "value": [
+              1,
+              [
+                3
+              ]
+            ]
+          }
+        },
+        {
+          "Int": {
+            "width": 32,
+            "value": [
+              1,
+              [
+                5
+              ]
+            ]
+          }
+        }
+      ]
+    ]
+  ]
+}

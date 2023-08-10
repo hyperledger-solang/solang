@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::encoding::{abi_decode, abi_encode};
+use super::revert::{
+    assert_failure, expr_assert, log_runtime_error, require, PanicCode, SolidityError,
+};
 use super::storage::{
     array_offset, array_pop, array_push, storage_slots_array_pop, storage_slots_array_push,
 };
@@ -11,7 +14,6 @@ use super::{
 };
 use crate::codegen::array_boundary::handle_array_assign;
 use crate::codegen::constructor::call_constructor;
-use crate::codegen::error_msg_with_loc;
 use crate::codegen::unused_variable::should_remove_assignment;
 use crate::codegen::{Builtin, Expression};
 use crate::sema::{
@@ -24,7 +26,6 @@ use crate::sema::{
     eval::{eval_const_number, eval_const_rational},
     expression::integers::bigint_to_expression,
     expression::ResolveTo,
-    file::PathDisplay,
 };
 use crate::Target;
 use num_bigint::BigInt;
@@ -364,7 +365,7 @@ pub fn expression(
             // If we reach this condition, the assignment is inside an expression.
 
             if let Some(function) = func {
-                if should_remove_assignment(ns, left, function, opt) {
+                if should_remove_assignment(left, function, opt, ns) {
                     return expression(right, cfg, contract_no, func, ns, vartab, opt);
                 }
             }
@@ -1538,117 +1539,6 @@ fn and(
     }
 }
 
-fn expr_assert(
-    cfg: &mut ControlFlowGraph,
-    args: &ast::Expression,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-) -> Expression {
-    let true_ = cfg.new_basic_block("noassert".to_owned());
-    let false_ = cfg.new_basic_block("doassert".to_owned());
-    let cond = expression(args, cfg, contract_no, func, ns, vartab, opt);
-    cfg.add(
-        vartab,
-        Instr::BranchCond {
-            cond,
-            true_block: true_,
-            false_block: false_,
-        },
-    );
-    cfg.set_basic_block(false_);
-    log_runtime_error(
-        opt.log_runtime_errors,
-        "assert failure",
-        args.loc(),
-        cfg,
-        vartab,
-        ns,
-    );
-    assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
-    cfg.set_basic_block(true_);
-    Expression::Poison
-}
-
-fn require(
-    cfg: &mut ControlFlowGraph,
-    args: &[ast::Expression],
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    loc: Loc,
-) -> Expression {
-    let true_ = cfg.new_basic_block("noassert".to_owned());
-    let false_ = cfg.new_basic_block("doassert".to_owned());
-    let cond = expression(&args[0], cfg, contract_no, func, ns, vartab, opt);
-    cfg.add(
-        vartab,
-        Instr::BranchCond {
-            cond,
-            true_block: true_,
-            false_block: false_,
-        },
-    );
-    cfg.set_basic_block(false_);
-    let expr = args
-        .get(1)
-        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
-    match ns.target {
-        // On Solana and Polkadot, print the reason, do not abi encode it
-        Target::Solana | Target::Polkadot { .. } => {
-            if opt.log_runtime_errors {
-                if let Some(expr) = expr {
-                    let prefix = b"runtime_error: ";
-                    let error_string = format!(
-                        " require condition failed in {},\n",
-                        ns.loc_to_string(PathDisplay::Filename, &expr.loc())
-                    );
-                    let print_expr = Expression::FormatString {
-                        loc: Loc::Codegen,
-                        args: vec![
-                            (
-                                FormatArg::StringLiteral,
-                                Expression::BytesLiteral {
-                                    loc: Loc::Codegen,
-                                    ty: Type::Bytes(prefix.len() as u8),
-                                    value: prefix.to_vec(),
-                                },
-                            ),
-                            (FormatArg::Default, expr),
-                            (
-                                FormatArg::StringLiteral,
-                                Expression::BytesLiteral {
-                                    loc: Loc::Codegen,
-                                    ty: Type::Bytes(error_string.as_bytes().len() as u8),
-                                    value: error_string.as_bytes().to_vec(),
-                                },
-                            ),
-                        ],
-                    };
-                    cfg.add(vartab, Instr::Print { expr: print_expr });
-                } else {
-                    log_runtime_error(
-                        opt.log_runtime_errors,
-                        "require condition failed",
-                        loc,
-                        cfg,
-                        vartab,
-                        ns,
-                    );
-                }
-            }
-            assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
-        }
-        _ => assert_failure(&Loc::Codegen, expr, ns, cfg, vartab),
-    }
-    cfg.set_basic_block(true_);
-    Expression::Poison
-}
-
 fn self_destruct(
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
@@ -2041,7 +1931,8 @@ fn expr_builtin(
                 vartab,
                 ns,
             );
-            assert_failure(loc, None, ns, cfg, vartab);
+            let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
+            assert_failure(loc, error, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
 
@@ -2101,7 +1992,8 @@ fn expr_builtin(
                 vartab,
                 ns,
             );
-            assert_failure(loc, None, ns, cfg, vartab);
+            let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
+            assert_failure(loc, error, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
             let advanced_ptr = Expression::AdvancePointer {
@@ -2178,7 +2070,8 @@ fn expr_builtin(
                 vartab,
                 ns,
             );
-            assert_failure(loc, None, ns, cfg, vartab);
+            let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
+            assert_failure(loc, error, ns, cfg, vartab);
 
             cfg.set_basic_block(in_bounds);
 
@@ -2442,7 +2335,8 @@ fn checking_trunc(
         vartab,
         ns,
     );
-    assert_failure(loc, None, ns, cfg, vartab);
+    let error = SolidityError::Panic(PanicCode::MathOverflow);
+    assert_failure(loc, error, ns, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
 
@@ -3347,7 +3241,8 @@ fn array_subscript(
         vartab,
         ns,
     );
-    assert_failure(loc, None, ns, cfg, vartab);
+    let error = SolidityError::Panic(PanicCode::ArrayIndexOob);
+    assert_failure(loc, error, ns, cfg, vartab);
 
     cfg.set_basic_block(in_bounds);
 
@@ -3674,39 +3569,6 @@ fn array_literal_to_memory_array(
     }
 }
 
-/// This function encodes the arguments for the assert-failure instruction
-/// and inserts it in the CFG.
-pub(super) fn assert_failure(
-    loc: &Loc,
-    arg: Option<Expression>,
-    ns: &Namespace,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-) {
-    // On Solana, returning the encoded arguments has no effect
-    if arg.is_none() || ns.target == Target::Solana {
-        cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
-        return;
-    }
-
-    let selector = 0x08c3_79a0u32;
-    let selector = Expression::NumberLiteral {
-        loc: Loc::Codegen,
-        ty: Type::Bytes(4),
-        value: BigInt::from(selector),
-    };
-    let args = vec![selector, arg.unwrap()];
-
-    let (encoded_buffer, _) = abi_encode(loc, args, ns, vartab, cfg, false);
-
-    cfg.add(
-        vartab,
-        Instr::AssertFailure {
-            encoded_args: Some(encoded_buffer),
-        },
-    )
-}
-
 /// Generate the binary code for a contract
 #[cfg(feature = "llvm")]
 fn code(loc: &Loc, contract_no: usize, ns: &Namespace, opt: &Options) -> Expression {
@@ -3743,35 +3605,6 @@ fn code(loc: &Loc, _contract_no: usize, _ns: &Namespace, _opt: &Options) -> Expr
         ty: Type::DynamicBytes,
         size: size.into(),
         initializer: Some(code),
-    }
-}
-
-fn string_to_expr(string: String) -> Expression {
-    Expression::FormatString {
-        loc: Loc::Codegen,
-        args: vec![(
-            FormatArg::StringLiteral,
-            Expression::BytesLiteral {
-                loc: Loc::Codegen,
-                ty: Type::Bytes(string.as_bytes().len() as u8),
-                value: string.as_bytes().to_vec(),
-            },
-        )],
-    }
-}
-
-pub(crate) fn log_runtime_error(
-    report_error: bool,
-    reason: &str,
-    reason_loc: Loc,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-    ns: &Namespace,
-) {
-    if report_error {
-        let error_with_loc = error_msg_with_loc(ns, reason.to_string(), Some(reason_loc));
-        let expr = string_to_expr(error_with_loc);
-        cfg.add(vartab, Instr::Print { expr });
     }
 }
 

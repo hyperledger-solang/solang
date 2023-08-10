@@ -207,12 +207,7 @@ pub(crate) fn function_dispatch(
         .enumerate()
         .find(|(_, cfg)| cfg.public && cfg.ty == pt::FunctionTy::Fallback);
 
-    let receive = all_cfg
-        .iter()
-        .enumerate()
-        .find(|(_, cfg)| cfg.public && cfg.ty == pt::FunctionTy::Receive);
-
-    if fallback.is_none() && receive.is_none() {
+    if fallback.is_none() {
         cfg.add(
             &mut vartab,
             Instr::ReturnCode {

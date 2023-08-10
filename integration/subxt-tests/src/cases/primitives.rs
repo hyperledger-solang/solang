@@ -8,7 +8,7 @@ use num_bigint::{BigInt, BigUint, Sign};
 use parity_scale_codec::{Decode, Encode, Input};
 use sp_core::{crypto::AccountId32, hexdisplay::AsBytesRef, keccak_256, KeccakHasher, H256, U256};
 use sp_runtime::{assert_eq_error_rate, scale_info::TypeInfo};
-use subxt::ext::sp_runtime::{traits::One, MultiAddress};
+use sp_runtime::{traits::One, MultiAddress};
 
 use crate::{Contract, DeployContract, Execution, ReadContract, WriteContract, API};
 

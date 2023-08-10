@@ -1,19 +1,34 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use itertools::Itertools;
 use rust_lapper::{Interval, Lapper};
 use serde_json::Value;
 use solang::{
-    codegen,
     codegen::codegen,
+    codegen::{self, Expression},
     file_resolver::FileResolver,
     parse_and_resolve,
     sema::{ast, builtin::get_prototype, symtable, tags::render},
     Target,
 };
 use solang_parser::pt;
-use std::{collections::HashMap, ffi::OsString, fmt::Write, path::PathBuf};
+use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 use tokio::sync::Mutex;
-use tower_lsp::{jsonrpc::Result, lsp_types::*, Client, LanguageServer, LspService, Server};
+use tower_lsp::{
+    jsonrpc::Result,
+    lsp_types::{
+        CompletionOptions, CompletionParams, CompletionResponse, Diagnostic,
+        DiagnosticRelatedInformation, DiagnosticSeverity, DidChangeConfigurationParams,
+        DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams,
+        DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
+        ExecuteCommandOptions, ExecuteCommandParams, Hover, HoverContents, HoverParams,
+        HoverProviderCapability, InitializeParams, InitializeResult, InitializedParams, Location,
+        MarkedString, MessageType, OneOf, Position, Range, ServerCapabilities,
+        SignatureHelpOptions, TextDocumentContentChangeEvent, TextDocumentSyncCapability,
+        TextDocumentSyncKind, Url, WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
+    },
+    Client, LanguageServer, LspService, Server,
+};
 
 use crate::cli::{target_arg, LanguageServerCommand};
 
@@ -80,7 +95,7 @@ impl SolangServer {
     /// Parse file
     async fn parse_file(&self, uri: Url) {
         let mut resolver = FileResolver::new();
-        for (path, contents) in self.files.lock().await.text_buffers.iter() {
+        for (path, contents) in &self.files.lock().await.text_buffers {
             resolver.set_file_contents(path.to_str().unwrap(), contents.clone());
         }
         if let Ok(path) = uri.to_file_path() {
@@ -191,54 +206,39 @@ impl<'a> Builder<'a> {
                 if let Some(exp) = expr {
                     self.expression(exp, symtab);
                 }
-                let mut val = format!("{} {}", self.expanded_ty(&param.ty), param.name_as_str());
-                if let Some(expr) = self.ns.var_constants.get(loc) {
-                    match expr {
-                        codegen::Expression::BytesLiteral {
-                            ty: ast::Type::Bytes(_),
-                            value,
-                            ..
-                        }
-                        | codegen::Expression::BytesLiteral {
-                            ty: ast::Type::DynamicBytes,
-                            value,
-                            ..
-                        } => {
-                            write!(val, " = hex\"{}\"", hex::encode(value)).unwrap();
-                        }
-                        codegen::Expression::BytesLiteral {
-                            ty: ast::Type::String,
-                            value,
-                            ..
-                        } => {
-                            write!(val, " = \"{}\"", String::from_utf8_lossy(value)).unwrap();
-                        }
-                        codegen::Expression::NumberLiteral {
-                            ty: ast::Type::Uint(_),
-                            value,
-                            ..
-                        }
-                        | codegen::Expression::NumberLiteral {
-                            ty: ast::Type::Int(_),
-                            value,
-                            ..
-                        } => {
-                            write!(val, " = {value}").unwrap();
-                        }
-                        _ => (),
-                    }
-                }
 
-                if let Some(var) = symtab.vars.get(var_no) {
-                    if var.slice {
-                        val.push_str("\nreadonly: compiled to slice\n")
-                    }
-                }
+                let constant = self
+                    .ns
+                    .var_constants
+                    .get(loc)
+                    .and_then(get_constants)
+                    .map(|s| format!(" = {s}"))
+                    .unwrap_or_default();
+
+                let readonly = symtab
+                    .vars
+                    .get(var_no)
+                    .map(|var| {
+                        if var.slice {
+                            "\nreadonly: compiled to slice\n"
+                        } else {
+                            ""
+                        }
+                    })
+                    .unwrap_or_default();
+
+                let val = format!(
+                    "{} {}{}{}",
+                    param.ty.to_string(self.ns),
+                    param.name_as_str(),
+                    constant,
+                    readonly
+                );
 
                 self.hovers.push(HoverEntry {
                     start: param.loc.start(),
-                    stop: param.loc.end(),
-                    val,
+                    stop: param.loc.exclusive_end(),
+                    val: make_code_block(val),
                 });
             }
             ast::Statement::If(_, _, expr, stat1, stat2) => {
@@ -296,12 +296,10 @@ impl<'a> Builder<'a> {
                             self.expression(expr, symtab);
                         }
                         ast::DestructureField::VariableDecl(_, param) => {
-                            let val = self.expanded_ty(&param.ty);
-
                             self.hovers.push(HoverEntry {
                                 start: param.loc.start(),
-                                stop: param.loc.end(),
-                                val,
+                                stop: param.loc.exclusive_end(),
+                                val: self.expanded_ty(&param.ty),
                             });
                         }
                         ast::DestructureField::None => (),
@@ -326,35 +324,32 @@ impl<'a> Builder<'a> {
                 ..
             } => {
                 let event = &self.ns.events[*event_no];
-
-                let mut val = render(&event.tags);
-
-                write!(val, "```\nevent {} {{\n", event.symbol_name(self.ns)).unwrap();
-
-                let mut iter = event.fields.iter().peekable();
-                while let Some(field) = iter.next() {
-                    writeln!(
-                        val,
-                        "\t{}{}{}{}",
-                        field.ty.to_string(self.ns),
-                        if field.indexed { " indexed " } else { " " },
-                        field.name_as_str(),
-                        if iter.peek().is_some() { "," } else { "" }
-                    )
-                    .unwrap();
+                let mut tags = render(&event.tags);
+                if !tags.is_empty() {
+                    tags.push_str("\n\n");
                 }
-
-                write!(
-                    val,
-                    "}}{};\n```\n",
+                let fields = event
+                    .fields
+                    .iter()
+                    .map(|field| {
+                        format!(
+                            "\t{}{}{}",
+                            field.ty.to_string(self.ns),
+                            if field.indexed { " indexed " } else { " " },
+                            field.name_as_str()
+                        )
+                    })
+                    .join(",\n");
+                let val = format!(
+                    "event {} {{\n{}\n}}{}",
+                    event.symbol_name(self.ns),
+                    fields,
                     if event.anonymous { " anonymous" } else { "" }
-                )
-                .unwrap();
-
+                );
                 self.hovers.push(HoverEntry {
                     start: event_loc.start(),
-                    stop: event_loc.end(),
-                    val,
+                    stop: event_loc.exclusive_end(),
+                    val: format!("{}{}", tags, make_code_block(val)),
                 });
 
                 for arg in args {
@@ -390,29 +385,29 @@ impl<'a> Builder<'a> {
             ast::Expression::BoolLiteral { loc, .. } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
-                    val: "bool".into(),
+                    stop: loc.exclusive_end(),
+                    val: make_code_block("bool"),
                 });
             }
             ast::Expression::BytesLiteral { loc, ty, .. } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
+                    stop: loc.exclusive_end(),
                     val: self.expanded_ty(ty),
                 });
             }
             ast::Expression::CodeLiteral { loc, .. } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
-                    val: "bytes".into(),
+                    stop: loc.exclusive_end(),
+                    val: make_code_block("bytes"),
                 });
             }
             ast::Expression::NumberLiteral { loc, ty, .. } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
-                    val: ty.to_string(self.ns),
+                    stop: loc.exclusive_end(),
+                    val: make_code_block(ty.to_string(self.ns)),
                 });
             }
             ast::Expression::StructLiteral { values, .. }
@@ -433,7 +428,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
+                    stop: loc.exclusive_end(),
                     val: format!(
                         "{} {} addition",
                         if *unchecked { "unchecked " } else { "" },
@@ -453,7 +448,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
+                    stop: loc.exclusive_end(),
                     val: format!(
                         "{} {} subtraction",
                         if *unchecked { "unchecked " } else { "" },
@@ -473,7 +468,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
+                    stop: loc.exclusive_end(),
                     val: format!(
                         "{} {} multiply",
                         if *unchecked { "unchecked " } else { "" },
@@ -492,7 +487,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
+                    stop: loc.exclusive_end(),
                     val: format!("{} divide", ty.to_string(self.ns)),
                 });
 
@@ -507,7 +502,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
+                    stop: loc.exclusive_end(),
                     val: format!("{} modulo", ty.to_string(self.ns)),
                 });
 
@@ -523,7 +518,7 @@ impl<'a> Builder<'a> {
             } => {
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
+                    stop: loc.exclusive_end(),
                     val: format!(
                         "{} {}power",
                         if *unchecked { "unchecked " } else { "" },
@@ -560,51 +555,63 @@ impl<'a> Builder<'a> {
 
             // Variable expression
             ast::Expression::Variable { loc, ty, var_no } => {
-                let mut val = self.expanded_ty(ty);
+                let name = if let Some(var) = symtab.vars.get(var_no) {
+                    &var.id.name
+                } else {
+                    ""
+                };
+                let readonly = symtab
+                    .vars
+                    .get(var_no)
+                    .map(|var| {
+                        if var.slice {
+                            "\nreadonly: compiled to slice\n"
+                        } else {
+                            ""
+                        }
+                    })
+                    .unwrap_or_default();
 
-                if let Some(expr) = self.ns.var_constants.get(loc) {
-                    match expr {
-                        codegen::Expression::BytesLiteral{ ty: ast::Type::Bytes(_), value, .. }
-                        | codegen::Expression::BytesLiteral{ ty: ast::Type::DynamicBytes, value, ..} => {
-                            write!(val, " hex\"{}\"", hex::encode(value)).unwrap();
-                        }
-                        codegen::Expression::BytesLiteral{ ty: ast::Type::String, value, ..} => {
-                            write!(val, " \"{}\"", String::from_utf8_lossy(value)).unwrap();
-                        }
-                        codegen::Expression::NumberLiteral { ty: ast::Type::Uint(_), value, .. }
-                        | codegen::Expression::NumberLiteral { ty: ast::Type::Int(_), value, .. } => {
-                            write!(val, " {value}").unwrap();
-                        }
-                        _ => (),
-                    }
-                }
-
-                if let Some(var) = symtab.vars.get(var_no) {
-                    if var.slice {
-                        val.push_str("\nreadonly: compiles to slice\n")
-                    }
-                }
+                let val = format!("{} {}{}", ty.to_string(self.ns), name, readonly);
 
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
-                    val,
+                    stop: loc.exclusive_end(),
+                    val: make_code_block(val),
                 });
             }
-            ast::Expression::ConstantVariable { loc, ty, .. } => {
-                let val = format!("constant ({})", self.expanded_ty(ty));
+            ast::Expression::ConstantVariable { loc, ty, contract_no, var_no } => {
+                let (contract, name) = if let Some(contract_no) = contract_no {
+                    let contract = format!("{}.", self.ns.contracts[*contract_no].name);
+                    let name = &self.ns.contracts[*contract_no].variables[*var_no].name;
+                    (contract, name)
+                } else {
+                    let contract = String::new();
+                    let name = &self.ns.constants[*var_no].name;
+                    (contract, name)
+                };
+                let constant = self
+                    .ns
+                    .var_constants
+                    .get(loc)
+                    .and_then(get_constants)
+                    .map(|s| format!(" = {s}"))
+                    .unwrap_or_default();
+                let val = format!("{} constant {}{}{}", ty.to_string(self.ns), contract, name, constant);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
-                    val,
+                    stop: loc.exclusive_end(),
+                    val: make_code_block(val),
                 });
             }
-            ast::Expression::StorageVariable { loc, ty, .. } => {
-                let val = format!("({})", self.expanded_ty(ty));
+            ast::Expression::StorageVariable { loc, ty, contract_no, var_no } => {
+                let contract = &self.ns.contracts[*contract_no];
+                let name = &contract.variables[*var_no].name;
+                let val = format!("{} {}.{}", ty.to_string(self.ns), contract.name, name);
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
-                    val,
+                    stop: loc.exclusive_end(),
+                    val: make_code_block(val),
                 });
             }
             // Load expression
@@ -643,8 +650,13 @@ impl<'a> Builder<'a> {
                 self.expression(index, symtab);
             }
 
-            ast::Expression::StructMember {  expr, .. } => {
+            ast::Expression::StructMember { loc, ty, expr, .. } => {
                 self.expression(expr, symtab);
+                self.hovers.push(HoverEntry {
+                    start: loc.start(),
+                    stop: loc.exclusive_end(),
+                    val: make_code_block(ty.to_string(self.ns)),
+                });
             }
 
             // Array operation expression
@@ -682,35 +694,29 @@ impl<'a> Builder<'a> {
             } => {
                 if let ast::Expression::InternalFunction { function_no, .. } = function.as_ref() {
                     let fnc = &self.ns.functions[*function_no];
-                    let msg_tg = render(&fnc.tags[..]);
-
-                    let mut val = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
-
-                    for parm in &*fnc.params {
-                        let msg = format!(
-                            "{}:{}, \n\n",
-                            parm.name_as_str(),
-                            self.expanded_ty(&parm.ty)
-                        );
-                        val = format!("{val} {msg}");
+                    let mut msg_tg = render(&fnc.tags[..]);
+                    if !msg_tg.is_empty() {
+                        msg_tg.push_str("\n\n");
                     }
 
-                    val = format!("{val} ) returns (");
+                    let params = fnc.params.iter().map(|parm| format!("{} {}", parm.ty.to_string(self.ns), parm.name_as_str())).join(", ");
 
-                    for ret in &*fnc.returns {
-                        let msg = format!(
-                            "{}:{}, ",
-                            ret.name_as_str(),
-                            self.expanded_ty(&ret.ty)
-                        );
-                        val = format!("{val} {msg}");
-                    }
+                    let rets = fnc.returns.iter().map(|ret| {
+                            let mut msg = ret.ty.to_string(self.ns);
+                            if ret.name_as_str() != "" {
+                                msg = format!("{} {}", msg, ret.name_as_str());
+                            }
+                            msg
+                        }).join(", ");
 
-                    val = format!("{val})");
+                    let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
+
+                    let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
+
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
-                        stop: loc.end(),
-                        val,
+                        stop: loc.exclusive_end(),
+                        val: format!("{}{}", msg_tg, make_code_block(val)),
                     });
                 }
 
@@ -733,34 +739,29 @@ impl<'a> Builder<'a> {
                 {
                     // modifiers do not have mutability, bases or modifiers itself
                     let fnc = &self.ns.functions[*function_no];
-                    let msg_tg = render(&fnc.tags[..]);
-                    let mut val = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
-
-                    for parm in &*fnc.params {
-                        let msg = format!(
-                            "{}:{}, \n\n",
-                            parm.name_as_str(),
-                            self.expanded_ty(&parm.ty)
-                        );
-                        val = format!("{val} {msg}");
+                    let mut msg_tg = render(&fnc.tags[..]);
+                    if !msg_tg.is_empty() {
+                        msg_tg.push_str("\n\n");
                     }
 
-                    val = format!("{val} ) \n\n returns (");
+                    let params = fnc.params.iter().map(|parm| format!("{} {}", parm.ty.to_string(self.ns), parm.name_as_str())).join(", ");
 
-                    for ret in &*fnc.returns {
-                        let msg = format!(
-                            "{}:{}, ",
-                            ret.name_as_str(),
-                            self.expanded_ty(&ret.ty)
-                        );
-                        val = format!("{val} {msg}");
-                    }
+                    let rets = fnc.returns.iter().map(|ret| {
+                            let mut msg = ret.ty.to_string(self.ns);
+                            if ret.name_as_str() != "" {
+                                msg = format!("{} {}", msg, ret.name_as_str());
+                            }
+                            msg
+                        }).join(", ");
 
-                    val = format!("{val})");
+                    let contract = fnc.contract_no.map(|contract_no| format!("{}.", self.ns.contracts[contract_no].name)).unwrap_or_default();
+
+                    let val = format!("{} {}{}({}) returns ({})\n", fnc.ty, contract, fnc.name, params, rets);
+
                     self.hovers.push(HoverEntry {
                         start: loc.start(),
-                        stop: loc.end(),
-                        val,
+                        stop: loc.exclusive_end(),
+                        val: format!("{}{}", msg_tg, make_code_block(val)),
                     });
 
                     self.expression(address, symtab);
@@ -813,24 +814,27 @@ impl<'a> Builder<'a> {
                 }
             }
             ast::Expression::Builtin { loc, kind, args, .. } => {
-                let mut msg = "[built-in] ".to_string();
-                let prot = get_prototype(*kind);
+                let (rets, name, params, doc) = if let Some(protval) = get_prototype(*kind) {
+                    let rets = protval.ret.iter().map(|ret| ret.to_string(self.ns)).join(" ");
 
-                if let Some(protval) = prot {
-                    for ret in &protval.ret {
-                        msg = format!("{} {}", msg, self.expanded_ty(ret));
+                    let mut params = protval.params.iter().map(|param| param.to_string(self.ns)).join(" ");
+
+                    if !params.is_empty() {
+                        params = format!("({params})");
                     }
-                    msg = format!("{} {} (", msg, protval.name);
-                    for arg in &protval.params {
-                        msg = format!("{}{}", msg, self.expanded_ty(arg));
-                    }
-                    msg = format!("{}): {}", msg, protval.doc);
-                }
+
+                    let doc = format!("{}\n\n", protval.doc);
+                    (rets, protval.name, params, doc)
+                } else {
+                    (String::new(), "", String::new(), String::new())
+                };
+                let val = make_code_block(format!("[built-in] {rets} {name} {params}"));
                 self.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
-                    val: msg,
+                    stop: loc.exclusive_end(),
+                    val: format!("{doc}{val}"),
                 });
+
                 for expr in args {
                     self.expression(expr, symtab);
                 }
@@ -851,11 +855,19 @@ impl<'a> Builder<'a> {
 
     // Constructs contract fields and stores it in the lookup table.
     fn contract_variable(&mut self, contract: &ast::Variable, symtab: &symtable::Symtable) {
-        let val = format!("{} {}", self.expanded_ty(&contract.ty), contract.name);
+        let mut tags = render(&contract.tags[..]);
+        if !tags.is_empty() {
+            tags.push_str("\n\n");
+        }
+        let val = make_code_block(format!(
+            "{} {}",
+            contract.ty.to_string(self.ns),
+            contract.name
+        ));
         self.hovers.push(HoverEntry {
             start: contract.loc.start(),
-            stop: contract.loc.end(),
-            val,
+            stop: contract.loc.start() + contract.name.len(),
+            val: format!("{tags}{val}"),
         });
         if let Some(expr) = &contract.initializer {
             self.expression(expr, symtab);
@@ -864,11 +876,14 @@ impl<'a> Builder<'a> {
 
     // Constructs struct fields and stores it in the lookup table.
     fn field(&mut self, field: &ast::Parameter) {
-        let val = format!("{} {}", field.ty.to_string(self.ns), field.name_as_str());
         self.hovers.push(HoverEntry {
             start: field.loc.start(),
-            stop: field.loc.end(),
-            val,
+            stop: field.loc.exclusive_end(),
+            val: make_code_block(format!(
+                "{} {}",
+                field.ty.to_string(self.ns),
+                field.name_as_str()
+            )),
         });
     }
 
@@ -881,19 +896,20 @@ impl<'a> Builder<'a> {
 
         for enum_decl in &builder.ns.enums {
             for (discriminant, (nam, loc)) in enum_decl.values.iter().enumerate() {
-                let val = format!("{nam} {discriminant}, \n\n");
                 builder.hovers.push(HoverEntry {
                     start: loc.start(),
-                    stop: loc.end(),
-                    val,
+                    stop: loc.exclusive_end(),
+                    val: make_code_block(format!(
+                        "enum {}.{} {}",
+                        enum_decl.name, nam, discriminant
+                    )),
                 });
             }
 
-            let val = render(&enum_decl.tags[..]);
             builder.hovers.push(HoverEntry {
                 start: enum_decl.loc.start(),
                 stop: enum_decl.loc.start() + enum_decl.name.len(),
-                val,
+                val: render(&enum_decl.tags[..]),
             });
         }
 
@@ -903,11 +919,10 @@ impl<'a> Builder<'a> {
                     builder.field(field);
                 }
 
-                let val = render(&struct_decl.tags[..]);
                 builder.hovers.push(HoverEntry {
                     start: *start,
                     stop: start + struct_decl.name.len(),
-                    val,
+                    val: render(&struct_decl.tags[..]),
                 });
             }
         }
@@ -929,28 +944,26 @@ impl<'a> Builder<'a> {
                     ast::ConstructorAnnotation::Payer(loc, name) => {
                         builder.hovers.push(HoverEntry {
                             start: loc.start(),
-                            stop: loc.end(),
-                            val: format!("payer account: {}", name),
+                            stop: loc.exclusive_end(),
+                            val: format!("payer account: {name}"),
                         });
                     }
                 }
             }
 
             for param in &*func.params {
-                let val = builder.expanded_ty(&param.ty);
                 builder.hovers.push(HoverEntry {
                     start: param.loc.start(),
-                    stop: param.loc.end(),
-                    val,
+                    stop: param.loc.exclusive_end(),
+                    val: builder.expanded_ty(&param.ty),
                 });
             }
 
             for ret in &*func.returns {
-                let val = builder.expanded_ty(&ret.ty);
                 builder.hovers.push(HoverEntry {
                     start: ret.loc.start(),
-                    stop: ret.loc.end(),
-                    val,
+                    stop: ret.loc.exclusive_end(),
+                    val: builder.expanded_ty(&ret.ty),
                 });
             }
 
@@ -962,33 +975,29 @@ impl<'a> Builder<'a> {
         for constant in &builder.ns.constants {
             let samptb = symtable::Symtable::new();
             builder.contract_variable(constant, &samptb);
-
-            let val = render(&constant.tags[..]);
-            builder.hovers.push(HoverEntry {
-                start: constant.loc.start(),
-                stop: constant.loc.start() + constant.name.len(),
-                val,
-            });
         }
 
         for contract in &builder.ns.contracts {
-            let val = render(&contract.tags[..]);
             builder.hovers.push(HoverEntry {
                 start: contract.loc.start(),
-                stop: contract.loc.start() + val.len(),
-                val,
+                stop: contract.loc.start() + contract.name.len(),
+                val: render(&contract.tags[..]),
             });
+
+            for base in &contract.bases {
+                builder.hovers.push(HoverEntry {
+                    start: base.loc.start(),
+                    stop: base.loc.exclusive_end(),
+                    val: make_code_block(format!(
+                        "contract {}",
+                        builder.ns.contracts[base.contract_no].name
+                    )),
+                });
+            }
 
             for variable in &contract.variables {
                 let symtable = symtable::Symtable::new();
                 builder.contract_variable(variable, &symtable);
-
-                let val = render(&variable.tags[..]);
-                builder.hovers.push(HoverEntry {
-                    start: variable.loc.start(),
-                    stop: variable.loc.start() + variable.name.len(),
-                    val,
-                });
             }
         }
 
@@ -996,15 +1005,14 @@ impl<'a> Builder<'a> {
             for field in &event.fields {
                 builder.field(field);
             }
-            let val = render(&event.tags[..]);
             builder.hovers.push(HoverEntry {
                 start: event.loc.start(),
                 stop: event.loc.start() + event.name.len(),
-                val,
+                val: render(&event.tags[..]),
             });
         }
 
-        for lookup in builder.hovers.iter_mut() {
+        for lookup in &mut builder.hovers {
             if let Some(msg) =
                 builder
                     .ns
@@ -1028,59 +1036,38 @@ impl<'a> Builder<'a> {
             ast::Type::StorageRef(_, ty) => self.expanded_ty(ty),
             ast::Type::Struct(struct_type) => {
                 let strct = struct_type.definition(self.ns);
-
-                let mut msg = render(&strct.tags);
-
-                writeln!(msg, "```\nstruct {strct} {{").unwrap();
-
-                let mut iter = strct.fields.iter().peekable();
-                while let Some(field) = iter.next() {
-                    writeln!(
-                        msg,
-                        "\t{} {}{}",
-                        field.ty.to_string(self.ns),
-                        field.name_as_str(),
-                        if iter.peek().is_some() { "," } else { "" }
-                    )
-                    .unwrap();
+                let mut tags = render(&strct.tags);
+                if !tags.is_empty() {
+                    tags.push_str("\n\n")
                 }
 
-                msg.push_str("};\n```\n");
+                let fields = strct
+                    .fields
+                    .iter()
+                    .map(|field| {
+                        format!("\t{} {}", field.ty.to_string(self.ns), field.name_as_str())
+                    })
+                    .join(",\n");
 
-                msg
+                let val = make_code_block(format!("struct {strct} {{\n{fields}\n}}"));
+                format!("{tags}{val}")
             }
             ast::Type::Enum(n) => {
                 let enm = &self.ns.enums[*n];
-
-                let mut msg = render(&enm.tags);
-
-                write!(msg, "```\nenum {enm} {{\n").unwrap();
-
-                // display the enum values in-order
-                let mut values = Vec::new();
-                values.resize(enm.values.len(), "");
-
-                for (idx, value) in enm.values.iter().enumerate() {
-                    values[idx] = value.0;
+                let mut tags = render(&enm.tags);
+                if !tags.is_empty() {
+                    tags.push_str("\n\n")
                 }
+                let values = enm
+                    .values
+                    .iter()
+                    .map(|value| format!("\t{}", value.0))
+                    .join(",\n");
 
-                let mut iter = values.iter().peekable();
-
-                while let Some(value) = iter.next() {
-                    writeln!(
-                        msg,
-                        "\t{}{}",
-                        value,
-                        if iter.peek().is_some() { "," } else { "" }
-                    )
-                    .unwrap();
-                }
-
-                msg.push_str("};\n```\n");
-
-                msg
+                let val = make_code_block(format!("enum {enm} {{\n{values}\n}}"));
+                format!("{tags}{val}")
             }
-            _ => ty.to_string(self.ns),
+            _ => make_code_block(ty.to_string(self.ns)),
         }
     }
 }
@@ -1180,7 +1167,7 @@ impl LanguageServer for SolangServer {
             }
             Err(_) => {
                 self.client
-                    .log_message(MessageType::ERROR, format!("received invalid URI: {}", uri))
+                    .log_message(MessageType::ERROR, format!("received invalid URI: {uri}"))
                     .await;
             }
         }
@@ -1201,7 +1188,7 @@ impl LanguageServer for SolangServer {
             }
             Err(_) => {
                 self.client
-                    .log_message(MessageType::ERROR, format!("received invalid URI: {}", uri))
+                    .log_message(MessageType::ERROR, format!("received invalid URI: {uri}"))
                     .await;
             }
         }
@@ -1252,14 +1239,14 @@ impl LanguageServer for SolangServer {
                 // The shortest hover for the position will be most informative
                 if let Some(hover) = hovers
                     .hovers
-                    .find(offset, offset)
+                    .find(offset, offset + 1)
                     .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
                 {
                     let loc = pt::Loc::File(0, hover.start, hover.stop);
                     let range = loc_to_range(&loc, &hovers.file);
 
                     return Ok(Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::String(
+                        contents: HoverContents::Scalar(MarkedString::from_markdown(
                             hover.val.to_string(),
                         )),
                         range: Some(range),
@@ -1280,6 +1267,38 @@ fn loc_to_range(loc: &pt::Loc, file: &ast::File) -> Range {
     let end = Position::new(line as u32, column as u32);
 
     Range::new(start, end)
+}
+
+fn make_code_block(s: impl AsRef<str>) -> String {
+    format!("```solidity\n{}\n```", s.as_ref())
+}
+
+fn get_constants(expr: &Expression) -> Option<String> {
+    let val = match expr {
+        codegen::Expression::BytesLiteral {
+            ty: ast::Type::Bytes(_) | ast::Type::DynamicBytes,
+            value,
+            ..
+        } => {
+            format!("hex\"{}\"", hex::encode(value))
+        }
+        codegen::Expression::BytesLiteral {
+            ty: ast::Type::String,
+            value,
+            ..
+        } => {
+            format!("\"{}\"", String::from_utf8_lossy(value))
+        }
+        codegen::Expression::NumberLiteral {
+            ty: ast::Type::Uint(_) | ast::Type::Int(_),
+            value,
+            ..
+        } => {
+            format!("{value}")
+        }
+        _ => return None,
+    };
+    Some(val)
 }
 
 fn update_file_contents(
@@ -1401,7 +1420,7 @@ mod test {
                         }
                     }),
                     range_length: Some(17),
-                    text: "".to_string(),
+                    text: String::new(),
                 }
             ),
         );

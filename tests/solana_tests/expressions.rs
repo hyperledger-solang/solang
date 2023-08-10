@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{build_solidity, BorshToken};
+use crate::{account_new, build_solidity, BorshToken};
 use num_bigint::BigInt;
 use rand::Rng;
 
@@ -20,9 +20,16 @@ fn interfaceid() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("get", &[]).unwrap();
+    let returns = vm
+        .function("get")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -57,23 +64,37 @@ fn write_buffer() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("test1", &[]).unwrap();
+    let returns = vm
+        .function("test1")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
         BorshToken::Bytes([0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2, 1].to_vec())
     );
 
-    let returns = vm.function("test2", &[]).unwrap();
+    let returns = vm
+        .function("test2")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     let mut buf = vec![0x42u8, 0x41u8];
-    buf.extend_from_slice(&vm.stack[0].program);
+    buf.extend_from_slice(&vm.stack[0].id);
 
     assert_eq!(returns, BorshToken::Bytes(buf));
 
-    let res = vm.function_must_fail("test3", &[]);
+    let res = vm
+        .function("test3")
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
     assert_eq!(res.unwrap(), 4294967296);
 }
 
@@ -92,15 +113,18 @@ fn read_buffer() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function(
-            "test1",
-            &[BorshToken::Bytes(
-                [0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2, 1].to_vec(),
-            )],
-        )
+        .function("test1")
+        .arguments(&[BorshToken::Bytes(
+            [0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2, 1].to_vec(),
+        )])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -118,19 +142,24 @@ fn read_buffer() {
         ]
     );
 
-    let res = vm.function_must_fail(
-        "test1",
-        &[BorshToken::Bytes(
+    let res = vm
+        .function("test1")
+        .arguments(&[BorshToken::Bytes(
             [0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2].to_vec(),
-        )],
-    );
+        )])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
     assert_eq!(res.unwrap(), 4294967296);
 
     let mut buf = vec![0x42u8, 0x41u8];
-    buf.extend_from_slice(&vm.origin);
+    let acc = account_new();
+    buf.extend_from_slice(&acc);
 
     let returns = vm
-        .function("test2", &[BorshToken::Bytes(buf.clone())])
+        .function("test2")
+        .arguments(&[BorshToken::Bytes(buf.clone())])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap()
         .unwrap_tuple();
 
@@ -141,13 +170,17 @@ fn read_buffer() {
                 width: 16,
                 value: BigInt::from(0x4142u16)
             },
-            BorshToken::Address(vm.origin)
+            BorshToken::Address(acc)
         ]
     );
 
     buf.pop();
 
-    let res = vm.function_must_fail("test2", &[BorshToken::Bytes(buf)]);
+    let res = vm
+        .function("test2")
+        .arguments(&[BorshToken::Bytes(buf)])
+        .accounts(vec![("dataAccount", data_account)])
+        .must_fail();
     assert_eq!(res.unwrap(), 4294967296);
 }
 
@@ -166,22 +199,25 @@ fn bytes_compare() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function(
-            "test1",
-            &[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())],
-        )
+        .function("test1")
+        .arguments(&[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(true));
 
     let returns = vm
-        .function(
-            "test2",
-            &[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())],
-        )
+        .function("test2")
+        .arguments(&[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())])
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
         .unwrap();
 
     assert_eq!(returns, BorshToken::Bool(false));
@@ -200,26 +236,28 @@ fn assignment_in_ternary() {
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     for _ in 0..10 {
         let left = rng.gen::<u64>();
         let right = rng.gen::<u64>();
 
         let returns = vm
-            .function(
-                "minimum",
-                &[
-                    BorshToken::Uint {
-                        width: 64,
-                        value: BigInt::from(left),
-                    },
-                    BorshToken::Uint {
-                        width: 64,
-                        value: BigInt::from(right),
-                    },
-                ],
-            )
+            .function("minimum")
+            .arguments(&[
+                BorshToken::Uint {
+                    width: 64,
+                    value: BigInt::from(left),
+                },
+                BorshToken::Uint {
+                    width: 64,
+                    value: BigInt::from(right),
+                },
+            ])
+            .call()
             .unwrap();
 
         assert_eq!(
@@ -237,15 +275,18 @@ fn power() {
     let mut vm = build_solidity(
         r#"
         contract foo {
-            function power() public returns (uint) {
+            function power() public pure returns (uint) {
                 return 2 ** 3 ** 4;
             }
         }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("power", &[]).unwrap();
+    let returns = vm.function("power").call().unwrap();
 
     assert_eq!(
         returns,

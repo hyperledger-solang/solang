@@ -1,0 +1,21 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "func",
+      [
+        {
+          "Bool": false
+        }
+      ]
+    ],
+    [
+      "func",
+      [
+        {
+          "Bool": true
+        }
+      ]
+    ]
+  ]
+}

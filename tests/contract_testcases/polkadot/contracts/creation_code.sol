@@ -14,5 +14,5 @@
         }
         
 // ---- Expect: diagnostics ----
-// warning: 4:27-31: local variable 'code' has been assigned, but never read
+// warning: 4:27-31: local variable 'code' is unused
 // error: 12:31-38: circular reference creating contract 'a'

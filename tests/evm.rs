@@ -46,7 +46,7 @@ fn address() {
 #[test]
 fn try_catch() {
     let ns = test_solidity(
-        r##"
+        r#"
         contract b {
             int32 x;
 
@@ -85,7 +85,7 @@ fn try_catch() {
 
                 return state;
             }
-        }"##,
+        }"#,
     );
 
     assert!(!ns.diagnostics.any_errors());
@@ -179,13 +179,10 @@ fn ethereum_solidity_tests() {
             .join("testdata/solidity/test/libsolidity/semanticTests"),
     )
     .into_iter()
-    .chain(
-        WalkDir::new(
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("testdata/solidity/test/libsolidity/syntaxTests"),
-        )
-        .into_iter(),
-    );
+    .chain(WalkDir::new(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("testdata/solidity/test/libsolidity/syntaxTests"),
+    ));
 
     let errors: usize = entries
         .par_bridge()
@@ -248,7 +245,7 @@ fn ethereum_solidity_tests() {
         })
         .sum();
 
-    assert_eq!(errors, 1029);
+    assert_eq!(errors, 1038);
 }
 
 fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {

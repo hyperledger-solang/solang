@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{HashTy, ReturnCode};
+use crate::codegen::revert::PanicCode;
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
 use crate::emit::polkadot::{log_return_code, PolkadotTarget, SCRATCH_SIZE};
@@ -357,7 +358,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             Some(loc),
             ns,
         );
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
+        let (revert_out, revert_out_len) = binary.panic_data_const(ns, PanicCode::ArrayIndexOob);
+        self.assert_failure(binary, revert_out, revert_out_len);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -445,7 +447,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             Some(loc),
             ns,
         );
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
+        let (revert_out, revert_out_len) = binary.panic_data_const(ns, PanicCode::ArrayIndexOob);
+        self.assert_failure(binary, revert_out, revert_out_len);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -625,7 +628,8 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             Some(loc),
             ns,
         );
-        self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
+        let (revert_out, revert_out_len) = binary.panic_data_const(ns, PanicCode::EmptyArrayPop);
+        self.assert_failure(binary, revert_out, revert_out_len);
 
         binary.builder.position_at_end(retrieve_block);
 
@@ -853,22 +857,10 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .builder
             .build_alloca(binary.value_type(ns), "balance");
 
-        // balance is a u128, make sure it's enough to cover existential_deposit
-        if let Some(value) = contract_args.value {
-            binary.builder.build_store(value_ptr, value);
-        } else {
-            let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
-
-            binary
-                .builder
-                .build_store(scratch_len, i32_const!(ns.value_length as u64));
-
-            call!(
-                "minimum_balance",
-                &[value_ptr.into(), scratch_len.into()],
-                "minimum_balance"
-            );
-        }
+        let value = contract_args
+            .value
+            .unwrap_or_else(|| binary.value_type(ns).const_zero());
+        binary.builder.build_store(value_ptr, value);
 
         // code hash
         let codehash = binary.emit_global_string(

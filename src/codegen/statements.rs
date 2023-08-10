@@ -4,8 +4,7 @@ use num_bigint::BigInt;
 
 use super::encoding::{abi_decode, abi_encode};
 use super::expression::{
-    assert_failure, assign_single, default_gas, emit_function_call, expression, log_runtime_error,
-    polkadot::RetCodeCheckBuilder,
+    assign_single, default_gas, emit_function_call, expression, polkadot::RetCodeCheckBuilder,
 };
 use super::{
     cfg::{ControlFlowGraph, Instr},
@@ -14,19 +13,17 @@ use super::{
 use super::{Builtin, Options};
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::events::new_event_emitter;
+use crate::codegen::revert::revert;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
 use crate::codegen::yul::inline_assembly_cfg;
 use crate::codegen::Expression;
-use crate::sema::Recurse;
-use crate::sema::{
-    ast::{
-        self, ArrayLength, CallTy, DestructureField, FormatArg, Function, Namespace, RetrieveType,
-        Statement, TryCatch, Type, Type::Uint,
-    },
-    file::PathDisplay,
+use crate::sema::ast::{
+    self, ArrayLength, CallTy, DestructureField, Function, Namespace, RetrieveType, Statement,
+    TryCatch, Type, Type::Uint,
 };
+use crate::sema::Recurse;
 use num_traits::Zero;
 use solang_parser::pt::{self, CodeLocation, Loc::Codegen};
 
@@ -61,7 +58,7 @@ pub(crate) fn statement(
             }
         }
         Statement::VariableDecl(loc, pos, _, Some(init)) => {
-            if should_remove_variable(*pos, func, opt) {
+            if should_remove_variable(*pos, func, opt, ns) {
                 let mut params = SideEffectsCheckParameters {
                     cfg,
                     contract_no,
@@ -126,7 +123,7 @@ pub(crate) fn statement(
             );
         }
         Statement::VariableDecl(loc, pos, param, None) => {
-            if should_remove_variable(*pos, func, opt) {
+            if should_remove_variable(*pos, func, opt, ns) {
                 return;
             }
 
@@ -173,7 +170,7 @@ pub(crate) fn statement(
         }
         Statement::Expression(_, _, expr) => {
             if let ast::Expression::Assign { left, right, .. } = &expr {
-                if should_remove_assignment(ns, left, func, opt) {
+                if should_remove_assignment(left, func, opt, ns) {
                     let mut params = SideEffectsCheckParameters {
                         cfg,
                         contract_no,
@@ -188,7 +185,7 @@ pub(crate) fn statement(
                 }
             } else if let ast::Expression::Builtin { args, .. } = expr {
                 // When array pop and push are top-level expressions, they can be removed
-                if should_remove_assignment(ns, expr, func, opt) {
+                if should_remove_assignment(expr, func, opt, ns) {
                     let mut params = SideEffectsCheckParameters {
                         cfg,
                         contract_no,
@@ -608,65 +605,6 @@ pub(crate) fn statement(
     }
 }
 
-fn revert(
-    args: &[ast::Expression],
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    loc: &pt::Loc,
-) {
-    let expr = args
-        .get(0)
-        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
-
-    if opt.log_runtime_errors {
-        if expr.is_some() {
-            let prefix = b"runtime_error: ";
-            let error_string = format!(
-                " revert encountered in {},\n",
-                ns.loc_to_string(PathDisplay::Filename, loc)
-            );
-            let print_expr = Expression::FormatString {
-                loc: Codegen,
-                args: vec![
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Codegen,
-                            ty: Type::Bytes(prefix.len() as u8),
-                            value: prefix.to_vec(),
-                        },
-                    ),
-                    (FormatArg::Default, expr.clone().unwrap()),
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Codegen,
-                            ty: Type::Bytes(error_string.as_bytes().len() as u8),
-                            value: error_string.as_bytes().to_vec(),
-                        },
-                    ),
-                ],
-            };
-            cfg.add(vartab, Instr::Print { expr: print_expr });
-        } else {
-            log_runtime_error(
-                opt.log_runtime_errors,
-                "revert encountered",
-                *loc,
-                cfg,
-                vartab,
-                ns,
-            )
-        }
-    }
-
-    assert_failure(&Codegen, expr, ns, cfg, vartab);
-}
-
 /// Generate if-then-no-else
 fn if_then(
     cond: &ast::Expression,
@@ -892,7 +830,7 @@ fn returns(
     let cast_values = func
         .returns
         .iter()
-        .zip(uncast_values.into_iter())
+        .zip(uncast_values)
         .map(|(left, right)| try_load_and_cast(&right.loc(), &right, &left.ty, ns, cfg, vartab))
         .collect();
 
@@ -990,7 +928,7 @@ fn destructure(
             DestructureField::VariableDecl(res, param) => {
                 let expr = try_load_and_cast(&param.loc, &right, &param.ty, ns, cfg, vartab);
 
-                if should_remove_variable(*res, func, opt) {
+                if should_remove_variable(*res, func, opt, ns) {
                     continue;
                 }
 
@@ -1006,7 +944,7 @@ fn destructure(
             DestructureField::Expression(left) => {
                 let expr = try_load_and_cast(&left.loc(), &right, &left.ty(), ns, cfg, vartab);
 
-                if should_remove_assignment(ns, left, func, opt) {
+                if should_remove_assignment(left, func, opt, ns) {
                     continue;
                 }
 

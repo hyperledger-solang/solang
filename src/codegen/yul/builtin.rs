@@ -3,7 +3,7 @@
 use crate::{
     codegen::{
         cfg::{ControlFlowGraph, Instr},
-        expression::{assert_failure, log_runtime_error},
+        revert::{assert_failure, log_runtime_error, PanicCode, SolidityError},
         vartable::Vartable,
         yul::expression::expression,
         {Builtin, Expression, Options},
@@ -198,7 +198,7 @@ pub(crate) fn process_builtin(
             log_runtime_error(opt.log_runtime_errors,  "reached invalid instruction", *loc, cfg,
             vartab,
             ns);
-            assert_failure(loc, None, ns, cfg, vartab);
+            assert_failure(loc, SolidityError::Panic(PanicCode::Generic), ns, cfg, vartab);
             Expression::Poison
         }
 

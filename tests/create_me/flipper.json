@@ -1,0 +1,75 @@
+{
+  "version": "0.2.1",
+  "name": "flipper",
+  "instructions": [
+    {
+      "name": "new",
+      "docs": [
+        "notice: Constructor that initializes the `bool` value to the given `init_value`."
+      ],
+      "accounts": [
+        {
+          "name": "dataAccount",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": false
+        }
+      ],
+      "args": [
+        {
+          "name": "initvalue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "flip",
+      "docs": [
+        "notice: A message that can be called on instantiated contracts.\nThis one flips the value of the stored `bool` from `true`\nto `false` and vice versa."
+      ],
+      "accounts": [
+        {
+          "name": "dataAccount",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "get",
+      "docs": [
+        "notice: Simply returns the current value of our `bool`."
+      ],
+      "accounts": [
+        {
+          "name": "dataAccount",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": false
+        }
+      ],
+      "args": [],
+      "returns": "bool"
+    }
+  ]
+}

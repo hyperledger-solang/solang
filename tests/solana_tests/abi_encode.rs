@@ -67,8 +67,11 @@ contract Testing {
         "#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("getThis", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm.function("getThis").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
@@ -80,7 +83,7 @@ contract Testing {
     assert_eq!(decoded.day, WeekDay::Wednesday);
     assert!(!decoded.h);
 
-    let returns = vm.function("encodeEnum", &[]).unwrap();
+    let returns = vm.function("encodeEnum").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
@@ -108,12 +111,19 @@ contract Testing {
 }
         "#,
     );
-    vm.constructor(&[]);
-    let returns = vm.function("getThis", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("getThis")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
-    assert_eq!(decoded.address, vm.programs[0].data);
-    assert_eq!(decoded.this, vm.programs[0].data);
+    assert_eq!(decoded.address, data_account);
+    assert_eq!(decoded.this, data_account);
 }
 
 #[test]
@@ -138,8 +148,11 @@ contract Testing {
       "#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("getThis", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm.function("getThis").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = MyStruct::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a, "coffe");
@@ -190,15 +203,19 @@ fn primitive_structs() {
 }
         "#,
     );
-    vm.constructor(&[]);
-    let returns = vm.function("getThis", &[]).unwrap();
+
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm.function("getThis").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
 
     let decoded = NoPadStruct::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a, 1238);
     assert_eq!(decoded.b, 87123);
 
-    let returns = vm.function("getThat", &[]).unwrap();
+    let returns = vm.function("getThat").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = PaddedStruct::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a, 12998);
@@ -226,10 +243,15 @@ contract Testing {
       "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
     let returns = vm
-        .function("testStruct", &[BorshToken::String("nihao".to_string())])
+        .function("testStruct")
+        .arguments(&[BorshToken::String("nihao".to_string())])
+        .call()
         .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
@@ -261,14 +283,29 @@ fn test_string_array() {
         "#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("encode", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let returns = vm
+        .function("encode")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a.len(), 0);
 
-    let _ = vm.function("insertStrings", &[]);
-    let returns = vm.function("encode", &[]).unwrap();
+    let _ = vm
+        .function("insertStrings")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("encode")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.a.len(), 2);
@@ -338,8 +375,16 @@ contract Testing {
         "#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("testStruct", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let returns = vm
+        .function("testStruct")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = NonConstantStruct::try_from_slice(&encoded).unwrap();
 
@@ -441,9 +486,20 @@ fn struct_in_array() {
         "#,
     );
 
-    vm.constructor(&[]);
-    let _ = vm.function("addData", &[]);
-    let returns = vm.function("encodeStruct", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let _ = vm
+        .function("addData")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("encodeStruct")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
@@ -454,7 +510,11 @@ fn struct_in_array() {
     let b: [u8; 21] = b"there_is_padding_here".to_owned();
     assert_eq!(&decoded.item_2.c[0..21], b);
 
-    let returns = vm.function("primitiveStruct", &[]).unwrap();
+    let returns = vm
+        .function("primitiveStruct")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
@@ -466,7 +526,11 @@ fn struct_in_array() {
     assert_eq!(decoded.item_3[0], NoPadStruct { a: 1, b: 2 });
     assert_eq!(decoded.item_3[1], NoPadStruct { a: 3, b: 4 });
 
-    let returns = vm.function("primitiveDynamicArray", &[]).unwrap();
+    let returns = vm
+        .function("primitiveDynamicArray")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res3::try_from_slice(&encoded).unwrap();
 
@@ -541,9 +605,19 @@ fn arrays() {
       "#,
     );
 
-    vm.constructor(&[]);
-    let _ = vm.function("addData", &[]);
-    let returns = vm.function("encodeArray", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let _ = vm
+        .function("addData")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("encodeArray")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
@@ -552,7 +626,11 @@ fn arrays() {
     assert_eq!(decoded.vec_1[1], 5523);
     assert_eq!(decoded.vec_1[2], -89);
 
-    let returns = vm.function("encodeComplex", &[]).unwrap();
+    let returns = vm
+        .function("encodeComplex")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
@@ -568,7 +646,7 @@ fn arrays() {
         vec!["cortado".to_string(), "cappuccino".to_string()]
     );
 
-    let returns = vm.function("multiDimArrays", &[]).unwrap();
+    let returns = vm.function("multiDimArrays").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res3::try_from_slice(&encoded).unwrap();
 
@@ -654,8 +732,11 @@ contract Testing {
         "#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("getThis", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm.function("getThis").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
@@ -713,7 +794,7 @@ contract Testing {
     );
     assert_eq!(decoded.item_2, 5);
 
-    let returns = vm.function("multiDim", &[]).unwrap();
+    let returns = vm.function("multiDim").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
@@ -721,7 +802,7 @@ contract Testing {
     assert_eq!(decoded.item[0][0], [1, 2, 3, 4]);
     assert_eq!(decoded.item[0][1], [5, 6, 7, 8]);
 
-    let returns = vm.function("uniqueDim", &[]).unwrap();
+    let returns = vm.function("uniqueDim").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res3::try_from_slice(&encoded).unwrap();
 
@@ -775,8 +856,11 @@ fn null_pointer() {
         "#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("test1", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm.function("test1").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res1::try_from_slice(&encoded).unwrap();
 
@@ -786,7 +870,7 @@ fn null_pointer() {
         assert!(decoded.item[i].f2.is_empty())
     }
 
-    let returns = vm.function("test2", &[]).unwrap();
+    let returns = vm.function("test2").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
@@ -822,9 +906,17 @@ fn external_function() {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("doThat", &[]).unwrap().unwrap_tuple();
+    let returns = vm
+        .function("doThat")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
     let encoded = returns[2].clone().into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
 
@@ -857,8 +949,13 @@ fn bytes_arrays() {
     }
         "#,
     );
-    vm.constructor(&[]);
-    let returns = vm.function("testBytesArray", &[]).unwrap();
+
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let returns = vm.function("testBytesArray").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
 
@@ -896,8 +993,11 @@ fn uint8_arrays() {
     }"#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("testBytesArray", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm.function("testBytesArray").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
 
@@ -921,15 +1021,26 @@ contract caller {
         return b + 3;
     }
 
-    function do_call() pure public returns (int64, int32) {
+    function do_call() view public returns (int64, int32) {
         return (this.doThis(5), this.doThat(3));
     }
 }"#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("do_call", &[]).unwrap().unwrap_tuple();
+    let returns = vm
+        .function("do_call")
+        .accounts(vec![
+            ("dataAccount", data_account),
+            ("systemProgram", [0; 32]),
+        ])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
     assert_eq!(returns.len(), 2);
     assert_eq!(
         returns[0],
@@ -977,9 +1088,12 @@ contract Testing {
         "#,
     );
 
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("testThis", &[]).unwrap();
+    let returns = vm.function("testThis").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
     assert_eq!(decoded.item_1, 99);

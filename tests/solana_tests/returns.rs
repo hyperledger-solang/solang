@@ -31,9 +31,16 @@ fn return_single() {
             }
         }"#,
     );
-    vm.constructor(&[]);
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
 
-    let returns = vm.function("f", &[]).unwrap();
+    let returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         returns,
         BorshToken::Uint {
@@ -42,7 +49,11 @@ fn return_single() {
         },
     );
 
-    let returns = vm.function("g", &[]).unwrap();
+    let returns = vm
+        .function("g")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         returns,
         BorshToken::Uint {
@@ -51,7 +62,11 @@ fn return_single() {
         },
     );
 
-    let returns = vm.function("h", &[]).unwrap();
+    let returns = vm
+        .function("h")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         returns,
         BorshToken::Uint {
@@ -60,7 +75,11 @@ fn return_single() {
         },
     );
 
-    let returns = vm.function("i", &[]).unwrap();
+    let returns = vm
+        .function("i")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         returns,
         BorshToken::Uint {
@@ -69,7 +88,11 @@ fn return_single() {
         },
     );
 
-    let returns = vm.function("j", &[]).unwrap();
+    let returns = vm
+        .function("j")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
     assert_eq!(
         returns,
         BorshToken::Uint {
@@ -90,8 +113,16 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -116,8 +147,16 @@ fn return_ternary() {
         }"#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -156,10 +195,23 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor(&[]);
-    let _returns = vm.function("strange", &[]);
-    let _returns = vm.function("inc", &[]);
-    let returns = vm.function("get", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let _returns = vm
+        .function("strange")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let _returns = vm
+        .function("inc")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("get")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -192,9 +244,19 @@ fn return_nothing() {
         }"#,
     );
 
-    vm.constructor(&[]);
-    let _returns = vm.function("f", &[]);
-    let returns = vm.function("get", &[]).unwrap();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let _returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("get")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
 
     assert_eq!(
         returns,
@@ -220,8 +282,16 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -250,8 +320,16 @@ fn return_function() {
         }"#,
     );
 
-    vm.constructor(&[]);
-    let returns = vm.function("f", &[]).unwrap().unwrap_tuple();
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+    let returns = vm
+        .function("f")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap()
+        .unwrap_tuple();
 
     assert_eq!(
         returns,

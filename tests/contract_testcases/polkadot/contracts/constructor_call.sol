@@ -14,4 +14,4 @@ contract CrowdProposalFactory {
 // ---- Expect: diagnostics ----
 // warning: 3:25-29: function parameter 'uni_' is unused
 // warning: 3:31-37: 'public': visibility for constructors is ignored
-// warning: 11:23-31: local variable 'proposal' has been assigned, but never read
+// warning: 11:23-31: local variable 'proposal' is unused

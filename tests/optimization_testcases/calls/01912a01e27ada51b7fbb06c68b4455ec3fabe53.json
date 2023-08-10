@@ -1,0 +1,21 @@
+{
+  "constructor": [
+    {
+      "Bool": true
+    }
+  ],
+  "function": [
+    [
+      "get",
+      []
+    ],
+    [
+      "flip",
+      []
+    ],
+    [
+      "get",
+      []
+    ]
+  ]
+}

@@ -9,7 +9,7 @@ struct RevertReturn(u32, String);
 #[test]
 fn revert() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract bar {
             function test() public {
                 revert("yo!");
@@ -30,7 +30,7 @@ fn revert() {
             function d() public {
                 revert("revert value has to be passed down the stack");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function_expect_failure("test", Vec::new());
@@ -61,26 +61,26 @@ fn revert() {
 
 #[test]
 fn require() {
-    let mut runtime = build_solidity(
-        r##"
-        contract c {
-            function test1() public {
-                require(false, "Program testing can be used to show the presence of bugs, but never to show their absence!");
-            }
+    let msg = "Program testing can be used to show the presence of bugs, but never to show their absence!".to_string();
+    let src = format!(
+        r#"contract c {{
+            function test1() public pure {{
+                require(false, "{}");
+            }}
 
-            function test2() public {
-                require(true, "Program testing can be used to show the presence of bugs, but never to show their absence!");
-            }
-        }"##,
+            function test2() public pure {{
+                require(true, "{}");
+            }}
+        }}"#,
+        &msg, &msg
     );
+    let mut runtime = build_solidity(&src);
 
     runtime.function_expect_failure("test1", Vec::new());
-
-    // The reason is lost
-    assert_eq!(runtime.output().len(), 0);
+    let selector = 0x08c379a0u32.to_be_bytes();
+    assert_eq!(runtime.output(), (selector, msg).encode());
 
     runtime.function("test2", Vec::new());
-
     assert_eq!(runtime.output().len(), 0);
 }
 
@@ -194,7 +194,7 @@ fn try_catch_external_calls() {
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract c {
             function test() public {
                 other o = new other();
@@ -214,14 +214,14 @@ fn try_catch_external_calls() {
                 revert("foo");
             }
         }
-        "##,
+        "#,
     );
 
     runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract c {
             function test() public {
                 other o = new other();
@@ -271,7 +271,7 @@ fn try_catch_external_calls() {
                 }
             }
         }
-        "##,
+        "#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -283,7 +283,7 @@ fn try_catch_external_calls() {
     struct Ret(u32);
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract dominator {
             child c;
 
@@ -330,7 +330,7 @@ fn try_catch_external_calls() {
             function go_bang() public pure returns (int32) {
                 revert("gone bang in child");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -345,7 +345,7 @@ fn try_catch_external_calls_dont_decode_returns() {
     // try not using the return values of test() - revert case
     // note the absense of "try o.test() returns (int32 y, bool) {"
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract c {
             function test() public returns (int32 x) {
                 other o = new other();
@@ -362,7 +362,7 @@ fn try_catch_external_calls_dont_decode_returns() {
                 revert("foo");
             }
         }
-        "##,
+        "#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -456,7 +456,7 @@ fn try_catch_constructor() {
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract c {
             function test() public {
                 int32 x = 0;
@@ -478,7 +478,7 @@ fn try_catch_constructor() {
 
             function _ext() public {}
         }
-        "##,
+        "#,
     );
 
     runtime.constructor(0, Vec::new());
@@ -488,7 +488,7 @@ fn try_catch_constructor() {
 #[test]
 fn local_destructure_call() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract c {
             function test() public {
                 (, bytes32 b, string s) = foo();
@@ -501,7 +501,7 @@ fn local_destructure_call() {
                 return (true, "0123", "abcd");
             }
         }
-        "##,
+        "#,
     );
 
     runtime.function("test", Vec::new());
@@ -687,20 +687,20 @@ fn payable_functions() {
 #[test]
 fn hash_tests() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract tester {
             function test() public {
                 bytes32 hash = keccak256("Hello, World!");
 
                 assert(hash == hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract tester {
             function test() public {
                 bytes memory s = "Hello, World!";
@@ -708,13 +708,13 @@ fn hash_tests() {
 
                 assert(hash == hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract tester {
             bytes s = "Hello, World!";
 
@@ -723,60 +723,60 @@ fn hash_tests() {
 
                 assert(hash == hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
             }
-        }"##,
+        }"#,
     );
 
     runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract tester {
             function test() public {
                 bytes32 hash = sha256("Hello, World!");
 
                 assert(hash == hex"dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract tester {
             function test() public {
                 bytes32 hash = blake2_256("Hello, World!");
 
                 assert(hash == hex"511bc81dde11180838c562c82bb35f3223f46061ebde4a955c27b3f489cf1e03");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract tester {
             function test() public {
                 bytes16 hash = blake2_128("Hello, World!");
 
                 assert(hash == hex"3895c59e4aeb0903396b5be3fbec69fe");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
 
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract tester {
             function test() public {
                 bytes20 hash = ripemd160("Hello, World!");
 
                 assert(hash == hex"527a6a4b9a6da75607546842e0e00105350b1aaf");
             }
-        }"##,
+        }"#,
     );
 
     runtime.function("test", Vec::new());
@@ -838,7 +838,7 @@ fn try_catch_reachable() {
 #[test]
 fn log_api_call_return_values_works() {
     let mut runtime = build_solidity_with_options(
-        r##"
+        r#"
         contract Test {
             constructor () payable {}
 
@@ -854,7 +854,7 @@ fn log_api_call_return_values_works() {
                 print("hi!");
             }
         }
-        "##,
+        "#,
         true,
         false,
     );

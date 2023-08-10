@@ -2333,3 +2333,65 @@ contract BeingBuilt {
         ]
     );
 }
+
+#[test]
+fn modifier() {
+    let src1 = r#"
+import "solana";
+
+@program_id("CU8sqXecq7pxweQnJq6CARonEApGN2DXcv9ukRBRgnRf")
+contract starter {
+    bool private value = true;
+
+    modifier test_modifier() {
+        print("modifier");
+        _;
+    }
+
+    @payer(payer)
+    constructor() {
+        print("Hello, World!");
+    }
+
+    function flip() public test_modifier {
+            value = !value;
+    }
+
+    function get() public view returns (bool) {
+            return value;
+    }
+}
+    "#;
+
+    let src2 = r#"
+import "solana";
+
+@program_id("CU8sqXecq7pxweQnJq6CARonEApGN2DXcv9ukRBRgnRf")
+contract starter {
+    bool private value = true;
+
+    @payer(payer)
+    constructor() {
+        print("Hello, World!");
+    }
+
+    function flip() public {
+            value = !value;
+    }
+
+    function get() public view returns (bool) {
+            return value;
+    }
+}
+    "#;
+
+    let mut ns1 = generate_namespace(src1);
+    codegen(&mut ns1, &Options::default());
+    let idl1 = generate_anchor_idl(0, &ns1, "0.1.0");
+
+    let mut ns2 = generate_namespace(src2);
+    codegen(&mut ns2, &Options::default());
+    let idl2 = generate_anchor_idl(0, &ns2, "0.1.0");
+
+    assert_eq!(idl1, idl2);
+}

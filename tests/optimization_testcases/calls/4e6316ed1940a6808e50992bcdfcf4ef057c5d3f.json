@@ -1,0 +1,25 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "return_enum",
+      []
+    ],
+    [
+      "enum_arg",
+      [
+        {
+          "Uint": {
+            "width": 8,
+            "value": [
+              1,
+              [
+                6
+              ]
+            ]
+          }
+        }
+      ]
+    ]
+  ]
+}
