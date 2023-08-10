@@ -74,26 +74,26 @@ struct Files {
     text_buffers: HashMap<PathBuf, String>,
 }
 
-// The language server currently stores some of the data grouped by the file to which the data belongs (Files struct). 
-// Other data (Definitions) is not grouped by file due to problems faced during cleanup, 
+// The language server currently stores some of the data grouped by the file to which the data belongs (Files struct).
+// Other data (Definitions) is not grouped by file due to problems faced during cleanup,
 // but is stored as a "global" field which is common to all files.
-// 
-// When the file is closed. This triggers the `did_close` handler function 
+//
+// When the file is closed. This triggers the `did_close` handler function
 // where we remove the entry corresponding to the closed file from Files::cache.
 // If the definitions are part of `FileCache`, they are also removed with the rest of `FileCache`
 // But there can be live references in other files whose definitions are defined in the closed file.
-// 
-// Files from multiple namespaces can be open at any time in VSCode. 
-// But compiler currently works on the granularity of a a namespace, 
+//
+// Files from multiple namespaces can be open at any time in VSCode.
+// But compiler currently works on the granularity of a a namespace,
 // i.e, all the analyses + code generated is for the whole namespace.
-// 
-// So, we will need some way to update data that is part of the language server between calls to 
+//
+// So, we will need some way to update data that is part of the language server between calls to
 // the parse_file method that provides new information for a namespace.
-// 
+//
 // 1. Propagate changes made to a file to all the files that depend on the file.
 // This requires a data structure that shows import dependencies between different files in the namespace.
 // 2. Need a way to safely remove stored Definitions that are no longer used by any of the References
-// 
+//
 // More information can be found here: https://github.com/hyperledger/solang/pull/1411
 
 pub struct SolangServer {
