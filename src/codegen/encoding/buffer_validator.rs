@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::codegen::cfg::{ControlFlowGraph, Instr};
-use crate::codegen::expression::assert_failure;
+use crate::codegen::revert::{assert_failure, PanicCode, SolidityError};
 use crate::codegen::vartable::Vartable;
 use crate::codegen::Expression;
 use crate::sema::ast::{Namespace, Type};
@@ -143,7 +143,8 @@ impl BufferValidator<'_> {
         cfg.set_basic_block(invalid);
 
         // TODO: This needs a proper error message
-        assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
+        let error = SolidityError::Panic(PanicCode::Generic);
+        assert_failure(&Loc::Codegen, error, ns, cfg, vartab);
 
         cfg.set_basic_block(valid);
     }
@@ -222,7 +223,8 @@ impl BufferValidator<'_> {
 
         cfg.set_basic_block(out_of_bounds_block);
         // TODO: Add an error message here
-        assert_failure(&Loc::Codegen, None, ns, cfg, vartab);
+        let error = SolidityError::Panic(PanicCode::Generic);
+        assert_failure(&Loc::Codegen, error, ns, cfg, vartab);
         cfg.set_basic_block(inbounds_block);
     }
 
