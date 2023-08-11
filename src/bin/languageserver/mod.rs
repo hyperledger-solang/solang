@@ -35,16 +35,28 @@ use tower_lsp::{
 
 use crate::cli::{target_arg, LanguageServerCommand};
 
+// Represents the type of the object that a reference points to
+// Here "object" refers to contracts, functions, structs, enums etc., that are defined and used within a namespace.
+// It is used along with the path of the file where the object is defined to uniquely identify an object
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum DefinitionType {
+    // function index in Namespace::functions
     Function(usize),
+    // variable id
     Variable(usize),
+    // (contract id where the variable is declared, variable id)
     NonLocalVariable(Option<usize>, usize),
+    // user-defined struct id
     Struct(usize),
+    // (user-defined struct id, field id)
     Field(Type, usize),
+    // enum index in Namespace::enums
     Enum(usize),
+    // (enum index in Namespace::enums, discriminant id)
     Variant(usize, usize),
+    // contract index in Namespace::contracts
     Contract(usize),
+    // event index in Namespace::events
     Event(usize),
     UserType(usize),
 }
@@ -78,19 +90,19 @@ struct Files {
 // Other data (Definitions) is not grouped by file due to problems faced during cleanup,
 // but is stored as a "global" field which is common to all files.
 //
-// When the file is closed. This triggers the `did_close` handler function
+// Closing the file triggers the `did_close` handler function
 // where we remove the entry corresponding to the closed file from Files::cache.
 // If the definitions are part of `FileCache`, they are also removed with the rest of `FileCache`
 // But there can be live references in other files whose definitions are defined in the closed file.
 //
 // Files from multiple namespaces can be open at any time in VSCode.
-// But compiler currently works on the granularity of a a namespace,
+// But compiler currently works on the granularity of a namespace,
 // i.e, all the analyses + code generated is for the whole namespace.
 //
-// So, we will need some way to update data that is part of the language server between calls to
-// the parse_file method that provides new information for a namespace.
+// So, we will need some way to update data that is part of the language server
+// between calls to the parse_file method that provides new information for a namespace.
 //
-// 1. Propagate changes made to a file to all the files that depend on the file.
+// 1. Propagate changes made to a file to all the files that depend on that.
 // This requires a data structure that shows import dependencies between different files in the namespace.
 // 2. Need a way to safely remove stored Definitions that are no longer used by any of the References
 //
@@ -498,7 +510,7 @@ impl<'a> Builder<'a> {
         }
     }
 
-    // Constructs lookup table by traversing over the expressions and storing
+    // Constructs lookup table by traversing the expressions and storing
     // information later used by the language server
     fn expression(&mut self, expr: &ast::Expression, symtab: &symtable::Symtable) {
         match expr {
@@ -999,7 +1011,7 @@ impl<'a> Builder<'a> {
             }
 
             ast::Expression::ExternalFunction { loc, address, function_no, .. } => {
-                // modifiers do not have mutability, bases or modifiers itself
+                // modifiers do not have mutability, bases or modifiers themselves
                 let fnc = &self.ns.functions[*function_no];
                 let mut msg_tg = render(&fnc.tags[..]);
                 if !msg_tg.is_empty() {
