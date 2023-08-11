@@ -7,39 +7,15 @@ import {
     approveChecked,
     AuthorityType,
     createMint,
-    getAccount,
+    getAccount, getMint,
     getOrCreateAssociatedTokenAccount, mintTo,
     setAuthority
 } from "@solana/spl-token";
-import { publicKey, u64, bool } from '@solana/buffer-layout-utils';
-import { u32, u8, struct } from '@solana/buffer-layout';
 import expect from "expect";
 import {Program} from "@coral-xyz/anchor";
-import assert from "assert";
-import exp from "constants";
 
 describe('Deserialize account data', function () {
     this.timeout(500000);
-
-    interface RawMint {
-        mintAuthorityOption: 1 | 0;
-        mintAuthority: PublicKey;
-        supply: bigint;
-        decimals: number;
-        isInitialized: boolean;
-        freezeAuthorityOption: 1 | 0;
-        freezeAuthority: PublicKey;
-    }
-
-    const MintLayout = struct<RawMint>([
-        u32('mintAuthorityOption'),
-        publicKey('mintAuthority'),
-        u64('supply'),
-        u8('decimals'),
-        bool('isInitialized'),
-        u32('freezeAuthorityOption'),
-        publicKey('freezeAuthority'),
-    ]);
 
     let program: Program;
     let storage: Keypair;
@@ -84,12 +60,15 @@ describe('Deserialize account data', function () {
         expect(res.mintAccount).toEqual(token_account.mint);
         expect(res.owner).toEqual(token_account.owner);
         expect(res.balance.toString()).toEqual(token_account.amount.toString());
+        expect(res.delegatePresent).toEqual(false);
         expect(res.delegatePresent).toEqual(token_account.delegate != null);
         expect(res.delegate).toEqual(new PublicKey("11111111111111111111111111111111")); // 0
         expect(res.state).toEqual({"initialized": {}});
+        expect(res.isNativePresent).toEqual(false);
         expect(res.isNativePresent).toEqual(token_account.rentExemptReserve != null);
         expect(res.isNative.toString()).toEqual("0");
         expect(res.delegatedAmount.toString()).toEqual(token_account.delegatedAmount.toString());
+        expect(res.closeAuthorityPresent).toEqual(false);
         expect(res.closeAuthorityPresent).toEqual(token_account.closeAuthority != null);
         expect(res.closeAuthority).toEqual(new PublicKey("11111111111111111111111111111111")); // 0
 
@@ -117,6 +96,7 @@ describe('Deserialize account data', function () {
             .view();
 
         // The delegate account should be present now
+        expect(res.delegatePresent).toEqual(true);
         expect(res.delegatePresent).toEqual(token_account.delegate !=  null);
         expect(res.delegate).toEqual(token_account.delegate);
 
@@ -142,6 +122,7 @@ describe('Deserialize account data', function () {
             .view();
 
         // The close authority should be present
+        expect(res.closeAuthorityPresent).toEqual(true);
         expect(res.closeAuthorityPresent).toEqual(token_account.closeAuthority != null);
         expect(res.closeAuthority).toEqual(close_authority.publicKey);
 
@@ -164,6 +145,7 @@ describe('Deserialize account data', function () {
 
         // Is native must be present
         expect(res.isNativePresent).toEqual(token_account.isNative);
+        expect(res.isNativePresent).toEqual(true);
         expect(res.isNativePresent).toEqual(token_account.rentExemptReserve != null);
         expect(res.isNative.toString()).toEqual(token_account.rentExemptReserve!.toString());
     });
@@ -198,9 +180,7 @@ describe('Deserialize account data', function () {
             5
         );
 
-        let data = await connection.getAccountInfo(mint);
-        assert(data != null);
-        let decoded = MintLayout.decode(data.data);
+        let mint_data = await getMint(connection, mint);
 
         let res = await program.methods.mintAccount(mint)
             .accounts({dataAccount: storage.publicKey})
@@ -212,13 +192,15 @@ describe('Deserialize account data', function () {
             .view();
 
         // Authorities are present
-        expect(res.authorityPresent).toEqual(decoded.mintAuthorityOption > 0);
-        expect(res.mintAuthority).toEqual(decoded.mintAuthority);
-        expect(res.supply.toString()).toEqual(decoded.supply.toString())
-        expect(res.decimals).toEqual(decoded.decimals);
-        expect(res.isInitialized).toEqual(decoded.isInitialized);
-        expect(res.freezeAuthorityPresent).toEqual(decoded.freezeAuthorityOption > 0);
-        expect(res.freezeAuthority).toEqual(decoded.freezeAuthority);
+        expect(res.authorityPresent).toEqual(true);
+        expect(res.authorityPresent).toEqual(mint_data.mintAuthority != null);
+        expect(res.mintAuthority).toEqual(mint_data.mintAuthority);
+        expect(res.supply.toString()).toEqual(mint_data.supply.toString())
+        expect(res.decimals).toEqual(mint_data.decimals);
+        expect(res.isInitialized).toEqual(mint_data.isInitialized);
+        expect(res.freezeAuthorityPresent).toEqual(true);
+        expect(res.freezeAuthorityPresent).toEqual(mint_data.freezeAuthority != null);
+        expect(res.freezeAuthority).toEqual(mint_data.freezeAuthority);
 
         await setAuthority(
             connection,
@@ -238,9 +220,7 @@ describe('Deserialize account data', function () {
             null
         );
 
-        data = await connection.getAccountInfo(mint);
-        assert(data != null);
-        decoded = MintLayout.decode(data.data);
+        mint_data = await getMint(connection, mint);
 
         res = await program.methods.mintAccount(mint)
             .accounts({dataAccount: storage.publicKey})
@@ -252,10 +232,12 @@ describe('Deserialize account data', function () {
             .view();
 
         // Authorities are not present
-        expect(res.authorityPresent).toEqual(decoded.mintAuthorityOption > 0);
-        expect(res.supply.toString()).toEqual(decoded.supply.toString())
-        expect(res.decimals).toEqual(decoded.decimals);
-        expect(res.isInitialized).toEqual(decoded.isInitialized);
-        expect(res.freezeAuthorityPresent).toEqual(decoded.freezeAuthorityOption > 0);
+        expect(res.authorityPresent).toEqual(false);
+        expect(res.authorityPresent).toEqual(mint_data.mintAuthority != null);
+        expect(res.supply.toString()).toEqual(mint_data.supply.toString())
+        expect(res.decimals).toEqual(mint_data.decimals);
+        expect(res.isInitialized).toEqual(mint_data.isInitialized);
+        expect(res.freezeAuthorityPresent).toEqual(false);
+        expect(res.freezeAuthorityPresent).toEqual(mint_data.freezeAuthority != null);
     });
 });
