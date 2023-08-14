@@ -14,6 +14,7 @@ use crate::sema::ast::{
 use base58::ToBase58;
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
+use solana_program::rent::{ACCOUNT_STORAGE_OVERHEAD, Rent};
 use solang_parser::pt::Loc;
 
 /// Special code for Solana constructors like creating the account
@@ -293,6 +294,7 @@ pub(super) fn solana_deploy(
             },
         );
 
+        let solana_rent = Rent::default();
         // Calculate minimum balance for rent-exempt
         let (space, lamports) = if let Some(ConstructorAnnotation::Space(space_expr)) = func
             .annotations
@@ -330,7 +332,7 @@ pub(super) fn solana_deploy(
                     right: Expression::NumberLiteral {
                         loc: Loc::Codegen,
                         ty: Type::Uint(64),
-                        value: 128.into(),
+                        value: ACCOUNT_STORAGE_OVERHEAD.into(),
                     }
                     .into(),
                 }
@@ -338,17 +340,19 @@ pub(super) fn solana_deploy(
                 right: Expression::NumberLiteral {
                     loc: Loc::Codegen,
                     ty: Type::Uint(64),
-                    value: BigInt::from(3480 * 2),
+                    value: BigInt::from(
+                        solana_rent.lamports_per_byte_year * solana_rent.exemption_threshold as u64,
+                    ),
                 }
                 .into(),
             };
 
             (space, lamports)
         } else {
-            let space_runtime_constant = contract.fixed_layout_size.to_u64().unwrap();
+            let space_runtime_constant = contract.fixed_layout_size.to_usize().unwrap();
 
             // https://github.com/solana-labs/solana/blob/718f433206c124da85a8aa2476c0753f351f9a28/sdk/program/src/rent.rs#L78-L82
-            let lamports_runtime_constant = (128 + space_runtime_constant) * 3480 * 2;
+            let lamports_runtime_constant = solana_rent.minimum_balance(space_runtime_constant);
 
             (
                 Expression::NumberLiteral {
