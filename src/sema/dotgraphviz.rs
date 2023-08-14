@@ -999,15 +999,22 @@ impl Dot {
 
                 self.add_expression(expr, func, ns, node, String::from("expr"));
             }
-            Expression::Negate { loc, ty, expr } => {
+            Expression::Negate {
+                loc,
+                ty,
+                unchecked,
+                expr,
+            } => {
+                let mut labels = vec![
+                    format!("unary minus {}", ty.to_string(ns)),
+                    ns.loc_to_string(PathDisplay::FullPath, loc),
+                ];
+                if *unchecked {
+                    labels.push(String::from("unchecked"));
+                }
+
                 let node = self.add_node(
-                    Node::new(
-                        "unary_minus",
-                        vec![
-                            format!("unary minus {}", ty.to_string(ns)),
-                            ns.loc_to_string(PathDisplay::FullPath, loc),
-                        ],
-                    ),
+                    Node::new("unary_minus", labels),
                     Some(parent),
                     Some(parent_rel),
                 );

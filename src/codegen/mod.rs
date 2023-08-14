@@ -620,6 +620,7 @@ pub enum Expression {
     Negate {
         loc: pt::Loc,
         ty: Type,
+        overflowing: bool,
         expr: Box<Expression>,
     },
     Undefined {
@@ -1561,9 +1562,15 @@ impl Expression {
                     ty: ty.clone(),
                     expr: Box::new(filter(expr, ctx)),
                 },
-                Expression::Negate { loc, ty, expr } => Expression::Negate {
+                Expression::Negate {
+                    loc,
+                    ty,
+                    overflowing,
+                    expr,
+                } => Expression::Negate {
                     loc: *loc,
                     ty: ty.clone(),
+                    overflowing: *overflowing,
                     expr: Box::new(filter(expr, ctx)),
                 },
                 Expression::Subscript {

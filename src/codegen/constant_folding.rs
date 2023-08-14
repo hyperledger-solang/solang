@@ -470,7 +470,12 @@ fn expression(
         Expression::SignExt { loc, ty, expr } => sign_ext(loc, ty, expr, vars, cfg, ns),
         Expression::Trunc { loc, ty, expr } => trunc(loc, ty, expr, vars, cfg, ns),
         Expression::BitwiseNot { loc, ty, expr } => bitwise_not(loc, ty, expr, vars, cfg, ns),
-        Expression::Negate { loc, ty, expr } => negate(loc, ty, expr, vars, cfg, ns),
+        Expression::Negate {
+            loc,
+            ty,
+            overflowing,
+            expr,
+        } => negate(loc, ty, expr, *overflowing, vars, cfg, ns),
         Expression::Variable { loc, ty, var_no } => {
             reference_variable(loc, *var_no, ty, vars, cfg, ns, expr)
         }
@@ -1277,18 +1282,20 @@ fn negate(
     loc: &pt::Loc,
     ty: &Type,
     expr: &Expression,
+    overflowing: bool,
     vars: Option<&reaching_definitions::VarDefs>,
     cfg: &ControlFlowGraph,
     ns: &mut Namespace,
 ) -> (Expression, bool) {
     let expr = expression(expr, vars, cfg, ns);
     if let Expression::NumberLiteral { value, .. } = expr.0 {
-        (bigint_to_expression(loc, ty, -value, true, ns), true)
+        (bigint_to_expression(loc, ty, -value, overflowing, ns), true)
     } else {
         (
             Expression::Negate {
                 loc: *loc,
                 ty: ty.clone(),
+                overflowing,
                 expr: Box::new(expr.0),
             },
             expr.1,

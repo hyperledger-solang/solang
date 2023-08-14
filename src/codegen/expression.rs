@@ -331,9 +331,15 @@ pub fn expression(
             ty: ty.clone(),
             expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         },
-        ast::Expression::Negate { loc, ty, expr } => Expression::Negate {
+        ast::Expression::Negate {
+            loc,
+            ty,
+            unchecked,
+            expr,
+        } => Expression::Negate {
             loc: *loc,
             ty: ty.clone(),
+            overflowing: *unchecked,
             expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         },
         ast::Expression::StructLiteral { loc, ty, values } => Expression::StructLiteral {

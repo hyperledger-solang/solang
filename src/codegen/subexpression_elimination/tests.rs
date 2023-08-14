@@ -231,6 +231,7 @@ fn not_tracked() {
     let minus = Expression::Negate {
         loc: Loc::Codegen,
         ty: Type::Int(32),
+        overflowing: true,
         expr: Box::new(load.clone()),
     };
     let exp = Expression::ShiftLeft {
@@ -326,6 +327,8 @@ fn complex_expression() {
     let unary = Expression::Negate {
         loc: Loc::Codegen,
         ty: Type::Int(44),
+        overflowing: true,
+
         expr: Box::new(modu.clone()),
     };
 
@@ -517,6 +520,8 @@ fn kill() {
     let unary = Expression::Negate {
         loc: Loc::Codegen,
         ty: Type::Int(44),
+        overflowing: true,
+
         expr: Box::new(modu.clone()),
     };
 
@@ -626,6 +631,8 @@ fn clone() {
     let unary = Expression::Negate {
         loc: Loc::Codegen,
         ty: Type::Int(44),
+        overflowing: true,
+
         expr: Box::new(modu.clone()),
     };
 
@@ -733,6 +740,7 @@ fn intersect() {
     let unary = Expression::Negate {
         loc: Loc::Codegen,
         ty: Type::Int(44),
+        overflowing: true,
         expr: Box::new(modu.clone()),
     };
 
