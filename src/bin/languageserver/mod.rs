@@ -158,7 +158,7 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
 impl SolangServer {
     /// Parse file
     async fn parse_file(&self, uri: Url) {
-        let mut resolver = FileResolver::new();
+        let mut resolver = FileResolver::default();
         for (path, contents) in &self.files.lock().await.text_buffers {
             resolver.set_file_contents(path.to_str().unwrap(), contents.clone());
         }

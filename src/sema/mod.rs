@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use self::{
+    expression::strings::unescape,
     functions::{resolve_params, resolve_returns},
     symtable::Symtable,
     unused_variable::check_unused_errors,
@@ -14,7 +15,7 @@ use solang_parser::{
     parse,
     pt::{self, CodeLocation},
 };
-use std::ffi::OsStr;
+use std::{ffi::OsString, str};
 
 mod address;
 pub mod ast;
@@ -99,7 +100,7 @@ fn sema_file(file: &ResolvedFile, resolver: &mut FileResolver, ns: &mut ast::Nam
         file.full_path.clone(),
         &source_code,
         file_cache_no,
-        Some(file.get_import_no()),
+        file.import_no,
     ));
 
     let (pt, comments) = match parse(&source_code, file_no) {
@@ -233,7 +234,30 @@ fn resolve_import(
         }
     };
 
-    let os_filename = OsStr::new(&filename.string);
+    if filename.string.is_empty() {
+        ns.diagnostics.push(ast::Diagnostic::error(
+            filename.loc,
+            "import path empty".into(),
+        ));
+        return;
+    }
+
+    let (valid, bs) = unescape(
+        &filename.string,
+        filename.loc.start(),
+        filename.loc.file_no(),
+        &mut ns.diagnostics,
+    );
+
+    if !valid {
+        return;
+    }
+
+    let os_filename = if let Some(res) = osstring_from_vec(&filename.loc, bs, ns) {
+        res
+    } else {
+        return;
+    };
 
     let import_file_no = if let Some(builtin_file_no) = ns
         .files
@@ -243,7 +267,7 @@ fn resolve_import(
         // import "solana"
         builtin_file_no
     } else {
-        match resolver.resolve_file(parent, os_filename) {
+        match resolver.resolve_file(parent, &os_filename) {
             Err(message) => {
                 ns.diagnostics
                     .push(ast::Diagnostic::error(filename.loc, message));
@@ -553,4 +577,26 @@ pub trait Recurse {
     type ArgType;
     /// recurse over a structure
     fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Self::ArgType, ctx: &mut T) -> bool);
+}
+
+#[cfg(unix)]
+fn osstring_from_vec(_: &pt::Loc, bs: Vec<u8>, _: &mut ast::Namespace) -> Option<OsString> {
+    use std::os::unix::ffi::OsStringExt;
+
+    Some(OsString::from_vec(bs))
+}
+
+#[cfg(not(unix))]
+fn osstring_from_vec(loc: &pt::Loc, bs: Vec<u8>, ns: &mut ast::Namespace) -> Option<OsString> {
+    match str::from_utf8(&bs) {
+        Ok(s) => Some(OsString::from(s)),
+        Err(_) => {
+            ns.diagnostics.push(ast::Diagnostic::error(
+                *loc,
+                "string is not a valid filename".into(),
+            ));
+
+            None
+        }
+    }
 }

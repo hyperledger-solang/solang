@@ -20,7 +20,12 @@ use solana_rbpf::{
 };
 use solang::abi::anchor::discriminator;
 use solang::{
-    abi::anchor::generate_anchor_idl, compile, file_resolver::FileResolver, sema::ast, Target,
+    abi::anchor::generate_anchor_idl,
+    codegen::{OptimizationLevel, Options},
+    compile,
+    file_resolver::FileResolver,
+    sema::ast,
+    Target,
 };
 use std::{
     cell::{RefCell, RefMut},
@@ -132,98 +137,119 @@ struct Assign {
 }
 
 fn build_solidity(src: &str) -> VirtualMachine {
-    let mut cache = FileResolver::new();
+    VirtualMachineBuilder::new(src).build()
+}
 
-    cache.set_file_contents("test.sol", src.to_string());
+pub(crate) struct VirtualMachineBuilder<'a> {
+    src: &'a str,
+    opts: Option<Options>,
+}
 
-    let (res, ns) = compile(
-        OsStr::new("test.sol"),
-        &mut cache,
-        inkwell::OptimizationLevel::Default,
-        Target::Solana,
-        false,
-        true,
-        true,
-        vec!["unknown".to_string()],
-        "0.0.1",
-        #[cfg(feature = "wasm_opt")]
-        None,
-    );
+impl<'a> VirtualMachineBuilder<'a> {
+    pub(crate) fn new(src: &'a str) -> Self {
+        Self { src, opts: None }
+    }
 
-    ns.print_diagnostics_in_plain(&cache, false);
+    pub(crate) fn opts(mut self, opts: Options) -> Self {
+        self.opts = Some(opts);
+        self
+    }
 
-    assert!(!res.is_empty());
+    pub(crate) fn build(self) -> VirtualMachine {
+        let mut cache = FileResolver::default();
 
-    let mut account_data = HashMap::new();
-    let mut programs = Vec::new();
+        cache.set_file_contents("test.sol", self.src.to_string());
 
-    for contract_no in 0..ns.contracts.len() {
-        let contract = &ns.contracts[contract_no];
+        let (res, ns) = compile(
+            OsStr::new("test.sol"),
+            &mut cache,
+            Target::Solana,
+            self.opts.as_ref().unwrap_or(&Options {
+                opt_level: OptimizationLevel::Default,
+                log_api_return_codes: false,
+                log_runtime_errors: true,
+                log_prints: true,
+                ..Default::default()
+            }),
+            vec!["unknown".to_string()],
+            "0.0.1",
+        );
 
-        if !contract.instantiable {
-            continue;
+        ns.print_diagnostics_in_plain(&cache, false);
+
+        assert!(!res.is_empty());
+
+        let mut account_data = HashMap::new();
+        let mut programs = Vec::new();
+
+        for contract_no in 0..ns.contracts.len() {
+            let contract = &ns.contracts[contract_no];
+
+            if !contract.instantiable {
+                continue;
+            }
+
+            let code = contract.code.get().unwrap();
+            let idl = generate_anchor_idl(contract_no, &ns, "0.1.0");
+
+            let program = if let Some(program_id) = &contract.program_id {
+                program_id.clone().try_into().unwrap()
+            } else {
+                account_new()
+            };
+
+            account_data.insert(
+                program,
+                AccountState {
+                    data: code.clone(),
+                    owner: None,
+                    lamports: 0,
+                },
+            );
+
+            programs.push(Program {
+                id: program,
+                idl: Some(idl),
+            });
         }
 
-        let code = contract.code.get().unwrap();
-        let idl = generate_anchor_idl(contract_no, &ns, "0.1.0");
+        // Add clock account
+        let clock_account: Account = "SysvarC1ock11111111111111111111111111111111"
+            .from_base58()
+            .unwrap()
+            .try_into()
+            .unwrap();
 
-        let program = if let Some(program_id) = &contract.program_id {
-            program_id.clone().try_into().unwrap()
-        } else {
-            account_new()
+        let clock_layout = ClockLayout {
+            slot: 70818331,
+            epoch: 102,
+            epoch_start_timestamp: 946684800,
+            leader_schedule_epoch: 1231231312,
+            unix_timestamp: 1620656423,
         };
 
         account_data.insert(
-            program,
+            clock_account,
             AccountState {
-                data: code.clone(),
+                data: bincode::serialize(&clock_layout).unwrap(),
                 owner: None,
                 lamports: 0,
             },
         );
 
-        programs.push(Program {
-            id: program,
-            idl: Some(idl),
-        });
-    }
+        account_data.insert([0; 32], AccountState::default());
 
-    // Add clock account
-    let clock_account: Account = "SysvarC1ock11111111111111111111111111111111"
-        .from_base58()
-        .unwrap()
-        .try_into()
-        .unwrap();
+        let cur = programs.last().unwrap().clone();
 
-    let clock_layout = ClockLayout {
-        slot: 70818331,
-        epoch: 102,
-        epoch_start_timestamp: 946684800,
-        leader_schedule_epoch: 1231231312,
-        unix_timestamp: 1620656423,
-    };
-
-    account_data.insert(
-        clock_account,
-        AccountState {
-            data: bincode::serialize(&clock_layout).unwrap(),
-            owner: None,
-            lamports: 0,
-        },
-    );
-
-    account_data.insert([0; 32], AccountState::default());
-
-    let cur = programs.last().unwrap().clone();
-
-    VirtualMachine {
-        account_data,
-        programs,
-        stack: vec![cur],
-        logs: String::new(),
-        events: Vec::new(),
-        return_data: None,
-        call_params_check: HashMap::new(),
+        VirtualMachine {
+            account_data,
+            programs,
+            stack: vec![cur],
+            logs: String::new(),
+            events: Vec::new(),
+            return_data: None,
+            call_params_check: HashMap::new(),
+        }
     }
 }
 
@@ -1594,7 +1620,7 @@ impl VirtualMachine {
 }
 
 pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents("test.sol", src.to_string());
 
@@ -1659,6 +1685,13 @@ impl<'a, 'b> VmFunction<'a, 'b> {
     }
 
     fn call(&mut self) -> Option<BorshToken> {
+        match self.call_with_error_code() {
+            Ok(output) => output,
+            Err(num) => panic!("unexpected return {num:#x}"),
+        }
+    }
+
+    fn call_with_error_code(&mut self) -> Result<Option<BorshToken>, u64> {
         self.vm.return_data = None;
         let idl_instr = self.vm.stack[0].idl.as_ref().unwrap().instructions[self.idx].clone();
         let mut calldata = discriminator("global", &idl_instr.name);
@@ -1693,7 +1726,7 @@ impl<'a, 'b> VmFunction<'a, 'b> {
 
         match res {
             ProgramResult::Ok(num) if num == self.expected => (),
-            ProgramResult::Ok(num) => panic!("unexpected return {num:#x}"),
+            ProgramResult::Ok(num) => return Err(num),
             ProgramResult::Err(e) => panic!("error {e:?}"),
         }
 
@@ -1712,10 +1745,10 @@ impl<'a, 'b> VmFunction<'a, 'b> {
                 &self.vm.stack[0].idl.as_ref().unwrap().types,
             );
             assert_eq!(offset, return_data.len());
-            Some(decoded)
+            Ok(Some(decoded))
         } else {
             assert_eq!(return_data.len(), 0);
-            None
+            Ok(None)
         }
     }
 

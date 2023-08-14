@@ -1,0 +1,13 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "getThis",
+      []
+    ],
+    [
+      "encodeEnum",
+      []
+    ]
+  ]
+}

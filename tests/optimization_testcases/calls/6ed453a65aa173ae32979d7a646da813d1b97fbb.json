@@ -1,0 +1,17 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "strange",
+      []
+    ],
+    [
+      "inc",
+      []
+    ],
+    [
+      "get",
+      []
+    ]
+  ]
+}

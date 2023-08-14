@@ -31,12 +31,7 @@ pub(super) fn string_literal(
     let mut loc = v[0].loc;
 
     for s in v {
-        result.append(&mut unescape(
-            &s.string,
-            s.loc.start(),
-            file_no,
-            diagnostics,
-        ));
+        result.append(&mut unescape(&s.string, s.loc.start(), file_no, diagnostics).1);
         loc.use_end_from(&s.loc);
     }
 

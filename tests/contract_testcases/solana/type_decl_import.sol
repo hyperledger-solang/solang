@@ -1,4 +1,4 @@
-import "type_decl.sol" as IMP;
+import "./type_decl.sol" as IMP;
 
 contract d {
 	function f(IMP.x c) public {

@@ -1,0 +1,45 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "get_bs",
+      []
+    ],
+    [
+      "pop",
+      []
+    ],
+    [
+      "get_bs",
+      []
+    ],
+    [
+      "push",
+      [
+        {
+          "FixedBytes": [
+            65
+          ]
+        }
+      ]
+    ],
+    [
+      "get_bs",
+      []
+    ],
+    [
+      "push",
+      [
+        {
+          "FixedBytes": [
+            1
+          ]
+        }
+      ]
+    ],
+    [
+      "get_bs",
+      []
+    ]
+  ]
+}

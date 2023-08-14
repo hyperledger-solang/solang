@@ -1,4 +1,4 @@
-import "simple.sol" as IMP;
+import "./simple.sol" as IMP;
 
 contract C is IMP.A {
 	using IMP.L for *;

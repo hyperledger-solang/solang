@@ -1,4 +1,4 @@
-import "mangling_02.sol" as X;
+import "./mangling_02.sol" as X;
 
 struct A { uint256 foo; }
 

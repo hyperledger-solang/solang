@@ -3,9 +3,7 @@
 use num_bigint::BigInt;
 
 use super::encoding::{abi_decode, abi_encode};
-use super::expression::{
-    assert_failure, assign_single, default_gas, emit_function_call, expression, log_runtime_error,
-};
+use super::expression::{assign_single, default_gas, emit_function_call, expression};
 use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr},
@@ -13,19 +11,17 @@ use super::{
 };
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::events::new_event_emitter;
+use crate::codegen::revert::revert;
 use crate::codegen::unused_variable::{
     should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
 };
 use crate::codegen::yul::inline_assembly_cfg;
 use crate::codegen::Expression;
-use crate::sema::Recurse;
-use crate::sema::{
-    ast::{
-        self, ArrayLength, CallTy, DestructureField, FormatArg, Function, Namespace, RetrieveType,
-        Statement, TryCatch, Type, Type::Uint,
-    },
-    file::PathDisplay,
+use crate::sema::ast::{
+    self, ArrayLength, CallTy, DestructureField, Function, Namespace, RetrieveType, Statement,
+    TryCatch, Type, Type::Uint,
 };
+use crate::sema::Recurse;
 use num_traits::Zero;
 use solang_parser::pt::{self, CodeLocation, Loc::Codegen};
 
@@ -605,65 +601,6 @@ pub(crate) fn statement(
             inline_assembly_cfg(inline_assembly, contract_no, ns, cfg, vartab, opt);
         }
     }
-}
-
-fn revert(
-    args: &[ast::Expression],
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    func: Option<&Function>,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    opt: &Options,
-    loc: &pt::Loc,
-) {
-    let expr = args
-        .get(0)
-        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
-
-    if opt.log_runtime_errors {
-        if expr.is_some() {
-            let prefix = b"runtime_error: ";
-            let error_string = format!(
-                " revert encountered in {},\n",
-                ns.loc_to_string(PathDisplay::Filename, loc)
-            );
-            let print_expr = Expression::FormatString {
-                loc: Codegen,
-                args: vec![
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Codegen,
-                            ty: Type::Bytes(prefix.len() as u8),
-                            value: prefix.to_vec(),
-                        },
-                    ),
-                    (FormatArg::Default, expr.clone().unwrap()),
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Codegen,
-                            ty: Type::Bytes(error_string.as_bytes().len() as u8),
-                            value: error_string.as_bytes().to_vec(),
-                        },
-                    ),
-                ],
-            };
-            cfg.add(vartab, Instr::Print { expr: print_expr });
-        } else {
-            log_runtime_error(
-                opt.log_runtime_errors,
-                "revert encountered",
-                *loc,
-                cfg,
-                vartab,
-                ns,
-            )
-        }
-    }
-
-    assert_failure(&Codegen, expr, ns, cfg, vartab);
 }
 
 /// Generate if-then-no-else

@@ -1057,7 +1057,9 @@ fn test_mul_within_range_signed() {
 
         let mut runtime = build_solidity(&src);
 
-        let a = rng.gen_bigint((width - 1).try_into().unwrap()).sub(1_u32);
+        let upper_bound = BigInt::from(2).pow(width as u32 - 1); // Upper bound is exclusive
+        let lower_bound = upper_bound.clone().mul(-1);
+        let a = rng.gen_bigint_range(&lower_bound, &upper_bound);
         let a_sign = a.sign();
         let mut a_data = a.to_signed_bytes_le();
 

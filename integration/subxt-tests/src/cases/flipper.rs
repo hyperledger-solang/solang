@@ -59,6 +59,5 @@ async fn case() -> anyhow::Result<()> {
         .and_then(|v| <bool>::decode(&mut v.as_bytes_ref()).map_err(Into::into))?;
 
     assert!(!updated);
-
     Ok(())
 }

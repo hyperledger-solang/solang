@@ -19,7 +19,7 @@ jobs:
   lints:
     name: Lints
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -71,7 +71,7 @@ jobs:
   linux-x86-64:
     name: Linux x86-64
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -93,7 +93,7 @@ jobs:
     name: Linux Arm
     runs-on: linux-arm64
     if: ${{ github.repository_owner == 'hyperledger' }}
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -231,7 +231,7 @@ jobs:
   anchor:
     name: Anchor Integration test
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -278,7 +278,7 @@ jobs:
   solana:
     name: Solana Integration test
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -321,7 +321,7 @@ jobs:
       # We can't run substrate node as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate contracts node
-      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:e41a9c0 substrate-contracts-node --dev --ws-external) >> $GITHUB_OUTPUT
+      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:054bef6 substrate-contracts-node --dev --rpc-external) >> $GITHUB_OUTPUT
       id: substrate
     - uses: actions/setup-node@v3
       with:
@@ -358,7 +358,7 @@ jobs:
       # We can't run substrate node as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
-      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:e41a9c0 substrate-contracts-node --dev --ws-external) >> $GITHUB_OUTPUT
+      run: echo id=$(docker run -d -p 9944:9944 ghcr.io/hyperledger/solang-substrate-ci:054bef6 substrate-contracts-node --dev --rpc-external) >> $GITHUB_OUTPUT
       id: substrate
     - uses: actions/download-artifact@master
       with:

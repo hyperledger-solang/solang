@@ -1,0 +1,17 @@
+{
+  "constructor": [],
+  "function": [
+    [
+      "test_cmp",
+      []
+    ],
+    [
+      "test_arith",
+      []
+    ],
+    [
+      "test_bit",
+      []
+    ]
+  ]
+}

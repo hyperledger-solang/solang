@@ -2,13 +2,14 @@
 
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
+use solang::codegen::{OptimizationLevel, Options};
 use solang::file_resolver::FileResolver;
 use solang::Target;
 use std::ffi::OsStr;
 
 #[test]
 fn test_abstract() {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -33,22 +34,25 @@ fn test_abstract() {
     let (contracts, ns) = solang::compile(
         OsStr::new("a.sol"),
         &mut cache,
-        inkwell::OptimizationLevel::Default,
         Target::default_polkadot(),
-        false,
-        false,
-        true,
+        &Options {
+            opt_level: OptimizationLevel::Default,
+            log_api_return_codes: false,
+            log_runtime_errors: false,
+            log_prints: true,
+            #[cfg(feature = "wasm_opt")]
+            wasm_opt: Some(contract_build::OptimizationPasses::Z),
+            ..Default::default()
+        },
         vec!["unknown".to_string()],
         "0.0.1",
-        #[cfg(feature = "wasm_opt")]
-        Some(contract_build::OptimizationPasses::Z),
     );
 
     assert!(!ns.diagnostics.any_errors());
 
     assert_eq!(contracts.len(), 1);
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents(
         "a.sol",
@@ -77,15 +81,18 @@ fn test_abstract() {
     let (contracts, ns) = solang::compile(
         OsStr::new("a.sol"),
         &mut cache,
-        inkwell::OptimizationLevel::Default,
         Target::default_polkadot(),
-        false,
-        false,
-        true,
+        &Options {
+            opt_level: OptimizationLevel::Default,
+            log_api_return_codes: false,
+            log_runtime_errors: false,
+            log_prints: true,
+            #[cfg(feature = "wasm_opt")]
+            wasm_opt: Some(contract_build::OptimizationPasses::Z),
+            ..Default::default()
+        },
         vec!["unknown".to_string()],
         "0.0.1",
-        #[cfg(feature = "wasm_opt")]
-        Some(contract_build::OptimizationPasses::Z),
     );
 
     assert!(!ns.diagnostics.any_errors());

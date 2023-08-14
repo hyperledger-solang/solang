@@ -10,9 +10,10 @@ pub(crate) fn unescape(
     start: usize,
     file_no: usize,
     diagnostics: &mut Diagnostics,
-) -> Vec<u8> {
+) -> (bool, Vec<u8>) {
     let mut s: Vec<u8> = Vec::new();
     let mut indeces = literal.char_indices();
+    let mut valid = true;
 
     while let Some((_, ch)) = indeces.next() {
         if ch != '\\' {
@@ -35,6 +36,7 @@ pub(crate) fn unescape(
             Some((i, 'x')) => match get_digits(&mut indeces, 2) {
                 Ok(ch) => s.push(ch as u8),
                 Err(offset) => {
+                    valid = false;
                     diagnostics.push(Diagnostic::error(
                         pt::Loc::File(
                             file_no,
@@ -52,6 +54,7 @@ pub(crate) fn unescape(
                         s.extend_from_slice(ch.encode_utf8(&mut buffer).as_bytes());
                     }
                     None => {
+                        valid = false;
                         diagnostics.push(Diagnostic::error(
                             pt::Loc::File(file_no, start + i, start + i + 6),
                             "Found an invalid unicode character".to_string(),
@@ -59,6 +62,7 @@ pub(crate) fn unescape(
                     }
                 },
                 Err(offset) => {
+                    valid = false;
                     diagnostics.push(Diagnostic::error(
                         pt::Loc::File(
                             file_no,
@@ -70,6 +74,7 @@ pub(crate) fn unescape(
                 }
             },
             Some((i, ch)) => {
+                valid = false;
                 diagnostics.push(Diagnostic::error(
                     pt::Loc::File(file_no, start + i, start + i + ch.len_utf8()),
                     format!("unknown escape character '{ch}'"),
@@ -78,7 +83,8 @@ pub(crate) fn unescape(
             None => unreachable!(),
         }
     }
-    s
+
+    (valid, s)
 }
 
 /// Get the hex digits for an escaped \x or \u. Returns either the value or

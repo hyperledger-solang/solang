@@ -2,7 +2,7 @@
 Cargo.lock
 /target
 **/*.rs.bk
-bundle.ll
+*.ll
 tests/.tmp*
 
 .helix/

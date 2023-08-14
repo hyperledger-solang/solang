@@ -5,7 +5,7 @@ use contract_transcode::ContractMessageTranscoder;
 use hex::FromHex;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::hexdisplay::AsBytesRef;
-use subxt::metadata::ErrorMetadata;
+use subxt::error::MetadataError;
 
 use crate::API;
 
@@ -55,8 +55,11 @@ async fn case() -> anyhow::Result<()> {
             0,
             &|t: &ContractMessageTranscoder| t.encode::<_, String>("test_assert_rpc", []).unwrap(),
         )
-        .await;
-    assert!(res.unwrap_err().to_string().contains("ContractReverted"));
+        .await
+        .unwrap_err();
+    assert!(res
+        .to_string()
+        .contains("ModuleError { index: 8, error: [25, 0, 0, 0] }"));
 
     // state should not change after failed operation
     let rv = contract

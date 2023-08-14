@@ -155,3 +155,58 @@ fn contract_name_defined_twice() {
     assert!(err.contains("relative_import.sol:1:1-6:2 and "));
     assert!(err.ends_with("rel.sol:2:1-16\n"));
 }
+
+#[test]
+fn bad_escape() {
+    let mut cmd = Command::cargo_bin("solang").unwrap();
+
+    let not_ok = cmd
+        .args([
+            "compile",
+            "--target",
+            "solana",
+            "tests/imports_testcases/bad_escape.sol",
+        ])
+        .assert();
+
+    let output = not_ok.get_output();
+    let err = String::from_utf8_lossy(&output.stderr);
+
+    println!("{}", err);
+
+    // The error contains the absolute paths, so we cannot assert the whole string
+    assert!(err.contains(": \\x escape should be followed by two hex digits"));
+    #[cfg(windows)]
+    assert!(err.contains(": string is not a valid filename"));
+    #[cfg(not(windows))]
+    assert!(err.contains(": file not found 'bar�.sol'"));
+}
+
+// Ensure that .\ and ..\ are not interpreted as relative paths on Unix/MacOS
+// Note Windows allows these as relative paths, but we do not.
+#[test]
+fn backslash_path() {
+    let mut cmd = Command::cargo_bin("solang").unwrap();
+
+    let not_ok = cmd
+        .args([
+            "compile",
+            "--target",
+            "solana",
+            "tests/imports_testcases/imports/bar_backslash.sol",
+        ])
+        .assert();
+
+    let output = not_ok.get_output();
+    let err = String::from_utf8_lossy(&output.stderr);
+
+    println!("{}", err);
+
+    #[cfg(windows)]
+    assert!(err.is_empty());
+
+    #[cfg(not(windows))]
+    assert!(err.contains(": file not found '.\\relative_import.sol'"));
+    #[cfg(not(windows))]
+    assert!(err.contains(": file not found '..\\import.sol'"));
+}

@@ -30,7 +30,7 @@ describe('Deploy balances contract and test', () => {
 
         expect(contractRpcBal?.toString()).toBe(contractQueryBalBefore.toString());
 
-        let gasLimit = await weight(conn, contract, "payMe");
+        let gasLimit = await weight(conn, contract, "payMe", undefined, 1000000n);
         let tx = contract.tx.payMe({ gasLimit, value: 1000000n });
 
         await transaction(tx, alice);
@@ -41,6 +41,7 @@ describe('Deploy balances contract and test', () => {
 
         let { data: { free: daveBal1 } } = await conn.query.system.account(dave.address);
 
+        gasLimit = await weight(conn, contract, "transfer", [dave.address, 20000]);
         let tx1 = contract.tx.transfer({ gasLimit }, dave.address, 20000);
 
         await transaction(tx1, alice);
@@ -49,6 +50,7 @@ describe('Deploy balances contract and test', () => {
 
         expect(daveBal2.toBigInt()).toEqual(daveBal1.toBigInt() + 20000n);
 
+        gasLimit = await weight(conn, contract, "transfer", [dave.address, 10000]);
         let tx2 = contract.tx.send({ gasLimit }, dave.address, 10000);
 
         await transaction(tx2, alice);
