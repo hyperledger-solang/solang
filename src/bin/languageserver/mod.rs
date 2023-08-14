@@ -96,8 +96,7 @@ struct Files {
 // But there can be live references in other files whose definitions are defined in the closed file.
 //
 // Files from multiple namespaces can be open at any time in VSCode.
-// But compiler currently works on the granularity of a namespace,
-// i.e, all the analyses + code generated is for the whole namespace.
+// But compiler currently works on the granularity of a namespace.
 //
 // So, we will need some way to update data that is part of the language server
 // between calls to the parse_file method that provides new information for a namespace.
@@ -260,8 +259,10 @@ impl SolangServer {
 }
 
 struct Builder<'a> {
+    // `usize` is the file number the hover entry belongs to
     hovers: Vec<(usize, HoverEntry)>,
     definitions: Definitions,
+    // `usize` is the file number the reference belongs to
     references: Vec<(usize, ReferenceEntry)>,
     ns: &'a ast::Namespace,
 }
