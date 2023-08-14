@@ -23,7 +23,7 @@ use crate::sema::{
         StructType, Type,
     },
     diagnostics::Diagnostics,
-    eval::{eval_const_number, eval_const_rational},
+    eval::{eval_const_number, eval_const_rational, eval_constants_in_expression},
     expression::integers::bigint_to_expression,
     expression::ResolveTo,
 };
@@ -43,7 +43,18 @@ pub fn expression(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
-    match expr {
+    let constant_expr;
+
+    let expr =
+        if let (Some(expr), _) = eval_constants_in_expression(expr, &mut Diagnostics::default()) {
+            constant_expr = expr;
+
+            &constant_expr
+        } else {
+            expr
+        };
+
+    match &expr {
         ast::Expression::StorageVariable {
             loc,
             contract_no: var_contract_no,
