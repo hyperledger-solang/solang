@@ -217,7 +217,7 @@ library SplToken {
 				is_native_present: ai.data.readUint32LE(109) > 0,
 				is_native: ai.data.readUint64LE(113),
 				delegated_amount: ai.data.readUint64LE(121),
-				close_authority_present: ai.data.readUint32LE(129) > 10,
+				close_authority_present: ai.data.readUint32LE(129) > 0,
 				close_authority: ai.data.readAddress(133)
 			}
 		);
