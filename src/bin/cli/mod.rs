@@ -515,11 +515,11 @@ impl PackageTrait for DocPackage {
 pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
     let mut resolver = FileResolver::default();
 
-    for filename in package.get_input() {
-        if let Ok(path) = PathBuf::from(filename).canonicalize() {
-            let _ = resolver.add_import_path(path.parent().unwrap());
-        }
-    }
+    // for filename in package.get_input() {
+    //     if let Ok(path) = PathBuf::from(filename).canonicalize() {
+    //         let _ = resolver.add_import_path(path.parent().unwrap());
+    //     }
+    // }
 
     if let Some(paths) = package.get_import_path() {
         for path in paths {

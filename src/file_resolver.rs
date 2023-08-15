@@ -182,7 +182,14 @@ impl FileResolver {
         parent: Option<&ResolvedFile>,
         filename: &OsStr,
     ) -> Result<ResolvedFile, String> {
+        println!("============================================");
+        println!("resolve_file({:#?}, {:#?}", parent, filename);
+        println!("============================================");
+        println!("");
+        println!("import paths: {:#?}", self.import_paths);
         let path = PathBuf::from(filename);
+
+        let mut result: Vec<Result<ResolvedFile, String>> = vec![];
 
         // Only when the path starts with ./ or ../ are relative paths considered; this means
         // that `import "b.sol";` will check the import paths for b.sol, while `import "./b.sol";`
@@ -199,6 +206,7 @@ impl FileResolver {
                 let path = base.join(&path);
 
                 if let Some(file) = self.try_file(filename, &path, *import_no)? {
+                    // No ambiguity possible, so just return
                     return Ok(file);
                 }
             }
@@ -206,24 +214,44 @@ impl FileResolver {
             return Err(format!("file not found '{}'", filename.to_string_lossy()));
         }
 
-        if let Some(file) = self.try_file(filename, &path, None)? {
-            return Ok(file);
-        } else if path.is_absolute() {
-            return Err(format!("file not found '{}'", filename.to_string_lossy()));
+        if parent.is_none() {
+            println!("[+] Treating path as host path\n");
+
+            println!("- try_file({:?}, {:?}, {:?})", &filename, &path, "None");
+
+            if let Some(file) = self.try_file(filename, &path, None)? {
+                println!("  Resolved to {:?}\n", &file);
+                return Ok(file);
+            } else if path.is_absolute() {
+                return Err(format!("file not found '{}'", filename.to_string_lossy()));
+            }
         }
 
         // first check maps
-        let mut iter = path.iter();
-        if let Some(first_part) = iter.next() {
-            let relpath: &PathBuf = &iter.collect();
 
-            for import_no in 0..self.import_paths.len() {
-                if let (Some(mapping), import_path) = &self.import_paths[import_no] {
-                    if first_part == mapping {
-                        let path = import_path.join(relpath);
+        println!("[+] Walking import maps");
+        for import_map_no in 0..self.import_paths.len() {
+            if let (Some(mapping), target) = &self.import_paths[import_map_no].clone() {
+                if let Ok(relpath) = path.strip_prefix(mapping) {
+                    // Resolve against import path roots that are _not_ remapping targets
+                    for import_path_no in 0..self.import_paths.len() {
+                        if let (None, import_path) = &self.import_paths[import_path_no] {
+                            let path = import_path.join(target).join(relpath);
 
-                        if let Some(file) = self.try_file(filename, &path, Some(import_no))? {
-                            return Ok(file);
+                            println!(
+                                "- try_file({:?}, {:?}, {:?})",
+                                &filename, &path, import_path_no
+                            );
+                            let import_path_string = import_path.to_str().unwrap().to_string();
+                            if let Some(file) =
+                                self.try_file(filename, &path, Some(import_path_no))?
+                            {
+                                println!(
+                                    "  Success: expanded {:?}={:?} against path {:?}\n",
+                                    &mapping, target, import_path_string
+                                );
+                                result.push(Ok(file));
+                            }
                         }
                     }
                 }
@@ -231,17 +259,45 @@ impl FileResolver {
         }
 
         // walk over the import paths until we find one that resolves
+        println!("[+] Walking import paths");
         for import_no in 0..self.import_paths.len() {
             if let (None, import_path) = &self.import_paths[import_no] {
                 let path = import_path.join(&path);
 
+                let import_path_string = import_path.to_str().unwrap().to_string();
+                println!("- try_file({:?}, {:?}, {:?})", &filename, &path, "None");
                 if let Some(file) = self.try_file(filename, &path, Some(import_no))? {
-                    return Ok(file);
+                    println!(
+                        "  Success: resolved against path {:?}\n",
+                        import_path_string
+                    );
+                    result.push(Ok(file));
                 }
             }
         }
 
-        Err(format!("file not found '{}'", filename.to_string_lossy()))
+        if result.len() == 0 {
+            return Err(format!("file not found '{}'", filename.to_string_lossy()));
+        } else if result.len() > 1 {
+            let filepaths = result
+                .iter()
+                .flatten()
+                .map(|f| &f.full_path)
+                .collect::<Vec<&PathBuf>>();
+
+            let mut filenames = vec![];
+            for fp in filepaths {
+                filenames.push(fp.to_str().unwrap().to_string());
+            }
+
+            return Err(format!(
+                "found multiple files matching '{}'\n- {}",
+                filename.to_string_lossy(),
+                filenames.join("\n- ")
+            ));
+        } else {
+            return result.pop().unwrap();
+        }
     }
 
     /// Get line and the target symbol's offset from loc
