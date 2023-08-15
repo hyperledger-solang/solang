@@ -5,8 +5,8 @@ use num_bigint::BigInt;
 use super::{statement, Builtin, LoopScopes, Options};
 use crate::codegen::constructor::call_constructor;
 use crate::codegen::encoding::{abi_decode, abi_encode};
-use crate::codegen::expression::polkadot::RetCodeCheck;
-use crate::codegen::expression::{default_gas, expression, polkadot::RetCodeCheckBuilder};
+use crate::codegen::expression::{default_gas, expression};
+use crate::codegen::polkadot;
 use crate::codegen::Expression;
 use crate::codegen::{
     cfg::{ControlFlowGraph, Instr},
@@ -26,7 +26,7 @@ fn try_catch_cases(
     ns: &Namespace,
     vartab: &mut Vartable,
     opt: &Options,
-) -> (RetCodeCheck, Vec<Type>) {
+) -> (polkadot::RetCodeCheck, Vec<Type>) {
     let success = vartab.temp(
         &pt::Identifier {
             loc: try_stmt.expr.loc(),
@@ -103,7 +103,7 @@ fn try_catch_cases(
                     },
                 );
 
-                let cases = RetCodeCheckBuilder::default()
+                let cases = polkadot::RetCodeCheckBuilder::default()
                     .loc(*loc)
                     .success_var(success)
                     .insert(cfg, vartab);
@@ -142,7 +142,7 @@ fn try_catch_cases(
                 opt,
             );
 
-            let cases = RetCodeCheckBuilder::default()
+            let cases = polkadot::RetCodeCheckBuilder::default()
                 .loc(*loc)
                 .success_var(success)
                 .insert(cfg, vartab);

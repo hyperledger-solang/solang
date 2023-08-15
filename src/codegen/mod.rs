@@ -10,6 +10,7 @@ pub(crate) mod encoding;
 mod events;
 mod expression;
 mod external_functions;
+pub(super) mod polkadot;
 mod reaching_definitions;
 pub mod revert;
 mod solana_accounts;
