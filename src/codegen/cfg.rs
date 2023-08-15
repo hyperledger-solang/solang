@@ -572,7 +572,7 @@ impl ControlFlowGraph {
                 Expression::Subtract {
                     loc,
                     ty: Type::Uint(32),
-                    overflowing: false,
+                    overflowing: true,
                     left: Box::new(Expression::Variable {
                         loc,
                         ty: Type::Uint(32),
@@ -588,7 +588,7 @@ impl ControlFlowGraph {
                 Expression::Add {
                     loc,
                     ty: Type::Uint(32),
-                    overflowing: false,
+                    overflowing: true,
                     left: Box::new(Expression::Variable {
                         loc,
                         ty: Type::Uint(32),

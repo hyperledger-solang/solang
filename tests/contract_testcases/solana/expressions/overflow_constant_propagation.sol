@@ -31,3 +31,4 @@ contract foo {
 // error: 11:21-28: arithmetic overflow, 65792 does not fit into uint16
 // error: 16:21-29: arithmetic overflow, 100000 does not fit into uint16
 // error: 21:21-28: arithmetic overflow, -1 does not fit into uint16
+// error: 25:20-23: arithmetic overflow, 32768 does not fit into int16

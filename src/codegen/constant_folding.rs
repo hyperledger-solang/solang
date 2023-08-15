@@ -867,7 +867,7 @@ fn bitwise_and(
     ) = (&left.0, &right.0)
     {
         (
-            bigint_to_expression(loc, ty, left.bitand(right), false, ns),
+            bigint_to_expression(loc, ty, left.bitand(right), true, ns),
             true,
         )
     } else {
@@ -901,7 +901,7 @@ fn bitwise_or(
     ) = (&left.0, &right.0)
     {
         (
-            bigint_to_expression(loc, ty, left.bitor(right), false, ns),
+            bigint_to_expression(loc, ty, left.bitor(right), true, ns),
             true,
         )
     } else {
@@ -935,7 +935,7 @@ fn bitwise_xor(
     ) = (&left.0, &right.0)
     {
         (
-            bigint_to_expression(loc, ty, left.bitxor(right), false, ns),
+            bigint_to_expression(loc, ty, left.bitxor(right), true, ns),
             true,
         )
     } else {
@@ -977,7 +977,7 @@ fn shift_left(
             let right: u64 = right.to_u64().unwrap();
 
             return (
-                bigint_to_expression(loc, ty, left.shl(&right), false, ns),
+                bigint_to_expression(loc, ty, left.shl(&right), true, ns),
                 true,
             );
         }
@@ -1020,7 +1020,7 @@ fn shift_right(
             let right: u64 = right.to_u64().unwrap();
 
             return (
-                bigint_to_expression(loc, ty, left.shr(&right), false, ns),
+                bigint_to_expression(loc, ty, left.shr(&right), true, ns),
                 true,
             );
         }
@@ -1242,7 +1242,7 @@ fn trunc(
 ) -> (Expression, bool) {
     let expr = expression(expr, vars, cfg, ns);
     if let Expression::NumberLiteral { value, .. } = expr.0 {
-        (bigint_to_expression(loc, ty, value, false, ns), true)
+        (bigint_to_expression(loc, ty, value, true, ns), true)
     } else {
         (
             Expression::Trunc {
@@ -1265,7 +1265,7 @@ fn bitwise_not(
 ) -> (Expression, bool) {
     let expr = expression(expr, vars, cfg, ns);
     if let Expression::NumberLiteral { value, .. } = expr.0 {
-        (bigint_to_expression(loc, ty, !value, false, ns), true)
+        (bigint_to_expression(loc, ty, !value, true, ns), true)
     } else {
         (
             Expression::BitwiseNot {
