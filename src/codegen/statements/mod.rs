@@ -1,27 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use num_bigint::BigInt;
-
-use self::try_catch::try_catch;
-
-use super::expression::{assign_single, emit_function_call, expression};
 use super::{
     cfg::{ControlFlowGraph, Instr},
+    events::new_event_emitter,
+    expression::{assign_single, emit_function_call, expression},
+    revert::revert,
+    unused_variable::{
+        should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
+    },
     vartable::Vartable,
+    yul::inline_assembly_cfg,
+    Builtin, Expression, Options,
 };
-use super::{Builtin, Options};
-use crate::codegen::events::new_event_emitter;
-use crate::codegen::revert::revert;
-use crate::codegen::unused_variable::{
-    should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
+use crate::sema::{
+    ast::{
+        self, ArrayLength, DestructureField, Function, Namespace, RetrieveType, Statement, Type,
+        Type::Uint,
+    },
+    Recurse,
 };
-use crate::codegen::yul::inline_assembly_cfg;
-use crate::codegen::Expression;
-use crate::sema::ast::{
-    self, ArrayLength, DestructureField, Function, Namespace, RetrieveType, Statement, Type,
-    Type::Uint,
-};
-use crate::sema::Recurse;
+use num_bigint::BigInt;
 use num_traits::Zero;
 use solang_parser::pt::{self, CodeLocation, Loc::Codegen};
 
@@ -556,7 +554,7 @@ pub(crate) fn statement(
         Statement::Destructure(_, fields, expr) => {
             destructure(fields, expr, cfg, contract_no, func, ns, vartab, opt)
         }
-        Statement::TryCatch(_, _, try_stmt) => try_catch(
+        Statement::TryCatch(_, _, try_stmt) => self::try_catch::try_catch(
             try_stmt,
             func,
             cfg,
