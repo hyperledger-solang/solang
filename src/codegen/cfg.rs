@@ -1557,9 +1557,11 @@ pub fn optimize_and_check_cfg(
             return;
         }
     }
-    if opt.constant_folding {
-        constant_folding::constant_folding(cfg, ns);
-    }
+
+    // constant folding generates diagnostics, so always run it. This means that the diagnostics
+    // do not depend which passes are enabled. If the constant_folding is not enabled, run it
+    // dry mode.
+    constant_folding::constant_folding(cfg, !opt.constant_folding, ns);
     if opt.vector_to_slice {
         vector_to_slice::vector_to_slice(cfg, ns);
     }
