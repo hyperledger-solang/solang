@@ -56,7 +56,7 @@ impl FileResolver {
                 format!("duplicate mapping for '{}'", map.to_string_lossy()),
             ))
         } else {
-            self.import_paths.push((Some(map), path.canonicalize()?));
+            self.import_paths.push((Some(map), path));
             Ok(())
         }
     }
