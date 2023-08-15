@@ -2,6 +2,8 @@
 
 use crate::{build_solidity, build_solidity_with_options};
 use parity_scale_codec::{Decode, Encode};
+use primitive_types::U256;
+use solang::codegen::revert::{PanicCode, SolidityError};
 
 #[derive(Debug, PartialEq, Eq, Encode, Decode)]
 struct RevertReturn(u32, String);
@@ -1127,7 +1129,7 @@ fn try_catch_uncaught_bubbles_up() {
         r##"contract C {
         function c() public payable {
             B b = new B();
-            b.b();
+            b.b{value: 1000}();
         }
     }
     
@@ -1139,7 +1141,7 @@ fn try_catch_uncaught_bubbles_up() {
     }
     
     contract A {
-        function a(uint8 div) public returns(uint8) {
+        function a(uint div) public pure returns(uint) {
             return 123 / div;
         }
     }
@@ -1149,8 +1151,13 @@ fn try_catch_uncaught_bubbles_up() {
     runtime.set_transferred_value(10000);
     runtime.function_expect_failure("c", vec![]);
 
-    assert!(runtime.output().is_empty());
-    // TODO: Can be tested after support for Panic
-    //assert_eq!(runtime.output(), expected_output);
-    //assert!(runtime.debug_buffer().contains("external call failed"));
+    let panic = PanicCode::DivisionByZero;
+    let expected_output = (
+        SolidityError::Panic(panic).selector().to_be_bytes(),
+        U256::from(panic as u8),
+    )
+        .encode();
+
+    assert_eq!(runtime.output(), expected_output);
+    assert!(runtime.debug_buffer().contains("external call failed"));
 }
