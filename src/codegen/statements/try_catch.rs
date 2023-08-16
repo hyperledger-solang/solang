@@ -38,7 +38,7 @@ pub(super) fn try_catch(
     let catch_block = cfg.new_basic_block("catch".to_string());
     let finally_block = cfg.new_basic_block("finally".to_string());
 
-    let error_ret_data_var = build_try_output(
+    let error_ret_data_var = insert_try_expression(
         try_stmt,
         cfg,
         ns,
@@ -52,7 +52,7 @@ pub(super) fn try_catch(
 
     vartab.new_dirty_tracker();
 
-    insert_ok(
+    insert_success_code_block(
         try_stmt,
         func,
         cfg,
@@ -67,7 +67,7 @@ pub(super) fn try_catch(
         finally_block,
     );
 
-    insert_catch(
+    insert_catch_clauses(
         try_stmt,
         func,
         cfg,
@@ -83,6 +83,7 @@ pub(super) fn try_catch(
         error_ret_data_var,
     );
 
+    //  Remove the variables only in scope inside the catch clauses block from the phi set for the finally block
     let mut set = vartab.pop_dirty_tracker();
     if let Some(pos) = &try_stmt.catch_param_pos {
         set.remove(pos);
@@ -97,8 +98,9 @@ pub(super) fn try_catch(
     cfg.set_basic_block(finally_block);
 }
 
-/// Executes the try statement and returns the variable number of the return data.
-fn build_try_output(
+/// Insert try statement execution and error data collection into the CFG.
+/// Returns the variable number of the return error data.
+fn insert_try_expression(
     try_stmt: &TryCatch,
     cfg: &mut ControlFlowGraph,
     ns: &Namespace,
@@ -177,7 +179,7 @@ fn build_try_output(
     error_ret_data_var
 }
 
-/// Insert the execution of the `try` statement into the CFG.
+/// Insert the execution of the `try` expression into the CFG.
 fn exec_try(
     try_stmt: &TryCatch,
     func: &Function,
@@ -312,8 +314,8 @@ fn exec_try(
     }
 }
 
-/// Insert the `Ok` code into the CFG.
-fn insert_ok(
+/// Insert the success code into the CFG.
+fn insert_success_code_block(
     try_stmt: &TryCatch,
     func: &Function,
     cfg: &mut ControlFlowGraph,
@@ -359,7 +361,7 @@ fn insert_ok(
 }
 
 /// Insert all catch cases into the CFG.
-fn insert_catch(
+fn insert_catch_clauses(
     try_stmt: &TryCatch,
     func: &Function,
     cfg: &mut ControlFlowGraph,
@@ -379,7 +381,7 @@ fn insert_catch(
     // Check for error blocks and dispatch
     // If no errors, go straight to the catch all block
     if try_stmt.errors.is_empty() {
-        insert_fallback_catch_stmt(
+        insert_catchall_clause_code_block(
             try_stmt,
             func,
             cfg,
@@ -478,7 +480,7 @@ fn insert_catch(
         let encoded_args = Some(buffer.clone());
         cfg.add(vartab, Instr::AssertFailure { encoded_args });
     } else {
-        insert_fallback_catch_stmt(
+        insert_catchall_clause_code_block(
             try_stmt,
             func,
             cfg,
@@ -531,7 +533,7 @@ fn insert_catch(
 }
 
 /// Insert the fallback catch code into the CFG.
-fn insert_fallback_catch_stmt(
+fn insert_catchall_clause_code_block(
     try_stmt: &TryCatch,
     func: &Function,
     cfg: &mut ControlFlowGraph,
