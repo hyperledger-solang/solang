@@ -165,7 +165,7 @@ impl SolangServer {
         if let Ok(path) = uri.to_file_path() {
             let dir = path.parent().unwrap();
 
-            let _ = resolver.add_import_path(dir);
+            resolver.add_import_path(dir);
 
             let mut diags = Vec::new();
 

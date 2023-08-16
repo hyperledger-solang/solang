@@ -228,8 +228,8 @@ impl FileResolver {
             }
         }
 
-        if result.len() == 0 {
-            return Err(format!("file not found '{}'", filename.to_string_lossy()));
+        if result.is_empty() {
+            Err(format!("file not found '{}'", filename.to_string_lossy()))
         } else if result.len() > 1 {
             let filepaths = result
                 .iter()
@@ -242,13 +242,13 @@ impl FileResolver {
                 filenames.push(fp.to_str().unwrap().to_string());
             }
 
-            return Err(format!(
+            Err(format!(
                 "found multiple files matching '{}'\n- {}",
                 filename.to_string_lossy(),
                 filenames.join("\n- ")
-            ));
+            ))
         } else {
-            return result.pop().unwrap();
+            result.pop().unwrap()
         }
     }
 
