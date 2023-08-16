@@ -118,7 +118,7 @@ fn test_statement_reachable() {
                     errors: vec![],
                     catch_param: None,
                     catch_param_pos: None,
-                    catch_stmt: vec![],
+                    catch_stmt: None,
                 },
             ),
             true,

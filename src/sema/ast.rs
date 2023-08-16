@@ -1695,7 +1695,7 @@ pub struct TryCatch {
     pub errors: Vec<(Option<usize>, Parameter, Vec<Statement>)>,
     pub catch_param: Option<Parameter>,
     pub catch_param_pos: Option<usize>,
-    pub catch_stmt: Vec<Statement>,
+    pub catch_stmt: Option<Vec<Statement>>,
 }
 
 #[derive(Clone, Debug)]
@@ -1765,8 +1765,10 @@ impl Recurse for Statement {
                         }
                     }
 
-                    for stmt in &try_catch.catch_stmt {
-                        stmt.recurse(cx, f);
+                    if let Some(stmts) = &try_catch.catch_stmt {
+                        for stmt in stmts {
+                            stmt.recurse(cx, f);
+                        }
                     }
                 }
                 _ => (),

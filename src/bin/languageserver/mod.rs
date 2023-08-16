@@ -358,8 +358,10 @@ impl<'a> Builder<'a> {
             }
             ast::Statement::TryCatch(_, _, try_stmt) => {
                 self.expression(&try_stmt.expr, symtab);
-                for stmt in &try_stmt.catch_stmt {
-                    self.statement(stmt, symtab);
+                if let Some(stmts) = &try_stmt.catch_stmt {
+                    for stmt in stmts {
+                        self.statement(stmt, symtab);
+                    }
                 }
                 for stmt in &try_stmt.ok_stmt {
                     self.statement(stmt, symtab);

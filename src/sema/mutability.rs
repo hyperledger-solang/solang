@@ -281,7 +281,9 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
                 for (_, _, s) in &try_catch.errors {
                     recurse_statements(s, ns, state);
                 }
-                recurse_statements(&try_catch.catch_stmt, ns, state);
+                if let Some(stmts) = &try_catch.catch_stmt {
+                    recurse_statements(stmts, ns, state);
+                }
             }
             Statement::Emit { loc, .. } => state.write(loc),
             Statement::Revert { args, .. } => {

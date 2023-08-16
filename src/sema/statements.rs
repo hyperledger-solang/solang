@@ -2416,7 +2416,7 @@ fn try_catch(
     let mut errors_resolved = Vec::new();
     let mut catch_param = None;
     let mut catch_param_pos = None;
-    let mut catch_stmt_resolved = Vec::new();
+    let mut catch_stmt_resolved = None;
 
     clause_stmts.iter().try_for_each(|clause_stmt| {
         let (loc, name) = match clause_stmt {
@@ -2486,9 +2486,10 @@ fn try_catch(
                     catch_param = Some(result);
                 }
 
+                catch_stmt_resolved = Some(Vec::new());
                 let reachable = statement(
                     stmt,
-                    &mut catch_stmt_resolved,
+                    catch_stmt_resolved.as_mut().unwrap(),
                     context,
                     symtable,
                     loops,

@@ -1838,13 +1838,9 @@ impl Dot {
                         );
                     }
 
-                    self.add_statement(
-                        &try_catch.catch_stmt,
-                        func,
-                        ns,
-                        parent,
-                        String::from("catch"),
-                    );
+                    if let Some(stmts) = &try_catch.catch_stmt {
+                        self.add_statement(stmts, func, ns, parent, String::from("catch"));
+                    }
                 }
                 Statement::Underscore(loc) => {
                     let labels = vec![

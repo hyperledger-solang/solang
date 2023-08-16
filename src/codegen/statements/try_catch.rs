@@ -34,6 +34,8 @@ pub(super) fn try_catch(
         unimplemented!()
     }
 
+    dbg!(try_stmt);
+
     let ok_block = cfg.new_basic_block("ok".to_string());
     let catch_block = cfg.new_basic_block("catch".to_string());
     let finally_block = cfg.new_basic_block("finally".to_string());
@@ -189,21 +191,23 @@ pub(super) fn try_catch(
 
     let mut reachable = true;
 
-    for stmt in &try_stmt.catch_stmt {
-        statement(
-            stmt,
-            func,
-            cfg,
-            callee_contract_no,
-            ns,
-            vartab,
-            loops,
-            placeholder,
-            return_override,
-            opt,
-        );
+    if let Some(stmts) = &try_stmt.catch_stmt {
+        for stmt in stmts {
+            statement(
+                stmt,
+                func,
+                cfg,
+                callee_contract_no,
+                ns,
+                vartab,
+                loops,
+                placeholder,
+                return_override,
+                opt,
+            );
 
-        reachable = stmt.reachable();
+            reachable = stmt.reachable();
+        }
     }
 
     if reachable {
