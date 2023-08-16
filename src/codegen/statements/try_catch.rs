@@ -440,7 +440,6 @@ fn insert_catch(
         },
     );
 
-    // If the selector doesn't match any of the errors and no fallback then bubble else catch
     let offset = Expression::NumberLiteral {
         loc: Codegen,
         ty: Uint(32),
@@ -450,7 +449,7 @@ fn insert_catch(
         loc: Codegen,
         tys: vec![Type::Bytes(4)],
         kind: Builtin::ReadFromBuffer,
-        args: vec![buffer.clone(), offset.clone()],
+        args: vec![buffer.clone(), offset],
     };
 
     cfg.set_basic_block(enough_data_block);
@@ -473,8 +472,12 @@ fn insert_catch(
     };
     cfg.add(vartab, instruction);
 
+    // If the selector doesn't match any of the errors and no fallback then bubble else catch
     cfg.set_basic_block(no_match_err_id);
-    if try_stmt.catch_stmt.is_some() {
+    if try_stmt.catch_stmt.is_none() {
+        let encoded_args = Some(buffer.clone());
+        cfg.add(vartab, Instr::AssertFailure { encoded_args });
+    } else {
         insert_fallback_catch_stmt(
             try_stmt,
             func,
@@ -488,9 +491,6 @@ fn insert_catch(
             opt,
             finally_block,
         );
-    } else {
-        let encoded_args = Some(buffer.clone());
-        cfg.add(vartab, Instr::AssertFailure { encoded_args });
     }
 
     cfg.set_basic_block(match_err_id);
