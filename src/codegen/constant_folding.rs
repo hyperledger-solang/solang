@@ -664,7 +664,7 @@ fn bigint_to_expression(
     value: BigInt,
     overflowing: bool,
     ns: &mut Namespace,
-) -> Expression {
+) -> (Expression, bool) {
     let value = match ty {
         Type::Uint(bits) => {
             if value.sign() == Sign::Minus {
@@ -672,7 +672,7 @@ fn bigint_to_expression(
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
-                            "arithmetic overflow, {value} does not fit into {}",
+                            "arithmetic overflow: {value} does not fit into {}",
                             ty.to_string(ns)
                         ),
                     ));
@@ -686,7 +686,7 @@ fn bigint_to_expression(
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
-                            "arithmetic overflow, {value} does not fit into {}",
+                            "arithmetic overflow: {value} does not fit into {}",
                             ty.to_string(ns)
                         ),
                     ));
@@ -712,7 +712,7 @@ fn bigint_to_expression(
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
-                            "arithmetic overflow, {value} does not fit into {}",
+                            "arithmetic overflow: {value} does not fit into {}",
                             ty.to_string(ns)
                         ),
                     ));
@@ -729,11 +729,14 @@ fn bigint_to_expression(
         _ => unreachable!(),
     };
 
-    Expression::NumberLiteral {
-        loc: *loc,
-        ty: ty.clone(),
-        value,
-    }
+    (
+        Expression::NumberLiteral {
+            loc: *loc,
+            ty: ty.clone(),
+            value,
+        },
+        true,
+    )
 }
 
 fn get_definition<'a>(
@@ -788,8 +791,7 @@ fn add(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        let n = bigint_to_expression(loc, ty, left.add(right), overflowing, ns);
-        (n, true)
+        bigint_to_expression(loc, ty, left.add(right), overflowing, ns)
     } else {
         (
             Expression::Add {
@@ -822,10 +824,7 @@ fn subtract(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        (
-            bigint_to_expression(loc, ty, left.sub(right), overflowing, ns),
-            true,
-        )
+        bigint_to_expression(loc, ty, left.sub(right), overflowing, ns)
     } else {
         (
             Expression::Subtract {
@@ -882,10 +881,7 @@ fn multiply(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        (
-            bigint_to_expression(loc, ty, left.mul(right), overflowing, ns),
-            true,
-        )
+        bigint_to_expression(loc, ty, left.mul(right), overflowing, ns)
     } else {
         (
             Expression::Multiply {
@@ -917,10 +913,7 @@ fn bitwise_and(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        (
-            bigint_to_expression(loc, ty, left.bitand(right), true, ns),
-            true,
-        )
+        bigint_to_expression(loc, ty, left.bitand(right), true, ns)
     } else {
         (
             Expression::BitwiseAnd {
@@ -951,10 +944,7 @@ fn bitwise_or(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        (
-            bigint_to_expression(loc, ty, left.bitor(right), true, ns),
-            true,
-        )
+        bigint_to_expression(loc, ty, left.bitor(right), true, ns)
     } else {
         (
             Expression::BitwiseOr {
@@ -985,10 +975,7 @@ fn bitwise_xor(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        (
-            bigint_to_expression(loc, ty, left.bitxor(right), true, ns),
-            true,
-        )
+        bigint_to_expression(loc, ty, left.bitxor(right), true, ns)
     } else {
         (
             Expression::BitwiseXor {
@@ -1027,10 +1014,7 @@ fn shift_left(
         } else {
             let right: u64 = right.to_u64().unwrap();
 
-            return (
-                bigint_to_expression(loc, ty, left.shl(&right), true, ns),
-                true,
-            );
+            return bigint_to_expression(loc, ty, left.shl(&right), true, ns);
         }
     }
     (
@@ -1070,10 +1054,7 @@ fn shift_right(
         } else {
             let right: u64 = right.to_u64().unwrap();
 
-            return (
-                bigint_to_expression(loc, ty, left.shr(&right), true, ns),
-                true,
-            );
+            return bigint_to_expression(loc, ty, left.shr(&right), true, ns);
         }
     }
 
@@ -1115,10 +1096,7 @@ fn power(
         } else {
             let right: u32 = right.to_u32().unwrap();
 
-            return (
-                bigint_to_expression(loc, ty, left.pow(right), overflowing, ns),
-                true,
-            );
+            return bigint_to_expression(loc, ty, left.pow(right), overflowing, ns);
         }
     }
 
@@ -1152,10 +1130,7 @@ fn divide(
             ns.diagnostics
                 .push(Diagnostic::error(*loc, String::from("divide by zero")));
         } else if let Expression::NumberLiteral { value: left, .. } = &left.0 {
-            return (
-                bigint_to_expression(loc, ty, left.div(right), false, ns),
-                true,
-            );
+            return bigint_to_expression(loc, ty, left.div(right), false, ns);
         }
     }
     (
@@ -1196,10 +1171,7 @@ fn modulo(
             ns.diagnostics
                 .push(Diagnostic::error(*loc, String::from("divide by zero")));
         } else if let Expression::NumberLiteral { value: left, .. } = &left.0 {
-            return (
-                bigint_to_expression(loc, ty, left.rem(right), false, ns),
-                true,
-            );
+            return bigint_to_expression(loc, ty, left.rem(right), false, ns);
         }
     }
 
@@ -1293,7 +1265,7 @@ fn trunc(
 ) -> (Expression, bool) {
     let expr = expression(expr, vars, cfg, ns);
     if let Expression::NumberLiteral { value, .. } = expr.0 {
-        (bigint_to_expression(loc, ty, value, true, ns), true)
+        bigint_to_expression(loc, ty, value, true, ns)
     } else {
         (
             Expression::Trunc {
@@ -1316,7 +1288,7 @@ fn bitwise_not(
 ) -> (Expression, bool) {
     let expr = expression(expr, vars, cfg, ns);
     if let Expression::NumberLiteral { value, .. } = expr.0 {
-        (bigint_to_expression(loc, ty, !value, true, ns), true)
+        bigint_to_expression(loc, ty, !value, true, ns)
     } else {
         (
             Expression::BitwiseNot {
@@ -1340,7 +1312,7 @@ fn negate(
 ) -> (Expression, bool) {
     let expr = expression(expr, vars, cfg, ns);
     if let Expression::NumberLiteral { value, .. } = expr.0 {
-        (bigint_to_expression(loc, ty, -value, overflowing, ns), true)
+        bigint_to_expression(loc, ty, -value, overflowing, ns)
     } else {
         (
             Expression::Negate {

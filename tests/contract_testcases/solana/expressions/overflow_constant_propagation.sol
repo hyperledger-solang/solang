@@ -55,8 +55,8 @@ contract foo {
     }
 }
 // ---- Expect: diagnostics ----
-// error: 6:20-25: arithmetic overflow, 4294967296 does not fit into uint32
-// error: 11:21-28: arithmetic overflow, 65792 does not fit into uint16
-// error: 16:21-29: arithmetic overflow, 100000 does not fit into uint16
-// error: 21:21-28: arithmetic overflow, -1 does not fit into uint16
-// error: 25:20-23: arithmetic overflow, 32768 does not fit into int16
+// error: 6:20-25: arithmetic overflow: 4294967296 does not fit into uint32
+// error: 11:21-28: arithmetic overflow: 65792 does not fit into uint16
+// error: 16:21-29: arithmetic overflow: 100000 does not fit into uint16
+// error: 21:21-28: arithmetic overflow: -1 does not fit into uint16
+// error: 25:20-23: arithmetic overflow: 32768 does not fit into int16
