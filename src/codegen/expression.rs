@@ -43,16 +43,8 @@ pub fn expression(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
-    let constant_expr;
-
-    let expr =
-        if let (Some(expr), _) = eval_constants_in_expression(expr, &mut Diagnostics::default()) {
-            constant_expr = expr;
-
-            &constant_expr
-        } else {
-            expr
-        };
+    let evaluated = eval_constants_in_expression(expr, &mut Diagnostics::default());
+    let expr = evaluated.0.as_ref().unwrap_or(expr);
 
     match &expr {
         ast::Expression::StorageVariable {
