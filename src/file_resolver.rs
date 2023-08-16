@@ -171,11 +171,6 @@ impl FileResolver {
         parent: Option<&ResolvedFile>,
         filename: &OsStr,
     ) -> Result<ResolvedFile, String> {
-        println!("============================================");
-        println!("resolve_file({:#?}, {:#?}", parent, filename);
-        println!("============================================");
-        println!("");
-        println!("import paths: {:#?}", self.import_paths);
         let path = PathBuf::from(filename);
 
         let mut result: Vec<Result<ResolvedFile, String>> = vec![];
@@ -204,12 +199,7 @@ impl FileResolver {
         }
 
         if parent.is_none() {
-            println!("[+] Treating path as host path\n");
-
-            println!("- try_file({:?}, {:?}, {:?})", &filename, &path, "None");
-
             if let Some(file) = self.try_file(filename, &path, None)? {
-                println!("  Resolved to {:?}\n", &file);
                 return Ok(file);
             } else if path.is_absolute() {
                 return Err(format!("file not found '{}'", filename.to_string_lossy()));
@@ -220,13 +210,10 @@ impl FileResolver {
 
         let mut remapped = path.clone();
 
-        println!("[+] Walking import maps");
         for import_map_no in 0..self.import_paths.len() {
             if let (Some(mapping), target) = &self.import_paths[import_map_no].clone() {
                 if let Ok(relpath) = path.strip_prefix(mapping) {
-                    print!("- Updated remapped {:?} ", remapped);
                     remapped = target.join(relpath);
-                    println!("to {:?} ", remapped);
                 }
             }
         }
@@ -234,18 +221,11 @@ impl FileResolver {
         let path = remapped;
 
         // walk over the import paths until we find one that resolves
-        println!("[+] Walking import paths");
         for import_no in 0..self.import_paths.len() {
             if let (None, import_path) = &self.import_paths[import_no] {
                 let path = import_path.join(&path);
 
-                let import_path_string = import_path.to_str().unwrap().to_string();
-                println!("- try_file({:?}, {:?}, {:?})", &filename, &path, "None");
                 if let Some(file) = self.try_file(filename, &path, Some(import_no))? {
-                    println!(
-                        "  Success: resolved against path {:?}\n",
-                        import_path_string
-                    );
                     result.push(Ok(file));
                 }
             }
