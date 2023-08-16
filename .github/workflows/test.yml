@@ -19,7 +19,7 @@ jobs:
   lints:
     name: Lints
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -71,7 +71,7 @@ jobs:
   linux-x86-64:
     name: Linux x86-64
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -93,7 +93,7 @@ jobs:
     name: Linux Arm
     runs-on: linux-arm64
     if: ${{ github.repository_owner == 'hyperledger' }}
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -231,7 +231,7 @@ jobs:
   anchor:
     name: Anchor Integration test
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -278,7 +278,7 @@ jobs:
   solana:
     name: Solana Integration test
     runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-4
+    container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
     steps:
     - name: Checkout sources

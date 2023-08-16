@@ -1584,7 +1584,7 @@ contract foo {
     }
 }
     "#;
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", file.to_string());
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);
@@ -1601,7 +1601,7 @@ contract foo {
 }
     "#;
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", file.to_string());
 
     let ns = parse_and_resolve(
@@ -1625,7 +1625,7 @@ contract foo {
 }
     "#;
 
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", file.to_string());
 
     let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Solana);

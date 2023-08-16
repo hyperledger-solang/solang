@@ -63,7 +63,7 @@ fn recurse_directory(path: PathBuf, target: Target) -> io::Result<()> {
 }
 
 fn parse_file(path: PathBuf, target: Target) -> io::Result<()> {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     let filename = add_file(&mut cache, &path, target)?;
 
@@ -128,7 +128,7 @@ fn add_file(cache: &mut FileResolver, path: &Path, target: Target) -> io::Result
         if line.starts_with("import") {
             if let (Some(start), Some(end)) = (line.find('"'), line.rfind('"')) {
                 let file = &line[start + 1..end];
-                if file != "solana" {
+                if !file.is_empty() && file != "solana" {
                     let mut import_path = path.parent().unwrap().to_path_buf();
                     import_path.push(file);
                     println!("adding import {}", import_path.display());

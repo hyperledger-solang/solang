@@ -10,33 +10,15 @@ use solang::{
 use std::{
     ffi::OsStr,
     fs::{read_dir, read_to_string},
+    path::PathBuf,
 };
 
 /// Populates a file resolver with all imports that could be used by some example.
-fn file_resolver(target: Target) -> FileResolver {
-    let mut result = FileResolver::new();
-    result.set_file_contents(
-        "docs/examples/user.sol",
-        r##"
-        struct User { string name; uint count; }
-        function clear_count(User memory user) {
-            user.count = 0;
-        }
-        using {clear_count} for User global;"##
-            .into(),
-    );
-    if let Target::Solana = target {
-        result.set_file_contents(
-                "docs/examples/solana/bobcat.sol",
-                r##"
-                anchor_anchor constant bobcat = anchor_anchor(address'z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq');
-                interface anchor_anchor {
-                    @selector([0xaf, 0xaf, 0x6d, 0x1f, 0x0d, 0x98, 0x9b, 0xed])
-                    function pounce() view external returns(int64);
-                }"##.into(),
-            );
-    }
-    result
+fn file_resolver() -> FileResolver {
+    let mut resolver = FileResolver::default();
+    resolver.add_import_path(&PathBuf::from(".")).unwrap();
+
+    resolver
 }
 
 /// Returns a list of all `.sol` files in the given `dir` path.
@@ -57,7 +39,7 @@ fn get_source_files(dir: &str) -> Vec<String> {
 
 /// Attempts to compile the file at `path` for the `target`, returning the diagnostics on fail.
 fn try_compile(path: &str, target: Target) -> Result<(), Diagnostics> {
-    let mut cache = file_resolver(target);
+    let mut cache = file_resolver();
     cache.set_file_contents(path, read_to_string(path).unwrap());
     let mut ns = solang::parse_and_resolve(OsStr::new(path), &mut cache, target);
     if ns.diagnostics.any_errors() {

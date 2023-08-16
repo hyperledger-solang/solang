@@ -8,7 +8,7 @@ use solang::{parse_and_resolve, Target};
 use std::ffi::OsStr;
 
 fn parse_and_codegen(src: &'static str) -> Namespace {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", src.to_string());
     let mut ns = parse_and_resolve(
         OsStr::new("test.sol"),

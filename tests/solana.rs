@@ -140,14 +140,24 @@ fn build_solidity(src: &str) -> VirtualMachine {
     VirtualMachineBuilder::new(src).build()
 }
 
-pub(crate) struct VirtualMachineBuilder<'a> {
-    src: &'a str,
+fn build_solidity_with_cache(cache: FileResolver) -> VirtualMachine {
+    VirtualMachineBuilder::new_with_cache(cache).build()
+}
+
+pub(crate) struct VirtualMachineBuilder {
+    cache: FileResolver,
     opts: Option<Options>,
 }
 
-impl<'a> VirtualMachineBuilder<'a> {
-    pub(crate) fn new(src: &'a str) -> Self {
-        Self { src, opts: None }
+impl VirtualMachineBuilder {
+    pub(crate) fn new(src: &str) -> Self {
+        let mut cache = FileResolver::default();
+        cache.set_file_contents("test.sol", src.to_string());
+        Self { cache, opts: None }
+    }
+
+    pub(crate) fn new_with_cache(cache: FileResolver) -> Self {
+        Self { cache, opts: None }
     }
 
     pub(crate) fn opts(mut self, opts: Options) -> Self {
@@ -155,14 +165,10 @@ impl<'a> VirtualMachineBuilder<'a> {
         self
     }
 
-    pub(crate) fn build(self) -> VirtualMachine {
-        let mut cache = FileResolver::new();
-
-        cache.set_file_contents("test.sol", self.src.to_string());
-
+    pub(crate) fn build(mut self) -> VirtualMachine {
         let (res, ns) = compile(
             OsStr::new("test.sol"),
-            &mut cache,
+            &mut self.cache,
             Target::Solana,
             self.opts.as_ref().unwrap_or(&Options {
                 opt_level: OptimizationLevel::Default,
@@ -175,7 +181,7 @@ impl<'a> VirtualMachineBuilder<'a> {
             "0.0.1",
         );
 
-        ns.print_diagnostics_in_plain(&cache, false);
+        ns.print_diagnostics_in_plain(&self.cache, false);
 
         assert!(!res.is_empty());
 
@@ -1620,7 +1626,7 @@ impl VirtualMachine {
 }
 
 pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
 
     cache.set_file_contents("test.sol", src.to_string());
 

@@ -1043,7 +1043,7 @@ pub fn build_solidity_with_options(src: &str, log_ret: bool, log_err: bool) -> M
 
 pub fn build_wasm(src: &str, log_ret: bool, log_err: bool) -> Vec<(Vec<u8>, String)> {
     let tmp_file = OsStr::new("test.sol");
-    let mut cache = FileResolver::new();
+    let mut cache = FileResolver::default();
     cache.set_file_contents(tmp_file.to_str().unwrap(), src.to_string());
     let opt = inkwell::OptimizationLevel::Default;
     let target = Target::default_polkadot();
