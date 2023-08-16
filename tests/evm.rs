@@ -212,7 +212,7 @@ fn ethereum_solidity_tests() {
 
             let (mut cache, names) = set_file_contents(&source, entry.path());
 
-            cache.add_import_path(path).unwrap();
+            cache.add_import_path(path);
 
             let errors: usize = names
                 .iter()

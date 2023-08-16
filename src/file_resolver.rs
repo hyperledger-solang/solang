@@ -6,7 +6,6 @@ use solang_parser::pt::Loc;
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
-use std::io;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -39,15 +38,13 @@ pub struct ResolvedFile {
 
 impl FileResolver {
     /// Add import path
-    pub fn add_import_path(&mut self, path: &Path) -> io::Result<()> {
+    pub fn add_import_path(&mut self, path: &Path) {
         self.import_paths.push((None, path.to_path_buf()));
-        Ok(())
     }
 
     /// Add import map
-    pub fn add_import_map(&mut self, map: OsString, path: PathBuf) -> io::Result<()> {
+    pub fn add_import_map(&mut self, map: OsString, path: PathBuf) {
         self.import_paths.push((Some(map), path));
-        Ok(())
     }
 
     /// Get the import path and the optional mapping corresponding to `import_no`.

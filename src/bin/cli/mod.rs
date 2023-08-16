@@ -518,26 +518,17 @@ pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
     let mut added_path = false;
     if let Some(paths) = package.get_import_path() {
         for path in paths {
-            if let Err(e) = resolver.add_import_path(path) {
-                eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
-                exit(1);
-            }
+            resolver.add_import_path(path);
             added_path = true;
         }
     }
     if !added_path {
-        if let Err(e) = resolver.add_import_path(&PathBuf::from("")) {
-            eprintln!("error: could not add default import path '': {}", e);
-            exit(1);
-        }
+        resolver.add_import_path(&PathBuf::from(""));
     }
 
     if let Some(maps) = package.get_import_map() {
         for (map, path) in maps {
-            if let Err(e) = resolver.add_import_map(OsString::from(map), path.clone()) {
-                eprintln!("error: import path '{}': {}", path.display(), e);
-                exit(1);
-            }
+            resolver.add_import_map(OsString::from(map), path.clone());
         }
     }
 
