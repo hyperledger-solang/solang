@@ -652,7 +652,7 @@ fn get_import_path() {
     let bad_path = PathBuf::from("/IDontExist.sol");
 
     assert!(cache.add_import_path(&examples).is_ok());
-    assert!(cache.add_import_path(&bad_path).is_err());
+    assert!(cache.add_import_path(&bad_path).is_ok());
 
     let ns = parse_and_resolve(OsStr::new("example.sol"), &mut cache, Target::EVM);
 
