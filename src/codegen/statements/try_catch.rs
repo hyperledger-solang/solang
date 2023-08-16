@@ -34,8 +34,6 @@ pub(super) fn try_catch(
         unimplemented!()
     }
 
-    dbg!(try_stmt);
-
     let ok_block = cfg.new_basic_block("ok".to_string());
     let catch_block = cfg.new_basic_block("catch".to_string());
     let finally_block = cfg.new_basic_block("finally".to_string());
@@ -476,8 +474,24 @@ fn insert_catch(
     cfg.add(vartab, instruction);
 
     cfg.set_basic_block(no_match_err_id);
-    let encoded_args = Some(buffer.clone());
-    cfg.add(vartab, Instr::AssertFailure { encoded_args });
+    if try_stmt.catch_stmt.is_some() {
+        insert_fallback_catch_stmt(
+            try_stmt,
+            func,
+            cfg,
+            callee_contract_no,
+            ns,
+            vartab,
+            loops,
+            placeholder,
+            return_override,
+            opt,
+            finally_block,
+        );
+    } else {
+        let encoded_args = Some(buffer.clone());
+        cfg.add(vartab, Instr::AssertFailure { encoded_args });
+    }
 
     cfg.set_basic_block(match_err_id);
     let tys = &[Type::Bytes(4), error_param.ty.clone()];
