@@ -378,14 +378,6 @@ fn insert_catch_clauses(
 ) {
     cfg.set_basic_block(catch_block);
 
-    // Dispatch according to the error selector
-    let (error_param_pos, error_param, error_stmt) = &try_stmt.errors.get(0).unwrap();
-
-    let error_var = match error_param_pos {
-        Some(pos) => *pos,
-        _ => vartab.temp_anonymous(&Type::String),
-    };
-
     let buffer = Expression::Variable {
         loc: Codegen,
         ty: Type::DynamicBytes,
@@ -412,6 +404,14 @@ fn insert_catch_clauses(
         return;
     }
 
+    let (error_param_pos, error_param, error_stmt) = &try_stmt.errors.get(0).unwrap();
+
+    let error_var = match error_param_pos {
+        Some(pos) => *pos,
+        _ => vartab.temp_anonymous(&Type::String),
+    };
+
+    // Dispatch according to the error selector.
     // At the moment, we only support Error(string).
     // Expect the returned data to contain at least the selector + 1 byte of data.
     // If the error data len is <4 and a fallback available then proceed else bubble
