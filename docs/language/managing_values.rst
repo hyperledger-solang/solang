@@ -95,8 +95,7 @@ Here is an example:
     function to be called, use ``address.call{value: 100}("")`` instead.
 
 .. note::
-    On Solana, these functions manage native token assets from a contract's data account when
-    invoked from a contract variable. Normally, funds are not stored in a contract's account, as
-    one can set a separate payer account to pay for all the transactions. In this case, it is more
-    straightforward to use the :ref:`system instruction library <system_instruction_library>` to transfer
-    native tokens between accounts.
+    On Solana, ``send()`` and ``transfer()`` can only transfer native tokens between accounts owned
+    by the contract's program account, since only the account owner can modify its balance.
+    Use the :ref:`system instruction library <system_instruction_library>` to transfer
+    native tokens between accounts owned by Solana's system program.
