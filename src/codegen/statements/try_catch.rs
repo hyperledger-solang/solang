@@ -378,6 +378,20 @@ fn insert_catch_clauses(
 ) {
     cfg.set_basic_block(catch_block);
 
+    // Dispatch according to the error selector
+    let (error_param_pos, error_param, error_stmt) = &try_stmt.errors.get(0).unwrap();
+
+    let error_var = match error_param_pos {
+        Some(pos) => *pos,
+        _ => vartab.temp_anonymous(&Type::String),
+    };
+
+    let buffer = Expression::Variable {
+        loc: Codegen,
+        ty: Type::DynamicBytes,
+        var_no: error_ret_data_var,
+    };
+
     // Check for error blocks and dispatch
     // If no errors, go straight to the catch all block
     if try_stmt.errors.is_empty() {
@@ -393,23 +407,10 @@ fn insert_catch_clauses(
             return_override,
             opt,
             finally_block,
+            buffer,
         );
         return;
     }
-
-    // Dispatch according to the error selector
-    let (error_param_pos, error_param, error_stmt) = &try_stmt.errors.get(0).unwrap();
-
-    let error_var = match error_param_pos {
-        Some(pos) => *pos,
-        _ => vartab.temp_anonymous(&Type::String),
-    };
-
-    let buffer = Expression::Variable {
-        loc: Codegen,
-        ty: Type::DynamicBytes,
-        var_no: error_ret_data_var,
-    };
 
     // At the moment, we only support Error(string).
     // Expect the returned data to contain at least the selector + 1 byte of data.
@@ -492,6 +493,7 @@ fn insert_catch_clauses(
             return_override,
             opt,
             finally_block,
+            buffer.clone(),
         );
     }
 
@@ -545,12 +547,13 @@ fn insert_catchall_clause_code_block(
     return_override: Option<&Instr>,
     opt: &Options,
     finally_block: usize,
+    error_data_buf: Expression,
 ) {
     if let Some(res) = try_stmt.catch_param_pos {
         let instruction = Instr::Set {
             loc: Codegen,
             res,
-            expr: Expression::ReturnData { loc: Codegen },
+            expr: error_data_buf,
         };
         cfg.add(vartab, instruction);
     }

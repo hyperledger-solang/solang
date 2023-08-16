@@ -1159,3 +1159,47 @@ fn try_catch_uncaught_bubbles_up() {
     assert_eq!(runtime.output(), expected_output);
     assert!(runtime.debug_buffer().contains("external call failed"));
 }
+
+#[test]
+fn try_catch_transfer_fail() {
+    let mut runtime = build_solidity_with_options(
+        r#"contract runner {
+        function test(uint128 amount) public returns (bytes) {
+            try new aborting{value: amount}(true) returns (
+                aborting a
+            ) {} catch Error(string x) {
+                return hex"41";
+            } catch (bytes raw) {
+                return raw;
+            }
+
+            return hex"ff";
+        }
+    }
+
+    contract aborting {
+        constructor(bool abort) {
+            if (abort) {
+                revert("bar");
+            }
+        }
+
+        function foo() public pure {}
+    }"#,
+        true,
+        true,
+    );
+
+    // Expect the contract to catch the reverting child constructor
+    runtime.function("test", 0u128.encode());
+    assert_eq!(runtime.output(), vec![0x41u8].encode());
+    assert!(runtime.debug_buffer().contains("seal_instantiate=2"));
+
+    // Trying to instantiate with value while having insufficient funds result in
+    // seal_instantiate faliing with transfer failed (return code 5).
+    // Now, the "catch (bytes raw)" clause should catch that, because there is no
+    // return data to be decoded.
+    runtime.function("test", 1u128.encode());
+    assert_eq!(runtime.output(), Vec::<u8>::new().encode());
+    assert!(runtime.debug_buffer().contains("seal_instantiate=5"));
+}
