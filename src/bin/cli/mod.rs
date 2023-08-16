@@ -521,9 +521,8 @@ pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
             if let Err(e) = resolver.add_import_path(path) {
                 eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
                 exit(1);
-            } else {
-                added_path = true;
             }
+            added_path = true;
         }
     }
     if !added_path {
