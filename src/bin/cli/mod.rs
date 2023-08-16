@@ -515,18 +515,21 @@ impl PackageTrait for DocPackage {
 pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
     let mut resolver = FileResolver::default();
 
-    // for filename in package.get_input() {
-    //     if let Ok(path) = PathBuf::from(filename).canonicalize() {
-    //         let _ = resolver.add_import_path(path.parent().unwrap());
-    //     }
-    // }
-
+    let mut added_path = false;
     if let Some(paths) = package.get_import_path() {
         for path in paths {
             if let Err(e) = resolver.add_import_path(path) {
                 eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
                 exit(1);
+            } else {
+                added_path = true;
             }
+        }
+    }
+    if !added_path {
+        if let Err(e) = resolver.add_import_path(&PathBuf::from("")) {
+            eprintln!("error: could not add default import path '': {}", e);
+            exit(1);
         }
     }
 

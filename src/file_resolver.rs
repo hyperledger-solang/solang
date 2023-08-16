@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io;
-use std::io::{prelude::*, Error, ErrorKind};
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -40,25 +40,14 @@ pub struct ResolvedFile {
 impl FileResolver {
     /// Add import path
     pub fn add_import_path(&mut self, path: &Path) -> io::Result<()> {
-        self.import_paths.push((None, path.canonicalize()?));
+        self.import_paths.push((None, path.to_path_buf()));
         Ok(())
     }
 
     /// Add import map
     pub fn add_import_map(&mut self, map: OsString, path: PathBuf) -> io::Result<()> {
-        if self
-            .import_paths
-            .iter()
-            .any(|(m, _)| m.as_ref() == Some(&map))
-        {
-            Err(Error::new(
-                ErrorKind::Other,
-                format!("duplicate mapping for '{}'", map.to_string_lossy()),
-            ))
-        } else {
-            self.import_paths.push((Some(map), path));
-            Ok(())
-        }
+        self.import_paths.push((Some(map), path));
+        Ok(())
     }
 
     /// Get the import path and the optional mapping corresponding to `import_no`.
@@ -229,34 +218,20 @@ impl FileResolver {
 
         // first check maps
 
+        let mut remapped = path.clone();
+
         println!("[+] Walking import maps");
         for import_map_no in 0..self.import_paths.len() {
             if let (Some(mapping), target) = &self.import_paths[import_map_no].clone() {
                 if let Ok(relpath) = path.strip_prefix(mapping) {
-                    // Resolve against import path roots that are _not_ remapping targets
-                    for import_path_no in 0..self.import_paths.len() {
-                        if let (None, import_path) = &self.import_paths[import_path_no] {
-                            let path = import_path.join(target).join(relpath);
-
-                            println!(
-                                "- try_file({:?}, {:?}, {:?})",
-                                &filename, &path, import_path_no
-                            );
-                            let import_path_string = import_path.to_str().unwrap().to_string();
-                            if let Some(file) =
-                                self.try_file(filename, &path, Some(import_path_no))?
-                            {
-                                println!(
-                                    "  Success: expanded {:?}={:?} against path {:?}\n",
-                                    &mapping, target, import_path_string
-                                );
-                                result.push(Ok(file));
-                            }
-                        }
-                    }
+                    print!("- Updated remapped {:?} ", remapped);
+                    remapped = target.join(relpath);
+                    println!("to {:?} ", remapped);
                 }
             }
         }
+
+        let path = remapped;
 
         // walk over the import paths until we find one that resolves
         println!("[+] Walking import paths");
