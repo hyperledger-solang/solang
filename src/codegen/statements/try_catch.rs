@@ -69,155 +69,21 @@ pub(super) fn try_catch(
         finally_block,
     );
 
-    cfg.set_basic_block(catch_block);
-
-    for (error_param_pos, error_param, error_stmt) in &try_stmt.errors {
-        let no_reason_block = cfg.new_basic_block("no_reason".to_string());
-
-        let error_var = match error_param_pos {
-            Some(pos) => *pos,
-            _ => vartab.temp_anonymous(&Type::String),
-        };
-
-        let buf = Expression::Variable {
-            loc: Codegen,
-            ty: Type::DynamicBytes,
-            var_no: error_ret_data_var,
-        };
-
-        // Expect the returned data to contain at least the selector + 1 byte of data
-        let ret_data_len = Expression::Builtin {
-            loc: Codegen,
-            tys: vec![Type::Uint(32)],
-            kind: Builtin::ArrayLength,
-            args: vec![buf.clone()],
-        };
-        let enough_data_block = cfg.new_basic_block("enough_data".into());
-        let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
-        let selector_data_len = Expression::NumberLiteral {
-            loc: Codegen,
-            ty: Type::Uint(32),
-            value: 4.into(),
-        };
-        let cond_enough_data = Expression::More {
-            loc: Codegen,
-            signed: false,
-            left: ret_data_len.into(),
-            right: selector_data_len.into(),
-        };
-        cfg.add(
-            vartab,
-            Instr::BranchCond {
-                cond: cond_enough_data,
-                true_block: enough_data_block,
-                false_block: no_match_err_id,
-            },
-        );
-
-        cfg.set_basic_block(enough_data_block);
-        // Expect the returned data to match the 4 bytes function selector for "Error(string)"
-        let tys = &[Type::Bytes(4), error_param.ty.clone()];
-        let decoded = abi_decode(&Codegen, &buf, tys, ns, vartab, cfg, None);
-        //let selector_ty = Type::Ref(Uint(32).into());
-        let err_id = Expression::NumberLiteral {
-            loc: Codegen,
-            ty: Type::Bytes(4),
-            value: 0x08c3_79a0.into(),
-        }
-        .into();
-        let cond = Expression::Equal {
-            loc: Codegen,
-            left: decoded[0].clone().into(),
-            right: err_id,
-        };
-        let match_err_id = cfg.new_basic_block("match_err_id".into());
-        let instruction = Instr::BranchCond {
-            cond,
-            true_block: match_err_id,
-            false_block: no_match_err_id,
-        };
-        cfg.add(vartab, instruction);
-
-        cfg.set_basic_block(no_match_err_id);
-        let encoded_args = Some(buf);
-        cfg.add(vartab, Instr::AssertFailure { encoded_args });
-
-        cfg.set_basic_block(match_err_id);
-        let instruction = Instr::Set {
-            loc: Codegen,
-            res: error_var,
-            expr: decoded[1].clone(),
-        };
-        cfg.add(vartab, instruction);
-
-        let mut reachable = true;
-
-        for stmt in error_stmt {
-            statement(
-                stmt,
-                func,
-                cfg,
-                callee_contract_no,
-                ns,
-                vartab,
-                loops,
-                placeholder,
-                return_override,
-                opt,
-            );
-
-            reachable = stmt.reachable();
-        }
-        if reachable {
-            cfg.add(
-                vartab,
-                Instr::Branch {
-                    block: finally_block,
-                },
-            );
-        }
-
-        cfg.set_basic_block(no_reason_block);
-    }
-
-    if let Some(res) = try_stmt.catch_param_pos {
-        let instruction = Instr::Set {
-            loc: Codegen,
-            res,
-            expr: Expression::ReturnData { loc: Codegen },
-        };
-        cfg.add(vartab, instruction);
-    }
-
-    let mut reachable = true;
-
-    if let Some(stmts) = &try_stmt.catch_stmt {
-        for stmt in stmts {
-            statement(
-                stmt,
-                func,
-                cfg,
-                callee_contract_no,
-                ns,
-                vartab,
-                loops,
-                placeholder,
-                return_override,
-                opt,
-            );
-
-            reachable = stmt.reachable();
-        }
-    }
-
-    if reachable {
-        cfg.add(
-            vartab,
-            Instr::Branch {
-                block: finally_block,
-            },
-        );
-    }
+    insert_catch(
+        try_stmt,
+        func,
+        cfg,
+        callee_contract_no,
+        ns,
+        vartab,
+        loops,
+        placeholder,
+        return_override,
+        opt,
+        catch_block,
+        finally_block,
+        error_ret_data_var,
+    );
 
     let mut set = vartab.pop_dirty_tracker();
     if let Some(pos) = &try_stmt.catch_param_pos {
@@ -485,6 +351,216 @@ fn insert_ok(
     }
 
     if finally_reachable {
+        cfg.add(
+            vartab,
+            Instr::Branch {
+                block: finally_block,
+            },
+        );
+    }
+}
+
+/// Insert all catch cases into the CFG.
+fn insert_catch(
+    try_stmt: &TryCatch,
+    func: &Function,
+    cfg: &mut ControlFlowGraph,
+    callee_contract_no: usize,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    loops: &mut LoopScopes,
+    placeholder: Option<&Instr>,
+    return_override: Option<&Instr>,
+    opt: &Options,
+    catch_block: usize,
+    finally_block: usize,
+    error_ret_data_var: usize,
+) {
+    cfg.set_basic_block(catch_block);
+
+    // Check for error blocks and dispatch
+    // If no errors, go straight to the catch all block
+    if try_stmt.errors.is_empty() {
+        insert_fallback_catch_stmt(
+            try_stmt,
+            func,
+            cfg,
+            callee_contract_no,
+            ns,
+            vartab,
+            loops,
+            placeholder,
+            return_override,
+            opt,
+            finally_block,
+        );
+        return;
+    }
+
+    // Dispatch according to the error selector
+    let (error_param_pos, error_param, error_stmt) = &try_stmt.errors.get(0).unwrap();
+
+    let error_var = match error_param_pos {
+        Some(pos) => *pos,
+        _ => vartab.temp_anonymous(&Type::String),
+    };
+
+    let buffer = Expression::Variable {
+        loc: Codegen,
+        ty: Type::DynamicBytes,
+        var_no: error_ret_data_var,
+    };
+
+    // At the moment, we only support Error(string).
+    // Expect the returned data to contain at least the selector + 1 byte of data.
+    // If the error data len is <4 and a fallback available then proceed else bubble
+    let ret_data_len = Expression::Builtin {
+        loc: Codegen,
+        tys: vec![Type::Uint(32)],
+        kind: Builtin::ArrayLength,
+        args: vec![buffer.clone()],
+    };
+    let enough_data_block = cfg.new_basic_block("enough_data".into());
+    let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
+    let selector_data_len = Expression::NumberLiteral {
+        loc: Codegen,
+        ty: Type::Uint(32),
+        value: 4.into(),
+    };
+    let cond_enough_data = Expression::More {
+        loc: Codegen,
+        signed: false,
+        left: ret_data_len.into(),
+        right: selector_data_len.into(),
+    };
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: cond_enough_data,
+            true_block: enough_data_block,
+            false_block: no_match_err_id,
+        },
+    );
+
+    // If the selector doesn't match any of the errors and no fallback then bubble else catch
+    let offset = Expression::NumberLiteral {
+        loc: Codegen,
+        ty: Uint(32),
+        value: 0.into(),
+    };
+    let err_selector = Expression::Builtin {
+        loc: Codegen,
+        tys: vec![Type::Bytes(4)],
+        kind: Builtin::ReadFromBuffer,
+        args: vec![buffer.clone(), offset.clone()],
+    };
+
+    cfg.set_basic_block(enough_data_block);
+    // Expect the returned data to match the 4 bytes function selector for "Error(string)"
+    let err_id = Expression::NumberLiteral {
+        loc: Codegen,
+        ty: Type::Bytes(4),
+        value: 0x08c3_79a0.into(),
+    };
+    let cond = Expression::Equal {
+        loc: Codegen,
+        left: err_selector.into(),
+        right: err_id.into(),
+    };
+    let match_err_id = cfg.new_basic_block("match_err_id".into());
+    let instruction = Instr::BranchCond {
+        cond,
+        true_block: match_err_id,
+        false_block: no_match_err_id,
+    };
+    cfg.add(vartab, instruction);
+
+    cfg.set_basic_block(no_match_err_id);
+    let encoded_args = Some(buffer.clone());
+    cfg.add(vartab, Instr::AssertFailure { encoded_args });
+
+    cfg.set_basic_block(match_err_id);
+    let tys = &[Type::Bytes(4), error_param.ty.clone()];
+    let decoded = abi_decode(&Codegen, &buffer, tys, ns, vartab, cfg, None);
+    let instruction = Instr::Set {
+        loc: Codegen,
+        res: error_var,
+        expr: decoded[1].clone(),
+    };
+    cfg.add(vartab, instruction);
+
+    let mut reachable = true;
+    for stmt in error_stmt {
+        statement(
+            stmt,
+            func,
+            cfg,
+            callee_contract_no,
+            ns,
+            vartab,
+            loops,
+            placeholder,
+            return_override,
+            opt,
+        );
+
+        reachable = stmt.reachable();
+    }
+    if reachable {
+        cfg.add(
+            vartab,
+            Instr::Branch {
+                block: finally_block,
+            },
+        );
+    }
+}
+
+/// Insert the fallback catch code into the CFG.
+fn insert_fallback_catch_stmt(
+    try_stmt: &TryCatch,
+    func: &Function,
+    cfg: &mut ControlFlowGraph,
+    callee_contract_no: usize,
+    ns: &Namespace,
+    vartab: &mut Vartable,
+    loops: &mut LoopScopes,
+    placeholder: Option<&Instr>,
+    return_override: Option<&Instr>,
+    opt: &Options,
+    finally_block: usize,
+) {
+    if let Some(res) = try_stmt.catch_param_pos {
+        let instruction = Instr::Set {
+            loc: Codegen,
+            res,
+            expr: Expression::ReturnData { loc: Codegen },
+        };
+        cfg.add(vartab, instruction);
+    }
+
+    let mut reachable = true;
+
+    if let Some(stmts) = &try_stmt.catch_stmt {
+        for stmt in stmts {
+            statement(
+                stmt,
+                func,
+                cfg,
+                callee_contract_no,
+                ns,
+                vartab,
+                loops,
+                placeholder,
+                return_override,
+                opt,
+            );
+
+            reachable = stmt.reachable();
+        }
+    }
+
+    if reachable {
         cfg.add(
             vartab,
             Instr::Branch {
