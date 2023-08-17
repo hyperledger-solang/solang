@@ -31,20 +31,14 @@ pub(crate) struct RetCodeCheckBuilder<Success = ()> {
 }
 
 impl RetCodeCheckBuilder {
-    pub(crate) fn loc(self, loc: Loc) -> Self {
-        Self {
-            loc,
-            msg: self.msg,
-            success_var: self.success_var,
-        }
+    pub(crate) fn loc(mut self, loc: Loc) -> Self {
+        self.loc = loc;
+        self
     }
 
-    pub(crate) fn msg(self, msg: &'static str) -> Self {
-        Self {
-            loc: self.loc,
-            msg,
-            success_var: self.success_var,
-        }
+    pub(crate) fn msg(mut self, msg: &'static str) -> Self {
+        self.msg = msg;
+        self
     }
 
     pub(crate) fn success_var(self, success_var: usize) -> RetCodeCheckBuilder<usize> {
