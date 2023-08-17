@@ -12,6 +12,7 @@ use num_traits::Zero;
 use solang_parser::{pt, pt::Loc};
 
 use crate::codegen::encoding::{abi_decode, abi_encode};
+use crate::sema::solana_accounts::BuiltinAccounts;
 
 pub const SOLANA_DISPATCH_CFG_NAME: &str = "solang_dispatch";
 
@@ -268,13 +269,19 @@ fn add_function_dispatch_case(
     let entry = cfg.new_basic_block(format!("function_cfg_{cfg_no}"));
     cfg.set_basic_block(entry);
 
-    let needs_account = if let ASTFunction::SolidityFunction(func_no) = func_cfg.function_no {
-        !ns.functions[func_no].is_pure()
+    let ast_func_no = if let ASTFunction::SolidityFunction(func_no) = func_cfg.function_no {
+        func_no
+    } else if let Some(func_no) = func_cfg.modifier {
+        func_no
     } else {
-        true
+        unreachable!("should not dispatch this function")
     };
 
-    if needs_account {
+    if ns.functions[ast_func_no]
+        .solana_accounts
+        .borrow()
+        .contains_key(BuiltinAccounts::DataAccount.as_str())
+    {
         check_magic(ns.contracts[contract_no].selector(), cfg, vartab);
     }
 

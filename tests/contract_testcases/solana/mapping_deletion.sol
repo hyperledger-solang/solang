@@ -19,7 +19,7 @@ contract DeleteTest {
     mapping(uint => savedTest) example2;
 
     function addData() public  {
-        data_struct dt = data_struct({addr1: address(this), addr2: tx.program_id});
+        data_struct dt = data_struct({addr1: address(this), addr2: tx.accounts.dataAccount.key});
         uint id = 1;
         example[id] = dt;
         savedTest tt = new savedTest(4);
@@ -39,4 +39,4 @@ contract DeleteTest {
 
 }
 // ---- Expect: diagnostics ----
-// error: 25:24-40: either 'address' or 'accounts' call argument is required on Solana
+// error: 25:24-40: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external

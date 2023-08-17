@@ -10,7 +10,6 @@ describe('Test events', function () {
         const { program, storage } = await loadContractAndCallConstructor('MyContractEvents');
 
         const res = await program.methods.test()
-            .accounts({ dataAccount: storage.publicKey })
             .simulate();
 
         const event1 = res.events[0];

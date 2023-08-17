@@ -29,9 +29,7 @@ fn simple() {
 
     vm.logs.truncate(0);
 
-    vm.function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    vm.function("test").call();
 
     assert_eq!(vm.logs, "Hello from function");
 }
@@ -93,7 +91,6 @@ fn parameters() {
                 value: BigInt::from(10u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 
     assert_eq!(vm.logs, "x is 10");
@@ -111,7 +108,6 @@ fn parameters() {
                 value: BigInt::from(102u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 
     assert_eq!(vm.logs, "y is 102");
@@ -139,7 +135,6 @@ fn returns() {
             width: 32,
             value: BigInt::from(10u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -171,7 +166,6 @@ fn returns() {
             width: 64,
             value: BigInt::from(982451653u64),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -484,7 +478,6 @@ contract test3 {
                 width: 32,
                 value: BigInt::from(i),
             }])
-            .accounts(vec![("dataAccount", data_account)])
             .call()
             .unwrap();
 
@@ -509,7 +502,6 @@ contract test3 {
                 },
                 BorshToken::Bool(true),
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .call()
             .unwrap();
 
@@ -538,7 +530,6 @@ contract test3 {
                 },
                 BorshToken::Bool(false),
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .call()
             .unwrap();
 
@@ -568,7 +559,6 @@ contract test3 {
                 width: 32,
                 value: BigInt::from(i),
             }])
-            .accounts(vec![("dataAccount", data_account)])
             .call()
             .unwrap();
 
@@ -601,11 +591,7 @@ fn overloading() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("foo_")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("foo_").call().unwrap();
 
     assert_eq!(
         returns,
@@ -615,11 +601,7 @@ fn overloading() {
         }
     );
 
-    let returns = vm
-        .function("foo_bar")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("foo_bar").call().unwrap();
 
     assert_eq!(
         returns,
@@ -631,7 +613,6 @@ fn overloading() {
 
     let returns = vm
         .function("foo_address")
-        .accounts(vec![("dataAccount", data_account)])
         .arguments(&[BorshToken::Address([0u8; 32])])
         .call()
         .unwrap();
@@ -646,7 +627,6 @@ fn overloading() {
 
     let returns = vm
         .function("foo_bytes32")
-        .accounts(vec![("dataAccount", data_account)])
         .arguments(&[BorshToken::FixedBytes(vec![0u8; 32])])
         .call()
         .unwrap();
@@ -660,7 +640,6 @@ fn overloading() {
     );
     let returns = vm
         .function("foo_bytes")
-        .accounts(vec![("dataAccount", data_account)])
         .arguments(&[BorshToken::Bytes(vec![])])
         .call()
         .unwrap();
@@ -675,7 +654,6 @@ fn overloading() {
 
     let returns = vm
         .function("foo_string")
-        .accounts(vec![("dataAccount", data_account)])
         .arguments(&[BorshToken::String("yo".into())])
         .call()
         .unwrap();

@@ -60,8 +60,8 @@ uint64_t sol_invoke_signed_c(const SolInstruction *instruction, const SolAccount
 
 // Calls an external function when 'program_id' is NULL or
 // creates a new contract and calls its constructor.
-uint64_t external_call(uint8_t *input, uint32_t input_len, SolPubkey *address, SolPubkey *program_id,
-                       const SolSignerSeeds *seeds, int seeds_len, SolParameters *params)
+uint64_t external_call(uint8_t *input, uint32_t input_len, SolPubkey *program_id, const SolSignerSeeds *seeds,
+                       int seeds_len, SolParameters *params)
 {
     SolAccountMeta metas[10];
     SolInstruction instruction = {
@@ -72,62 +72,16 @@ uint64_t external_call(uint8_t *input, uint32_t input_len, SolPubkey *address, S
         .data_len = input_len,
     };
 
-    int meta_no = 1;
-    int new_address_idx = -1;
-
+    // When the '{accounts: ...}' call argument is missing, we pass on all the accounts in the transaction.
     for (int account_no = 0; account_no < params->ka_num; account_no++)
     {
         SolAccountInfo *acc = &params->ka[account_no];
-
-        // The address for the new contract should go first. Note that there
-        // may be duplicate entries, the order of those does not matter.
-        if (new_address_idx < 0 && SolPubkey_same(address, acc->key))
-        {
-            metas[0].pubkey = acc->key;
-            metas[0].is_writable = acc->is_writable;
-            metas[0].is_signer = acc->is_signer;
-            new_address_idx = account_no;
-        }
-        else
-        {
-            metas[meta_no].pubkey = acc->key;
-            metas[meta_no].is_writable = acc->is_writable;
-            metas[meta_no].is_signer = acc->is_signer;
-            meta_no += 1;
-        }
+        metas[account_no].pubkey = acc->key;
+        metas[account_no].is_writable = acc->is_writable;
+        metas[account_no].is_signer = acc->is_signer;
     }
 
-    // If the program_id is null, we are dealing with an external call
-    if (!program_id)
-    {
-        if (new_address_idx < 0)
-        {
-            sol_log("call to account not in transaction");
-            sol_panic();
-
-            return ERROR_INVALID_ACCOUNT_DATA;
-        }
-        else
-        {
-            instruction.program_id = params->ka[new_address_idx].owner;
-            return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, NULL, 0);
-        }
-    }
-    else
-    {
-        // This is a constructor call
-        if (new_address_idx < 0)
-        {
-            sol_log("new account needed");
-            sol_panic();
-
-            return ERROR_NEW_ACCOUNT_NEEDED;
-        }
-        else
-        {
-            return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, seeds, seeds_len);
-        }
-    }
+    return sol_invoke_signed_c(&instruction, params->ka, params->ka_num, seeds, seeds_len);
 }
 
 uint64_t *sol_account_lamport(uint8_t *address, SolParameters *params)

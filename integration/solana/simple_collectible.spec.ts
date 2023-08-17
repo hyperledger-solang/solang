@@ -72,7 +72,6 @@ describe('Simple collectible', function () {
         await program.methods.transferOwnership(
             owner_token_account.address,
             new_owner_token_account.address)
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([
                 { pubkey: new_owner_token_account.address, isSigner: false, isWritable: true },
                 { pubkey: owner_token_account.address, isSigner: false, isWritable: true },

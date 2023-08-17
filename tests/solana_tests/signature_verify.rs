@@ -81,10 +81,7 @@ fn verify() {
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs.clone()),
         ])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("SysvarInstruction", instructions_account),
-        ])
+        .accounts(vec![("SysvarInstruction", instructions_account)])
         .call()
         .unwrap();
 
@@ -116,10 +113,7 @@ fn verify() {
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs.clone()),
         ])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("SysvarInstruction", instructions_account),
-        ])
+        .accounts(vec![("SysvarInstruction", instructions_account)])
         .call()
         .unwrap();
 
@@ -153,10 +147,7 @@ fn verify() {
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs),
         ])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("SysvarInstruction", instructions_account),
-        ])
+        .accounts(vec![("SysvarInstruction", instructions_account)])
         .call()
         .unwrap();
 

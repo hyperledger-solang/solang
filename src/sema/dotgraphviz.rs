@@ -1477,9 +1477,6 @@ impl Dot {
         if let Some(salt) = &call_args.salt {
             self.add_expression(salt, func, ns, node, String::from("salt"));
         }
-        if let Some(address) = &call_args.address {
-            self.add_expression(address, func, ns, node, String::from("address"));
-        }
         if let Some(accounts) = &call_args.accounts {
             self.add_expression(accounts, func, ns, node, String::from("accounts"));
         }

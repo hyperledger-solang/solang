@@ -267,6 +267,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, dry_run: bool, ns: &mut Name
                     }
                 }
                 Instr::ExternalCall {
+                    loc,
                     success,
                     address,
                     payload,
@@ -296,6 +297,7 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, dry_run: bool, ns: &mut Name
 
                     if !dry_run {
                         cfg.blocks[block_no].instr[instr_no] = Instr::ExternalCall {
+                            loc: *loc,
                             success: *success,
                             address,
                             accounts,

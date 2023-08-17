@@ -34,12 +34,18 @@ fn get_balance() {
     let returns = vm
         .function("test")
         .arguments(&[BorshToken::Address(new)])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: false,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: false,
+            },
+        ])
         .call()
         .unwrap();
 
@@ -88,12 +94,18 @@ fn send_fails() {
                 value: BigInt::from(102u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: true,
+            },
+        ])
         .call()
         .unwrap();
 
@@ -140,12 +152,18 @@ fn send_succeeds() {
                 value: BigInt::from(102u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: true,
+            },
+        ])
         .call()
         .unwrap();
 
@@ -195,12 +213,18 @@ fn send_overflows() {
                 value: BigInt::from(102u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: true,
+            },
+        ])
         .call()
         .unwrap();
 
@@ -254,12 +278,18 @@ fn transfer_succeeds() {
                 value: BigInt::from(102u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: true,
+            },
+        ])
         .call();
 
     assert_eq!(vm.account_data.get_mut(&new).unwrap().lamports, 107);
@@ -305,12 +335,18 @@ fn transfer_fails_not_enough() {
                 value: BigInt::from(104u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: true,
+            },
+        ])
         .must_fail();
     assert!(res.is_err());
 
@@ -326,12 +362,18 @@ fn transfer_fails_not_enough() {
                 value: BigInt::from(103u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: true,
+            },
+        ])
         .call();
 
     assert_eq!(vm.account_data[&data_account].lamports, 0);
@@ -378,12 +420,18 @@ fn transfer_fails_overflow() {
                 value: BigInt::from(104u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_writable: false,
-            is_signer: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_writable: false,
+                is_signer: true,
+            },
+        ])
         .must_fail();
     assert!(res.is_err());
 
@@ -399,12 +447,18 @@ fn transfer_fails_overflow() {
                 value: BigInt::from(100u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_writable: false,
-            is_signer: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_writable: false,
+                is_signer: true,
+            },
+        ])
         .call();
 
     assert_eq!(vm.account_data[&new].lamports, u64::MAX);
@@ -486,12 +540,18 @@ fn value_overflows() {
                 value: BigInt::from(u64::MAX as u128 + 1),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: true,
+            },
+        ])
         .must_fail();
     assert_eq!(res.unwrap(), 4294967296);
 
@@ -504,12 +564,18 @@ fn value_overflows() {
                 value: BigInt::from(u128::MAX),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: true,
+            },
+        ])
         .must_fail();
 
     assert_eq!(res.unwrap(), 4294967296);
@@ -523,12 +589,18 @@ fn value_overflows() {
                 value: BigInt::from(102u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
-        .remaining_accounts(&[AccountMeta {
-            pubkey: Pubkey(new),
-            is_signer: false,
-            is_writable: true,
-        }])
+        .remaining_accounts(&[
+            AccountMeta {
+                pubkey: Pubkey(data_account),
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: Pubkey(new),
+                is_signer: false,
+                is_writable: true,
+            },
+        ])
         .call()
         .unwrap();
 

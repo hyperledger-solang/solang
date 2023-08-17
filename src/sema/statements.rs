@@ -41,7 +41,7 @@ pub fn resolve_function_body(
     let mut symtable = Symtable::new();
     let mut loops = LoopScopes::new();
     let mut res = Vec::new();
-    let context = ExprContext {
+    let mut context = ExprContext {
         file_no,
         contract_no,
         function_no: Some(function_no),
@@ -49,6 +49,7 @@ pub fn resolve_function_body(
         constant: false,
         lvalue: false,
         yul_function: false,
+        loop_nesting_level: 0,
     };
 
     let mut unresolved_annotation: Vec<UnresolvedAnnotation> = Vec::new();
@@ -220,6 +221,7 @@ pub fn resolve_function_body(
             }
         }
 
+        context.drop();
         ns.diagnostics.extend(diagnostics);
         ns.functions[function_no].modifiers = modifiers;
     }
@@ -285,7 +287,7 @@ pub fn resolve_function_body(
     let reachable = statement(
         body,
         &mut res,
-        &context,
+        &mut context,
         &mut symtable,
         &mut loops,
         ns,
@@ -342,7 +344,7 @@ pub fn resolve_function_body(
 fn statement(
     stmt: &pt::Statement,
     res: &mut Vec<Statement>,
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     loops: &mut LoopScopes,
     ns: &mut Namespace,
@@ -432,7 +434,7 @@ fn statement(
                     ));
                     return Err(());
                 }
-                reachable = statement(stmt, res, &context, symtable, loops, ns, diagnostics)?;
+                reachable = statement(stmt, res, &mut context, symtable, loops, ns, diagnostics)?;
             }
 
             symtable.leave_scope();
@@ -464,6 +466,7 @@ fn statement(
             }
         }
         pt::Statement::While(loc, cond_expr, body) => {
+            context.enter_loop();
             let expr = expression(
                 cond_expr,
                 context,
@@ -491,10 +494,11 @@ fn statement(
             loops.leave_scope();
 
             res.push(Statement::While(*loc, true, cond, body_stmts));
-
+            context.exit_loop();
             Ok(true)
         }
         pt::Statement::DoWhile(loc, body, cond_expr) => {
+            context.enter_loop();
             let expr = expression(
                 cond_expr,
                 context,
@@ -522,6 +526,7 @@ fn statement(
             loops.leave_scope();
 
             res.push(Statement::DoWhile(*loc, true, body_stmts, cond));
+            context.exit_loop();
             Ok(true)
         }
         pt::Statement::If(loc, cond_expr, then, else_) => {
@@ -597,6 +602,7 @@ fn statement(
             }
 
             loops.new_scope();
+            context.enter_loop();
 
             let mut body = Vec::new();
 
@@ -637,7 +643,7 @@ fn statement(
                 cond: None,
                 body,
             });
-
+            context.exit_loop();
             Ok(reachable)
         }
         pt::Statement::For(loc, init_stmt, Some(cond_expr), next_expr, body_stmt) => {
@@ -659,6 +665,7 @@ fn statement(
                 )?;
             }
 
+            context.enter_loop();
             let cond = expression(
                 cond_expr,
                 context,
@@ -716,6 +723,7 @@ fn statement(
                 body,
             });
 
+            context.exit_loop();
             Ok(true)
         }
         pt::Statement::Return(loc, None) => {
@@ -2111,7 +2119,7 @@ fn try_catch(
     expr: &pt::Expression,
     returns_and_ok: &Option<(Vec<(pt::Loc, Option<pt::Parameter>)>, Box<pt::Statement>)>,
     clause_stmts: &[pt::CatchClause],
-    context: &ExprContext,
+    context: &mut ExprContext,
     symtable: &mut Symtable,
     loops: &mut LoopScopes,
     ns: &mut Namespace,

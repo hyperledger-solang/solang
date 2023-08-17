@@ -3,8 +3,8 @@ contract Builder {
     BeingBuilt other;
     
     @payer(payer_account)
-    constructor(address addr) {
-        other = new BeingBuilt{address: addr}("abc");
+    constructor() {
+        other = new BeingBuilt("abc");
     }
 }
 

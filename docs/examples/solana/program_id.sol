@@ -8,11 +8,11 @@ contract Foo {
 contract Bar {
     Foo public foo;
 
-    function create_foo(address new_address) external {
-        foo = new Foo{address: new_address}();
+    function create_foo() external {
+        foo = new Foo();
     }
 
-    function call_foo() public pure {
+    function call_foo() public {
         foo.say_hello();
     }
 }
