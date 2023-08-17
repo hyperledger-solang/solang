@@ -278,11 +278,15 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
             Statement::TryCatch(_, _, try_catch) => {
                 try_catch.expr.recurse(state, read_expression);
                 recurse_statements(&try_catch.ok_stmt, ns, state);
-                for (_, _, s) in &try_catch.errors {
-                    recurse_statements(s, ns, state);
+                for clause in &try_catch.errors {
+                    recurse_statements(&clause.stmt, ns, state);
                 }
-                if let Some(stmts) = &try_catch.catch_stmt {
-                    recurse_statements(stmts, ns, state);
+                if let Some(stmts) = try_catch
+                    .catch_all
+                    .as_ref()
+                    .map(|clause| clause.stmt.clone())
+                {
+                    recurse_statements(&stmts, ns, state);
                 }
             }
             Statement::Emit { loc, .. } => state.write(loc),

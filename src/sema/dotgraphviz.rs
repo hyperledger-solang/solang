@@ -1806,24 +1806,28 @@ impl Dot {
 
                     self.add_statement(&try_catch.ok_stmt, func, ns, parent, String::from("ok"));
 
-                    for (_, param, stmt) in &try_catch.errors {
+                    for clause in &try_catch.errors {
                         self.add_node(
                             Node::new(
                                 "error_param",
                                 vec![format!(
                                     "{} {}",
-                                    param.ty.to_string(ns),
-                                    param.name_as_str()
+                                    clause.param.as_ref().unwrap().ty.to_string(ns),
+                                    clause.param.as_ref().unwrap().name_as_str()
                                 )],
                             ),
                             Some(parent),
                             Some(String::from("error parameter")),
                         );
 
-                        self.add_statement(stmt, func, ns, parent, String::from("error"));
+                        self.add_statement(&clause.stmt, func, ns, parent, String::from("error"));
                     }
 
-                    if let Some(param) = &try_catch.catch_param {
+                    if let Some(param) = try_catch
+                        .catch_all
+                        .as_ref()
+                        .and_then(|clause| clause.param.clone())
+                    {
                         self.add_node(
                             Node::new(
                                 "catch_param",
@@ -1838,8 +1842,12 @@ impl Dot {
                         );
                     }
 
-                    if let Some(stmts) = &try_catch.catch_stmt {
-                        self.add_statement(stmts, func, ns, parent, String::from("catch"));
+                    if let Some(stmts) = try_catch
+                        .catch_all
+                        .as_ref()
+                        .map(|clause| clause.stmt.clone())
+                    {
+                        self.add_statement(&stmts, func, ns, parent, String::from("catch"));
                     }
                 }
                 Statement::Underscore(loc) => {

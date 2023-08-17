@@ -492,7 +492,11 @@ impl<'a> Builder<'a> {
             }
             ast::Statement::TryCatch(_, _, try_stmt) => {
                 self.expression(&try_stmt.expr, symtab);
-                if let Some(stmts) = &try_stmt.catch_stmt {
+                if let Some(stmts) = &try_stmt
+                    .catch_all
+                    .as_ref()
+                    .map(|clause| clause.stmt.clone())
+                {
                     for stmt in stmts {
                         self.statement(stmt, symtab);
                     }
@@ -500,8 +504,8 @@ impl<'a> Builder<'a> {
                 for stmt in &try_stmt.ok_stmt {
                     self.statement(stmt, symtab);
                 }
-                for (_, _, block) in &try_stmt.errors {
-                    for stmts in block {
+                for clause in &try_stmt.errors {
+                    for stmts in &clause.stmt {
                         self.statement(stmts, symtab);
                     }
                 }

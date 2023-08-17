@@ -30,6 +30,7 @@ pub(super) fn try_catch(
     return_override: Option<&Instr>,
     opt: &Options,
 ) {
+    dbg!(try_stmt);
     if !ns.target.is_polkadot() {
         unimplemented!()
     }
@@ -85,12 +86,16 @@ pub(super) fn try_catch(
 
     //  Remove the variables only in scope inside the catch clauses block from the phi set for the finally block
     let mut set = vartab.pop_dirty_tracker();
-    if let Some(pos) = &try_stmt.catch_param_pos {
-        set.remove(pos);
+    if let Some(pos) = try_stmt
+        .catch_all
+        .as_ref()
+        .and_then(|clause| clause.param_pos)
+    {
+        set.remove(&pos);
     }
-    for (pos, _, _) in &try_stmt.errors {
-        if let Some(pos) = pos {
-            set.remove(pos);
+    for clause in &try_stmt.errors {
+        if let Some(pos) = clause.param_pos {
+            set.remove(&pos);
         }
     }
     cfg.set_phis(finally_block, set);
@@ -404,12 +409,11 @@ fn insert_catch_clauses(
         return;
     }
 
-    let (error_param_pos, error_param, error_stmt) = &try_stmt.errors.get(0).unwrap();
+    let clause = &try_stmt.errors.get(0).unwrap();
 
-    let error_var = match error_param_pos {
-        Some(pos) => *pos,
-        _ => vartab.temp_anonymous(&Type::String),
-    };
+    let error_var = clause
+        .param_pos
+        .unwrap_or_else(|| vartab.temp_anonymous(&Type::String));
 
     // Dispatch according to the error selector.
     // At the moment, we only support Error(string).
@@ -477,7 +481,7 @@ fn insert_catch_clauses(
 
     // If the selector doesn't match any of the errors and no fallback then bubble else catch
     cfg.set_basic_block(no_match_err_id);
-    if try_stmt.catch_stmt.is_none() {
+    if try_stmt.catch_all.is_none() {
         let encoded_args = Some(buffer.clone());
         cfg.add(vartab, Instr::AssertFailure { encoded_args });
     } else {
@@ -498,7 +502,7 @@ fn insert_catch_clauses(
     }
 
     cfg.set_basic_block(match_err_id);
-    let tys = &[Type::Bytes(4), error_param.ty.clone()];
+    let tys = &[Type::Bytes(4), clause.param.as_ref().unwrap().ty.clone()];
     let decoded = abi_decode(&Codegen, &buffer, tys, ns, vartab, cfg, None);
     let instruction = Instr::Set {
         loc: Codegen,
@@ -508,7 +512,7 @@ fn insert_catch_clauses(
     cfg.add(vartab, instruction);
 
     let mut reachable = true;
-    for stmt in error_stmt {
+    for stmt in &clause.stmt {
         statement(
             stmt,
             func,
@@ -549,7 +553,7 @@ fn insert_catchall_clause_code_block(
     finally_block: usize,
     error_data_buf: Expression,
 ) {
-    if let Some(res) = try_stmt.catch_param_pos {
+    if let Some(res) = try_stmt.catch_all.as_ref().unwrap().param_pos {
         let instruction = Instr::Set {
             loc: Codegen,
             res,
@@ -560,23 +564,21 @@ fn insert_catchall_clause_code_block(
 
     let mut reachable = true;
 
-    if let Some(stmts) = &try_stmt.catch_stmt {
-        for stmt in stmts {
-            statement(
-                stmt,
-                func,
-                cfg,
-                callee_contract_no,
-                ns,
-                vartab,
-                loops,
-                placeholder,
-                return_override,
-                opt,
-            );
+    for stmt in &try_stmt.catch_all.as_ref().unwrap().stmt {
+        statement(
+            stmt,
+            func,
+            cfg,
+            callee_contract_no,
+            ns,
+            vartab,
+            loops,
+            placeholder,
+            return_override,
+            opt,
+        );
 
-            reachable = stmt.reachable();
-        }
+        reachable = stmt.reachable();
     }
 
     if reachable {

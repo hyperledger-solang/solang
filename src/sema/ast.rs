@@ -1692,10 +1692,15 @@ pub struct TryCatch {
     pub expr: Expression,
     pub returns: Vec<(Option<usize>, Parameter)>,
     pub ok_stmt: Vec<Statement>,
-    pub errors: Vec<(Option<usize>, Parameter, Vec<Statement>)>,
-    pub catch_param: Option<Parameter>,
-    pub catch_param_pos: Option<usize>,
-    pub catch_stmt: Option<Vec<Statement>>,
+    pub errors: Vec<CatchClause>,
+    pub catch_all: Option<CatchClause>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CatchClause {
+    pub param: Option<Parameter>,
+    pub param_pos: Option<usize>,
+    pub stmt: Vec<Statement>,
 }
 
 #[derive(Clone, Debug)]
@@ -1759,14 +1764,14 @@ impl Recurse for Statement {
                         stmt.recurse(cx, f);
                     }
 
-                    for error_stmt in &try_catch.errors {
-                        for stmt in &error_stmt.2 {
+                    for clause in &try_catch.errors {
+                        for stmt in &clause.stmt {
                             stmt.recurse(cx, f);
                         }
                     }
 
-                    if let Some(stmts) = &try_catch.catch_stmt {
-                        for stmt in stmts {
+                    if let Some(clause) = try_catch.catch_all.as_ref() {
+                        for stmt in &clause.stmt {
                             stmt.recurse(cx, f);
                         }
                     }
