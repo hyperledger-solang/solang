@@ -30,7 +30,6 @@ pub(super) fn try_catch(
     return_override: Option<&Instr>,
     opt: &Options,
 ) {
-    dbg!(try_stmt);
     if !ns.target.is_polkadot() {
         unimplemented!()
     }
