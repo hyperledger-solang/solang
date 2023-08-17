@@ -681,7 +681,7 @@ fn bigint_to_expression(
                 bs.resize(*bits as usize / 8, 0xff);
 
                 BigInt::from_bytes_le(Sign::Plus, &bs)
-            } else if value.bits() > *bits as u64 || value.sign() == Sign::Minus {
+            } else if value.bits() > *bits as u64 {
                 if !overflowing {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
@@ -691,11 +691,6 @@ fn bigint_to_expression(
                         ),
                     ));
                 }
-                let (_, mut bs) = value.to_bytes_le();
-                bs.truncate(*bits as usize / 8);
-
-                BigInt::from_bytes_le(Sign::Plus, &bs)
-            } else if value.bits() > *bits as u64 {
                 let (_, mut bs) = value.to_bytes_le();
                 bs.truncate(*bits as usize / 8);
 
