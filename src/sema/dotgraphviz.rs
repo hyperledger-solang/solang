@@ -1823,23 +1823,15 @@ impl Dot {
                         self.add_statement(&clause.stmt, func, ns, parent, String::from("error"));
                     }
 
-                    if let Some(param) = try_catch
+                    if let Some(clause) = try_catch
                         .catch_all
                         .as_ref()
-                        .and_then(|clause| clause.param.clone())
+                        .filter(|clause| clause.param.is_some())
                     {
-                        self.add_node(
-                            Node::new(
-                                "catch_param",
-                                vec![format!(
-                                    "{} {}",
-                                    param.ty.to_string(ns),
-                                    param.name_as_str()
-                                )],
-                            ),
-                            Some(parent),
-                            Some(String::from("catch parameter")),
-                        );
+                        let param = clause.param.as_ref().unwrap();
+                        let label = format!("{} {}", param.ty.to_string(ns), param.name_as_str());
+                        let node = Node::new("catch_param", vec![label]);
+                        self.add_node(node, Some(parent), Some(String::from("catch parameter")));
                     }
 
                     if let Some(clause) = try_catch.catch_all.as_ref() {
