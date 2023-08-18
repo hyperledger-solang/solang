@@ -186,7 +186,7 @@ fn compile(compile_args: &Compile) {
     for filename in compile_args.package.get_input() {
         // TODO: this could be parallelized using e.g. rayon
         let ns = process_file(
-            &filename.canonicalize().unwrap(),
+            &filename,
             &mut resolver,
             target,
             &compile_args.compiler_output,
