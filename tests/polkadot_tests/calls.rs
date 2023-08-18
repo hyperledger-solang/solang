@@ -1196,7 +1196,7 @@ fn try_catch_transfer_fail() {
     assert!(runtime.debug_buffer().contains("seal_instantiate=2"));
 
     // Trying to instantiate with value while having insufficient funds result in
-    // seal_instantiate faliing with transfer failed (return code 5).
+    // seal_instantiate failing with transfer failed (return code 5).
     // Now, the "catch (bytes raw)" clause should catch that, because there is no
     // return data to be decoded.
     runtime.function("test", 1u128.encode());

@@ -2815,7 +2815,7 @@ pub fn emit_function_call(
             } else {
                 Expression::Variable {
                     loc: *loc,
-                    ty: Type::Bool,
+                    ty: Type::Uint(32),
                     var_no: success,
                 }
             };
@@ -2893,7 +2893,7 @@ pub fn emit_function_call(
                 let success = ns
                     .target
                     .is_polkadot()
-                    .then(|| vartab.temp_name("success", &Type::Bool));
+                    .then(|| vartab.temp_name("success", &Type::Uint(32)));
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
@@ -2979,7 +2979,7 @@ pub fn emit_function_call(
                 let success = ns
                     .target
                     .is_polkadot()
-                    .then(|| vartab.temp_name("success", &Type::Bool));
+                    .then(|| vartab.temp_name("success", &Type::Uint(32)));
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
