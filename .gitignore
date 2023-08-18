@@ -4,7 +4,7 @@ Cargo.lock
 **/*.rs.bk
 *.ll
 tests/.tmp*
-tests/create_me/flipper.json
+tests/create_me/
 
 .helix/
 .vscode/
