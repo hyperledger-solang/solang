@@ -2797,10 +2797,15 @@ pub fn emit_function_call(
             );
 
             let success = if ns.target.is_polkadot() {
-                let ret_code = Expression::Variable {
+                let ret_code = Expression::Cast {
                     loc: *loc,
                     ty: Type::Uint(32),
-                    var_no: success,
+                    expr: Expression::Variable {
+                        loc: *loc,
+                        ty: Type::Bool,
+                        var_no: success,
+                    }
+                    .into(),
                 };
                 let ret_ok = Expression::NumberLiteral {
                     loc: *loc,
