@@ -955,7 +955,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .unwrap()
                 .into_int_value();
                 log_return_code(binary, "seal_call", ret);
-                ret
+                ret.as_basic_value_enum()
             }
             ast::CallTy::Delegate => {
                 // delegate_call asks for a code hash instead of an address
@@ -1032,11 +1032,10 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 let ret = binary.builder.build_phi(ty, "storage_res");
                 ret.add_incoming(&[(&code_hash_ret, not_found_block), (&ty.const_zero(), entry)]);
                 ret.add_incoming(&[(&delegate_call_ret, call_block), (&ty.const_zero(), entry)]);
-                ret.as_basic_value().into_int_value()
+                ret.as_basic_value()
             }
             ast::CallTy::Static => unreachable!("sema does not allow this"),
-        }
-        .into();
+        };
     }
 
     /// Send value to address

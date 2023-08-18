@@ -7,6 +7,7 @@ use crate::codegen::{
     encoding::{abi_decode, abi_encode},
     expression::{default_gas, expression},
     polkadot,
+    revert::ERROR_SELECTOR,
     vartable::Vartable,
     Expression,
 };
@@ -463,7 +464,7 @@ fn insert_catch_clauses(
     let err_id = Expression::NumberLiteral {
         loc: Codegen,
         ty: Type::Bytes(4),
-        value: 0x08c3_79a0.into(),
+        value: ERROR_SELECTOR.into(),
     };
     let cond = Expression::Equal {
         loc: Codegen,
