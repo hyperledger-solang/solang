@@ -310,7 +310,7 @@ pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Names
                     }),
                     _,
                 ) => {
-                    if let Some(diagnostic) = overflow_check(&result, &ty, &loc) {
+                    if let Some(diagnostic) = overflow_diagnostic(&result, &ty, &loc) {
                         ns.diagnostics.push(diagnostic);
                     }
 
@@ -499,7 +499,7 @@ pub(crate) fn eval_constants_in_expression(
                 }),
             ) = (&base, &exp)
             {
-                if overflow_check(right, &Type::Uint(16), right_loc).is_some() {
+                if overflow_diagnostic(right, &Type::Uint(16), right_loc).is_some() {
                     diagnostics.push(Diagnostic::error(
                         *right_loc,
                         format!("power by {right} is not possible"),
@@ -537,20 +537,13 @@ pub(crate) fn eval_constants_in_expression(
                 }),
             ) = (&left, &right)
             {
-                if overflow_check(right, &Type::Uint(64), right_loc).is_some() {
+                if overflow_diagnostic(right, &Type::Uint(64), right_loc).is_some() {
                     diagnostics.push(Diagnostic::error(
                         *right_loc,
                         format!("left shift by {right} is not possible"),
                     ));
                     (None, false)
                 } else {
-                    if right >= &BigInt::from(left.bits()) {
-                        diagnostics.push(Diagnostic::warning(
-                            *right_loc,
-                            format!("left shift by {right} may overflow the final result"),
-                        ));
-                    }
-
                     (
                         Some(Expression::NumberLiteral {
                             loc: *loc,
@@ -584,7 +577,7 @@ pub(crate) fn eval_constants_in_expression(
                 }),
             ) = (&left, &right)
             {
-                if overflow_check(right, &Type::Uint(64), right_loc).is_some() {
+                if overflow_diagnostic(right, &Type::Uint(64), right_loc).is_some() {
                     diagnostics.push(Diagnostic::error(
                         *right_loc,
                         format!("right shift by {right} is not possible"),
@@ -718,7 +711,7 @@ pub(crate) fn eval_constants_in_expression(
 }
 
 /// Function that takes a BigInt and an expected type. If the number of bits in the type required to represent the BigInt is not suffiecient, it will return a diagnostic.
-pub(super) fn overflow_check(result: &BigInt, ty: &Type, loc: &Loc) -> Option<Diagnostic> {
+pub(crate) fn overflow_diagnostic(result: &BigInt, ty: &Type, loc: &Loc) -> Option<Diagnostic> {
     if result.bits() > 1024 {
         // Do not try to print large values. For example:
         // uint x = 80 ** 0x100000;

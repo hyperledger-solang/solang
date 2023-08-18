@@ -3,7 +3,10 @@
 use super::cfg::{ControlFlowGraph, Instr};
 use super::reaching_definitions;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Diagnostic, Namespace, RetrieveType, StringLocation, Type};
+use crate::sema::{
+    ast::{Diagnostic, Namespace, RetrieveType, StringLocation, Type},
+    eval::overflow_diagnostic,
+};
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 use ripemd::Ripemd160;
@@ -665,32 +668,20 @@ fn bigint_to_expression(
     overflowing: bool,
     ns: &mut Namespace,
 ) -> (Expression, bool) {
+    if !overflowing {
+        if let Some(diagnostic) = overflow_diagnostic(&value, ty, loc) {
+            ns.diagnostics.push(diagnostic);
+        }
+    }
+
     let value = match ty {
         Type::Uint(bits) => {
             if value.sign() == Sign::Minus {
-                if !overflowing {
-                    ns.diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "arithmetic overflow: {value} does not fit into {}",
-                            ty.to_string(ns)
-                        ),
-                    ));
-                }
                 let mut bs = value.to_signed_bytes_le();
                 bs.resize(*bits as usize / 8, 0xff);
 
                 BigInt::from_bytes_le(Sign::Plus, &bs)
             } else if value.bits() > *bits as u64 {
-                if !overflowing {
-                    ns.diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "arithmetic overflow: {value} does not fit into {}",
-                            ty.to_string(ns)
-                        ),
-                    ));
-                }
                 let (_, mut bs) = value.to_bytes_le();
                 bs.truncate(*bits as usize / 8);
 
@@ -703,16 +694,6 @@ fn bigint_to_expression(
             let mut bs = value.to_signed_bytes_le();
 
             if bs.len() * 8 > *bits as usize {
-                if !overflowing {
-                    ns.diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "arithmetic overflow: {value} does not fit into {}",
-                            ty.to_string(ns)
-                        ),
-                    ));
-                }
-
                 bs.truncate(*bits as usize / 8);
 
                 BigInt::from_signed_bytes_le(&bs)
@@ -1083,7 +1064,7 @@ fn power(
         Expression::NumberLiteral { value: right, .. },
     ) = (&base.0, &exp.0)
     {
-        if right.sign() == Sign::Minus || right >= &BigInt::from(u32::MAX) {
+        if right.sign() == Sign::Minus || right >= &BigInt::from(u16::MAX) {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("power {right} not possible"),

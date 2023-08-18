@@ -328,7 +328,6 @@ fn complex_expression() {
         loc: Loc::Codegen,
         ty: Type::Int(44),
         overflowing: true,
-
         expr: Box::new(modu.clone()),
     };
 
@@ -521,7 +520,6 @@ fn kill() {
         loc: Loc::Codegen,
         ty: Type::Int(44),
         overflowing: true,
-
         expr: Box::new(modu.clone()),
     };
 
@@ -632,7 +630,6 @@ fn clone() {
         loc: Loc::Codegen,
         ty: Type::Int(44),
         overflowing: true,
-
         expr: Box::new(modu.clone()),
     };
 
