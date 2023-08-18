@@ -196,7 +196,7 @@ pub(super) fn member_access(
         (
             Expression::Load {
                 loc: *loc,
-                ty: expr_ty.clone(),
+                ty: *ty.clone(),
                 expr: Box::new(expr),
             },
             ty.as_ref().clone(),

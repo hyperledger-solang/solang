@@ -34,6 +34,9 @@ pub(super) struct AnticipatedExpressions<'a> {
     depth: Vec<u16>,
 }
 
+/// Source node flow rate used to find the dominator node.
+const SOURCE_FLOW: u16 = 1000;
+
 impl<'a> AnticipatedExpressions<'a> {
     pub(super) fn new(
         dag: &Vec<Vec<usize>>,
@@ -114,8 +117,8 @@ impl<'a> AnticipatedExpressions<'a> {
     /// receives is the sum of the flows from its incoming edges.
     pub(super) fn calculate_flow(&self, block_1: usize, block_2: usize) -> Vec<BigRational> {
         let mut flow: Vec<BigRational> = vec![BigRational::zero(); self.reverse_dag.len()];
-        flow[block_1] = BigRational::from_integer(1000.into());
-        flow[block_2] = BigRational::from_integer(1000.into());
+        flow[block_1] = BigRational::from_integer(SOURCE_FLOW.into());
+        flow[block_2] = BigRational::from_integer(SOURCE_FLOW.into());
 
         for (block_no, _) in &self.traversing_order {
             if !self.reverse_dag[*block_no].is_empty() {
@@ -151,13 +154,14 @@ impl<'a> AnticipatedExpressions<'a> {
             // 1. We prefer deeper blocks to evaluate the subexpression (depth[block_no] < depth[candidate]).
             //    This is because if we evaluate a subexpression too early, we risk taking a branch
             //    where the subexpression is not even used.
-            // 2. The flow_magnitude must be 2000. (2000.0 - *flow_magnitude).abs() deals with
+            // 2. The flow_magnitude must be 2000. (2000.0 - flow_magnitude).abs() deals with
             //    floating point imprecision. We can also set a lower threshold for the comparison.
             //    Ideally, it should be greater than the machine epsilon.
+            //    2000 = 2*1000 = 2*SOURCE_FLOW
             // 3. The expression must be available at the anticipated expression set for the block
             //    we are analysing.
             if (candidate == usize::MAX || self.depth[block_no] > self.depth[candidate])
-                && BigRational::from_integer(2000.into()) == *flow_magnitude
+                && BigRational::from_integer((2 * SOURCE_FLOW).into()) == *flow_magnitude
                 && self
                     .reverse_sets
                     .get(&block_no)
