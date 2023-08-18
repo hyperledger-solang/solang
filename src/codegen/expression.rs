@@ -23,7 +23,7 @@ use crate::sema::{
         StructType, Type,
     },
     diagnostics::Diagnostics,
-    eval::{eval_const_number, eval_const_rational},
+    eval::{eval_const_number, eval_const_rational, eval_constants_in_expression},
     expression::integers::bigint_to_expression,
     expression::ResolveTo,
 };
@@ -43,7 +43,10 @@ pub fn expression(
     vartab: &mut Vartable,
     opt: &Options,
 ) -> Expression {
-    match expr {
+    let evaluated = eval_constants_in_expression(expr, &mut Diagnostics::default());
+    let expr = evaluated.0.as_ref().unwrap_or(expr);
+
+    match &expr {
         ast::Expression::StorageVariable {
             loc,
             contract_no: var_contract_no,
@@ -320,9 +323,15 @@ pub fn expression(
             ty: ty.clone(),
             expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         },
-        ast::Expression::Negate { loc, ty, expr } => Expression::Negate {
+        ast::Expression::Negate {
+            loc,
+            ty,
+            unchecked,
+            expr,
+        } => Expression::Negate {
             loc: *loc,
             ty: ty.clone(),
+            overflowing: *unchecked,
             expr: Box::new(expression(expr, cfg, contract_no, func, ns, vartab, opt)),
         },
         ast::Expression::StructLiteral { loc, ty, values } => Expression::StructLiteral {

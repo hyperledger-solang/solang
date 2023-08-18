@@ -300,26 +300,28 @@ pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Names
         | Expression::BitwiseAnd { .. }
         | Expression::BitwiseOr { .. }
         | Expression::BitwiseXor { .. }
-        | Expression::NumberLiteral { .. } => match eval_constants_in_expression(expr, ns) {
-            (
-                Some(Expression::NumberLiteral {
-                    loc,
-                    ty,
-                    value: result,
-                }),
-                _,
-            ) => {
-                if let Some(diagnostic) = overflow_check(&result, &ty, &loc) {
-                    ns.diagnostics.push(diagnostic);
-                }
+        | Expression::NumberLiteral { .. } => {
+            match eval_constants_in_expression(expr, &mut ns.diagnostics) {
+                (
+                    Some(Expression::NumberLiteral {
+                        loc,
+                        ty,
+                        value: result,
+                    }),
+                    _,
+                ) => {
+                    if let Some(diagnostic) = overflow_diagnostic(&result, &ty, &loc) {
+                        ns.diagnostics.push(diagnostic);
+                    }
 
-                return false;
+                    return false;
+                }
+                (None, false) => {
+                    return false;
+                }
+                _ => {}
             }
-            (None, false) => {
-                return false;
-            }
-            _ => {}
-        },
+        }
         _ => {}
     }
 
@@ -328,9 +330,9 @@ pub(super) fn check_term_for_constant_overflow(expr: &Expression, ns: &mut Names
 
 /// This function recursively folds number literals in a given expression.
 /// It returns an Option<Expression> which is the result of the folding if the operands are number literals, and a boolean flag that is set to false if the recursion should stop.
-fn eval_constants_in_expression(
+pub(crate) fn eval_constants_in_expression(
     expr: &Expression,
-    ns: &mut Namespace,
+    diagnostics: &mut Diagnostics,
 ) -> (Option<Expression>, bool) {
     match expr {
         Expression::Add {
@@ -340,8 +342,8 @@ fn eval_constants_in_expression(
             left,
             right,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -367,8 +369,8 @@ fn eval_constants_in_expression(
             left,
             right,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -395,8 +397,8 @@ fn eval_constants_in_expression(
             left,
             right,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -421,8 +423,8 @@ fn eval_constants_in_expression(
             left,
             right,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -430,8 +432,7 @@ fn eval_constants_in_expression(
             ) = (&left, &right)
             {
                 if right.is_zero() {
-                    ns.diagnostics
-                        .push(Diagnostic::error(*loc, "divide by zero".to_string()));
+                    diagnostics.push(Diagnostic::error(*loc, "divide by zero".to_string()));
                     (None, false)
                 } else {
                     (
@@ -454,8 +455,8 @@ fn eval_constants_in_expression(
             left,
             right,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -463,8 +464,7 @@ fn eval_constants_in_expression(
             ) = (&left, &right)
             {
                 if right.is_zero() {
-                    ns.diagnostics
-                        .push(Diagnostic::error(*loc, "divide by zero".to_string()));
+                    diagnostics.push(Diagnostic::error(*loc, "divide by zero".to_string()));
                     (None, false)
                 } else {
                     (
@@ -487,8 +487,8 @@ fn eval_constants_in_expression(
             base,
             exp,
         } => {
-            let base = eval_constants_in_expression(base, ns).0;
-            let exp = eval_constants_in_expression(exp, ns).0;
+            let base = eval_constants_in_expression(base, diagnostics).0;
+            let exp = eval_constants_in_expression(exp, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -499,8 +499,8 @@ fn eval_constants_in_expression(
                 }),
             ) = (&base, &exp)
             {
-                if overflow_check(right, &Type::Uint(16), right_loc).is_some() {
-                    ns.diagnostics.push(Diagnostic::error(
+                if overflow_diagnostic(right, &Type::Uint(16), right_loc).is_some() {
+                    diagnostics.push(Diagnostic::error(
                         *right_loc,
                         format!("power by {right} is not possible"),
                     ));
@@ -525,8 +525,8 @@ fn eval_constants_in_expression(
             left,
             right,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -537,20 +537,13 @@ fn eval_constants_in_expression(
                 }),
             ) = (&left, &right)
             {
-                if overflow_check(right, &Type::Uint(64), right_loc).is_some() {
-                    ns.diagnostics.push(Diagnostic::error(
+                if overflow_diagnostic(right, &Type::Uint(64), right_loc).is_some() {
+                    diagnostics.push(Diagnostic::error(
                         *right_loc,
                         format!("left shift by {right} is not possible"),
                     ));
                     (None, false)
                 } else {
-                    if right >= &BigInt::from(left.bits()) {
-                        ns.diagnostics.push(Diagnostic::warning(
-                            *right_loc,
-                            format!("left shift by {right} may overflow the final result"),
-                        ));
-                    }
-
                     (
                         Some(Expression::NumberLiteral {
                             loc: *loc,
@@ -572,8 +565,8 @@ fn eval_constants_in_expression(
             right,
             sign: _,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -584,8 +577,8 @@ fn eval_constants_in_expression(
                 }),
             ) = (&left, &right)
             {
-                if overflow_check(right, &Type::Uint(64), right_loc).is_some() {
-                    ns.diagnostics.push(Diagnostic::error(
+                if overflow_diagnostic(right, &Type::Uint(64), right_loc).is_some() {
+                    diagnostics.push(Diagnostic::error(
                         *right_loc,
                         format!("right shift by {right} is not possible"),
                     ));
@@ -610,8 +603,8 @@ fn eval_constants_in_expression(
             left,
             right,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -636,8 +629,8 @@ fn eval_constants_in_expression(
             left,
             right,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -662,8 +655,8 @@ fn eval_constants_in_expression(
             left,
             right,
         } => {
-            let left = eval_constants_in_expression(left, ns).0;
-            let right = eval_constants_in_expression(right, ns).0;
+            let left = eval_constants_in_expression(left, diagnostics).0;
+            let right = eval_constants_in_expression(right, diagnostics).0;
 
             if let (
                 Some(Expression::NumberLiteral { value: left, .. }),
@@ -683,7 +676,7 @@ fn eval_constants_in_expression(
             }
         }
         Expression::ZeroExt { loc, to, expr } => {
-            let expr = eval_constants_in_expression(expr, ns).0;
+            let expr = eval_constants_in_expression(expr, diagnostics).0;
             if let Some(Expression::NumberLiteral { value, .. }) = expr {
                 (
                     Some(Expression::NumberLiteral {
@@ -698,7 +691,7 @@ fn eval_constants_in_expression(
             }
         }
         Expression::SignExt { loc, to, expr } => {
-            let expr = eval_constants_in_expression(expr, ns).0;
+            let expr = eval_constants_in_expression(expr, diagnostics).0;
             if let Some(Expression::NumberLiteral { value, .. }) = expr {
                 (
                     Some(Expression::NumberLiteral {
@@ -717,8 +710,8 @@ fn eval_constants_in_expression(
     }
 }
 
-/// Function that takes a BigInt and an expected type. If the number of bits in the type required to represent the BigInt is not suffiecient, it will return a diagnostic.
-pub(super) fn overflow_check(result: &BigInt, ty: &Type, loc: &Loc) -> Option<Diagnostic> {
+/// Function that takes a BigInt and an expected type. If the number of bits in the type required to represent the BigInt is not sufficient, it will return a diagnostic.
+pub(crate) fn overflow_diagnostic(result: &BigInt, ty: &Type, loc: &Loc) -> Option<Diagnostic> {
     if result.bits() > 1024 {
         // Do not try to print large values. For example:
         // uint x = 80 ** 0x100000;
