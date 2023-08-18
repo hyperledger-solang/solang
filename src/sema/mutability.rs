@@ -281,12 +281,8 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
                 for clause in &try_catch.errors {
                     recurse_statements(&clause.stmt, ns, state);
                 }
-                if let Some(stmts) = try_catch
-                    .catch_all
-                    .as_ref()
-                    .map(|clause| clause.stmt.clone())
-                {
-                    recurse_statements(&stmts, ns, state);
+                if let Some(clause) = try_catch.catch_all.as_ref() {
+                    recurse_statements(&clause.stmt, ns, state);
                 }
             }
             Statement::Emit { loc, .. } => state.write(loc),

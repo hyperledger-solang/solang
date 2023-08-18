@@ -1842,12 +1842,8 @@ impl Dot {
                         );
                     }
 
-                    if let Some(stmts) = try_catch
-                        .catch_all
-                        .as_ref()
-                        .map(|clause| clause.stmt.clone())
-                    {
-                        self.add_statement(&stmts, func, ns, parent, String::from("catch"));
+                    if let Some(clause) = try_catch.catch_all.as_ref() {
+                        self.add_statement(&clause.stmt, func, ns, parent, String::from("catch"));
                     }
                 }
                 Statement::Underscore(loc) => {

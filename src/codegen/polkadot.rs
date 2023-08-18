@@ -121,7 +121,7 @@ impl RetCodeCheck {
 /// Check the return code of `transfer`.
 ///
 /// If `bubble_up` is set to true, this will revert the contract execution on failure.
-/// Otherwise, the expression comparing the return code against `0` (success) is returned.
+/// Otherwise, the expression comparing the return code against `0` is returned.
 pub(super) fn check_transfer_ret(
     loc: &Loc,
     success: usize,
