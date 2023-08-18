@@ -2773,7 +2773,7 @@ pub fn emit_function_call(
                 .as_ref()
                 .map(|expr| expression(expr, cfg, caller_contract_no, func, ns, vartab, opt));
 
-            let success = vartab.temp_name("success", &Type::Bool);
+            let success = vartab.temp_name("success", &Type::Uint(32));
 
             let flags = call_args
                 .flags
@@ -2797,15 +2797,10 @@ pub fn emit_function_call(
             );
 
             let success = if ns.target.is_polkadot() {
-                let ret_code = Expression::Cast {
+                let ret_code = Expression::Variable {
                     loc: *loc,
                     ty: Type::Uint(32),
-                    expr: Expression::Variable {
-                        loc: *loc,
-                        ty: Type::Bool,
-                        var_no: success,
-                    }
-                    .into(),
+                    var_no: success,
                 };
                 let ret_ok = Expression::NumberLiteral {
                     loc: *loc,
