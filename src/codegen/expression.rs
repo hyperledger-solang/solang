@@ -444,7 +444,7 @@ pub fn expression(
             let success = ns
                 .target
                 .is_polkadot()
-                .then(|| vartab.temp_name("success", &Type::Bool));
+                .then(|| vartab.temp_name("success", &Type::Uint(32)));
             call_constructor(
                 loc,
                 *constructor_contract,
@@ -1570,7 +1570,7 @@ fn payable_send(
             loc: *loc,
             name: "success".to_owned(),
         },
-        &Type::Bool,
+        &Type::Uint(32),
     );
 
     // Ethereum can only transfer via external call
@@ -1678,7 +1678,7 @@ fn payable_transfer(
     let success = ns
         .target
         .is_polkadot()
-        .then(|| vartab.temp_name("success", &Type::Bool));
+        .then(|| vartab.temp_name("success", &Type::Uint(32)));
     let ins = Instr::ValueTransfer {
         success,
         address,
