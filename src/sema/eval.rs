@@ -710,7 +710,7 @@ pub(crate) fn eval_constants_in_expression(
     }
 }
 
-/// Function that takes a BigInt and an expected type. If the number of bits in the type required to represent the BigInt is not suffiecient, it will return a diagnostic.
+/// Function that takes a BigInt and an expected type. If the number of bits in the type required to represent the BigInt is not sufficient, it will return a diagnostic.
 pub(crate) fn overflow_diagnostic(result: &BigInt, ty: &Type, loc: &Loc) -> Option<Diagnostic> {
     if result.bits() > 1024 {
         // Do not try to print large values. For example:
