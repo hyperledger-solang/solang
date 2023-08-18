@@ -144,7 +144,7 @@ contract c3 {
 
         int c = 32 + 4 * (f = it1 + it2);
         // CHECK: ty:int256 %c = (int256 32 + (sext int256 (int64 4 * (trunc int64 (%temp.130 + %temp.131)))))
-        // NOT-CHECK: ty:int256 %f = (%temp. + %temp.)
+        // NOT-CHECK: ty:int256 %f = (%temp.
         return c;
     }
 
