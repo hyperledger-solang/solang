@@ -53,7 +53,7 @@ fn global_constants() {
 #[test]
 fn ensure_unread_storage_vars_write() {
     let mut runtime = build_solidity(
-        r##"import "polkadot";
+        r#"import "polkadot";
         contract C {
             uint8 foo;
             function c(uint8[32] code) public payable {
@@ -61,7 +61,7 @@ fn ensure_unread_storage_vars_write() {
                 require(set_code_hash(code) == 0);
             }
         }
-        contract A { uint8 public foo; }"##,
+        contract A { uint8 public foo; }"#,
     );
 
     runtime.function("c", runtime.contracts()[1].code.hash.encode());
@@ -81,7 +81,7 @@ fn ext_fn_call_is_reading_variable() {
                 return func(arg);
             }
         }
-        
+
         contract A {
             function a(uint32 arg) public pure returns (uint32) {
                 return arg;

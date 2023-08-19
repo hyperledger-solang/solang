@@ -1812,7 +1812,7 @@ impl LanguageServer for SolangServer {
 
         let path = uri.to_file_path().map_err(|_| Error {
             code: ErrorCode::InvalidRequest,
-            message: format!("Received invalid URI: {uri}"),
+            message: format!("Received invalid URI: {uri}").into(),
             data: None,
         })?;
         let files = self.files.lock().await;
