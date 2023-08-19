@@ -4,6 +4,7 @@ Cargo.lock
 **/*.rs.bk
 *.ll
 tests/.tmp*
+tests/create_me/
 
 .helix/
 .vscode/

@@ -407,9 +407,10 @@ impl<'a> Dispatch<'a> {
 
         self.cfg.set_basic_block(true_block);
         let function_name = self.all_cfg[func_no].name.split("::").last().unwrap();
+        let function_type = self.all_cfg[func_no].ty;
         log_runtime_error(
             self.opt.log_runtime_errors,
-            &format!("runtime_error: non payable function {function_name} received value"),
+            &format!("runtime_error: non payable {function_type} {function_name} received value"),
             Codegen,
             &mut self.cfg,
             &mut self.vartab,

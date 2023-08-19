@@ -1,29 +1,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use num_bigint::BigInt;
-
-use super::encoding::{abi_decode, abi_encode};
-use super::expression::{assign_single, default_gas, emit_function_call, expression};
-use super::Options;
 use super::{
     cfg::{ControlFlowGraph, Instr},
+    events::new_event_emitter,
+    expression::{assign_single, emit_function_call, expression},
+    revert::revert,
+    unused_variable::{
+        should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
+    },
     vartable::Vartable,
+    yul::inline_assembly_cfg,
+    Builtin, Expression, Options,
 };
-use crate::codegen::constructor::call_constructor;
-use crate::codegen::events::new_event_emitter;
-use crate::codegen::revert::revert;
-use crate::codegen::unused_variable::{
-    should_remove_assignment, should_remove_variable, SideEffectsCheckParameters,
+use crate::sema::{
+    ast::{
+        self, ArrayLength, DestructureField, Function, Namespace, RetrieveType, Statement, Type,
+        Type::Uint,
+    },
+    Recurse,
 };
-use crate::codegen::yul::inline_assembly_cfg;
-use crate::codegen::Expression;
-use crate::sema::ast::{
-    self, ArrayLength, CallTy, DestructureField, Function, Namespace, RetrieveType, Statement,
-    TryCatch, Type, Type::Uint,
-};
-use crate::sema::Recurse;
+use num_bigint::BigInt;
 use num_traits::Zero;
 use solang_parser::pt::{self, CodeLocation, Loc::Codegen};
+
+mod try_catch;
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 pub(crate) fn statement(
@@ -554,7 +554,7 @@ pub(crate) fn statement(
         Statement::Destructure(_, fields, expr) => {
             destructure(fields, expr, cfg, contract_no, func, ns, vartab, opt)
         }
-        Statement::TryCatch(_, _, try_stmt) => try_catch(
+        Statement::TryCatch(_, _, try_stmt) => self::try_catch::try_catch(
             try_stmt,
             func,
             cfg,
@@ -1003,343 +1003,6 @@ fn try_load_and_cast(
         },
         _ => expr.cast(to_ty, ns),
     }
-}
-
-/// Resolve try catch statement
-fn try_catch(
-    try_stmt: &TryCatch,
-    func: &Function,
-    cfg: &mut ControlFlowGraph,
-    callee_contract_no: usize,
-    ns: &Namespace,
-    vartab: &mut Vartable,
-    loops: &mut LoopScopes,
-    placeholder: Option<&Instr>,
-    return_override: Option<&Instr>,
-    opt: &Options,
-) {
-    let success = vartab.temp(
-        &pt::Identifier {
-            loc: try_stmt.expr.loc(),
-            name: "success".to_owned(),
-        },
-        &Type::Bool,
-    );
-
-    let success_block = cfg.new_basic_block("success".to_string());
-    let catch_block = cfg.new_basic_block("catch".to_string());
-    let finally_block = cfg.new_basic_block("finally".to_string());
-
-    match &try_stmt.expr {
-        ast::Expression::ExternalFunctionCall {
-            loc,
-            function,
-            args,
-            call_args,
-            ..
-        } => {
-            if let Type::ExternalFunction {
-                returns: func_returns,
-                ..
-            } = function.ty()
-            {
-                let value = if let Some(value) = &call_args.value {
-                    expression(value, cfg, callee_contract_no, Some(func), ns, vartab, opt)
-                } else {
-                    Expression::NumberLiteral {
-                        loc: Codegen,
-                        ty: Type::Value,
-                        value: BigInt::zero(),
-                    }
-                };
-                let gas = if let Some(gas) = &call_args.gas {
-                    expression(gas, cfg, callee_contract_no, Some(func), ns, vartab, opt)
-                } else {
-                    default_gas(ns)
-                };
-                let function = expression(
-                    function,
-                    cfg,
-                    callee_contract_no,
-                    Some(func),
-                    ns,
-                    vartab,
-                    opt,
-                );
-
-                let mut args = args
-                    .iter()
-                    .map(|a| expression(a, cfg, callee_contract_no, Some(func), ns, vartab, opt))
-                    .collect::<Vec<Expression>>();
-
-                let selector = function.external_function_selector();
-
-                let address = function.external_function_address();
-
-                args.insert(0, selector);
-                let (payload, _) = abi_encode(loc, args, ns, vartab, cfg, false);
-
-                let flags = call_args.flags.as_ref().map(|expr| {
-                    expression(expr, cfg, callee_contract_no, Some(func), ns, vartab, opt)
-                });
-
-                cfg.add(
-                    vartab,
-                    Instr::ExternalCall {
-                        success: Some(success),
-                        address: Some(address),
-                        accounts: None,
-                        seeds: None,
-                        payload,
-                        value,
-                        gas,
-                        callty: CallTy::Regular,
-                        contract_function_no: None,
-                        flags,
-                    },
-                );
-
-                cfg.add(
-                    vartab,
-                    Instr::BranchCond {
-                        cond: Expression::Variable {
-                            loc: try_stmt.expr.loc(),
-                            ty: Type::Bool,
-                            var_no: success,
-                        },
-                        true_block: success_block,
-                        false_block: catch_block,
-                    },
-                );
-
-                cfg.set_basic_block(success_block);
-
-                if !try_stmt.returns.is_empty() {
-                    let mut res = Vec::new();
-
-                    for ret in &try_stmt.returns {
-                        res.push(match ret {
-                            (Some(pos), _) => *pos,
-                            (None, param) => vartab.temp_anonymous(&param.ty),
-                        });
-                    }
-
-                    let buf = &Expression::ReturnData { loc: Codegen };
-                    let decoded = abi_decode(&Codegen, buf, &func_returns, ns, vartab, cfg, None);
-                    for instruction in res.iter().zip(decoded).map(|(var, expr)| Instr::Set {
-                        loc: Codegen,
-                        res: *var,
-                        expr,
-                    }) {
-                        cfg.add(vartab, instruction)
-                    }
-                }
-            } else {
-                // dynamic dispatch
-                unimplemented!();
-            }
-        }
-        ast::Expression::Constructor {
-            loc,
-            contract_no,
-            constructor_no,
-            args,
-            call_args,
-            ..
-        } => {
-            let address_res = match try_stmt.returns.get(0) {
-                Some((Some(pos), _)) => *pos,
-                _ => vartab.temp_anonymous(&Type::Contract(*contract_no)),
-            };
-
-            call_constructor(
-                loc,
-                *contract_no,
-                callee_contract_no,
-                constructor_no,
-                args,
-                call_args,
-                address_res,
-                Some(success),
-                Some(func),
-                ns,
-                vartab,
-                cfg,
-                opt,
-            );
-
-            cfg.add(
-                vartab,
-                Instr::BranchCond {
-                    cond: Expression::Variable {
-                        loc: try_stmt.expr.loc(),
-                        ty: Type::Bool,
-                        var_no: success,
-                    },
-                    true_block: success_block,
-                    false_block: catch_block,
-                },
-            );
-
-            cfg.set_basic_block(success_block);
-        }
-        _ => unreachable!(),
-    }
-
-    vartab.new_dirty_tracker();
-
-    let mut finally_reachable = true;
-
-    for stmt in &try_stmt.ok_stmt {
-        statement(
-            stmt,
-            func,
-            cfg,
-            callee_contract_no,
-            ns,
-            vartab,
-            loops,
-            placeholder,
-            return_override,
-            opt,
-        );
-
-        finally_reachable = stmt.reachable();
-    }
-
-    if finally_reachable {
-        cfg.add(
-            vartab,
-            Instr::Branch {
-                block: finally_block,
-            },
-        );
-    }
-
-    cfg.set_basic_block(catch_block);
-
-    for (error_param_pos, error_param, error_stmt) in &try_stmt.errors {
-        let no_reason_block = cfg.new_basic_block("no_reason".to_string());
-
-        let error_var = match error_param_pos {
-            Some(pos) => *pos,
-            _ => vartab.temp_anonymous(&Type::String),
-        };
-
-        // Expect the returned data to match the 4 bytes function selector for "Error(string)"
-        let buf = &Expression::ReturnData { loc: Codegen };
-        let tys = &[Type::Bytes(4), error_param.ty.clone()];
-        let decoded = abi_decode(&Codegen, buf, tys, ns, vartab, cfg, None);
-        let err_id = Expression::NumberLiteral {
-            loc: Codegen,
-            ty: Type::Bytes(4),
-            value: 0x08c3_79a0.into(),
-        }
-        .into();
-        let cond = Expression::Equal {
-            loc: Codegen,
-            left: decoded[0].clone().into(),
-            right: err_id,
-        };
-        let match_err_id = cfg.new_basic_block("match_err_id".into());
-        let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
-        let instruction = Instr::BranchCond {
-            cond,
-            true_block: match_err_id,
-            false_block: no_match_err_id,
-        };
-
-        cfg.add(vartab, instruction);
-        cfg.set_basic_block(no_match_err_id);
-
-        cfg.add(vartab, Instr::AssertFailure { encoded_args: None });
-        cfg.set_basic_block(match_err_id);
-        let instruction = Instr::Set {
-            loc: Codegen,
-            res: error_var,
-            expr: decoded[1].clone(),
-        };
-        cfg.add(vartab, instruction);
-
-        let mut reachable = true;
-
-        for stmt in error_stmt {
-            statement(
-                stmt,
-                func,
-                cfg,
-                callee_contract_no,
-                ns,
-                vartab,
-                loops,
-                placeholder,
-                return_override,
-                opt,
-            );
-
-            reachable = stmt.reachable();
-        }
-        if reachable {
-            cfg.add(
-                vartab,
-                Instr::Branch {
-                    block: finally_block,
-                },
-            );
-        }
-
-        cfg.set_basic_block(no_reason_block);
-    }
-
-    if let Some(res) = try_stmt.catch_param_pos {
-        let instruction = Instr::Set {
-            loc: Codegen,
-            res,
-            expr: Expression::ReturnData { loc: Codegen },
-        };
-        cfg.add(vartab, instruction);
-    }
-
-    let mut reachable = true;
-
-    for stmt in &try_stmt.catch_stmt {
-        statement(
-            stmt,
-            func,
-            cfg,
-            callee_contract_no,
-            ns,
-            vartab,
-            loops,
-            placeholder,
-            return_override,
-            opt,
-        );
-
-        reachable = stmt.reachable();
-    }
-
-    if reachable {
-        cfg.add(
-            vartab,
-            Instr::Branch {
-                block: finally_block,
-            },
-        );
-    }
-
-    let mut set = vartab.pop_dirty_tracker();
-    if let Some(pos) = &try_stmt.catch_param_pos {
-        set.remove(pos);
-    }
-    for (pos, _, _) in &try_stmt.errors {
-        if let Some(pos) = pos {
-            set.remove(pos);
-        }
-    }
-    cfg.set_phis(finally_block, set);
-
-    cfg.set_basic_block(finally_block);
 }
 
 pub struct LoopScope {

@@ -21,6 +21,11 @@ use crate::Target;
 use parse_display::Display;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 
+/// Signature of `Keccak256('Error(string)')[:4]`
+pub(crate) const ERROR_SELECTOR: u32 = 0x08c379a0u32;
+/// Signature of `Keccak256('Panic(uint256)')[:4]`
+pub(crate) const PANIC_SELECTOR: u32 = 0x4e487b71u32;
+
 /// Corresponds to the error types from the Solidity language.
 ///
 /// Marked as non-exhaustive because Solidity may add more variants in the future.
@@ -55,8 +60,8 @@ impl SolidityError {
     pub fn selector(&self) -> u32 {
         match self {
             Self::Empty => unreachable!("empty return data has no selector"),
-            Self::String(_) => 0x08c379a0u32,
-            Self::Panic(_) => 0x4e487b71u32,
+            Self::String(_) => ERROR_SELECTOR,
+            Self::Panic(_) => PANIC_SELECTOR,
         }
     }
 
@@ -378,7 +383,7 @@ fn string_to_expr(string: String) -> Expression {
 #[cfg(test)]
 mod tests {
     use crate::codegen::{
-        revert::{PanicCode, SolidityError},
+        revert::{PanicCode, SolidityError, ERROR_SELECTOR, PANIC_SELECTOR},
         Expression,
     };
 
@@ -399,11 +404,11 @@ mod tests {
     #[test]
     fn function_selector_expression() {
         assert_eq!(
-            0x08c379a0u32, // Keccak256('Error(string)')[:4]
+            ERROR_SELECTOR,
             SolidityError::String(Expression::Poison).selector(),
         );
         assert_eq!(
-            0x4e487b71u32, // Keccak256('Panic(uint256)')[:4]
+            PANIC_SELECTOR,
             SolidityError::Panic(PanicCode::Generic).selector(),
         );
     }

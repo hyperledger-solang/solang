@@ -10,7 +10,11 @@ use std::ffi::OsStr;
 fn parse_and_codegen(src: &'static str) -> Namespace {
     let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", src.to_string());
-    let mut ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::EVM);
+    let mut ns = parse_and_resolve(
+        OsStr::new("test.sol"),
+        &mut cache,
+        Target::default_polkadot(),
+    );
     let opt = Options {
         dead_storage: false,
         constant_folding: false,
@@ -604,39 +608,40 @@ contract test {
 
 #[test]
 fn try_catch() {
-    //TODO: Fix this test case
+    let file = r#"
+     contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
+     contract Example {
+         AddNumbers addContract;
+         event StringFailure(string stringFailure);
+         event BytesFailure(bytes bytesFailure);
+    
+         function exampleFunction(uint256 _a, uint256 _b) public returns (bytes c) {
+             bytes r;
+             try addContract.add(_a, _b) returns (uint256 _value) {
+                 r = hex"ABCD";
+                 return r;
+             } catch Error(string memory _err) {
+                 r = hex"ABCD";
+                 emit StringFailure(_err);
+             } catch (bytes memory _err) {
+                 emit BytesFailure(_err);
+             }
+    
+             return r;
+         }
+    
+     }
+     "#;
 
-    // let file = r#"
-    // contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
-    // contract Example {
-    //     AddNumbers addContract;
-    //     event StringFailure(string stringFailure);
-    //     event BytesFailure(bytes bytesFailure);
-    //
-    //     function exampleFunction(uint256 _a, uint256 _b) public returns (bytes c) {
-    //         bytes r;
-    //         try addContract.add(_a, _b) returns (uint256 _value) {
-    //             r = hex"ABCD";
-    //             return r;
-    //         } catch Error(string memory _err) {
-    //             r = hex"ABCD";
-    //             emit StringFailure(_err);
-    //         } catch (bytes memory _err) {
-    //             emit BytesFailure(_err);
-    //         }
-    //
-    //         return r;
-    //     }
-    //
-    // }
-    // "#;
-    //
-    // let ns = parse_and_codegen(file);
-    // let errors = ns.diagnostics.errors();
-    // assert_eq!(errors.len(), 1);
-    // assert_eq!(errors[0].message, "Variable 'r' is undefined");
-    // assert_eq!(errors[0].notes.len(), 1);
-    // assert_eq!(errors[0].notes[0].message, "Variable read before being defined");
+    let ns = parse_and_codegen(file);
+    let errors = ns.diagnostics.errors();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].message, "Variable 'r' is undefined");
+    assert_eq!(errors[0].notes.len(), 1);
+    assert_eq!(
+        errors[0].notes[0].message,
+        "Variable read before being defined"
+    );
 
     let file = r#"
     contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
@@ -688,7 +693,6 @@ fn try_catch() {
 
             return r;
         }
-
     }
     "#;
 
@@ -696,11 +700,11 @@ fn try_catch() {
     let errors = ns.diagnostics.errors();
     assert_eq!(errors.len(), 1);
     assert_eq!(errors[0].message, "Variable 'r' is undefined");
-    assert_eq!(errors[0].notes.len(), 1);
-    assert_eq!(
-        errors[0].notes[0].message,
-        "Variable read before being defined"
-    );
+    assert_eq!(errors[0].notes.len(), 2);
+    assert!(errors[0]
+        .notes
+        .iter()
+        .all(|note| { note.message == "Variable read before being defined" }));
 
     let file = r#"
     contract AddNumbers { function add(uint256 a, uint256 b) external pure returns (uint256 c) {c = b;} }
