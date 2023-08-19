@@ -2414,9 +2414,8 @@ fn try_catch(
 
     let mut clauses_unique = HashSet::new();
     let mut errors_resolved = Vec::new();
-    let mut catch_param = None;
-    let mut catch_param_pos = None;
-    let mut catch_stmt_resolved = Vec::new();
+
+    let mut catch_all = None;
 
     clause_stmts.iter().try_for_each(|clause_stmt| {
         let (loc, name) = match clause_stmt {
@@ -2438,6 +2437,10 @@ fn try_catch(
         match clause_stmt {
             CatchClause::Simple(_, param, stmt) => {
                 symtable.new_scope();
+
+                let mut catch_param = None;
+                let mut catch_param_pos = None;
+                let mut catch_stmt_resolved = vec![];
 
                 if let Some(param) = param {
                     let (catch_ty, ty_loc) =
@@ -2499,6 +2502,12 @@ fn try_catch(
                 finally_reachable |= reachable;
 
                 symtable.leave_scope();
+
+                catch_all = Some(super::ast::CatchClause {
+                    param: catch_param,
+                    param_pos: catch_param_pos,
+                    stmt: catch_stmt_resolved,
+                });
 
                 Ok(())
             }
@@ -2610,11 +2619,16 @@ fn try_catch(
         TryCatch {
             expr: fcall,
             returns: params,
-            errors: errors_resolved,
+            errors: errors_resolved
+                .iter()
+                .map(|(pos, param, stmt)| super::ast::CatchClause {
+                    param: param.clone().into(),
+                    param_pos: *pos,
+                    stmt: stmt.clone(),
+                })
+                .collect(),
             ok_stmt: ok_resolved,
-            catch_param,
-            catch_param_pos,
-            catch_stmt: catch_stmt_resolved,
+            catch_all,
         },
     );
 

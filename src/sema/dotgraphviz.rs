@@ -1813,45 +1813,37 @@ impl Dot {
 
                     self.add_statement(&try_catch.ok_stmt, func, ns, parent, String::from("ok"));
 
-                    for (_, param, stmt) in &try_catch.errors {
+                    for clause in &try_catch.errors {
                         self.add_node(
                             Node::new(
                                 "error_param",
                                 vec![format!(
                                     "{} {}",
-                                    param.ty.to_string(ns),
-                                    param.name_as_str()
+                                    clause.param.as_ref().unwrap().ty.to_string(ns),
+                                    clause.param.as_ref().unwrap().name_as_str()
                                 )],
                             ),
                             Some(parent),
                             Some(String::from("error parameter")),
                         );
 
-                        self.add_statement(stmt, func, ns, parent, String::from("error"));
+                        self.add_statement(&clause.stmt, func, ns, parent, String::from("error"));
                     }
 
-                    if let Some(param) = &try_catch.catch_param {
-                        self.add_node(
-                            Node::new(
-                                "catch_param",
-                                vec![format!(
-                                    "{} {}",
-                                    param.ty.to_string(ns),
-                                    param.name_as_str()
-                                )],
-                            ),
-                            Some(parent),
-                            Some(String::from("catch parameter")),
-                        );
+                    if let Some(clause) = try_catch
+                        .catch_all
+                        .as_ref()
+                        .filter(|clause| clause.param.is_some())
+                    {
+                        let param = clause.param.as_ref().unwrap();
+                        let label = format!("{} {}", param.ty.to_string(ns), param.name_as_str());
+                        let node = Node::new("catch_param", vec![label]);
+                        self.add_node(node, Some(parent), Some(String::from("catch parameter")));
                     }
 
-                    self.add_statement(
-                        &try_catch.catch_stmt,
-                        func,
-                        ns,
-                        parent,
-                        String::from("catch"),
-                    );
+                    if let Some(clause) = try_catch.catch_all.as_ref() {
+                        self.add_statement(&clause.stmt, func, ns, parent, String::from("catch"));
+                    }
                 }
                 Statement::Underscore(loc) => {
                     let labels = vec![
