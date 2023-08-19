@@ -1071,6 +1071,8 @@ pub enum Expression {
     Negate {
         loc: pt::Loc,
         ty: Type,
+        /// Do not check for overflow, i.e. in `unchecked {}` block
+        unchecked: bool,
         expr: Box<Expression>,
     },
 

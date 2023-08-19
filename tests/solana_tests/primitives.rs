@@ -12,7 +12,7 @@ use std::ops::Rem;
 use std::ops::Shl;
 use std::ops::Shr;
 use std::ops::Sub;
-use std::ops::{Add, BitOr, BitXor, MulAssign, ShlAssign, ShrAssign, SubAssign};
+use std::ops::{Add, AddAssign, BitOr, BitXor, MulAssign, Neg, ShlAssign, ShrAssign, SubAssign};
 
 #[test]
 #[should_panic]
@@ -1171,6 +1171,10 @@ fn test_overflow_detect_signed() {
             function mul(intN a, intN b) public returns (intN) {
                 return a * b;
             }
+
+            function neg(intN a) public returns (intN) {
+                return -a;
+            }
         }"#
         .replace("intN", &format!("int{width}"));
         let mut contract = build_solidity(&src);
@@ -1230,6 +1234,32 @@ fn test_overflow_detect_signed() {
             ])
             .accounts(vec![("dataAccount", data_account)])
             .must_fail();
+
+        // neg fails when value -(2^N)
+        let upper_limit: BigInt = BigInt::from(2_u32).pow((width - 1) as u32);
+        let mut lower_limit: BigInt = upper_limit.clone().neg();
+
+        contract
+            .function("neg")
+            .arguments(&[BorshToken::Int {
+                width: width as u16,
+                value: lower_limit.clone(),
+            }])
+            .accounts(vec![("dataAccount", data_account)])
+            .must_fail();
+
+        lower_limit.add_assign(1usize);
+
+        let first_operand_rand = rng.gen_bigint_range(&lower_limit, &upper_limit);
+
+        contract
+            .function("neg")
+            .arguments(&[BorshToken::Int {
+                width: width as u16,
+                value: first_operand_rand,
+            }])
+            .accounts(vec![("dataAccount", data_account)])
+            .call();
     }
 }
 

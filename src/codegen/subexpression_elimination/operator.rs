@@ -46,6 +46,7 @@ pub enum Operator {
     Cast(Type),
     BytesCast,
     Negate,
+    OverflowingNegate,
     BitwiseNot,
 }
 
@@ -97,7 +98,13 @@ impl Expression {
             Expression::Trunc { ty, .. } => Operator::Trunc(ty.clone()),
             Expression::Cast { ty, .. } => Operator::Cast(ty.clone()),
             Expression::BytesCast { .. } => Operator::BytesCast,
-            Expression::Negate { .. } => Operator::Negate,
+            Expression::Negate { overflowing, .. } => {
+                if *overflowing {
+                    Operator::OverflowingNegate
+                } else {
+                    Operator::Negate
+                }
+            }
             Expression::More { signed: true, .. } => Operator::SignedMore,
             Expression::More { signed: false, .. } => Operator::UnsignedMore,
             Expression::Less { signed: true, .. } => Operator::SignedLess,

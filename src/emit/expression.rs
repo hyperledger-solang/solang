@@ -1021,10 +1021,30 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_int_z_extend(e, ty.into_int_type(), "")
                 .into()
         }
-        Expression::Negate { expr, .. } => {
+        Expression::Negate {
+            loc,
+            expr,
+            overflowing,
+            ..
+        } => {
             let e = expression(target, bin, expr, vartab, function, ns).into_int_value();
 
-            bin.builder.build_int_neg(e, "").into()
+            if *overflowing {
+                bin.builder.build_int_neg(e, "").into()
+            } else {
+                build_binary_op_with_overflow_check(
+                    target,
+                    bin,
+                    function,
+                    e.get_type().const_zero(),
+                    e,
+                    BinaryOp::Subtract,
+                    true,
+                    ns,
+                    *loc,
+                )
+                .into()
+            }
         }
         Expression::SignExt { ty, expr, .. } => {
             let e = expression(target, bin, expr, vartab, function, ns).into_int_value();

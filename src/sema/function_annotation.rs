@@ -3,7 +3,7 @@
 use super::{
     ast::{ConstructorAnnotation, Diagnostic, Expression, Function, Namespace, Type},
     diagnostics::Diagnostics,
-    eval::overflow_check,
+    eval::overflow_diagnostic,
     expression::literals::{hex_number_literal, unit_literal},
     expression::{ExprContext, ResolveTo},
     Symtable,
@@ -140,7 +140,7 @@ fn function_selector(
                 };
 
                 if let Ok(Expression::NumberLiteral { loc, value, .. }) = &expr {
-                    if let Some(diagnostic) = overflow_check(value, &uint8, loc) {
+                    if let Some(diagnostic) = overflow_diagnostic(value, &uint8, loc) {
                         diagnostics.push(diagnostic);
                     } else {
                         selector.push(value.to_u8().unwrap());
