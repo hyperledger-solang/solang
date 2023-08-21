@@ -5,7 +5,7 @@ use assert_cmd::Command;
 #[test]
 fn import_map_dup() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
-    let dup = cmd
+    let run = cmd
         .args([
             "compile",
             "--target",
@@ -14,43 +14,35 @@ fn import_map_dup() {
             "foo=tests",
             "--importmap",
             "foo=tests",
-            "foo.sol",
+            "dummy.sol",
         ])
-        .env("exit", "1")
-        .assert();
+        .current_dir("tests/imports_testcases")
+        .assert()
+        .success();
+    let output = run.get_output();
 
-    let output = dup.get_output();
-    let stderr = String::from_utf8_lossy(&output.stderr);
-
-    println!("stderr: {stderr}");
-
-    assert_eq!(
-        stderr,
-        "error: import path 'tests': duplicate mapping for 'foo'\n"
-    );
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
 }
 
 #[test]
 fn import_map_badpath() {
     let mut cmd = Command::cargo_bin("solang").unwrap();
-    let badpath = cmd
+    let run = cmd
         .args([
             "compile",
             "--target",
             "solana",
             "--importmap",
             "foo=/does/not/exist",
-            "bar.sol",
+            "dummy.sol",
         ])
-        .env("exit", "1")
-        .assert();
+        .current_dir("tests/imports_testcases")
+        .assert()
+        .success();
 
-    let output = badpath.get_output();
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let output = run.get_output();
 
-    println!("stderr: {stderr}");
-
-    assert!(stderr.contains("error: import path '/does/not/exist': "));
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
 }
 
 #[test]
@@ -66,7 +58,8 @@ fn import_map() {
             "import_map.sol",
         ])
         .current_dir("tests/imports_testcases")
-        .assert();
+        .assert()
+        .success();
 
     let output = assert.get_output();
 
@@ -76,7 +69,8 @@ fn import_map() {
     let badpath = cmd
         .args(["compile", "import_map.sol", "--target", "solana"])
         .current_dir("tests/imports_testcases")
-        .assert();
+        .assert()
+        .failure();
 
     let output = badpath.get_output();
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -99,7 +93,8 @@ fn import() {
             "imports_testcases/import.sol",
         ])
         .current_dir("tests")
-        .assert();
+        .assert()
+        .success();
 
     let output = assert.get_output();
 
@@ -109,7 +104,8 @@ fn import() {
     let badpath = cmd
         .args(["compile", "--target", "solana", "import.sol"])
         .current_dir("tests/imports_testcases")
-        .assert();
+        .assert()
+        .failure();
 
     let output = badpath.get_output();
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -126,7 +122,8 @@ fn contract_name_defined_twice() {
     let ok = cmd
         .args(["compile", "--target", "solana", "bar.sol", "rel.sol"])
         .current_dir("tests/imports_testcases/imports")
-        .assert();
+        .assert()
+        .success();
 
     let output = ok.get_output();
 
@@ -143,7 +140,8 @@ fn contract_name_defined_twice() {
             "rel.sol",
         ])
         .current_dir("tests/imports_testcases/imports")
-        .assert();
+        .assert()
+        .failure();
 
     let output = not_ok.get_output();
     let err = String::from_utf8_lossy(&output.stderr);
@@ -167,7 +165,8 @@ fn bad_escape() {
             "solana",
             "tests/imports_testcases/bad_escape.sol",
         ])
-        .assert();
+        .assert()
+        .failure();
 
     let output = not_ok.get_output();
     let err = String::from_utf8_lossy(&output.stderr);
@@ -196,6 +195,11 @@ fn backslash_path() {
             "tests/imports_testcases/imports/bar_backslash.sol",
         ])
         .assert();
+    #[cfg(windows)]
+    let not_ok = not_ok.success();
+
+    #[cfg(not(windows))]
+    let not_ok = not_ok.failure();
 
     let output = not_ok.get_output();
     let err = String::from_utf8_lossy(&output.stderr);
