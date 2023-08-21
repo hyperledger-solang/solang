@@ -1909,7 +1909,7 @@ fn runtime_cast<'a>(
             // no conversion needed
             val
         }
-        (_, Type::Address(_)) => {
+        (Type::Bytes(_) | Type::Int(_) | Type::Uint(_) | Type::Value, Type::Address(_)) => {
             let llvm_ty = bin.llvm_type(from, ns);
 
             let src = bin.build_alloca(function, llvm_ty, "dest");
@@ -1931,7 +1931,7 @@ fn runtime_cast<'a>(
 
             bin.builder.build_load(bin.address_type(ns), dest, "val")
         }
-        (Type::Address(_), _) => {
+        (Type::Address(_), Type::Bytes(_) | Type::Int(_) | Type::Uint(_) | Type::Value) => {
             let llvm_ty = bin.llvm_type(to, ns);
 
             let src = bin.build_alloca(function, bin.address_type(ns), "address");
@@ -1961,7 +1961,7 @@ fn runtime_cast<'a>(
                 "bool_to_int_cast",
             )
             .into(),
-         (_, Type::Uint(_)) if !from.is_contract_storage() && from.is_reference_type(ns) => bin
+        (_, Type::Uint(_)) if !from.is_contract_storage() && from.is_reference_type(ns) => bin
             .builder
             .build_ptr_to_int(
                 val.into_pointer_value(),
@@ -1977,7 +1977,7 @@ fn runtime_cast<'a>(
                 "int_to_ptr",
             )
             .into(),
-      (Type::DynamicBytes, Type::Slice(_)) => {
+        (Type::DynamicBytes, Type::Slice(_)) => {
             let slice_ty = bin.llvm_type(to, ns);
             let slice = bin.build_alloca(function, slice_ty, "slice");
 
@@ -2003,6 +2003,6 @@ fn runtime_cast<'a>(
 
             bin.builder.build_load(slice_ty, slice, "slice")
         }
-         _ => val,
+        _ => val,
     }
 }
