@@ -170,6 +170,20 @@ impl FileResolver {
     ) -> Result<ResolvedFile, String> {
         let path = PathBuf::from(filename);
 
+        // XXX: This is a HACK! There is a bug where caching currently happens
+        // over canonicalized path names instead of VFS path names. My updates
+        // to bring solang import resolution in line with solc broke something
+        // with caching.
+        //
+        // If this file has already been cashed in the VFS, return it.
+        if let Some(import_no) = self.cached_paths.get(&path) {
+            if let Some(ref res) = self.files.get(*import_no) {
+                return Ok((*res).clone());
+            } else {
+                return Err("".to_string());
+            }
+        }
+
         let mut result: Vec<Result<ResolvedFile, String>> = vec![];
 
         // Only when the path starts with ./ or ../ are relative paths considered; this means
