@@ -177,7 +177,7 @@ impl FileResolver {
         //
         // If this file has already been cashed in the VFS, return it.
         if let Some(import_no) = self.cached_paths.get(&path) {
-            if let Some(ref res) = self.files.get(*import_no) {
+            if let Some(res) = self.files.get(*import_no) {
                 return Ok((*res).clone());
             } else {
                 return Err("".to_string());
