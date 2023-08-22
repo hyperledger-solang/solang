@@ -219,9 +219,6 @@ pub trait TargetRuntime<'a> {
     /// Return failure code
     fn return_code<'b>(&self, bin: &'b Binary, ret: IntValue<'b>);
 
-    /// Return success with the ABI encoded result
-    fn return_abi<'b>(&self, bin: &'b Binary, data: PointerValue<'b>, length: IntValue);
-
     /// Return failure without any result
     fn assert_failure(&self, bin: &Binary, data: PointerValue, length: IntValue);
 
