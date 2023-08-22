@@ -1189,26 +1189,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_return(Some(&binary.context.i64_type().const_int(0, false)));
     }
 
-    fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
-        // set return data
-        binary.builder.build_call(
-            binary.module.get_function("sol_set_return_data").unwrap(),
-            &[
-                data.into(),
-                binary
-                    .builder
-                    .build_int_z_extend(length, binary.context.i64_type(), "length")
-                    .into(),
-            ],
-            "",
-        );
-
-        // return 0 for success
-        binary
-            .builder
-            .build_return(Some(&binary.context.i64_type().const_int(0, false)));
-    }
-
     fn assert_failure(&self, binary: &Binary, data: PointerValue, length: IntValue) {
         // the reason code should be null (and already printed)
         binary.builder.build_call(
