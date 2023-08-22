@@ -10,7 +10,7 @@ contract UserStats {
     @payer(wallet)
     @seed("user-stats")
     @space(250)
-    constructor(@seed bytes user_key, @bump uint8 _bump, string _name, uint16 _level) {
+    constructor(@seed address user_key, @bump uint8 _bump, string _name, uint16 _level) {
         name = _name;
         level = _level;
         bump = _bump;

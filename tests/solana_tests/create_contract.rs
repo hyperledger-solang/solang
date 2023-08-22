@@ -579,10 +579,10 @@ fn account_with_seed_bump() {
 
     let program_id = vm.stack[0].id;
 
-    let (address, mut seed) = vm.create_pda(&program_id, 35);
-    let bump = seed.pop().unwrap();
-    let seed_addr = &seed[0..32];
-    let seed2 = &seed[32..34];
+    let (address, full_seed) = vm.create_pda(&program_id, 35);
+    let bump = full_seed[34];
+    let seed_addr = &full_seed[0..32];
+    let seed2 = &full_seed[32..34];
     let payer = account_new();
     vm.account_data.insert(payer, AccountState::default());
 
