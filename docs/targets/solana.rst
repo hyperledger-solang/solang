@@ -186,7 +186,7 @@ then the seeds and bump have to be provided. There can be multiple seeds, and an
 single bump. If the bump is not provided, then the seeds must not create an
 account that falls on the curve. When placed above the constructor, the ``@seed`` can be a string literal,
 or a hex string with the format ``hex"4142"``. If before an argument, the seed annotation must refer to an argument
-of type ``bytes``. The ``@bump`` must a single byte of type ``bytes1``.
+of type ``bytes``, ``address``, or fixed length byte array of ``bytesN``. The ``@bump`` must a single byte of type ``bytes1``.
 
 .. _value_transfer:
 

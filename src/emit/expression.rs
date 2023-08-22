@@ -2003,6 +2003,83 @@ fn runtime_cast<'a>(
 
             bin.builder.build_load(slice_ty, slice, "slice")
         }
+        (Type::Address(_), Type::Slice(_)) => {
+            let slice_ty = bin.llvm_type(to, ns);
+            let slice = bin.build_alloca(function, slice_ty, "slice");
+            let address = bin.build_alloca(function, bin.llvm_type(from, ns), "address");
+
+            bin.builder.build_store(address, val);
+
+            let data_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 0, "data")
+                .unwrap();
+
+            bin.builder.build_store(data_ptr, address);
+
+            let len = bin
+                .context
+                .i64_type()
+                .const_int(ns.address_length as u64, false);
+
+            let len_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 1, "len")
+                .unwrap();
+
+            bin.builder.build_store(len_ptr, len);
+
+            bin.builder.build_load(slice_ty, slice, "slice")
+        }
+        (Type::Bytes(bytes_length), Type::Slice(_)) => {
+            let llvm_ty = bin.llvm_type(from, ns);
+            let src = bin.build_alloca(function, llvm_ty, "src");
+
+            bin.builder.build_store(src, val.into_int_value());
+
+            let dest = bin.build_alloca(
+                function,
+                bin.context.i8_type().array_type((*bytes_length).into()),
+                "dest",
+            );
+
+            bin.builder.build_call(
+                bin.module.get_function("__leNtobeN").unwrap(),
+                &[
+                    src.into(),
+                    dest.into(),
+                    bin.context
+                        .i32_type()
+                        .const_int((*bytes_length).into(), false)
+                        .into(),
+                ],
+                "",
+            );
+
+            let slice_ty = bin.llvm_type(to, ns);
+            let slice = bin.build_alloca(function, slice_ty, "slice");
+
+            let data_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 0, "data")
+                .unwrap();
+
+            bin.builder.build_store(data_ptr, dest);
+
+            let len = bin
+                .context
+                .i64_type()
+                .const_int((*bytes_length).into(), false);
+
+            let len_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 1, "len")
+                .unwrap();
+
+            bin.builder.build_store(len_ptr, len);
+
+            bin.builder.build_load(slice_ty, slice, "slice")
+        }
         _ => val,
     }
 }
