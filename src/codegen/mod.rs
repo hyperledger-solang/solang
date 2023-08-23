@@ -54,7 +54,7 @@ use solang_parser::{pt, pt::CodeLocation};
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
 
 /// Name of the storage initializer function
-pub const STORAGE_INITIALIZER: &'static str = "storage_initializer";
+pub const STORAGE_INITIALIZER: &str = "storage_initializer";
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum OptimizationLevel {
