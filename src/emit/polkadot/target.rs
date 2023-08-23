@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{HashTy, ReturnCode};
+use crate::codegen::cfg::HashTy;
 use crate::codegen::revert::PanicCode;
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
@@ -754,17 +754,6 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         call!("hash_keccak_256", &[src.into(), length.into(), dest.into()]);
     }
 
-    fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
-        emit_context!(binary);
-
-        call!(
-            "seal_return",
-            &[i32_zero!().into(), data.into(), length.into()]
-        );
-
-        binary.builder.build_unreachable();
-    }
-
     fn return_abi_data<'b>(
         &self,
         binary: &Binary<'b>,
@@ -778,9 +767,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             &[i32_zero!().into(), data.into(), data_len.into()]
         );
 
-        binary
-            .builder
-            .build_return(Some(&binary.return_values[&ReturnCode::Success]));
+        binary.builder.build_unreachable();
     }
 
     fn assert_failure(&self, binary: &Binary, data: PointerValue, length: IntValue) {
