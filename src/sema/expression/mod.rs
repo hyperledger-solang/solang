@@ -1190,7 +1190,9 @@ impl Expression {
             {
                 Ok(self.clone())
             }
-            (Type::DynamicBytes, Type::Slice(ty)) if ty.as_ref() == &Type::Bytes(1) => {
+            (Type::DynamicBytes | Type::Address(_) | Type::Bytes(_), Type::Slice(ty))
+                if ty.as_ref() == &Type::Bytes(1) =>
+            {
                 Ok(Expression::Cast {
                     loc: *loc,
                     to: to.clone(),

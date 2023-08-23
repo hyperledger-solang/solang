@@ -702,7 +702,10 @@ fn pda() {
                     AccountMeta({pubkey: SYSVAR_RENT_PUBKEY, is_writable: false, is_signer: false})
                 ];
 
-                tokenProgramId.call{seeds: [ ["foo"], ["b", "a", "r"] ], accounts: metas}(instr);
+                bytes3 foo = "foo";
+                address addr = address"8dtukUTHTZoVQTA5i4UdC2z6A2b5yvnJhkzhYnwAk3Fm";
+
+                tokenProgramId.call{seeds: [ [ foo ] , ["b", "a", "r"], [addr], [foo, addr, "meh"] ], accounts: metas}(instr);
             }
         }"#,
     );
@@ -720,6 +723,17 @@ fn pda() {
         assert_eq!(
             signers[1],
             create_program_address(&vm.stack[0].id, &[b"bar"])
+        );
+        assert_eq!(
+            signers[2],
+            create_program_address(&vm.stack[0].id, &[b"quinquagintaquadringentilliardth"])
+        );
+        assert_eq!(
+            signers[3],
+            create_program_address(
+                &vm.stack[0].id,
+                &[b"fooquinquagintaquadringentilliardthmeh"]
+            )
         );
     };
 

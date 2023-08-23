@@ -1508,10 +1508,10 @@ impl VirtualMachine {
         self.stack = vec![cur];
     }
 
-    fn create_pda(&mut self, program_id: &Account) -> (Account, Vec<u8>) {
+    fn create_pda(&mut self, program_id: &Account, len: usize) -> (Account, Vec<u8>) {
         let mut rng = rand::thread_rng();
 
-        let mut seed = [0u8; 7];
+        let mut seed = vec![0u8; len];
 
         rng.fill(&mut seed[..]);
 
@@ -1522,12 +1522,12 @@ impl VirtualMachine {
         println!(
             "new empty account {} with seed {}",
             account.to_base58(),
-            hex::encode(seed)
+            hex::encode(&seed)
         );
 
         self.create_empty_account(&account, program_id);
 
-        (account, seed.to_vec())
+        (account, seed)
     }
 
     fn create_empty_account(&mut self, account: &Account, program_id: &Account) {

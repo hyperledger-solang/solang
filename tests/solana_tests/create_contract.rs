@@ -149,7 +149,7 @@ fn simple_create_contract() {
         .try_into()
         .unwrap();
 
-    let seed = vm.create_pda(&program_id);
+    let seed = vm.create_pda(&program_id, 7);
     let payer = account_new();
 
     vm.account_data.insert(payer, AccountState::default());
@@ -404,8 +404,8 @@ fn two_contracts() {
         .try_into()
         .unwrap();
 
-    let seed1 = vm.create_pda(&program_id);
-    let seed2 = vm.create_pda(&program_id);
+    let seed1 = vm.create_pda(&program_id, 5);
+    let seed2 = vm.create_pda(&program_id, 5);
     let payer = account_new();
     vm.account_data.insert(seed1.0, AccountState::default());
     vm.account_data.insert(seed2.0, AccountState::default());
@@ -534,7 +534,7 @@ fn account_with_seed() {
     );
 
     let program_id = vm.stack[0].id;
-    let seed = vm.create_pda(&program_id);
+    let seed = vm.create_pda(&program_id, 7);
     let payer = account_new();
     vm.account_data.insert(payer, AccountState::default());
 
@@ -566,10 +566,9 @@ fn account_with_seed_bump() {
     let mut vm = build_solidity(
         r#"
         contract bar {
-
             @space(511 + 102)
             @payer(payer)
-            constructor(@seed bytes seed, @bump byte b) {}
+            constructor(@seed address seed, @seed bytes2 seed2, @bump byte b) {}
 
             function hello() public returns (bool) {
                 return true;
@@ -580,34 +579,37 @@ fn account_with_seed_bump() {
 
     let program_id = vm.stack[0].id;
 
-    let mut seed = vm.create_pda(&program_id);
-    let bump = seed.1.pop().unwrap();
+    let (address, full_seed) = vm.create_pda(&program_id, 35);
+    let bump = full_seed[34];
+    let seed_addr = &full_seed[0..32];
+    let seed2 = &full_seed[32..34];
     let payer = account_new();
     vm.account_data.insert(payer, AccountState::default());
 
     vm.function("new")
         .arguments(&[
-            BorshToken::Bytes(seed.1),
+            BorshToken::Address(seed_addr.try_into().unwrap()),
+            BorshToken::FixedBytes(seed2.to_vec()),
             BorshToken::Uint {
                 width: 8,
                 value: bump.into(),
             },
         ])
         .accounts(vec![
-            ("dataAccount", seed.0),
+            ("dataAccount", address),
             ("payer", payer),
             ("systemProgram", [0; 32]),
         ])
         .call();
 
     assert_eq!(
-        vm.account_data.get_mut(&seed.0).unwrap().data.len(),
+        vm.account_data.get_mut(&address).unwrap().data.len(),
         511 + 102
     );
 
     let ret = vm
         .function("hello")
-        .accounts(vec![("dataAccount", seed.0)])
+        .accounts(vec![("dataAccount", address)])
         .call()
         .unwrap();
 
@@ -700,7 +702,7 @@ fn create_child() {
     let payer = account_new();
     let program_id = vm.stack[0].id;
 
-    let seed = vm.create_pda(&program_id);
+    let seed = vm.create_pda(&program_id, 7);
     vm.account_data.insert(payer, AccountState::default());
     vm.account_data.insert(seed.0, AccountState::default());
 
@@ -768,7 +770,7 @@ contract Child {
 
     let payer = account_new();
     let program_id = vm.stack[0].id;
-    let seed = vm.create_pda(&program_id);
+    let seed = vm.create_pda(&program_id, 7);
     vm.account_data.insert(seed.0, AccountState::default());
     vm.account_data.insert(payer, AccountState::default());
 
