@@ -37,3 +37,17 @@ contract foo {
         [SStruct { f1: 1 }, SStruct { f1: 2 }].encode(),
     );
 }
+
+#[test]
+fn storage_initializer_addr_type() {
+    // The contracts storage initializer writes to the scratch buffer in the storage.
+    let mut runtime = build_solidity(r#"contract C { address public owner = msg.sender; }"#);
+
+    // But this must not overwrite the input length; deploy should not revert.
+    runtime.constructor(0, Vec::new());
+    assert!(runtime.output().is_empty());
+
+    // Expect the storage initializer to work properly.
+    runtime.function("owner", Vec::new());
+    assert_eq!(runtime.output(), runtime.caller());
+}

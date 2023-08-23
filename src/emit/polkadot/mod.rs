@@ -189,7 +189,7 @@ impl PolkadotTarget {
     fn public_function_prelude<'a>(
         &self,
         binary: &Binary<'a>,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = binary.context.append_basic_block(function, "entry");
 
@@ -200,12 +200,13 @@ impl PolkadotTarget {
             .builder
             .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "");
 
-        let scratch_buf = binary.scratch.unwrap().as_pointer_value();
-        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+        let input_buf_ty = binary.context.i8_type().array_type(SCRATCH_SIZE);
+        let input_buf = binary.build_alloca(function, input_buf_ty, "input_buf");
+        let input_len = binary.scratch_len.unwrap().as_pointer_value();
 
         // copy arguments from input buffer
         binary.builder.build_store(
-            scratch_len,
+            input_len,
             binary
                 .context
                 .i32_type()
@@ -214,14 +215,14 @@ impl PolkadotTarget {
 
         binary.builder.build_call(
             binary.module.get_function("input").unwrap(),
-            &[scratch_buf.into(), scratch_len.into()],
+            &[input_buf.into(), input_len.into()],
             "",
         );
 
         let args_length =
             binary
                 .builder
-                .build_load(binary.context.i32_type(), scratch_len, "input_len");
+                .build_load(binary.context.i32_type(), input_len, "input_len");
 
         // store the length in case someone wants it via msg.data
         binary.builder.build_store(
@@ -229,7 +230,7 @@ impl PolkadotTarget {
             args_length.into_int_value(),
         );
 
-        (scratch_buf, args_length.into_int_value())
+        (input_buf, args_length.into_int_value())
     }
 
     fn declare_externals(&self, binary: &Binary) {
