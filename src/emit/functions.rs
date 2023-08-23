@@ -4,7 +4,7 @@ use crate::{
     emit::{binary::Binary, cfg::emit_cfg, TargetRuntime},
     sema::ast::{Contract, Namespace, Type},
 };
-use inkwell::{module::Linkage, values::FunctionValue};
+use inkwell::module::Linkage;
 
 /// Emit all functions, constructors, fallback and receiver
 pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(
@@ -48,26 +48,4 @@ pub(super) fn emit_functions<'a, T: TargetRuntime<'a>>(
     for (func_decl, cfg) in defines {
         emit_cfg(target, bin, contract, cfg, func_decl, ns);
     }
-}
-
-/// Emit the storage initializers
-pub(super) fn emit_initializer<'a, T: TargetRuntime<'a>>(
-    target: &mut T,
-    bin: &mut Binary<'a>,
-    contract: &Contract,
-    ns: &Namespace,
-) -> FunctionValue<'a> {
-    let function_ty = bin.function_type(&[], &[], ns);
-
-    let function = bin.module.add_function(
-        &format!("sol::{}::storage_initializers", contract.name),
-        function_ty,
-        Some(Linkage::Internal),
-    );
-
-    let cfg = &contract.cfg[contract.initializer.unwrap()];
-
-    emit_cfg(target, bin, contract, cfg, function, ns);
-
-    function
 }
