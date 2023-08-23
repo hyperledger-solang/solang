@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import {loadContract} from "./setup";
-import {Keypair, PublicKey} from "@solana/web3.js";
+import { loadContract } from "./setup";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import { utils } from '@coral-xyz/anchor';
 import expect from "expect";
 
-describe('PDA hash table', function() {
+describe('PDA hash table', function () {
     // A PDA (Program derived address) hash table is a way to store values for a provided key
     // on a unique account on chain, resembling a hash table. This is an example for achieving
     // so with Solidity.
 
     it('Table functions', async function test_table() {
-        const {program, payer} = await loadContract("UserStats");
+        const { program, payer } = await loadContract("UserStats");
         // A user's public key will be the key for the hash table in this example.
         const myUser = Keypair.generate();
 
@@ -29,10 +29,10 @@ describe('PDA hash table', function() {
         // We create the account to hold the user's related information. The generated PDA becomes the
         // data account for our contract.
         // If a contract for `userStatsPDA` already exists, this function will fail.
-        await program.methods.new(myUser.publicKey.toBuffer(), bump, "user-one", 25)
+        await program.methods.new(myUser.publicKey, bump, "user-one", 25)
             .accounts({
-                    dataAccount: userStatsPDA,
-                    wallet: payer.publicKey,
+                dataAccount: userStatsPDA,
+                wallet: payer.publicKey,
             })
             .signers([payer])
             .rpc();
