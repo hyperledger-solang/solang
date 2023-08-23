@@ -193,7 +193,7 @@ fn backslash_path() {
             "--target",
             "solana",
             "tests/imports_testcases/imports/bar_backslash.sol",
-            "-importpath",
+            "--importpath",
             "tests/imports_testcases/imports",
         ])
         .assert();
