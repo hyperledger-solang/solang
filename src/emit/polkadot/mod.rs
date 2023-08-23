@@ -2,7 +2,7 @@
 
 use std::ffi::CString;
 
-use crate::codegen::Options;
+use crate::codegen::{Options, STORAGE_INITIALIZER};
 use crate::sema::ast::{Contract, Namespace};
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
@@ -146,7 +146,7 @@ impl PolkadotTarget {
 
         emit_functions(&mut target, &mut binary, contract, ns);
 
-        let function_name = CString::new(format!("{}:storage_initializer", contract.name)).unwrap();
+        let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
         let mut storage_initializers = binary
             .functions
             .values()

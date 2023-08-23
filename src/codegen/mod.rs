@@ -53,6 +53,9 @@ use solang_parser::{pt, pt::CodeLocation};
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
 
+/// Name of the storage initializer function
+pub const STORAGE_INITIALIZER: &'static str = "storage_initializer";
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum OptimizationLevel {
     None = 0,
@@ -252,10 +255,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
 /// This function will set all contract storage initializers and should be called from the constructor
 fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) -> ControlFlowGraph {
     // note the single `:` to prevent a name clash with user-declared functions
-    let mut cfg = ControlFlowGraph::new(
-        format!("{}:storage_initializer", ns.contracts[contract_no].name),
-        ASTFunction::None,
-    );
+    let mut cfg = ControlFlowGraph::new(STORAGE_INITIALIZER.to_string(), ASTFunction::None);
     let mut vartab = Vartable::new(ns.next_id);
 
     for layout in &ns.contracts[contract_no].layout {
