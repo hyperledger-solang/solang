@@ -201,7 +201,7 @@ impl PolkadotTarget {
         &self,
         binary: &Binary<'a>,
         function: FunctionValue<'a>,
-        init: Option<FunctionValue>,
+        storage_initializer: Option<FunctionValue>,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = binary.context.append_basic_block(function, "entry");
 
@@ -213,7 +213,7 @@ impl PolkadotTarget {
             .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "");
 
         // Call the storage initializers on deploy
-        if let Some(initializer) = init {
+        if let Some(initializer) = storage_initializer {
             binary.builder.build_call(initializer, &[], "");
         }
 
@@ -342,19 +342,28 @@ impl PolkadotTarget {
         external!("set_code_hash", i32_type, u8_ptr);
     }
 
-    /// Emits the "deploy" function if `init` is `Some`, otherwise emits the "call" function.
-    fn emit_dispatch(&mut self, init: Option<FunctionValue>, bin: &mut Binary, ns: &Namespace) {
+    /// Emits the "deploy" function if `storage_initializer` is `Some`, otherwise emits the "call" function.
+    fn emit_dispatch(
+        &mut self,
+        storage_initializer: Option<FunctionValue>,
+        bin: &mut Binary,
+        ns: &Namespace,
+    ) {
         let ty = bin.context.void_type().fn_type(&[], false);
-        let export_name = if init.is_some() { "deploy" } else { "call" };
+        let export_name = if storage_initializer.is_some() {
+            "deploy"
+        } else {
+            "call"
+        };
         let func = bin.module.add_function(export_name, ty, None);
-        let (input, input_length) = self.public_function_prelude(bin, func, init);
+        let (input, input_length) = self.public_function_prelude(bin, func, storage_initializer);
         let args = vec![
             BasicMetadataValueEnum::PointerValue(input),
             BasicMetadataValueEnum::IntValue(input_length),
             BasicMetadataValueEnum::IntValue(self.value_transferred(bin, ns)),
             BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
         ];
-        let dispatch_cfg_name = &init
+        let dispatch_cfg_name = &storage_initializer
             .map(|_| DispatchType::Deploy)
             .unwrap_or(DispatchType::Call)
             .to_string();
