@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::Options;
+use std::ffi::CString;
+
+use crate::codegen::{Options, STORAGE_INITIALIZER};
 use crate::sema::ast::{Contract, Namespace};
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
@@ -8,7 +10,7 @@ use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerVa
 use inkwell::AddressSpace;
 
 use crate::codegen::dispatch::polkadot::DispatchType;
-use crate::emit::functions::{emit_functions, emit_initializer};
+use crate::emit::functions::emit_functions;
 use crate::emit::{Binary, TargetRuntime};
 
 mod storage;
@@ -144,7 +146,16 @@ impl PolkadotTarget {
 
         emit_functions(&mut target, &mut binary, contract, ns);
 
-        let storage_initializer = emit_initializer(&mut target, &mut binary, contract, ns);
+        let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
+        let mut storage_initializers = binary
+            .functions
+            .values()
+            .filter(|f| f.get_name() == function_name.as_c_str());
+        let storage_initializer = *storage_initializers
+            .next()
+            .expect("storage initializer is always present");
+        assert!(storage_initializers.next().is_none());
+
         target.emit_dispatch(Some(storage_initializer), &mut binary, ns);
         target.emit_dispatch(None, &mut binary, ns);
 
