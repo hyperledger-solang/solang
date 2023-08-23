@@ -91,12 +91,12 @@ contract CompactEncoding {
         // CHECK: branchcond (unsigned more (builtin ArrayLength ((arg #0))) > uint32 63), block3, block1
 
         // CHECK: block8: # small
-        // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:uint32 0 value:uint8((%temp.27 * uint32 4))
+        // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:uint32 0 value:(trunc uint8 (%temp.27 * uint32 4))
         // CHECK: ty:uint32 %temp.28 = uint32 1
         // CHECK: branch block12
 
         // CHECK: block9: # medium
-        // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:uint32 0 value:uint16(((%temp.27 * uint32 4) | uint32 1))
+        // CHECK: writebuffer buffer:%abi_encoded.temp.26 offset:uint32 0 value:(trunc uint16 ((%temp.27 * uint32 4) | uint32 1))
         // CHECK: ty:uint32 %temp.28 = uint32 2
         // CHECK: branch block12
 

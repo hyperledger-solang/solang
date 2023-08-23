@@ -486,6 +486,7 @@ pub fn expression(
         ast::Expression::InternalFunction {
             function_no,
             signature,
+            ty,
             ..
         } => {
             let function_no = if let Some(signature) = signature {
@@ -495,6 +496,7 @@ pub fn expression(
             };
 
             Expression::InternalFunctionCfg {
+                ty: ty.clone(),
                 cfg_no: ns.contracts[contract_no].all_functions[function_no],
             }
         }

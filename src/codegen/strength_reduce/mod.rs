@@ -562,7 +562,10 @@ fn expression_reduce(expr: &Expression, vars: &Variables, ns: &mut Namespace) ->
 /// Other types (e.g. bytes) is not relevant for strength reduce. Bools are only
 /// tracked so we can following branching after integer compare.
 fn track(ty: &Type) -> bool {
-    matches!(ty, Type::Uint(_) | Type::Int(_) | Type::Bool | Type::Value)
+    matches!(
+        ty,
+        Type::Uint(_) | Type::Int(_) | Type::Bool | Type::Value | Type::UserType(_)
+    )
 }
 
 // A variable can

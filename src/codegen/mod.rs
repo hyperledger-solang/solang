@@ -464,6 +464,7 @@ pub enum Expression {
         expr: Box<Expression>,
     },
     InternalFunctionCfg {
+        ty: Type,
         cfg_no: usize,
     },
     Keccak256 {
@@ -838,7 +839,8 @@ impl RetrieveType for Expression {
             | Expression::AllocDynamicBytes { ty, .. }
             | Expression::BytesCast { ty, .. }
             | Expression::RationalNumberLiteral { ty, .. }
-            | Expression::Subscript { ty, .. } => ty.clone(),
+            | Expression::Subscript { ty, .. }
+            | Expression::InternalFunctionCfg { ty, .. } => ty.clone(),
 
             Expression::BoolLiteral { .. }
             | Expression::MoreEqual { .. }
@@ -858,7 +860,6 @@ impl RetrieveType for Expression {
 
             Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString { .. } => Type::String,
-            Expression::InternalFunctionCfg { .. } => Type::Unreachable,
             Expression::Poison => unreachable!("Expression does not have a type"),
         }
     }

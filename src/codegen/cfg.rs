@@ -933,7 +933,7 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::InternalFunctionCfg { cfg_no } => {
+            Expression::InternalFunctionCfg { cfg_no, .. } => {
                 format!("function {}", contract.cfg[*cfg_no].name)
             }
             Expression::ReturnData { .. } => "(external call return data)".to_string(),

@@ -1815,7 +1815,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into()
         }
         Expression::Builtin { .. } => target.builtin(bin, e, vartab, function, ns),
-        Expression::InternalFunctionCfg { cfg_no } => bin.functions[cfg_no]
+        Expression::InternalFunctionCfg { cfg_no, .. } => bin.functions[cfg_no]
             .as_global_value()
             .as_pointer_value()
             .into(),
@@ -1905,10 +1905,48 @@ fn runtime_cast<'a>(
     ns: &Namespace,
 ) -> BasicValueEnum<'a> {
     match (from, to) {
-        (Type::Address(_) | Type::Contract(_), Type::Address(_) | Type::Contract(_)) => {
-            // no conversion needed
+        // no conversion needed
+        (from, to) if from == to => val,
+
+        (Type::Address(_) | Type::Contract(_), Type::Address(_) | Type::Contract(_)) => val,
+        (
+            Type::ExternalFunction { .. } | Type::Struct(StructType::ExternalFunction),
+            Type::ExternalFunction { .. } | Type::Struct(StructType::ExternalFunction),
+        ) => val,
+        (
+            Type::Uint(_)
+            | Type::Int(_)
+            | Type::Value
+            | Type::Bytes(_)
+            | Type::UserType(_)
+            | Type::Enum(_)
+            | Type::FunctionSelector,
+            Type::Uint(_)
+            | Type::Int(_)
+            | Type::Value
+            | Type::Bytes(_)
+            | Type::Enum(_)
+            | Type::UserType(_)
+            | Type::FunctionSelector,
+        ) => {
+            assert_eq!(from.bytes(ns), to.bytes(ns),);
+
             val
         }
+        (Type::String | Type::DynamicBytes, Type::String | Type::DynamicBytes) => val,
+        (
+            Type::InternalFunction {
+                params: from_params,
+                returns: from_returns,
+                ..
+            },
+            Type::InternalFunction {
+                params: to_params,
+                returns: to_returns,
+                ..
+            },
+        ) if from_params == to_params && from_returns == to_returns => val,
+
         (Type::Bytes(_) | Type::Int(_) | Type::Uint(_) | Type::Value, Type::Address(_)) => {
             let llvm_ty = bin.llvm_type(from, ns);
 
@@ -2080,6 +2118,6 @@ fn runtime_cast<'a>(
 
             bin.builder.build_load(slice_ty, slice, "slice")
         }
-        _ => val,
+        _ => unreachable!(),
     }
 }
