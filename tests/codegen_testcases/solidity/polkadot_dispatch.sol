@@ -8,7 +8,7 @@ contract has_fallback_and_receive {
 	// CHECK: 	ty:uint32 %input_len.temp.1 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.2 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.3 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.1 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.4 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.4
@@ -26,14 +26,14 @@ contract has_fallback_and_receive {
 	// CHECK: 	ty:uint32 %input_len.temp.5 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.6 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.7 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.5 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.8 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.8
 	// CHECK: 	switch %selector.temp.8:
 	// CHECK: 		default: goto block #2
 	// CHECK: block2: # fb_or_recv
-	// CHECK: 	branchcond (unsigned more %value.temp.6 > uint128 0), block4, block3
+	// CHECK: 	branchcond (unsigned more (arg #2) > uint128 0), block4, block3
 	// CHECK: block3: # fallback
 	// CHECK: 	 = call has_fallback_and_receive::has_fallback_and_receive::fallback 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
@@ -55,7 +55,7 @@ contract has_fallback {
 	// CHECK: 	ty:uint32 %input_len.temp.9 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.10 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.11 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.9 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.12 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.12
@@ -73,14 +73,14 @@ contract has_fallback {
 	// CHECK: 	ty:uint32 %input_len.temp.13 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.14 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.15 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.13 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.16 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.16
 	// CHECK: 	switch %selector.temp.16:
 	// CHECK: 		default: goto block #2
 	// CHECK: block2: # fb_or_recv
-	// CHECK: 	branchcond (unsigned more %value.temp.14 > uint128 0), block4, block3
+	// CHECK: 	branchcond (unsigned more (arg #2) > uint128 0), block4, block3
 	// CHECK: block3: # fallback
 	// CHECK: 	 = call has_fallback::has_fallback::fallback 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
@@ -100,7 +100,7 @@ contract has_receive {
 	// CHECK: 	ty:uint32 %input_len.temp.17 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.18 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.19 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.17 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.20 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.20
@@ -120,14 +120,14 @@ contract has_receive {
 	// CHECK: 	ty:uint32 %input_len.temp.21 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.22 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.23 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.21 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.24 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.24
 	// CHECK: 	switch %selector.temp.24:
 	// CHECK: 		default: goto block #2
 	// CHECK: block2: # fb_or_recv
-	// CHECK: 	branchcond (unsigned more %value.temp.22 > uint128 0), block4, block3
+	// CHECK: 	branchcond (unsigned more (arg #2) > uint128 0), block4, block3
 	// CHECK: block3: # fallback
 	// CHECK: 	return code: function selector invalid
 	// CHECK: block4: # receive
@@ -148,7 +148,7 @@ contract is_payable {
 	// CHECK: 	ty:uint32 %input_len.temp.25 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.26 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.27 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.25 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.28 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.28
@@ -168,7 +168,7 @@ contract is_payable {
 	// CHECK: 	ty:uint32 %input_len.temp.29 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.30 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.31 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.29 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.32 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.32
@@ -179,7 +179,7 @@ contract is_payable {
 	// CHECK: block2: # fb_or_recv
 	// CHECK: 	return code: function selector invalid
 	// CHECK: block3: # func_0_dispatch
-	// CHECK: 	branchcond (unsigned more %value.temp.30 > uint128 0), block4, block5
+	// CHECK: 	branchcond (unsigned more (arg #2) > uint128 0), block4, block5
 	// CHECK: block4: # func_0_got_value
 	// CHECK: 	assert-failure
 	// CHECK: block5: # func_0_no_value
@@ -201,7 +201,7 @@ contract overloaded {
 	// CHECK: 	ty:uint32 %input_len.temp.33 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.34 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.35 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.33 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.36 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.36
@@ -225,7 +225,7 @@ contract overloaded {
 	// CHECK: 	ty:uint32 %input_len.temp.37 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.38 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.39 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.37 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.42 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.42
@@ -234,20 +234,19 @@ contract overloaded {
 	// CHECK: 		case uint32 2338643635: goto block #4
 	// CHECK: 		default: goto block #2
 	// CHECK: block2: # fb_or_recv
-	// CHECK: 	branchcond (unsigned more %value.temp.38 > uint128 0), block12, block11
+	// CHECK: 	branchcond (unsigned more (arg #2) > uint128 0), block12, block11
 	// CHECK: block3: # func_2_dispatch
 	// CHECK: 	 = call overloaded::overloaded::function::f 
 	// CHECK: 	return data (alloc bytes len uint32 0), data length: uint32 0
 	// CHECK: block4: # func_3_dispatch
-	// CHECK: 	branchcond (unsigned more %value.temp.38 > uint128 0), block5, block6
+	// CHECK: 	branchcond (unsigned more (arg #2) > uint128 0), block5, block6
 	// CHECK: block5: # func_3_got_value
 	// CHECK: 	assert-failure
 	// CHECK: block6: # func_3_no_value
-	// CHECK: 	ty:uint32 %temp.40 = (trunc uint32 (%input_len.temp.37 - uint32 4))
-	// CHECK: 	branchcond (unsigned (uint32 0 + uint32 32) <= %temp.40), block7, block8
+	// CHECK: 	branchcond (unsigned uint32 32 <= (trunc uint32 ((arg #1) - uint32 4))), block7, block8
 	// CHECK: block7: # inbounds
 	// CHECK: 	ty:uint256 %temp.41 = (builtin ReadFromBuffer ((advance ptr: %input_ptr.temp.39, by: uint32 4), uint32 0))
-	// CHECK: 	branchcond (unsigned less (uint32 0 + uint32 32) < %temp.40), block9, block10
+	// CHECK: 	branchcond (unsigned less uint32 32 < (trunc uint32 ((arg #1) - uint32 4))), block9, block10
 	// CHECK: block8: # out_of_bounds
 	// CHECK: 	assert-failure
 	// CHECK: block9: # not_all_bytes_read
@@ -280,7 +279,7 @@ contract simple {
 	// CHECK: 	ty:uint32 %input_len.temp.43 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.44 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.45 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.43 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.46 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.46
@@ -301,7 +300,7 @@ contract simple {
 	// CHECK: 	ty:uint32 %input_len.temp.47 = (arg #1)
 	// CHECK: 	ty:uint128 %value.temp.48 = (arg #2)
 	// CHECK: 	ty:buffer_pointer %input_ptr.temp.49 = (arg #0)
-	// CHECK: 	branchcond (unsigned less %input_len.temp.47 < uint32 4), block2, block1
+	// CHECK: 	branchcond (unsigned less (arg #1) < uint32 4), block2, block1
 	// CHECK: block1: # start_dispatch
 	// CHECK: 	ty:uint32 %selector.temp.50 = (builtin ReadFromBuffer ((arg #0), uint32 0))
 	// CHECK: 	store (arg #3), %selector.temp.50
@@ -312,7 +311,7 @@ contract simple {
 	// CHECK: block2: # fb_or_recv
 	// CHECK: 	return code: function selector invalid
 	// CHECK: block3: # func_0_dispatch
-	// CHECK: 	branchcond (unsigned more %value.temp.48 > uint128 0), block4, block5
+	// CHECK: 	branchcond (unsigned more (arg #2) > uint128 0), block4, block5
 	// CHECK: block4: # func_0_got_value
 	// CHECK: 	assert-failure
 	// CHECK: block5: # func_0_no_value

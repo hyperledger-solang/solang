@@ -244,7 +244,8 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
-        for dispatch_cfg in function_dispatch(contract_no, &all_cfg, ns, opt) {
+        for mut dispatch_cfg in function_dispatch(contract_no, &all_cfg, ns, opt) {
+            optimize_and_check_cfg(&mut dispatch_cfg, ns, ASTFunction::None, opt);
             all_cfg.push(dispatch_cfg);
         }
 
