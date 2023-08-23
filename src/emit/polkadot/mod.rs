@@ -190,6 +190,7 @@ impl PolkadotTarget {
         &self,
         binary: &Binary<'a>,
         function: FunctionValue<'a>,
+        init: Option<FunctionValue>,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = binary.context.append_basic_block(function, "entry");
 
@@ -200,13 +201,17 @@ impl PolkadotTarget {
             .builder
             .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "");
 
-        let input_buf_ty = binary.context.i8_type().array_type(SCRATCH_SIZE);
-        let input_buf = binary.build_alloca(function, input_buf_ty, "input_buf");
-        let input_len = binary.scratch_len.unwrap().as_pointer_value();
+        // Call the storage initializers on deploy
+        if let Some(initializer) = init {
+            binary.builder.build_call(initializer, &[], "");
+        }
+
+        let scratch_buf = binary.scratch.unwrap().as_pointer_value();
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
 
         // copy arguments from input buffer
         binary.builder.build_store(
-            input_len,
+            scratch_len,
             binary
                 .context
                 .i32_type()
@@ -215,14 +220,14 @@ impl PolkadotTarget {
 
         binary.builder.build_call(
             binary.module.get_function("input").unwrap(),
-            &[input_buf.into(), input_len.into()],
+            &[scratch_buf.into(), scratch_len.into()],
             "",
         );
 
         let args_length =
             binary
                 .builder
-                .build_load(binary.context.i32_type(), input_len, "input_len");
+                .build_load(binary.context.i32_type(), scratch_len, "input_len");
 
         // store the length in case someone wants it via msg.data
         binary.builder.build_store(
@@ -230,7 +235,7 @@ impl PolkadotTarget {
             args_length.into_int_value(),
         );
 
-        (input_buf, args_length.into_int_value())
+        (scratch_buf, args_length.into_int_value())
     }
 
     fn declare_externals(&self, binary: &Binary) {
@@ -331,7 +336,7 @@ impl PolkadotTarget {
         let ty = bin.context.void_type().fn_type(&[], false);
         let export_name = if init.is_some() { "deploy" } else { "call" };
         let func = bin.module.add_function(export_name, ty, None);
-        let (input, input_length) = self.public_function_prelude(bin, func);
+        let (input, input_length) = self.public_function_prelude(bin, func, init);
         let args = vec![
             BasicMetadataValueEnum::PointerValue(input),
             BasicMetadataValueEnum::IntValue(input_length),
@@ -339,11 +344,7 @@ impl PolkadotTarget {
             BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
         ];
         let dispatch_cfg_name = &init
-            .map(|initializer| {
-                // Call the storage initializers on deploy
-                bin.builder.build_call(initializer, &[], "");
-                DispatchType::Deploy
-            })
+            .map(|_| DispatchType::Deploy)
             .unwrap_or(DispatchType::Call)
             .to_string();
         let cfg = bin.module.get_function(dispatch_cfg_name).unwrap();
