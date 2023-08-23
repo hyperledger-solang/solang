@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast;
-use normalize_path::NormalizePath;
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
@@ -99,10 +98,7 @@ impl FileResolver {
         path: &Path,
         import_no: Option<usize>,
     ) -> Result<Option<ResolvedFile>, String> {
-        // For accessing the cache, remove "." and ".." path components
-        let cache_path = path.normalize();
-
-        if let Some(cache) = self.cached_paths.get(&cache_path) {
+        if let Some(cache) = self.cached_paths.get(path) {
             let mut file = self.files[*cache].clone();
             file.import_no = import_no;
             return Ok(Some(file));
@@ -116,14 +112,15 @@ impl FileResolver {
         Ok(None)
     }
 
-    /// Populate the cache with absolute file path
+    /// Populate the cache with VFS path
     fn load_file(
         &mut self,
         filename: &OsStr,
         path: &Path,
         import_no: Option<usize>,
     ) -> Result<&ResolvedFile, String> {
-        if let Some(cache) = self.cached_paths.get(path) {
+        let vfs_path = PathBuf::from(filename);
+        if let Some(cache) = self.cached_paths.get(&vfs_path) {
             if self.files[*cache].import_no == import_no {
                 return Ok(&self.files[*cache]);
             }
@@ -155,7 +152,7 @@ impl FileResolver {
             contents: Arc::from(contents),
         });
 
-        self.cached_paths.insert(path.to_path_buf(), pos);
+        self.cached_paths.insert(vfs_path, pos);
 
         Ok(&self.files[pos])
     }
@@ -169,20 +166,6 @@ impl FileResolver {
         filename: &OsStr,
     ) -> Result<ResolvedFile, String> {
         let path = PathBuf::from(filename);
-
-        // XXX: This is a HACK! There is a bug where caching currently happens
-        // over canonicalized path names instead of VFS path names. My updates
-        // to bring solang import resolution in line with solc broke something
-        // with caching.
-        //
-        // If this file has already been cashed in the VFS, return it.
-        if let Some(import_no) = self.cached_paths.get(&path) {
-            if let Some(res) = self.files.get(*import_no) {
-                return Ok((*res).clone());
-            } else {
-                return Err("".to_string());
-            }
-        }
 
         let mut result: Vec<Result<ResolvedFile, String>> = vec![];
 
