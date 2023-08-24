@@ -4,7 +4,3 @@
 [submodule "integration/polkadot/tornado/tornado-cli"]
 	path = integration/polkadot/tornado/tornado-cli
 	url = https://github.com/tornadocash/tornado-cli.git
-[submodule "testdata/solang_import_resolution_tests"]
-	path = testdata/solang_import_resolution_tests
-  url = https://github.com/bkushigian/solang_import_resolution_tests
-  branch = v1.0.0
