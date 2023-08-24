@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use parity_scale_codec::{Decode, Encode};
+use primitive_types::U256;
 use rand::Rng;
 
 use crate::build_solidity;
@@ -1411,6 +1412,26 @@ fn abi_encode_dynamic_array4() {
         ])
         .encode()
     );
+}
+
+#[test]
+fn abi_encode_dynamic_array5() {
+    let uint_str = "201f1e1d1c1b1a191817161514131211100f0e0d0c0b0a090807060504030201";
+    let uint_val = U256::from_str_radix(uint_str, 16).unwrap();
+
+    let mut runtime = build_solidity(&format!(
+        "contract Test {{
+            function test() external view returns (uint256[] memory _amounts) {{
+                _amounts = new uint256[](2);
+                _amounts[0] = 0x{};
+                _amounts[1] = 0x{};
+            }}
+        }}",
+        uint_str, uint_str
+    ));
+
+    runtime.function("test", Vec::new());
+    assert_eq!(runtime.output(), vec![uint_val, uint_val].encode())
 }
 
 #[test]
