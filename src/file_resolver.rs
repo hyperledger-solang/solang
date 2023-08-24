@@ -53,7 +53,7 @@ impl FileResolver {
 
     /// Get the import paths
     pub fn get_import_paths(&self) -> &[(Option<OsString>, PathBuf)] {
-        &self.import_paths.as_slice()
+        self.import_paths.as_slice()
     }
 
     /// Get the import path corresponding to a map
