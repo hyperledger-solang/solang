@@ -1416,22 +1416,52 @@ fn abi_encode_dynamic_array4() {
 
 #[test]
 fn abi_encode_dynamic_array5() {
-    let uint_str = "201f1e1d1c1b1a191817161514131211100f0e0d0c0b0a090807060504030201";
-    let uint_val = U256::from_str_radix(uint_str, 16).unwrap();
+    let uint_str_0 = "201f1e1d1c1b1a191817161514131211100f0e0d0c0b0a090807060504030201";
+    let uint_val_0 = U256::from_str_radix(uint_str_0, 16).unwrap();
+
+    let uint_str_1 = "dbb85cf1ffefee258d1bdf7bc573838c30a6bc5a64fdc5c708280f56e4972fe7";
+    let uint_val_1 = U256::from_str_radix(uint_str_1, 16).unwrap();
 
     let mut runtime = build_solidity(&format!(
         "contract Test {{
-            function test() external view returns (uint256[] memory _amounts) {{
+            function test() external pure returns (uint256[] memory _amounts) {{
                 _amounts = new uint256[](2);
                 _amounts[0] = 0x{};
                 _amounts[1] = 0x{};
             }}
         }}",
-        uint_str, uint_str
+        uint_str_0, uint_str_1
     ));
 
     runtime.function("test", Vec::new());
-    assert_eq!(runtime.output(), vec![uint_val, uint_val].encode())
+    assert_eq!(runtime.output(), vec![uint_val_0, uint_val_1].encode());
+}
+
+#[test]
+fn abi_encode_dynamic_array6() {
+    let mut runtime = build_solidity(
+        r#"contract Test {
+            function test(uint256[] _init) external pure returns (uint256[] memory _amounts) {
+                _amounts = new uint256[](_init.length);
+                for (uint i = 0; i<_init.length; i++) {
+                    _amounts[i] = _init[i];
+                }
+            }
+        }"#,
+    );
+
+    let max_array_length = 128;
+    let mut r = rand::thread_rng();
+    let mut values = Vec::with_capacity(max_array_length);
+    for _ in 0..max_array_length {
+        let val = U256::from_big_endian(&r.gen::<[u8; 32]>());
+        println!("{val}");
+        values.push(val);
+
+        let identity = values.encode();
+        runtime.function("test", identity.to_vec());
+        assert_eq!(runtime.output(), identity);
+    }
 }
 
 #[test]
