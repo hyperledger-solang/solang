@@ -2,11 +2,43 @@
 All notable changes to [Solang](https://github.com/hyperledger/solang/)
 will be documented here.
 
-## Unreleased
+## v0.3.2 Brasília
+
+The language server is much improved, and many fixes all over.
+
+### Added
+- Go to definition is now implemented in the language server. [chioni16](https://github.com/chioni16)
+- The parser has been updated to be compatible with Ethereum Solidity v0.8.21. [seanyoung](https://github.com/seanyoung)
+- **Polkadot** Support for runtimes built with on `polkadot-v1.0.0`
 
 ### Fixed
 - **breaking** Resolving import paths now matches solc more closely, and only resolves relative
   paths when specified as `./foo` or `../foo`. [seanyoung](https://github.com/seanyoung)
+- **Solana** The `lamports` and `data` fields of `tx.accounts` can be modified again. [LucasSte](https://github.com/LucasSte)
+- **Solana** The `address.transfer()` and `address.send()` functions no longer change any balances
+  in the error case if there was an overflow (e.g. not enough balance).
+  [LucasSte](https://github.com/LucasSte)
+- **Solana** When collecting the required accounts, ensure that the writer and signer bits are set
+  correctly if the same account is used multiple times. [LucasSte](https://github.com/LucasSte)
+- It is not longer necessary to save a Solidity file, in order for the language server to pick
+  up changes to the file. [chioni16](https://github.com/chioni16)
+- The negate operator `-` now checks for overflow at runtime, and other math overflow fixes.
+  [seanyoung](https://github.com/seanyoung)
+- Fixed a bug where accessing the function selector of virtual functions might cause a compiler panic. [xermicus](https://github.com/xermicus)
+- Fixed a bug where the strength reduce optimization pass removed overflow checks on optimized multiplications. [xermicus](https://github.com/xermicus)
+- Fixed a bug where external function variables were not marked as `read` when they were called by the semantic analyzer, which could lead to the external function call being eliminated spuriously. [xermicus](https://github.com/xermicus)
+- Fixed a bug in `try-catch` where a failed transfer trapped the contract instead of handling it in a catch all block. [xermicus](https://github.com/xermicus)
+
+### Changed
+- The Substrate target has been renamed to Polkadot. [xermicus](https://github.com/xermicus)
+- **Polkadot** `assert()` and `require()` is now implemented as a transction revert, rather
+  than a trap. The error data is returned, and encoded the same as on Ethereum. Error data is now
+  passed to the calling contract, all the way up the call stack. [xermicus](https://github.com/xermicus)
+- **Polkadot** constructor can be non-payable. [xermicus](https://github.com/xermicus)
+- Storage variables are now always written to, regardless whether the contract does read them or not.
+  Prior behavior was to not write to storage variables if they are not read, which can remove wanted
+  side effects, because unused storage variables may be used in future versions of the contract. [xermicus](https://github.com/xermicus)
+- **Solana** seeds can now be of type `address` or `bytesN`, in addition to `bytes`. [seanyoung](https://github.com/seanyoung)
 
 ## v0.3.1 Göttingen
 
