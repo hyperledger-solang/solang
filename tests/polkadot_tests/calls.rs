@@ -1032,26 +1032,26 @@ fn constructors_and_messages_distinct_in_dispatcher() {
 #[test]
 fn error_bubbling() {
     let mut runtime = build_solidity(
-        r##"contract C {
+        r#"contract C {
         function raw_call() public payable returns (bytes ret) {
             B b = new B();
             (bool ok, ret) = address(b).call{value: 5000}(bytes4(0x00000000));
         }
-    
+
         function normal_call() public payable {
             B b = new B();
             b.b();
         }
-    
+
         function ext_func_call() public payable {
             A a = new A();
             function() external payable func = a.a;
             func{value: 1000}();
             a.a();
         }
-    
+
     }
-    
+
     contract B {
         @selector([0, 0, 0, 0])
         function b() public payable {
@@ -1059,13 +1059,13 @@ fn error_bubbling() {
             a.a();
         }
     }
-    
+
     contract A {
         function a() public payable {
             revert("no");
         }
     }
-    "##,
+    "#,
     );
 
     runtime.set_transferred_value(20000);
@@ -1087,27 +1087,27 @@ fn error_bubbling() {
 #[test]
 fn constructor_reverts_bubbling() {
     let mut runtime = build_solidity(
-        r##"
+        r#"
         contract A {
             B public b;
             constructor(bool r) payable {
                 b = new B(r);
             }
         }
-    
+
         contract B {
             C public c;
             constructor(bool r) payable {
                 c = new C(r);
             }
         }
-    
+
         contract C {
             uint public foo;
             constructor(bool r) {
                 if (!r) revert("no");
             }
-        }"##,
+        }"#,
     );
 
     runtime.set_transferred_value(20000);
@@ -1130,14 +1130,14 @@ fn try_catch_uncaught_bubbles_up() {
             b.b{value: 1000}();
         }
     }
-    
+
     contract B {
         function b() public payable {
             A a = new A();
             try a.a(0) {} catch Error(string) {}
         }
     }
-    
+
     contract A {
         function a(uint div) public pure returns(uint) {
             return 123 / div;
