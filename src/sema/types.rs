@@ -1299,9 +1299,6 @@ impl Type {
     pub fn to_signature_string(&self, say_tuple: bool, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
-            Type::Contract(_) | Type::Address(_) if ns.target == Target::Solana => {
-                format!("bytes{}", ns.address_length)
-            }
             Type::Contract(_) | Type::Address(_) => "address".to_string(),
             Type::Int(n) => format!("int{n}"),
             Type::Uint(n) => format!("uint{n}"),
