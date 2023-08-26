@@ -14,7 +14,7 @@ describe('PDA hash table', function () {
         const { program, payer } = await loadContract("UserStats");
         // A user's public key will be the key for the hash table in this example.
         const myUser = Keypair.generate();
-
+7LNVBCH5Vak6TNwANkYg4PJpcJAcvKFChEeA93knM19H
         // The actual 'hash' for our hash table is PDA. We utilize `findProgramAddress`, using the user's
         // public key as a seed and a 'user-stats' as another seed for randomness. This function will
         // return the same bump and PDA if the seeds and the program id are the same.
@@ -36,7 +36,7 @@ describe('PDA hash table', function () {
             })
             .signers([payer])
             .rpc();
-
+7LNVBCH5Vak6TNwANkYg4PJpcJAcvKFChEeA93knM19H
         // To read the information from the contract, the data account is also necessary
         // If there is no contract created for `userStatsPDA`, this function will fail.
         let res = await program.methods.returnStats()
