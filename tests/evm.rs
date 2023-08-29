@@ -2,7 +2,11 @@
 
 use rayon::prelude::*;
 use solang::{file_resolver::FileResolver, parse_and_resolve, sema::ast, Target};
-use std::{ffi::OsStr, fs, path::Path};
+use std::{
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+};
 use walkdir::WalkDir;
 
 fn test_solidity(src: &str) -> ast::Namespace {
@@ -288,6 +292,8 @@ fn set_file_contents(source: &str, path: &Path) -> (FileResolver, Vec<String>) {
         cache.set_file_contents(&name, contents);
         names.push(name);
     }
+
+    cache.add_import_path(&PathBuf::from(""));
 
     (cache, names)
 }

@@ -4,6 +4,7 @@ use solang::file_resolver::FileResolver;
 use solang::sema::ast;
 use solang::{parse_and_resolve, Target};
 use std::ffi::OsStr;
+use std::path::PathBuf;
 
 fn parse(src: &'static str) -> ast::Namespace {
     let mut cache = FileResolver::default();
@@ -16,7 +17,7 @@ fn parse_two_files(src1: &'static str, src2: &'static str) -> ast::Namespace {
     let mut cache = FileResolver::default();
     cache.set_file_contents("test.sol", src1.to_string());
     cache.set_file_contents("test2.sol", src2.to_string());
-
+    cache.add_import_path(&PathBuf::from(""));
     parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::EVM)
 }
 

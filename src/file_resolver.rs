@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast;
+use normalize_path::NormalizePath;
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
@@ -103,7 +104,10 @@ impl FileResolver {
         path: &Path,
         import_no: Option<usize>,
     ) -> Result<Option<ResolvedFile>, String> {
-        if let Some(cache) = self.cached_paths.get(path) {
+        // For accessing the cache, remove "." and ".." path components
+        let cache_path = path.normalize();
+
+        if let Some(cache) = self.cached_paths.get(&cache_path) {
             let mut file = self.files[*cache].clone();
             file.import_no = import_no;
             return Ok(Some(file));
@@ -157,7 +161,7 @@ impl FileResolver {
             contents: Arc::from(contents),
         });
 
-        self.cached_paths.insert(vfs_path, pos);
+        self.cached_paths.insert(path.to_path_buf(), pos);
 
         Ok(&self.files[pos])
     }

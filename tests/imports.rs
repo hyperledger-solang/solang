@@ -21,7 +21,10 @@ fn import_map_dup() {
         .success();
     let output = run.get_output();
 
-    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "warning: mapping foo is overwritten\n"
+    );
 }
 
 #[test]
