@@ -154,17 +154,23 @@ void sol_transfer(uint8_t *to_address, uint64_t lamports, SolParameters *params)
     uint64_t *from = params->ka[0].lamports;
     uint64_t *to = sol_account_lamport(to_address, params);
 
-    if (__builtin_sub_overflow(*from, lamports, from))
+    uint64_t from_balance;
+    uint64_t to_balance;
+
+    if (__builtin_sub_overflow(*from, lamports, &from_balance))
     {
         sol_log("sender does not have enough balance");
         sol_panic();
     }
 
-    if (__builtin_add_overflow(*to, lamports, to))
+    if (__builtin_add_overflow(*to, lamports, &to_balance))
     {
         sol_log("recipient lamports overflows");
         sol_panic();
     }
+
+    *from = from_balance;
+    *to = to_balance;
 }
 
 bool sol_try_transfer(uint8_t *to_address, uint64_t lamports, SolParameters *params)

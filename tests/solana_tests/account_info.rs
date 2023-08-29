@@ -280,3 +280,50 @@ contract starter {
     assert_eq!(vm.account_data.get(&acc2).unwrap().lamports, 7);
     assert_eq!(vm.account_data.get(&acc3).unwrap().lamports, 11);
 }
+
+#[test]
+fn account_data() {
+    let mut vm = build_solidity(
+        r#"
+import 'solana';
+
+contract C {
+	function test() external {
+		AccountInfo ai = tx.accounts[1];
+		ai.data[0] = 0xca;
+		ai.data[1] = 0xff;
+		ai.data[2] = 0xee;
+	}
+}
+        "#,
+    );
+
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let program_id = vm.stack[0].id;
+    let other_account = account_new();
+    vm.account_data.insert(
+        other_account,
+        AccountState {
+            lamports: 0,
+            owner: Some(program_id),
+            data: vec![0; 3],
+        },
+    );
+
+    vm.function("test")
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(other_account),
+            is_writable: true,
+            is_signer: false,
+        }])
+        .call();
+
+    assert_eq!(vm.account_data[&other_account].data[0], 0xca);
+    assert_eq!(vm.account_data[&other_account].data[1], 0xff);
+    assert_eq!(vm.account_data[&other_account].data[2], 0xee);
+}

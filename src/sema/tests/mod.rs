@@ -116,9 +116,7 @@ fn test_statement_reachable() {
                     returns: vec![],
                     ok_stmt: vec![],
                     errors: vec![],
-                    catch_param: None,
-                    catch_param_pos: None,
-                    catch_stmt: vec![],
+                    catch_all: None,
                 },
             ),
             true,
@@ -320,19 +318,7 @@ fn constant_overflow_checks() {
 
     assert_eq!(errors.len(), 31);
 
-    assert_eq!(
-        warnings[0].message,
-        "left shift by 7 may overflow the final result"
-    );
-    assert_eq!(
-        warnings[1].message,
-        "left shift by 7 may overflow the final result"
-    );
-    assert_eq!(
-        warnings[2].message,
-        "left shift by 9 may overflow the final result"
-    );
-    assert_eq!(warnings.len(), 3);
+    assert_eq!(warnings.len(), 0);
 }
 
 #[test]

@@ -335,7 +335,7 @@ fn encode_compact(
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: Expression::Cast {
+                value: Expression::Trunc {
                     loc: Codegen,
                     ty: Uint(8),
                     expr: mul.clone().into(),
@@ -371,7 +371,7 @@ fn encode_compact(
             Instr::WriteBuffer {
                 buf: buffer.clone(),
                 offset: offset.clone(),
-                value: Expression::Cast {
+                value: Expression::Trunc {
                     loc: Codegen,
                     ty: Uint(16),
                     expr: mul.into(),

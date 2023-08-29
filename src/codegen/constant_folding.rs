@@ -3,8 +3,10 @@
 use super::cfg::{ControlFlowGraph, Instr};
 use super::reaching_definitions;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::RetrieveType;
-use crate::sema::ast::{Diagnostic, Namespace, StringLocation, Type};
+use crate::sema::{
+    ast::{Diagnostic, Namespace, RetrieveType, StringLocation, Type},
+    eval::overflow_diagnostic,
+};
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 use ripemd::Ripemd160;
@@ -15,9 +17,10 @@ use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Shl, Shr, Sub};
 use tiny_keccak::{Hasher, Keccak};
 
 /// Constant folding pass on the given cfg. During constant folding, we may find issues
-/// like divide by zero, so this function returns a list of diagnostics which should
-/// be added to the namespace.
-pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
+/// like divide by zero, so this function may add diagnostics to the namespace. If dry_run
+/// is true, then diagnostics are generated but the CFG is not modified. This
+///
+pub fn constant_folding(cfg: &mut ControlFlowGraph, dry_run: bool, ns: &mut Namespace) {
     // for each block, instruction
     for block_no in 0..cfg.blocks.len() {
         let mut vars = cfg.blocks[block_no].defs.clone();
@@ -31,11 +34,13 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         ns.var_constants.insert(*loc, expr.clone());
                     }
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Set {
-                        loc: *loc,
-                        res: *res,
-                        expr,
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::Set {
+                            loc: *loc,
+                            res: *res,
+                            expr,
+                        };
+                    }
                 }
                 Instr::Call {
                     res,
@@ -48,12 +53,14 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .map(|e| expression(e, Some(&vars), cfg, ns).0)
                         .collect();
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Call {
-                        res: res.clone(),
-                        call: call.clone(),
-                        args,
-                        return_tys: return_tys.clone(),
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::Call {
+                            res: res.clone(),
+                            call: call.clone(),
+                            args,
+                            return_tys: return_tys.clone(),
+                        };
+                    }
                 }
                 Instr::Return { value } => {
                     let value = value
@@ -61,7 +68,9 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .map(|e| expression(e, Some(&vars), cfg, ns).0)
                         .collect();
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Return { value };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::Return { value };
+                    }
                 }
                 Instr::BranchCond {
                     cond,
@@ -70,64 +79,78 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 } => {
                     let (cond, _) = expression(cond, Some(&vars), cfg, ns);
 
-                    if let Expression::BoolLiteral { value: cond, .. } = cond {
-                        cfg.blocks[block_no].instr[instr_no] = Instr::Branch {
-                            block: if cond { *true_block } else { *false_block },
-                        };
-                    } else {
-                        cfg.blocks[block_no].instr[instr_no] = Instr::BranchCond {
-                            cond,
-                            true_block: *true_block,
-                            false_block: *false_block,
-                        };
+                    if !dry_run {
+                        if let Expression::BoolLiteral { value: cond, .. } = cond {
+                            cfg.blocks[block_no].instr[instr_no] = Instr::Branch {
+                                block: if cond { *true_block } else { *false_block },
+                            };
+                        } else {
+                            cfg.blocks[block_no].instr[instr_no] = Instr::BranchCond {
+                                cond,
+                                true_block: *true_block,
+                                false_block: *false_block,
+                            };
+                        }
                     }
                 }
                 Instr::Store { dest, data } => {
                     let (dest, _) = expression(dest, Some(&vars), cfg, ns);
                     let (data, _) = expression(data, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Store { dest, data };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::Store { dest, data };
+                    }
                 }
                 Instr::AssertFailure {
                     encoded_args: Some(expr),
                 } => {
                     let (buf, _) = expression(expr, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::AssertFailure {
-                        encoded_args: Some(buf),
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::AssertFailure {
+                            encoded_args: Some(buf),
+                        };
+                    }
                 }
                 Instr::Print { expr } => {
                     let (expr, _) = expression(expr, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Print { expr };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::Print { expr };
+                    }
                 }
                 Instr::ClearStorage { ty, storage } => {
                     let (storage, _) = expression(storage, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::ClearStorage {
-                        ty: ty.clone(),
-                        storage,
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::ClearStorage {
+                            ty: ty.clone(),
+                            storage,
+                        };
+                    }
                 }
                 Instr::SetStorage { ty, storage, value } => {
                     let (storage, _) = expression(storage, Some(&vars), cfg, ns);
                     let (value, _) = expression(value, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::SetStorage {
-                        ty: ty.clone(),
-                        storage,
-                        value,
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::SetStorage {
+                            ty: ty.clone(),
+                            storage,
+                            value,
+                        };
+                    }
                 }
                 Instr::LoadStorage { ty, storage, res } => {
                     let (storage, _) = expression(storage, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::LoadStorage {
-                        ty: ty.clone(),
-                        storage,
-                        res: *res,
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::LoadStorage {
+                            ty: ty.clone(),
+                            storage,
+                            res: *res,
+                        };
+                    }
                 }
                 Instr::SetStorageBytes {
                     storage,
@@ -138,11 +161,13 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let (value, _) = expression(value, Some(&vars), cfg, ns);
                     let (offset, _) = expression(offset, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::SetStorageBytes {
-                        storage,
-                        value,
-                        offset,
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::SetStorageBytes {
+                            storage,
+                            value,
+                            offset,
+                        };
+                    }
                 }
                 Instr::PushStorage {
                     res,
@@ -155,21 +180,25 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::PushStorage {
-                        res: *res,
-                        ty: ty.clone(),
-                        storage,
-                        value,
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::PushStorage {
+                            res: *res,
+                            ty: ty.clone(),
+                            storage,
+                            value,
+                        };
+                    }
                 }
                 Instr::PopStorage { res, ty, storage } => {
                     let (storage, _) = expression(storage, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::PopStorage {
-                        res: *res,
-                        ty: ty.clone(),
-                        storage,
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::PopStorage {
+                            res: *res,
+                            ty: ty.clone(),
+                            storage,
+                        };
+                    }
                 }
                 Instr::PushMemory {
                     res,
@@ -179,12 +208,14 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                 } => {
                     let (value, _) = expression(value, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::PushMemory {
-                        res: *res,
-                        ty: ty.clone(),
-                        array: *array,
-                        value: Box::new(value),
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::PushMemory {
+                            res: *res,
+                            ty: ty.clone(),
+                            array: *array,
+                            value: Box::new(value),
+                        };
+                    }
                 }
                 Instr::Constructor {
                     success,
@@ -218,20 +249,22 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Constructor {
-                        success: *success,
-                        res: *res,
-                        contract_no: *contract_no,
-                        constructor_no: *constructor_no,
-                        encoded_args,
-                        value,
-                        gas,
-                        salt,
-                        address,
-                        seeds,
-                        loc: *loc,
-                        accounts,
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::Constructor {
+                            success: *success,
+                            res: *res,
+                            contract_no: *contract_no,
+                            constructor_no: *constructor_no,
+                            encoded_args,
+                            value,
+                            gas,
+                            salt,
+                            address,
+                            seeds,
+                            loc: *loc,
+                            accounts,
+                        };
+                    }
                 }
                 Instr::ExternalCall {
                     success,
@@ -261,23 +294,27 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .as_ref()
                         .map(|expr| expression(expr, Some(&vars), cfg, ns).0);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::ExternalCall {
-                        success: *success,
-                        address,
-                        accounts,
-                        seeds,
-                        payload,
-                        value,
-                        gas,
-                        callty: callty.clone(),
-                        contract_function_no: *contract_function_no,
-                        flags,
-                    };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::ExternalCall {
+                            success: *success,
+                            address,
+                            accounts,
+                            seeds,
+                            payload,
+                            value,
+                            gas,
+                            callty: callty.clone(),
+                            contract_function_no: *contract_function_no,
+                            flags,
+                        };
+                    }
                 }
                 Instr::SelfDestruct { recipient } => {
                     let (recipient, _) = expression(recipient, Some(&vars), cfg, ns);
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::SelfDestruct { recipient };
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::SelfDestruct { recipient };
+                    }
                 }
                 Instr::EmitEvent {
                     event_no,
@@ -289,10 +326,12 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .map(|e| expression(e, Some(&vars), cfg, ns).0)
                         .collect();
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::EmitEvent {
-                        event_no: *event_no,
-                        data: expression(data, Some(&vars), cfg, ns).0,
-                        topics,
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::EmitEvent {
+                            event_no: *event_no,
+                            data: expression(data, Some(&vars), cfg, ns).0,
+                            topics,
+                        };
                     }
                 }
                 Instr::MemCopy {
@@ -303,11 +342,14 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                     let bytes = expression(bytes, Some(&vars), cfg, ns);
                     let source = expression(source, Some(&vars), cfg, ns);
                     let destination = expression(destination, Some(&vars), cfg, ns);
-                    cfg.blocks[block_no].instr[instr_no] = Instr::MemCopy {
-                        source: source.0,
-                        destination: destination.0,
-                        bytes: bytes.0,
-                    };
+
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::MemCopy {
+                            source: source.0,
+                            destination: destination.0,
+                            bytes: bytes.0,
+                        };
+                    }
                 }
                 Instr::Switch {
                     cond,
@@ -320,43 +362,53 @@ pub fn constant_folding(cfg: &mut ControlFlowGraph, ns: &mut Namespace) {
                         .map(|(exp, goto)| (expression(exp, Some(&vars), cfg, ns).0, *goto))
                         .collect::<Vec<(Expression, usize)>>();
 
-                    if let Expression::NumberLiteral { value: num, .. } = &cond.0 {
-                        let mut simplified_branch = None;
-                        for (match_item, block) in &cases {
-                            if let Expression::NumberLiteral {
-                                value: match_num, ..
-                            } = match_item
-                            {
-                                if match_num == num {
-                                    simplified_branch = Some(*block);
+                    if !dry_run {
+                        if let Expression::NumberLiteral { value: num, .. } = &cond.0 {
+                            let mut simplified_branch = None;
+                            for (match_item, block) in &cases {
+                                if let Expression::NumberLiteral {
+                                    value: match_num, ..
+                                } = match_item
+                                {
+                                    if match_num == num {
+                                        simplified_branch = Some(*block);
+                                    }
                                 }
                             }
+                            cfg.blocks[block_no].instr[instr_no] = Instr::Branch {
+                                block: simplified_branch.unwrap_or(*default),
+                            };
+                            break;
                         }
-                        cfg.blocks[block_no].instr[instr_no] = Instr::Branch {
-                            block: simplified_branch.unwrap_or(*default),
-                        };
-                        continue;
-                    }
 
-                    cfg.blocks[block_no].instr[instr_no] = Instr::Switch {
-                        cond: cond.0,
-                        cases,
-                        default: *default,
-                    };
+                        cfg.blocks[block_no].instr[instr_no] = Instr::Switch {
+                            cond: cond.0,
+                            cases,
+                            default: *default,
+                        };
+                    }
                 }
                 Instr::ReturnData { data, data_len } => {
                     let data = expression(data, Some(&vars), cfg, ns);
                     let data_len = expression(data_len, Some(&vars), cfg, ns);
-                    cfg.blocks[block_no].instr[instr_no] = Instr::ReturnData {
-                        data: data.0,
-                        data_len: data_len.0,
-                    };
+
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::ReturnData {
+                            data: data.0,
+                            data_len: data_len.0,
+                        };
+                    }
                 }
                 Instr::WriteBuffer { buf, offset, value } => {
-                    cfg.blocks[block_no].instr[instr_no] = Instr::WriteBuffer {
-                        buf: buf.clone(),
-                        offset: expression(offset, Some(&vars), cfg, ns).0,
-                        value: expression(value, Some(&vars), cfg, ns).0,
+                    let offset = expression(offset, Some(&vars), cfg, ns).0;
+                    let value = expression(value, Some(&vars), cfg, ns).0;
+
+                    if !dry_run {
+                        cfg.blocks[block_no].instr[instr_no] = Instr::WriteBuffer {
+                            buf: buf.clone(),
+                            offset,
+                            value,
+                        };
                     }
                 }
                 _ => (),
@@ -472,7 +524,12 @@ fn expression(
         Expression::SignExt { loc, ty, expr } => sign_ext(loc, ty, expr, vars, cfg, ns),
         Expression::Trunc { loc, ty, expr } => trunc(loc, ty, expr, vars, cfg, ns),
         Expression::BitwiseNot { loc, ty, expr } => bitwise_not(loc, ty, expr, vars, cfg, ns),
-        Expression::Negate { loc, ty, expr } => negate(loc, ty, expr, vars, cfg, ns),
+        Expression::Negate {
+            loc,
+            ty,
+            overflowing,
+            expr,
+        } => negate(loc, ty, expr, *overflowing, vars, cfg, ns),
         Expression::Variable { loc, ty, var_no } => {
             reference_variable(loc, *var_no, ty, vars, cfg, ns, expr)
         }
@@ -604,29 +661,47 @@ fn expression(
     }
 }
 
-fn bigint_to_expression(loc: &Loc, ty: &Type, n: BigInt) -> (Expression, bool) {
-    let n = match ty {
+fn bigint_to_expression(
+    loc: &Loc,
+    ty: &Type,
+    value: BigInt,
+    overflowing: bool,
+    ns: &mut Namespace,
+) -> (Expression, bool) {
+    if !overflowing {
+        if let Some(diagnostic) = overflow_diagnostic(&value, ty, loc) {
+            ns.diagnostics.push(diagnostic);
+        }
+    }
+
+    let value = match ty {
         Type::Uint(bits) => {
-            if n.bits() > *bits as u64 {
-                let (_, mut bs) = n.to_bytes_le();
+            if value.sign() == Sign::Minus {
+                let mut bs = value.to_signed_bytes_le();
+                bs.resize(*bits as usize / 8, 0xff);
+
+                BigInt::from_bytes_le(Sign::Plus, &bs)
+            } else if value.bits() > *bits as u64 {
+                let (_, mut bs) = value.to_bytes_le();
                 bs.truncate(*bits as usize / 8);
 
                 BigInt::from_bytes_le(Sign::Plus, &bs)
             } else {
-                n
+                value
             }
         }
         Type::Int(bits) => {
-            if n.bits() > *bits as u64 {
-                let mut bs = n.to_signed_bytes_le();
+            let mut bs = value.to_signed_bytes_le();
+
+            if bs.len() * 8 > *bits as usize {
                 bs.truncate(*bits as usize / 8);
 
                 BigInt::from_signed_bytes_le(&bs)
             } else {
-                n
+                value
             }
         }
-        Type::StorageRef(..) => n,
+        Type::StorageRef(..) => value,
         _ => unreachable!(),
     };
 
@@ -634,7 +709,7 @@ fn bigint_to_expression(loc: &Loc, ty: &Type, n: BigInt) -> (Expression, bool) {
         Expression::NumberLiteral {
             loc: *loc,
             ty: ty.clone(),
-            value: n,
+            value,
         },
         true,
     )
@@ -692,7 +767,7 @@ fn add(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        bigint_to_expression(loc, ty, left.add(right))
+        bigint_to_expression(loc, ty, left.add(right), overflowing, ns)
     } else {
         (
             Expression::Add {
@@ -725,7 +800,7 @@ fn subtract(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        bigint_to_expression(loc, ty, left.sub(right))
+        bigint_to_expression(loc, ty, left.sub(right), overflowing, ns)
     } else {
         (
             Expression::Subtract {
@@ -782,7 +857,7 @@ fn multiply(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        bigint_to_expression(loc, ty, left.mul(right))
+        bigint_to_expression(loc, ty, left.mul(right), overflowing, ns)
     } else {
         (
             Expression::Multiply {
@@ -814,7 +889,7 @@ fn bitwise_and(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        bigint_to_expression(loc, ty, left.bitand(right))
+        bigint_to_expression(loc, ty, left.bitand(right), true, ns)
     } else {
         (
             Expression::BitwiseAnd {
@@ -845,7 +920,7 @@ fn bitwise_or(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        bigint_to_expression(loc, ty, left.bitor(right))
+        bigint_to_expression(loc, ty, left.bitor(right), true, ns)
     } else {
         (
             Expression::BitwiseOr {
@@ -876,7 +951,7 @@ fn bitwise_xor(
         Expression::NumberLiteral { value: right, .. },
     ) = (&left.0, &right.0)
     {
-        bigint_to_expression(loc, ty, left.bitxor(right))
+        bigint_to_expression(loc, ty, left.bitxor(right), true, ns)
     } else {
         (
             Expression::BitwiseXor {
@@ -915,7 +990,7 @@ fn shift_left(
         } else {
             let right: u64 = right.to_u64().unwrap();
 
-            return bigint_to_expression(loc, ty, left.shl(&right));
+            return bigint_to_expression(loc, ty, left.shl(&right), true, ns);
         }
     }
     (
@@ -955,7 +1030,7 @@ fn shift_right(
         } else {
             let right: u64 = right.to_u64().unwrap();
 
-            return bigint_to_expression(loc, ty, left.shr(&right));
+            return bigint_to_expression(loc, ty, left.shr(&right), true, ns);
         }
     }
 
@@ -989,7 +1064,7 @@ fn power(
         Expression::NumberLiteral { value: right, .. },
     ) = (&base.0, &exp.0)
     {
-        if right.sign() == Sign::Minus || right >= &BigInt::from(u32::MAX) {
+        if right.sign() == Sign::Minus || right >= &BigInt::from(u16::MAX) {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("power {right} not possible"),
@@ -997,7 +1072,7 @@ fn power(
         } else {
             let right: u32 = right.to_u32().unwrap();
 
-            return bigint_to_expression(loc, ty, left.pow(right));
+            return bigint_to_expression(loc, ty, left.pow(right), overflowing, ns);
         }
     }
 
@@ -1031,7 +1106,7 @@ fn divide(
             ns.diagnostics
                 .push(Diagnostic::error(*loc, String::from("divide by zero")));
         } else if let Expression::NumberLiteral { value: left, .. } = &left.0 {
-            return bigint_to_expression(loc, ty, left.div(right));
+            return bigint_to_expression(loc, ty, left.div(right), false, ns);
         }
     }
     (
@@ -1072,7 +1147,7 @@ fn modulo(
             ns.diagnostics
                 .push(Diagnostic::error(*loc, String::from("divide by zero")));
         } else if let Expression::NumberLiteral { value: left, .. } = &left.0 {
-            return bigint_to_expression(loc, ty, left.rem(right));
+            return bigint_to_expression(loc, ty, left.rem(right), false, ns);
         }
     }
 
@@ -1166,7 +1241,7 @@ fn trunc(
 ) -> (Expression, bool) {
     let expr = expression(expr, vars, cfg, ns);
     if let Expression::NumberLiteral { value, .. } = expr.0 {
-        bigint_to_expression(loc, ty, value)
+        bigint_to_expression(loc, ty, value, true, ns)
     } else {
         (
             Expression::Trunc {
@@ -1189,7 +1264,7 @@ fn bitwise_not(
 ) -> (Expression, bool) {
     let expr = expression(expr, vars, cfg, ns);
     if let Expression::NumberLiteral { value, .. } = expr.0 {
-        bigint_to_expression(loc, ty, !value)
+        bigint_to_expression(loc, ty, !value, true, ns)
     } else {
         (
             Expression::BitwiseNot {
@@ -1206,18 +1281,20 @@ fn negate(
     loc: &pt::Loc,
     ty: &Type,
     expr: &Expression,
+    overflowing: bool,
     vars: Option<&reaching_definitions::VarDefs>,
     cfg: &ControlFlowGraph,
     ns: &mut Namespace,
 ) -> (Expression, bool) {
     let expr = expression(expr, vars, cfg, ns);
     if let Expression::NumberLiteral { value, .. } = expr.0 {
-        bigint_to_expression(loc, ty, -value)
+        bigint_to_expression(loc, ty, -value, overflowing, ns)
     } else {
         (
             Expression::Negate {
                 loc: *loc,
                 ty: ty.clone(),
+                overflowing,
                 expr: Box::new(expr.0),
             },
             expr.1,

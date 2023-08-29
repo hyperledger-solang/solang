@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::Options;
+use std::ffi::CString;
+
+use crate::codegen::{Options, STORAGE_INITIALIZER};
 use crate::sema::ast::{Contract, Namespace};
 use inkwell::context::Context;
 use inkwell::module::{Linkage, Module};
@@ -8,7 +10,7 @@ use inkwell::values::{BasicMetadataValueEnum, FunctionValue, IntValue, PointerVa
 use inkwell::AddressSpace;
 
 use crate::codegen::dispatch::polkadot::DispatchType;
-use crate::emit::functions::{emit_functions, emit_initializer};
+use crate::emit::functions::emit_functions;
 use crate::emit::{Binary, TargetRuntime};
 
 mod storage;
@@ -144,7 +146,16 @@ impl PolkadotTarget {
 
         emit_functions(&mut target, &mut binary, contract, ns);
 
-        let storage_initializer = emit_initializer(&mut target, &mut binary, contract, ns);
+        let function_name = CString::new(STORAGE_INITIALIZER).unwrap();
+        let mut storage_initializers = binary
+            .functions
+            .values()
+            .filter(|f| f.get_name() == function_name.as_c_str());
+        let storage_initializer = *storage_initializers
+            .next()
+            .expect("storage initializer is always present");
+        assert!(storage_initializers.next().is_none());
+
         target.emit_dispatch(Some(storage_initializer), &mut binary, ns);
         target.emit_dispatch(None, &mut binary, ns);
 
@@ -189,7 +200,8 @@ impl PolkadotTarget {
     fn public_function_prelude<'a>(
         &self,
         binary: &Binary<'a>,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
+        storage_initializer: Option<FunctionValue>,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = binary.context.append_basic_block(function, "entry");
 
@@ -199,6 +211,11 @@ impl PolkadotTarget {
         binary
             .builder
             .build_call(binary.module.get_function("__init_heap").unwrap(), &[], "");
+
+        // Call the storage initializers on deploy
+        if let Some(initializer) = storage_initializer {
+            binary.builder.build_call(initializer, &[], "");
+        }
 
         let scratch_buf = binary.scratch.unwrap().as_pointer_value();
         let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
@@ -325,24 +342,29 @@ impl PolkadotTarget {
         external!("set_code_hash", i32_type, u8_ptr);
     }
 
-    /// Emits the "deploy" function if `init` is `Some`, otherwise emits the "call" function.
-    fn emit_dispatch(&mut self, init: Option<FunctionValue>, bin: &mut Binary, ns: &Namespace) {
+    /// Emits the "deploy" function if `storage_initializer` is `Some`, otherwise emits the "call" function.
+    fn emit_dispatch(
+        &mut self,
+        storage_initializer: Option<FunctionValue>,
+        bin: &mut Binary,
+        ns: &Namespace,
+    ) {
         let ty = bin.context.void_type().fn_type(&[], false);
-        let export_name = if init.is_some() { "deploy" } else { "call" };
+        let export_name = if storage_initializer.is_some() {
+            "deploy"
+        } else {
+            "call"
+        };
         let func = bin.module.add_function(export_name, ty, None);
-        let (input, input_length) = self.public_function_prelude(bin, func);
+        let (input, input_length) = self.public_function_prelude(bin, func, storage_initializer);
         let args = vec![
             BasicMetadataValueEnum::PointerValue(input),
             BasicMetadataValueEnum::IntValue(input_length),
             BasicMetadataValueEnum::IntValue(self.value_transferred(bin, ns)),
             BasicMetadataValueEnum::PointerValue(bin.selector.as_pointer_value()),
         ];
-        let dispatch_cfg_name = &init
-            .map(|initializer| {
-                // Call the storage initializers on deploy
-                bin.builder.build_call(initializer, &[], "");
-                DispatchType::Deploy
-            })
+        let dispatch_cfg_name = &storage_initializer
+            .map(|_| DispatchType::Deploy)
             .unwrap_or(DispatchType::Call)
             .to_string();
         let cfg = bin.module.get_function(dispatch_cfg_name).unwrap();

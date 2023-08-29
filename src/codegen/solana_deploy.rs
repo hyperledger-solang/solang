@@ -16,6 +16,13 @@ use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 use solang_parser::pt::Loc;
 
+// https://github.com/solana-labs/solana/blob/7beeb83104a46b9e709f24fbf94e19a2ac564e99/sdk/program/src/rent.rs#L50
+const ACCOUNT_STORAGE_OVERHEAD: u64 = 128;
+// https://github.com/solana-labs/solana/blob/7beeb83104a46b9e709f24fbf94e19a2ac564e99/sdk/program/src/rent.rs#L34
+const LAMPORTS_PER_BYTE_YER: u64 = 3480;
+// https://github.com/solana-labs/solana/blob/7beeb83104a46b9e709f24fbf94e19a2ac564e99/sdk/program/src/rent.rs#L38
+const EXEMPTION_THRESHOLD: u64 = 2;
+
 /// Special code for Solana constructors like creating the account
 ///
 /// On Solana, prepare the data account after deploy; ensure the account is
@@ -330,7 +337,7 @@ pub(super) fn solana_deploy(
                     right: Expression::NumberLiteral {
                         loc: Loc::Codegen,
                         ty: Type::Uint(64),
-                        value: 128.into(),
+                        value: ACCOUNT_STORAGE_OVERHEAD.into(),
                     }
                     .into(),
                 }
@@ -338,7 +345,7 @@ pub(super) fn solana_deploy(
                 right: Expression::NumberLiteral {
                     loc: Loc::Codegen,
                     ty: Type::Uint(64),
-                    value: BigInt::from(3480 * 2),
+                    value: BigInt::from(LAMPORTS_PER_BYTE_YER * EXEMPTION_THRESHOLD),
                 }
                 .into(),
             };
@@ -348,7 +355,9 @@ pub(super) fn solana_deploy(
             let space_runtime_constant = contract.fixed_layout_size.to_u64().unwrap();
 
             // https://github.com/solana-labs/solana/blob/718f433206c124da85a8aa2476c0753f351f9a28/sdk/program/src/rent.rs#L78-L82
-            let lamports_runtime_constant = (128 + space_runtime_constant) * 3480 * 2;
+            let lamports_runtime_constant = (ACCOUNT_STORAGE_OVERHEAD + space_runtime_constant)
+                * LAMPORTS_PER_BYTE_YER
+                * EXEMPTION_THRESHOLD;
 
             (
                 Expression::NumberLiteral {

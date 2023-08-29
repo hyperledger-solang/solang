@@ -69,7 +69,7 @@ fn constructor_wrong_selector() {
         }",
     );
 
-    runtime.raw_constructor(vec![0xaa, 0xbb, 0xcc, 0xdd]);
+    runtime.raw_constructor_failure(vec![0xaa, 0xbb, 0xcc, 0xdd]);
     runtime.function("get", Vec::new());
 }
 

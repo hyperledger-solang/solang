@@ -17,16 +17,16 @@ contract Array_bound_Test {
         // CHECK: ty:uint32 %array_length.temp.34 = uint32 20
         uint256[] d = new uint256[](20);
 
-        // CHECK: ty:uint32 %array_length.temp.32 = (%1.cse_temp + uint32 1)
+        // CHECK: ty:uint32 %array_length.temp.32 = (overflowing %1.cse_temp + uint32 1)
         a.push();
 
-        // CHECK: ty:uint32 %array_length.temp.33 = ((arg #2) - uint32 1)
+        // CHECK: ty:uint32 %array_length.temp.33 = (overflowing (arg #2) - uint32 1)
         c.pop();
 
         // CHECK: ty:uint32 %array_length.temp.34 = uint32 21
         d.push();
 
-        // CHECK: return (zext uint256 (((%array_length.temp.32 + (builtin ArrayLength ((arg #0)))) + ((arg #2) - uint32 1)) + uint32 21))
+        // CHECK: return (zext uint256 (((%array_length.temp.32 + (builtin ArrayLength ((arg #0)))) + (overflowing (arg #2) - uint32 1)) + uint32 21))
         return a.length + b.length + c.length + d.length;
     }
 
