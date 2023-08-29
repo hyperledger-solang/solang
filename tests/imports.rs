@@ -13,7 +13,7 @@ fn import_map_dup() {
             "--importmap",
             "foo=tests",
             "--importmap",
-            "foo=tests",
+            "foo=tests2",
             "dummy.sol",
         ])
         .current_dir("tests/imports_testcases")
@@ -23,7 +23,7 @@ fn import_map_dup() {
 
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "warning: mapping foo is overwritten\n"
+        "warning: mapping 'foo' to 'tests' is overwritten\n"
     );
 }
 

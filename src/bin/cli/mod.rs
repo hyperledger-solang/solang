@@ -527,18 +527,20 @@ pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
     }
 
     if let Some(maps) = package.get_import_map() {
-        let mut existing_mapped_values = resolver
-            .get_import_paths()
-            .iter()
-            .filter_map(|x| x.0.clone())
-            .collect::<Vec<OsString>>();
         for (map, path) in maps {
-            let map2 = OsString::from(map);
-            if existing_mapped_values.contains(&map2) {
-                eprintln!("warning: mapping {} is overwritten", map)
+            let os_map = OsString::from(map);
+            if let Some((_, existing_path)) = resolver
+                .get_import_paths()
+                .iter()
+                .find(|(m, _)| *m == Some(os_map.clone()))
+            {
+                eprintln!(
+                    "warning: mapping '{}' to '{}' is overwritten",
+                    map,
+                    existing_path.display()
+                )
             }
-            existing_mapped_values.push(map2.clone());
-            resolver.add_import_map(map2, path.clone());
+            resolver.add_import_map(os_map, path.clone());
         }
     }
 
