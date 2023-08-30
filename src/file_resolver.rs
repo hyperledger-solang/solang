@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast;
+use itertools::Itertools;
 use normalize_path::NormalizePath;
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
@@ -180,14 +181,14 @@ impl FileResolver {
         parent: Option<&ResolvedFile>,
         filename: &OsStr,
     ) -> Result<ResolvedFile, String> {
-        let path = PathBuf::from(filename);
+        let path_filename = PathBuf::from(filename);
 
-        let mut result: Vec<Result<ResolvedFile, String>> = vec![];
+        let mut result: Vec<ResolvedFile> = vec![];
 
         // Only when the path starts with ./ or ../ are relative paths considered; this means
         // that `import "b.sol";` will check the import paths for b.sol, while `import "./b.sol";`
         // will only the path relative to the current file.
-        if path.starts_with("./") || path.starts_with("../") {
+        if path_filename.starts_with("./") || path_filename.starts_with("../") {
             if let Some(ResolvedFile {
                 import_no,
                 full_path,
@@ -196,7 +197,7 @@ impl FileResolver {
             {
                 let curdir = PathBuf::from(".");
                 let base = full_path.parent().unwrap_or(&curdir);
-                let path = base.join(&path);
+                let path = base.join(&path_filename);
 
                 if let Some(file) = self.try_file(filename, &path, *import_no)? {
                     // No ambiguity possible, so just return
@@ -204,24 +205,24 @@ impl FileResolver {
                 }
             }
 
-            return Err(format!("file not found '{}'", filename.to_string_lossy()));
+            return Err(format!("file not found '{}'", path_filename.display()));
         }
 
         if parent.is_none() {
-            if let Some(file) = self.try_file(filename, &path, None)? {
+            if let Some(file) = self.try_file(filename, &path_filename, None)? {
                 return Ok(file);
-            } else if path.is_absolute() {
-                return Err(format!("file not found '{}'", filename.to_string_lossy()));
+            } else if path_filename.is_absolute() {
+                return Err(format!("file not found '{}'", path_filename.display()));
             }
         }
 
         // first check maps
 
-        let mut remapped = path.clone();
+        let mut remapped = path_filename.clone();
 
         for import_map_no in 0..self.import_paths.len() {
             if let (Some(mapping), target) = &self.import_paths[import_map_no].clone() {
-                if let Ok(relpath) = path.strip_prefix(mapping) {
+                if let Ok(relpath) = path_filename.strip_prefix(mapping) {
                     remapped = target.join(relpath);
                 }
             }
@@ -235,32 +236,22 @@ impl FileResolver {
                 let path = import_path.join(&path);
 
                 if let Some(file) = self.try_file(filename, &path, Some(import_no))? {
-                    result.push(Ok(file));
+                    result.push(file);
                 }
             }
         }
 
-        if result.is_empty() {
-            Err(format!("file not found '{}'", filename.to_string_lossy()))
-        } else if result.len() > 1 {
-            let filepaths = result
-                .iter()
-                .flatten()
-                .map(|f| &f.full_path)
-                .collect::<Vec<&PathBuf>>();
-
-            let mut filenames = vec![];
-            for fp in filepaths {
-                filenames.push(fp.to_str().unwrap().to_string());
-            }
-
-            Err(format!(
-                "found multiple files matching '{}'\n- {}",
-                filename.to_string_lossy(),
-                filenames.join("\n- ")
-            ))
-        } else {
-            result.pop().unwrap()
+        match result.len() {
+            0 => Err(format!("file not found '{}'", path_filename.display())),
+            1 => Ok(result.pop().unwrap()),
+            _ => Err(format!(
+                "found multiple files matching '{}': {}",
+                path_filename.display(),
+                result
+                    .iter()
+                    .map(|f| format!("'{}'", f.full_path.display()))
+                    .join(", ")
+            )),
         }
     }
 

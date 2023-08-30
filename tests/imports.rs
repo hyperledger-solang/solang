@@ -219,3 +219,31 @@ fn backslash_path() {
     #[cfg(not(windows))]
     assert!(err.contains(": file not found '..\\import.sol'"));
 }
+
+#[test]
+fn found_two_files() {
+    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let run = cmd
+        .args([
+            "compile",
+            "--target",
+            "solana",
+            "--importpath",
+            "imports",
+            "-I",
+            "imports2",
+            "import.sol",
+        ])
+        .current_dir("tests/imports_testcases")
+        .assert()
+        .failure();
+    let output = run.get_output();
+
+    let error = String::from_utf8_lossy(&output.stderr);
+
+    println!("{error}");
+
+    assert!(error.contains(": found multiple files matching 'bar.sol': '"));
+    assert!(error.contains("/tests/imports_testcases/imports/bar.sol', '"));
+    assert!(error.contains("/tests/imports_testcases/imports2/bar.sol'"));
+}
