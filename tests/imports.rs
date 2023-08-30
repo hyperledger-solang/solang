@@ -244,6 +244,14 @@ fn found_two_files() {
     println!("{error}");
 
     assert!(error.contains(": found multiple files matching 'bar.sol': '"));
-    assert!(error.contains("/tests/imports_testcases/imports/bar.sol', '"));
-    assert!(error.contains("/tests/imports_testcases/imports2/bar.sol'"));
+    #[cfg(windows)]
+    {
+        assert!(error.contains("\\tests\\imports_testcases\\imports\\bar.sol', '"));
+        assert!(error.contains("\\tests\\imports_testcases\\imports2\\bar.sol'"));
+    }
+    #[cfg(not(windows))]
+    {
+        assert!(error.contains("/tests/imports_testcases/imports/bar.sol', '"));
+        assert!(error.contains("/tests/imports_testcases/imports2/bar.sol'"));
+    }
 }
