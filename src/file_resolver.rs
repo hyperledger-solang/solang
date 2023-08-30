@@ -128,15 +128,15 @@ impl FileResolver {
         Ok(None)
     }
 
-    /// Populate the cache with VFS path
+    /// Populate the cache with absolute file path
     fn load_file(
         &mut self,
         filename: &OsStr,
         path: &Path,
         import_no: Option<usize>,
     ) -> Result<&ResolvedFile, String> {
-        let vfs_path = PathBuf::from(filename);
-        if let Some(cache) = self.cached_paths.get(&vfs_path) {
+        let path_filename = PathBuf::from(filename);
+        if let Some(cache) = self.cached_paths.get(&path_filename) {
             if self.files[*cache].import_no == import_no {
                 return Ok(&self.files[*cache]);
             }
