@@ -44,7 +44,13 @@ impl FileResolver {
 
     /// Add import map
     pub fn add_import_map(&mut self, map: OsString, path: PathBuf) {
-        self.import_paths.push((Some(map), path));
+        let map = Some(map);
+
+        if let Some((_, e)) = self.import_paths.iter_mut().find(|(k, _)| *k == map) {
+            *e = path;
+        } else {
+            self.import_paths.push((map, path));
+        }
     }
 
     /// Get the import path and the optional mapping corresponding to `import_no`.
