@@ -401,3 +401,33 @@ fn signed_literal_unsigned_cast() {
 
     runtime.function("foo", Vec::new());
 }
+
+#[test]
+fn mul() {
+    // https://github.com/hyperledger/solang/issues/1507
+    let mut runtime = build_solidity(
+        r#"
+        contract Test {
+            function test()
+                external view
+                returns (uint256 result)
+            {
+                return f(10_000_000_000);
+            }
+
+            function f(uint256 x)
+                internal pure
+                returns (uint256)
+            {
+                return x * x / 10_000_000_000;
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    assert_eq!(
+        runtime.output(),
+        (10000000000u64, 0u64, 0u64, 0u64).encode()
+    );
+}
