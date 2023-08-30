@@ -8,7 +8,7 @@ use ink_env::{
 use ink_primitives::{AccountId, Hash};
 use parity_scale_codec::Encode;
 use solang::{file_resolver::FileResolver, Target};
-use std::{ffi::OsStr, path::PathBuf};
+use std::ffi::OsStr;
 
 fn topic_hash(encoded: &[u8]) -> Hash {
     let mut buf = [0; 32];
@@ -119,8 +119,6 @@ fn event_imported() {
         .to_string(),
     );
 
-    cache.add_import_path(&PathBuf::from(""));
-
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -150,8 +148,6 @@ fn event_imported() {
         "#
         .to_string(),
     );
-
-    cache.add_import_path(&PathBuf::from(""));
 
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
@@ -183,8 +179,6 @@ fn event_imported() {
         .to_string(),
     );
 
-    cache.add_import_path(&PathBuf::from(""));
-
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -212,8 +206,6 @@ fn event_imported() {
         "#
         .to_string(),
     );
-
-    cache.add_import_path(&PathBuf::from(""));
 
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 

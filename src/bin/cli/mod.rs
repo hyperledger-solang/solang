@@ -515,7 +515,6 @@ impl PackageTrait for DocPackage {
 pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
     let mut resolver = FileResolver::default();
 
-    let mut added_path = false;
     if let Some(paths) = package.get_import_path() {
         let dups: Vec<_> = paths.iter().duplicates().collect();
 
@@ -529,11 +528,7 @@ pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
 
         for path in paths {
             resolver.add_import_path(path);
-            added_path = true;
         }
-    }
-    if !added_path {
-        resolver.add_import_path(&PathBuf::from(""));
     }
 
     if let Some(maps) = package.get_import_map() {

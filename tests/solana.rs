@@ -34,7 +34,6 @@ use std::{
     ffi::OsStr,
     io::Write,
     mem::size_of,
-    path::PathBuf,
     rc::Rc,
     sync::Arc,
 };
@@ -154,7 +153,6 @@ impl VirtualMachineBuilder {
     pub(crate) fn new(src: &str) -> Self {
         let mut cache = FileResolver::default();
         cache.set_file_contents("test.sol", src.to_string());
-        cache.add_import_path(&PathBuf::from(""));
         Self { cache, opts: None }
     }
 

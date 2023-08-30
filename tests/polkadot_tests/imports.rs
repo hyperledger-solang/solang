@@ -3,7 +3,6 @@
 use solang::file_resolver::FileResolver;
 use solang::Target;
 use std::ffi::OsStr;
-use std::path::PathBuf;
 
 #[test]
 fn enum_import() {
@@ -28,7 +27,7 @@ fn enum_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -54,7 +53,7 @@ fn enum_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -80,7 +79,7 @@ fn enum_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -102,7 +101,7 @@ fn enum_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert_eq!(
@@ -120,7 +119,7 @@ fn enum_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert_eq!(
@@ -137,7 +136,7 @@ fn enum_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert_eq!(
@@ -169,7 +168,7 @@ fn struct_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -195,7 +194,7 @@ fn struct_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert_eq!(ns.diagnostics.first_error(), "type 'struct_a' not found");
@@ -232,7 +231,7 @@ fn contract_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -275,7 +274,7 @@ fn contract_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -319,8 +318,6 @@ fn contract_import() {
         .to_string(),
     );
 
-    cache.add_import_path(&PathBuf::from(""));
-
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -343,8 +340,6 @@ fn circular_import() {
         "#
         .to_string(),
     );
-
-    cache.add_import_path(&PathBuf::from(""));
 
     let ns = solang::parse_and_resolve(
         OsStr::new("self.sol"),
@@ -390,7 +385,7 @@ fn circular_import() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -424,7 +419,7 @@ fn import_symbol() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -459,7 +454,7 @@ fn import_symbol() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -494,7 +489,7 @@ fn import_symbol() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -539,7 +534,7 @@ fn import_symbol() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -589,7 +584,7 @@ fn enum_import_chain() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -636,7 +631,7 @@ fn enum_import_chain() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert_eq!(
@@ -685,7 +680,7 @@ fn import_base_dir() {
         "#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(OsStr::new("a.sol"), &mut cache, Target::default_polkadot());
 
     assert!(!ns.diagnostics.any_errors());
@@ -725,7 +720,7 @@ fn event_resolve() {
         }"#
         .to_string(),
     );
-    cache.add_import_path(&PathBuf::from(""));
+
     let ns = solang::parse_and_resolve(
         OsStr::new("Test.sol"),
         &mut cache,

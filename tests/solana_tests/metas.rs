@@ -7,7 +7,6 @@ use crate::{
 use borsh::BorshSerialize;
 use num_bigint::BigInt;
 use solang::file_resolver::FileResolver;
-use std::path::PathBuf;
 
 #[test]
 fn use_authority() {
@@ -81,7 +80,7 @@ fn token_account() {
         include_str!("../../solana-library/spl_token.sol").to_string(),
     );
     let src = r#"
-    import 'spl_token.sol';
+    import './spl_token.sol';
 
 contract Foo {
     function token_account(address add) public returns (SplToken.TokenAccountData) {
@@ -90,7 +89,6 @@ contract Foo {
 }
     "#;
     cache.set_file_contents("test.sol", src.to_string());
-    cache.add_import_path(&PathBuf::from(""));
 
     let mut vm = build_solidity_with_cache(cache);
 
@@ -240,7 +238,7 @@ fn mint_account() {
         include_str!("../../solana-library/spl_token.sol").to_string(),
     );
     let src = r#"
-    import 'spl_token.sol';
+    import './spl_token.sol';
 
 contract Foo {
     function mint_account(address add) public returns (SplToken.MintAccountData) {
@@ -249,7 +247,7 @@ contract Foo {
 }
     "#;
     cache.set_file_contents("test.sol", src.to_string());
-    cache.add_import_path(&PathBuf::from(""));
+
     let mut vm = build_solidity_with_cache(cache);
 
     #[derive(BorshSerialize)]

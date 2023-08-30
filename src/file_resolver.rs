@@ -40,10 +40,7 @@ pub struct ResolvedFile {
 impl FileResolver {
     /// Add import path
     pub fn add_import_path(&mut self, path: &Path) {
-        assert!(!self
-            .import_paths
-            .iter()
-            .any(|(m, p)| m.is_none() && p == path));
+        assert!(!self.import_paths.contains(&(None, path.to_path_buf())));
 
         self.import_paths.push((None, path.to_path_buf()));
     }
@@ -188,6 +185,7 @@ impl FileResolver {
     ) -> Result<ResolvedFile, String> {
         let path_filename = PathBuf::from(filename);
 
+        // See https://docs.soliditylang.org/en/v0.8.17/path-resolution.html
         let mut result: Vec<ResolvedFile> = vec![];
 
         // Only when the path starts with ./ or ../ are relative paths considered; this means
@@ -222,7 +220,6 @@ impl FileResolver {
         }
 
         // first check maps
-
         let mut remapped = path_filename.clone();
 
         for import_map_no in 0..self.import_paths.len() {
@@ -243,6 +240,15 @@ impl FileResolver {
                 if let Some(file) = self.try_file(filename, &path, Some(import_no))? {
                     result.push(file);
                 }
+            }
+        }
+
+        // If there was no defined import path, then try the file directly. See
+        // https://docs.soliditylang.org/en/v0.8.17/path-resolution.html#base-path-and-include-paths
+        // "By default the base path is empty, which leaves the source unit name unchanged."
+        if !self.import_paths.iter().any(|(m, _)| m.is_none()) {
+            if let Some(file) = self.try_file(filename, &path, None)? {
+                result.push(file);
             }
         }
 
