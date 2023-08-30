@@ -231,6 +231,31 @@ fn found_two_files() {
             "--importpath",
             "imports",
             "-I",
+            "imports",
+            "--importpath",
+            "meh",
+            "-I",
+            "meh",
+            "import.sol",
+        ])
+        .current_dir("tests/imports_testcases")
+        .assert()
+        .failure();
+    let output = run.get_output();
+    let error = String::from_utf8_lossy(&output.stderr);
+    println!("{error}");
+
+    assert!(error.contains("error: import paths 'imports', 'meh' specifed more than once"));
+
+    let mut cmd = Command::cargo_bin("solang").unwrap();
+    let run = cmd
+        .args([
+            "compile",
+            "--target",
+            "solana",
+            "--importpath",
+            "imports",
+            "-I",
             "imports2",
             "import.sol",
         ])

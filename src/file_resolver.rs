@@ -40,6 +40,11 @@ pub struct ResolvedFile {
 impl FileResolver {
     /// Add import path
     pub fn add_import_path(&mut self, path: &Path) {
+        assert!(!self
+            .import_paths
+            .iter()
+            .any(|(m, p)| m.is_none() && p == path));
+
         self.import_paths.push((None, path.to_path_buf()));
     }
 

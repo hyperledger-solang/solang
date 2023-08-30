@@ -8,15 +8,15 @@ use clap_complete::Shell;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
 
+use itertools::Itertools;
 use semver::Version;
 use serde::Deserialize;
-use std::{ffi::OsString, path::PathBuf, process::exit};
-
 use solang::{
     codegen::{OptimizationLevel, Options},
     file_resolver::FileResolver,
     Target,
 };
+use std::{ffi::OsString, path::PathBuf, process::exit};
 
 mod test;
 #[derive(Parser)]
@@ -517,6 +517,16 @@ pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
 
     let mut added_path = false;
     if let Some(paths) = package.get_import_path() {
+        let dups: Vec<_> = paths.iter().duplicates().collect();
+
+        if !dups.is_empty() {
+            eprintln!(
+                "error: import paths {} specifed more than once",
+                dups.iter().map(|p| format!("'{}'", p.display())).join(", ")
+            );
+            exit(1);
+        }
+
         for path in paths {
             resolver.add_import_path(path);
             added_path = true;
