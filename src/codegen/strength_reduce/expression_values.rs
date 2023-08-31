@@ -436,18 +436,17 @@ fn multiply_values(
                 }
             } else {
                 let mut max_possible =
-                    (BigInt::from_signed_bytes_le(&l.get_unsigned_max_value().into_inner())
-                        * BigInt::from_signed_bytes_le(&r.get_unsigned_max_value().into_inner()))
+                    (BigInt::from_bytes_le(Sign::Plus, &l.get_unsigned_max_value().into_inner())
+                        * BigInt::from_bytes_le(
+                            Sign::Plus,
+                            &r.get_unsigned_max_value().into_inner(),
+                        ))
                     .to_signed_bytes_le();
-                let sign = if (max_possible.last().unwrap() & 0x80) != 0 {
-                    u8::MAX
-                } else {
-                    u8::MIN
-                };
-                max_possible.resize(32, sign);
 
                 if l.known_bits[0..l.bits].all() && r.known_bits[0..r.bits].all() {
                     // constants
+                    max_possible.resize(32, 0);
+
                     known_bits.fill(true);
 
                     Value {
@@ -458,7 +457,10 @@ fn multiply_values(
                 } else {
                     let top_bit = highest_set_bit(&max_possible);
 
+                    // one above the top bit and higher will be known (i.e. all zeros)
                     if top_bit < l.bits {
+                        debug_assert_eq!(l.bits, r.bits);
+
                         known_bits[top_bit + 1..l.bits].fill(true);
                     }
 
