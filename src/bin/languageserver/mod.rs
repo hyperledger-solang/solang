@@ -165,28 +165,16 @@ impl SolangServer {
         if let Ok(path) = uri.to_file_path() {
             let dir = path.parent().unwrap();
 
-            let _ = resolver.add_import_path(dir);
+            resolver.add_import_path(dir);
 
             let mut diags = Vec::new();
 
             for path in &self.importpaths {
-                if let Err(e) = resolver.add_import_path(path) {
-                    diags.push(Diagnostic {
-                        message: format!("import path '{}': {}", path.to_string_lossy(), e),
-                        severity: Some(DiagnosticSeverity::ERROR),
-                        ..Default::default()
-                    });
-                }
+                resolver.add_import_path(path);
             }
 
             for (map, path) in &self.importmaps {
-                if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
-                    diags.push(Diagnostic {
-                        message: format!("error: import path '{}': {e}", path.display()),
-                        severity: Some(DiagnosticSeverity::ERROR),
-                        ..Default::default()
-                    });
-                }
+                resolver.add_import_map(OsString::from(map), PathBuf::from(path));
             }
 
             let os_str = path.file_name().unwrap();

@@ -8,15 +8,15 @@ use clap_complete::Shell;
 #[cfg(feature = "wasm_opt")]
 use contract_build::OptimizationPasses;
 
+use itertools::Itertools;
 use semver::Version;
 use serde::Deserialize;
-use std::{ffi::OsString, path::PathBuf, process::exit};
-
 use solang::{
     codegen::{OptimizationLevel, Options},
     file_resolver::FileResolver,
     Target,
 };
+use std::{ffi::OsString, path::PathBuf, process::exit};
 
 mod test;
 #[derive(Parser)]
@@ -515,27 +515,37 @@ impl PackageTrait for DocPackage {
 pub fn imports_arg<T: PackageTrait>(package: &T) -> FileResolver {
     let mut resolver = FileResolver::default();
 
-    for filename in package.get_input() {
-        if let Ok(path) = PathBuf::from(filename).canonicalize() {
-            let _ = resolver.add_import_path(path.parent().unwrap());
-        }
-    }
-
     if let Some(paths) = package.get_import_path() {
+        let dups: Vec<_> = paths.iter().duplicates().collect();
+
+        if !dups.is_empty() {
+            eprintln!(
+                "error: import paths {} specifed more than once",
+                dups.iter().map(|p| format!("'{}'", p.display())).join(", ")
+            );
+            exit(1);
+        }
+
         for path in paths {
-            if let Err(e) = resolver.add_import_path(path) {
-                eprintln!("error: import path '{}': {}", path.to_string_lossy(), e);
-                exit(1);
-            }
+            resolver.add_import_path(path);
         }
     }
 
     if let Some(maps) = package.get_import_map() {
         for (map, path) in maps {
-            if let Err(e) = resolver.add_import_map(OsString::from(map), path.clone()) {
-                eprintln!("error: import path '{}': {}", path.display(), e);
-                exit(1);
+            let os_map = OsString::from(map);
+            if let Some((_, existing_path)) = resolver
+                .get_import_paths()
+                .iter()
+                .find(|(m, _)| *m == Some(os_map.clone()))
+            {
+                eprintln!(
+                    "warning: mapping '{}' to '{}' is overwritten",
+                    map,
+                    existing_path.display()
+                )
             }
+            resolver.add_import_map(os_map, path.clone());
         }
     }
 

@@ -1,0 +1,3 @@
+*.so
+**/.solang_out*/
+**/Contract.json
