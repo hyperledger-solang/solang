@@ -16,7 +16,7 @@ use std::{
 /// Populates a file resolver with all imports that could be used by some example.
 fn file_resolver() -> FileResolver {
     let mut resolver = FileResolver::default();
-    resolver.add_import_path(&PathBuf::from(".")).unwrap();
+    resolver.add_import_path(&PathBuf::from("."));
 
     resolver
 }
