@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sema::ast;
+use itertools::Itertools;
 use normalize_path::NormalizePath;
 use solang_parser::pt::Loc;
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
-use std::io;
-use std::io::{prelude::*, Error, ErrorKind};
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -39,31 +39,31 @@ pub struct ResolvedFile {
 
 impl FileResolver {
     /// Add import path
-    pub fn add_import_path(&mut self, path: &Path) -> io::Result<()> {
-        self.import_paths.push((None, path.canonicalize()?));
-        Ok(())
+    pub fn add_import_path(&mut self, path: &Path) {
+        assert!(!self.import_paths.contains(&(None, path.to_path_buf())));
+
+        self.import_paths.push((None, path.to_path_buf()));
     }
 
     /// Add import map
-    pub fn add_import_map(&mut self, map: OsString, path: PathBuf) -> io::Result<()> {
-        if self
-            .import_paths
-            .iter()
-            .any(|(m, _)| m.as_ref() == Some(&map))
-        {
-            Err(Error::new(
-                ErrorKind::Other,
-                format!("duplicate mapping for '{}'", map.to_string_lossy()),
-            ))
+    pub fn add_import_map(&mut self, map: OsString, path: PathBuf) {
+        let map = Some(map);
+
+        if let Some((_, e)) = self.import_paths.iter_mut().find(|(k, _)| *k == map) {
+            *e = path;
         } else {
-            self.import_paths.push((Some(map), path.canonicalize()?));
-            Ok(())
+            self.import_paths.push((map, path));
         }
     }
 
     /// Get the import path and the optional mapping corresponding to `import_no`.
     pub fn get_import_path(&self, import_no: usize) -> Option<&(Option<OsString>, PathBuf)> {
         self.import_paths.get(import_no)
+    }
+
+    /// Get the import paths
+    pub fn get_import_paths(&self) -> &[(Option<OsString>, PathBuf)] {
+        self.import_paths.as_slice()
     }
 
     /// Get the import path corresponding to a map
@@ -137,7 +137,8 @@ impl FileResolver {
         path: &Path,
         import_no: Option<usize>,
     ) -> Result<&ResolvedFile, String> {
-        if let Some(cache) = self.cached_paths.get(path) {
+        let path_filename = PathBuf::from(filename);
+        if let Some(cache) = self.cached_paths.get(&path_filename) {
             if self.files[*cache].import_no == import_no {
                 return Ok(&self.files[*cache]);
             }
@@ -182,12 +183,15 @@ impl FileResolver {
         parent: Option<&ResolvedFile>,
         filename: &OsStr,
     ) -> Result<ResolvedFile, String> {
-        let path = PathBuf::from(filename);
+        let path_filename = PathBuf::from(filename);
+
+        // See https://docs.soliditylang.org/en/v0.8.17/path-resolution.html
+        let mut result: Vec<ResolvedFile> = vec![];
 
         // Only when the path starts with ./ or ../ are relative paths considered; this means
         // that `import "b.sol";` will check the import paths for b.sol, while `import "./b.sol";`
         // will only the path relative to the current file.
-        if path.starts_with("./") || path.starts_with("../") {
+        if path_filename.starts_with("./") || path_filename.starts_with("../") {
             if let Some(ResolvedFile {
                 import_no,
                 full_path,
@@ -196,39 +200,37 @@ impl FileResolver {
             {
                 let curdir = PathBuf::from(".");
                 let base = full_path.parent().unwrap_or(&curdir);
-                let path = base.join(&path);
+                let path = base.join(&path_filename);
 
                 if let Some(file) = self.try_file(filename, &path, *import_no)? {
+                    // No ambiguity possible, so just return
                     return Ok(file);
                 }
             }
 
-            return Err(format!("file not found '{}'", filename.to_string_lossy()));
+            return Err(format!("file not found '{}'", path_filename.display()));
         }
 
-        if let Some(file) = self.try_file(filename, &path, None)? {
-            return Ok(file);
-        } else if path.is_absolute() {
-            return Err(format!("file not found '{}'", filename.to_string_lossy()));
+        if parent.is_none() {
+            if let Some(file) = self.try_file(filename, &path_filename, None)? {
+                return Ok(file);
+            } else if path_filename.is_absolute() {
+                return Err(format!("file not found '{}'", path_filename.display()));
+            }
         }
 
         // first check maps
-        let mut iter = path.iter();
-        if let Some(first_part) = iter.next() {
-            let relpath: &PathBuf = &iter.collect();
+        let mut remapped = path_filename.clone();
 
-            for import_no in 0..self.import_paths.len() {
-                if let (Some(mapping), import_path) = &self.import_paths[import_no] {
-                    if first_part == mapping {
-                        let path = import_path.join(relpath);
-
-                        if let Some(file) = self.try_file(filename, &path, Some(import_no))? {
-                            return Ok(file);
-                        }
-                    }
+        for import_map_no in 0..self.import_paths.len() {
+            if let (Some(mapping), target) = &self.import_paths[import_map_no].clone() {
+                if let Ok(relpath) = path_filename.strip_prefix(mapping) {
+                    remapped = target.join(relpath);
                 }
             }
         }
+
+        let path = remapped;
 
         // walk over the import paths until we find one that resolves
         for import_no in 0..self.import_paths.len() {
@@ -236,12 +238,32 @@ impl FileResolver {
                 let path = import_path.join(&path);
 
                 if let Some(file) = self.try_file(filename, &path, Some(import_no))? {
-                    return Ok(file);
+                    result.push(file);
                 }
             }
         }
 
-        Err(format!("file not found '{}'", filename.to_string_lossy()))
+        // If there was no defined import path, then try the file directly. See
+        // https://docs.soliditylang.org/en/v0.8.17/path-resolution.html#base-path-and-include-paths
+        // "By default the base path is empty, which leaves the source unit name unchanged."
+        if !self.import_paths.iter().any(|(m, _)| m.is_none()) {
+            if let Some(file) = self.try_file(filename, &path, None)? {
+                result.push(file);
+            }
+        }
+
+        match result.len() {
+            0 => Err(format!("file not found '{}'", path_filename.display())),
+            1 => Ok(result.pop().unwrap()),
+            _ => Err(format!(
+                "found multiple files matching '{}': {}",
+                path_filename.display(),
+                result
+                    .iter()
+                    .map(|f| format!("'{}'", f.full_path.display()))
+                    .join(", ")
+            )),
+        }
     }
 
     /// Get line and the target symbol's offset from loc

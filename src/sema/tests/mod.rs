@@ -619,9 +619,7 @@ fn get_import_map() {
         .canonicalize()
         .unwrap();
 
-    assert!(cache
-        .add_import_map(map.clone(), example_sol_path.clone())
-        .is_ok());
+    cache.add_import_map(map.clone(), example_sol_path.clone());
 
     let retrieved = cache.get_import_map(&map);
     assert_eq!(Some(&example_sol_path), retrieved);
@@ -637,8 +635,8 @@ fn get_import_path() {
 
     let bad_path = PathBuf::from("/IDontExist.sol");
 
-    assert!(cache.add_import_path(&examples).is_ok());
-    assert!(cache.add_import_path(&bad_path).is_err());
+    cache.add_import_path(&examples);
+    cache.add_import_path(&bad_path);
 
     let ns = parse_and_resolve(OsStr::new("example.sol"), &mut cache, Target::EVM);
 

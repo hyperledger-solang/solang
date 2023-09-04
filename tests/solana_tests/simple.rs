@@ -581,3 +581,110 @@ contract test3 {
         );
     }
 }
+
+#[test]
+fn overloading() {
+    let mut vm = build_solidity(
+        r#"
+        contract c {
+            function foo() public returns (uint32) { return 1; }
+            function foo_bar() public returns (uint32) { return 0; }
+            function foo(address) public returns (uint32) { return 2; }
+            function foo(bytes32) public returns (uint32) { return 3; }
+            function foo(bytes) public returns (uint32) { return 4; }
+            function foo(string) public returns (uint32) { return 5; }
+        }"#,
+    );
+
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let returns = vm
+        .function("foo_")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
+
+    assert_eq!(
+        returns,
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(1)
+        }
+    );
+
+    let returns = vm
+        .function("foo_bar")
+        .accounts(vec![("dataAccount", data_account)])
+        .call()
+        .unwrap();
+
+    assert_eq!(
+        returns,
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(0)
+        }
+    );
+
+    let returns = vm
+        .function("foo_address")
+        .accounts(vec![("dataAccount", data_account)])
+        .arguments(&[BorshToken::Address([0u8; 32])])
+        .call()
+        .unwrap();
+
+    assert_eq!(
+        returns,
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(2)
+        }
+    );
+
+    let returns = vm
+        .function("foo_bytes32")
+        .accounts(vec![("dataAccount", data_account)])
+        .arguments(&[BorshToken::FixedBytes(vec![0u8; 32])])
+        .call()
+        .unwrap();
+
+    assert_eq!(
+        returns,
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(3)
+        }
+    );
+    let returns = vm
+        .function("foo_bytes")
+        .accounts(vec![("dataAccount", data_account)])
+        .arguments(&[BorshToken::Bytes(vec![])])
+        .call()
+        .unwrap();
+
+    assert_eq!(
+        returns,
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(4)
+        }
+    );
+
+    let returns = vm
+        .function("foo_string")
+        .accounts(vec![("dataAccount", data_account)])
+        .arguments(&[BorshToken::String("yo".into())])
+        .call()
+        .unwrap();
+
+    assert_eq!(
+        returns,
+        BorshToken::Uint {
+            width: 32,
+            value: BigInt::from(5)
+        }
+    );
+}

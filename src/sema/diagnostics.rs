@@ -205,7 +205,7 @@ impl Namespace {
     pub fn print_diagnostics(&self, cache: &FileResolver, debug: bool) {
         let (files, file_id) = self.convert_files(cache);
 
-        let writer = term::termcolor::StandardStream::stderr(term::termcolor::ColorChoice::Always);
+        let writer = term::termcolor::StandardStream::stderr(term::termcolor::ColorChoice::Auto);
         let config = term::Config::default();
 
         for msg in self.diagnostics.iter() {
