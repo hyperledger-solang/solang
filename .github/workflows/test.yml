@@ -9,7 +9,8 @@ on:
 jobs:
   repolinter:
     name: Repolinter
-    runs-on: solang-ubuntu-latest
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -18,7 +19,8 @@ jobs:
 
   lints:
     name: Lints
-    runs-on: solang-ubuntu-latest
+    runs-on: linux-arm64
+    if: ${{ github.repository_owner == 'hyperledger' }}
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     steps:
       - name: Checkout sources
@@ -46,7 +48,9 @@ jobs:
 
   docs:
     name: Docs
-    runs-on: solang-ubuntu-latest
+    runs-on: linux-arm64
+    needs: lints
+    if: ${{ github.repository_owner == 'hyperledger' }}
     container: ubuntu:22.04
     steps:
       - name: Install Python and git
@@ -71,6 +75,8 @@ jobs:
   linux-x86-64:
     name: Linux x86-64
     runs-on: solang-ubuntu-latest
+    needs: docs
+    if: ${{ github.repository_owner == 'hyperledger' }}
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     steps:
     - name: Checkout sources
@@ -88,10 +94,10 @@ jobs:
         name: solang-linux-x86-64
         path: ./target/debug/solang
 
-
   linux-arm:
     name: Linux Arm
     runs-on: linux-arm64
+    needs: docs
     if: ${{ github.repository_owner == 'hyperledger' }}
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     steps:
@@ -113,6 +119,8 @@ jobs:
   windows:
     name: Windows
     runs-on: solang-windows-latest
+    needs: docs
+    if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -212,6 +220,7 @@ jobs:
   container-multiarch:
     name: Multiarch Container Image
     runs-on: linux-arm64
+    needs: docs
     if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
     - name: Checkout sources
@@ -231,6 +240,7 @@ jobs:
   anchor:
     name: Anchor Integration test
     runs-on: solang-ubuntu-latest
+    if: ${{ github.repository_owner == 'hyperledger' }}
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
     steps:
@@ -278,6 +288,7 @@ jobs:
   solana:
     name: Solana Integration test
     runs-on: solang-ubuntu-latest
+    if: ${{ github.repository_owner == 'hyperledger' }}
     container: ghcr.io/hyperledger/solang-llvm:ci-5
     needs: linux-x86-64
     steps:
@@ -312,6 +323,7 @@ jobs:
   polkadot:
     name: Polkadot Integration test
     runs-on: solang-ubuntu-latest
+    if: ${{ github.repository_owner == 'hyperledger' }}
     needs: linux-x86-64
     steps:
     - name: Checkout sources
@@ -385,6 +397,7 @@ jobs:
   vscode:
     name: Visual Code Extension
     runs-on: solang-ubuntu-latest
+    if: ${{ github.repository_owner == 'hyperledger' }}
     needs: linux-x86-64
     steps:
     - name: Checkout
@@ -415,6 +428,7 @@ jobs:
   std-lib-tests:
     name: Stdlib
     runs-on: solang-ubuntu-latest
+    if: ${{ github.repository_owner == 'hyperledger' }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
