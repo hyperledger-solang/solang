@@ -1350,9 +1350,10 @@ pub(super) fn resolve_method_call(
     diagnostics: &mut Diagnostics,
 ) -> Result<Option<Expression>, ()> {
     let expr_ty = expr.ty();
+    let deref_ty = expr_ty.deref_memory();
     let funcs: Vec<_> = BUILTIN_METHODS
         .iter()
-        .filter(|func| func.name == id.name && func.method.contains(&expr_ty))
+        .filter(|func| func.name == id.name && func.method.contains(deref_ty))
         .collect();
     let mut errors = Diagnostics::default();
 
@@ -1421,7 +1422,10 @@ pub(super) fn resolve_method_call(
                 return Err(());
             }
         } else {
-            cast_args.insert(0, expr.clone());
+            cast_args.insert(
+                0,
+                expr.cast(&id.loc, deref_ty, true, ns, diagnostics).unwrap(),
+            );
 
             let returns = if func.ret.is_empty() {
                 vec![Type::Void]

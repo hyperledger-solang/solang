@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{HashTy, ReturnCode};
+use crate::codegen::cfg::HashTy;
 use crate::codegen::revert::PanicCode;
 use crate::emit::binary::Binary;
 use crate::emit::expression::expression;
@@ -754,17 +754,6 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         call!("hash_keccak_256", &[src.into(), length.into(), dest.into()]);
     }
 
-    fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
-        emit_context!(binary);
-
-        call!(
-            "seal_return",
-            &[i32_zero!().into(), data.into(), length.into()]
-        );
-
-        binary.builder.build_unreachable();
-    }
-
     fn return_abi_data<'b>(
         &self,
         binary: &Binary<'b>,
@@ -778,9 +767,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             &[i32_zero!().into(), data.into(), data_len.into()]
         );
 
-        binary
-            .builder
-            .build_return(Some(&binary.return_values[&ReturnCode::Success]));
+        binary.builder.build_unreachable();
     }
 
     fn assert_failure(&self, binary: &Binary, data: PointerValue, length: IntValue) {
@@ -822,7 +809,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         encoded_args_len: BasicValueEnum<'b>,
         contract_args: ContractArgs<'b>,
         ns: &ast::Namespace,
-        loc: Loc,
+        _loc: Loc,
     ) {
         emit_context!(binary);
 
@@ -904,30 +891,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
 
         log_return_code(binary, "seal_instantiate", ret);
 
-        let is_success =
-            binary
-                .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "success");
-
-        if let Some(success) = success {
-            // we're in a try statement. This means:
-            // return success or not in success variable; do not abort execution
-            *success = is_success.into();
-        } else {
-            let success_block = binary.context.append_basic_block(function, "success");
-            let bail_block = binary.context.append_basic_block(function, "bail");
-
-            binary
-                .builder
-                .build_conditional_branch(is_success, success_block, bail_block);
-
-            binary.builder.position_at_end(bail_block);
-
-            binary.log_runtime_error(self, "contract creation failed".to_string(), Some(loc), ns);
-            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
-
-            binary.builder.position_at_end(success_block);
-        }
+        *success.unwrap() = ret.into();
     }
 
     /// Call external binary
@@ -952,7 +916,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
             .build_store(scratch_len, i32_const!(SCRATCH_SIZE as u64));
 
         // do the actual call
-        let ret = match call_type {
+        *success.unwrap() = match call_type {
             ast::CallTy::Regular => {
                 let value_ptr = binary
                     .builder
@@ -978,7 +942,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 .unwrap()
                 .into_int_value();
                 log_return_code(binary, "seal_call", ret);
-                ret
+                ret.as_basic_value_enum()
             }
             ast::CallTy::Delegate => {
                 // delegate_call asks for a code hash instead of an address
@@ -1055,47 +1019,22 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
                 let ret = binary.builder.build_phi(ty, "storage_res");
                 ret.add_incoming(&[(&code_hash_ret, not_found_block), (&ty.const_zero(), entry)]);
                 ret.add_incoming(&[(&delegate_call_ret, call_block), (&ty.const_zero(), entry)]);
-                ret.as_basic_value().into_int_value()
+                ret.as_basic_value()
             }
             ast::CallTy::Static => unreachable!("sema does not allow this"),
         };
-
-        let is_success =
-            binary
-                .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "success");
-
-        if let Some(success) = success {
-            // we're in a try statement. This means:
-            // do not abort execution; return success or not in success variable
-            *success = is_success.into();
-        } else {
-            let success_block = binary.context.append_basic_block(function, "success");
-            let bail_block = binary.context.append_basic_block(function, "bail");
-
-            binary
-                .builder
-                .build_conditional_branch(is_success, success_block, bail_block);
-
-            binary.builder.position_at_end(bail_block);
-
-            binary.log_runtime_error(self, "external call failed".to_string(), Some(loc), ns);
-            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
-
-            binary.builder.position_at_end(success_block);
-        }
     }
 
     /// Send value to address
     fn value_transfer<'b>(
         &self,
         binary: &Binary<'b>,
-        function: FunctionValue,
+        _function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
         address: PointerValue<'b>,
         value: IntValue<'b>,
         ns: &ast::Namespace,
-        loc: Loc,
+        _loc: Loc,
     ) {
         emit_context!(binary);
 
@@ -1121,31 +1060,7 @@ impl<'a> TargetRuntime<'a> for PolkadotTarget {
         .into_int_value();
 
         log_return_code(binary, "seal_transfer", ret);
-
-        let is_success =
-            binary
-                .builder
-                .build_int_compare(IntPredicate::EQ, ret, i32_zero!(), "success");
-
-        if let Some(success) = success {
-            // we're in a try statement. This means:
-            // do not abort execution; return success or not in success variable
-            *success = is_success.into();
-        } else {
-            let success_block = binary.context.append_basic_block(function, "success");
-            let bail_block = binary.context.append_basic_block(function, "bail");
-
-            binary
-                .builder
-                .build_conditional_branch(is_success, success_block, bail_block);
-
-            binary.builder.position_at_end(bail_block);
-
-            binary.log_runtime_error(self, "value transfer failure".to_string(), Some(loc), ns);
-            self.assert_failure(binary, byte_ptr!().const_null(), i32_zero!());
-
-            binary.builder.position_at_end(success_block);
-        }
+        *success.unwrap() = ret.into();
     }
 
     fn return_data<'b>(&self, binary: &Binary<'b>, _function: FunctionValue) -> PointerValue<'b> {

@@ -550,6 +550,7 @@ fn negate(
                 Ok(Expression::Negate {
                     loc: *loc,
                     ty: expr_type,
+                    unchecked: context.unchecked,
                     expr: Box::new(expr),
                 })
             }

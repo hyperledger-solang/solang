@@ -193,28 +193,16 @@ impl SolangServer {
         if let Ok(path) = uri.to_file_path() {
             let dir = path.parent().unwrap();
 
-            let _ = resolver.add_import_path(dir);
+            resolver.add_import_path(dir);
 
             let mut diags = Vec::new();
 
             for path in &self.importpaths {
-                if let Err(e) = resolver.add_import_path(path) {
-                    diags.push(Diagnostic {
-                        message: format!("import path '{}': {}", path.to_string_lossy(), e),
-                        severity: Some(DiagnosticSeverity::ERROR),
-                        ..Default::default()
-                    });
-                }
+                resolver.add_import_path(path);
             }
 
             for (map, path) in &self.importmaps {
-                if let Err(e) = resolver.add_import_map(OsString::from(map), PathBuf::from(path)) {
-                    diags.push(Diagnostic {
-                        message: format!("error: import path '{}': {e}", path.display()),
-                        severity: Some(DiagnosticSeverity::ERROR),
-                        ..Default::default()
-                    });
-                }
+                resolver.add_import_map(OsString::from(map), PathBuf::from(path));
             }
 
             let os_str = path.file_name().unwrap();
@@ -295,7 +283,7 @@ impl SolangServer {
         let uri = params.text_document_position_params.text_document.uri;
         let path = uri.to_file_path().map_err(|_| Error {
             code: ErrorCode::InvalidRequest,
-            message: format!("Received invalid URI: {uri}"),
+            message: format!("Received invalid URI: {uri}").into(),
             data: None,
         })?;
 
@@ -555,14 +543,16 @@ impl<'a> Builder<'a> {
             }
             ast::Statement::TryCatch(_, _, try_stmt) => {
                 self.expression(&try_stmt.expr, symtab);
-                for stmt in &try_stmt.catch_stmt {
-                    self.statement(stmt, symtab);
+                if let Some(clause) = try_stmt.catch_all.as_ref() {
+                    for stmt in &clause.stmt {
+                        self.statement(stmt, symtab);
+                    }
                 }
                 for stmt in &try_stmt.ok_stmt {
                     self.statement(stmt, symtab);
                 }
-                for (_, _, block) in &try_stmt.errors {
-                    for stmts in block {
+                for clause in &try_stmt.errors {
+                    for stmts in &clause.stmt {
                         self.statement(stmts, symtab);
                     }
                 }

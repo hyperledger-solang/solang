@@ -1515,6 +1515,8 @@ pub(crate) trait AbiEncoding {
                 };
             }
 
+            let size_width = self.size_width(&size, vartab, cfg);
+
             let type_size = Expression::NumberLiteral {
                 loc: Codegen,
                 ty: Uint(32),
@@ -1544,7 +1546,6 @@ pub(crate) trait AbiEncoding {
             if self.is_packed() || !matches!(&dims.last().unwrap(), ArrayLength::Dynamic) {
                 return size_var;
             }
-            let size_width = self.size_width(&size_var, vartab, cfg);
             Expression::Add {
                 loc: Codegen,
                 ty: Uint(32),

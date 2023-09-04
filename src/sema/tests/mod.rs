@@ -116,9 +116,7 @@ fn test_statement_reachable() {
                     returns: vec![],
                     ok_stmt: vec![],
                     errors: vec![],
-                    catch_param: None,
-                    catch_param_pos: None,
-                    catch_stmt: vec![],
+                    catch_all: None,
                 },
             ),
             true,
@@ -320,19 +318,7 @@ fn constant_overflow_checks() {
 
     assert_eq!(errors.len(), 31);
 
-    assert_eq!(
-        warnings[0].message,
-        "left shift by 7 may overflow the final result"
-    );
-    assert_eq!(
-        warnings[1].message,
-        "left shift by 7 may overflow the final result"
-    );
-    assert_eq!(
-        warnings[2].message,
-        "left shift by 9 may overflow the final result"
-    );
-    assert_eq!(warnings.len(), 3);
+    assert_eq!(warnings.len(), 0);
 }
 
 #[test]
@@ -633,9 +619,7 @@ fn get_import_map() {
         .canonicalize()
         .unwrap();
 
-    assert!(cache
-        .add_import_map(map.clone(), example_sol_path.clone())
-        .is_ok());
+    cache.add_import_map(map.clone(), example_sol_path.clone());
 
     let retrieved = cache.get_import_map(&map);
     assert_eq!(Some(&example_sol_path), retrieved);
@@ -651,8 +635,8 @@ fn get_import_path() {
 
     let bad_path = PathBuf::from("/IDontExist.sol");
 
-    assert!(cache.add_import_path(&examples).is_ok());
-    assert!(cache.add_import_path(&bad_path).is_err());
+    cache.add_import_path(&examples);
+    cache.add_import_path(&bad_path);
 
     let ns = parse_and_resolve(OsStr::new("example.sol"), &mut cache, Target::EVM);
 

@@ -550,6 +550,49 @@ fn expression_known_bits() {
 
     assert_eq!(v.value.into_inner(), &bs[..]);
 
+    // multiply two unknowns
+    let mut vars = HashMap::new();
+
+    let var1 = expression_values(
+        &Expression::FunctionArg {
+            loc,
+            ty: Type::Uint(64),
+            arg_no: 0,
+        },
+        &vars,
+        &ns,
+    );
+
+    vars.insert(0, var1);
+
+    let expr = Expression::Multiply {
+        loc,
+        ty: Type::Uint(64),
+        overflowing: false,
+        left: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+        right: Box::new(Expression::Variable {
+            loc,
+            ty: Type::Uint(64),
+            var_no: 0,
+        }),
+    };
+
+    let res = expression_values(&expr, &vars, &ns);
+
+    let mut cmp_set = HashSet::new();
+
+    cmp_set.insert(Value {
+        known_bits: BitArray::new([0u8; 32]),
+        value: BitArray::new([0u8; 32]),
+        bits: 64,
+    });
+
+    assert_eq!(res, cmp_set);
+
     // multiply a bunch of numbers, known or not
     let mut vars = HashMap::new();
 

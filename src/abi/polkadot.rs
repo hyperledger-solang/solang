@@ -20,9 +20,12 @@ use scale_info::{
 use semver::Version;
 use solang_parser::pt;
 
-use crate::sema::{
-    ast::{self, ArrayLength, EventDecl, Function},
-    tags::render,
+use crate::{
+    codegen::revert::{ERROR_SELECTOR, PANIC_SELECTOR},
+    sema::{
+        ast::{self, ArrayLength, EventDecl, Function},
+        tags::render,
+    },
 };
 
 macro_rules! path {
@@ -502,8 +505,8 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .done();
 
     let error_definitions = &[
-        ("Error", 0x08c379a0, vec![ast::Type::String]),
-        ("Panic", 0x4e487b71, vec![ast::Type::Uint(256)]),
+        ("Error", ERROR_SELECTOR, vec![ast::Type::String]),
+        ("Panic", PANIC_SELECTOR, vec![ast::Type::Uint(256)]),
     ];
 
     let spec = ContractSpec::new()

@@ -3,7 +3,7 @@
         "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
         "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
         "parse-idl": "solang idl target/idl/anchor.json -o tests",
-        "build": "solang compile tests/*.sol --target solana -v -o tests/"
+        "build": "solang compile tests/*.sol --importpath tests --target solana -v -o tests/"
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.28.0",

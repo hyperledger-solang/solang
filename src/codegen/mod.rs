@@ -10,6 +10,7 @@ pub(crate) mod encoding;
 mod events;
 mod expression;
 mod external_functions;
+pub(super) mod polkadot;
 mod reaching_definitions;
 pub mod revert;
 mod solana_accounts;
@@ -51,6 +52,9 @@ use solang_parser::{pt, pt::CodeLocation};
 
 // The sizeof(struct account_data_header)
 pub const SOLANA_FIRST_OFFSET: u64 = 16;
+
+/// Name of the storage initializer function
+pub const STORAGE_INITIALIZER: &str = "storage_initializer";
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum OptimizationLevel {
@@ -240,7 +244,8 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }
 
-        for dispatch_cfg in function_dispatch(contract_no, &all_cfg, ns, opt) {
+        for mut dispatch_cfg in function_dispatch(contract_no, &all_cfg, ns, opt) {
+            optimize_and_check_cfg(&mut dispatch_cfg, ns, ASTFunction::None, opt);
             all_cfg.push(dispatch_cfg);
         }
 
@@ -251,10 +256,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
 /// This function will set all contract storage initializers and should be called from the constructor
 fn storage_initializer(contract_no: usize, ns: &mut Namespace, opt: &Options) -> ControlFlowGraph {
     // note the single `:` to prevent a name clash with user-declared functions
-    let mut cfg = ControlFlowGraph::new(
-        format!("{}:storage_initializer", ns.contracts[contract_no].name),
-        ASTFunction::None,
-    );
+    let mut cfg = ControlFlowGraph::new(STORAGE_INITIALIZER.to_string(), ASTFunction::None);
     let mut vartab = Vartable::new(ns.next_id);
 
     for layout in &ns.contracts[contract_no].layout {
@@ -463,6 +465,7 @@ pub enum Expression {
         expr: Box<Expression>,
     },
     InternalFunctionCfg {
+        ty: Type,
         cfg_no: usize,
     },
     Keccak256 {
@@ -620,6 +623,7 @@ pub enum Expression {
     Negate {
         loc: pt::Loc,
         ty: Type,
+        overflowing: bool,
         expr: Box<Expression>,
     },
     Undefined {
@@ -836,7 +840,8 @@ impl RetrieveType for Expression {
             | Expression::AllocDynamicBytes { ty, .. }
             | Expression::BytesCast { ty, .. }
             | Expression::RationalNumberLiteral { ty, .. }
-            | Expression::Subscript { ty, .. } => ty.clone(),
+            | Expression::Subscript { ty, .. }
+            | Expression::InternalFunctionCfg { ty, .. } => ty.clone(),
 
             Expression::BoolLiteral { .. }
             | Expression::MoreEqual { .. }
@@ -856,7 +861,6 @@ impl RetrieveType for Expression {
 
             Expression::AdvancePointer { .. } => Type::BufferPointer,
             Expression::FormatString { .. } => Type::String,
-            Expression::InternalFunctionCfg { .. } => Type::Unreachable,
             Expression::Poison => unreachable!("Expression does not have a type"),
         }
     }
@@ -1561,9 +1565,15 @@ impl Expression {
                     ty: ty.clone(),
                     expr: Box::new(filter(expr, ctx)),
                 },
-                Expression::Negate { loc, ty, expr } => Expression::Negate {
+                Expression::Negate {
+                    loc,
+                    ty,
+                    overflowing,
+                    expr,
+                } => Expression::Negate {
                     loc: *loc,
                     ty: ty.clone(),
+                    overflowing: *overflowing,
                     expr: Box::new(filter(expr, ctx)),
                 },
                 Expression::Subscript {

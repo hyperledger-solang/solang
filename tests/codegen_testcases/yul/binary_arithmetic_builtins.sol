@@ -52,7 +52,7 @@ contract testing {
             // CHECK: ty:uint256 %t = (overflowing uint256 22193982385802470 + uint256(false))
             let t := add(q, r)
 
-            // CHECK: ty:uint256 %u = uint256 -1
+            // CHECK: ty:uint256 %u = uint256 115792089237316195423570985008687907853269984665640564039457584007913129639935
             let u := sub(false, true)
 
             // CHECK: ty:uint256 %v = uint256((overflowing true + false))

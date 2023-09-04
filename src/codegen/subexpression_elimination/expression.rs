@@ -291,10 +291,14 @@ impl Expression {
             },
 
             Expression::Negate {
-                loc, ty: expr_type, ..
+                loc,
+                ty: expr_type,
+                overflowing,
+                ..
             } => Expression::Negate {
                 loc: *loc,
                 ty: expr_type.clone(),
+                overflowing: *overflowing,
                 expr: Box::new(operand.clone()),
             },
 

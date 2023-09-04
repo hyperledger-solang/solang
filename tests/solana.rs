@@ -12,7 +12,7 @@ use sha2::{Digest, Sha256};
 use solana_rbpf::{
     aligned_memory::AlignedMemory,
     ebpf,
-    elf::Executable,
+    elf::{Executable, SBPFVersion},
     error::EbpfError,
     memory_region::{AccessType, MemoryMapping, MemoryRegion},
     verifier::{RequisiteVerifier, TautologyVerifier},
@@ -1371,13 +1371,13 @@ impl VirtualMachine {
         let mut heap = vec![0_u8; DEFAULT_HEAP_SIZE];
 
         let program = &self.stack[0];
-
-        let mut loader = BuiltinProgram::new_loader(Config {
-            static_syscalls: false,
+        let config = Config {
+            enable_sbpf_v1: true,
             enable_symbol_and_section_labels: false,
-            dynamic_stack_frames: false,
             ..Config::default()
-        });
+        };
+
+        let mut loader = BuiltinProgram::new_loader(config);
 
         loader.register_function(b"sol_panic_", sol_panic_).unwrap();
 
@@ -1455,11 +1455,18 @@ impl VirtualMachine {
             MemoryRegion::new_writable(stack.as_slice_mut(), ebpf::MM_STACK_START),
         ];
 
-        let memory_mapping = MemoryMapping::new(parameter_region, &config).unwrap();
+        let memory_mapping =
+            MemoryMapping::new(parameter_region, &config, &SBPFVersion::V1).unwrap();
 
-        let mut vm = EbpfVm::new(&verified_executable, &mut context, memory_mapping, 4196);
+        let mut vm = EbpfVm::new(
+            &config,
+            &SBPFVersion::V1,
+            &mut context,
+            memory_mapping,
+            4196,
+        );
 
-        let (_, res) = vm.execute_program(true);
+        let (_, res) = vm.execute_program(&verified_executable, true);
 
         deserialize_parameters(&parameter_bytes, &refs, &mut self.account_data);
 
@@ -1501,10 +1508,10 @@ impl VirtualMachine {
         self.stack = vec![cur];
     }
 
-    fn create_pda(&mut self, program_id: &Account) -> (Account, Vec<u8>) {
+    fn create_pda(&mut self, program_id: &Account, len: usize) -> (Account, Vec<u8>) {
         let mut rng = rand::thread_rng();
 
-        let mut seed = [0u8; 7];
+        let mut seed = vec![0u8; len];
 
         rng.fill(&mut seed[..]);
 
@@ -1515,12 +1522,12 @@ impl VirtualMachine {
         println!(
             "new empty account {} with seed {}",
             account.to_base58(),
-            hex::encode(seed)
+            hex::encode(&seed)
         );
 
         self.create_empty_account(&account, program_id);
 
-        (account, seed.to_vec())
+        (account, seed)
     }
 
     fn create_empty_account(&mut self, account: &Account, program_id: &Account) {

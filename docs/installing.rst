@@ -28,11 +28,11 @@ Option 2: Download binaries
 
 There are binaries available on github releases:
 
-- `Linux x86-64 <https://github.com/hyperledger/solang/releases/download/v0.3.1/solang-linux-x86-64>`_
-- `Linux arm64 <https://github.com/hyperledger/solang/releases/download/v0.3.1/solang-linux-arm64>`_
-- `Windows x64 <https://github.com/hyperledger/solang/releases/download/v0.3.1/solang.exe>`_
-- `MacOS intel <https://github.com/hyperledger/solang/releases/download/v0.3.1/solang-mac-intel>`_
-- `MacOS arm <https://github.com/hyperledger/solang/releases/download/v0.3.1/solang-mac-arm>`_
+- `Linux x86-64 <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang-linux-x86-64>`_
+- `Linux arm64 <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang-linux-arm64>`_
+- `Windows x64 <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang.exe>`_
+- `MacOS intel <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang-mac-intel>`_
+- `MacOS arm <https://github.com/hyperledger/solang/releases/download/v0.3.2/solang-mac-arm>`_
 
 Download the file and save it somewhere in your ``$PATH``, for example the bin directory in your home directory. If the
 path you use is not already in ``$PATH``, then you need to add it yourself.
@@ -56,7 +56,7 @@ Option 3: Use ghcr.io/hyperledger/solang containers
 
 New images are automatically made available on
 `solang containers <https://github.com/hyperledger/solang/pkgs/container/solang>`_.
-There is a release `v0.3.1` tag and a `latest` tag:
+There is a release `v0.3.2` tag and a `latest` tag:
 
 .. code-block:: bash
 
@@ -89,7 +89,7 @@ Option 5: Build Solang from source
 
 In order to build Solang from source, you will need:
 
-* Rust version 1.68.0 or higher
+* Rust version 1.70.0 or higher
 * A C++ compiler with support for C++17
 * A build of LLVM based on the Solana LLVM tree. There are a few LLVM patches required that are not upstream yet.
 

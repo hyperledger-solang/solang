@@ -313,6 +313,29 @@ fn transfer_fails_not_enough() {
         }])
         .must_fail();
     assert!(res.is_err());
+
+    // Ensure the balance in the account has not overflowed
+    assert_eq!(vm.account_data[&data_account].lamports, 103);
+    assert_eq!(vm.account_data[&new].lamports, 5);
+
+    vm.function("transfer")
+        .arguments(&[
+            BorshToken::Address(new),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(103u8),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_signer: false,
+            is_writable: true,
+        }])
+        .call();
+
+    assert_eq!(vm.account_data[&data_account].lamports, 0);
+    assert_eq!(vm.account_data[&new].lamports, 108);
 }
 
 #[test]
@@ -329,7 +352,7 @@ fn transfer_fails_overflow() {
     );
 
     let data_account = vm.initialize_data_account();
-    vm.account_data.get_mut(&data_account).unwrap().lamports = 103;
+    vm.account_data.get_mut(&data_account).unwrap().lamports = 104;
 
     vm.function("new")
         .accounts(vec![("dataAccount", data_account)])
@@ -363,6 +386,29 @@ fn transfer_fails_overflow() {
         }])
         .must_fail();
     assert!(res.is_err());
+
+    // Ensure no change in the values
+    assert_eq!(vm.account_data[&new].lamports, u64::MAX - 100);
+    assert_eq!(vm.account_data[&data_account].lamports, 104);
+
+    vm.function("transfer")
+        .arguments(&[
+            BorshToken::FixedBytes(new.to_vec()),
+            BorshToken::Uint {
+                width: 64,
+                value: BigInt::from(100u8),
+            },
+        ])
+        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(new),
+            is_writable: false,
+            is_signer: true,
+        }])
+        .call();
+
+    assert_eq!(vm.account_data[&new].lamports, u64::MAX);
+    assert_eq!(vm.account_data[&data_account].lamports, 4);
 }
 
 #[test]

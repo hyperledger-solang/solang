@@ -49,7 +49,7 @@ static BUILTIN_STRUCTS: Lazy<[StructDecl; 3]> = Lazy::new(|| {
                     ty: Type::Slice(Box::new(Type::Bytes(1))),
                     ty_loc: None,
                     indexed: false,
-                    readonly: true,
+                    readonly: false,
                     infinite_size: false,
                     recursive: false,
                     annotation: None,

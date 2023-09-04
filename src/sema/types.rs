@@ -1299,9 +1299,6 @@ impl Type {
     pub fn to_signature_string(&self, say_tuple: bool, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
-            Type::Contract(_) | Type::Address(_) if ns.target == Target::Solana => {
-                format!("bytes{}", ns.address_length)
-            }
             Type::Contract(_) | Type::Address(_) => "address".to_string(),
             Type::Int(n) => format!("int{n}"),
             Type::Uint(n) => format!("uint{n}"),
@@ -1620,6 +1617,7 @@ impl Type {
             Type::StorageRef(..) => ns.storage_type().bytes(ns),
             Type::Ref(ty) => ty.bytes(ns),
             Type::FunctionSelector => ns.target.selector_length(),
+            Type::UserType(ty) => ns.user_types[*ty].ty.bytes(ns),
             _ => panic!("type not allowed"),
         }
     }
@@ -1636,6 +1634,8 @@ impl Type {
             Type::Value => ns.value_length as u16 * 8,
             Type::StorageRef(..) => ns.storage_type().bits(ns),
             Type::Ref(ty) => ty.bits(ns),
+            Type::FunctionSelector => (ns.target.selector_length() * 8).into(),
+            Type::UserType(ty) => ns.user_types[*ty].ty.bits(ns),
             _ => panic!("type not allowed"),
         }
     }

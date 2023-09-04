@@ -2,6 +2,8 @@
 
 use crate::{build_solidity, build_solidity_with_options};
 use parity_scale_codec::{Decode, Encode};
+use primitive_types::U256;
+use solang::codegen::revert::{PanicCode, SolidityError};
 
 #[derive(Debug, PartialEq, Eq, Encode, Decode)]
 struct RevertReturn(u32, String);
@@ -275,9 +277,7 @@ fn try_catch_external_calls() {
     );
 
     runtime.constructor(0, Vec::new());
-    // FIXME: Try catch is broken; it tries to ABI decode an "Error(string)" in all cases,
-    // leading to a revert in the ABI decoder in case of "revert()" without any return data.
-    //runtime.function("test", Vec::new());
+    runtime.function("test", Vec::new());
 
     #[derive(Debug, PartialEq, Eq, Encode, Decode)]
     struct Ret(u32);
@@ -510,20 +510,20 @@ fn local_destructure_call() {
 #[test]
 fn payable_constructors() {
     // no contructors means constructor is not payable
-    // however there is no check for value transfers on constructor so endowment can be received
     let mut runtime = build_solidity(
         r##"
         contract c {
-            function test(string a) public {
-            }
+            function test(string a) public {}
         }"##,
     );
 
     runtime.set_transferred_value(1);
-    runtime.constructor(0, Vec::new());
+    runtime.raw_constructor_failure(runtime.contracts()[0].code.constructors[0].clone());
+    assert!(runtime
+        .debug_buffer()
+        .contains("runtime_error: non payable constructor"));
 
     // contructors w/o payable means can't send value
-    // however there is no check for value transfers on constructor so endowment can be received
     let mut runtime = build_solidity(
         r##"
         contract c {
@@ -531,13 +531,15 @@ fn payable_constructors() {
                 int32 a = 0;
             }
 
-            function test(string a) public {
-            }
+            function test(string a) public {}
         }"##,
     );
 
     runtime.set_transferred_value(1);
-    runtime.constructor(0, Vec::new());
+    runtime.raw_constructor_failure(runtime.contracts()[0].code.constructors[0].clone());
+    assert!(runtime
+        .debug_buffer()
+        .contains("runtime_error: non payable constructor"));
 
     // contructors w/ payable means can send value
     let mut runtime = build_solidity(
@@ -547,8 +549,7 @@ fn payable_constructors() {
                 int32 a = 0;
             }
 
-            function test(string a) public {
-            }
+            function test(string a) public {}
         }"##,
     );
 
@@ -1026,4 +1027,179 @@ fn constructors_and_messages_distinct_in_dispatcher() {
     runtime.raw_function(function.clone());
     // Expect calling the function via "deploy" to trap the contract
     runtime.raw_constructor_failure(function);
+}
+
+#[test]
+fn error_bubbling() {
+    let mut runtime = build_solidity(
+        r#"contract C {
+        function raw_call() public payable returns (bytes ret) {
+            B b = new B();
+            (bool ok, ret) = address(b).call{value: 5000}(bytes4(0x00000000));
+        }
+
+        function normal_call() public payable {
+            B b = new B();
+            b.b();
+        }
+
+        function ext_func_call() public payable {
+            A a = new A();
+            function() external payable func = a.a;
+            func{value: 1000}();
+            a.a();
+        }
+
+    }
+
+    contract B {
+        @selector([0, 0, 0, 0])
+        function b() public payable {
+            A a = new A();
+            a.a();
+        }
+    }
+
+    contract A {
+        function a() public payable {
+            revert("no");
+        }
+    }
+    "#,
+    );
+
+    runtime.set_transferred_value(20000);
+    let expected_output = ([0x08u8, 0xc3, 0x79, 0xa0], "no".to_string()).encode();
+
+    // The raw call must not bubble up
+    runtime.function("raw_call", vec![]);
+    assert_eq!(runtime.output(), expected_output.encode());
+
+    runtime.function_expect_failure("normal_call", vec![]);
+    assert_eq!(runtime.output(), expected_output);
+    assert!(runtime.debug_buffer().contains("external call failed"));
+
+    runtime.function_expect_failure("ext_func_call", vec![]);
+    assert_eq!(runtime.output(), expected_output);
+    assert!(runtime.debug_buffer().contains("external call failed"));
+}
+
+#[test]
+fn constructor_reverts_bubbling() {
+    let mut runtime = build_solidity(
+        r#"
+        contract A {
+            B public b;
+            constructor(bool r) payable {
+                b = new B(r);
+            }
+        }
+
+        contract B {
+            C public c;
+            constructor(bool r) payable {
+                c = new C(r);
+            }
+        }
+
+        contract C {
+            uint public foo;
+            constructor(bool r) {
+                if (!r) revert("no");
+            }
+        }"#,
+    );
+
+    runtime.set_transferred_value(20000);
+    runtime.constructor(0, true.encode());
+
+    let mut input = runtime.contracts()[0].code.constructors[0].clone();
+    input.push(0);
+    runtime.raw_constructor_failure(input);
+
+    let expected_output = ([0x08u8, 0xc3, 0x79, 0xa0], "no".to_string()).encode();
+    assert_eq!(runtime.output(), expected_output);
+}
+
+#[test]
+fn try_catch_uncaught_bubbles_up() {
+    let mut runtime = build_solidity(
+        r##"contract C {
+        function c() public payable {
+            B b = new B();
+            b.b{value: 1000}();
+        }
+    }
+
+    contract B {
+        function b() public payable {
+            A a = new A();
+            try a.a(0) {} catch Error(string) {}
+        }
+    }
+
+    contract A {
+        function a(uint div) public pure returns(uint) {
+            return 123 / div;
+        }
+    }
+    "##,
+    );
+
+    runtime.set_transferred_value(10000);
+    runtime.function_expect_failure("c", vec![]);
+
+    let panic = PanicCode::DivisionByZero;
+    let expected_output = (
+        SolidityError::Panic(panic).selector().to_be_bytes(),
+        U256::from(panic as u8),
+    )
+        .encode();
+
+    assert_eq!(runtime.output(), expected_output);
+    assert!(runtime.debug_buffer().contains("external call failed"));
+}
+
+#[test]
+fn try_catch_transfer_fail() {
+    let mut runtime = build_solidity_with_options(
+        r#"contract runner {
+        function test(uint128 amount) public returns (bytes) {
+            try new aborting{value: amount}(true) returns (
+                aborting a
+            ) {} catch Error(string x) {
+                return hex"41";
+            } catch (bytes raw) {
+                return raw;
+            }
+
+            return hex"ff";
+        }
+    }
+
+    contract aborting {
+        constructor(bool abort) {
+            if (abort) {
+                revert("bar");
+            }
+        }
+
+        function foo() public pure {}
+    }"#,
+        true,
+        true,
+    );
+
+    // Expect the contract to catch the reverting child constructor
+    runtime.function("test", 0u128.encode());
+    assert_eq!(runtime.output(), vec![0x41u8].encode());
+    assert!(runtime.debug_buffer().contains("seal_instantiate=2"));
+
+    // Trying to instantiate with value while having insufficient funds result in
+    // seal_instantiate failing with transfer failed (return code 5).
+    // Now, the "catch (bytes raw)" clause should catch that, because there is no
+    // return data to be decoded.
+    runtime.function("test", 1u128.encode());
+    assert_eq!(runtime.output(), Vec::<u8>::new().encode());
+    assert!(runtime.debug_buffer().contains("seal_instantiate=5"));
 }

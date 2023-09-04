@@ -1021,10 +1021,30 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .build_int_z_extend(e, ty.into_int_type(), "")
                 .into()
         }
-        Expression::Negate { expr, .. } => {
+        Expression::Negate {
+            loc,
+            expr,
+            overflowing,
+            ..
+        } => {
             let e = expression(target, bin, expr, vartab, function, ns).into_int_value();
 
-            bin.builder.build_int_neg(e, "").into()
+            if *overflowing {
+                bin.builder.build_int_neg(e, "").into()
+            } else {
+                build_binary_op_with_overflow_check(
+                    target,
+                    bin,
+                    function,
+                    e.get_type().const_zero(),
+                    e,
+                    BinaryOp::Subtract,
+                    true,
+                    ns,
+                    *loc,
+                )
+                .into()
+            }
         }
         Expression::SignExt { ty, expr, .. } => {
             let e = expression(target, bin, expr, vartab, function, ns).into_int_value();
@@ -1795,7 +1815,7 @@ pub(super) fn expression<'a, T: TargetRuntime<'a> + ?Sized>(
                 .into()
         }
         Expression::Builtin { .. } => target.builtin(bin, e, vartab, function, ns),
-        Expression::InternalFunctionCfg { cfg_no } => bin.functions[cfg_no]
+        Expression::InternalFunctionCfg { cfg_no, .. } => bin.functions[cfg_no]
             .as_global_value()
             .as_pointer_value()
             .into(),
@@ -1884,106 +1904,220 @@ fn runtime_cast<'a>(
     val: BasicValueEnum<'a>,
     ns: &Namespace,
 ) -> BasicValueEnum<'a> {
-    if matches!(from, Type::Address(_) | Type::Contract(_))
-        && matches!(to, Type::Address(_) | Type::Contract(_))
-    {
+    match (from, to) {
         // no conversion needed
-        val
-    } else if let Type::Address(_) = to {
-        let llvm_ty = bin.llvm_type(from, ns);
+        (from, to) if from == to => val,
 
-        let src = bin.build_alloca(function, llvm_ty, "dest");
+        (Type::Address(_) | Type::Contract(_), Type::Address(_) | Type::Contract(_)) => val,
+        (
+            Type::ExternalFunction { .. } | Type::Struct(StructType::ExternalFunction),
+            Type::ExternalFunction { .. } | Type::Struct(StructType::ExternalFunction),
+        ) => val,
+        (
+            Type::Uint(_)
+            | Type::Int(_)
+            | Type::Value
+            | Type::Bytes(_)
+            | Type::UserType(_)
+            | Type::Enum(_)
+            | Type::FunctionSelector,
+            Type::Uint(_)
+            | Type::Int(_)
+            | Type::Value
+            | Type::Bytes(_)
+            | Type::Enum(_)
+            | Type::UserType(_)
+            | Type::FunctionSelector,
+        ) => {
+            assert_eq!(from.bytes(ns), to.bytes(ns),);
 
-        bin.builder.build_store(src, val.into_int_value());
+            val
+        }
+        (Type::String | Type::DynamicBytes, Type::String | Type::DynamicBytes) => val,
+        (
+            Type::InternalFunction {
+                params: from_params,
+                returns: from_returns,
+                ..
+            },
+            Type::InternalFunction {
+                params: to_params,
+                returns: to_returns,
+                ..
+            },
+        ) if from_params == to_params && from_returns == to_returns => val,
 
-        let dest = bin.build_alloca(function, bin.address_type(ns), "address");
+        (Type::Bytes(_) | Type::Int(_) | Type::Uint(_) | Type::Value, Type::Address(_)) => {
+            let llvm_ty = bin.llvm_type(from, ns);
 
-        let len = bin
-            .context
-            .i32_type()
-            .const_int(ns.address_length as u64, false);
+            let src = bin.build_alloca(function, llvm_ty, "dest");
 
-        bin.builder.build_call(
-            bin.module.get_function("__leNtobeN").unwrap(),
-            &[src.into(), dest.into(), len.into()],
-            "",
-        );
+            bin.builder.build_store(src, val.into_int_value());
 
-        bin.builder.build_load(bin.address_type(ns), dest, "val")
-    } else if let Type::Address(_) = from {
-        let llvm_ty = bin.llvm_type(to, ns);
+            let dest = bin.build_alloca(function, bin.address_type(ns), "address");
 
-        let src = bin.build_alloca(function, bin.address_type(ns), "address");
+            let len = bin
+                .context
+                .i32_type()
+                .const_int(ns.address_length as u64, false);
 
-        bin.builder.build_store(src, val.into_array_value());
+            bin.builder.build_call(
+                bin.module.get_function("__leNtobeN").unwrap(),
+                &[src.into(), dest.into(), len.into()],
+                "",
+            );
 
-        let dest = bin.build_alloca(function, llvm_ty, "dest");
+            bin.builder.build_load(bin.address_type(ns), dest, "val")
+        }
+        (Type::Address(_), Type::Bytes(_) | Type::Int(_) | Type::Uint(_) | Type::Value) => {
+            let llvm_ty = bin.llvm_type(to, ns);
 
-        let len = bin
-            .context
-            .i32_type()
-            .const_int(ns.address_length as u64, false);
+            let src = bin.build_alloca(function, bin.address_type(ns), "address");
 
-        bin.builder.build_call(
-            bin.module.get_function("__beNtoleN").unwrap(),
-            &[src.into(), dest.into(), len.into()],
-            "",
-        );
+            bin.builder.build_store(src, val.into_array_value());
 
-        bin.builder.build_load(llvm_ty, dest, "val")
-    } else if matches!(from, Type::Bool) && matches!(to, Type::Int(_) | Type::Uint(_)) {
-        bin.builder
+            let dest = bin.build_alloca(function, llvm_ty, "dest");
+
+            let len = bin
+                .context
+                .i32_type()
+                .const_int(ns.address_length as u64, false);
+
+            bin.builder.build_call(
+                bin.module.get_function("__beNtoleN").unwrap(),
+                &[src.into(), dest.into(), len.into()],
+                "",
+            );
+
+            bin.builder.build_load(llvm_ty, dest, "val")
+        }
+        (Type::Bool, Type::Int(_) | Type::Uint(_)) => bin
+            .builder
             .build_int_cast(
                 val.into_int_value(),
                 bin.llvm_type(to, ns).into_int_type(),
                 "bool_to_int_cast",
             )
-            .into()
-    } else if !from.is_contract_storage()
-        && from.is_reference_type(ns)
-        && matches!(to, Type::Uint(_))
-    {
-        bin.builder
+            .into(),
+        (_, Type::Uint(_)) if !from.is_contract_storage() && from.is_reference_type(ns) => bin
+            .builder
             .build_ptr_to_int(
                 val.into_pointer_value(),
                 bin.llvm_type(to, ns).into_int_type(),
                 "ptr_to_int",
             )
-            .into()
-    } else if to.is_reference_type(ns) && matches!(from, Type::Uint(_)) {
-        bin.builder
+            .into(),
+        (Type::Uint(_), _) if to.is_reference_type(ns) => bin
+            .builder
             .build_int_to_ptr(
                 val.into_int_value(),
                 bin.llvm_type(to, ns).ptr_type(AddressSpace::default()),
                 "int_to_ptr",
             )
-            .into()
-    } else if matches!((from, to), (Type::DynamicBytes, Type::Slice(_))) {
-        let slice_ty = bin.llvm_type(to, ns);
-        let slice = bin.build_alloca(function, slice_ty, "slice");
+            .into(),
+        (Type::DynamicBytes, Type::Slice(_)) => {
+            let slice_ty = bin.llvm_type(to, ns);
+            let slice = bin.build_alloca(function, slice_ty, "slice");
 
-        let data = bin.vector_bytes(val);
+            let data = bin.vector_bytes(val);
 
-        let data_ptr = bin
-            .builder
-            .build_struct_gep(slice_ty, slice, 0, "data")
-            .unwrap();
+            let data_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 0, "data")
+                .unwrap();
 
-        bin.builder.build_store(data_ptr, data);
+            bin.builder.build_store(data_ptr, data);
 
-        let len =
-            bin.builder
-                .build_int_z_extend(bin.vector_len(val), bin.context.i64_type(), "len");
+            let len =
+                bin.builder
+                    .build_int_z_extend(bin.vector_len(val), bin.context.i64_type(), "len");
 
-        let len_ptr = bin
-            .builder
-            .build_struct_gep(slice_ty, slice, 1, "len")
-            .unwrap();
+            let len_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 1, "len")
+                .unwrap();
 
-        bin.builder.build_store(len_ptr, len);
+            bin.builder.build_store(len_ptr, len);
 
-        bin.builder.build_load(slice_ty, slice, "slice")
-    } else {
-        val
+            bin.builder.build_load(slice_ty, slice, "slice")
+        }
+        (Type::Address(_), Type::Slice(_)) => {
+            let slice_ty = bin.llvm_type(to, ns);
+            let slice = bin.build_alloca(function, slice_ty, "slice");
+            let address = bin.build_alloca(function, bin.llvm_type(from, ns), "address");
+
+            bin.builder.build_store(address, val);
+
+            let data_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 0, "data")
+                .unwrap();
+
+            bin.builder.build_store(data_ptr, address);
+
+            let len = bin
+                .context
+                .i64_type()
+                .const_int(ns.address_length as u64, false);
+
+            let len_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 1, "len")
+                .unwrap();
+
+            bin.builder.build_store(len_ptr, len);
+
+            bin.builder.build_load(slice_ty, slice, "slice")
+        }
+        (Type::Bytes(bytes_length), Type::Slice(_)) => {
+            let llvm_ty = bin.llvm_type(from, ns);
+            let src = bin.build_alloca(function, llvm_ty, "src");
+
+            bin.builder.build_store(src, val.into_int_value());
+
+            let dest = bin.build_alloca(
+                function,
+                bin.context.i8_type().array_type((*bytes_length).into()),
+                "dest",
+            );
+
+            bin.builder.build_call(
+                bin.module.get_function("__leNtobeN").unwrap(),
+                &[
+                    src.into(),
+                    dest.into(),
+                    bin.context
+                        .i32_type()
+                        .const_int((*bytes_length).into(), false)
+                        .into(),
+                ],
+                "",
+            );
+
+            let slice_ty = bin.llvm_type(to, ns);
+            let slice = bin.build_alloca(function, slice_ty, "slice");
+
+            let data_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 0, "data")
+                .unwrap();
+
+            bin.builder.build_store(data_ptr, dest);
+
+            let len = bin
+                .context
+                .i64_type()
+                .const_int((*bytes_length).into(), false);
+
+            let len_ptr = bin
+                .builder
+                .build_struct_gep(slice_ty, slice, 1, "len")
+                .unwrap();
+
+            bin.builder.build_store(len_ptr, len);
+
+            bin.builder.build_load(slice_ty, slice, "slice")
+        }
+        _ => unreachable!(),
     }
 }
