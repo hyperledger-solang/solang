@@ -127,14 +127,18 @@ struct Files {
 //
 // More information can be found here: https://github.com/hyperledger/solang/pull/1411
 
+struct GlobalCache {
+    definitions: Definitions,
+    types: Types,
+}
+
 pub struct SolangServer {
     client: Client,
     target: Target,
     importpaths: Vec<PathBuf>,
     importmaps: Vec<(String, PathBuf)>,
     files: Mutex<Files>,
-    definitions: Mutex<Definitions>,
-    types: Mutex<Types>,
+    global_cache: Mutex<GlobalCache>,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -168,8 +172,10 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
             caches: HashMap::new(),
             text_buffers: HashMap::new(),
         }),
-        definitions: Mutex::new(HashMap::new()),
-        types: Mutex::new(HashMap::new()),
+        global_cache: Mutex::new(GlobalCache {
+            definitions: HashMap::new(),
+            types: HashMap::new(),
+        }),
     });
 
     Server::new(stdin, stdout, socket).serve(service).await;
@@ -273,8 +279,9 @@ impl SolangServer {
                 }
             }
 
-            self.definitions.lock().await.extend(definitions);
-            self.types.lock().await.extend(types);
+            let mut gc = self.global_cache.lock().await;
+            gc.definitions.extend(definitions);
+            gc.types.extend(types);
 
             res.await;
         }
@@ -1906,7 +1913,7 @@ impl LanguageServer for SolangServer {
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
         let Some(reference) = self.get_reference_from_params(params).await? else {return Ok(None)};
-        let definitions = &self.definitions.lock().await;
+        let definitions = &self.global_cache.lock().await.definitions;
         let location = definitions
             .get(&reference)
             .map(|range| {
@@ -1922,14 +1929,14 @@ impl LanguageServer for SolangServer {
         params: GotoTypeDefinitionParams,
     ) -> Result<Option<GotoTypeDefinitionResponse>> {
         let Some(reference) = self.get_reference_from_params(params).await? else { return Ok(None) };
-        let types = self.types.lock().await;
+        let gc = self.global_cache.lock().await;
 
         let di = match &reference.def_type {
             DefinitionType::Variable(_)
             | DefinitionType::NonLocalVariable(_, _)
             | DefinitionType::Field(_, _)
             | DefinitionType::Variant(_, _) => {
-                if let Some(def) = types.get(&reference) {
+                if let Some(def) = gc.types.get(&reference) {
                     def
                 } else {
                     return Ok(None);
@@ -1943,8 +1950,8 @@ impl LanguageServer for SolangServer {
             _ => return Ok(None),
         };
 
-        let definitions = &self.definitions.lock().await;
-        let location = definitions
+        let location = gc
+            .definitions
             .get(di)
             .map(|range| {
                 let uri = Url::from_file_path(&di.def_path).unwrap();
@@ -1961,34 +1968,32 @@ impl LanguageServer for SolangServer {
     ) -> Result<Option<GotoImplementationResponse>> {
         let Some(reference) = self.get_reference_from_params(params).await? else { return Ok(None) };
         let caches = &self.files.lock().await.caches;
+        let gc = self.global_cache.lock().await;
         let impls = match &reference.def_type {
             DefinitionType::Variable(_)
             | DefinitionType::NonLocalVariable(_, _)
-            | DefinitionType::Field(_, _) => {
-                self.types.lock().await.get(&reference).and_then(|ty| {
-                    if let DefinitionType::Contract(_) = &ty.def_type {
-                        caches
-                            .get(&ty.def_path)
-                            .and_then(|cache| cache.implementations.get(ty))
-                    } else {
-                        None
-                    }
-                })
-            }
+            | DefinitionType::Field(_, _) => gc.types.get(&reference).and_then(|ty| {
+                if let DefinitionType::Contract(_) = &ty.def_type {
+                    caches
+                        .get(&ty.def_path)
+                        .and_then(|cache| cache.implementations.get(ty))
+                } else {
+                    None
+                }
+            }),
             DefinitionType::Contract(_) => caches
                 .get(&reference.def_path)
                 .and_then(|cache| cache.implementations.get(&reference)),
             _ => None,
         };
 
-        let definitions = self.definitions.lock().await;
         let impls = impls
             .map(|impls| {
                 impls
                     .iter()
                     .filter_map(|di| {
                         let path = &di.def_path;
-                        definitions.get(di).map(|range| {
+                        gc.definitions.get(di).map(|range| {
                             let uri = Url::from_file_path(path).unwrap();
                             Location { uri, range: *range }
                         })
@@ -2025,7 +2030,7 @@ impl LanguageServer for SolangServer {
             .collect();
 
         if !params.context.include_declaration {
-            let definitions = self.definitions.lock().await;
+            let definitions = &self.global_cache.lock().await.definitions;
             let uri = Url::from_file_path(&reference.def_path).unwrap();
             let def = if let Some(range) = definitions.get(&reference) {
                 Location { uri, range: *range }
