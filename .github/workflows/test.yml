@@ -346,7 +346,7 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       # We can't run substrate node as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
@@ -360,11 +360,9 @@ jobs:
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
     - name: Install latest rust toolchain
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
-        default: true
-        override: true
     - run: 'parallel solang compile -v --target polkadot --wasm-opt z -o ./contracts/ ::: ../polkadot/*.sol ../polkadot/test/*.sol'
       working-directory: ./integration/subxt-tests
     - name: Deploy and test contracts
