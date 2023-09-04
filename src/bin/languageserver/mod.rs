@@ -280,8 +280,7 @@ impl SolangServer {
         }
     }
 
-    // Used for goto-{definitions, implementations, declarations, type_definitions}
-
+    /// Common code for goto_{definitions, implementations, declarations, type_definitions}
     async fn get_reference_from_params(
         &self,
         params: GotoDefinitionParams,
@@ -1324,13 +1323,17 @@ impl<'a> Builder<'a> {
                         )),
                     },
                 ));
-                builder.definitions.insert(
-                    DefinitionIndex {
-                        def_path: file.path.clone(),
-                        def_type: DefinitionType::Variant(ei, discriminant),
-                    },
-                    loc_to_range(loc, file),
-                );
+
+                let di = DefinitionIndex {
+                    def_path: file.path.clone(),
+                    def_type: DefinitionType::Variant(ei, discriminant),
+                };
+                builder
+                    .definitions
+                    .insert(di.clone(), loc_to_range(loc, file));
+
+                let dt = DefinitionType::Enum(ei);
+                builder.types.push((di, dt.into()));
             }
 
             let file_no = enum_decl.loc.file_no();
@@ -1592,7 +1595,7 @@ impl<'a> Builder<'a> {
             );
         }
 
-        for lookup in builder.hovers.iter_mut() {
+        for lookup in &mut builder.hovers {
             if let Some(msg) = builder.ns.hover_overrides.get(&pt::Loc::File(
                 lookup.0,
                 lookup.1.start,
@@ -1924,16 +1927,14 @@ impl LanguageServer for SolangServer {
         let di = match &reference.def_type {
             DefinitionType::Variable(_)
             | DefinitionType::NonLocalVariable(_, _)
-            | DefinitionType::Field(_, _) => {
+            | DefinitionType::Field(_, _)
+            | DefinitionType::Variant(_, _) => {
                 if let Some(def) = types.get(&reference) {
                     def
                 } else {
                     return Ok(None);
                 }
             }
-            // DefinitionIndex::Variant(enum_id, _) => {
-            //     &DefinitionIndex::Enum(*enum_id)
-            // }
             DefinitionType::Struct(_)
             | DefinitionType::Enum(_)
             | DefinitionType::Contract(_)
