@@ -21,4 +21,4 @@
         }
         
 // ---- Expect: diagnostics ----
-// error: 8:25-28: only catch 'Error' is supported, not 'Foo'
+// error: 10:26-32: catch can only take 'bytes memory', not 'string'

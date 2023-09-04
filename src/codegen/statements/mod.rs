@@ -575,13 +575,7 @@ pub(crate) fn statement(
             let emitter = new_event_emitter(loc, *event_no, args, ns);
             emitter.emit(contract_no, func, cfg, vartab, opt);
         }
-        Statement::Revert {
-            loc,
-            error_no,
-            args,
-        } => {
-            assert!(error_no.is_none());
-
+        Statement::Revert { loc, args, .. } => {
             revert(args, cfg, contract_no, Some(func), ns, vartab, opt, loc);
         }
         Statement::Underscore(_) => {

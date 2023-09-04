@@ -983,7 +983,7 @@ fn revert_pos_arg(
             ));
         }
 
-        if ns.target != Target::EVM {
+        if ns.target == Target::Solana {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("revert with custom errors not supported on {}", ns.target),
@@ -1156,7 +1156,7 @@ fn revert_named_arg(
             }
         }
 
-        if ns.target != Target::EVM {
+        if ns.target == Target::Solana {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("revert with custom errors not supported on {}", ns.target),
@@ -2513,13 +2513,6 @@ fn try_catch(
             }
             CatchClause::Named(_, id, param, stmt) => {
                 match ns.target {
-                    Target::Polkadot { .. } if id.name != "Error" => {
-                        ns.diagnostics.push(Diagnostic::error(
-                            id.loc,
-                            format!("only catch 'Error' is supported, not '{}'", id.name),
-                        ));
-                        return Err(());
-                    }
                     Target::EVM if id.name != "Error" && id.name != "Panic" => {
                         ns.diagnostics.push(Diagnostic::error(
                             id.loc,
