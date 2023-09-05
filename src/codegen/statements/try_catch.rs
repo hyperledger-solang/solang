@@ -409,8 +409,6 @@ fn insert_catch_clauses(
         return;
     }
 
-    let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
-
     // Dispatch according to the error selector.
     // Currently, only catchin  "Error" and "Panic" are supported.
     // Expect the returned data to contain at least the selector + 1 byte of data.
@@ -422,6 +420,7 @@ fn insert_catch_clauses(
         args: vec![buffer.clone()],
     };
 
+    let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
     let mut next_clause = Some(cfg.new_basic_block("catch_error_0".into()));
 
     let selector_data_len = Expression::NumberLiteral {
@@ -444,12 +443,13 @@ fn insert_catch_clauses(
         },
     );
 
-    while let Some((n, clause)) = try_stmt.errors.iter().enumerate().next() {
+    for (n, clause) in try_stmt.errors.iter().enumerate() {
         cfg.set_basic_block(next_clause.unwrap());
+        let next_index = n + 1;
         next_clause = try_stmt
             .errors
-            .get(n + 1)
-            .map(|_| cfg.new_basic_block(format!("catch_error_{}", n + 1)));
+            .get(next_index)
+            .map(|_| cfg.new_basic_block(format!("catch_error_{}", next_index)));
 
         let error_var = clause
             .param_pos
