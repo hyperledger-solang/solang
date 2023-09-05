@@ -30,10 +30,11 @@ use tower_lsp::{
         ExecuteCommandOptions, ExecuteCommandParams, GotoDefinitionParams, GotoDefinitionResponse,
         Hover, HoverContents, HoverParams, HoverProviderCapability,
         ImplementationProviderCapability, InitializeParams, InitializeResult, InitializedParams,
-        Location, MarkedString, MessageType, OneOf, Position, Range, ReferenceParams,
+        Location, MarkedString, MessageType, OneOf, Position, Range, ReferenceParams, RenameParams,
         ServerCapabilities, SignatureHelpOptions, TextDocumentContentChangeEvent,
-        TextDocumentSyncCapability, TextDocumentSyncKind, TypeDefinitionProviderCapability, Url,
-        WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
+        TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit,
+        TypeDefinitionProviderCapability, Url, WorkspaceEdit, WorkspaceFoldersServerCapabilities,
+        WorkspaceServerCapabilities,
     },
     Client, LanguageServer, LspService, Server,
 };
@@ -1746,6 +1747,7 @@ impl LanguageServer for SolangServer {
                 type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
                 implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
                 references_provider: Some(OneOf::Left(true)),
+                rename_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -2034,6 +2036,36 @@ impl LanguageServer for SolangServer {
         }
 
         Ok(Some(locations))
+    }
+
+    async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+        let def_params: GotoDefinitionParams = GotoDefinitionParams {
+            text_document_position_params: params.text_document_position,
+            work_done_progress_params: params.work_done_progress_params,
+            partial_result_params: Default::default(),
+        };
+        let Some(reference)  = self.get_reference_from_params(def_params).await? else {return Ok(None)};
+
+        let new_text = params.new_name;
+        let caches = &self.files.lock().await.caches;
+        let ws: HashMap<_, _> = caches
+            .iter()
+            .map(|(p, cache)| {
+                let uri = Url::from_file_path(p).unwrap();
+                let text_edits: Vec<_> = cache
+                    .references
+                    .iter()
+                    .filter(|r| r.val == reference)
+                    .map(|r| TextEdit {
+                        range: get_range(r.start, r.stop, &cache.file),
+                        new_text: new_text.clone(),
+                    })
+                    .collect();
+                (uri, text_edits)
+            })
+            .collect();
+
+        Ok(Some(WorkspaceEdit::new(ws)))
     }
 }
 
