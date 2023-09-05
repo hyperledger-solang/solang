@@ -115,15 +115,11 @@ contract Testing {
     vm.function("new")
         .accounts(vec![("dataAccount", data_account)])
         .call();
-    let returns = vm
-        .function("getThis")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("getThis").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Response::try_from_slice(&encoded).unwrap();
-    assert_eq!(decoded.address, data_account);
-    assert_eq!(decoded.this, data_account);
+    assert_eq!(decoded.address, vm.stack[0].id);
+    assert_eq!(decoded.this, vm.stack[0].id);
 }
 
 #[test]
@@ -526,11 +522,7 @@ fn struct_in_array() {
     assert_eq!(decoded.item_3[0], NoPadStruct { a: 1, b: 2 });
     assert_eq!(decoded.item_3[1], NoPadStruct { a: 3, b: 4 });
 
-    let returns = vm
-        .function("primitiveDynamicArray")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("primitiveDynamicArray").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res3::try_from_slice(&encoded).unwrap();
 
@@ -626,11 +618,7 @@ fn arrays() {
     assert_eq!(decoded.vec_1[1], 5523);
     assert_eq!(decoded.vec_1[2], -89);
 
-    let returns = vm
-        .function("encodeComplex")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("encodeComplex").call().unwrap();
     let encoded = returns.into_bytes().unwrap();
     let decoded = Res2::try_from_slice(&encoded).unwrap();
 
@@ -911,12 +899,7 @@ fn external_function() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("doThat")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap()
-        .unwrap_tuple();
+    let returns = vm.function("doThat").call().unwrap().unwrap_tuple();
     let encoded = returns[2].clone().into_bytes().unwrap();
     let decoded = Res::try_from_slice(&encoded).unwrap();
 
@@ -1032,11 +1015,12 @@ contract caller {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
+    let caller_program_id = vm.stack[0].id;
     let returns = vm
         .function("do_call")
         .accounts(vec![
-            ("dataAccount", data_account),
             ("systemProgram", [0; 32]),
+            ("caller_programId", caller_program_id),
         ])
         .call()
         .unwrap()

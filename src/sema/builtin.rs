@@ -309,7 +309,7 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
 });
 
 // A list of all Solidity builtins variables
-static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
+static BUILTIN_VARIABLE: Lazy<[Prototype; 17]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::BlockCoinbase,
@@ -364,17 +364,6 @@ static BUILTIN_VARIABLE: Lazy<[Prototype; 18]> = Lazy::new(|| {
             ret: vec![Type::Uint(64)],
             target: vec![Target::Solana],
             doc: "Current slot number",
-            constant: false,
-        },
-        Prototype {
-            builtin: Builtin::ProgramId,
-            namespace: Some("tx"),
-            method: vec![],
-            name: "program_id",
-            params: vec![],
-            ret: vec![Type::Address(false)],
-            target: vec![Target::Solana],
-            doc: "Program ID of currently executing program",
             constant: false,
         },
         Prototype {

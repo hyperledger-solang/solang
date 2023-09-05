@@ -1498,6 +1498,7 @@ impl Namespace {
             constant: true,
             lvalue: false,
             yul_function: false,
+            loop_nesting_level: 0,
         };
 
         let size_expr = expression(
@@ -1508,6 +1509,7 @@ impl Namespace {
             diagnostics,
             ResolveTo::Type(&Type::Uint(256)),
         )?;
+        context.drop();
 
         match size_expr.ty() {
             Type::Uint(_) | Type::Int(_) => {}

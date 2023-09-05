@@ -28,9 +28,7 @@ fn simple_event() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    vm.function("go")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    vm.function("go").call();
 
     assert_eq!(vm.events.len(), 1);
     assert_eq!(vm.events[0].len(), 1);
@@ -87,9 +85,7 @@ fn less_simple_event() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    vm.function("go")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    vm.function("go").call();
 
     assert_eq!(vm.events.len(), 1);
     assert_eq!(vm.events[0].len(), 1);

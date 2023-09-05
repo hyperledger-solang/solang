@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{build_solidity, BorshToken};
+use crate::{build_solidity, AccountMeta, BorshToken, Pubkey};
 use num_bigint::{BigInt, Sign};
 use num_traits::{One, Zero};
 
@@ -32,7 +32,7 @@ contract testing  {
         return ret;
     }
 
-    function call_data_array(uint32[] calldata vl) public pure returns (uint256, uint256) {
+    function call_data_array(uint32[] calldata vl) public view returns (uint256, uint256) {
         uint256 ret1 = 98;
         uint256 ret2 = 99;
         assembly {
@@ -120,17 +120,17 @@ contract testing  {
 
     let returns = vm
         .function("selector_address")
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
 
+    let program_id = vm.stack[0].id;
     assert_eq!(
         returns,
         vec![
             BorshToken::Uint {
                 width: 256,
-                value: BigInt::from_bytes_be(Sign::Plus, data_account.as_ref())
+                value: BigInt::from_bytes_be(Sign::Plus, program_id.as_ref())
             },
             BorshToken::Uint {
                 width: 256,
@@ -191,7 +191,6 @@ contract testing  {
             width: 64,
             value: BigInt::from(5u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -216,7 +215,6 @@ contract testing  {
             width: 64,
             value: BigInt::from(78u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -241,7 +239,6 @@ contract testing  {
             width: 64,
             value: BigInt::from(259u16),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -488,7 +485,6 @@ fn external_function() {
             },
             BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7, 8]),
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -528,16 +524,13 @@ contract testing  {
     );
 
     let data_account = runtime.initialize_data_account();
+    let program_id = runtime.stack[0].id;
     runtime
         .function("new")
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = runtime
-        .function("test_address")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = runtime.function("test_address").call().unwrap();
     let addr = returns.into_bigint().unwrap();
     let mut b_vec = addr.to_bytes_be().1;
     // test_address() returns address as uint256. If the highest bits are 0, then addr.to_bytes_be().1
@@ -545,16 +538,16 @@ contract testing  {
     while b_vec.len() < 32 {
         b_vec.insert(0, 0);
     }
-    assert_eq!(&b_vec, data_account.as_ref());
+    assert_eq!(&b_vec, program_id.as_ref());
 
-    runtime
-        .account_data
-        .get_mut(&data_account)
-        .unwrap()
-        .lamports = 102;
+    runtime.account_data.get_mut(&program_id).unwrap().lamports = 102;
     let returns = runtime
         .function("test_balance")
-        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(program_id),
+            is_writable: false,
+            is_signer: false,
+        }])
         .call()
         .unwrap();
     assert_eq!(
@@ -567,7 +560,11 @@ contract testing  {
 
     let returns = runtime
         .function("test_selfbalance")
-        .accounts(vec![("dataAccount", data_account)])
+        .remaining_accounts(&[AccountMeta {
+            pubkey: Pubkey(program_id),
+            is_signer: false,
+            is_writable: false,
+        }])
         .call()
         .unwrap();
 

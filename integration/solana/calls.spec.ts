@@ -26,22 +26,16 @@ describe('Testing calls', function () {
 
         expect(res).toEqual(new BN(102));
 
-        let address_caller = caller.storage.publicKey;
-        let address_callee = callee.storage.publicKey;
-        let address_callee2 = callee2.storage.publicKey;
-
         res = await caller.program.methods.whoAmI()
-            .accounts({ dataAccount: caller.storage.publicKey })
             .view();
 
-        expect(res).toStrictEqual(address_caller);
+        expect(res).toStrictEqual(caller.program_key);
 
-        await caller.program.methods.doCall(address_callee, new BN(13123))
-            .accounts({ dataAccount: caller.storage.publicKey })
-            .remainingAccounts([
-                { pubkey: callee.storage.publicKey, isSigner: false, isWritable: true },
-                { pubkey: callee.program_key, isSigner: false, isWritable: false },
-            ])
+        await caller.program.methods.doCall(callee.program_key, new BN(13123))
+            .accounts({
+                callee_dataAccount: callee.storage.publicKey,
+                callee_programId: callee.program_key,
+                })
             .rpc();
 
         res = await callee.program.methods.getX()
@@ -50,33 +44,30 @@ describe('Testing calls', function () {
 
         expect(res).toEqual(new BN(13123));
 
-        res = await caller.program.methods.doCall2(address_callee, new BN(20000))
-            .accounts({ dataAccount: caller.storage.publicKey })
-            .remainingAccounts([
-                { pubkey: callee.storage.publicKey, isSigner: false, isWritable: true },
-                { pubkey: callee.program_key, isSigner: false, isWritable: false },
-                { pubkey: caller.program_key, isSigner: false, isWritable: false },
-            ])
+        res = await caller.program.methods.doCall2(callee.program_key, new BN(20000))
+            .accounts({
+                callee_dataAccount: callee.storage.publicKey,
+                callee_programId: callee.program_key,
+            })
             .view();
 
         expect(res).toEqual(new BN(33123));
 
-        let all_keys = [
-            { pubkey: callee.storage.publicKey, isSigner: false, isWritable: true },
-            { pubkey: callee.program_key, isSigner: false, isWritable: false },
-            { pubkey: callee2.storage.publicKey, isSigner: false, isWritable: true },
-            { pubkey: callee2.program_key, isSigner: false, isWritable: false },
-        ];
-
-        res = await caller.program.methods.doCall3(address_callee, address_callee2, [new BN(3), new BN(5), new BN(7), new BN(9)], "yo")
-            .remainingAccounts(all_keys)
+        res = await caller.program.methods.doCall3(callee.program_key, callee2.program_key, [new BN(3), new BN(5), new BN(7), new BN(9)], "yo")
+            .accounts({
+                callee2_programId: callee2.program_key,
+                callee_programId: callee.program_key,
+            })
             .view();
 
         expect(res.return0).toEqual(new BN(24));
         expect(res.return1).toBe("my name is callee");
 
-        res = await caller.program.methods.doCall4(address_callee, address_callee2, [new BN(1), new BN(2), new BN(3), new BN(4)], "asda")
-            .remainingAccounts(all_keys)
+        res = await caller.program.methods.doCall4(callee.program_key, callee2.program_key, [new BN(1), new BN(2), new BN(3), new BN(4)], "asda")
+            .accounts({
+                callee2_programId: callee2.program_key,
+                callee_programId: callee.program_key,
+            })
             .view();
 
         expect(res.return0).toEqual(new BN(10));

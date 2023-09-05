@@ -11,6 +11,7 @@ use crate::sema::ast::{
     self, ArrayLength, CallTy, ConstructorAnnotation, Function, FunctionAttributes, Namespace,
     StructType,
 };
+use crate::sema::solana_accounts::BuiltinAccounts;
 use base58::ToBase58;
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
@@ -49,12 +50,17 @@ pub(super) fn solana_deploy(
                 ty: Type::Address(false),
                 value: BigInt::from_bytes_be(Sign::Plus, program_id),
             }),
-            right: Box::new(Expression::Builtin {
+            right: Expression::Load {
                 loc: Loc::Codegen,
-                tys: vec![Type::Address(false)],
-                kind: Builtin::ProgramId,
-                args: Vec::new(),
-            }),
+                ty: Type::Address(false),
+                expr: Box::new(Expression::Builtin {
+                    loc: Loc::Codegen,
+                    tys: vec![Type::Ref(Box::new(Type::Address(false)))],
+                    kind: Builtin::GetAddress,
+                    args: Vec::new(),
+                }),
+            }
+            .into(),
         };
 
         let id_fail = cfg.new_basic_block("program_id_fail".to_string());
@@ -265,14 +271,30 @@ pub(super) fn solana_deploy(
                 var_no: account_info_var,
             },
         );
+        let data_account_info_var = vartab.temp_anonymous(&account_info_ty);
+        cfg.add(
+            vartab,
+            Instr::AccountAccess {
+                loc: Loc::Codegen,
+                name: BuiltinAccounts::DataAccount.to_string(),
+                var_no: data_account_info_var,
+            },
+        );
 
         let account_var = Expression::Variable {
             loc: Loc::Codegen,
-            ty: account_info_ty,
+            ty: account_info_ty.clone(),
             var_no: account_info_var,
         };
 
+        let data_acc_var = Expression::Variable {
+            loc: Loc::Codegen,
+            ty: account_info_ty,
+            var_no: data_account_info_var,
+        };
+
         let ptr_to_address = retrieve_key_from_account_info(account_var);
+        let ptr_to_data_acc = retrieve_key_from_account_info(data_acc_var);
 
         cfg.add(
             vartab,
@@ -285,16 +307,7 @@ pub(super) fn solana_deploy(
                     dimensions: vec![2],
                     values: vec![
                         account_meta_literal(ptr_to_address, true, true),
-                        account_meta_literal(
-                            Expression::Builtin {
-                                loc: Loc::Codegen,
-                                tys: vec![Type::Ref(Box::new(Type::Address(false)))],
-                                kind: Builtin::GetAddress,
-                                args: vec![],
-                            },
-                            true,
-                            true,
-                        ),
+                        account_meta_literal(ptr_to_data_acc, true, true),
                     ],
                 },
             },
@@ -460,11 +473,16 @@ pub(super) fn solana_deploy(
                         value: BigInt::from_bytes_be(Sign::Plus, program_id),
                     }
                 } else {
-                    Expression::Builtin {
+                    let addr_ptr = Expression::Builtin {
                         loc: Loc::Codegen,
-                        tys: vec![Type::Address(false)],
-                        kind: Builtin::ProgramId,
+                        tys: vec![Type::Ref(Box::new(Type::Address(false)))],
+                        kind: Builtin::GetAddress,
                         args: vec![],
+                    };
+                    Expression::Load {
+                        loc: Loc::Codegen,
+                        ty: Type::Address(false),
+                        expr: Box::new(addr_ptr),
                     }
                 },
                 offset: Expression::NumberLiteral {
@@ -537,6 +555,7 @@ pub(super) fn solana_deploy(
         cfg.add(
             vartab,
             Instr::ExternalCall {
+                loc: Loc::Codegen,
                 success: None,
                 seeds,
                 address: Some(Expression::NumberLiteral {

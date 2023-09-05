@@ -17,7 +17,7 @@ contract c {
         for (uint32 i = 0; i < tx.accounts.length; i++) {
             AccountInfo ai = tx.accounts[i];
 
-            if (ai.key == address(this)) {
+            if (ai.key == tx.accounts.dataAccount.key) {
                 return (ai.data.readUint32LE(1), ai.data.length);
             }
         }

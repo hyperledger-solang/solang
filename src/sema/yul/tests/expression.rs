@@ -23,15 +23,7 @@ use std::sync::Arc;
 
 #[test]
 fn resolve_bool_literal() {
-    let ctx = ExprContext {
-        file_no: 0,
-        contract_no: None,
-        function_no: None,
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-    };
+    let ctx = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -71,15 +63,7 @@ fn resolve_bool_literal() {
 
 #[test]
 fn resolve_number_literal() {
-    let ctx = ExprContext {
-        file_no: 0,
-        contract_no: None,
-        function_no: None,
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-    };
+    let ctx = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -133,15 +117,7 @@ fn resolve_number_literal() {
 
 #[test]
 fn resolve_hex_number_literal() {
-    let ctx = ExprContext {
-        file_no: 0,
-        contract_no: None,
-        function_no: None,
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-    };
+    let ctx = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -184,15 +160,7 @@ fn resolve_hex_number_literal() {
 
 #[test]
 fn resolve_hex_string_literal() {
-    let ctx = ExprContext {
-        file_no: 0,
-        contract_no: None,
-        function_no: None,
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-    };
+    let ctx = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -255,15 +223,7 @@ fn resolve_hex_string_literal() {
 
 #[test]
 fn resolve_string_literal() {
-    let ctx = ExprContext {
-        file_no: 0,
-        contract_no: None,
-        function_no: None,
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-    };
+    let ctx = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
@@ -292,15 +252,7 @@ fn resolve_string_literal() {
 
 #[test]
 fn resolve_variable_local() {
-    let context = ExprContext {
-        file_no: 0,
-        contract_no: Some(0),
-        function_no: Some(0),
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-    };
+    let context = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::EVM);
@@ -378,6 +330,7 @@ fn resolve_variable_contract() {
         constant: false,
         lvalue: false,
         yul_function: false,
+        loop_nesting_level: 0,
     };
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
@@ -530,15 +483,7 @@ fn resolve_variable_contract() {
 
 #[test]
 fn function_call() {
-    let context = ExprContext {
-        file_no: 0,
-        contract_no: Some(0),
-        function_no: Some(0),
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-    };
+    let context = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
     function_table.new_scope();
@@ -691,15 +636,7 @@ fn function_call() {
 
 #[test]
 fn check_arguments() {
-    let context = ExprContext {
-        file_no: 0,
-        contract_no: Some(0),
-        function_no: Some(0),
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-    };
+    let context = ExprContext::default();
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
     function_table.new_scope();
@@ -840,7 +777,9 @@ fn test_member_access() {
         constant: false,
         lvalue: false,
         yul_function: false,
+        loop_nesting_level: 0,
     };
+
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
     let mut ns = Namespace::new(Target::EVM);
@@ -938,15 +877,7 @@ fn test_check_types() {
         0,
     );
 
-    let context = ExprContext {
-        file_no: 0,
-        contract_no: Some(0),
-        function_no: Some(0),
-        unchecked: false,
-        constant: false,
-        lvalue: false,
-        yul_function: false,
-    };
+    let context = ExprContext::default();
 
     let mut ns = Namespace::new(Target::EVM);
     let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);

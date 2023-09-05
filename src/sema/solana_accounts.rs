@@ -17,9 +17,9 @@ pub enum BuiltinAccounts {
     InstructionAccount,
 }
 
-impl ToString for BuiltinAccounts {
-    fn to_string(&self) -> String {
-        let str = match self {
+impl BuiltinAccounts {
+    pub fn as_str(&self) -> &'static str {
+        match self {
             BuiltinAccounts::ClockAccount => "clock",
             BuiltinAccounts::SystemAccount => "systemProgram",
             BuiltinAccounts::AssociatedTokenProgram => "associatedTokenProgram",
@@ -27,8 +27,13 @@ impl ToString for BuiltinAccounts {
             BuiltinAccounts::TokenProgramId => "tokenProgram",
             BuiltinAccounts::DataAccount => "dataAccount",
             BuiltinAccounts::InstructionAccount => "SysvarInstruction",
-        };
+        }
+    }
+}
 
+impl ToString for BuiltinAccounts {
+    fn to_string(&self) -> String {
+        let str = self.as_str();
         str.to_string()
     }
 }

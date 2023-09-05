@@ -1,6 +1,6 @@
 contract testTypes {
     uint256 b;
-    function testAsm(uint128[] calldata vl) public pure returns (uint256) {
+    function testAsm(uint128[] calldata vl) public view returns (uint256) {
         uint256 y = 0;
         assembly {
             switch vl.length
@@ -17,3 +17,4 @@ contract testTypes {
     }
 } 
 // ---- Expect: diagnostics ----
+// warning: 3:5-74: function declared 'view' can be declared 'pure'

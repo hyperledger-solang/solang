@@ -193,13 +193,9 @@ fn resolve_base_args(contracts: &[ContractDefinition], file_no: usize, ns: &mut 
     // for every contract, if we have a base which resolved successfully, resolve any constructor args
     for contract in contracts {
         let context = ExprContext {
-            function_no: None,
-            contract_no: Some(contract.contract_no),
             file_no,
-            unchecked: false,
-            constant: false,
-            lvalue: false,
-            yul_function: false,
+            contract_no: Some(contract.contract_no),
+            ..Default::default()
         };
 
         for base in &contract.base {
@@ -231,6 +227,7 @@ fn resolve_base_args(contracts: &[ContractDefinition], file_no: usize, ns: &mut 
                 }
             }
         }
+        context.drop();
     }
 
     ns.diagnostics.extend(diagnostics);

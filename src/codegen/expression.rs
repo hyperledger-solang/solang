@@ -28,7 +28,7 @@ use crate::sema::{
     expression::ResolveTo,
 };
 use crate::Target;
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
 use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, Loc};
@@ -1589,6 +1589,7 @@ fn payable_send(
         cfg.add(
             vartab,
             Instr::ExternalCall {
+                loc: *loc,
                 success: Some(success),
                 address: Some(address),
                 accounts: None,
@@ -1658,6 +1659,7 @@ fn payable_transfer(
         cfg.add(
             vartab,
             Instr::ExternalCall {
+                loc: *loc,
                 success: None,
                 accounts: None,
                 seeds: None,
@@ -2162,6 +2164,14 @@ fn expr_builtin(
             }
         }
         ast::Builtin::GetAddress => {
+            if let Some(constant_id) = &ns.contracts[contract_no].program_id {
+                return Expression::NumberLiteral {
+                    loc: *loc,
+                    ty: Type::Address(false),
+                    value: BigInt::from_bytes_be(Sign::Plus, constant_id),
+                };
+            }
+
             // In emit, GetAddress returns a pointer to the address
             let codegen_expr = Expression::Builtin {
                 loc: *loc,
@@ -2794,6 +2804,7 @@ pub fn emit_function_call(
             cfg.add(
                 vartab,
                 Instr::ExternalCall {
+                    loc: *loc,
                     success: Some(success),
                     address: Some(address),
                     payload: args,
@@ -2908,6 +2919,7 @@ pub fn emit_function_call(
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
+                        loc: *loc,
                         success,
                         accounts,
                         address: Some(address),
@@ -2994,6 +3006,7 @@ pub fn emit_function_call(
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
+                        loc: *loc,
                         success,
                         accounts: None,
                         seeds: None,

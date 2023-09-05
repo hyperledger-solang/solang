@@ -214,7 +214,7 @@ contract c3 {
     }
 
     // BEGIN-CHECK: c3::function::test18
-    function test18(address payable addr) public returns (bool) {
+    function test18(address payable addr) public payable returns (bool) {
         bool p;
         p = false || addr.send(msg.value);
         // CHECK: value transfer address

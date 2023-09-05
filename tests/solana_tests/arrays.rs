@@ -25,12 +25,7 @@ fn fixed_array() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("get")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap()
-        .unwrap_tuple();
+    let returns = vm.function("get").call().unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -79,11 +74,7 @@ fn fixed_array() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("get")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("get").call().unwrap();
 
     assert_eq!(
         returns,
@@ -155,11 +146,7 @@ fn fixed_array() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("get")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("get").call().unwrap();
 
     assert_eq!(
         returns,
@@ -211,7 +198,6 @@ fn fixed_array() {
             ]),
             BorshToken::Bool(true),
         ])])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -287,7 +273,6 @@ fn dynamic_array_fixed_elements() {
                 value: BigInt::from(102u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -300,12 +285,7 @@ fn dynamic_array_fixed_elements() {
     );
 
     // test that the abi encoder can handle fixed arrays
-    let returns = vm
-        .function("set")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap()
-        .unwrap_tuple();
+    let returns = vm.function("set").call().unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -391,7 +371,6 @@ fn fixed_array_dynamic_elements() {
                 value: BigInt::from(102u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -403,12 +382,7 @@ fn fixed_array_dynamic_elements() {
         }
     );
 
-    let returns = vm
-        .function("set")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap()
-        .unwrap_tuple();
+    let returns = vm.function("set").call().unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -486,7 +460,6 @@ fn dynamic_array_dynamic_elements() {
                 value: BigInt::from(102u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -498,12 +471,7 @@ fn dynamic_array_dynamic_elements() {
         }
     );
 
-    let returns = vm
-        .function("set")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap()
-        .unwrap_tuple();
+    let returns = vm.function("set").call().unwrap().unwrap_tuple();
 
     assert_eq!(
         returns,
@@ -1754,10 +1722,7 @@ fn dynamic_array_push() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     let mut runtime = build_solidity(
         r#"
@@ -1783,10 +1748,7 @@ fn dynamic_array_push() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     let mut runtime = build_solidity(
         r#"
@@ -1817,10 +1779,7 @@ fn dynamic_array_push() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     let mut runtime = build_solidity(
         r#"
@@ -1847,10 +1806,7 @@ fn dynamic_array_push() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     // push() returns a reference to the thing
     let mut runtime = build_solidity(
@@ -1881,10 +1837,7 @@ fn dynamic_array_push() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 }
 
 #[test]
@@ -1913,10 +1866,7 @@ fn dynamic_array_pop() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     let mut runtime = build_solidity(
         r#"
@@ -1942,10 +1892,7 @@ fn dynamic_array_pop() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     let mut runtime = build_solidity(
         r#"
@@ -1978,10 +1925,7 @@ fn dynamic_array_pop() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     let mut runtime = build_solidity(
         r#"
@@ -2008,10 +1952,7 @@ fn dynamic_array_pop() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 }
 
 #[test]
@@ -2113,10 +2054,7 @@ fn dynamic_array_push_pop_loop() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     let mut runtime = build_solidity(
         r#"
@@ -2160,10 +2098,7 @@ fn dynamic_array_push_pop_loop() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 }
 
 #[test]

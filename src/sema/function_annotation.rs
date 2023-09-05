@@ -255,6 +255,12 @@ pub(super) fn function_body_annotations(
                             format!("'{}' is a reserved account name", id.name),
                         ));
                         continue;
+                    } else if id.name.contains(BuiltinAccounts::DataAccount.as_str()) {
+                        diagnostics.push(Diagnostic::error(
+                            id.loc,
+                            "account names that contain 'dataAccount' are reserved".to_string(),
+                        ));
+                        continue;
                     }
 
                     match ns.functions[function_no]
