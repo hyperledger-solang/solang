@@ -7,7 +7,7 @@ use crate::codegen::{
     encoding::{abi_decode, abi_encode},
     expression::{default_gas, expression},
     polkadot,
-    revert::ERROR_SELECTOR,
+    revert::{ERROR_SELECTOR, PANIC_SELECTOR},
     vartable::Vartable,
     Expression,
 };
@@ -409,14 +409,10 @@ fn insert_catch_clauses(
         return;
     }
 
-    let clause = &try_stmt.errors.get(0).unwrap();
-
-    let error_var = clause
-        .param_pos
-        .unwrap_or_else(|| vartab.temp_anonymous(&Type::String));
+    let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
 
     // Dispatch according to the error selector.
-    // At the moment, we only support Error(string).
+    // Currently, only catchin  "Error" and "Panic" are supported.
     // Expect the returned data to contain at least the selector + 1 byte of data.
     // If the error data len is <4 and a fallback available then proceed else bubble
     let ret_data_len = Expression::Builtin {
@@ -425,8 +421,9 @@ fn insert_catch_clauses(
         kind: Builtin::ArrayLength,
         args: vec![buffer.clone()],
     };
-    let enough_data_block = cfg.new_basic_block("enough_data".into());
-    let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
+
+    let mut next_clause = Some(cfg.new_basic_block("catch_error_0".into()));
+
     let selector_data_len = Expression::NumberLiteral {
         loc: Codegen,
         ty: Type::Uint(32),
@@ -442,42 +439,93 @@ fn insert_catch_clauses(
         vartab,
         Instr::BranchCond {
             cond: cond_enough_data,
-            true_block: enough_data_block,
+            true_block: next_clause.unwrap(),
             false_block: no_match_err_id,
         },
     );
 
-    let offset = Expression::NumberLiteral {
-        loc: Codegen,
-        ty: Uint(32),
-        value: 0.into(),
-    };
-    let err_selector = Expression::Builtin {
-        loc: Codegen,
-        tys: vec![Type::Bytes(4)],
-        kind: Builtin::ReadFromBuffer,
-        args: vec![buffer.clone(), offset],
-    };
+    while let Some((n, clause)) = try_stmt.errors.iter().enumerate().next() {
+        cfg.set_basic_block(next_clause.unwrap());
+        next_clause = try_stmt
+            .errors
+            .get(n + 1)
+            .map(|_| cfg.new_basic_block(format!("catch_error_{}", n + 1)));
 
-    cfg.set_basic_block(enough_data_block);
-    // Expect the returned data to match the 4 bytes function selector for "Error(string)"
-    let err_id = Expression::NumberLiteral {
-        loc: Codegen,
-        ty: Type::Bytes(4),
-        value: ERROR_SELECTOR.into(),
-    };
-    let cond = Expression::Equal {
-        loc: Codegen,
-        left: err_selector.into(),
-        right: err_id.into(),
-    };
-    let match_err_id = cfg.new_basic_block("match_err_id".into());
-    let instruction = Instr::BranchCond {
-        cond,
-        true_block: match_err_id,
-        false_block: no_match_err_id,
-    };
-    cfg.add(vartab, instruction);
+        let error_var = clause
+            .param_pos
+            .unwrap_or_else(|| vartab.temp_anonymous(&clause.param.as_ref().unwrap().ty));
+
+        // Expect the returned data to match the 4 bytes function selector for "Error(string)"
+        let err_id = Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Type::Bytes(4),
+            value: match clause.param.as_ref().unwrap().ty {
+                Type::String => ERROR_SELECTOR,
+                Type::Uint(256) => PANIC_SELECTOR,
+                _ => unreachable!("Only 'Error(string)' and 'Panic(uint256)' can be caught"),
+            }
+            .into(),
+        };
+        let offset = Expression::NumberLiteral {
+            loc: Codegen,
+            ty: Uint(32),
+            value: 0.into(),
+        };
+        let err_selector = Expression::Builtin {
+            loc: Codegen,
+            tys: vec![Type::Bytes(4)],
+            kind: Builtin::ReadFromBuffer,
+            args: vec![buffer.clone(), offset],
+        };
+        let cond = Expression::Equal {
+            loc: Codegen,
+            left: err_selector.into(),
+            right: err_id.into(),
+        };
+        let match_err_id = cfg.new_basic_block("match_err_id".into());
+        let instruction = Instr::BranchCond {
+            cond,
+            true_block: match_err_id,
+            false_block: next_clause.unwrap_or(no_match_err_id),
+        };
+        cfg.add(vartab, instruction);
+
+        cfg.set_basic_block(match_err_id);
+        let tys = &[Type::Bytes(4), clause.param.as_ref().unwrap().ty.clone()];
+        let decoded = abi_decode(&Codegen, &buffer, tys, ns, vartab, cfg, None);
+        let instruction = Instr::Set {
+            loc: Codegen,
+            res: error_var,
+            expr: decoded[1].clone(),
+        };
+        cfg.add(vartab, instruction);
+
+        let mut reachable = true;
+        for stmt in &clause.stmt {
+            statement(
+                stmt,
+                func,
+                cfg,
+                callee_contract_no,
+                ns,
+                vartab,
+                loops,
+                placeholder,
+                return_override,
+                opt,
+            );
+
+            reachable = stmt.reachable();
+        }
+        if reachable {
+            cfg.add(
+                vartab,
+                Instr::Branch {
+                    block: finally_block,
+                },
+            );
+        }
+    }
 
     // If the selector doesn't match any of the errors and no fallback then bubble else catch
     cfg.set_basic_block(no_match_err_id);
@@ -498,42 +546,6 @@ fn insert_catch_clauses(
             opt,
             finally_block,
             buffer.clone(),
-        );
-    }
-
-    cfg.set_basic_block(match_err_id);
-    let tys = &[Type::Bytes(4), clause.param.as_ref().unwrap().ty.clone()];
-    let decoded = abi_decode(&Codegen, &buffer, tys, ns, vartab, cfg, None);
-    let instruction = Instr::Set {
-        loc: Codegen,
-        res: error_var,
-        expr: decoded[1].clone(),
-    };
-    cfg.add(vartab, instruction);
-
-    let mut reachable = true;
-    for stmt in &clause.stmt {
-        statement(
-            stmt,
-            func,
-            cfg,
-            callee_contract_no,
-            ns,
-            vartab,
-            loops,
-            placeholder,
-            return_override,
-            opt,
-        );
-
-        reachable = stmt.reachable();
-    }
-    if reachable {
-        cfg.add(
-            vartab,
-            Instr::Branch {
-                block: finally_block,
-            },
         );
     }
 }
