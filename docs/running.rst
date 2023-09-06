@@ -207,11 +207,11 @@ Options:
   must be specified.
 
 \-\-address\-length *length-in-bytes*
-  Change the default address length on Polkadot. By default, Substate uses an address type of 32 bytes. This option
+  Change the default address length on Polkadot. By default, Substrate uses an address type of 32 bytes. This option
   is ignored for any other target.
 
 \-\-value\-length *length-in-bytes*
-  Change the default value length on Polkadot. By default, Substate uses an value type of 16 bytes. This option
+  Change the default value length on Polkadot. By default, Substrate uses an value type of 16 bytes. This option
   is ignored for any other target.
 
 \-\-importpath *directory*

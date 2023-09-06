@@ -16,9 +16,15 @@ use solang::{
     file_resolver::FileResolver,
     Target,
 };
+use std::fs::File;
+use std::io::Read;
 use std::{ffi::OsString, path::PathBuf, process::exit};
-
+mod polkadot;
 mod test;
+
+use polkadot::{
+    PolkadotCallCommand, PolkadotInstantiateCommand, PolkadotRemoveCommand, PolkadotUploadCommand,
+};
 #[derive(Parser)]
 #[command(author = env!("CARGO_PKG_AUTHORS"), version = concat!("version ", env!("SOLANG_VERSION")), about = env!("CARGO_PKG_DESCRIPTION"), subcommand_required = true)]
 pub struct Cli {
@@ -45,6 +51,20 @@ pub enum Commands {
 
     #[command(about = "Create a new Solang project")]
     New(New),
+
+    #[command(about = "Interact with polkadot contracts on chain")]
+    Polkadot {
+        #[clap(subcommand)]
+        action: PolkadotAction,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PolkadotAction {
+    Upload(PolkadotUploadCommand),
+    Instantiate(PolkadotInstantiateCommand),
+    Call(PolkadotCallCommand),
+    Remove(PolkadotRemoveCommand),
 }
 
 #[derive(Args)]
@@ -681,4 +701,38 @@ fn explicit_args(matches: &ArgMatches) -> Vec<&Id> {
             )
         })
         .collect()
+}
+
+/// A helper function to check if the target name provided by the user matches the target name in solang.toml
+fn check_target_match(target_name: &str) {
+    // Get the manifest path from the current directory
+    let manifest_path = PathBuf::from("solang.toml");
+
+    // Check if the manifest file exists
+    // If it doesn't, then we don't need to check the target name
+    if !manifest_path.exists() {
+        return;
+    }
+
+    // Read the contents of the solang.toml file
+    let mut file = File::open(&manifest_path).expect("Failed to open the manifest");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("Failed to read solang.toml");
+
+    // Parse the TOML contents and extract the target name
+    let parsed_toml: toml::Value = toml::from_str(&contents).expect("Failed to parse solang.toml");
+    let config_target = parsed_toml["target"]["name"]
+        .as_str()
+        .expect("target name is not a string")
+        .to_string();
+
+    // Compare the target name with the provided argument
+    if config_target != target_name {
+        eprintln!(
+            "Error: The specified target '{}' does not match the target '{}' in solang.toml",
+            target_name, config_target
+        );
+        std::process::exit(1);
+    }
 }

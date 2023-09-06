@@ -336,6 +336,9 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/polkadot
+    - name: Test Polkadot cli
+      run: ./cli_test.sh
+      working-directory: ./integration/polkadot
     - name: cleanup
       if: always()
       run: docker kill ${{steps.substrate.outputs.id}}
