@@ -294,45 +294,21 @@ pub(super) fn revert(
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
 
     if opt.log_runtime_errors {
-        if expr.is_some() {
-            let prefix = b"runtime_error: ";
-            let error_string = format!(
-                " revert encountered in {},\n",
-                ns.loc_to_string(PathDisplay::Filename, loc)
-            );
-            let print_expr = Expression::FormatString {
-                loc: Codegen,
-                args: vec![
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Codegen,
-                            ty: Type::Bytes(prefix.len() as u8),
-                            value: prefix.to_vec(),
-                        },
-                    ),
-                    (FormatArg::Default, expr.clone().unwrap()),
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Codegen,
-                            ty: Type::Bytes(error_string.as_bytes().len() as u8),
-                            value: error_string.as_bytes().to_vec(),
-                        },
-                    ),
-                ],
-            };
-            cfg.add(vartab, Instr::Print { expr: print_expr });
+        let reason = args
+            .iter()
+            .map(|arg| {
+                arg.tys()
+                    .iter()
+                    .map(|ty| ty.to_string(ns))
+                    .collect::<String>()
+            })
+            .collect::<String>();
+        let reason = if !reason.is_empty() {
+            format!("{} revert encountered", reason)
         } else {
-            log_runtime_error(
-                opt.log_runtime_errors,
-                "revert encountered",
-                *loc,
-                cfg,
-                vartab,
-                ns,
-            )
-        }
+            "revert encountered".to_string()
+        };
+        log_runtime_error(opt.log_runtime_errors, &reason, *loc, cfg, vartab, ns)
     }
 
     let error = expr

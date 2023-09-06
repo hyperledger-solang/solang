@@ -1125,21 +1125,30 @@ fn constructor_reverts_bubbling() {
 fn try_catch_uncaught_bubbles_up() {
     let mut runtime = build_solidity(
         r##"contract C {
-        function c() public payable {
+        function c(uint div) public payable {
             B b = new B();
-            b.b{value: 1000}();
+            b.b{value: 1000}(div);
         }
     }
 
     contract B {
-        function b() public payable {
+        function b(uint div) public payable {
             A a = new A();
-            try a.a(0) {} catch Error(string) {}
+            try a.a(div) {} catch Error(string) {}
         }
     }
 
     contract A {
+        struct Bar {
+            uint foo;
+            string bar;
+        }
+        error Foo(Bar);
+
         function a(uint div) public pure returns(uint) {
+            if (div == 1) {
+                revert Foo(Bar({ foo: 123, bar: "bar" }));
+            }
             return 123 / div;
         }
     }
@@ -1147,7 +1156,6 @@ fn try_catch_uncaught_bubbles_up() {
     );
 
     runtime.set_transferred_value(10000);
-    runtime.function_expect_failure("c", vec![]);
 
     let panic = PanicCode::DivisionByZero;
     let expected_output = (
@@ -1155,7 +1163,17 @@ fn try_catch_uncaught_bubbles_up() {
         U256::from(panic as u8),
     )
         .encode();
+    runtime.function_expect_failure("c", U256::from(0).encode());
+    assert_eq!(runtime.output(), expected_output);
+    assert!(runtime.debug_buffer().contains("external call failed"));
 
+    let expected_output = (
+        [0x93u8, 0x12, 0x0c, 0xb2],
+        U256::from(123),
+        "bar".to_string(),
+    )
+        .encode();
+    runtime.function_expect_failure("c", U256::from(1).encode());
     assert_eq!(runtime.output(), expected_output);
     assert!(runtime.debug_buffer().contains("external call failed"));
 }
@@ -1202,4 +1220,85 @@ fn try_catch_transfer_fail() {
     runtime.function("test", 1u128.encode());
     assert_eq!(runtime.output(), Vec::<u8>::new().encode());
     assert!(runtime.debug_buffer().contains("seal_instantiate=5"));
+}
+
+#[test]
+fn try_catch_panic() {
+    let mut runtime = build_solidity(
+        r#"contract A {
+        function a() public payable returns (uint) {
+            B b = new B();
+            try b.b(0) {} catch Panic(uint code) {
+                return code;
+            }
+            revert("didn't catch");
+        }
+    }
+
+    contract B {
+        function b(uint div) public pure returns(uint) {
+            return 123 / div;
+        }
+    }
+    "#,
+    );
+
+    runtime.function("a", vec![]);
+    let expected_output = U256::from(PanicCode::DivisionByZero as u8).encode();
+    assert_eq!(runtime.output(), expected_output);
+}
+
+#[test]
+fn try_catch_different_errors() {
+    let mut runtime = build_solidity(
+        r#"contract A {
+        function a(uint div) public payable returns (uint) {
+            B b = new B();
+            try b.b(div) returns (uint) {
+                return 3;
+            } catch Error(string) {
+                return 1;
+            } catch Panic(uint) {
+                return 0;
+            } catch (bytes raw) {
+                return 2;
+            }
+        }
+    }
+
+    contract B {
+        error Foo();
+
+        // div = 0: Reverts with Panic error
+        // div = 1: Reverts with Error error
+        // div = 2: Reverts with Foo error
+        // div >= 3: Doesn't revert
+        function b(uint div) public pure returns(uint) {
+            if (div == 1) {
+                revert("foo");
+            }
+            if (div == 2) {
+                revert Foo();
+            }
+            return 123 / div;
+        }
+    }
+    "#,
+    );
+
+    let in_out = U256::from(0).encode();
+    runtime.function("a", in_out.clone());
+    assert_eq!(runtime.output(), in_out);
+
+    let in_out = U256::from(1).encode();
+    runtime.function("a", in_out.clone());
+    assert_eq!(runtime.output(), in_out);
+
+    let in_out = U256::from(2).encode();
+    runtime.function("a", in_out.clone());
+    assert_eq!(runtime.output(), in_out);
+
+    let in_out = U256::from(3).encode();
+    runtime.function("a", in_out.clone());
+    assert_eq!(runtime.output(), in_out);
 }

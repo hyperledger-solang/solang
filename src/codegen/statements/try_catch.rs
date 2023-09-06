@@ -365,7 +365,9 @@ fn insert_success_code_block(
     }
 }
 
-/// Insert all catch cases into the CFG.
+/// Insert all catch cases into the CFG (error selectors and catch-all clause).
+/// Currently, only catching "Error" and "Panic" errors are supported.
+/// Other errors will lead to the catch-all (if any) or bubble up the error.
 fn insert_catch_clauses(
     try_stmt: &TryCatch,
     func: &Function,
@@ -409,20 +411,16 @@ fn insert_catch_clauses(
         return;
     }
 
-    // Dispatch according to the error selector.
-    // Currently, only catchin  "Error" and "Panic" are supported.
     // Expect the returned data to contain at least the selector + 1 byte of data.
     // If the error data len is <4 and a fallback available then proceed else bubble
+    let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
+    let mut next_clause = Some(cfg.new_basic_block("catch_error_0".into()));
     let ret_data_len = Expression::Builtin {
         loc: Codegen,
         tys: vec![Type::Uint(32)],
         kind: Builtin::ArrayLength,
         args: vec![buffer.clone()],
     };
-
-    let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
-    let mut next_clause = Some(cfg.new_basic_block("catch_error_0".into()));
-
     let selector_data_len = Expression::NumberLiteral {
         loc: Codegen,
         ty: Type::Uint(32),
@@ -434,14 +432,12 @@ fn insert_catch_clauses(
         left: ret_data_len.into(),
         right: selector_data_len.into(),
     };
-    cfg.add(
-        vartab,
-        Instr::BranchCond {
-            cond: cond_enough_data,
-            true_block: next_clause.unwrap(),
-            false_block: no_match_err_id,
-        },
-    );
+    let instruction = Instr::BranchCond {
+        cond: cond_enough_data,
+        true_block: next_clause.unwrap(),
+        false_block: no_match_err_id,
+    };
+    cfg.add(vartab, instruction);
 
     for (n, clause) in try_stmt.errors.iter().enumerate() {
         cfg.set_basic_block(next_clause.unwrap());
@@ -451,11 +447,7 @@ fn insert_catch_clauses(
             .get(next_index)
             .map(|_| cfg.new_basic_block(format!("catch_error_{}", next_index)));
 
-        let error_var = clause
-            .param_pos
-            .unwrap_or_else(|| vartab.temp_anonymous(&clause.param.as_ref().unwrap().ty));
-
-        // Expect the returned data to match the 4 bytes function selector for "Error(string)"
+        // Expect the returned data to match a known 4 bytes function selector
         let err_id = Expression::NumberLiteral {
             loc: Codegen,
             ty: Type::Bytes(4),
@@ -491,12 +483,13 @@ fn insert_catch_clauses(
         cfg.add(vartab, instruction);
 
         cfg.set_basic_block(match_err_id);
-        let tys = &[Type::Bytes(4), clause.param.as_ref().unwrap().ty.clone()];
-        let decoded = abi_decode(&Codegen, &buffer, tys, ns, vartab, cfg, None);
+        let types = &[Type::Bytes(4), clause.param.as_ref().unwrap().ty.clone()];
         let instruction = Instr::Set {
             loc: Codegen,
-            res: error_var,
-            expr: decoded[1].clone(),
+            res: clause
+                .param_pos
+                .unwrap_or_else(|| vartab.temp_anonymous(&clause.param.as_ref().unwrap().ty)),
+            expr: abi_decode(&Codegen, &buffer, types, ns, vartab, cfg, None)[1].clone(),
         };
         cfg.add(vartab, instruction);
 

@@ -2559,7 +2559,7 @@ fn try_catch(
                 let mut error_stmt_resolved = Vec::new();
                 let mut error_param = Parameter {
                     loc: id.loc,
-                    ty: Type::String,
+                    ty: error_ty.clone(),
                     ty_loc: Some(ty_loc),
                     id: None,
                     indexed: false,
@@ -2572,7 +2572,7 @@ fn try_catch(
                 if let Some(name) = &param.name {
                     if let Some(pos) = symtable.add(
                         name,
-                        Type::String,
+                        error_ty,
                         ns,
                         VariableInitializer::Solidity(None),
                         VariableUsage::TryCatchErrorString,

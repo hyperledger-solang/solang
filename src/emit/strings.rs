@@ -87,7 +87,7 @@ pub(super) fn format_string<'a, T: TargetRuntime<'a> + ?Sized>(
                     .context
                     .i32_type()
                     .const_int(ns.enums[enum_no].ty.bits(ns) as u64 / 3, false),
-                _ => unimplemented!(),
+                _ => unimplemented!("can't format this argument: {:?}", arg),
             }
         };
 

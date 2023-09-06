@@ -8,7 +8,6 @@ describe('Deploy debug_buffer_format.sol and test the debug buffer formatting', 
         let conn = await createConnection();
         const alice = aliceKeypair();
 
-
         let deployed_contract = await deploy(
             conn,
             alice,
@@ -22,8 +21,6 @@ describe('Deploy debug_buffer_format.sol and test the debug buffer formatting', 
             deployed_contract.address
         );
 
-
-
         let res = await debug_buffer(conn, contract, "multiple_prints", [])
         expect(res).toEqual(`print: Hello!,
 call: seal_debug_message=0,
@@ -31,17 +28,14 @@ print: I call seal_debug_message under the hood!,
 call: seal_debug_message=0,
 `)
 
-
         let res1 = await debug_buffer(conn, contract, "multiple_prints_then_revert", [])
         expect(res1).toEqual(`print: Hello!,
 call: seal_debug_message=0,
 print: I call seal_debug_message under the hood!,
 call: seal_debug_message=0,
-runtime_error: sesa!!! revert encountered in debug_buffer_format.sol:10:9-26,
+runtime_error: string revert encountered in debug_buffer_format.sol:10:9-26,
 call: seal_debug_message=0,
 `)
-
-
 
         conn.disconnect();
     });
