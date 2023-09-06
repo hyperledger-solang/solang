@@ -1299,7 +1299,7 @@ fn try_catch_different_errors() {
     runtime.function("a", in_out.clone());
     assert_eq!(runtime.output(), in_out);
 
-    //let in_out = U256::from(3).encode();
-    //runtime.function("a", in_out.clone());
-    //assert_eq!(runtime.output(), in_out);
+    let in_out = U256::from(3).encode();
+    runtime.function("a", in_out.clone());
+    assert_eq!(runtime.output(), in_out);
 }

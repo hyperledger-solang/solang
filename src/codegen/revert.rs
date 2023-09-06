@@ -329,8 +329,8 @@ pub(super) fn revert(
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
 
     if opt.log_runtime_errors {
-        // We can log Error(string)
         match (error_no, &expr) {
+            // In the case of Error(string), we can print the reason
             (None, Some(expr)) => {
                 let prefix = b"runtime_error: ";
                 let error_string = format!(
@@ -361,6 +361,7 @@ pub(super) fn revert(
                 };
                 cfg.add(vartab, Instr::Print { expr: print_expr });
             }
+            // Otherwise, not all fields might be formatted, so just print the error type
             _ => {
                 let error_ty = error_no
                     .map(|n| ns.errors[n].name.as_str())
