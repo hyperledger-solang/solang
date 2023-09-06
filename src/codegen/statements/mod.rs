@@ -575,8 +575,22 @@ pub(crate) fn statement(
             let emitter = new_event_emitter(loc, *event_no, args, ns);
             emitter.emit(contract_no, func, cfg, vartab, opt);
         }
-        Statement::Revert { loc, args, .. } => {
-            revert(args, cfg, contract_no, Some(func), ns, vartab, opt, loc);
+        Statement::Revert {
+            loc,
+            args,
+            error_no,
+        } => {
+            revert(
+                args,
+                error_no,
+                cfg,
+                contract_no,
+                Some(func),
+                ns,
+                vartab,
+                opt,
+                loc,
+            );
         }
         Statement::Underscore(_) => {
             // ensure we get phi nodes for the return values

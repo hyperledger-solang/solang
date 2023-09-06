@@ -20,6 +20,7 @@ use crate::sema::{
 use crate::Target;
 use parse_display::Display;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
+use tiny_keccak::{Hasher, Keccak};
 
 /// Signature of `Keccak256('Error(string)')[:4]`
 pub(crate) const ERROR_SELECTOR: u32 = 0x08c379a0u32;
@@ -38,15 +39,21 @@ pub enum SolidityError {
     String(Expression),
     /// The `Panic(uint256)` selector
     Panic(PanicCode),
+    /// User defined errors
+    Custom {
+        error_no: usize,
+        expr: Option<Expression>,
+    },
 }
 
 impl SolidityError {
     /// Return the selector expression of the error.
-    pub fn selector_expression(&self) -> Expression {
+    pub fn selector_expression(&self, ns: &Namespace) -> Expression {
         let selector = match self {
             Self::Empty => unreachable!("empty return data has no selector"),
-            Self::String(_) => self.selector().into(),
-            Self::Panic(_) => self.selector().into(),
+            Self::String(_) => self.selector(ns).into(),
+            Self::Panic(_) => self.selector(ns).into(),
+            Self::Custom { .. } => self.selector(ns).into(),
         };
 
         Expression::NumberLiteral {
@@ -57,11 +64,20 @@ impl SolidityError {
     }
 
     /// Return the selector of the error.
-    pub fn selector(&self) -> u32 {
+    pub fn selector(&self, ns: &Namespace) -> u32 {
         match self {
             Self::Empty => unreachable!("empty return data has no selector"),
             Self::String(_) => ERROR_SELECTOR,
             Self::Panic(_) => PANIC_SELECTOR,
+            Self::Custom { error_no, .. } => {
+                let mut buf = [0u8; 32];
+                let mut hasher = Keccak::v256();
+                let signature =
+                    ns.signature(&ns.errors[*error_no].name, &ns.errors[*error_no].fields);
+                hasher.update(signature.as_bytes());
+                hasher.finalize(&mut buf);
+                u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]])
+            }
         }
     }
 
@@ -77,8 +93,11 @@ impl SolidityError {
     ) -> Option<Expression> {
         match self {
             Self::Empty => None,
-            Self::String(data) => {
-                let args = vec![self.selector_expression(), data.clone()];
+            Self::String(expr)
+            | Self::Custom {
+                expr: Some(expr), ..
+            } => {
+                let args = vec![self.selector_expression(ns), expr.clone()];
                 create_encoder(ns, false)
                     .const_encode(&args)
                     .map(|bytes| {
@@ -96,6 +115,21 @@ impl SolidityError {
                     })
                     .or_else(|| abi_encode(loc, args, ns, vartab, cfg, false).0.into())
             }
+            Self::Custom { .. } => create_encoder(ns, false)
+                .const_encode(&[self.selector_expression(ns)])
+                .map(|bytes| {
+                    let size = Expression::NumberLiteral {
+                        loc: Codegen,
+                        ty: Type::Uint(32),
+                        value: bytes.len().into(),
+                    };
+                    Expression::AllocDynamicBytes {
+                        loc: Codegen,
+                        ty: Type::Slice(Type::Bytes(1).into()),
+                        size: size.into(),
+                        initializer: bytes.into(),
+                    }
+                }),
             Self::Panic(code) => {
                 let code = Expression::NumberLiteral {
                     loc: Codegen,
@@ -103,7 +137,7 @@ impl SolidityError {
                     value: (*code as u8).into(),
                 };
                 create_encoder(ns, false)
-                    .const_encode(&[self.selector_expression(), code])
+                    .const_encode(&[self.selector_expression(ns), code])
                     .map(|bytes| {
                         let size = Expression::NumberLiteral {
                             loc: Codegen,
@@ -281,6 +315,7 @@ pub(super) fn require(
 
 pub(super) fn revert(
     args: &[ast::Expression],
+    error_no: &Option<usize>,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     func: Option<&Function>,
@@ -294,26 +329,56 @@ pub(super) fn revert(
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
 
     if opt.log_runtime_errors {
-        let reason = args
-            .iter()
-            .map(|arg| {
-                arg.tys()
-                    .iter()
-                    .map(|ty| ty.to_string(ns))
-                    .collect::<String>()
-            })
-            .collect::<String>();
-        let reason = if !reason.is_empty() {
-            format!("{} revert encountered", reason)
-        } else {
-            "revert encountered".to_string()
-        };
-        log_runtime_error(opt.log_runtime_errors, &reason, *loc, cfg, vartab, ns)
+        // We can log Error(string)
+        match (error_no, &expr) {
+            (None, Some(expr)) => {
+                let prefix = b"runtime_error: ";
+                let error_string = format!(
+                    " revert encountered in {},\n",
+                    ns.loc_to_string(PathDisplay::Filename, loc)
+                );
+                let print_expr = Expression::FormatString {
+                    loc: Codegen,
+                    args: vec![
+                        (
+                            FormatArg::StringLiteral,
+                            Expression::BytesLiteral {
+                                loc: Codegen,
+                                ty: Type::Bytes(prefix.len() as u8),
+                                value: prefix.to_vec(),
+                            },
+                        ),
+                        (FormatArg::Default, expr.clone()),
+                        (
+                            FormatArg::StringLiteral,
+                            Expression::BytesLiteral {
+                                loc: Codegen,
+                                ty: Type::Bytes(error_string.as_bytes().len() as u8),
+                                value: error_string.as_bytes().to_vec(),
+                            },
+                        ),
+                    ],
+                };
+                cfg.add(vartab, Instr::Print { expr: print_expr });
+            }
+            _ => {
+                let error_ty = error_no
+                    .map(|n| ns.errors[n].name.as_str())
+                    .unwrap_or("unspecified");
+                let reason = format!("{} revert encountered", error_ty);
+                log_runtime_error(opt.log_runtime_errors, &reason, *loc, cfg, vartab, ns);
+            }
+        }
     }
 
-    let error = expr
-        .map(SolidityError::String)
-        .unwrap_or(SolidityError::Empty);
+    let error = match (error_no, &expr) {
+        // Having an error number requires a custom error
+        (Some(n), _) => SolidityError::Custom { error_no: *n, expr },
+        // No error number but an expression requires Error(String)
+        (None, Some(expr)) => SolidityError::String(expr.clone()),
+        // No error number and no data means just "revert();" without any reason
+        (None, None) => SolidityError::Empty,
+    };
     assert_failure(&Codegen, error, ns, cfg, vartab);
 }
 
@@ -358,9 +423,13 @@ fn string_to_expr(string: String) -> Expression {
 
 #[cfg(test)]
 mod tests {
-    use crate::codegen::{
-        revert::{PanicCode, SolidityError, ERROR_SELECTOR, PANIC_SELECTOR},
-        Expression,
+    use crate::{
+        codegen::{
+            revert::{PanicCode, SolidityError, ERROR_SELECTOR, PANIC_SELECTOR},
+            Expression,
+        },
+        sema::ast::{ErrorDecl, Namespace, Parameter, Type},
+        Target,
     };
 
     #[test]
@@ -378,14 +447,58 @@ mod tests {
     }
 
     #[test]
-    fn function_selector_expression() {
+    fn default_error_selector_expression() {
+        let ns = Namespace::new(Target::default_polkadot());
         assert_eq!(
             ERROR_SELECTOR,
-            SolidityError::String(Expression::Poison).selector(),
+            SolidityError::String(Expression::Poison).selector(&ns),
         );
         assert_eq!(
             PANIC_SELECTOR,
-            SolidityError::Panic(PanicCode::Generic).selector(),
+            SolidityError::Panic(PanicCode::Generic).selector(&ns),
         );
+    }
+
+    /// Tests the error selector calculation to be correct against two examples:
+    /// - `error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);`
+    /// - `error Unauthorized();`
+    ///
+    /// Error selector calculation uses the same signature algorithm used for message selectors.
+    /// Which is expected to already have sufficient test coverage.
+    #[test]
+    fn custom_error_selector_expression() {
+        let mut ns = Namespace::new(Target::default_polkadot());
+        ns.errors = vec![
+            ErrorDecl {
+                name: "Unauthorized".to_string(),
+                ..Default::default()
+            },
+            ErrorDecl {
+                name: "ERC20InsufficientBalance".to_string(),
+                fields: vec![
+                    Parameter {
+                        ty: Type::Address(false),
+                        ..Default::default()
+                    },
+                    Parameter {
+                        ty: Type::Uint(256),
+                        ..Default::default()
+                    },
+                    Parameter {
+                        ty: Type::Uint(256),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            },
+        ];
+
+        let expr = Some(Expression::Poison);
+        let expected_selector = SolidityError::Custom { error_no: 0, expr }.selector(&ns);
+        assert_eq!(0x82b42900, expected_selector);
+
+        let expr = Some(Expression::Poison);
+        let expected_selector = SolidityError::Custom { error_no: 1, expr }.selector(&ns);
+        assert_eq!(0xe450d38c, expected_selector);
     }
 }

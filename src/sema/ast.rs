@@ -24,7 +24,7 @@ use std::{
 };
 use tiny_keccak::{Hasher, Keccak};
 
-#[derive(PartialEq, Eq, Clone, Hash, Debug)]
+#[derive(Default, PartialEq, Eq, Clone, Hash, Debug)]
 pub enum Type {
     Address(bool),
     Bool,
@@ -60,6 +60,7 @@ pub enum Type {
     UserType(usize),
     /// There is no way to declare value in Solidity (should there be?)
     Value,
+    #[default]
     Void,
     Unreachable,
     /// DynamicBytes and String are lowered to a vector.
@@ -186,7 +187,7 @@ impl EventDecl {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(Default, PartialEq, Eq, Clone, Debug)]
 pub struct ErrorDecl {
     pub tags: Vec<Tag>,
     pub name: String,
@@ -237,7 +238,7 @@ impl fmt::Display for EnumDecl {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(Default, PartialEq, Eq, Clone, Debug)]
 pub struct Parameter {
     pub loc: pt::Loc,
     /// The name can empty (e.g. in an event field or unnamed parameter/return)

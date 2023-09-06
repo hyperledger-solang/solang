@@ -3,9 +3,13 @@
 use crate::build_solidity;
 use parity_scale_codec::{Decode, Encode};
 use primitive_types::U256;
-use solang::codegen::{
-    revert::{PanicCode, PanicCode::*, SolidityError},
-    Expression,
+use solang::{
+    codegen::{
+        revert::{PanicCode, PanicCode::*, SolidityError},
+        Expression,
+    },
+    sema::ast::Namespace,
+    Target,
 };
 
 #[derive(Encode, Decode)]
@@ -17,7 +21,9 @@ struct PanicData {
 impl From<PanicCode> for PanicData {
     fn from(value: PanicCode) -> Self {
         Self {
-            selector: SolidityError::Panic(value).selector().to_be_bytes(),
+            selector: SolidityError::Panic(value)
+                .selector(&Namespace::new(Target::default_polkadot()))
+                .to_be_bytes(),
             data: U256::from(value as u8),
         }
     }
@@ -33,7 +39,7 @@ impl From<String> for ErrorData {
     fn from(msg: String) -> Self {
         Self {
             selector: SolidityError::String(Expression::Poison)
-                .selector()
+                .selector(&Namespace::new(Target::default_polkadot()))
                 .to_be_bytes(),
             msg,
         }
@@ -264,16 +270,20 @@ fn revert() {
     );
 
     runtime.function_expect_failure("i_will_revert", Vec::new());
-    assert!(runtime.debug_buffer().contains("runtime_error: revert"));
+    assert!(runtime
+        .debug_buffer()
+        .contains("runtime_error: unspecified revert encountered"));
     assert!(runtime.output().is_empty());
 
     let msg = "hello \"\n\0world!".to_string();
     runtime.function_expect_failure("revert_dyn", msg.encode());
     dbg!(runtime.debug_buffer());
-    assert!(runtime.debug_buffer().contains("string revert encountered"));
+    assert!(runtime
+        .debug_buffer()
+        .contains("hello \"\n\0world! revert encountered"));
 
     runtime.function_expect_failure("revert_static", Vec::new());
-    assert!(runtime.debug_buffer().contains("string revert encountered"));
+    assert!(runtime.debug_buffer().contains("hi revert encountered"));
     assert_eq!(runtime.output(), ErrorData::from("hi".to_string()).encode());
 }
 
