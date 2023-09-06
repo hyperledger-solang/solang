@@ -39,7 +39,7 @@ call: seal_debug_message=0,
 call: seal_debug_message=0,
 print: I call seal_debug_message under the hood!,
 call: seal_debug_message=0,
-runtime_error: string revert encountered in test.sol:10:17-34,
+runtime_error: sesa!!! revert encountered in test.sol:10:17-34,
 call: seal_debug_message=0,
 "#
     );
