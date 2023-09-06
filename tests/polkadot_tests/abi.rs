@@ -173,3 +173,114 @@ fn error_and_panic_in_lang_error() {
         _ => panic!("expected Panic(uint256) type"),
     };
 }
+
+/// Ensure that custom errors end up correctly in the metadata.
+#[test]
+fn custom_errors_in_metadata() {
+    let src = r#"
+        struct Bar { uint foo; string bar; }
+        error Custom(Bar);
+        error Unauthorized();
+        error ERC721InsufficientApproval(string operator, uint256 tokenId);
+        contract VendingMachine { uint public foo; }"#;
+    let abi = load_abi(&build_wasm(src, false, false)[0].1);
+
+    // Find them in lang_error
+    let (error_ty_id, custom_ty_id, erc721_ty_id) = match &abi
+        .registry()
+        .resolve(abi.spec().lang_error().ty().id)
+        .unwrap()
+        .type_def
+    {
+        TypeDef::<PortableForm>::Variant(TypeDefVariant::<PortableForm> { variants }) => {
+            let unauthorized = variants.iter().find(|v| v.name == "Unauthorized").unwrap();
+            let custom = variants.iter().find(|v| v.name == "Custom").unwrap();
+            let erc721 = variants
+                .iter()
+                .find(|v| v.name == "ERC721InsufficientApproval")
+                .unwrap();
+            (
+                unauthorized.fields[0].ty.id,
+                custom.fields[0].ty.id,
+                erc721.fields[0].ty.id,
+            )
+        }
+        _ => panic!("unexpected lang_err type def"),
+    };
+
+    // Asserts for Unauthorized
+    let unauthorized_ty = abi.registry().resolve(error_ty_id).unwrap();
+    match &unauthorized_ty.type_def {
+        TypeDef::<PortableForm>::Composite(TypeDefComposite::<PortableForm> { fields }) => {
+            assert_eq!(unauthorized_ty.path, path!("0x82b42900"));
+            assert!(fields.is_empty());
+        }
+        _ => panic!("expected Unauthorized() type"),
+    }
+
+    // Asserts for Custom(Bar)
+    let custom_ty = abi.registry().resolve(custom_ty_id).unwrap();
+    let custom_ty_id = match &custom_ty.type_def {
+        TypeDef::<PortableForm>::Composite(TypeDefComposite::<PortableForm> { fields }) => {
+            assert_eq!(custom_ty.path, path!("0x49dfe8ce"));
+            fields[0].ty.id
+        }
+        _ => panic!("expected Foo(Bar) type"),
+    };
+    let custom_ty = abi.registry().resolve(custom_ty_id).unwrap();
+    match &custom_ty.type_def {
+        TypeDef::<PortableForm>::Composite(TypeDefComposite { fields }) => {
+            assert_eq!(custom_ty.path, path!("Bar"));
+            assert_eq!(fields.len(), 2);
+
+            let foo = &fields[0];
+            assert_eq!(foo.name.as_ref().unwrap(), "foo");
+
+            let foo_ty = abi.registry().resolve(foo.ty.id).unwrap();
+            match &foo_ty.type_def {
+                TypeDef::<PortableForm>::Primitive(TypeDefPrimitive::U256) => {
+                    assert_eq!(foo_ty.path, path!("uint256"))
+                }
+                _ => panic!("expected uint256 type"),
+            }
+
+            let bar = &fields[1];
+            assert_eq!(bar.name.as_ref().unwrap(), "bar");
+            let bar_ty = abi.registry().resolve(bar.ty.id).unwrap();
+            match &bar_ty.type_def {
+                TypeDef::<PortableForm>::Primitive(TypeDefPrimitive::Str) => {
+                    assert_eq!(bar_ty.path, path!("string"))
+                }
+                _ => panic!("expected string type"),
+            }
+        }
+        _ => panic!("expected Foo(Bar) type"),
+    };
+
+    // Asserts for ERC721InsufficientApproval
+    let erc721_ty = abi.registry().resolve(erc721_ty_id).unwrap();
+    let (operator, token_id) = match &erc721_ty.type_def {
+        TypeDef::<PortableForm>::Composite(TypeDefComposite::<PortableForm> { fields }) => {
+            assert_eq!(erc721_ty.path, path!("0x8799e34a"));
+            assert_eq!(fields.len(), 2);
+            (&fields[0], &fields[1])
+        }
+        _ => panic!("expected ERC721InsufficientApproval(string,uint256) type"),
+    };
+
+    let operator_ty = abi.registry().resolve(operator.ty.id).unwrap();
+    match &operator_ty.type_def {
+        TypeDef::<PortableForm>::Primitive(TypeDefPrimitive::Str) => {
+            assert_eq!(operator_ty.path, path!("string"))
+        }
+        _ => panic!("expected string type"),
+    }
+
+    let bar_ty = abi.registry().resolve(token_id.ty.id).unwrap();
+    match &bar_ty.type_def {
+        TypeDef::<PortableForm>::Primitive(TypeDefPrimitive::U256) => {
+            assert_eq!(bar_ty.path, path!("uint256"))
+        }
+        _ => panic!("expected uint256 type"),
+    }
+}

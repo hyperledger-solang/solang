@@ -21,7 +21,7 @@ use semver::Version;
 use solang_parser::pt;
 
 use crate::{
-    codegen::revert::{ERROR_SELECTOR, PANIC_SELECTOR},
+    codegen::revert::{SolidityError, ERROR_SELECTOR, PANIC_SELECTOR},
     sema::{
         ast::{self, ArrayLength, EventDecl, Function},
         tags::render,
@@ -91,7 +91,7 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
 fn lang_error(
     ns: &ast::Namespace,
     reg: &mut PortableRegistryBuilder,
-    errors: &[(&str, u32, Vec<ast::Type>)],
+    errors: Vec<(String, u32, Vec<ast::Type>)>,
 ) -> TypeSpec<PortableForm> {
     let variants = errors.iter().enumerate().map(|(n, (name, selector, ty))| {
         let struct_fields = ty
@@ -504,10 +504,24 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         ))
         .done();
 
-    let error_definitions = &[
-        ("Error", ERROR_SELECTOR, vec![ast::Type::String]),
-        ("Panic", PANIC_SELECTOR, vec![ast::Type::Uint(256)]),
+    let mut error_definitions = vec![
+        ("Error".to_string(), ERROR_SELECTOR, vec![ast::Type::String]),
+        (
+            "Panic".to_string(),
+            PANIC_SELECTOR,
+            vec![ast::Type::Uint(256)],
+        ),
     ];
+    for (error_no, err) in ns.errors.iter().enumerate() {
+        let name = err.name.clone();
+        let selector = SolidityError::Custom {
+            error_no,
+            expr: None,
+        }
+        .selector(ns);
+        let types = err.fields.iter().map(|f| f.ty.clone()).collect();
+        error_definitions.push((name, selector, types));
+    }
 
     let spec = ContractSpec::new()
         .constructors(constructors)
