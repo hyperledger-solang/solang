@@ -505,20 +505,13 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         .done();
 
     let mut error_definitions = vec![
-        ("Error".to_string(), ERROR_SELECTOR, vec![ast::Type::String]),
-        (
-            "Panic".to_string(),
-            PANIC_SELECTOR,
-            vec![ast::Type::Uint(256)],
-        ),
+        ("Error".into(), ERROR_SELECTOR, vec![ast::Type::String]),
+        ("Panic".into(), PANIC_SELECTOR, vec![ast::Type::Uint(256)]),
     ];
     for (error_no, err) in ns.errors.iter().enumerate() {
         let name = err.name.clone();
-        let selector = SolidityError::Custom {
-            error_no,
-            expr: None,
-        }
-        .selector(ns);
+        let expr = None;
+        let selector = SolidityError::Custom { error_no, expr }.selector(ns);
         let types = err.fields.iter().map(|f| f.ty.clone()).collect();
         error_definitions.push((name, selector, types));
     }
