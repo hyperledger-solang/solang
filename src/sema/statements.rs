@@ -2512,23 +2512,17 @@ fn try_catch(
                 Ok(())
             }
             CatchClause::Named(_, id, param, stmt) => {
-                match ns.target {
-                    Target::EVM if id.name != "Error" && id.name != "Panic" => {
-                        ns.diagnostics.push(Diagnostic::error(
-                            id.loc,
-                            format!(
-                                "only catch 'Error' or 'Panic' is supported, not '{}'",
-                                id.name
-                            ),
-                        ));
-                        return Err(());
-                    }
-                    _ => {
-                        if let Some(annotation) = &param.annotation {
-                            ns.diagnostics
-                                .push(unexpected_parameter_annotation(annotation.loc))
-                        }
-                    }
+                if id.name != "Error" && id.name != "Panic" {
+                    let message = format!(
+                        "only catch 'Error' or 'Panic' is supported, not '{}'",
+                        id.name
+                    );
+                    ns.diagnostics.push(Diagnostic::error(id.loc, message));
+                    return Err(());
+                }
+                if let Some(annotation) = &param.annotation {
+                    ns.diagnostics
+                        .push(unexpected_parameter_annotation(annotation.loc))
                 }
 
                 let (error_ty, ty_loc) =
