@@ -452,11 +452,10 @@ fn insert_catch_clauses(
             loc: Codegen,
             ty: Type::Bytes(4),
             value: match clause.param.as_ref().unwrap().ty {
-                Type::String => ERROR_SELECTOR,
-                Type::Uint(256) => PANIC_SELECTOR,
+                Type::String => ERROR_SELECTOR.into(),
+                Type::Uint(256) => PANIC_SELECTOR.into(),
                 _ => unreachable!("Only 'Error(string)' and 'Panic(uint256)' can be caught"),
-            }
-            .into(),
+            },
         };
         let offset = Expression::NumberLiteral {
             loc: Codegen,

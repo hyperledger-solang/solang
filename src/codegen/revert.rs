@@ -361,7 +361,7 @@ pub(super) fn revert(
                 };
                 cfg.add(vartab, Instr::Print { expr: print_expr });
             }
-            // Otherwise, not all fields might be formatted, so just print the error type
+            // Else: Not all fields might be formattable, just print the error type
             _ => {
                 let error_ty = error_no
                     .map(|n| ns.errors[n].name.as_str())
