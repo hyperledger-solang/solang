@@ -881,7 +881,7 @@ pub fn resolve_params(
 
         let mut ty_loc = p.ty.loc();
 
-        match ns.resolve_type(file_no, contract_no, false, &p.ty, diagnostics) {
+        match ns.resolve_type(file_no, contract_no, false, false, &p.ty, diagnostics) {
             Ok(ty) => {
                 if !is_internal {
                     if ty.contains_internal_function(ns) {
@@ -1002,7 +1002,7 @@ pub fn resolve_returns(
 
         let mut ty_loc = r.ty.loc();
 
-        match ns.resolve_type(file_no, contract_no, false, &r.ty, diagnostics) {
+        match ns.resolve_type(file_no, contract_no, false, false, &r.ty, diagnostics) {
             Ok(ty) => {
                 if !is_internal {
                     if ty.contains_internal_function(ns) {

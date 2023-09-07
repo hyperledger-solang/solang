@@ -31,10 +31,22 @@ Instantiation using new
 _______________________
 
 Contracts can be created using the ``new`` keyword. The contract that is being created might have
-constructor arguments, which need to be provided.
+constructor arguments, which need to be provided. On Solana, contracts cannot exist as a variable, so it is not
+possible to instantiate a contract with the new keyword. Instead, a function ``new`` is made available to call its
+constructor, but the call does not return anything. Its purpose is to initialize the data account.
 
-.. include:: ../examples/polkadot/contract_new.sol
-  :code: solidity
+.. tabs::
+
+    .. group-tab:: Polkadot
+
+        .. include:: ../examples/polkadot/contract_new.sol
+            :code: solidity
+
+
+    .. group-tab:: Solana
+
+        .. include:: ../examples/solana/contract_new.sol
+            :code: solidity
 
 The constructor might fail for various reasons, for example ``require()`` might fail here. This can
 be handled using the :ref:`try-catch` statement, else errors cause the transaction to fail.
@@ -87,15 +99,16 @@ can use. gas is a ``uint64``.
 .. include:: ../examples/polkadot/contract_gas_limit.sol
   :code: solidity
 
+
 .. _solana_constructor:
 
-Instantiating a contract on Solana
-__________________________________
+Solana constructors
+___________________
 
-On Solana, the contract being created must have the ``@program_id()`` annotation that specifies the program account to
-which the contract code has been deployed. This account holds only the contract's executable binary.
-When calling a constructor only once from an external function, no call arguments are needed. The data account
-necessary to initialize the contract should be present in the IDL and is identified as ``contractName_dataAccount``.
+Solidiy contracts are coupled to a data account, which stores the contract's state variables on the blockchain.
+This account must be initialized before calling other contract functions, if the require one. A contract constructor
+initializes the data account and can be called with the ``new`` function. When invoking the constructor from another
+contract, the data account to initialize appears in the IDL file and is identified as ``contractName_dataAccount``.
 In the example below, the IDL for the instruction ``test`` requires the ``hatchling_dataAccount`` account to be
 initialized as the new contract's data account.
 
@@ -123,6 +136,25 @@ For the creation of a contract, the data account must the **first** element in s
 
 The sequence of the accounts in the ``AccountMeta`` array matters and must follow the
 :ref:`IDL ordering <account_management>`.
+
+
+.. _solana_contract_call:
+
+Calling a contract on Solana
+____________________________
+
+On Solana, contracts are deployed to a program account, which holds only the contract's executable binary. For this
+reason, a Solidity contract on Solana is represented by its program account address. When making an external call,
+the contract definition serves only as a interface to provide the functions' signatures. As the program account address,
+also known as program id, is often determined beforehand, it can be a compile-time constant when declared above a
+a contract definition, using the ``@program_id`` annotation. When it is not known, calls to a contract must specify
+the program id to which the contract has been deployed using the ``{program_id: ... }`` call argument.
+
+Because the program address is frequently a constant, contracts cannot be types on Solana. This means they
+cannot appear as function arguments, function returns or as a variable.
+
+.. include:: ../examples/solana/contract_call.sol
+  :code: solidity
 
 
 Base contracts, abstract contracts and interfaces

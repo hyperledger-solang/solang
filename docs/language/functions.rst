@@ -66,12 +66,25 @@ external functions. The called function must be declared public.
 Calling external functions requires ABI encoding the arguments, and ABI decoding the
 return values. This much more costly than an internal function call.
 
-.. include:: ../examples/function_call_external.sol
-  :code: solidity
 
-The syntax for calling external call is the same as the external call, except for
-that it must be done on a contract type variable. Any error in an external call can
-be handled with :ref:`try-catch`.
+.. tabs::
+
+    .. group-tab:: Polkadot
+
+        .. include:: ../examples/polkadot/function_call_external.sol
+            :code: solidity
+
+
+    .. group-tab:: Solana
+
+        .. include:: ../examples/solana/function_call_external.sol
+            :code: solidity
+
+
+
+The syntax for calling a contract is the same as that of the external call, except
+that it must be done on a contract type variable. Errors in external calls can
+be handled with :ref:`try-catch` only on Polkadot.
 
 Internal calls and externals calls
 ___________________________________
@@ -289,8 +302,18 @@ This takes a single argument, which should be the ABI encoded arguments. The ret
 values are a ``boolean`` which indicates success if true, and the ABI encoded
 return value in ``bytes``.
 
-.. include:: ../examples/function_call.sol
-  :code: solidity
+.. tabs::
+
+    .. group-tab:: Polkadot
+
+        .. include:: ../examples/polkadot/function_call.sol
+            :code: solidity
+
+
+    .. group-tab:: Solana
+
+        .. include:: ../examples/solana/function_call.sol
+            :code: solidity
 
 Any value or gas limit can be specified for the external call. Note that no check is done to see
 if the called function is ``payable``, since the compiler does not know what function you are

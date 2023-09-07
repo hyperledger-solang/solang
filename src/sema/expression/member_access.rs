@@ -649,6 +649,7 @@ fn type_name_expr(
         context.file_no,
         context.contract_no,
         false,
+        true,
         &args[0],
         diagnostics,
     )?;

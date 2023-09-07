@@ -485,8 +485,19 @@ the contract, and the function selector. An internal function type only stores t
 assigning a value to an external function selector, the contract and function must be specified, by using
 a function on particular contract instance.
 
-.. include:: ../examples/function_type_callback.sol
-  :code: solidity
+.. tabs::
+
+    .. group-tab:: Polkadot
+
+        .. include:: ../examples/polkadot/function_type_callback.sol
+            :code: solidity
+
+
+    .. group-tab:: Solana
+
+        .. include:: ../examples/solana/function_type_callback.sol
+            :code: solidity
+
 
 Storage References
 __________________

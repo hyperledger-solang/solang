@@ -120,7 +120,7 @@ pub fn variable_decl<'a>(
 
     let mut diagnostics = Diagnostics::default();
 
-    let ty = match ns.resolve_type(file_no, contract_no, false, &ty, &mut diagnostics) {
+    let ty = match ns.resolve_type(file_no, contract_no, false, false, &ty, &mut diagnostics) {
         Ok(s) => s,
         Err(()) => {
             ns.diagnostics.extend(diagnostics);

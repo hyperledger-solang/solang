@@ -11,14 +11,12 @@ fn simple_create_contract_no_seed() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other() external returns (bar1) {
-                bar1 x = new bar1("yo from bar0");
-
-                return x;
+            function test_other() external {
+                bar1.new("yo from bar0");
             }
 
-            function call_bar1_at_address(bar1 a, string x) public {
-                a.say_hello(x);
+            function call_bar1_at_address(string x) public {
+                bar1.say_hello(x);
             }
         }
 
@@ -63,8 +61,7 @@ fn simple_create_contract_no_seed() {
         },
     );
 
-    let bar1 = vm
-        .function("test_other")
+    vm.function("test_other")
         .accounts(vec![
             ("bar1_dataAccount", acc),
             ("bar1_programId", program_id),
@@ -76,8 +73,7 @@ fn simple_create_contract_no_seed() {
             is_writable: true,
             is_signer: true,
         }])
-        .call()
-        .unwrap();
+        .call();
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0");
 
@@ -86,7 +82,7 @@ fn simple_create_contract_no_seed() {
     vm.logs.truncate(0);
 
     vm.function("call_bar1_at_address")
-        .arguments(&[bar1, BorshToken::String(String::from("xywoleh"))])
+        .arguments(&[BorshToken::String(String::from("xywoleh"))])
         .accounts(vec![
             ("bar1_programId", program_id),
             ("systemProgram", [0; 32]),
@@ -101,14 +97,12 @@ fn simple_create_contract() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other() external returns (bar1) {
-                bar1 x = new bar1("yo from bar0");
-
-                return x;
+            function test_other() external {
+                bar1.new("yo from bar0");
             }
 
-            function call_bar1_at_address(bar1 a, string x) public {
-                a.say_hello(x);
+            function call_bar1_at_address(string x) public {
+                bar1.say_hello(x);
             }
         }
 
@@ -142,25 +136,21 @@ fn simple_create_contract() {
 
     vm.account_data.insert(payer, AccountState::default());
 
-    let bar1 = vm
-        .function("test_other")
+    vm.function("test_other")
         .accounts(vec![
             ("bar1_dataAccount", seed.0),
             ("bar1_programId", program_id),
             ("pay", payer),
             ("systemProgram", [0; 32]),
         ])
-        .call()
-        .unwrap();
+        .call();
 
     assert_eq!(vm.logs, "bar1 says: yo from bar0");
 
     vm.logs.truncate(0);
 
-    println!("next test, {bar1:?}");
-
     vm.function("call_bar1_at_address")
-        .arguments(&[bar1, BorshToken::String(String::from("xywoleh"))])
+        .arguments(&[BorshToken::String(String::from("xywoleh"))])
         .accounts(vec![
             ("bar1_programId", program_id),
             ("systemProgram", [0; 32]),
@@ -280,14 +270,12 @@ fn missing_contract() {
     let mut vm = build_solidity(
         r#"
         contract bar0 {
-            function test_other() external returns (bar1) {
-                bar1 x = new bar1("yo from bar0");
-
-                return x;
+            function test_other() external {
+                bar1.new("yo from bar0");
             }
 
-            function call_bar1_at_address(bar1 a, string x) public {
-                a.say_hello(x);
+            function call_bar1_at_address(string x) public {
+                bar1.say_hello(x);
             }
         }
 
@@ -337,7 +325,7 @@ fn two_contracts() {
         import 'solana';
 
         contract bar0 {
-            function test_other(address a, address b, address payer) external returns (bar1) {
+            function test_other(address a, address b, address payer) external {
                 AccountMeta[2] bar1_metas = [
                     AccountMeta({pubkey: a, is_writable: true, is_signer: true}),
                     AccountMeta({pubkey: payer, is_writable: true, is_signer: true})
@@ -346,10 +334,8 @@ fn two_contracts() {
                     AccountMeta({pubkey: b, is_writable: true, is_signer: true}),
                     AccountMeta({pubkey: payer, is_writable: true, is_signer: true})
                 ];
-                bar1 x = new bar1{accounts: bar1_metas}("yo from bar0");
-                bar1 y = new bar1{accounts: bar2_metas}("hi from bar0");
-
-                return x;
+                bar1.new{accounts: bar1_metas}("yo from bar0");
+                bar1.new{accounts: bar2_metas}("hi from bar0");
             }
         }
 
@@ -382,14 +368,16 @@ fn two_contracts() {
     vm.account_data.insert(seed2.0, AccountState::default());
     vm.account_data.insert(payer, AccountState::default());
 
-    let _bar1 = vm
-        .function("test_other")
+    vm.function("test_other")
         .arguments(&[
             BorshToken::Address(seed1.0),
             BorshToken::Address(seed2.0),
             BorshToken::Address(payer),
         ])
-        .accounts(vec![("systemProgram", [0; 32])])
+        .accounts(vec![
+            ("systemProgram", [0; 32]),
+            ("bar1_programId", program_id),
+        ])
         .remaining_accounts(&[
             AccountMeta {
                 pubkey: Pubkey(seed1.0),
@@ -400,11 +388,6 @@ fn two_contracts() {
                 pubkey: Pubkey(seed2.0),
                 is_signer: true,
                 is_writable: true,
-            },
-            AccountMeta {
-                pubkey: Pubkey(program_id),
-                is_writable: false,
-                is_signer: false,
             },
             AccountMeta {
                 pubkey: Pubkey(payer),
@@ -629,12 +612,10 @@ fn create_child() {
     let mut vm = build_solidity(
         r#"
         contract creator {
-            Child public c;
-
             function create_child() external {
                 print("Going to create child");
-                c = new Child();
-                c.say_hello();
+                Child.new();
+                Child.say_hello();
             }
         }
 
@@ -675,7 +656,6 @@ fn create_child() {
         .accounts(vec![
             ("Child_dataAccount", seed.0),
             ("Child_programId", child_program_id),
-            ("dataAccount", data_account),
             ("payer", payer),
             ("systemProgram", [0; 32]),
         ])
@@ -699,7 +679,6 @@ fn create_child_with_meta() {
         import 'solana';
 
 contract creator {
-    Child public c;
     function create_child_with_meta(address child, address payer) public {
         print("Going to create child");
         AccountMeta[2] metas = [
@@ -708,8 +687,8 @@ contract creator {
             // Passing the system account here crashes the VM, even if I add it to vm.account_data
             // AccountMeta({pubkey: address"11111111111111111111111111111111", is_writable: false, is_signer: false})
         ];
-        c = new Child{accounts: metas}();
-        c.say_hello();
+        Child.new{accounts: metas}();
+        Child.say_hello();
     }
 }
 
@@ -750,7 +729,6 @@ contract Child {
         .arguments(&[BorshToken::Address(seed.0), BorshToken::Address(payer)])
         .accounts(vec![
             ("Child_programId", child_program_id),
-            ("dataAccount", data_account),
             ("systemProgram", [0; 32]),
         ])
         .remaining_accounts(&[

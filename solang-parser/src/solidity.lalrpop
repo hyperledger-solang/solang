@@ -483,6 +483,10 @@ NoFunctionTyPrecedence0: Expression = {
         Expression::MemberAccess(Loc::File(file_no, a, b), Box::new(e),
             Identifier { loc: Loc::File(file_no, al, b), name: "address".to_string() })
     },
+    <a:@L> <e:Precedence1> "." <al:@L> "new" <b:@R> => {
+        Expression::MemberAccess(Loc::File(file_no, a, b), Box::new(e),
+            Identifier { loc: Loc::File(file_no, al, b), name: "new".to_string() })
+    },
     <l:@L> <ty:NoFunctionType> <r:@R> => Expression::Type(Loc::File(file_no, l, r), ty),
     <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc::File(file_no, a, b), v)

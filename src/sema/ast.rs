@@ -804,14 +804,16 @@ impl Contract {
 
     /// Does the constructor require arguments. Should be false is there is no constructor
     pub fn constructor_needs_arguments(&self, ns: &Namespace) -> bool {
-        self.have_constructor(ns) && self.no_args_constructor(ns).is_none()
+        self.has_constructor(ns).is_some() && self.no_args_constructor(ns).is_none()
     }
 
-    /// Does the contract have a constructor defined
-    pub fn have_constructor(&self, ns: &Namespace) -> bool {
+    /// Does the contract have a constructor defined?
+    /// Returns the constructor function number if it exists
+    pub fn has_constructor(&self, ns: &Namespace) -> Option<usize> {
         self.functions
             .iter()
-            .any(|func_no| ns.functions[*func_no].is_constructor())
+            .copied()
+            .find(|func_no| ns.functions[*func_no].is_constructor())
     }
 
     /// Return the constructor with no arguments
@@ -1226,6 +1228,7 @@ pub struct CallArgs {
     pub accounts: Option<Box<Expression>>,
     pub seeds: Option<Box<Expression>>,
     pub flags: Option<Box<Expression>>,
+    pub program_id: Option<Box<Expression>>,
 }
 
 impl Recurse for CallArgs {

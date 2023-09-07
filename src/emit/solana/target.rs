@@ -1227,20 +1227,15 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         binary: &Binary<'b>,
         function: FunctionValue<'b>,
         _success: Option<&mut BasicValueEnum<'b>>,
-        contract_no: usize,
-        _address: PointerValue<'b>,
+        _contract_no: usize,
+        address: PointerValue<'b>,
         encoded_args: BasicValueEnum<'b>,
         encoded_args_len: BasicValueEnum<'b>,
         mut contract_args: ContractArgs<'b>,
-        ns: &ast::Namespace,
+        _ns: &ast::Namespace,
         _loc: Loc,
     ) {
-        let const_program_id = binary.emit_global_string(
-            "const_program_id",
-            ns.contracts[contract_no].program_id.as_ref().unwrap(),
-            true,
-        );
-        contract_args.program_id = Some(const_program_id);
+        contract_args.program_id = Some(address);
 
         let payload = binary.vector_bytes(encoded_args);
         let payload_len = encoded_args_len.into_int_value();

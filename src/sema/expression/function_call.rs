@@ -6,7 +6,9 @@ use crate::sema::ast::{
 };
 use crate::sema::contracts::is_base;
 use crate::sema::diagnostics::Diagnostics;
-use crate::sema::expression::constructor::{deprecated_constructor_arguments, new};
+use crate::sema::expression::constructor::{
+    deprecated_constructor_arguments, new, solana_constructor_check,
+};
 use crate::sema::expression::literals::{named_struct_literal, struct_literal};
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
@@ -15,6 +17,7 @@ use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::check_function_call;
 use crate::sema::{builtin, using};
 use crate::Target;
+use num_bigint::{BigInt, Sign};
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
 use solang_parser::pt::{CodeLocation, Loc, Visibility};
@@ -101,7 +104,16 @@ pub(super) fn call_function_type(
         mutability,
     } = ty
     {
-        let call_args = parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
+        let call_args = parse_call_args(
+            loc,
+            call_args,
+            None,
+            true,
+            context,
+            ns,
+            symtable,
+            diagnostics,
+        )?;
 
         if let Some(value) = &call_args.value {
             if !value.const_zero(ns) && !matches!(mutability, Mutability::Payable(_)) {
@@ -495,6 +507,7 @@ fn try_namespace(
     var: &pt::Expression,
     func: &pt::Identifier,
     args: &[pt::Expression],
+    call_args: &[&pt::NamedArgument],
     call_args_loc: Option<pt::Loc>,
     context: &ExprContext,
     ns: &mut Namespace,
@@ -592,7 +605,22 @@ fn try_namespace(
             // is a base contract of us
             if let Some(contract_no) = context.contract_no {
                 if is_base(call_contract_no, contract_no, ns) {
-                    if let Some(loc) = call_args_loc {
+                    if ns.target == Target::Solana && call_args_loc.is_some() {
+                        // On Solana, assume this is an external call
+                        return contract_call_pos_args(
+                            loc,
+                            call_contract_no,
+                            func,
+                            None,
+                            args,
+                            call_args,
+                            context,
+                            ns,
+                            symtable,
+                            diagnostics,
+                            resolve_to,
+                        );
+                    } else if let Some(loc) = call_args_loc {
                         diagnostics.push(Diagnostic::error(
                             loc,
                             "call arguments not allowed on internal calls".to_string(),
@@ -619,6 +647,20 @@ fn try_namespace(
                         symtable,
                         diagnostics,
                     )?));
+                } else if ns.target == Target::Solana {
+                    return contract_call_pos_args(
+                        loc,
+                        call_contract_no,
+                        func,
+                        None,
+                        args,
+                        call_args,
+                        context,
+                        ns,
+                        symtable,
+                        diagnostics,
+                        resolve_to,
+                    );
                 } else {
                     diagnostics.push(Diagnostic::error(
                         *loc,
@@ -874,6 +916,7 @@ fn try_user_type(
         context.file_no,
         context.contract_no,
         false,
+        false,
         var,
         &mut Diagnostics::default(),
     ) {
@@ -1069,148 +1112,19 @@ fn try_type_method(
         }
 
         Type::Contract(ext_contract_no) => {
-            let call_args =
-                parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
-
-            let mut errors = Diagnostics::default();
-            let mut name_matches: Vec<usize> = Vec::new();
-
-            for function_no in ns.contracts[*ext_contract_no].all_functions.keys() {
-                if func.name != ns.functions[*function_no].name
-                    || ns.functions[*function_no].ty != pt::FunctionTy::Function
-                {
-                    continue;
-                }
-
-                name_matches.push(*function_no);
-            }
-
-            for function_no in &name_matches {
-                let params_len = ns.functions[*function_no].params.len();
-
-                if params_len != args.len() {
-                    errors.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "function expects {} arguments, {} provided",
-                            params_len,
-                            args.len()
-                        ),
-                    ));
-                    continue;
-                }
-
-                let mut matches = true;
-                let mut cast_args = Vec::new();
-
-                // check if arguments can be implicitly casted
-                for (i, arg) in args.iter().enumerate() {
-                    let ty = ns.functions[*function_no].params[i].ty.clone();
-
-                    let arg = match expression(
-                        arg,
-                        context,
-                        ns,
-                        symtable,
-                        &mut errors,
-                        ResolveTo::Type(&ty),
-                    ) {
-                        Ok(e) => e,
-                        Err(_) => {
-                            matches = false;
-                            continue;
-                        }
-                    };
-
-                    match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
-                        Ok(expr) => cast_args.push(expr),
-                        Err(()) => {
-                            matches = false;
-                            continue;
-                        }
-                    }
-                }
-
-                if matches {
-                    if !ns.functions[*function_no].is_public() {
-                        diagnostics.push(Diagnostic::error(
-                            *loc,
-                            format!("function '{}' is not 'public' or 'external'", func.name),
-                        ));
-                        return Err(());
-                    }
-
-                    if let Some(value) = &call_args.value {
-                        if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
-                            diagnostics.push(Diagnostic::error(
-                                *loc,
-                                format!(
-                                    "sending value to function '{}' which is not payable",
-                                    func.name
-                                ),
-                            ));
-                            return Err(());
-                        }
-                    }
-
-                    let func = &ns.functions[*function_no];
-                    let returns = function_returns(func, resolve_to);
-                    let ty = function_type(func, true, resolve_to);
-
-                    return Ok(Some(Expression::ExternalFunctionCall {
-                        loc: *loc,
-                        returns,
-                        function: Box::new(Expression::ExternalFunction {
-                            loc: *loc,
-                            ty,
-                            function_no: *function_no,
-                            address: Box::new(var_expr.cast(
-                                &var.loc(),
-                                &Type::Contract(func.contract_no.unwrap()),
-                                true,
-                                ns,
-                                diagnostics,
-                            )?),
-                        }),
-                        args: cast_args,
-                        call_args,
-                    }));
-                } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
-                    return Err(());
-                }
-            }
-
-            // what about call args
-            match using::try_resolve_using_call(
+            return contract_call_pos_args(
                 loc,
+                *ext_contract_no,
                 func,
-                var_expr,
-                context,
+                Some(var_expr),
                 args,
+                call_args,
+                context,
+                ns,
                 symtable,
                 diagnostics,
-                ns,
                 resolve_to,
-            ) {
-                Ok(Some(expr)) => {
-                    return Ok(Some(expr));
-                }
-                Ok(None) => (),
-                Err(_) => {
-                    return Err(());
-                }
-            }
-
-            if name_matches.len() == 1 {
-                diagnostics.extend(errors);
-            } else if name_matches.len() != 1 {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot find overloaded function which matches signature".to_string(),
-                ));
-            }
-
-            return Err(());
+            );
         }
 
         Type::Address(is_payable) => {
@@ -1287,8 +1201,16 @@ fn try_type_method(
             };
 
             if let Some(ty) = ty {
-                let call_args =
-                    parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
+                let call_args = parse_call_args(
+                    loc,
+                    call_args,
+                    None,
+                    true,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                )?;
 
                 if ty != CallTy::Regular && call_args.value.is_some() {
                     diagnostics.push(Diagnostic::error(
@@ -1389,6 +1311,7 @@ pub(super) fn method_call_pos_args(
         var,
         func,
         args,
+        call_args,
         call_args_loc,
         context,
         ns,
@@ -1429,6 +1352,26 @@ pub(super) fn method_call_pos_args(
             &path,
             &mut Diagnostics::default(),
         ) {
+            if let Some(callee_contract) =
+                is_solana_external_call(&list, context.contract_no, &call_args_loc, ns)
+            {
+                if let Some(resolved_call) = contract_call_pos_args(
+                    &var.loc(),
+                    callee_contract,
+                    func,
+                    None,
+                    args,
+                    call_args,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    resolve_to,
+                )? {
+                    return Ok(resolved_call);
+                }
+            }
+
             if let Some(loc) = call_args_loc {
                 diagnostics.push(Diagnostic::error(
                     loc,
@@ -1620,7 +1563,22 @@ pub(super) fn method_call_named_args(
             // is a base contract of us
             if let Some(contract_no) = context.contract_no {
                 if is_base(call_contract_no, contract_no, ns) {
-                    if let Some(loc) = call_args_loc {
+                    if ns.target == Target::Solana && call_args_loc.is_some() {
+                        // If on Solana, assume this is an external call
+                        return contract_call_named_args(
+                            loc,
+                            None,
+                            func_name,
+                            args,
+                            call_args,
+                            call_contract_no,
+                            context,
+                            symtable,
+                            ns,
+                            diagnostics,
+                            resolve_to,
+                        );
+                    } else if let Some(loc) = call_args_loc {
                         diagnostics.push(Diagnostic::error(
                             loc,
                             "call arguments not allowed on internal calls".to_string(),
@@ -1646,6 +1604,20 @@ pub(super) fn method_call_named_args(
                         symtable,
                         diagnostics,
                     );
+                } else if ns.target == Target::Solana {
+                    return contract_call_named_args(
+                        loc,
+                        None,
+                        func_name,
+                        args,
+                        call_args,
+                        call_contract_no,
+                        context,
+                        symtable,
+                        ns,
+                        diagnostics,
+                        resolve_to,
+                    );
                 } else {
                     diagnostics.push(Diagnostic::error(
                         *loc,
@@ -1664,6 +1636,24 @@ pub(super) fn method_call_named_args(
             &path,
             &mut Diagnostics::default(),
         ) {
+            if let Some(callee_contract) =
+                is_solana_external_call(&list, context.contract_no, &call_args_loc, ns)
+            {
+                return contract_call_named_args(
+                    &var.loc(),
+                    None,
+                    func_name,
+                    args,
+                    call_args,
+                    callee_contract,
+                    context,
+                    symtable,
+                    ns,
+                    diagnostics,
+                    resolve_to,
+                );
+            }
+
             if let Some(loc) = call_args_loc {
                 diagnostics.push(Diagnostic::error(
                     loc,
@@ -1690,192 +1680,19 @@ pub(super) fn method_call_named_args(
     let var_ty = var_expr.ty();
 
     if let Type::Contract(external_contract_no) = &var_ty.deref_any() {
-        let call_args = parse_call_args(loc, call_args, true, context, ns, symtable, diagnostics)?;
-
-        let mut arguments = HashMap::new();
-
-        // check if the arguments are not garbage
-        for arg in args {
-            if arguments.contains_key(arg.name.name.as_str()) {
-                diagnostics.push(Diagnostic::error(
-                    arg.name.loc,
-                    format!("duplicate argument with name '{}'", arg.name.name),
-                ));
-
-                let _ = expression(
-                    &arg.expr,
-                    context,
-                    ns,
-                    symtable,
-                    diagnostics,
-                    ResolveTo::Unknown,
-                );
-
-                continue;
-            }
-
-            arguments.insert(arg.name.name.as_str(), &arg.expr);
-        }
-
-        let mut errors = Diagnostics::default();
-        let mut name_matches: Vec<usize> = Vec::new();
-
-        // function call
-        for function_no in ns.contracts[*external_contract_no].all_functions.keys() {
-            if ns.functions[*function_no].name != func_name.name
-                || ns.functions[*function_no].ty != pt::FunctionTy::Function
-            {
-                continue;
-            }
-
-            name_matches.push(*function_no);
-        }
-
-        for function_no in &name_matches {
-            let func = &ns.functions[*function_no];
-
-            let unnamed_params = func.params.iter().filter(|p| p.id.is_none()).count();
-            let params_len = func.params.len();
-
-            let mut matches = true;
-
-            if unnamed_params > 0 {
-                errors.push(Diagnostic::cast_error_with_note(
-                    *loc,
-                    format!(
-                        "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
-                    ),
-                    func.loc,
-                    format!("definition of {}", func.name),
-                ));
-                matches = false;
-            } else if params_len != args.len() {
-                errors.push(Diagnostic::cast_error(
-                    *loc,
-                    format!(
-                        "function expects {} arguments, {} provided",
-                        params_len,
-                        args.len()
-                    ),
-                ));
-                matches = false;
-            }
-            let mut cast_args = Vec::new();
-
-            for i in 0..params_len {
-                let param = ns.functions[*function_no].params[i].clone();
-                if param.id.is_none() {
-                    continue;
-                }
-
-                let arg = match arguments.get(param.name_as_str()) {
-                    Some(a) => a,
-                    None => {
-                        matches = false;
-                        diagnostics.push(Diagnostic::cast_error(
-                            *loc,
-                            format!(
-                                "missing argument '{}' to function '{}'",
-                                param.name_as_str(),
-                                func_name.name,
-                            ),
-                        ));
-                        continue;
-                    }
-                };
-
-                let arg = match expression(
-                    arg,
-                    context,
-                    ns,
-                    symtable,
-                    &mut errors,
-                    ResolveTo::Type(&param.ty),
-                ) {
-                    Ok(e) => e,
-                    Err(()) => {
-                        matches = false;
-                        continue;
-                    }
-                };
-
-                match arg.cast(&arg.loc(), &param.ty, true, ns, &mut errors) {
-                    Ok(expr) => cast_args.push(expr),
-                    Err(()) => {
-                        matches = false;
-                        break;
-                    }
-                }
-            }
-
-            if matches {
-                if !ns.functions[*function_no].is_public() {
-                    diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "function '{}' is not 'public' or 'external'",
-                            func_name.name
-                        ),
-                    ));
-                } else if let Some(value) = &call_args.value {
-                    if !value.const_zero(ns) && !ns.functions[*function_no].is_payable() {
-                        diagnostics.push(Diagnostic::error(
-                            *loc,
-                            format!(
-                                "sending value to function '{}' which is not payable",
-                                func_name.name
-                            ),
-                        ));
-                    }
-                }
-
-                let func = &ns.functions[*function_no];
-                let returns = function_returns(func, resolve_to);
-                let ty = function_type(func, true, resolve_to);
-
-                return Ok(Expression::ExternalFunctionCall {
-                    loc: *loc,
-                    returns,
-                    function: Box::new(Expression::ExternalFunction {
-                        loc: *loc,
-                        ty,
-                        function_no: *function_no,
-                        address: Box::new(var_expr.cast(
-                            &var.loc(),
-                            &Type::Contract(func.contract_no.unwrap()),
-                            true,
-                            ns,
-                            diagnostics,
-                        )?),
-                    }),
-                    args: cast_args,
-                    call_args,
-                });
-            } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
-                return Err(());
-            }
-        }
-
-        match name_matches.len() {
-            0 => {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "contract '{}' does not have function '{}'",
-                        var_ty.deref_any().to_string(ns),
-                        func_name.name
-                    ),
-                ));
-            }
-            1 => diagnostics.extend(errors),
-            _ => {
-                diagnostics.push(Diagnostic::error(
-                    *loc,
-                    "cannot find overloaded function which matches signature".to_string(),
-                ));
-            }
-        }
-        return Err(());
+        return contract_call_named_args(
+            loc,
+            Some(var_expr),
+            func_name,
+            args,
+            call_args,
+            *external_contract_no,
+            context,
+            symtable,
+            ns,
+            diagnostics,
+            resolve_to,
+        );
     }
 
     diagnostics.push(Diagnostic::error(
@@ -1941,6 +1758,7 @@ pub fn collect_call_args<'a>(
 pub(super) fn parse_call_args(
     loc: &pt::Loc,
     call_args: &[&pt::NamedArgument],
+    callee_contract: Option<usize>,
     external_call: bool,
     context: &ExprContext,
     ns: &mut Namespace,
@@ -2148,6 +1966,30 @@ pub(super) fn parse_call_args(
 
                 res.seeds = Some(Box::new(expr));
             }
+            "program_id" => {
+                if ns.target != Target::Solana {
+                    diagnostics.push(Diagnostic::error(
+                        arg.loc,
+                        format!(
+                            "'program_id' not permitted for external calls or constructors on {}",
+                            ns.target
+                        ),
+                    ));
+                    return Err(());
+                }
+
+                let ty = Type::Address(false);
+                let expr = expression(
+                    &arg.expr,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    ResolveTo::Type(&ty),
+                )?;
+
+                res.program_id = Some(Box::new(expr));
+            }
             "flags" => {
                 if !(ns.target.is_polkadot() && external_call) {
                     diagnostics.push(Diagnostic::error(
@@ -2179,24 +2021,37 @@ pub(super) fn parse_call_args(
         }
     }
 
-    // address is required on solana constructors
-    if ns.target == Target::Solana
-        && !external_call
-        && res.accounts.is_none()
-        && !matches!(
-            ns.functions[context.function_no.unwrap()].visibility,
-            Visibility::External(_)
-        )
-        && !ns.functions[context.function_no.unwrap()].is_constructor()
-    {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            "accounts are required for calling a contract. You can either provide the \
+    if ns.target == Target::Solana {
+        if !external_call
+            && res.accounts.is_none()
+            && !matches!(
+                ns.functions[context.function_no.unwrap()].visibility,
+                Visibility::External(_)
+            )
+            && !ns.functions[context.function_no.unwrap()].is_constructor()
+        {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "accounts are required for calling a contract. You can either provide the \
             accounts with the {accounts: ...} call argument or change this function's \
             visibility to external"
-                .to_string(),
-        ));
-        return Err(());
+                    .to_string(),
+            ));
+            return Err(());
+        }
+
+        if let Some(callee_contract_no) = callee_contract {
+            if res.program_id.is_none() && ns.contracts[callee_contract_no].program_id.is_none() {
+                diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "a contract needs a program id to be called. Either a '@program_id' \
+                        must be declared above a contract or the {program_id: ...} call argument \
+                        must be present"
+                        .to_string(),
+                ));
+                return Err(());
+            }
+        }
     }
 
     Ok(res)
@@ -2220,6 +2075,7 @@ pub fn named_call_expr(
         context.file_no,
         context.contract_no,
         true,
+        false,
         ty,
         &mut nullsink,
     ) {
@@ -2287,6 +2143,7 @@ pub fn call_expr(
         context.file_no,
         context.contract_no,
         true,
+        false,
         ty,
         &mut nullsink,
     ) {
@@ -2653,5 +2510,505 @@ fn resolve_internal_call(
             },
         }),
         args: cast_args,
+    })
+}
+
+/// Resolve call to contract with named arguments
+fn contract_call_named_args(
+    loc: &pt::Loc,
+    var_expr: Option<Expression>,
+    func_name: &pt::Identifier,
+    args: &[pt::NamedArgument],
+    call_args: &[&pt::NamedArgument],
+    external_contract_no: usize,
+    context: &ExprContext,
+    symtable: &mut Symtable,
+    ns: &mut Namespace,
+    diagnostics: &mut Diagnostics,
+    resolve_to: ResolveTo,
+) -> Result<Expression, ()> {
+    let mut arguments = HashMap::new();
+
+    // check if the arguments are not garbage
+    for arg in args {
+        if arguments.contains_key(arg.name.name.as_str()) {
+            diagnostics.push(Diagnostic::error(
+                arg.name.loc,
+                format!("duplicate argument with name '{}'", arg.name.name),
+            ));
+
+            let _ = expression(
+                &arg.expr,
+                context,
+                ns,
+                symtable,
+                diagnostics,
+                ResolveTo::Unknown,
+            );
+
+            continue;
+        }
+
+        arguments.insert(arg.name.name.as_str(), &arg.expr);
+    }
+
+    let (call_args, name_matches) = match preprocess_contract_call(
+        loc,
+        call_args,
+        external_contract_no,
+        func_name,
+        args,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+    ) {
+        PreProcessedCall::Success {
+            call_args,
+            name_matches,
+        } => (call_args, name_matches),
+        PreProcessedCall::DefaultConstructor(expr) => return Ok(expr),
+        PreProcessedCall::Error => return Err(()),
+    };
+
+    let mut errors = Diagnostics::default();
+
+    for function_no in &name_matches {
+        let func = &ns.functions[*function_no];
+
+        let unnamed_params = func.params.iter().filter(|p| p.id.is_none()).count();
+        let params_len = func.params.len();
+
+        let mut matches = true;
+
+        if unnamed_params > 0 {
+            errors.push(Diagnostic::cast_error_with_note(
+                *loc,
+                format!(
+                    "function cannot be called with named arguments as {unnamed_params} of its parameters do not have names"
+                ),
+                func.loc,
+                format!("definition of {}", func.name),
+            ));
+            matches = false;
+        } else if params_len != args.len() {
+            errors.push(Diagnostic::cast_error(
+                *loc,
+                format!(
+                    "function expects {} arguments, {} provided",
+                    params_len,
+                    args.len()
+                ),
+            ));
+            matches = false;
+        }
+        let mut cast_args = Vec::new();
+
+        for i in 0..params_len {
+            let param = ns.functions[*function_no].params[i].clone();
+            if param.id.is_none() {
+                continue;
+            }
+
+            let arg = match arguments.get(param.name_as_str()) {
+                Some(a) => a,
+                None => {
+                    matches = false;
+                    diagnostics.push(Diagnostic::cast_error(
+                        *loc,
+                        format!(
+                            "missing argument '{}' to function '{}'",
+                            param.name_as_str(),
+                            func_name.name,
+                        ),
+                    ));
+                    continue;
+                }
+            };
+
+            let arg = match expression(
+                arg,
+                context,
+                ns,
+                symtable,
+                &mut errors,
+                ResolveTo::Type(&param.ty),
+            ) {
+                Ok(e) => e,
+                Err(()) => {
+                    matches = false;
+                    continue;
+                }
+            };
+
+            match arg.cast(&arg.loc(), &param.ty, true, ns, &mut errors) {
+                Ok(expr) => cast_args.push(expr),
+                Err(()) => {
+                    matches = false;
+                    break;
+                }
+            }
+        }
+
+        if matches {
+            return contract_call_match(
+                loc,
+                func_name,
+                *function_no,
+                external_contract_no,
+                call_args,
+                cast_args,
+                var_expr.as_ref(),
+                ns,
+                diagnostics,
+                resolve_to,
+            );
+        } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
+            return Err(());
+        }
+    }
+
+    match name_matches.len() {
+        0 => {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "contract '{}' does not have function '{}'",
+                    ns.contracts[external_contract_no].name, func_name.name
+                ),
+            ));
+        }
+        1 => diagnostics.extend(errors),
+        _ => {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "cannot find overloaded function which matches signature".to_string(),
+            ));
+        }
+    }
+    Err(())
+}
+
+/// Resolve call to contract with positional arguments
+fn contract_call_pos_args(
+    loc: &pt::Loc,
+    external_contract_no: usize,
+    func: &pt::Identifier,
+    var_expr: Option<&Expression>,
+    args: &[pt::Expression],
+    call_args: &[&pt::NamedArgument],
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+    resolve_to: ResolveTo,
+) -> Result<Option<Expression>, ()> {
+    let (call_args, name_matches) = match preprocess_contract_call(
+        loc,
+        call_args,
+        external_contract_no,
+        func,
+        args,
+        context,
+        ns,
+        symtable,
+        diagnostics,
+    ) {
+        PreProcessedCall::Success {
+            call_args,
+            name_matches,
+        } => (call_args, name_matches),
+        PreProcessedCall::DefaultConstructor(expr) => return Ok(Some(expr)),
+        PreProcessedCall::Error => return Err(()),
+    };
+
+    let mut errors = Diagnostics::default();
+
+    for function_no in &name_matches {
+        let params_len = ns.functions[*function_no].params.len();
+
+        if params_len != args.len() {
+            errors.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "function expects {} arguments, {} provided",
+                    params_len,
+                    args.len()
+                ),
+            ));
+            continue;
+        }
+
+        let mut matches = true;
+        let mut cast_args = Vec::new();
+
+        // check if arguments can be implicitly casted
+        for (i, arg) in args.iter().enumerate() {
+            let ty = ns.functions[*function_no].params[i].ty.clone();
+
+            let arg = match expression(
+                arg,
+                context,
+                ns,
+                symtable,
+                &mut errors,
+                ResolveTo::Type(&ty),
+            ) {
+                Ok(e) => e,
+                Err(_) => {
+                    matches = false;
+                    continue;
+                }
+            };
+
+            match arg.cast(&arg.loc(), &ty, true, ns, &mut errors) {
+                Ok(expr) => cast_args.push(expr),
+                Err(()) => {
+                    matches = false;
+                    continue;
+                }
+            }
+        }
+
+        if matches {
+            let resolved_call = contract_call_match(
+                loc,
+                func,
+                *function_no,
+                external_contract_no,
+                call_args,
+                cast_args,
+                var_expr,
+                ns,
+                diagnostics,
+                resolve_to,
+            )?;
+            return Ok(Some(resolved_call));
+        } else if name_matches.len() > 1 && diagnostics.extend_non_casting(&errors) {
+            return Err(());
+        }
+    }
+
+    if let Some(var) = var_expr {
+        // what about call args
+        match using::try_resolve_using_call(
+            loc,
+            func,
+            var,
+            context,
+            args,
+            symtable,
+            diagnostics,
+            ns,
+            resolve_to,
+        ) {
+            Ok(Some(expr)) => {
+                return Ok(Some(expr));
+            }
+            Ok(None) => (),
+            Err(_) => {
+                return Err(());
+            }
+        }
+    }
+
+    if name_matches.len() == 1 {
+        diagnostics.extend(errors);
+    } else if name_matches.len() != 1 {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot find overloaded function which matches signature".to_string(),
+        ));
+    }
+
+    Err(())
+}
+
+/// Checks if an identifier path is an external call on Solana.
+/// For instance, my_file.my_contract.my_func() may be a call to a contract.
+fn is_solana_external_call(
+    list: &[(pt::Loc, usize)],
+    contract_no: Option<usize>,
+    call_args_loc: &Option<pt::Loc>,
+    ns: &Namespace,
+) -> Option<usize> {
+    if ns.target == Target::Solana
+        && list.len() == 1
+        && ns.functions[list[0].1].contract_no != contract_no
+    {
+        if let (Some(callee), Some(caller)) = (ns.functions[list[0].1].contract_no, contract_no) {
+            if is_base(callee, caller, ns) && call_args_loc.is_none() {
+                return None;
+            }
+        }
+        return ns.functions[list[0].1].contract_no;
+    }
+
+    None
+}
+
+/// Data structure to manage the returns of 'preprocess_contract_call'
+enum PreProcessedCall {
+    Success {
+        call_args: CallArgs,
+        name_matches: Vec<usize>,
+    },
+    DefaultConstructor(Expression),
+    Error,
+}
+
+/// This functions preprocesses calls to contracts, i.e. it parses the call arguments,
+/// find function name matches and identifies if we are calling a constructor on Solana.
+fn preprocess_contract_call<T>(
+    loc: &pt::Loc,
+    call_args: &[&pt::NamedArgument],
+    external_contract_no: usize,
+    func: &pt::Identifier,
+    args: &[T],
+    context: &ExprContext,
+    ns: &mut Namespace,
+    symtable: &mut Symtable,
+    diagnostics: &mut Diagnostics,
+) -> PreProcessedCall {
+    let call_args = if let Ok(call_args) = parse_call_args(
+        loc,
+        call_args,
+        Some(external_contract_no),
+        func.name != "new",
+        context,
+        ns,
+        symtable,
+        diagnostics,
+    ) {
+        call_args
+    } else {
+        return PreProcessedCall::Error;
+    };
+
+    let mut name_matches: Vec<usize> = Vec::new();
+
+    for function_no in ns.contracts[external_contract_no].all_functions.keys() {
+        if func.name != ns.functions[*function_no].name
+            || ns.functions[*function_no].ty != pt::FunctionTy::Function
+        {
+            continue;
+        }
+
+        name_matches.push(*function_no);
+    }
+
+    if ns.target == Target::Solana && func.name == "new" {
+        solana_constructor_check(
+            loc,
+            external_contract_no,
+            diagnostics,
+            context,
+            &call_args,
+            ns,
+        );
+
+        if let Some(function_no) = ns.contracts[external_contract_no].has_constructor(ns) {
+            name_matches.push(function_no);
+        } else if !args.is_empty() {
+            // Default constructor must not receive arguments
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "'{}' constructor takes no argument",
+                    ns.contracts[external_contract_no].name
+                ),
+            ));
+            return PreProcessedCall::Error;
+        } else {
+            // Default constructor case
+            return PreProcessedCall::DefaultConstructor(Expression::Constructor {
+                loc: *loc,
+                contract_no: external_contract_no,
+                constructor_no: None,
+                args: vec![],
+                call_args,
+            });
+        }
+    }
+
+    PreProcessedCall::Success {
+        call_args,
+        name_matches,
+    }
+}
+
+/// This function generates the final expression when a contract's function is matched with both
+/// the provided name and arguments
+fn contract_call_match(
+    loc: &pt::Loc,
+    func: &pt::Identifier,
+    function_no: usize,
+    external_contract_no: usize,
+    call_args: CallArgs,
+    cast_args: Vec<Expression>,
+    var_expr: Option<&Expression>,
+    ns: &Namespace,
+    diagnostics: &mut Diagnostics,
+    resolve_to: ResolveTo,
+) -> Result<Expression, ()> {
+    if !ns.functions[function_no].is_public() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            format!("function '{}' is not 'public' or 'external'", func.name),
+        ));
+        return Err(());
+    } else if let Some(value) = &call_args.value {
+        if !value.const_zero(ns) && !ns.functions[function_no].is_payable() {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "sending value to function '{}' which is not payable",
+                    func.name
+                ),
+            ));
+            return Err(());
+        }
+    }
+
+    let func = &ns.functions[function_no];
+    let returns = function_returns(func, resolve_to);
+    let ty = function_type(func, true, resolve_to);
+
+    let (address, implicit) = if let Some(program_id_var) = &call_args.program_id {
+        (*program_id_var.clone(), false)
+    } else if let Some(address_id) = &ns.contracts[external_contract_no].program_id {
+        (
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Address(false),
+                value: BigInt::from_bytes_be(Sign::Plus, address_id),
+            },
+            false,
+        )
+    } else if let Some(var) = var_expr {
+        (var.clone(), true)
+    } else {
+        unreachable!("address not found")
+    };
+
+    Ok({
+        Expression::ExternalFunctionCall {
+            loc: *loc,
+            returns,
+            function: Box::new(Expression::ExternalFunction {
+                loc: *loc,
+                ty,
+                function_no,
+                address: Box::new(address.cast(
+                    &address.loc(),
+                    &Type::Contract(func.contract_no.unwrap()),
+                    implicit,
+                    ns,
+                    diagnostics,
+                )?),
+            }),
+            args: cast_args,
+            call_args,
+        }
     })
 }

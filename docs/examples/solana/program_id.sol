@@ -5,14 +5,23 @@ contract Foo {
     }
 }
 
-contract Bar {
-    Foo public foo;
+contract OtherFoo {
+    function say_bye() public pure {
+        print("Bye from other foo");
+    }
+}
 
+contract Bar {
     function create_foo() external {
-        foo = new Foo();
+        Foo.new();
     }
 
     function call_foo() public {
-        foo.say_hello();
+        Foo.say_hello();
+    }
+
+    function foo_at_another_address(address other_foo_id) external {
+        OtherFoo.new{program_id: other_foo_id}();
+        OtherFoo.say_bye{program_id: other_foo_id}();
     }
 }

@@ -50,11 +50,8 @@ describe('Call Anchor program from Solidity via IDL', () => {
         const ret = await program.methods.data().accounts({ dataAccount: storage.publicKey }).view();
         expect(ret).toEqual(data.publicKey);
 
+        const anchor_program_id = new PublicKey("z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq");
         const remainingAccounts: AccountMeta[] = [{
-            pubkey: new PublicKey("z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq"),
-            isSigner: false,
-            isWritable: false,
-        }, {
             pubkey: data.publicKey,
             isSigner: true,
             isWritable: true,
@@ -65,7 +62,10 @@ describe('Call Anchor program from Solidity via IDL', () => {
         }];
 
         await program.methods.test(payer.publicKey)
-            .accounts({ dataAccount: storage.publicKey })
+            .accounts({
+                dataAccount: storage.publicKey,
+                anchor_programId: anchor_program_id,
+            })
             .remainingAccounts(remainingAccounts)
             .signers([data, payer])
             .rpc();

@@ -34,7 +34,7 @@ pub(crate) fn using_decl(
     }
 
     let ty = if let Some(expr) = &using.ty {
-        match ns.resolve_type(file_no, contract_no, false, expr, &mut diagnostics) {
+        match ns.resolve_type(file_no, contract_no, false, false, expr, &mut diagnostics) {
             Ok(Type::Contract(contract_no)) if ns.contracts[contract_no].is_library() => {
                 ns.diagnostics.push(Diagnostic::error(
                     expr.loc(),

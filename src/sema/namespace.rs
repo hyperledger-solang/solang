@@ -893,6 +893,7 @@ impl Namespace {
         file_no: usize,
         contract_no: Option<usize>,
         casting: bool,
+        is_type_func: bool,
         id: &pt::Expression,
         diagnostics: &mut Diagnostics,
     ) -> Result<Type, ()> {
@@ -947,9 +948,9 @@ impl Namespace {
                     ..
                 } => {
                     let key_ty =
-                        self.resolve_type(file_no, contract_no, false, key, diagnostics)?;
+                        self.resolve_type(file_no, contract_no, false, false, key, diagnostics)?;
                     let value_ty =
-                        self.resolve_type(file_no, contract_no, false, value, diagnostics)?;
+                        self.resolve_type(file_no, contract_no, false, false, value, diagnostics)?;
 
                     match key_ty {
                         Type::Mapping(..) => {
@@ -1211,11 +1212,23 @@ impl Namespace {
                 Box::new(Type::Struct(*str_ty)),
                 resolve_dimensions(&dimensions, diagnostics)?,
             )),
-            Some(Symbol::Contract(_, n)) if dimensions.is_empty() => Ok(Type::Contract(*n)),
-            Some(Symbol::Contract(_, n)) => Ok(Type::Array(
-                Box::new(Type::Contract(*n)),
-                resolve_dimensions(&dimensions, diagnostics)?,
-            )),
+            Some(Symbol::Contract(_, n)) => {
+                if self.target == Target::Solana && !is_type_func {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        "contracts are not allowed as types on Solana".to_string(),
+                    ));
+                    return Err(());
+                }
+                if dimensions.is_empty() {
+                    Ok(Type::Contract(*n))
+                } else {
+                    Ok(Type::Array(
+                        Box::new(Type::Contract(*n)),
+                        resolve_dimensions(&dimensions, diagnostics)?,
+                    ))
+                }
+            }
             Some(Symbol::Event(_)) => {
                 diagnostics.push(Diagnostic::decl_error(
                     id.loc,

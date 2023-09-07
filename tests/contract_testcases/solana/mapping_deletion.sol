@@ -16,14 +16,14 @@ contract DeleteTest {
     }
 
     mapping(uint => data_struct) example;
-    mapping(uint => savedTest) example2;
+    mapping(uint => address) example2;
 
-    function addData() public  {
+    function addData(address pid) public  {
         data_struct dt = data_struct({addr1: address(this), addr2: tx.accounts.dataAccount.key});
         uint id = 1;
         example[id] = dt;
-        savedTest tt = new savedTest(4);
-        example2[id] = tt;
+        savedTest.new{program_id: pid}(4);
+        example2[id] = pid;
     }
 
     function deltest() external {
@@ -39,4 +39,4 @@ contract DeleteTest {
 
 }
 // ---- Expect: diagnostics ----
-// error: 25:24-40: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external
+// error: 25:9-42: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external

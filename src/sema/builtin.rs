@@ -1083,6 +1083,7 @@ pub(super) fn resolve_namespace_call(
                             context.file_no,
                             context.contract_no,
                             false,
+                            false,
                             &param.ty,
                             diagnostics,
                         )?;
@@ -1123,6 +1124,7 @@ pub(super) fn resolve_namespace_call(
                 let ty = ns.resolve_type(
                     context.file_no,
                     context.contract_no,
+                    false,
                     false,
                     args[1].remove_parenthesis(),
                     diagnostics,

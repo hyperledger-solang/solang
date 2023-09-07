@@ -1838,8 +1838,14 @@ fn resolve_var_decl_ty(
     diagnostics: &mut Diagnostics,
 ) -> Result<(Type, pt::Loc), ()> {
     let mut loc_ty = ty.loc();
-    let mut var_ty =
-        ns.resolve_type(context.file_no, context.contract_no, false, ty, diagnostics)?;
+    let mut var_ty = ns.resolve_type(
+        context.file_no,
+        context.contract_no,
+        false,
+        false,
+        ty,
+        diagnostics,
+    )?;
 
     if let Some(storage) = storage {
         if !var_ty.can_have_data_location() {
