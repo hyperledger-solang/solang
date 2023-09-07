@@ -69,7 +69,7 @@ describe('Runtime Errors', function () {
             let res = await program.methods.iWillRevert().simulate();
         } catch (e: any) {
             const logs = e.simulationResponse.logs;
-            expect(logs).toContain(`Program log: runtime_error: revert encountered in runtime_errors.sol:69:9-17,
+            expect(logs).toContain(`Program log: runtime_error: unspecified revert encountered in runtime_errors.sol:69:9-17,
 `)
         }
 
