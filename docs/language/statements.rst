@@ -145,7 +145,7 @@ This might be useful when no error string is expected, and will generate shorter
 
 .. note::
 
-    At the moment, only catching ``Error`` and ``Panic`` errors with an explicit catch clause is supported.
+    At the moment, only catching ``Error`` and ``Panic`` errors with an explicit catch clause are supported.
     Calls reverting with a `custom error <https://docs.soliditylang.org/en/latest/abi-spec.html#errors>`_
     will be caught in the catch-all clause (``catch (bytes raw)``) instead.
     If there is no catch-all clause, custom errors will bubble up to the caller.

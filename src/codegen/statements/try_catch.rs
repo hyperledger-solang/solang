@@ -367,7 +367,7 @@ fn insert_success_code_block(
 }
 
 /// Insert all catch cases into the CFG (error selectors and catch-all clause).
-/// Currently, only catching "Error" and "Panic" errors are supported.
+/// Currently, only catching "Error" and "Panic" errors is supported.
 /// Other errors will lead to the catch-all (if any) or bubble up the error.
 fn insert_catch_clauses(
     try_stmt: &TryCatch,
