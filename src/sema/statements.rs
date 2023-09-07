@@ -2522,7 +2522,7 @@ fn try_catch(
             CatchClause::Named(_, id, param, stmt) => {
                 if id.name != "Error" && id.name != "Panic" {
                     let message = format!(
-                        "only catch 'Error' or 'Panic' is supported, not '{}'",
+                        "only catch 'Error' and 'Panic' are supported, not '{}'",
                         id.name
                     );
                     ns.diagnostics.push(Diagnostic::error(id.loc, message));
