@@ -25,11 +25,7 @@ fn interfaceid() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("get")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("get").call().unwrap();
 
     assert_eq!(
         returns,
@@ -52,7 +48,7 @@ fn write_buffer() {
             function test2() public returns (bytes) {
                 bytes bs = new bytes(34);
                 bs.writeUint16LE(0x4142, 0);
-                bs.writeAddress(tx.program_id, 2);
+                bs.writeAddress(address(this), 2);
                 return bs;
             }
 
@@ -69,32 +65,21 @@ fn write_buffer() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("test1")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test1").call().unwrap();
 
     assert_eq!(
         returns,
         BorshToken::Bytes([0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2, 1].to_vec())
     );
 
-    let returns = vm
-        .function("test2")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test2").call().unwrap();
 
     let mut buf = vec![0x42u8, 0x41u8];
     buf.extend_from_slice(&vm.stack[0].id);
 
     assert_eq!(returns, BorshToken::Bytes(buf));
 
-    let res = vm
-        .function("test3")
-        .accounts(vec![("dataAccount", data_account)])
-        .must_fail();
+    let res = vm.function("test3").must_fail();
     assert_eq!(res.unwrap(), 4294967296);
 }
 
@@ -123,7 +108,6 @@ fn read_buffer() {
         .arguments(&[BorshToken::Bytes(
             [0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2, 1].to_vec(),
         )])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -147,7 +131,6 @@ fn read_buffer() {
         .arguments(&[BorshToken::Bytes(
             [0xbc, 0xbc, 0xbd, 0xbe, 8, 7, 6, 5, 4, 3, 2].to_vec(),
         )])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
     assert_eq!(res.unwrap(), 4294967296);
 
@@ -158,7 +141,6 @@ fn read_buffer() {
     let returns = vm
         .function("test2")
         .arguments(&[BorshToken::Bytes(buf.clone())])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -179,7 +161,6 @@ fn read_buffer() {
     let res = vm
         .function("test2")
         .arguments(&[BorshToken::Bytes(buf)])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
     assert_eq!(res.unwrap(), 4294967296);
 }
@@ -207,7 +188,6 @@ fn bytes_compare() {
     let returns = vm
         .function("test1")
         .arguments(&[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -216,7 +196,6 @@ fn bytes_compare() {
     let returns = vm
         .function("test2")
         .arguments(&[BorshToken::FixedBytes([0xbc, 0xbc, 0xbd, 0xbe].to_vec())])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 

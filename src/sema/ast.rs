@@ -343,7 +343,7 @@ pub struct Function {
 
 /// This struct represents a Solana account. There is no name field, because
 /// it is stored in a IndexMap<String, SolanaAccount> (see above)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SolanaAccount {
     pub loc: pt::Loc,
     pub is_signer: bool,
@@ -1209,7 +1209,6 @@ pub struct CallArgs {
     pub gas: Option<Box<Expression>>,
     pub salt: Option<Box<Expression>>,
     pub value: Option<Box<Expression>>,
-    pub address: Option<Box<Expression>>,
     pub accounts: Option<Box<Expression>>,
     pub seeds: Option<Box<Expression>>,
     pub flags: Option<Box<Expression>>,
@@ -1264,6 +1263,8 @@ impl Recurse for Expression {
                 | Expression::Not { expr, .. }
                 | Expression::BitwiseNot { expr, .. }
                 | Expression::Negate { expr, .. }
+                | Expression::GetRef { expr, .. }
+                | Expression::NamedMember { array: expr, .. }
                 | Expression::StructMember { expr, .. } => expr.recurse(cx, f),
 
                 Expression::Add { left, right, .. }
@@ -1372,7 +1373,22 @@ impl Recurse for Expression {
                     }
                 }
 
-                _ => (),
+                Expression::FormatString { format, .. } => {
+                    for (_, arg) in format {
+                        arg.recurse(cx, f);
+                    }
+                }
+
+                Expression::NumberLiteral { .. }
+                | Expression::InterfaceId { .. }
+                | Expression::InternalFunction { .. }
+                | Expression::ConstantVariable { .. }
+                | Expression::StorageVariable { .. }
+                | Expression::Variable { .. }
+                | Expression::RationalNumberLiteral { .. }
+                | Expression::CodeLiteral { .. }
+                | Expression::BytesLiteral { .. }
+                | Expression::BoolLiteral { .. } => (),
             }
         }
     }
@@ -1576,7 +1592,6 @@ pub enum Builtin {
     GasLimit,
     BlockNumber,
     Slot,
-    ProgramId,
     Timestamp,
     Calldata,
     Sender,

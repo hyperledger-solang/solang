@@ -299,7 +299,7 @@ fn try_catch_external_calls() {
                 return c.get_a();
             }
 
-            function test() public pure returns (int32) {
+            function test() public returns (int32) {
                 try c.go_bang() returns (int32 l) {
                     print("try call success");
                     return 8000;

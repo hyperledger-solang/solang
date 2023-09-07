@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "name": "Dummy",
+  "docs": [
+    "notice: This is a dummy contract to test stuff like redundant (and unneeded)\nimportmaps"
+  ],
+  "instructions": [
+    {
+      "name": "new",
+      "accounts": [
+        {
+          "name": "dataAccount",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": false
+        }
+      ],
+      "args": []
+    }
+  ]
+}

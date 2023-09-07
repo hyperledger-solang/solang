@@ -2033,45 +2033,6 @@ pub(super) fn parse_call_args(
                     diagnostics,
                 )?));
             }
-            "address" => {
-                if ns.target != Target::Solana {
-                    diagnostics.push(Diagnostic::error(
-                        arg.loc,
-                        format!(
-                            "'address' not permitted for external calls or constructors on {}",
-                            ns.target
-                        ),
-                    ));
-                    return Err(());
-                }
-
-                if external_call {
-                    diagnostics.push(Diagnostic::error(
-                        arg.loc,
-                        "'address' not valid for external calls".to_string(),
-                    ));
-                    return Err(());
-                }
-
-                let ty = Type::Address(false);
-
-                let expr = expression(
-                    &arg.expr,
-                    context,
-                    ns,
-                    symtable,
-                    diagnostics,
-                    ResolveTo::Type(&ty),
-                )?;
-
-                res.address = Some(Box::new(expr.cast(
-                    &arg.expr.loc(),
-                    &ty,
-                    true,
-                    ns,
-                    diagnostics,
-                )?));
-            }
             "salt" => {
                 if ns.target == Target::Solana {
                     diagnostics.push(Diagnostic::error(
@@ -2219,40 +2180,23 @@ pub(super) fn parse_call_args(
     }
 
     // address is required on solana constructors
-    if ns.target == Target::Solana && !external_call {
-        if res.address.is_none() && res.accounts.is_none() {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                format!(
-                    "either 'address' or 'accounts' call argument is required on {}",
-                    ns.target
-                ),
-            ));
-            return Err(());
-        } else if res.address.is_some() && res.accounts.is_some() {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                "'address' and 'accounts' call arguments cannot be used together. \
-                The first address provided on the accounts vector must be the contract's address."
-                    .to_string(),
-            ));
-            return Err(());
-        } else if res.accounts.is_none()
-            && !matches!(
-                ns.functions[context.function_no.unwrap()].visibility,
-                Visibility::External(_)
-            )
-            && !ns.functions[context.function_no.unwrap()].is_constructor()
-        {
-            diagnostics.push(Diagnostic::error(
-                *loc,
-                "accounts are required for calling a contract. You can either provide the \
-                accounts with the {accounts: ...} call argument or change this function's \
-                visibility to external"
-                    .to_string(),
-            ));
-            return Err(());
-        }
+    if ns.target == Target::Solana
+        && !external_call
+        && res.accounts.is_none()
+        && !matches!(
+            ns.functions[context.function_no.unwrap()].visibility,
+            Visibility::External(_)
+        )
+        && !ns.functions[context.function_no.unwrap()].is_constructor()
+    {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "accounts are required for calling a contract. You can either provide the \
+            accounts with the {accounts: ...} call argument or change this function's \
+            visibility to external"
+                .to_string(),
+        ));
+        return Err(());
     }
 
     Ok(res)

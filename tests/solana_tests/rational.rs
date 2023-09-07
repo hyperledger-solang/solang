@@ -26,11 +26,7 @@ fn rational() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test").call().unwrap();
 
     assert_eq!(
         returns,
@@ -40,11 +36,7 @@ fn rational() {
         }
     );
 
-    let returns = vm
-        .function("test2")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test2").call().unwrap();
 
     assert_eq!(
         returns,
@@ -69,11 +61,7 @@ fn rational() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test").call().unwrap();
 
     assert_eq!(
         returns,
@@ -98,11 +86,7 @@ fn rational() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test").call().unwrap();
 
     assert_eq!(
         returns,
@@ -127,11 +111,7 @@ fn rational() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test").call().unwrap();
 
     assert_eq!(
         returns,
@@ -156,11 +136,7 @@ fn rational() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test").call().unwrap();
 
     assert_eq!(
         returns,
@@ -184,11 +160,7 @@ fn rational() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test").call().unwrap();
 
     assert_eq!(
         returns,
@@ -212,11 +184,7 @@ fn rational() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test").call().unwrap();
 
     assert_eq!(
         returns,
@@ -246,7 +214,6 @@ fn rational() {
             width: 64,
             value: BigInt::from(982451653u32),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();

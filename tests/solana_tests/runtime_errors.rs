@@ -146,7 +146,6 @@ contract calle_contract {
             width: 8,
             value: BigInt::from(10u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
     assert_eq!(
         vm.logs,
@@ -160,7 +159,6 @@ contract calle_contract {
             width: 256,
             value: BigInt::from(9u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
     assert_eq!(
@@ -199,7 +197,6 @@ contract calle_contract {
             width: 32,
             value: BigInt::from(2u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
     assert_eq!(
@@ -214,7 +211,6 @@ contract calle_contract {
             width: 256,
             value: BigInt::from(u128::MAX),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
     assert_eq!(
@@ -223,10 +219,7 @@ contract calle_contract {
     );
     vm.logs.clear();
 
-    _res = vm
-        .function("invalid_instruction")
-        .accounts(vec![("dataAccount", data_account)])
-        .must_fail();
+    _res = vm.function("invalid_instruction").must_fail();
 
     assert_eq!(
         vm.logs,
@@ -253,7 +246,6 @@ contract calle_contract {
             width: 256,
             value: BigInt::from(9u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
     assert_eq!(
@@ -269,7 +261,6 @@ contract calle_contract {
             width: 256,
             value: BigInt::from(9u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
     println!("{}", vm.logs);
     assert_eq!(
@@ -284,7 +275,6 @@ contract calle_contract {
             width: 256,
             value: BigInt::from(19u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
     assert_eq!(
@@ -300,7 +290,6 @@ contract calle_contract {
             width: 256,
             value: BigInt::from(1u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
     assert_eq!(
@@ -316,7 +305,6 @@ contract calle_contract {
             width: 256,
             value: BigInt::from(33u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
     assert_eq!(
@@ -326,10 +314,7 @@ contract calle_contract {
 
     vm.logs.clear();
 
-    _res = vm
-        .function("i_will_revert")
-        .accounts(vec![("dataAccount", data_account)])
-        .must_fail();
+    _res = vm.function("i_will_revert").must_fail();
 
     assert_eq!(
         vm.logs,

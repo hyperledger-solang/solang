@@ -57,7 +57,7 @@ contract CallFlags {
     }
 
     // Does this.call() on this instead of address.call()
-    function call_this(uint32 _x) public pure returns (uint32) {
+    function call_this(uint32 _x) public view returns (uint32) {
         return this.foo{flags: bitflags([CallFlag.ALLOW_REENTRY])}(_x);
     }
 }

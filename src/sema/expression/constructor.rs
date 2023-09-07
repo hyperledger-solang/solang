@@ -10,7 +10,7 @@ use crate::sema::unused_variable::used_variable;
 use crate::Target;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
-use solang_parser::pt::CodeLocation;
+use solang_parser::pt::{CodeLocation, Visibility};
 use std::collections::BTreeMap;
 
 /// Resolve an new contract expression with positional arguments
@@ -60,15 +60,7 @@ fn constructor(
         return Err(());
     }
 
-    if ns.target == Target::Solana && ns.contracts[no].program_id.is_none() {
-        diagnostics.push(Diagnostic::error(
-            *loc,
-            format!(
-                "in order to instantiate contract '{}', a @program_id is required on contract '{}'",
-                ns.contracts[no].name, ns.contracts[no].name
-            ),
-        ));
-    }
+    solana_constructor_check(loc, no, diagnostics, context, &call_args, ns);
 
     // check for circular references
     if circular_reference(no, context_contract_no, ns) {
@@ -267,6 +259,8 @@ pub fn constructor_named_args(
 
         return Err(());
     }
+
+    solana_constructor_check(loc, no, diagnostics, context, &call_args, ns);
 
     // check for circular references
     if circular_reference(no, context_contract_no, ns) {
@@ -579,4 +573,48 @@ pub(super) fn deprecated_constructor_arguments(
     }
 
     Ok(())
+}
+
+/// When calling a constructor on Solana, we must verify it the contract we are instantiating has
+/// a program id annotation and require the accounts call argument if the call is inside a loop.
+fn solana_constructor_check(
+    loc: &pt::Loc,
+    constructor_contract_no: usize,
+    diagnostics: &mut Diagnostics,
+    context: &ExprContext,
+    call_args: &CallArgs,
+    ns: &Namespace,
+) {
+    if ns.target != Target::Solana {
+        return;
+    }
+
+    if ns.contracts[constructor_contract_no].program_id.is_none() {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            format!(
+                "in order to instantiate contract '{}', a @program_id is required on contract '{}'",
+                ns.contracts[constructor_contract_no].name,
+                ns.contracts[constructor_contract_no].name
+            ),
+        ));
+    }
+
+    if !context.in_a_loop() || call_args.accounts.is_some() {
+        return;
+    }
+
+    if let Some(function_no) = context.function_no {
+        if matches!(
+            ns.functions[function_no].visibility,
+            Visibility::External(_)
+        ) {
+            diagnostics.push(Diagnostic::error(
+                *loc,
+                "the {accounts: ..} call argument is needed since the constructor may be \
+                called multiple times"
+                    .to_string(),
+            ));
+        }
+    }
 }

@@ -32,7 +32,6 @@ describe('Create spl-token and use from solidity', function () {
             .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([{ pubkey: mint, isSigner: false, isWritable: false }])
             .view();
-
         expect(total_supply.toNumber()).toBe(0);
 
         const tokenAccount = await getOrCreateAssociatedTokenAccount(
@@ -43,7 +42,6 @@ describe('Create spl-token and use from solidity', function () {
         )
 
         let balance = await program.methods.getBalance(tokenAccount.address)
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([{ pubkey: tokenAccount.address, isSigner: false, isWritable: false }])
             .view();
 
@@ -71,7 +69,6 @@ describe('Create spl-token and use from solidity', function () {
 
         expect(total_supply.toNumber()).toBe(100000);
         balance = await program.methods.getBalance(tokenAccount.address)
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([{ pubkey: tokenAccount.address, isSigner: false, isWritable: false }])
             .view();
 
@@ -92,7 +89,6 @@ describe('Create spl-token and use from solidity', function () {
             otherTokenAccount.address,
             payer.publicKey,
             new BN(70000))
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([
                 { pubkey: otherTokenAccount.address, isSigner: false, isWritable: true },
                 { pubkey: tokenAccount.address, isSigner: false, isWritable: true },
@@ -108,14 +104,12 @@ describe('Create spl-token and use from solidity', function () {
 
         expect(total_supply.toNumber()).toBe(100000);
         balance = await program.methods.getBalance(tokenAccount.address)
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([{ pubkey: tokenAccount.address, isSigner: false, isWritable: false }])
             .view();
 
         expect(balance.toNumber()).toBe(30000);
 
         balance = await program.methods.getBalance(otherTokenAccount.address)
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([{ pubkey: otherTokenAccount.address, isSigner: false, isWritable: false }])
             .view();
 
@@ -135,7 +129,6 @@ describe('Create spl-token and use from solidity', function () {
             .signers([theOutsider])
             .rpc();
 
-
         total_supply = await program.methods.totalSupply()
             .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([{ pubkey: mint, isSigner: false, isWritable: false }])
@@ -143,14 +136,12 @@ describe('Create spl-token and use from solidity', function () {
 
         expect(total_supply.toNumber()).toBe(80000);
         balance = await program.methods.getBalance(tokenAccount.address)
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([{ pubkey: tokenAccount.address, isSigner: false, isWritable: false }])
             .view();
 
         expect(balance.toNumber()).toBe(30000);
 
         balance = await program.methods.getBalance(otherTokenAccount.address)
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([{ pubkey: otherTokenAccount.address, isSigner: false, isWritable: false }])
             .view();
 

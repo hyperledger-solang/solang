@@ -2,10 +2,12 @@
 
 use crate::{
     borsh_encoding::{visit_mut, VisitorMut},
-    BorshToken, VirtualMachineBuilder,
+    AccountMeta, BorshToken, Pubkey, VirtualMachineBuilder,
 };
+use anchor_syn::idl::IdlAccountItem;
 use once_cell::sync::Lazy;
-use rayon::prelude::*;
+use rayon::iter::ParallelIterator;
+use rayon::prelude::IntoParallelIterator;
 use serde::Deserialize;
 use solang::codegen::Options;
 use std::{
@@ -42,6 +44,7 @@ fn optimizations() {
             .map(|entry| entry.unwrap().path())
             .collect::<Vec<_>>();
         tests.into_par_iter().for_each(|path| run_test(&path));
+        //tests.iter().for_each(|path| run_test(path));
     }
 }
 
@@ -91,13 +94,38 @@ fn run_test_with_opts<T: IntoIterator<Item = Options>>(program: &str, calls: &Ca
                 .call_with_error_code(),
         );
 
+        let program_id = vm.stack[0].id;
         for (name, args) in &calls.function {
-            results_curr.push(
+            let needs_account = vm.stack[0]
+                .idl
+                .as_ref()
+                .unwrap()
+                .instructions
+                .iter()
+                .find(|instr| &instr.name == name)
+                .unwrap()
+                .accounts
+                .iter()
+                .any(|acc| match acc {
+                    IdlAccountItem::IdlAccount(account) => account.name == "dataAccount",
+                    IdlAccountItem::IdlAccounts(_) => false,
+                });
+
+            results_curr.push(if needs_account {
                 vm.function(name)
                     .arguments(args)
                     .accounts(vec![("dataAccount", data_account)])
-                    .call_with_error_code(),
-            );
+                    .call_with_error_code()
+            } else {
+                vm.function(name)
+                    .arguments(args)
+                    .remaining_accounts(&[AccountMeta {
+                        pubkey: Pubkey(program_id),
+                        is_signer: false,
+                        is_writable: false,
+                    }])
+                    .call_with_error_code()
+            });
         }
 
         for token in results_curr.iter_mut().flatten().flatten() {

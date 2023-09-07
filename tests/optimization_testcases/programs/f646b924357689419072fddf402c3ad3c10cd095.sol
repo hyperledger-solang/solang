@@ -9,7 +9,7 @@ contract foo {
     function test2() public returns (bytes) {
         bytes bs = new bytes(34);
         bs.writeUint16LE(0x4142, 0);
-        bs.writeAddress(tx.program_id, 2);
+        bs.writeAddress(address(this), 2);
         return bs;
     }
 

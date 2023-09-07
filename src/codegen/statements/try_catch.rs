@@ -257,6 +257,7 @@ fn exec_try(
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
+                        loc: *loc,
                         success: Some(success),
                         address: Some(address),
                         accounts: None,

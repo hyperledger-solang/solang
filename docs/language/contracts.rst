@@ -94,15 +94,19 @@ __________________________________
 
 On Solana, the contract being created must have the ``@program_id()`` annotation that specifies the program account to
 which the contract code has been deployed. This account holds only the contract's executable binary.
-When calling a constructor, one needs to provide an address that will serve as the contract's data account,
-by using the call argument ``address``:
+When calling a constructor only once from an external function, no call arguments are needed. The data account
+necessary to initialize the contract should be present in the IDL and is identified as ``contractName_dataAccount``.
+In the example below, the IDL for the instruction ``test`` requires the ``hatchling_dataAccount`` account to be
+initialized as the new contract's data account.
 
 .. include:: ../examples/solana/contract_address.sol
   :code: solidity
 
-When the contract's data account is passed through the ``address`` call argument, the compiler will automatically create
+When there are no call arguments to a constructor call, the compiler will automatically create
 the ``AccountMeta`` array the constructor call needs. Due to the impossibility to track account ordering in
-private, internal and public functions, such a call argument is only allowed in external functions.
+private, internal and public functions, such a call argument is only allowed in functions with ``external``
+visibility. This automatic account management only works, however, if there is a single instantiation of
+a particular contract type.
 
 Alternatively, the data account to be initialized can be provided using the ``accounts`` call argument. In this case,
 one needs to instantiate a fixed length array of type ``AccountMeta`` to pass to the call. The array must contain all

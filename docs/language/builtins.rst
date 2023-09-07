@@ -108,10 +108,6 @@ AccountInfo[] ``tx.accounts``
 .. include:: ../examples/solana/accountinfo.sol
   :code: solidity
 
-address ``tx.program_id``
-    The address or account of the currently executing program. Only available on
-    Solana.
-
 ``block`` properties
 ++++++++++++++++++++++
 

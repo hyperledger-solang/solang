@@ -29,121 +29,121 @@ describe('Simple solang tests', function () {
         // TEST Basic enums
         // in ethereum, an enum is described as an uint8 so can't use the enum
         // names programmatically. 0 = add, 1 = sub, 2 = mul, 3 = div, 4 = mod, 5 = pow, 6 = shl, 7 = shr
-        let res = await program.methods.isMul({ mul: {} }).accounts({ dataAccount: storage.publicKey }).view();
+        let res = await program.methods.isMul({ mul: {} }).view();
         expect(res).toBe(true);
 
-        res = await program.methods.returnDiv().accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.returnDiv().view();
         expect(res.div).toBeDefined();
 
         // TEST uint and int types, and arithmetic/bitwise ops
         res = await program.methods.opI64({ add: {} }, new BN(1000), new BN(4100)).view();
         expect(Number(res)).toBe(5100);
-        res = await program.methods.opI64({ sub: {} }, new BN(1000), new BN(4100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI64({ sub: {} }, new BN(1000), new BN(4100)).view();
         expect(Number(res)).toStrictEqual(-3100);
-        res = await program.methods.opI64({ mul: {} }, new BN(1000), new BN(4100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI64({ mul: {} }, new BN(1000), new BN(4100)).view();
         expect(Number(res)).toBe(4100000);
-        res = await program.methods.opI64({ div: {} }, new BN(1000), new BN(10)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI64({ div: {} }, new BN(1000), new BN(10)).view();
         expect(Number(res)).toBe(100);
-        res = await program.methods.opI64({ mod: {} }, new BN(1000), new BN(99)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI64({ mod: {} }, new BN(1000), new BN(99)).view();
         expect(Number(res)).toBe(10);
-        res = await program.methods.opI64({ shl: {} }, new BN(-1000), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI64({ shl: {} }, new BN(-1000), new BN(8)).view();
         expect(Number(res)).toBe(-256000);
-        res = await program.methods.opI64({ shr: {} }, new BN(-1000), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI64({ shr: {} }, new BN(-1000), new BN(8)).view();
         expect(Number(res)).toBe(-4);
 
-        res = await program.methods.opU64({ add: {} }, new BN(1000), new BN(4100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU64({ add: {} }, new BN(1000), new BN(4100)).view();
         expect(Number(res)).toBe(5100);
-        res = await program.methods.opU64({ sub: {} }, new BN(1000), new BN(4100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU64({ sub: {} }, new BN(1000), new BN(4100)).view();
         expect(Number(res)).toBe(18446744073709548516); // (2^64)-18446744073709548516 = 3100
-        res = await program.methods.opU64({ mul: {} }, new BN(123456789), new BN(123456789)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU64({ mul: {} }, new BN(123456789), new BN(123456789)).view();
         expect(Number(res)).toBe(15241578750190521);
-        res = await program.methods.opU64({ div: {} }, new BN(123456789), new BN(100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU64({ div: {} }, new BN(123456789), new BN(100)).view();
         expect(Number(res)).toBe(1234567);
-        res = await program.methods.opU64({ mod: {} }, new BN(123456789), new BN(100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU64({ mod: {} }, new BN(123456789), new BN(100)).view();
         expect(Number(res)).toBe(89);
-        res = await program.methods.opU64({ pow: {} }, new BN(3), new BN(7)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU64({ pow: {} }, new BN(3), new BN(7)).view();
         expect(Number(res)).toBe(2187);
-        res = await program.methods.opI64({ shl: {} }, new BN(1000), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI64({ shl: {} }, new BN(1000), new BN(8)).view();
         expect(Number(res)).toBe(256000);
-        res = await program.methods.opI64({ shr: {} }, new BN(1000), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI64({ shr: {} }, new BN(1000), new BN(8)).view();
         expect(Number(res)).toBe(3);
 
         // now for 256 bit operations
-        res = await program.methods.opI256({ add: {} }, new BN(1000), new BN(4100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI256({ add: {} }, new BN(1000), new BN(4100)).view();
         expect(Number(res)).toBe(5100);
-        res = await program.methods.opI256({ sub: {} }, new BN(1000), new BN(4100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI256({ sub: {} }, new BN(1000), new BN(4100)).view();
         expect(res).toStrictEqual(new BN(-3100));
-        res = await program.methods.opI256({ mul: {} }, new BN(1000), new BN(4100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI256({ mul: {} }, new BN(1000), new BN(4100)).view();
         expect(Number(res)).toBe(4100000);
-        res = await program.methods.opI256({ div: {} }, new BN(1000), new BN(10)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI256({ div: {} }, new BN(1000), new BN(10)).view();
         expect(Number(res)).toBe(100);
-        res = await program.methods.opI256({ mod: {} }, new BN(1000), new BN(99)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI256({ mod: {} }, new BN(1000), new BN(99)).view();
         expect(Number(res)).toBe(10);
-        res = await program.methods.opI256({ shl: {} }, new BN(-10000000000000), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI256({ shl: {} }, new BN(-10000000000000), new BN(8)).view();
         expect(Number(res)).toBe(-2560000000000000);
-        res = await program.methods.opI256({ shr: {} }, new BN(-10000000000000), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opI256({ shr: {} }, new BN(-10000000000000), new BN(8)).view();
         expect(Number(res)).toBe(-39062500000);
 
-        res = await program.methods.opU256({ add: {} }, new BN(1000), new BN(4100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU256({ add: {} }, new BN(1000), new BN(4100)).view();
         expect(Number(res)).toBe(5100);
-        res = await program.methods.opU256({ sub: {} }, new BN(1000), new BN(4100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU256({ sub: {} }, new BN(1000), new BN(4100)).view();
         expect(Number(res)).toBe(115792089237316195423570985008687907853269984665640564039457584007913129636836); // (2^64)-18446744073709548516 = 3100
-        res = await program.methods.opU256({ mul: {} }, new BN(123456789), new BN(123456789)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU256({ mul: {} }, new BN(123456789), new BN(123456789)).view();
         expect(Number(res)).toBe(15241578750190521);
-        res = await program.methods.opU256({ div: {} }, new BN(123456789), new BN(100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU256({ div: {} }, new BN(123456789), new BN(100)).view();
         expect(Number(res)).toBe(1234567);
-        res = await program.methods.opU256({ mod: {} }, new BN(123456789), new BN(100)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU256({ mod: {} }, new BN(123456789), new BN(100)).view();
         expect(Number(res)).toBe(89);
-        res = await program.methods.opU256({ pow: {} }, new BN(123456789), new BN(9)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU256({ pow: {} }, new BN(123456789), new BN(9)).view();
         expect(Number(res)).toBe(6662462759719942007440037531362779472290810125440036903063319585255179509);
-        res = await program.methods.opU256({ shl: {} }, new BN(10000000000000), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU256({ shl: {} }, new BN(10000000000000), new BN(8)).view();
         expect(Number(res)).toBe(2560000000000000);
-        res = await program.methods.opU256({ shr: {} }, new BN(10000000000000), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU256({ shr: {} }, new BN(10000000000000), new BN(8)).view();
         expect(Number(res)).toBe(39062500000);
 
         // TEST bytesN
-        res = await program.methods.returnU86().accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.returnU86().view();
         expect(res).toStrictEqual([0x41, 0x42, 0x43, 0x44, 0x45, 0x46]);
 
         // TEST bytes5
         res = await program.methods.opU85Shift({ shl: {} },
-            Buffer.from("deadcafe59", "hex"), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+            Buffer.from("deadcafe59", "hex"), new BN(8)).view();
         expect(res).toStrictEqual([0xad, 0xca, 0xfe, 0x59, 0x00]);
-        res = await program.methods.opU85Shift({ shr: {} }, Buffer.from("deadcafe59", "hex"), new BN(8)).accounts({ dataAccount: storage.publicKey }).view();
+        res = await program.methods.opU85Shift({ shr: {} }, Buffer.from("deadcafe59", "hex"), new BN(8)).view();
         expect(res).toStrictEqual([0x00, 0xde, 0xad, 0xca, 0xfe]);
         res = await program.methods.opU85({ or: {} },
             Buffer.from("deadcafe59", "hex"),
-            Buffer.from("0000000006", "hex")).accounts({ dataAccount: storage.publicKey }).view();
+            Buffer.from("0000000006", "hex")).view();
         expect(res).toStrictEqual([0xde, 0xad, 0xca, 0xfe, 0x5f]);
         res = await program.methods.opU85({ and: {} },
             Buffer.from("deadcafe59", "hex"),
-            Buffer.from("00000000ff", "hex")).accounts({ dataAccount: storage.publicKey }).view();
+            Buffer.from("00000000ff", "hex")).view();
         expect(res).toStrictEqual([0x00, 0x00, 0x00, 0x00, 0x59]);
         res = await program.methods.opU85({ xor: {} },
             Buffer.from("deadcafe59", "hex"),
-            Buffer.from("00000000ff", "hex")).accounts({ dataAccount: storage.publicKey }).view();
+            Buffer.from("00000000ff", "hex")).view();
         expect(res).toStrictEqual([0xde, 0xad, 0xca, 0xfe, 0xa6]);
 
         // TEST bytes14
         res = await program.methods.opU814Shift({ shl: {} },
             Buffer.from("deadcafe123456789abcdefbeef7", "hex"), new BN(9))
-            .accounts({ dataAccount: storage.publicKey }).view();
+            .view();
         expect(res).toStrictEqual([0x5b, 0x95, 0xfc, 0x24, 0x68, 0xac, 0xf1, 0x35, 0x79, 0xbd, 0xf7, 0xdd, 0xee, 0x00]);
         res = await program.methods.opU814Shift({ shr: {} },
-            Buffer.from("deadcafe123456789abcdefbeef7", "hex"), new BN(9)).accounts({ dataAccount: storage.publicKey }).view();
+            Buffer.from("deadcafe123456789abcdefbeef7", "hex"), new BN(9)).view();
         expect(res).toStrictEqual([0x00, 0x6f, 0x56, 0xe5, 0x7f, 0x09, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f, 0x7d, 0xf7]);
         res = await program.methods.opU814({ or: {} },
             Buffer.from("deadcafe123456789abcdefbeef7", "hex"),
-            Buffer.from("0000060000000000000000000000", "hex")).accounts({ dataAccount: storage.publicKey }).view();
+            Buffer.from("0000060000000000000000000000", "hex")).view();
         expect(res).toStrictEqual([0xde, 0xad, 0xce, 0xfe, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xfb, 0xee, 0xf7]);
         res = await program.methods.opU814({ and: {} },
             Buffer.from("deadcafe123456789abcdefbeef7", "hex"),
-            Buffer.from("000000000000000000ff00000000", "hex")).accounts({ dataAccount: storage.publicKey }).view();
+            Buffer.from("000000000000000000ff00000000", "hex")).view();
         expect(res).toStrictEqual(
             [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xbc, 0x00, 0x00, 0x00, 0x00]);
         res = await program.methods.opU814({ xor: {} },
             Buffer.from("deadcafe123456789abcdefbeef7", "hex"),
-            Buffer.from("ff00000000000000000000000000", "hex")).accounts({ dataAccount: storage.publicKey }).view();
+            Buffer.from("ff00000000000000000000000000", "hex")).view();
         expect(res).toStrictEqual(
             [0x21, 0xad, 0xca, 0xfe, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xfb, 0xee, 0xf7]);
 

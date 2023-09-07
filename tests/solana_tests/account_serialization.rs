@@ -13,7 +13,7 @@ fn deserialize_duplicate_account() {
         assert(tx.accounts[1].is_signer == tx.accounts[2].is_signer);
         assert(tx.accounts[1].is_writable == tx.accounts[2].is_writable);
 
-        assert(my_address == tx.program_id);
+        assert(my_address == tx.accounts.dataAccount.key);
     }
 }
         "#,
@@ -44,9 +44,8 @@ fn deserialize_duplicate_account() {
         },
     );
 
-    let program_id = vm.stack[0].id;
     vm.function("check_deserialization")
-        .arguments(&[BorshToken::Address(program_id)])
+        .arguments(&[BorshToken::Address(data_account)])
         .accounts(vec![("dataAccount", data_account)])
         .remaining_accounts(&[
             AccountMeta {
@@ -71,7 +70,7 @@ fn more_than_10_accounts() {
     function check_deserialization(address my_address) public view {
         // This assertion ensure the padding is correctly added when
         // deserializing accounts
-        assert(my_address == tx.program_id);
+        assert(my_address == address(this));
     }
 }
         "#,
@@ -119,7 +118,6 @@ fn more_than_10_accounts() {
     let program_id = vm.stack[0].id;
     vm.function("check_deserialization")
         .arguments(&[BorshToken::Address(program_id)])
-        .accounts(vec![("dataAccount", data_account)])
         .remaining_accounts(&metas)
         .call();
 }

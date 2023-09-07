@@ -8,6 +8,8 @@ use crate::sema::{
     ast,
     ast::{CallArgs, Function, Namespace, Type},
 };
+use crate::Target;
+use num_bigint::{BigInt, Sign};
 use solang_parser::pt::Loc;
 
 use super::encoding::abi_encode;
@@ -44,10 +46,18 @@ pub(super) fn call_constructor(
         .salt
         .as_ref()
         .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
-    let address = call_args
-        .address
-        .as_ref()
-        .map(|e| expression(e, cfg, callee_contract_no, func, ns, vartab, opt));
+    let address = if ns.target == Target::Solana {
+        Some(Expression::NumberLiteral {
+            loc: Loc::Codegen,
+            ty: Type::Address(false),
+            value: BigInt::from_bytes_be(
+                Sign::Plus,
+                ns.contracts[contract_no].program_id.as_ref().unwrap(),
+            ),
+        })
+    } else {
+        None
+    };
     let seeds = call_args
         .seeds
         .as_ref()

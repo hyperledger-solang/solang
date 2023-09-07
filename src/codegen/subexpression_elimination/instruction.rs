@@ -376,6 +376,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
             }
 
             Instr::ExternalCall {
+                loc,
                 success,
                 address,
                 accounts,
@@ -404,6 +405,7 @@ impl<'a, 'b: 'a> AvailableExpressionSet<'a> {
                     .map(|expr| self.regenerate_expression(expr, ave, cst).1);
 
                 Instr::ExternalCall {
+                    loc: *loc,
                     success: *success,
                     address: new_address,
                     accounts: new_accounts,
