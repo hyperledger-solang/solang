@@ -123,9 +123,6 @@ An internal function cannot be called from a try catch statement. Not all proble
 for example, out of gas cannot be caught. The ``revert()`` and ``require()`` builtins may
 be passed a reason code, which can be inspected using the ``catch Error(string)`` syntax.
 
-.. note::
-    On Polkadot, catching `Panic(uint256)` or custom errors is not supported yet.
-
 .. warning::
     On Solana, any transaction that fails halts the execution of a contract. The try-catch statement, thus,
     is not supported for Solana contracts and the compiler will raise an error if it detects its usage.
@@ -145,3 +142,10 @@ This might be useful when no error string is expected, and will generate shorter
 
 .. include:: ../examples/polkadot/statement_try_catch_no_error_handling.sol
   :code: solidity
+
+.. note::
+
+    At the moment, only catching ``Error`` and ``Panic`` errors is explicitly supported.
+    Calls reverting with a `custom error <https://docs.soliditylang.org/en/latest/abi-spec.html#errors>`_
+    will be caught in the catch-all clause (``catch (bytes raw)``) instead.
+    If there is no catch-all clause, custom errors will bubble up to the caller.

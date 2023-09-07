@@ -75,6 +75,12 @@ for more information about when ``Panic`` might be returned).
 Uncaught exceptions from calling and instantiating contracts or transferring funds will be bubbled 
 up back to the caller.
 
+.. note::
+
+    Solidity knows about ``Error``, ``Panic`` and custom errors. Please also refer to the
+    `Ethereum Solidity documentation <https://docs.soliditylang.org/en/latest/abi-spec.html#errors>`_,
+    for more information.
+
 The metadata contains all error variants that the contract `knows` about in the ``lang_error`` field.
 
 .. warning::
@@ -113,13 +119,6 @@ In the following example, the ``Panic`` variant of ``lang_error`` is of type ``1
 
 From this follows that error data matching the ``Panic`` selector of `0x4e487b71` can be decoded 
 according to type ``10`` (where the decoder must exclude the first 4 selector bytes).
-
-.. note::
-
-    Ethereum Solidity knows about ``Error``, ``Panic`` and 
-    `custom errors <https://docs.soliditylang.org/en/latest/abi-spec.html#errors>`_.
-    Solang does not yet support custom errors. For now, only ``Error`` (selector of `0x08c379a0`) 
-    and ``Panic`` (selector of `0x4e487b71`) are returned and occur in the metadata.
 
 The general process of decoding the output data of Solang Solidity contracts is as follows:
 

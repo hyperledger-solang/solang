@@ -1128,7 +1128,7 @@ fn constructor_reverts_bubbling() {
 #[test]
 fn try_catch_uncaught_bubbles_up() {
     let mut runtime = build_solidity(
-        r##"contract C {
+        r#"contract C {
         function c(uint div) public payable {
             B b = new B();
             b.b{value: 1000}(div);
@@ -1156,7 +1156,7 @@ fn try_catch_uncaught_bubbles_up() {
             return 123 / div;
         }
     }
-    "##,
+    "#,
     );
 
     runtime.set_transferred_value(10000);
