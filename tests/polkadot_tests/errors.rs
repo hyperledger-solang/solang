@@ -38,7 +38,7 @@ struct ErrorData {
 impl From<String> for ErrorData {
     fn from(msg: String) -> Self {
         Self {
-            selector: SolidityError::String(Expression::Poison)
+            selector: SolidityError::Error(Expression::Poison)
                 .selector(&Namespace::new(Target::default_polkadot()))
                 .to_be_bytes(),
             msg,

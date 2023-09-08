@@ -36,7 +36,7 @@ pub enum SolidityError {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
     Empty,
     /// The `Error(string)` selector
-    String(Expression),
+    Error(Expression),
     /// The `Panic(uint256)` selector
     Panic(PanicCode),
     /// User defined errors
@@ -51,7 +51,7 @@ impl SolidityError {
     pub fn selector_expression(&self, ns: &Namespace) -> Expression {
         let selector = match self {
             Self::Empty => unreachable!("empty return data has no selector"),
-            Self::String(_) => self.selector(ns).into(),
+            Self::Error(_) => self.selector(ns).into(),
             Self::Panic(_) => self.selector(ns).into(),
             Self::Custom { .. } => self.selector(ns).into(),
         };
@@ -67,7 +67,7 @@ impl SolidityError {
     pub fn selector(&self, ns: &Namespace) -> u32 {
         match self {
             Self::Empty => unreachable!("empty return data has no selector"),
-            Self::String(_) => ERROR_SELECTOR,
+            Self::Error(_) => ERROR_SELECTOR,
             Self::Panic(_) => PANIC_SELECTOR,
             Self::Custom { error_no, .. } => {
                 let mut buf = [0u8; 32];
@@ -93,7 +93,7 @@ impl SolidityError {
     ) -> Option<Expression> {
         match self {
             Self::Empty => None,
-            Self::String(expr) => {
+            Self::Error(expr) => {
                 let args = vec![self.selector_expression(ns), expr.clone()];
                 create_encoder(ns, false)
                     .const_encode(&args)
@@ -307,7 +307,7 @@ pub(super) fn require(
     }
 
     let error = expr
-        .map(SolidityError::String)
+        .map(SolidityError::Error)
         .unwrap_or(SolidityError::Empty);
     assert_failure(&Codegen, error, ns, cfg, vartab);
 
@@ -379,7 +379,7 @@ pub(super) fn revert(
         // Having an error number requires a custom error
         (Some(n), _) => SolidityError::Custom { error_no: *n, expr },
         // No error number but an expression requires Error(String)
-        (None, Some(expr)) => SolidityError::String(expr.clone()),
+        (None, Some(expr)) => SolidityError::Error(expr.clone()),
         // No error number and no data means just "revert();" without any reason
         (None, None) => SolidityError::Empty,
     };
@@ -455,7 +455,7 @@ mod tests {
         let ns = Namespace::new(Target::default_polkadot());
         assert_eq!(
             ERROR_SELECTOR,
-            SolidityError::String(Expression::Poison).selector(&ns),
+            SolidityError::Error(Expression::Poison).selector(&ns),
         );
         assert_eq!(
             PANIC_SELECTOR,
