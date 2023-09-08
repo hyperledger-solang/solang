@@ -1904,7 +1904,9 @@ impl LanguageServer for SolangServer {
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
-        let Some(reference) = self.get_reference_from_params(params).await? else {return Ok(None)};
+        let Some(reference) = self.get_reference_from_params(params).await? else {
+            return Ok(None);
+        };
         let definitions = &self.global_cache.lock().await.definitions;
         let location = definitions
             .get(&reference)
@@ -1920,7 +1922,9 @@ impl LanguageServer for SolangServer {
         &self,
         params: GotoTypeDefinitionParams,
     ) -> Result<Option<GotoTypeDefinitionResponse>> {
-        let Some(reference) = self.get_reference_from_params(params).await? else { return Ok(None) };
+        let Some(reference) = self.get_reference_from_params(params).await? else {
+            return Ok(None);
+        };
         let gc = self.global_cache.lock().await;
 
         let di = match &reference.def_type {
@@ -1958,7 +1962,9 @@ impl LanguageServer for SolangServer {
         &self,
         params: GotoImplementationParams,
     ) -> Result<Option<GotoImplementationResponse>> {
-        let Some(reference) = self.get_reference_from_params(params).await? else { return Ok(None) };
+        let Some(reference) = self.get_reference_from_params(params).await? else {
+            return Ok(None);
+        };
         let caches = &self.files.lock().await.caches;
         let gc = self.global_cache.lock().await;
         let impls = match &reference.def_type {
@@ -2003,7 +2009,9 @@ impl LanguageServer for SolangServer {
             work_done_progress_params: params.work_done_progress_params,
             partial_result_params: params.partial_result_params,
         };
-        let Some(reference)  = self.get_reference_from_params(def_params).await? else {return Ok(None)};
+        let Some(reference) = self.get_reference_from_params(def_params).await? else {
+            return Ok(None);
+        };
 
         let caches = &self.files.lock().await.caches;
         let mut locations: Vec<_> = caches
@@ -2044,7 +2052,9 @@ impl LanguageServer for SolangServer {
             work_done_progress_params: params.work_done_progress_params,
             partial_result_params: Default::default(),
         };
-        let Some(reference)  = self.get_reference_from_params(def_params).await? else {return Ok(None)};
+        let Some(reference) = self.get_reference_from_params(def_params).await? else {
+            return Ok(None);
+        };
 
         let new_text = params.new_name;
         let caches = &self.files.lock().await.caches;
