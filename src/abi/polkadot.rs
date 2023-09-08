@@ -510,7 +510,7 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
     ];
     for (error_no, err) in ns.errors.iter().enumerate() {
         let name = err.name.clone();
-        let expr = None;
+        let expr = Vec::new();
         let selector = SolidityError::Custom { error_no, expr }.selector(ns);
         let types = err.fields.iter().map(|f| f.ty.clone()).collect();
         error_definitions.push((name, selector, types));

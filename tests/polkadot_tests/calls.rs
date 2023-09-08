@@ -1303,3 +1303,21 @@ fn try_catch_different_errors() {
     runtime.function("a", in_out.clone());
     assert_eq!(runtime.output(), in_out);
 }
+
+#[test]
+fn try_catch_multiple_error_args() {
+    let mut runtime = build_solidity(
+        r#"error Foo(uint128, address);
+    contract A {
+            function a() public payable {
+                revert Foo(msg.value, msg.sender);
+            }
+    }"#,
+    );
+
+    // Expect the contract to revert with the custom error for input `1`
+    let expected_selecor = [0xd3u8, 0x5a, 0xad, 0x96]; // keccak256('Foo((uint256,string))')[:4]
+    let expected_output = (expected_selecor, 0u128, runtime.caller()).encode();
+    runtime.function_expect_failure("a", Vec::new());
+    assert_eq!(runtime.output(), expected_output);
+}

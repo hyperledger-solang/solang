@@ -42,7 +42,7 @@ pub enum SolidityError {
     /// User defined errors
     Custom {
         error_no: usize,
-        expr: Option<Expression>,
+        expr: Vec<Expression>,
     },
 }
 
@@ -93,10 +93,7 @@ impl SolidityError {
     ) -> Option<Expression> {
         match self {
             Self::Empty => None,
-            Self::String(expr)
-            | Self::Custom {
-                expr: Some(expr), ..
-            } => {
+            Self::String(expr) => {
                 let args = vec![self.selector_expression(ns), expr.clone()];
                 create_encoder(ns, false)
                     .const_encode(&args)
@@ -115,21 +112,26 @@ impl SolidityError {
                     })
                     .or_else(|| abi_encode(loc, args, ns, vartab, cfg, false).0.into())
             }
-            Self::Custom { .. } => create_encoder(ns, false)
-                .const_encode(&[self.selector_expression(ns)])
-                .map(|bytes| {
-                    let size = Expression::NumberLiteral {
-                        loc: Codegen,
-                        ty: Type::Uint(32),
-                        value: bytes.len().into(),
-                    };
-                    Expression::AllocDynamicBytes {
-                        loc: Codegen,
-                        ty: Type::Slice(Type::Bytes(1).into()),
-                        size: size.into(),
-                        initializer: bytes.into(),
-                    }
-                }),
+            Self::Custom { expr, .. } => {
+                let mut args = expr.to_owned();
+                args.insert(0, self.selector_expression(ns));
+                create_encoder(ns, false)
+                    .const_encode(&args)
+                    .map(|bytes| {
+                        let size = Expression::NumberLiteral {
+                            loc: Codegen,
+                            ty: Type::Uint(32),
+                            value: bytes.len().into(),
+                        };
+                        Expression::AllocDynamicBytes {
+                            loc: Codegen,
+                            ty: Type::Slice(Type::Bytes(1).into()),
+                            size: size.into(),
+                            initializer: bytes.into(),
+                        }
+                    })
+                    .or_else(|| abi_encode(loc, args, ns, vartab, cfg, false).0.into())
+            }
             Self::Panic(code) => {
                 let code = Expression::NumberLiteral {
                     loc: Codegen,
@@ -325,11 +327,12 @@ pub(super) fn revert(
     loc: &Loc,
 ) {
     let expr = args
-        .get(0)
-        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
+        .iter()
+        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt))
+        .collect::<Vec<_>>();
 
     if opt.log_runtime_errors {
-        match (error_no, &expr) {
+        match (error_no, expr.get(0)) {
             // In the case of Error(string), we can print the reason
             (None, Some(expr)) => {
                 let prefix = b"runtime_error: ";
@@ -372,7 +375,7 @@ pub(super) fn revert(
         }
     }
 
-    let error = match (error_no, &expr) {
+    let error = match (error_no, expr.get(0)) {
         // Having an error number requires a custom error
         (Some(n), _) => SolidityError::Custom { error_no: *n, expr },
         // No error number but an expression requires Error(String)
@@ -494,11 +497,11 @@ mod tests {
             },
         ];
 
-        let expr = Some(Expression::Poison);
+        let expr = vec![Expression::Poison];
         let expected_selector = SolidityError::Custom { error_no: 0, expr }.selector(&ns);
         assert_eq!(0x82b42900, expected_selector);
 
-        let expr = Some(Expression::Poison);
+        let expr = vec![Expression::Poison];
         let expected_selector = SolidityError::Custom { error_no: 1, expr }.selector(&ns);
         assert_eq!(0xe450d38c, expected_selector);
     }
