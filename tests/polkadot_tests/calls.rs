@@ -1315,8 +1315,7 @@ fn try_catch_multiple_error_args() {
     }"#,
     );
 
-    // Expect the contract to revert with the custom error for input `1`
-    let expected_selecor = [0xd3u8, 0x5a, 0xad, 0x96]; // keccak256('Foo((uint256,string))')[:4]
+    let expected_selecor = [0xd3u8, 0x5a, 0xad, 0x96]; // keccak256('Foo(uint128,address)')[:4]
     let expected_output = (expected_selecor, 0u128, runtime.caller()).encode();
     runtime.function_expect_failure("a", Vec::new());
     assert_eq!(runtime.output(), expected_output);
