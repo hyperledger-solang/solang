@@ -522,7 +522,7 @@ fn insert_catch_clauses(
     // If the selector doesn't match any of the errors and no fallback then bubble else catch
     cfg.set_basic_block(no_match_err_id);
     if try_stmt.catch_all.is_none() {
-        let encoded_args = Some(buffer.clone());
+        let encoded_args = Some(buffer);
         cfg.add(vartab, Instr::AssertFailure { encoded_args });
     } else {
         insert_catchall_clause_code_block(
@@ -537,7 +537,7 @@ fn insert_catch_clauses(
             return_override,
             opt,
             finally_block,
-            buffer.clone(),
+            buffer,
         );
     }
 }
