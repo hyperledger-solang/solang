@@ -60,8 +60,8 @@ pub enum Type {
     UserType(usize),
     /// There is no way to declare value in Solidity (should there be?)
     Value,
-    #[default]
     Void,
+    #[default]
     Unreachable,
     /// DynamicBytes and String are lowered to a vector.
     Slice(Box<Type>),
