@@ -415,7 +415,7 @@ fn insert_catch_clauses(
     // Expect the returned data to contain at least the selector + 1 byte of data.
     // If the error data len is <4 and a fallback available then proceed else bubble
     let no_match_err_id = cfg.new_basic_block("no_match_err_id".into());
-    let mut next_clause = Some(cfg.new_basic_block("catch_error_0".into()));
+    let switch_on_err_id = cfg.new_basic_block("switch_on_err_id".into());
     let ret_data_len = Expression::Builtin {
         loc: Codegen,
         tys: vec![Type::Uint(32)],
@@ -435,90 +435,89 @@ fn insert_catch_clauses(
     };
     let instruction = Instr::BranchCond {
         cond: cond_enough_data,
-        true_block: next_clause.unwrap(),
+        true_block: switch_on_err_id,
         false_block: no_match_err_id,
     };
     cfg.add(vartab, instruction);
 
-    for (n, clause) in try_stmt.errors.iter().enumerate() {
-        cfg.set_basic_block(next_clause.unwrap());
-        let next_index = n + 1;
-        next_clause = try_stmt
-            .errors
-            .get(next_index)
-            .map(|_| cfg.new_basic_block(format!("catch_error_{}", next_index)));
+    let cases = try_stmt
+        .errors
+        .iter()
+        .enumerate()
+        .map(|(n, clause)| {
+            let clause_body_block = cfg.new_basic_block(format!("catch_error_{}", n));
 
-        // Expect the returned data to match a known 4 bytes function selector
-        let err_id = Expression::NumberLiteral {
-            loc: Codegen,
-            ty: Type::Bytes(4),
-            value: match clause.param.as_ref().unwrap().ty {
-                Type::String => ERROR_SELECTOR.into(),
-                Type::Uint(256) => PANIC_SELECTOR.into(),
-                _ => unreachable!("Only 'Error(string)' and 'Panic(uint256)' can be caught"),
-            },
-        };
-        let offset = Expression::NumberLiteral {
-            loc: Codegen,
-            ty: Uint(32),
-            value: 0.into(),
-        };
-        let err_selector = Expression::Builtin {
-            loc: Codegen,
-            tys: vec![Type::Bytes(4)],
-            kind: Builtin::ReadFromBuffer,
-            args: vec![buffer.clone(), offset],
-        };
-        let cond = Expression::Equal {
-            loc: Codegen,
-            left: err_selector.into(),
-            right: err_id.into(),
-        };
-        let match_err_id = cfg.new_basic_block("match_err_id".into());
-        let instruction = Instr::BranchCond {
-            cond,
-            true_block: match_err_id,
-            false_block: next_clause.unwrap_or(no_match_err_id),
-        };
-        cfg.add(vartab, instruction);
+            cfg.set_basic_block(clause_body_block);
+            let types = &[Type::Bytes(4), clause.param.as_ref().unwrap().ty.clone()];
+            let instruction = Instr::Set {
+                loc: Codegen,
+                res: clause
+                    .param_pos
+                    .unwrap_or_else(|| vartab.temp_anonymous(&clause.param.as_ref().unwrap().ty)),
+                expr: abi_decode(&Codegen, &buffer, types, ns, vartab, cfg, None)[1].clone(),
+            };
+            cfg.add(vartab, instruction);
 
-        cfg.set_basic_block(match_err_id);
-        let types = &[Type::Bytes(4), clause.param.as_ref().unwrap().ty.clone()];
-        let instruction = Instr::Set {
-            loc: Codegen,
-            res: clause
-                .param_pos
-                .unwrap_or_else(|| vartab.temp_anonymous(&clause.param.as_ref().unwrap().ty)),
-            expr: abi_decode(&Codegen, &buffer, types, ns, vartab, cfg, None)[1].clone(),
-        };
-        cfg.add(vartab, instruction);
+            let mut reachable = true;
+            for stmt in &clause.stmt {
+                statement(
+                    stmt,
+                    func,
+                    cfg,
+                    callee_contract_no,
+                    ns,
+                    vartab,
+                    loops,
+                    placeholder,
+                    return_override,
+                    opt,
+                );
 
-        let mut reachable = true;
-        for stmt in &clause.stmt {
-            statement(
-                stmt,
-                func,
-                cfg,
-                callee_contract_no,
-                ns,
-                vartab,
-                loops,
-                placeholder,
-                return_override,
-                opt,
-            );
+                reachable = stmt.reachable();
+            }
+            if reachable {
+                cfg.add(
+                    vartab,
+                    Instr::Branch {
+                        block: finally_block,
+                    },
+                );
+            }
 
-            reachable = stmt.reachable();
-        }
-        if reachable {
-            cfg.add(
-                vartab,
-                Instr::Branch {
-                    block: finally_block,
+            let clause_condition = Expression::NumberLiteral {
+                loc: Codegen,
+                ty: Type::Bytes(4),
+                value: match clause.param.as_ref().unwrap().ty {
+                    Type::String => ERROR_SELECTOR.into(),
+                    Type::Uint(256) => PANIC_SELECTOR.into(),
+                    _ => {
+                        unreachable!("Only 'Error(string)' and 'Panic(uint256)' can be caught")
+                    }
                 },
-            );
-        }
-    }
+            };
+
+            (clause_condition, clause_body_block)
+        })
+        .collect();
+
+    cfg.set_basic_block(switch_on_err_id);
+    let offset = Expression::NumberLiteral {
+        loc: Codegen,
+        ty: Uint(32),
+        value: 0.into(),
+    };
+    let err_selector = Expression::Builtin {
+        loc: Codegen,
+        tys: vec![Type::Bytes(4)],
+        kind: Builtin::ReadFromBuffer,
+        args: vec![buffer.clone(), offset],
+    };
+    let instruction = Instr::Switch {
+        cond: err_selector,
+        cases,
+        default: no_match_err_id,
+    };
+    cfg.add(vartab, instruction);
 
     // If the selector doesn't match any of the errors and no fallback then bubble else catch
     cfg.set_basic_block(no_match_err_id);
