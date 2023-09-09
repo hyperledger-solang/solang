@@ -15,34 +15,9 @@ jobs:
         uses: actions/checkout@v3
       - name: Run repolinter
         run: npx repolinter --rulesetUrl https://raw.githubusercontent.com/hyperledger-labs/hyperledger-community-management-tools/master/repo_structure/repolint.json
-
-  lints:
-    name: Lints
-    runs-on: solang-ubuntu-latest
-    container: ghcr.io/hyperledger/solang-llvm:ci-5
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v3
-      - name: Rust stable
-        run: rustup default stable
       - uses: enarx/spdx@master
         with:
           licenses: Apache-2.0 MIT
-      - name: Run cargo fmt
-        if: always()
-        run: cargo fmt --all -- --check
-      - name: Run cargo clippy
-        if: always()
-        run: cargo clippy --workspace --tests --bins -- -D warnings
-      - name: Run cargo clippy without wasm_opt feature
-        if: always()
-        run: cargo clippy --workspace --no-default-features --features llvm --bins -- -D warnings
-      - name: Run cargo clippy without llvm feature
-        if: always()
-        run: cargo clippy --workspace --no-default-features --lib -- -D warnings
-      - name: Run cargo doc
-        if: always()
-        run: cargo doc --workspace --bins
 
   docs:
     name: Docs
@@ -79,15 +54,26 @@ jobs:
         submodules: recursive
     - name: Rust stable
       run: rustup default 1.70.0
+    - name: Run cargo clippy
+      run: cargo clippy --workspace --tests --bins -- -D warnings
+    - name: Run cargo clippy without wasm_opt feature
+      run: cargo clippy --workspace --no-default-features --features llvm --bins -- -D warnings
+    - name: Run cargo clippy without llvm feature
+      run: cargo clippy --workspace --no-default-features --lib -- -D warnings
+    - name: Run cargo doc
+      run: cargo doc --workspace --bins
+    - name: Run cargo fmt
+      run: cargo fmt --all -- --check
     - name: Build
+      if: always()
       run: cargo build --verbose
     - name: Run tests
+      if: always()
       run: cargo test --verbose --workspace
     - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang-linux-x86-64
         path: ./target/debug/solang
-
 
   linux-arm:
     name: Linux Arm
@@ -112,7 +98,7 @@ jobs:
 
   windows:
     name: Windows
-    runs-on: solang-windows-latest
+    runs-on: windows-latest
     steps:
     - name: Checkout sources
       uses: actions/checkout@v3
@@ -124,6 +110,9 @@ jobs:
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
       run: echo "c:\llvm15.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+    # Use C:\ as D:\ might run out of space
+    - name: "Use C: for rust temporary files"
+      run: echo "CARGO_TARGET_DIR=C:\target" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
     - uses: dtolnay/rust-toolchain@1.70.0
       with:
         components: clippy
@@ -137,7 +126,10 @@ jobs:
     - uses: actions/upload-artifact@v3.1.0
       with:
         name: solang.exe
-        path: ./target/debug/solang.exe
+        path: C:/target/debug/solang.exe
+    # Print disk usage to debug disk space problems
+    - run: Get-PSDrive
+      if: always()
 
   mac-arm:
     name: Mac Arm
@@ -354,7 +346,7 @@ jobs:
     needs: linux-x86-64
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       # We can't run substrate node as a github actions service, since it requires
       # command line arguments. See https://github.com/actions/runner/pull/1152
     - name: Start substrate
@@ -368,11 +360,9 @@ jobs:
         chmod 755 ./bin/solang
         echo "$(pwd)/bin" >> $GITHUB_PATH
     - name: Install latest rust toolchain
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
-        default: true
-        override: true
     - run: 'parallel solang compile -v --target polkadot --wasm-opt z -o ./contracts/ ::: ../polkadot/*.sol ../polkadot/test/*.sol'
       working-directory: ./integration/subxt-tests
     - name: Deploy and test contracts

@@ -1155,9 +1155,6 @@ impl<'a> Builder<'a> {
                 if let Some(optsalt) = &call_args.salt {
                     self.expression(optsalt, symtab);
                 }
-                if let Some(address) = &call_args.address {
-                    self.expression(address, symtab);
-                }
                 if let Some(seeds) = &call_args.seeds {
                     self.expression(seeds, symtab);
                 }

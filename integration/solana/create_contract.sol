@@ -4,25 +4,24 @@ contract creator {
     Child public c;
     Child public c_metas;
 
-    function create_child(address child) external {
+    function create_child() external {
         print("Going to create child");
-        c = new Child{address: child}();
+        c = new Child();
 
         c.say_hello();
     }
 
-    function create_seed1(address child, bytes seed, bytes1 bump, uint64 space) external {
+    function create_seed1(bytes seed, bytes1 bump, uint64 space) external {
         print("Going to create Seed1");
-        Seed1 s = new Seed1{address: child}(seed, bump, space);
+        Seed1 s = new Seed1(seed, bump, space);
 
         s.say_hello();
     }
 
-    function create_seed2(address child, bytes seed, uint32 space) external {
+    function create_seed2(bytes seed, uint32 space) external {
         print("Going to create Seed2");
 
-        new Seed2{address: child}(seed, space);
-
+        new Seed2(seed, space);
     }
 
     function create_child_with_metas(address child, address payer) public {
@@ -37,8 +36,8 @@ contract creator {
         c_metas.use_metas();
     }
 
-    function create_without_annotation(address child) external {
-        MyCreature cc = new MyCreature{address: child}();
+    function create_without_annotation() external {
+        MyCreature cc = new MyCreature();
         cc.say_my_name();
     }
 }
@@ -88,9 +87,9 @@ contract Seed2 {
     }
 
     function check() public view {
-        address pda = create_program_address([ "sunflower", my_seed ], tx.program_id);
+        address pda = create_program_address([ "sunflower", my_seed ], address(this));
 
-        if (pda == address(this)) {
+        if (pda == tx.accounts.dataAccount.key) {
             print("I am PDA.");
         }
     }

@@ -141,7 +141,6 @@ contract Foo {
     let res = vm
         .function("token_account")
         .arguments(&[BorshToken::Address(account)])
-        .accounts(vec![("dataAccount", data_account)])
         .remaining_accounts(&[AccountMeta {
             pubkey: Pubkey(account),
             is_signer: false,
@@ -190,7 +189,6 @@ contract Foo {
     let res = vm
         .function("token_account")
         .arguments(&[BorshToken::Address(account)])
-        .accounts(vec![("dataAccount", data_account)])
         .remaining_accounts(&[AccountMeta {
             pubkey: Pubkey(account),
             is_signer: false,
@@ -289,7 +287,6 @@ contract Foo {
 
     let res = vm
         .function("mint_account")
-        .accounts(vec![("dataAccount", data_account)])
         .arguments(&[BorshToken::Address(account)])
         .remaining_accounts(&[AccountMeta {
             pubkey: Pubkey(account),
@@ -327,7 +324,6 @@ contract Foo {
 
     let res = vm
         .function("mint_account")
-        .accounts(vec![("dataAccount", data_account)])
         .arguments(&[BorshToken::Address(account)])
         .remaining_accounts(&[AccountMeta {
             pubkey: Pubkey(account),

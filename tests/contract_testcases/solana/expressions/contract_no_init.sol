@@ -15,4 +15,4 @@
             }
         }
 // ---- Expect: diagnostics ----
-// error: 11:25-36: either 'address' or 'accounts' call argument is required on Solana
+// error: 11:25-36: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external

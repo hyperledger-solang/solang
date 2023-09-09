@@ -34,10 +34,7 @@ fn using_for_contracts() {
         .function("new")
         .accounts(vec![("dataAccount", data_account)])
         .call();
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     assert_eq!(runtime.logs, "Hello");
 
@@ -84,10 +81,12 @@ fn using_for_contracts() {
         .function("new")
         .accounts(vec![("dataAccount", data_account)])
         .call();
+
+    let program_id = runtime.stack[0].id;
     runtime
         .function("test")
         .accounts(vec![
-            ("dataAccount", data_account),
+            ("I_programId", program_id),
             ("systemProgram", [0; 32]),
         ])
         .call();
@@ -225,16 +224,7 @@ fn user_defined_oper() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test_cmp")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
-    runtime
-        .function("test_arith")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
-    runtime
-        .function("test_bit")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test_cmp").call();
+    runtime.function("test_arith").call();
+    runtime.function("test_bit").call();
 }

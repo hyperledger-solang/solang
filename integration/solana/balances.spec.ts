@@ -12,7 +12,6 @@ describe('Deploy solang contract and test', function () {
         let { program, storage, payer, provider } = await loadContractAndCallConstructor('balances', []);
 
         let res = await program.methods.getBalance(payer.publicKey)
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([{ pubkey: payer.publicKey, isSigner: false, isWritable: false }])
             .view();
 
@@ -38,7 +37,6 @@ describe('Deploy solang contract and test', function () {
         await sendAndConfirmTransaction(provider.connection, transaction, [payer]);
 
         await program.methods.send(payer.publicKey, new BN(500))
-            .accounts({ dataAccount: storage.publicKey })
             .remainingAccounts([
                 { pubkey: storage.publicKey, isSigner: true, isWritable: true },
                 { pubkey: payer.publicKey, isSigner: false, isWritable: true }

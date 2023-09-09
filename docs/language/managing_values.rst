@@ -24,8 +24,9 @@ is ``address(this).balance``.
     function to that contract like the one below, and call that function instead.
 
 .. note::
-    On Solana, checking the balance of an account different than the data account
+    On Solana, checking the balance of an account different than the program account
     requires that it be passed as an AccountMeta during the transaction.
+    It is not common practice for the program account to hold native Solana tokens.
 
 .. code-block:: solidity
 

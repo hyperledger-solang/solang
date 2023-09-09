@@ -4,7 +4,7 @@ use crate::{
     build_solidity, create_program_address, AccountMeta, AccountState, BorshToken, Instruction,
     Pubkey, VirtualMachine,
 };
-use base58::FromBase58;
+use base58::{FromBase58, ToBase58};
 use num_bigint::BigInt;
 use num_traits::One;
 
@@ -36,7 +36,6 @@ fn simple_external_call() {
         .call();
 
     vm.function("test_bar")
-        .accounts(vec![("dataAccount", bar1_account)])
         .arguments(&[BorshToken::String(String::from("yo"))])
         .call();
 
@@ -52,7 +51,6 @@ fn simple_external_call() {
         .call();
 
     vm.function("test_bar")
-        .accounts(vec![("dataAccount", bar0_account)])
         .arguments(&[BorshToken::String(String::from("uncle beau"))])
         .call();
 
@@ -62,7 +60,7 @@ fn simple_external_call() {
 
     vm.function("test_other")
         .accounts(vec![
-            ("dataAccount", bar0_account),
+            ("bar1_programId", bar1_program_id),
             ("systemProgram", [0; 32]),
         ])
         .remaining_accounts(&[
@@ -77,7 +75,7 @@ fn simple_external_call() {
                 is_writable: false,
             },
         ])
-        .arguments(&[BorshToken::Address(bar1_account)])
+        .arguments(&[BorshToken::Address(bar1_program_id)])
         .call();
 
     assert_eq!(vm.logs, "bar1 says: cross contract call");
@@ -108,7 +106,6 @@ fn external_call_with_returns() {
 
     let res = vm
         .function("test_bar")
-        .accounts(vec![("dataAccount", bar1_account)])
         .arguments(&[BorshToken::Int {
             width: 64,
             value: BigInt::from(21),
@@ -133,9 +130,9 @@ fn external_call_with_returns() {
 
     let res = vm
         .function("test_other")
-        .arguments(&[BorshToken::Address(bar1_account)])
+        .arguments(&[BorshToken::Address(bar1_program_id)])
         .accounts(vec![
-            ("dataAccount", bar0_account),
+            ("bar1_programId", bar1_program_id),
             ("systemProgram", [0; 32]),
         ])
         .remaining_accounts(&[
@@ -198,7 +195,6 @@ fn external_raw_call_with_returns() {
             width: 64,
             value: BigInt::from(21u8),
         }])
-        .accounts(vec![("dataAccount", bar1_account)])
         .call()
         .unwrap();
 
@@ -219,11 +215,8 @@ fn external_raw_call_with_returns() {
 
     let res = vm
         .function("test_other")
-        .arguments(&[BorshToken::Address(bar1_account)])
-        .accounts(vec![
-            ("dataAccount", bar0_account),
-            ("systemProgram", [0; 32]),
-        ])
+        .arguments(&[BorshToken::Address(bar1_program_id)])
+        .accounts(vec![("systemProgram", [0; 32])])
         .remaining_accounts(&[
             AccountMeta {
                 pubkey: Pubkey(bar1_account),
@@ -275,10 +268,7 @@ fn call_external_func_type() {
 
     let res = vm
         .function("doTest")
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("systemProgram", [0; 32]),
-        ])
+        .accounts(vec![("systemProgram", [0; 32])])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -338,7 +328,6 @@ fn external_call_with_string_returns() {
             width: 64,
             value: BigInt::from(22u8),
         }])
-        .accounts(vec![("dataAccount", bar1_account)])
         .call()
         .unwrap();
 
@@ -353,9 +342,9 @@ fn external_call_with_string_returns() {
 
     let res = vm
         .function("test_other")
-        .arguments(&[BorshToken::Address(bar1_account)])
+        .arguments(&[BorshToken::Address(bar1_program_id)])
         .accounts(vec![
-            ("dataAccount", bar0_account),
+            ("bar1_programId", bar1_program_id),
             ("systemProgram", [0; 32]),
         ])
         .remaining_accounts(&[
@@ -376,9 +365,9 @@ fn external_call_with_string_returns() {
     assert_eq!(res, BorshToken::String(String::from("foo:7")));
 
     vm.function("test_this")
-        .arguments(&[BorshToken::Address(bar1_account)])
+        .arguments(&[BorshToken::Address(bar1_program_id)])
         .accounts(vec![
-            ("dataAccount", bar0_account),
+            ("bar1_programId", bar1_program_id),
             ("systemProgram", [0; 32]),
         ])
         .remaining_accounts(&[
@@ -414,7 +403,7 @@ fn encode_call() {
         }
 
         contract bar1 {
-            function test_bar(int64 y) public returns (int64) {
+            function test_bar(int64 y) public pure returns (int64) {
                 return 3 + y;
             }
         }"#,
@@ -432,7 +421,6 @@ fn encode_call() {
             width: 64,
             value: BigInt::from(21u8),
         }])
-        .accounts(vec![("dataAccount", bar1_account)])
         .call()
         .unwrap();
 
@@ -451,13 +439,11 @@ fn encode_call() {
         .accounts(vec![("dataAccount", bar0_account)])
         .call();
 
+    std::println!("bar_acc: {}", bar1_account.to_base58());
     let res = vm
         .function("test_other")
-        .arguments(&[BorshToken::Address(bar1_account)])
-        .accounts(vec![
-            ("dataAccount", bar0_account),
-            ("systemProgram", [0; 32]),
-        ])
+        .arguments(&[BorshToken::Address(bar1_program_id)])
+        .accounts(vec![("systemProgram", [0; 32])])
         .remaining_accounts(&[
             AccountMeta {
                 pubkey: Pubkey(bar1_account),
@@ -677,11 +663,7 @@ fn raw_call_accounts() {
             BorshToken::Address(b"quinquagintaquadringentilliardth".to_owned()),
             BorshToken::Address(b"quinquagintaquadringentillionths".to_owned()),
         ])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("tokenProgram", token.0),
-            ("systemProgram", [0; 32]),
-        ])
+        .accounts(vec![("tokenProgram", token.0), ("systemProgram", [0; 32])])
         .call();
 }
 
@@ -749,10 +731,6 @@ fn pda() {
     vm.call_params_check.insert(token.clone(), test_args);
 
     vm.function("test")
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("tokenProgram", token.0),
-            ("systemProgram", [0; 32]),
-        ])
+        .accounts(vec![("tokenProgram", token.0), ("systemProgram", [0; 32])])
         .call();
 }

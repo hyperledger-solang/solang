@@ -205,7 +205,7 @@ fn issue666() {
                 _flipper = _flipperContract;
             }
 
-            function superFlip () pure public {
+            function superFlip () view public {
                 _flipper.flip();
             }
         }"#,

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::codegen::cfg::{ControlFlowGraph, Instr};
+use crate::codegen::cfg::Instr;
 use crate::codegen::dispatch::solana::SOLANA_DISPATCH_CFG_NAME;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{ArrayLength, Function, Namespace, StructType, Type};
+use crate::sema::ast::{ArrayLength, Contract, Function, Namespace, StructType, Type};
 use crate::sema::solana_accounts::BuiltinAccounts;
 use num_bigint::BigInt;
-use num_traits::Zero;
 use solang_parser::pt::Loc;
 use std::collections::{HashSet, VecDeque};
 
@@ -26,8 +25,10 @@ pub(crate) fn manage_contract_accounts(contract_no: usize, ns: &mut Namespace) {
             .copied()
             .unwrap();
         traverse_cfg(
-            &mut ns.contracts[contract_no].cfg[cfg_no],
+            &mut ns.contracts,
+            contract_no,
             &ns.functions,
+            cfg_no,
             *function_no,
         );
     }
@@ -35,16 +36,28 @@ pub(crate) fn manage_contract_accounts(contract_no: usize, ns: &mut Namespace) {
     if let Some(constructor) = constructor_no {
         let dispatch = ns.contracts[contract_no]
             .cfg
-            .iter_mut()
-            .find(|cfg| cfg.name == SOLANA_DISPATCH_CFG_NAME)
+            .iter()
+            .position(|cfg| cfg.name == SOLANA_DISPATCH_CFG_NAME)
             .expect("dispatch CFG is always generated");
-        traverse_cfg(dispatch, &ns.functions, constructor);
+        traverse_cfg(
+            &mut ns.contracts,
+            contract_no,
+            &ns.functions,
+            dispatch,
+            constructor,
+        );
     }
 }
 
 /// This function walks over the CFG to process its instructions for the account management.
-fn traverse_cfg(cfg: &mut ControlFlowGraph, functions: &[Function], ast_no: usize) {
-    if cfg.blocks.is_empty() {
+fn traverse_cfg(
+    contracts: &mut [Contract],
+    contract_no: usize,
+    functions: &[Function],
+    cfg_no: usize,
+    ast_no: usize,
+) {
+    if contracts[contract_no].cfg[cfg_no].blocks.is_empty() {
         return;
     }
 
@@ -54,11 +67,22 @@ fn traverse_cfg(cfg: &mut ControlFlowGraph, functions: &[Function], ast_no: usiz
     visited.insert(0);
 
     while let Some(cur_block) = queue.pop_front() {
-        for instr in cfg.blocks[cur_block].instr.iter_mut() {
-            process_instruction(instr, functions, ast_no);
+        for instr_no in 0..contracts[contract_no].cfg[cfg_no].blocks[cur_block]
+            .instr
+            .len()
+        {
+            process_instruction(
+                cfg_no,
+                instr_no,
+                cur_block,
+                functions,
+                contracts,
+                ast_no,
+                contract_no,
+            );
         }
 
-        for edge in cfg.blocks[cur_block].successors() {
+        for edge in contracts[contract_no].cfg[cfg_no].blocks[cur_block].successors() {
             if !visited.contains(&edge) {
                 queue.push_back(edge);
                 visited.insert(edge);
@@ -69,48 +93,45 @@ fn traverse_cfg(cfg: &mut ControlFlowGraph, functions: &[Function], ast_no: usiz
 
 /// This function processes the instruction, creating the AccountMeta array when possible.
 /// Presently, we only check the Instr::Constructor, but more will come later.
-fn process_instruction(instr: &mut Instr, functions: &[Function], ast_no: usize) {
-    if let Instr::Constructor {
-        accounts,
-        address,
-        constructor_no,
-        ..
-    } = instr
-    {
-        if accounts.is_some() || constructor_no.is_none() {
-            return;
+fn process_instruction(
+    cfg_no: usize,
+    instr_no: usize,
+    block_no: usize,
+    functions: &[Function],
+    contracts: &mut [Contract],
+    ast_no: usize,
+    contract_no: usize,
+) {
+    let instr = &mut contracts[contract_no].cfg[cfg_no].blocks[block_no].instr[instr_no];
+    match instr {
+        Instr::Constructor {
+            accounts,
+            constructor_no: Some(func_no),
+            contract_no,
+            ..
         }
+        | Instr::ExternalCall {
+            accounts,
+            contract_function_no: Some((contract_no, func_no)),
+            ..
+        } => {
+            if accounts.is_some() {
+                return;
+            }
 
-        let mut account_metas: Vec<Expression> = Vec::new();
-        let constructor_func = &functions[constructor_no.unwrap()];
-        for (name, account) in constructor_func.solana_accounts.borrow().iter() {
-            if name == BuiltinAccounts::DataAccount {
-                let address_ref = Expression::GetRef {
-                    loc: Loc::Codegen,
-                    ty: Type::Ref(Box::new(Type::Address(false))),
-                    expr: Box::new(address.as_ref().unwrap().clone()),
+            let mut account_metas: Vec<Expression> = Vec::new();
+            let constructor_func = &functions[*func_no];
+            for (name, account) in constructor_func.solana_accounts.borrow().iter() {
+                let name_to_index = if name == BuiltinAccounts::DataAccount {
+                    format!("{}_dataAccount", contracts[*contract_no].name)
+                } else {
+                    name.clone()
                 };
-                let struct_literal =
-                    account_meta_literal(address_ref, account.is_signer, account.is_writer);
-                account_metas.push(struct_literal);
-            } else if name == BuiltinAccounts::SystemAccount {
-                let system_address = Expression::NumberLiteral {
-                    loc: Loc::Codegen,
-                    ty: Type::Address(false),
-                    value: BigInt::zero(),
-                };
-                let system_ref = Expression::GetRef {
-                    loc: Loc::Codegen,
-                    ty: Type::Ref(Box::new(Type::Address(false))),
-                    expr: Box::new(system_address),
-                };
-                let struct_literal = account_meta_literal(system_ref, false, false);
-                account_metas.push(struct_literal);
-            } else {
+
                 let account_index = functions[ast_no]
                     .solana_accounts
                     .borrow()
-                    .get_index_of(name)
+                    .get_index_of(&name_to_index)
                     .unwrap();
                 let ptr_to_address = accounts_vector_key_at_index(account_index);
                 account_metas.push(account_meta_literal(
@@ -119,38 +140,40 @@ fn process_instruction(instr: &mut Instr, functions: &[Function], ast_no: usize)
                     account.is_writer,
                 ));
             }
+
+            let metas_vector = Expression::ArrayLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Array(
+                    Box::new(Type::Struct(StructType::AccountMeta)),
+                    vec![ArrayLength::Fixed(BigInt::from(account_metas.len()))],
+                ),
+                dimensions: vec![account_metas.len() as u32],
+                values: account_metas,
+            };
+            *accounts = Some(metas_vector);
         }
-        let metas_vector = Expression::ArrayLiteral {
-            loc: Loc::Codegen,
-            ty: Type::Array(
-                Box::new(Type::Struct(StructType::AccountMeta)),
-                vec![ArrayLength::Fixed(BigInt::from(account_metas.len()))],
-            ),
-            dimensions: vec![account_metas.len() as u32],
-            values: account_metas,
-        };
+        Instr::AccountAccess { loc, name, var_no } => {
+            // This could have been an Expression::AccountAccess if we had a three-address form.
+            // The amount of code necessary to traverse all Instructions and all expressions recursively
+            // (Expressions form a tree) makes the usage of Expression::AccountAccess too burdensome.
 
-        *address = None;
-        *accounts = Some(metas_vector);
-    } else if let Instr::AccountAccess { loc, name, var_no } = instr {
-        // This could have been an Expression::AccountAccess if we had a three-address form.
-        // The amount of code necessary to traverse all Instructions and all expressions recursively
-        // (Expressions form a tree) makes the usage of Expression::AccountAccess too burdensome.
+            // Alternatively, we can create a codegen::Expression::AccountAccess when we have the
+            // new SSA IR complete.
+            let account_index = functions[ast_no]
+                .solana_accounts
+                .borrow()
+                .get_index_of(name)
+                .unwrap();
+            let expr = index_accounts_vector(account_index);
 
-        // Alternatively, we can create a codegen::Expression::AccountAccess when we have the
-        // new SSA IR complete.
-        let account_index = functions[ast_no]
-            .solana_accounts
-            .borrow()
-            .get_index_of(name)
-            .unwrap();
-        let expr = index_accounts_vector(account_index);
+            *instr = Instr::Set {
+                loc: *loc,
+                res: *var_no,
+                expr,
+            };
+        }
 
-        *instr = Instr::Set {
-            loc: *loc,
-            res: *var_no,
-            expr,
-        };
+        _ => (),
     }
 }
 

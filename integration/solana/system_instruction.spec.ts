@@ -28,7 +28,6 @@ describe('Test system instructions', function () {
                 { pubkey: payer.publicKey, isSigner: true, isWritable: false },
                 { pubkey: to_key_pair.publicKey, isSigner: true, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer, to_key_pair]).rpc();
     });
 
@@ -51,7 +50,6 @@ describe('Test system instructions', function () {
                 { pubkey: to_key_pair, isSigner: false, isWritable: true },
                 { pubkey: base_keypair.publicKey, isSigner: true, isWritable: false },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer, base_keypair]).rpc();
     });
 
@@ -67,7 +65,6 @@ describe('Test system instructions', function () {
                 { pubkey: payer.publicKey, isSigner: false, isWritable: false },
                 { pubkey: to_key_pair.publicKey, isSigner: true, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer, to_key_pair]).rpc();
     });
 
@@ -86,7 +83,6 @@ describe('Test system instructions', function () {
                 { pubkey: payer.publicKey, isSigner: false, isWritable: false },
                 { pubkey: to_key_pair, isSigner: false, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer]).rpc();
     });
 
@@ -102,7 +98,6 @@ describe('Test system instructions', function () {
                 { pubkey: payer.publicKey, isSigner: false, isWritable: true },
                 { pubkey: dest.publicKey, isSigner: false, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer]).rpc();
     });
 
@@ -128,7 +123,6 @@ describe('Test system instructions', function () {
                 { pubkey: dest.publicKey, isSigner: false, isWritable: true },
                 { pubkey: payer.publicKey, isSigner: true, isWritable: false },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer]).rpc();
     });
 
@@ -142,7 +136,6 @@ describe('Test system instructions', function () {
             .remainingAccounts([
                 { pubkey: account.publicKey, isSigner: true, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer, account]).rpc();
     });
 
@@ -163,7 +156,6 @@ describe('Test system instructions', function () {
                 { pubkey: account.publicKey, isSigner: true, isWritable: false },
                 { pubkey: derived_key, isSigner: false, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer, account]).rpc();
     });
 
@@ -187,7 +179,6 @@ describe('Test system instructions', function () {
                 { pubkey: derived_account, isSigner: false, isWritable: true },
                 { pubkey: base_address.publicKey, isSigner: true, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer, base_address]).rpc();
     });
 
@@ -207,7 +198,6 @@ describe('Test system instructions', function () {
                 { pubkey: payer.publicKey, isSigner: false, isWritable: true },
                 { pubkey: nonce.publicKey, isSigner: true, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([payer, nonce]).rpc();
 
         await program.methods.advanceNonceAccount(
@@ -218,7 +208,6 @@ describe('Test system instructions', function () {
                 { pubkey: authority.publicKey, isSigner: true, isWritable: false },
                 { pubkey: nonce.publicKey, isSigner: false, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([authority]).rpc();
 
         await program.methods.withdrawNonceAccount(
@@ -233,7 +222,6 @@ describe('Test system instructions', function () {
                 { pubkey: nonce.publicKey, isSigner: false, isWritable: true },
                 { pubkey: payer.publicKey, isSigner: false, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([authority]).rpc();
 
         const new_authority = Keypair.generate();
@@ -246,7 +234,6 @@ describe('Test system instructions', function () {
                 { pubkey: authority.publicKey, isSigner: true, isWritable: false },
                 { pubkey: nonce.publicKey, isSigner: false, isWritable: true },
             ])
-            .accounts({ dataAccount: storage.publicKey })
             .signers([authority]).rpc();
     });
 });

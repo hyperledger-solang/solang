@@ -45,9 +45,11 @@ Runtime
 
 - The Solana target requires `Solana <https://www.solana.com/>`_ v1.8.1.
 - Function selectors are eight bytes wide and known as *discriminators*.
-- Solana provides different builtins, e.g. ``tx.program_id`` and ``tx.accounts``.
-- When creating a contract in Solidity using ``new``, one :ref:`needs to provide <solana_constructor>` the data account
-  address that is going to be initialized for the new contract.
+- Solana provides different builtins, e.g. ``block.slot`` and ``tx.accounts``.
+- When calling an external function or instantiating a contract using ``new``, one
+  :ref:`needs to provide <solana_constructor>` the necessary accounts for the transaction.
+- The keyword ``this`` returns the contract's program account, also know as program id.
+
 
 Compute budget
 ++++++++++++++

@@ -56,7 +56,6 @@ fn safe_math() {
                 value: BigInt::from_str("4000000000000000000").unwrap(),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -80,7 +79,6 @@ fn safe_math() {
                 value: BigInt::from_str("4000000000000000000").unwrap(),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -104,7 +102,6 @@ fn safe_math() {
                 value: BigInt::from_str("1000000000000000000").unwrap(),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -127,7 +124,6 @@ fn safe_math() {
                 value: BigInt::from_str("400000000000000000000000000000000000000").unwrap(),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
     vm.function(
@@ -144,7 +140,6 @@ fn safe_math() {
             },
         ],
     )
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 
     vm.function("sub_test")
@@ -158,6 +153,5 @@ fn safe_math() {
                 value: BigInt::from_str("4000000000000000000").unwrap(),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .must_fail();
 }

@@ -45,7 +45,6 @@ fn lamports() {
     let returns = vm
         .function("test")
         .arguments(&[BorshToken::Address(acc)])
-        .accounts(vec![("dataAccount", data_account)])
         .remaining_accounts(&[AccountMeta {
             pubkey: Pubkey(acc),
             is_writable: true,
@@ -70,15 +69,7 @@ fn owner() {
         import 'solana';
         contract c {
             function test() public payable returns (address) {
-                for (uint32 i = 0; i < tx.accounts.length; i++) {
-                    AccountInfo ai = tx.accounts[i];
-
-                    if (ai.key == address(this)) {
-                        return ai.owner;
-                    }
-                }
-
-                revert("account not found");
+                return tx.accounts.dataAccount.owner;
             }
         }"#,
     );
@@ -106,27 +97,12 @@ fn data() {
         import 'solana';
         contract c {
             function test(uint32 index) public payable returns (uint8) {
-                for (uint32 i = 0; i < tx.accounts.length; i++) {
-                    AccountInfo ai = tx.accounts[i];
-
-                    if (ai.key == address(this)) {
-                        return ai.data[index];
-                    }
-                }
-
-                revert("account not found");
+                return tx.accounts.dataAccount.data[index];
             }
 
             function test2() public payable returns (uint32, uint32) {
-                for (uint32 i = 0; i < tx.accounts.length; i++) {
-                    AccountInfo ai = tx.accounts[i];
-
-                    if (ai.key == address(this)) {
-                        return (ai.data.readUint32LE(1), ai.data.length);
-                    }
-                }
-
-                revert("account not found");
+                AccountInfo ai = tx.accounts.dataAccount;
+                return (ai.data.readUint32LE(1), ai.data.length);
             }
         }"#,
     );
@@ -193,9 +169,9 @@ import 'solana';
 
 contract starter {
     function createNewAccount(uint64 lamport1, uint64 lamport2, uint64 lamport3) public {
-        AccountInfo acc1 = tx.accounts[1];
-        AccountInfo acc2 = tx.accounts[2];
-        AccountInfo acc3 = tx.accounts[3];
+        AccountInfo acc1 = tx.accounts[0];
+        AccountInfo acc2 = tx.accounts[1];
+        AccountInfo acc3 = tx.accounts[2];
 
         acc1.lamports -= lamport1;
         acc2.lamports = lamport2;
@@ -272,7 +248,6 @@ contract starter {
                 value: BigInt::from(9u8),
             },
         ])
-        .accounts(vec![("dataAccount", data_account)])
         .remaining_accounts(&metas)
         .call();
 
@@ -289,7 +264,7 @@ import 'solana';
 
 contract C {
 	function test() external {
-		AccountInfo ai = tx.accounts[1];
+		AccountInfo ai = tx.accounts[0];
 		ai.data[0] = 0xca;
 		ai.data[1] = 0xff;
 		ai.data[2] = 0xee;
@@ -315,7 +290,6 @@ contract C {
     );
 
     vm.function("test")
-        .accounts(vec![("dataAccount", data_account)])
         .remaining_accounts(&[AccountMeta {
             pubkey: Pubkey(other_account),
             is_writable: true,

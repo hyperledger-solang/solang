@@ -63,7 +63,7 @@ contract testing  {
         }
     }
 
-    function calldata_vec(uint256 input, uint32[] calldata vec) public pure returns (uint256 ret) {
+    function calldata_vec(uint256 input, uint32[] calldata vec) public view returns (uint256 ret) {
         assembly {
             vec.offset := add(input, 7)
             input := 9

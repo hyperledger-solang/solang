@@ -179,6 +179,7 @@ pub fn codegen(ns: &mut Namespace, opt: &Options) {
             }
         }
     }
+    ns.diagnostics.sort_and_dedup();
 }
 
 fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
@@ -1755,7 +1756,6 @@ pub enum Builtin {
     Ripemd160,
     Sender,
     Slot,
-    ProgramId,
     Sha256,
     Signature,
     SignatureVerify,
@@ -1813,7 +1813,6 @@ impl From<&ast::Builtin> for Builtin {
             ast::Builtin::Ripemd160 => Builtin::Ripemd160,
             ast::Builtin::Sender => Builtin::Sender,
             ast::Builtin::Slot => Builtin::Slot,
-            ast::Builtin::ProgramId => Builtin::ProgramId,
             ast::Builtin::Sha256 => Builtin::Sha256,
             ast::Builtin::Signature => Builtin::Signature,
             ast::Builtin::SignatureVerify => Builtin::SignatureVerify,

@@ -326,6 +326,7 @@ pub fn variable_decl<'a>(
                 constant,
                 lvalue: false,
                 yul_function: false,
+                loop_nesting_level: 0,
             };
             match expression(
                 initializer,
@@ -782,12 +783,8 @@ pub fn resolve_initializers(
 
         let context = ExprContext {
             file_no,
-            unchecked: false,
             contract_no: Some(*contract_no),
-            function_no: None,
-            constant: false,
-            lvalue: false,
-            yul_function: false,
+            ..Default::default()
         };
 
         if let Ok(res) = expression(
@@ -803,6 +800,7 @@ pub fn resolve_initializers(
                 ns.contracts[*contract_no].variables[*var_no].initializer = Some(res);
             }
         }
+        context.drop();
     }
 
     ns.diagnostics.extend(diagnostics);

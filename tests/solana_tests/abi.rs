@@ -51,21 +51,13 @@ fn packed() {
         .accounts(vec![("dataAccount", account)])
         .call();
 
-    vm.function("test")
-        .accounts(vec![("dataAccount", account)])
-        .call();
+    vm.function("test").call();
 
-    vm.function("test2")
-        .accounts(vec![("dataAccount", account)])
-        .call();
+    vm.function("test2").call();
 
-    vm.function("test3")
-        .accounts(vec![("dataAccount", account)])
-        .call();
+    vm.function("test3").call();
 
-    vm.function("test4")
-        .accounts(vec![("dataAccount", account)])
-        .call();
+    vm.function("test4").call();
 }
 
 #[test]
@@ -85,9 +77,7 @@ fn inherited() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    vm.function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    vm.function("test").call();
 
     let mut vm = build_solidity(
         r#"

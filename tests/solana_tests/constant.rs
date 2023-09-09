@@ -25,11 +25,7 @@ fn constant() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("f")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("f").call().unwrap();
     assert_eq!(
         returns,
         BorshToken::Uint {
@@ -58,11 +54,7 @@ fn constant() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("f")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("f").call().unwrap();
     assert_eq!(
         returns,
         BorshToken::Uint {

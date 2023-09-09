@@ -11,7 +11,7 @@ contract Inc {
 	_flipper = _flipperContract;
     }
 
-    function superFlip () pure public {
+    function superFlip () view public {
 	_flipper.flip();
     }
 }
