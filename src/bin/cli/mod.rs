@@ -16,9 +16,15 @@ use solang::{
     file_resolver::FileResolver,
     Target,
 };
+use std::fs::File;
+use std::io::Read;
 use std::{ffi::OsString, path::PathBuf, process::exit};
-
+mod polkadot;
 mod test;
+
+use polkadot::{
+    PolkadotCallCommand, PolkadotInstantiateCommand, PolkadotRemoveCommand, PolkadotUploadCommand,
+};
 #[derive(Parser)]
 #[command(author = env!("CARGO_PKG_AUTHORS"), version = concat!("version ", env!("SOLANG_VERSION")), about = env!("CARGO_PKG_DESCRIPTION"), subcommand_required = true)]
 pub struct Cli {
@@ -45,6 +51,21 @@ pub enum Commands {
 
     #[command(about = "Create a new Solang project")]
     New(New),
+
+    #[command(about = "Interact with polkadot contracts on chain")]
+    Polkadot {
+        #[clap(subcommand)]
+        action: PolkadotAction,
+    },
+}
+
+/// Available subcommands for the `polkadot` command.
+#[derive(Debug, Subcommand)]
+pub enum PolkadotAction {
+    Upload(PolkadotUploadCommand),
+    Instantiate(PolkadotInstantiateCommand),
+    Call(PolkadotCallCommand),
+    Remove(PolkadotRemoveCommand),
 }
 
 #[derive(Args)]
@@ -681,4 +702,86 @@ fn explicit_args(matches: &ArgMatches) -> Vec<&Id> {
             )
         })
         .collect()
+}
+
+/// A helper function to check if the target name provided by the user matches the target name in solang.toml
+fn check_target_match(target_name: &str) -> anyhow::Result<()> {
+    // Get the manifest path from the current directory
+    let manifest_path = PathBuf::from("solang.toml");
+
+    // Check if the manifest file exists
+    // If it doesn't, then we don't need to check the target name
+    if !manifest_path.exists() {
+        return Ok(());
+    }
+
+    // Read the contents of the solang.toml file
+    let mut file = File::open(&manifest_path).expect("Failed to open the manifest");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("Failed to read solang.toml");
+
+    // Parse the TOML contents and extract the target name
+    let parsed_toml: toml::Value = toml::from_str(&contents).expect("Failed to parse solang.toml");
+    let config_target = parsed_toml["target"]["name"]
+        .as_str()
+        .expect("target name is not a string")
+        .to_string();
+
+    // Compare the target name with the provided argument
+    if config_target != target_name {
+        return Err(anyhow::anyhow!(
+            "Error: The specified target '{}' does not match the target '{}' in solang.toml",
+            target_name,
+            config_target
+        ));
+    }
+    Ok(())
+}
+
+#[test]
+fn test_check_target_match_fail() {
+    use std::io::Write;
+    use std::panic;
+    use tempfile::NamedTempFile;
+
+    // Create a temporary solang.toml file with a different target name
+    let mut tmpfile = NamedTempFile::new().expect("Failed to create temporary file");
+    writeln!(
+        tmpfile,
+        r#"
+        [package]
+        authors = ["sesa"]
+        version = "0.1.0"
+        input_files = ["flipper.sol"]
+        contracts = ["flipper"]
+
+        [target]
+        name = "polkadot"
+        address_length = 32
+        value_length = 16
+    "#
+    )
+    .expect("Failed to write to temporary file");
+    tmpfile.flush().expect("Failed to flush temporary file");
+
+    // Get the path to the temporary file
+    let tmpfile_path = tmpfile.into_temp_path();
+    let tmpfile_path_str = tmpfile_path.to_str().unwrap();
+
+    // Rename the temporary file to "solang.toml"
+    std::fs::rename(tmpfile_path_str, "solang.toml").expect("Failed to rename temporary file");
+
+    // Use catch_unwind to catch any panics that occur
+    let result = panic::catch_unwind(|| {
+        // Call the check_target_match function with the expected target name ("solana")
+        // This should fail because the target name in solang.toml is "polkadot"
+        check_target_match("solana").unwrap();
+    });
+
+    // Clean up the renamed file
+    std::fs::remove_file("solang.toml").expect("Failed to remove renamed file");
+
+    // Assert that the result is a panic
+    assert!(result.is_err());
 }

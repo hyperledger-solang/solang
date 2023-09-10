@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{anyhow, Error};
 use clap::{Command, CommandFactory, FromArgMatches};
-
 use clap_complete::generate;
 use cli::PackageTrait;
+use colored::Colorize;
+use contract_extrinsics::ErrorVariant;
 use itertools::Itertools;
 use solang::{
     abi,
@@ -22,10 +24,11 @@ use std::{
     path::{Path, PathBuf},
     process::exit,
 };
+use tokio::runtime::Runtime;
 
 use crate::cli::{
     imports_arg, options_arg, target_arg, Cli, Commands, Compile, CompilerOutput, Doc, New,
-    ShellComplete,
+    PolkadotAction, ShellComplete,
 };
 
 mod cli;
@@ -35,7 +38,7 @@ mod languageserver;
 
 fn main() {
     let matches = Cli::command().get_matches();
-
+    let runtime = Runtime::new().expect("Failed to create Tokio runtime");
     let cli = Cli::from_arg_matches(&matches).unwrap();
 
     match cli.command {
@@ -62,6 +65,49 @@ fn main() {
         Commands::LanguageServer(server_args) => languageserver::start_server(&server_args),
         Commands::Idl(idl_args) => idl::idl(&idl_args),
         Commands::New(new_arg) => new_command(new_arg),
+        Commands::Polkadot { action } => match action {
+            PolkadotAction::Upload(upload_args) => runtime.block_on(async {
+                upload_args
+                    .handle()
+                    .await
+                    .map_err(|err| map_polkadot_extrinsic_err(err, upload_args.output_json()))
+                    .unwrap_or_else(|err| eprintln!("{err:?}"))
+            }),
+            PolkadotAction::Instantiate(instantiate_args) => runtime.block_on(async {
+                instantiate_args
+                    .handle()
+                    .await
+                    .map_err(|err| map_polkadot_extrinsic_err(err, instantiate_args.output_json()))
+                    .unwrap_or_else(|err| eprintln!("{err:?}"))
+            }),
+            PolkadotAction::Call(call_args) => runtime.block_on(async {
+                call_args
+                    .handle()
+                    .await
+                    .map_err(|err| map_polkadot_extrinsic_err(err, call_args.output_json()))
+                    .unwrap_or_else(|err| eprintln!("{err:?}"))
+            }),
+            PolkadotAction::Remove(remove_args) => runtime.block_on(async {
+                remove_args
+                    .handle()
+                    .await
+                    .map_err(|err| map_polkadot_extrinsic_err(err, remove_args.output_json()))
+                    .unwrap_or_else(|err| eprintln!("{err:?}"))
+            }),
+        },
+    }
+}
+
+/// Map polkadot extrinsic error to a human readable error
+/// If `is_json` is true, return a json string, otherwise return a normal string
+fn map_polkadot_extrinsic_err(err: ErrorVariant, is_json: bool) -> Error {
+    if is_json {
+        anyhow!(
+            "{}",
+            serde_json::to_string_pretty(&err).expect("error serialization is infallible; qed")
+        )
+    } else {
+        anyhow!("ERROR: {}", format!("{err:?}").bright_red())
     }
 }
 

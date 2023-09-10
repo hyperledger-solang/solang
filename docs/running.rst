@@ -207,11 +207,11 @@ Options:
   must be specified.
 
 \-\-address\-length *length-in-bytes*
-  Change the default address length on Polkadot. By default, Substate uses an address type of 32 bytes. This option
+  Change the default address length on Polkadot. By default, Substrate uses an address type of 32 bytes. This option
   is ignored for any other target.
 
 \-\-value\-length *length-in-bytes*
-  Change the default value length on Polkadot. By default, Substate uses an value type of 16 bytes. This option
+  Change the default value length on Polkadot. By default, Substrate uses an value type of 16 bytes. This option
   is ignored for any other target.
 
 \-\-importpath *directory*
@@ -243,6 +243,132 @@ for an example of how to use this.
 .. note::
 
   There is only supported on Solana.
+
+Submitting extrinsics to Polkadot on-chain
+__________________________________________
+
+  solang polkadot [SUBCOMMAND] [OPTIONS]... [FILE]...
+
+This means that the command line is ``solang polkadot`` followed by a subcommand followed by any options described below,
+followed by the filename. The filename could be ``.wasm file``, ``.contract`` bundle, or ``.json`` metadata file.
+
+General Options (for all subcommands):
+
+\-\-url *url*
+  The websockets URL for the substrate node. [default: ws://localhost:9944]
+
+\-\-network *network*
+  Specify the network name to use.
+  You can either specify a network name or a URL, but not both.
+
+  Network:
+
+  rococo
+    Contracts (Rococo) (Equivalent to ``--url wss://rococo-contracts-rpc.polkadot.io``)
+
+  phala-po-c5
+    Phala PoC-5 (Equivalent to ``--url wss://poc5.phala.network/ws``)
+
+  astar-shiden
+    Astar Shiden (Kusama) (Equivalent to ``--url wss://rpc.shiden.astar.network``)
+
+  astar-shibuya
+    Astar Shibuya (Tokio) (Equivalent to ``--url wss://rpc.shibuya.astar.network``)
+
+  astar
+    Astar (Equivalent to ``--url wss://rpc.astar.network``)
+
+  aleph-zero-testnet
+    Aleph Zero Testnet (Equivalent to ``--url wss://ws.test.azero.dev``)
+
+  aleph-zero
+    Aleph Zero (Equivalent to ``--url wss://ws.azero.dev``)
+  
+  t3rnt0rn
+    T3RN T0RN (Equivalent to ``--url wss://ws.t0rn.io``)
+  
+  pendulum-testnet
+    Pendulum Testnet (Equivalent to ``--url wss://rpc-foucoco.pendulumchain.tech``)
+
+-s, \-\-suri *suri*
+  Specifies the secret key URI used for deploying the contract (must be specified). For example:
+    For a development account: //Alice
+    
+    With a password: //Alice///SECRET_PASSWORD
+
+-x, \-\-execute
+  Specifies whether to submit the extrinsic for on-chain execution.
+
+\-\-storage-deposit-limit *storage-deposit-limit*
+  Specifies the maximum amount of balance that can be charged from the caller to pay for the storage consumed.
+
+\-\-output-json
+  Specifies whether to export the call output in JSON format.
+
+\-\-help, -h
+  This displays a short description of all the options
+
+Subcommands:
+
+  solang polkadot upload [OPTIONS]... [FILE]...
+
+  solang polkadot instantiate [OPTIONS]... [FILE]...
+
+Options specific to the ``instantiate`` subcommand:
+
+\-\-constructor *constructor*
+  Specifies the name of the contract constructor to call. [default: new]
+
+\-\-args *<ARGS>...*
+  Specifies the arguments of the contract constructor to call.
+
+\-\-value *value*
+  Specifies the value to be transferred as part of the call. [default: 0]
+
+\-\-gas *gas*
+  Specifies the maximum amount of gas to be used for this command.
+
+\-\-proof-size *proof-size*
+  Specifies the maximum proof size for this instantiation.
+
+\-\-salt *salt*
+  Specifies a salt used in the address derivation of the new contract.
+
+-y, \-\-skip-confirm
+  When set, skips the interactive confirmation prompt.
+
+  solang polkadot call [OPTIONS]... [FILE]...
+
+Options specific to the ``call`` subcommand:
+
+\-\-contract *contract*
+  Specifies the address of the contract to call.
+
+-m, \-\-message *message*
+  Specifies the name of the contract message to call.
+
+\-\-args *<ARGS>...*
+  Specifies the arguments of the contract message to call.
+
+\-\-value *value*
+  Specifies the value to be transferred as part of the call. [default: 0]
+
+\-\-gas *gas*
+  Specifies the maximum amount of gas to be used for this command.
+
+\-\-proof-size *proof-size*
+  Specifies the maximum proof size for this call.
+
+-y, \-\-skip-confirm
+  When set, skips the interactive confirmation prompt.
+
+  solang polkadot remove [OPTIONS]... [FILE]...
+
+Options specific to the ``remove`` subcommand:
+
+\-\-code-hash *code_hash*
+  Specifies the code hash to remove.
+
 
 Running Solang using a container
 ________________________________
