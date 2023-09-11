@@ -4,17 +4,24 @@ use itertools::Itertools;
 use num_traits::ToPrimitive;
 use rust_lapper::{Interval, Lapper};
 use serde_json::Value;
-use solang::sema::ast::{RetrieveType, StructType, Type};
 use solang::{
-    codegen::codegen,
-    codegen::{self, Expression},
+    codegen::{self, codegen, Expression},
     file_resolver::FileResolver,
     parse_and_resolve,
-    sema::{ast, builtin::get_prototype, symtable, tags::render},
+    sema::{
+        ast::{self, RetrieveType, StructType, Type},
+        builtin::get_prototype,
+        symtable,
+        tags::render,
+    },
     Target,
 };
 use solang_parser::pt;
-use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    ffi::OsString,
+    path::PathBuf,
+};
 use tokio::sync::Mutex;
 use tower_lsp::{
     jsonrpc::{Error, ErrorCode, Result},
@@ -1576,23 +1583,38 @@ impl<'a> Builder<'a> {
                 .virtual_functions
                 .iter()
                 .filter_map(|(_, indices)| {
-                    if indices.len() < 2 {
-                        return None;
-                    }
+                    let func = DefinitionIndex {
+                        def_path: file.path.clone(),
+                        def_type: DefinitionType::Function(indices.last().copied().unwrap()),
+                    };
 
-                    let mut functions: Vec<_> = indices
+                    let all_decls: HashSet<usize> = HashSet::from_iter(indices.iter().copied());
+                    let parent_decls = contract
+                        .bases
                         .iter()
-                        .map(|&i| {
-                            let loc = builder.ns.functions[i].loc;
-                            DefinitionIndex {
-                                def_path: builder.ns.files[loc.file_no()].path.clone(),
-                                def_type: DefinitionType::Function(i),
-                            }
+                        .map(|b| {
+                            let p = &builder.ns.contracts[b.contract_no];
+                            HashSet::from_iter(p.functions.iter().copied())
+                                .intersection(&all_decls)
+                                .copied()
+                                .collect::<HashSet<usize>>()
                         })
-                        .collect();
+                        .reduce(|acc, e| acc.union(&e).copied().collect());
 
-                    let start = functions.pop().unwrap();
-                    Some((start, functions))
+                    parent_decls.map(|parent_decls| {
+                        let decls = parent_decls
+                            .iter()
+                            .map(|&i| {
+                                let loc = builder.ns.functions[i].loc;
+                                DefinitionIndex {
+                                    def_path: builder.ns.files[loc.file_no()].path.clone(),
+                                    def_type: DefinitionType::Function(i),
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        (func, decls)
+                    })
                 });
             builder.declarations[file_no].extend(decls);
         }
