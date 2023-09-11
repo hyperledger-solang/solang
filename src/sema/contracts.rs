@@ -600,7 +600,10 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
             if cur.is_override.is_some() || cur.is_virtual {
                 ns.contracts[contract_no]
                     .virtual_functions
-                    .insert(signature, function_no);
+                    .entry(signature)
+                    .or_insert_with(|| vec![])
+                    .push(function_no);
+                // .insert(signature, function_no);
             }
 
             ns.contracts[contract_no]

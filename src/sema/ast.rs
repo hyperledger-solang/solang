@@ -753,7 +753,7 @@ pub struct Contract {
     pub fixed_layout_size: BigInt,
     pub functions: Vec<usize>,
     pub all_functions: BTreeMap<usize, usize>,
-    pub virtual_functions: HashMap<String, usize>,
+    pub virtual_functions: HashMap<String, Vec<usize>>,
     pub yul_functions: Vec<usize>,
     pub variables: Vec<Variable>,
     /// List of contracts this contract instantiates
@@ -769,6 +769,13 @@ pub struct Contract {
     pub instantiable: bool,
     /// Account of deployed program code on Solana
     pub program_id: Option<Vec<u8>>,
+}
+
+impl Contract {
+    pub fn _virtual_functions(&self, key: &String) -> usize {
+        let a = &self.virtual_functions[key];
+        a[a.len() - 1]
+    }
 }
 
 impl Contract {

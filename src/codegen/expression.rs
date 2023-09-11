@@ -490,7 +490,9 @@ pub fn expression(
             ..
         } => {
             let function_no = if let Some(signature) = signature {
-                &ns.contracts[contract_no].virtual_functions[signature]
+                ns.contracts[contract_no].virtual_functions[signature]
+                    .last()
+                    .unwrap()
             } else {
                 function_no
             };
@@ -2634,6 +2636,9 @@ pub fn emit_function_call(
 
                 let function_no = if let Some(signature) = signature {
                     ns.contracts[caller_contract_no].virtual_functions[signature]
+                        .last()
+                        .copied()
+                        .unwrap()
                 } else {
                     *function_no
                 };
