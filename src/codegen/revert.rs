@@ -464,12 +464,10 @@ mod tests {
         );
     }
 
-    /// Tests if the error selector calculation is correct against two examples:
+    /// Error selector calculation uses the same signature algorithm used for message selectors.
+    /// Tests the error selector calculation to be correct against two examples:
     /// - `error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);`
     /// - `error Unauthorized();`
-    ///
-    /// Error selector calculation uses the same signature algorithm used for message selectors,
-    /// which is expected to already have sufficient test coverage.
     #[test]
     fn custom_error_selector_expression() {
         let mut ns = Namespace::new(Target::default_polkadot());
