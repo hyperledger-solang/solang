@@ -22,8 +22,7 @@ impl From<PanicCode> for PanicData {
     fn from(value: PanicCode) -> Self {
         Self {
             selector: SolidityError::Panic(value)
-                .selector(&Namespace::new(Target::default_polkadot()))
-                .to_be_bytes(),
+                .selector(&Namespace::new(Target::default_polkadot())),
             data: U256::from(value as u8),
         }
     }
@@ -38,9 +37,8 @@ struct ErrorData {
 impl From<String> for ErrorData {
     fn from(msg: String) -> Self {
         Self {
-            selector: SolidityError::Error(Expression::Poison)
-                .selector(&Namespace::new(Target::default_polkadot()))
-                .to_be_bytes(),
+            selector: SolidityError::String(Expression::Poison)
+                .selector(&Namespace::new(Target::default_polkadot())),
             msg,
         }
     }

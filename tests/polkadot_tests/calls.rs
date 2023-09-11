@@ -1164,7 +1164,7 @@ fn try_catch_uncaught_bubbles_up() {
     // Expect the contract to revert with div by zero Panic for input `0`
     let ns = Namespace::new(Target::default_polkadot());
     let panic = PanicCode::DivisionByZero;
-    let expected_selector = SolidityError::Panic(panic).selector(&ns).to_be_bytes();
+    let expected_selector = SolidityError::Panic(panic).selector(&ns);
     let expected_output = (expected_selector, U256::from(panic as u8)).encode();
     runtime.function_expect_failure("c", U256::from(0).encode());
     assert_eq!(runtime.output(), expected_output);

@@ -14,7 +14,7 @@ use crate::codegen::{
 use crate::sema::ast::{
     self, CallTy, Function, Namespace, RetrieveType, TryCatch, Type, Type::Uint,
 };
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
 use num_traits::Zero;
 use solang_parser::pt::{self, CodeLocation, Loc::Codegen};
 
@@ -484,16 +484,15 @@ fn insert_catch_clauses(
                 );
             }
 
+            let error_selector = match clause.param.as_ref().unwrap().ty {
+                Type::String => ERROR_SELECTOR,
+                Type::Uint(256) => PANIC_SELECTOR,
+                _ => unreachable!("Only 'Error(string)' and 'Panic(uint256)' can be caught"),
+            };
             let clause_condition = Expression::NumberLiteral {
                 loc: Codegen,
                 ty: Type::Bytes(4),
-                value: match clause.param.as_ref().unwrap().ty {
-                    Type::String => ERROR_SELECTOR.into(),
-                    Type::Uint(256) => PANIC_SELECTOR.into(),
-                    _ => {
-                        unreachable!("Only 'Error(string)' and 'Panic(uint256)' can be caught")
-                    }
-                },
+                value: BigInt::from_bytes_be(Sign::Plus, &error_selector),
             };
 
             (clause_condition, clause_body_block)

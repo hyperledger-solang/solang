@@ -18,14 +18,15 @@ use crate::sema::{
     file::PathDisplay,
 };
 use crate::Target;
+use num_bigint::{BigInt, Sign};
 use parse_display::Display;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
 use tiny_keccak::{Hasher, Keccak};
 
 /// Signature of `Keccak256('Error(string)')[:4]`
-pub(crate) const ERROR_SELECTOR: u32 = 0x08c379a0u32;
+pub(crate) const ERROR_SELECTOR: [u8; 4] = [0x08, 0xc3, 0x79, 0xa0];
 /// Signature of `Keccak256('Panic(uint256)')[:4]`
-pub(crate) const PANIC_SELECTOR: u32 = 0x4e487b71u32;
+pub(crate) const PANIC_SELECTOR: [u8; 4] = [0x4e, 0x48, 0x7b, 0x71];
 
 /// Corresponds to the error types from the Solidity language.
 ///
@@ -36,7 +37,7 @@ pub enum SolidityError {
     /// Reverts with "empty error data"; stems from `revert()` or `require()` without string arguments.
     Empty,
     /// The `Error(string)` selector
-    Error(Expression),
+    String(Expression),
     /// The `Panic(uint256)` selector
     Panic(PanicCode),
     /// User defined errors
@@ -51,23 +52,23 @@ impl SolidityError {
     pub fn selector_expression(&self, ns: &Namespace) -> Expression {
         let selector = match self {
             Self::Empty => unreachable!("empty return data has no selector"),
-            Self::Error(_) => self.selector(ns).into(),
-            Self::Panic(_) => self.selector(ns).into(),
-            Self::Custom { .. } => self.selector(ns).into(),
+            Self::String(_) => self.selector(ns),
+            Self::Panic(_) => self.selector(ns),
+            Self::Custom { .. } => self.selector(ns),
         };
 
         Expression::NumberLiteral {
             loc: Codegen,
             ty: Type::Bytes(4),
-            value: selector,
+            value: BigInt::from_bytes_be(Sign::Plus, &selector),
         }
     }
 
     /// Return the selector of the error.
-    pub fn selector(&self, ns: &Namespace) -> u32 {
+    pub fn selector(&self, ns: &Namespace) -> [u8; 4] {
         match self {
             Self::Empty => unreachable!("empty return data has no selector"),
-            Self::Error(_) => ERROR_SELECTOR,
+            Self::String(_) => ERROR_SELECTOR,
             Self::Panic(_) => PANIC_SELECTOR,
             Self::Custom { error_no, .. } => {
                 let mut buf = [0u8; 32];
@@ -76,7 +77,7 @@ impl SolidityError {
                     ns.signature(&ns.errors[*error_no].name, &ns.errors[*error_no].fields);
                 hasher.update(signature.as_bytes());
                 hasher.finalize(&mut buf);
-                u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]])
+                [buf[0], buf[1], buf[2], buf[3]]
             }
         }
     }
@@ -93,7 +94,7 @@ impl SolidityError {
     ) -> Option<Expression> {
         match self {
             Self::Empty => None,
-            Self::Error(expr) => {
+            Self::String(expr) => {
                 let args = vec![self.selector_expression(ns), expr.clone()];
                 create_encoder(ns, false)
                     .const_encode(&args)
@@ -307,7 +308,7 @@ pub(super) fn require(
     }
 
     let error = expr
-        .map(SolidityError::Error)
+        .map(SolidityError::String)
         .unwrap_or(SolidityError::Empty);
     assert_failure(&Codegen, error, ns, cfg, vartab);
 
@@ -379,7 +380,7 @@ pub(super) fn revert(
         // Having an error number requires a custom error
         (Some(n), _) => SolidityError::Custom { error_no: *n, expr },
         // No error number but an expression requires Error(String)
-        (None, Some(expr)) => SolidityError::Error(expr.clone()),
+        (None, Some(expr)) => SolidityError::String(expr.clone()),
         // No error number and no data means just "revert();" without any reason
         (None, None) => SolidityError::Empty,
     };
@@ -455,7 +456,7 @@ mod tests {
         let ns = Namespace::new(Target::default_polkadot());
         assert_eq!(
             ERROR_SELECTOR,
-            SolidityError::Error(Expression::Poison).selector(&ns),
+            SolidityError::String(Expression::Poison).selector(&ns),
         );
         assert_eq!(
             PANIC_SELECTOR,
@@ -499,10 +500,10 @@ mod tests {
 
         let expr = vec![Expression::Poison];
         let expected_selector = SolidityError::Custom { error_no: 0, expr }.selector(&ns);
-        assert_eq!(0x82b42900, expected_selector);
+        assert_eq!([0x82, 0xb4, 0x29, 0x00], expected_selector);
 
         let expr = vec![Expression::Poison];
         let expected_selector = SolidityError::Custom { error_no: 1, expr }.selector(&ns);
-        assert_eq!(0xe450d38c, expected_selector);
+        assert_eq!([0xe4, 0x50, 0xd3, 0x8c], expected_selector);
     }
 }
