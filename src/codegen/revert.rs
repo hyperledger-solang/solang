@@ -43,7 +43,7 @@ pub enum SolidityError {
     /// User defined errors
     Custom {
         error_no: usize,
-        expr: Vec<Expression>,
+        exprs: Vec<Expression>,
     },
 }
 
@@ -113,8 +113,8 @@ impl SolidityError {
                     })
                     .or_else(|| abi_encode(loc, args, ns, vartab, cfg, false).0.into())
             }
-            Self::Custom { expr, .. } => {
-                let mut args = expr.to_owned();
+            Self::Custom { exprs, .. } => {
+                let mut args = exprs.to_owned();
                 args.insert(0, self.selector_expression(ns));
                 create_encoder(ns, false)
                     .const_encode(&args)
@@ -327,13 +327,13 @@ pub(super) fn revert(
     opt: &Options,
     loc: &Loc,
 ) {
-    let expr = args
+    let exprs = args
         .iter()
         .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt))
         .collect::<Vec<_>>();
 
     if opt.log_runtime_errors {
-        match (error_no, expr.get(0)) {
+        match (error_no, exprs.get(0)) {
             // In the case of Error(string), we can print the reason
             (None, Some(expr)) => {
                 let prefix = b"runtime_error: ";
@@ -376,9 +376,9 @@ pub(super) fn revert(
         }
     }
 
-    let error = match (error_no, expr.get(0)) {
+    let error = match (*error_no, exprs.get(0)) {
         // Having an error number requires a custom error
-        (Some(n), _) => SolidityError::Custom { error_no: *n, expr },
+        (Some(error_no), _) => SolidityError::Custom { error_no, exprs },
         // No error number but an expression requires Error(String)
         (None, Some(expr)) => SolidityError::String(expr.clone()),
         // No error number and no data means just "revert();" without any reason
@@ -498,12 +498,12 @@ mod tests {
             },
         ];
 
-        let expr = vec![Expression::Poison];
-        let expected_selector = SolidityError::Custom { error_no: 0, expr }.selector(&ns);
+        let exprs = vec![Expression::Poison];
+        let expected_selector = SolidityError::Custom { error_no: 0, exprs }.selector(&ns);
         assert_eq!([0x82, 0xb4, 0x29, 0x00], expected_selector);
 
-        let expr = vec![Expression::Poison];
-        let expected_selector = SolidityError::Custom { error_no: 1, expr }.selector(&ns);
+        let exprs = vec![Expression::Poison];
+        let expected_selector = SolidityError::Custom { error_no: 1, exprs }.selector(&ns);
         assert_eq!([0xe4, 0x50, 0xd3, 0x8c], expected_selector);
     }
 }
