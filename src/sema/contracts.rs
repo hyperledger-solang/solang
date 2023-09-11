@@ -601,7 +601,7 @@ fn check_inheritance(contract_no: usize, ns: &mut ast::Namespace) {
                 ns.contracts[contract_no]
                     .virtual_functions
                     .entry(signature)
-                    .or_insert_with(|| vec![])
+                    .or_insert_with(Vec::new)
                     .push(function_no);
                 // .insert(signature, function_no);
             }

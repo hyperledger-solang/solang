@@ -20,10 +20,10 @@ use tower_lsp::{
     jsonrpc::{Error, ErrorCode, Result},
     lsp_types::{
         request::{
-            GotoImplementationParams, GotoImplementationResponse, GotoTypeDefinitionParams,
-            GotoTypeDefinitionResponse,
+            GotoDeclarationParams, GotoDeclarationResponse, GotoImplementationParams,
+            GotoImplementationResponse, GotoTypeDefinitionParams, GotoTypeDefinitionResponse,
         },
-        CompletionOptions, CompletionParams, CompletionResponse, Diagnostic,
+        CompletionOptions, CompletionParams, CompletionResponse, DeclarationCapability, Diagnostic,
         DiagnosticRelatedInformation, DiagnosticSeverity, DidChangeConfigurationParams,
         DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams,
         DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
@@ -92,6 +92,8 @@ type ReferenceEntry = Interval<usize, DefinitionIndex>;
 type Implementations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
 /// Stores types of code objects
 type Types = HashMap<DefinitionIndex, DefinitionIndex>;
+/// Stores all the functions that a given function overrides
+type Declarations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
 
 #[derive(Debug)]
 struct FileCache {
@@ -99,6 +101,7 @@ struct FileCache {
     hovers: Lapper<usize, String>,
     references: Lapper<usize, DefinitionIndex>,
     implementations: Implementations,
+    declarations: Declarations,
 }
 
 /// Stores information used by language server for every opened file
@@ -314,6 +317,7 @@ struct Builder<'a> {
     // `usize` is the file number the reference belongs to
     references: Vec<(usize, ReferenceEntry)>,
     implementations: Vec<Implementations>,
+    declarations: Vec<Declarations>,
     types: Vec<(DefinitionIndex, DefinitionIndex)>,
     ns: &'a ast::Namespace,
 }
@@ -1302,6 +1306,7 @@ impl<'a> Builder<'a> {
             definitions: HashMap::new(),
             references: Vec::new(),
             implementations: vec![HashMap::new(); ns.files.len()],
+            declarations: vec![HashMap::new(); ns.files.len()],
             types: Vec::new(),
             ns,
         };
@@ -1566,6 +1571,30 @@ impl<'a> Builder<'a> {
                 })
                 .collect();
             builder.implementations[file_no].insert(cdi, impls);
+
+            let decls = contract
+                .virtual_functions
+                .iter()
+                .filter_map(|(_, indices)| {
+                    if indices.len() < 2 {
+                        return None;
+                    }
+
+                    let mut functions: Vec<_> = indices
+                        .iter()
+                        .map(|&i| {
+                            let loc = builder.ns.functions[i].loc;
+                            DefinitionIndex {
+                                def_path: builder.ns.files[loc.file_no()].path.clone(),
+                                def_type: DefinitionType::Function(i),
+                            }
+                        })
+                        .collect();
+
+                    let start = functions.pop().unwrap();
+                    Some((start, functions))
+                });
+            builder.declarations[file_no].extend(decls);
         }
 
         for (ei, event) in builder.ns.events.iter().enumerate() {
@@ -1653,6 +1682,7 @@ impl<'a> Builder<'a> {
                         .collect(),
                 ),
                 implementations: builder.implementations[i].clone(),
+                declarations: builder.declarations[i].clone(),
             })
             .collect();
 
@@ -1746,6 +1776,7 @@ impl LanguageServer for SolangServer {
                 definition_provider: Some(OneOf::Left(true)),
                 type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
                 implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
+                declaration_provider: Some(DeclarationCapability::Simple(true)),
                 references_provider: Some(OneOf::Left(true)),
                 rename_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
@@ -2001,6 +2032,38 @@ impl LanguageServer for SolangServer {
             .map(GotoImplementationResponse::Array);
 
         Ok(impls)
+    }
+
+    async fn goto_declaration(
+        &self,
+        params: GotoDeclarationParams,
+    ) -> Result<Option<GotoDeclarationResponse>> {
+        let Some(reference) = self.get_reference_from_params(params).await? else {
+            return Ok(None);
+        };
+
+        let caches = &self.files.lock().await.caches;
+        let decls = caches
+            .get(&reference.def_path)
+            .and_then(|cache| cache.declarations.get(&reference));
+
+        let gc = self.global_cache.lock().await;
+        let decls = decls
+            .map(|decls| {
+                decls
+                    .iter()
+                    .filter_map(|di| {
+                        let path = &di.def_path;
+                        gc.definitions.get(di).map(|range| {
+                            let uri = Url::from_file_path(path).unwrap();
+                            Location { uri, range: *range }
+                        })
+                    })
+                    .collect()
+            })
+            .map(GotoImplementationResponse::Array);
+
+        Ok(decls)
     }
 
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
