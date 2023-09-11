@@ -234,7 +234,7 @@ fn contract(contract_no: usize, ns: &mut Namespace, opt: &Options) {
         all_cfg.push(cfg);
         ns.contracts[contract_no].initializer = Some(pos);
 
-        if ns.contracts[contract_no].has_constructor(ns).is_none() {
+        if ns.contracts[contract_no].constructors(ns).is_empty() {
             // generate the default constructor
             let func = ns.default_constructor(contract_no);
             let cfg_no = all_cfg.len();

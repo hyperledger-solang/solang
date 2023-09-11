@@ -49,8 +49,8 @@ Runtime
 - When calling an external function or invoking a contract's constructor, one
   :ref:`needs to provide <solana_constructor>` the necessary accounts for the transaction.
 - The keyword ``this`` returns the contract's program account, also know as program id.
-- Contracts cannot be types on Solana and :ref:`calls to contracts <solana_contract_call>` follow a different
-  syntax.
+- Contracts :ref:`cannot be types <contracts_not_types>` on Solana and :ref:`calls to contracts <solana_contract_call>`
+  follow a different syntax.
 
 
 Compute budget

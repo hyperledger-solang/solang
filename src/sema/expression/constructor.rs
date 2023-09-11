@@ -5,6 +5,7 @@ use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::function_call::{collect_call_args, parse_call_args};
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
+use crate::sema::namespace::ResolveTypeContext;
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::used_variable;
 use solang_parser::diagnostics::Diagnostic;
@@ -214,8 +215,7 @@ pub fn constructor_named_args(
     let no = match ns.resolve_type(
         context.file_no,
         context.contract_no,
-        false,
-        false,
+        ResolveTypeContext::None,
         ty,
         diagnostics,
     )? {
@@ -450,8 +450,7 @@ pub fn new(
     let ty = ns.resolve_type(
         context.file_no,
         context.contract_no,
-        false,
-        false,
+        ResolveTypeContext::None,
         ty,
         diagnostics,
     )?;
@@ -641,6 +640,11 @@ pub(super) fn solana_constructor_check(
                 .creates
                 .push(constructor_contract_no);
         }
+    } else {
+        diagnostics.push(Diagnostic::error(
+            *loc,
+            "constructors not allowed in standalone functions".to_string(),
+        ));
     }
 
     if !context.in_a_loop() || call_args.accounts.is_some() {

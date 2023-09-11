@@ -10,6 +10,7 @@ use super::{
 };
 use crate::sema::expression::function_call::{function_returns, function_type};
 use crate::sema::expression::resolve_expression::expression;
+use crate::sema::namespace::ResolveTypeContext;
 use solang_parser::pt::CodeLocation;
 use solang_parser::pt::{self};
 use std::collections::HashSet;
@@ -34,7 +35,13 @@ pub(crate) fn using_decl(
     }
 
     let ty = if let Some(expr) = &using.ty {
-        match ns.resolve_type(file_no, contract_no, false, false, expr, &mut diagnostics) {
+        match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            expr,
+            &mut diagnostics,
+        ) {
             Ok(Type::Contract(contract_no)) if ns.contracts[contract_no].is_library() => {
                 ns.diagnostics.push(Diagnostic::error(
                     expr.loc(),

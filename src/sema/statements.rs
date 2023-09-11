@@ -18,6 +18,7 @@ use crate::sema::expression::function_call::{
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::function_annotation::function_body_annotations;
 use crate::sema::function_annotation::{unexpected_parameter_annotation, UnresolvedAnnotation};
+use crate::sema::namespace::ResolveTypeContext;
 use crate::sema::symtable::{VariableInitializer, VariableUsage};
 use crate::sema::unused_variable::{assigned_variable, check_function_call, used_variable};
 use crate::sema::yul::resolve_inline_assembly;
@@ -1841,8 +1842,7 @@ fn resolve_var_decl_ty(
     let mut var_ty = ns.resolve_type(
         context.file_no,
         context.contract_no,
-        false,
-        false,
+        ResolveTypeContext::None,
         ty,
         diagnostics,
     )?;

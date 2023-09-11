@@ -460,6 +460,14 @@ The expression ``this`` evaluates to the current contract, which can be cast to 
 .. include:: ../examples/contract_type_cast_address.sol
   :code: solidity
 
+.. _contracts_not_types:
+
+.. note::
+    On Solana, contracts cannot exist as types, so contracts cannot be function parameters, function returns
+    or variables. Contracts on Solana are deployed to a defined address, which is often known during compile time,
+    so there is no need to hold that address as a variable underneath a contract type.
+
+
 Function Types
 ______________
 

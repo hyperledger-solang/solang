@@ -16,6 +16,7 @@ use super::{
 };
 use crate::sema::eval::check_term_for_constant_overflow;
 use crate::sema::expression::resolve_expression::expression;
+use crate::sema::namespace::ResolveTypeContext;
 use crate::sema::Recurse;
 use solang_parser::{
     doccomment::DocComment,
@@ -120,7 +121,13 @@ pub fn variable_decl<'a>(
 
     let mut diagnostics = Diagnostics::default();
 
-    let ty = match ns.resolve_type(file_no, contract_no, false, false, &ty, &mut diagnostics) {
+    let ty = match ns.resolve_type(
+        file_no,
+        contract_no,
+        ResolveTypeContext::None,
+        &ty,
+        &mut diagnostics,
+    ) {
         Ok(s) => s,
         Err(()) => {
             ns.diagnostics.extend(diagnostics);

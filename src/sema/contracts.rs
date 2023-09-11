@@ -1090,7 +1090,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
         })
         .collect::<Vec<usize>>();
 
-    if contract.has_constructor(ns).is_some() {
+    if !contract.constructors(ns).is_empty() {
         for constructor_no in contract
             .functions
             .iter()

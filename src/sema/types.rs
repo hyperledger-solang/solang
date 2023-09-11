@@ -10,6 +10,7 @@ use super::{
     diagnostics::Diagnostics,
     ContractDefinition, SOLANA_SPARSE_ARRAY_SIZE,
 };
+use crate::sema::namespace::ResolveTypeContext;
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use indexmap::IndexMap;
@@ -217,8 +218,7 @@ fn type_decl(
     let mut ty = match ns.resolve_type(
         file_no,
         contract_no,
-        false,
-        false,
+        ResolveTypeContext::None,
         &def.ty,
         &mut diagnostics,
     ) {
@@ -710,8 +710,7 @@ pub fn struct_decl(
         let ty = match ns.resolve_type(
             file_no,
             contract_no,
-            false,
-            false,
+            ResolveTypeContext::None,
             &field.ty,
             &mut diagnostics,
         ) {
@@ -812,8 +811,7 @@ fn event_decl(
         let mut ty = match ns.resolve_type(
             file_no,
             contract_no,
-            false,
-            false,
+            ResolveTypeContext::None,
             &field.ty,
             &mut diagnostics,
         ) {
@@ -936,8 +934,7 @@ fn error_decl(
         let mut ty = match ns.resolve_type(
             file_no,
             contract_no,
-            false,
-            false,
+            ResolveTypeContext::None,
             &field.ty,
             &mut diagnostics,
         ) {

@@ -13,6 +13,7 @@ use crate::sema::expression::literals::{named_struct_literal, struct_literal};
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
 use crate::sema::format::string_format;
+use crate::sema::namespace::ResolveTypeContext;
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::check_function_call;
 use crate::sema::{builtin, using};
@@ -647,26 +648,30 @@ fn try_namespace(
                         symtable,
                         diagnostics,
                     )?));
-                } else if ns.target == Target::Solana {
-                    return contract_call_pos_args(
-                        loc,
-                        call_contract_no,
-                        func,
-                        None,
-                        args,
-                        call_args,
-                        context,
-                        ns,
-                        symtable,
-                        diagnostics,
-                        resolve_to,
-                    );
-                } else {
+                } else if ns.target != Target::Solana {
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         "function calls via contract name are only valid for base contracts".into(),
                     ));
                 }
+            }
+
+            if ns.target == Target::Solana {
+                // If the symbol resolves to a contract, this is an external call on Solana
+                // regardless of whether we are inside a contract or not.
+                return contract_call_pos_args(
+                    loc,
+                    call_contract_no,
+                    func,
+                    None,
+                    args,
+                    call_args,
+                    context,
+                    ns,
+                    symtable,
+                    diagnostics,
+                    resolve_to,
+                );
             }
         }
     }
@@ -915,8 +920,7 @@ fn try_user_type(
     if let Ok(Type::UserType(no)) = ns.resolve_type(
         context.file_no,
         context.contract_no,
-        false,
-        false,
+        ResolveTypeContext::None,
         var,
         &mut Diagnostics::default(),
     ) {
@@ -1320,6 +1324,7 @@ pub(super) fn method_call_pos_args(
         resolve_to,
     )? {
         return Ok(resolved_call);
+    } else {
     }
 
     if let Some(resolved_call) = try_user_type(
@@ -1604,26 +1609,30 @@ pub(super) fn method_call_named_args(
                         symtable,
                         diagnostics,
                     );
-                } else if ns.target == Target::Solana {
-                    return contract_call_named_args(
-                        loc,
-                        None,
-                        func_name,
-                        args,
-                        call_args,
-                        call_contract_no,
-                        context,
-                        symtable,
-                        ns,
-                        diagnostics,
-                        resolve_to,
-                    );
-                } else {
+                } else if ns.target != Target::Solana {
                     diagnostics.push(Diagnostic::error(
                         *loc,
                         "function calls via contract name are only valid for base contracts".into(),
                     ));
                 }
+            }
+
+            if ns.target == Target::Solana {
+                // If the identifier symbol resolves to a contract, this an external call on Solana
+                // regardless of whether we are inside a contract or not.
+                return contract_call_named_args(
+                    loc,
+                    None,
+                    func_name,
+                    args,
+                    call_args,
+                    call_contract_no,
+                    context,
+                    symtable,
+                    ns,
+                    diagnostics,
+                    resolve_to,
+                );
             }
         }
     }
@@ -2074,8 +2083,7 @@ pub fn named_call_expr(
     match ns.resolve_type(
         context.file_no,
         context.contract_no,
-        true,
-        false,
+        ResolveTypeContext::Casting,
         ty,
         &mut nullsink,
     ) {
@@ -2142,8 +2150,7 @@ pub fn call_expr(
     match ns.resolve_type(
         context.file_no,
         context.contract_no,
-        true,
-        false,
+        ResolveTypeContext::Casting,
         ty,
         &mut nullsink,
     ) {
@@ -2907,8 +2914,10 @@ fn preprocess_contract_call<T>(
             ns,
         );
 
-        if let Some(function_no) = ns.contracts[external_contract_no].has_constructor(ns) {
-            name_matches.push(function_no);
+        let constructor_nos = ns.contracts[external_contract_no].constructors(ns);
+        if !constructor_nos.is_empty() {
+            // Solana contracts shall have only a single constructor
+            name_matches.push(constructor_nos[0]);
         } else if !args.is_empty() {
             // Default constructor must not receive arguments
             diagnostics.push(Diagnostic::error(
