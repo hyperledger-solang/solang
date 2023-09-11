@@ -145,7 +145,7 @@ This might be useful when no error string is expected, and will generate shorter
 
 .. note::
 
-    Only catching ``Error`` and ``Panic`` errors with an explicit catch clause are supported.
+    Try-catch only supports ``Error`` and ``Panic`` errors with an explicit catch clause.
     Calls reverting with a `custom error <https://docs.soliditylang.org/en/latest/abi-spec.html#errors>`_
     will be caught in the catch-all clause (``catch (bytes raw)``) instead.
     If there is no catch-all clause, custom errors will bubble up to the caller.
