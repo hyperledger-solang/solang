@@ -92,6 +92,12 @@ type Implementations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
 /// Stores types of code objects
 type Types = HashMap<DefinitionIndex, DefinitionIndex>;
 
+/// Stores information used by language server for every opened file
+struct Files {
+    caches: HashMap<PathBuf, FileCache>,
+    text_buffers: HashMap<PathBuf, String>,
+}
+
 #[derive(Debug)]
 struct FileCache {
     file: ast::File,
@@ -100,10 +106,10 @@ struct FileCache {
     implementations: Implementations,
 }
 
-/// Stores information used by language server for every opened file
-struct Files {
-    caches: HashMap<PathBuf, FileCache>,
-    text_buffers: HashMap<PathBuf, String>,
+/// Stores information used by language server that is not file-specific
+struct GlobalCache {
+    definitions: Definitions,
+    types: Types,
 }
 
 // The language server currently stores some of the data grouped by the file to which the data belongs (Files struct).
@@ -126,12 +132,6 @@ struct Files {
 // 2. Need a way to safely remove stored Definitions that are no longer used by any of the References
 //
 // More information can be found here: https://github.com/hyperledger/solang/pull/1411
-
-struct GlobalCache {
-    definitions: Definitions,
-    types: Types,
-}
-
 pub struct SolangServer {
     client: Client,
     target: Target,
@@ -1290,8 +1290,8 @@ impl<'a> Builder<'a> {
         }
     }
 
-    // Traverses namespace to extract information used later by the language server
-    // This includes hover messages, locations where code objects are declared and used
+    /// Traverses namespace to extract information used later by the language server
+    /// This includes hover messages, locations where code objects are declared and used
     fn build(ns: &ast::Namespace) -> (Vec<FileCache>, Definitions, Types) {
         let mut builder = Builder {
             hovers: Vec::new(),
@@ -1913,6 +1913,7 @@ impl LanguageServer for SolangServer {
         Ok(location)
     }
 
+    /// Returns the type of the given code-object (variable, struct field etc).
     async fn goto_type_definition(
         &self,
         params: GotoTypeDefinitionParams,
@@ -1953,6 +1954,7 @@ impl LanguageServer for SolangServer {
         Ok(location)
     }
 
+    /// Returns a list of methods defined in the given contract.
     async fn goto_implementation(
         &self,
         params: GotoImplementationParams,
@@ -1998,6 +2000,7 @@ impl LanguageServer for SolangServer {
         Ok(impls)
     }
 
+    /// Returns a list of places where the given code-object (variable, struct field etc) is used.
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
         let def_params: GotoDefinitionParams = GotoDefinitionParams {
             text_document_position_params: params.text_document_position,
