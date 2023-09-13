@@ -222,7 +222,19 @@ pub(crate) fn function_dispatch(
     }
 
     match fallback {
-        Some((cfg_no, _)) => {
+        Some((cfg_no, fallback_cfg)) => {
+            let ASTFunction::SolidityFunction(ast_func_no) = fallback_cfg.function_no else {
+                unreachable!("fallback must be a Solidity function");
+            };
+
+            if ns.functions[ast_func_no]
+                .solana_accounts
+                .borrow()
+                .contains_key(BuiltinAccounts::DataAccount.as_str())
+            {
+                check_magic(ns.contracts[contract_no].selector(), &mut cfg, &mut vartab);
+            }
+
             cfg.add(
                 &mut vartab,
                 Instr::Call {
