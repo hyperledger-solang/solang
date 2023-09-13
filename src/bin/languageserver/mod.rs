@@ -103,13 +103,13 @@ struct FileCache {
     file: ast::File,
     hovers: Lapper<usize, String>,
     references: Lapper<usize, DefinitionIndex>,
-    implementations: Implementations,
 }
 
 /// Stores information used by language server that is not file-specific
 struct GlobalCache {
     definitions: Definitions,
     types: Types,
+    implementations: Implementations,
 }
 
 // The language server currently stores some of the data grouped by the file to which the data belongs (Files struct).
@@ -175,6 +175,7 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
         global_cache: Mutex::new(GlobalCache {
             definitions: HashMap::new(),
             types: HashMap::new(),
+            implementations: HashMap::new(),
         }),
     });
 
@@ -258,7 +259,7 @@ impl SolangServer {
 
             let res = self.client.publish_diagnostics(uri, diags, None);
 
-            let (caches, definitions, types) = Builder::build(&ns);
+            let (caches, definitions, types, implementations) = Builder::build(&ns);
 
             let mut files = self.files.lock().await;
             for (f, c) in ns.files.iter().zip(caches.into_iter()) {
@@ -270,6 +271,7 @@ impl SolangServer {
             let mut gc = self.global_cache.lock().await;
             gc.definitions.extend(definitions);
             gc.types.extend(types);
+            gc.implementations.extend(implementations);
 
             res.await;
         }
@@ -309,11 +311,13 @@ impl SolangServer {
 struct Builder<'a> {
     // `usize` is the file number the hover entry belongs to
     hovers: Vec<(usize, HoverEntry)>,
-    definitions: Definitions,
     // `usize` is the file number the reference belongs to
     references: Vec<(usize, ReferenceEntry)>,
-    implementations: Vec<Implementations>,
-    types: Vec<(DefinitionIndex, DefinitionIndex)>,
+
+    definitions: Definitions,
+    implementations: Implementations,
+    types: Types,
+
     ns: &'a ast::Namespace,
 }
 
@@ -378,7 +382,7 @@ impl<'a> Builder<'a> {
                     self.definitions
                         .insert(di.clone(), loc_to_range(&id.loc, file));
                     if let Some(dt) = get_type_definition(&param.ty) {
-                        self.types.push((di, dt.into()));
+                        self.types.insert(di, dt.into());
                     }
                 }
 
@@ -468,7 +472,7 @@ impl<'a> Builder<'a> {
                                 self.definitions
                                     .insert(di.clone(), loc_to_range(&id.loc, file));
                                 if let Some(dt) = get_type_definition(&param.ty) {
-                                    self.types.push((di, dt.into()));
+                                    self.types.insert(di, dt.into());
                                 }
                             }
                         }
@@ -1242,7 +1246,7 @@ impl<'a> Builder<'a> {
         self.definitions
             .insert(di.clone(), loc_to_range(&variable.loc, file));
         if let Some(dt) = get_type_definition(&variable.ty) {
-            self.types.push((di, dt.into()));
+            self.types.insert(di, dt.into());
         }
     }
 
@@ -1286,19 +1290,21 @@ impl<'a> Builder<'a> {
         self.definitions
             .insert(di.clone(), loc_to_range(&field.loc, file));
         if let Some(dt) = get_type_definition(&field.ty) {
-            self.types.push((di, dt.into()));
+            self.types.insert(di, dt.into());
         }
     }
 
     /// Traverses namespace to extract information used later by the language server
     /// This includes hover messages, locations where code objects are declared and used
-    fn build(ns: &ast::Namespace) -> (Vec<FileCache>, Definitions, Types) {
+    fn build(ns: &ast::Namespace) -> (Vec<FileCache>, Definitions, Types, Implementations) {
         let mut builder = Builder {
             hovers: Vec::new(),
-            definitions: HashMap::new(),
             references: Vec::new(),
-            implementations: vec![HashMap::new(); ns.files.len()],
-            types: Vec::new(),
+
+            definitions: HashMap::new(),
+            implementations: HashMap::new(),
+            types: HashMap::new(),
+
             ns,
         };
 
@@ -1327,7 +1333,7 @@ impl<'a> Builder<'a> {
                     .insert(di.clone(), loc_to_range(loc, file));
 
                 let dt = DefinitionType::Enum(ei);
-                builder.types.push((di, dt.into()));
+                builder.types.insert(di, dt.into());
             }
 
             let file_no = enum_decl.loc.file_no();
@@ -1423,7 +1429,7 @@ impl<'a> Builder<'a> {
                             .definitions
                             .insert(di.clone(), loc_to_range(&id.loc, file));
                         if let Some(dt) = get_type_definition(&param.ty) {
-                            builder.types.push((di, dt.into()));
+                            builder.types.insert(di, dt.into());
                         }
                     }
                 }
@@ -1463,7 +1469,7 @@ impl<'a> Builder<'a> {
                             .definitions
                             .insert(di.clone(), loc_to_range(&id.loc, file));
                         if let Some(dt) = get_type_definition(&ret.ty) {
-                            builder.types.push((di, dt.into()));
+                            builder.types.insert(di, dt.into());
                         }
                     }
                 }
@@ -1561,7 +1567,7 @@ impl<'a> Builder<'a> {
                     def_type: DefinitionType::Function(*f),
                 })
                 .collect();
-            builder.implementations[file_no].insert(cdi, impls);
+            builder.implementations.insert(cdi, impls);
         }
 
         for (ei, event) in builder.ns.events.iter().enumerate() {
@@ -1599,15 +1605,23 @@ impl<'a> Builder<'a> {
             }
         }
 
-        let mut defs_to_files: HashMap<DefinitionType, PathBuf> = HashMap::new();
-        for key in builder.definitions.keys() {
-            defs_to_files.insert(key.def_type.clone(), key.def_path.clone());
+        let defs_to_files = builder
+            .definitions
+            .keys()
+            .map(|key| (key.def_type.clone(), key.def_path.clone()))
+            .collect::<HashMap<DefinitionType, PathBuf>>();
+
+        let defs_to_file_nos = ns
+            .files
+            .iter()
+            .enumerate()
+            .map(|(i, f)| (f.path.clone(), i))
+            .collect::<HashMap<PathBuf, usize>>();
+
+        for val in builder.types.values_mut() {
+            val.def_path = defs_to_files[&val.def_type].clone();
         }
 
-        let mut defs_to_file_nos = HashMap::new();
-        for (i, f) in ns.files.iter().enumerate() {
-            defs_to_file_nos.insert(f.path.clone(), i);
-        }
         for (di, range) in &builder.definitions {
             let file_no = defs_to_file_nos[&di.def_path];
             let file = &ns.files[file_no];
@@ -1648,17 +1662,15 @@ impl<'a> Builder<'a> {
                         })
                         .collect(),
                 ),
-                implementations: builder.implementations[i].clone(),
             })
             .collect();
 
-        let mut types = HashMap::new();
-        for (key, mut val) in builder.types {
-            val.def_path = defs_to_files[&val.def_type].clone();
-            types.insert(key, val);
-        }
-
-        (caches, builder.definitions, types)
+        (
+            caches,
+            builder.definitions,
+            builder.types,
+            builder.implementations,
+        )
     }
 
     /// Render the type with struct/enum fields expanded
@@ -1962,23 +1974,20 @@ impl LanguageServer for SolangServer {
         let Some(reference) = self.get_reference_from_params(params).await? else {
             return Ok(None);
         };
-        let caches = &self.files.lock().await.caches;
+
         let gc = self.global_cache.lock().await;
+
         let impls = match &reference.def_type {
             DefinitionType::Variable(_)
             | DefinitionType::NonLocalVariable(_, _)
             | DefinitionType::Field(_, _) => gc.types.get(&reference).and_then(|ty| {
-                if let DefinitionType::Contract(_) = &ty.def_type {
-                    caches
-                        .get(&ty.def_path)
-                        .and_then(|cache| cache.implementations.get(ty))
+                if matches!(ty.def_type, DefinitionType::Contract(_)) {
+                    gc.implementations.get(ty)
                 } else {
                     None
                 }
             }),
-            DefinitionType::Contract(_) => caches
-                .get(&reference.def_path)
-                .and_then(|cache| cache.implementations.get(&reference)),
+            DefinitionType::Contract(_) => gc.implementations.get(&reference),
             _ => None,
         };
 
@@ -2030,18 +2039,19 @@ impl LanguageServer for SolangServer {
         if !params.context.include_declaration {
             let definitions = &self.global_cache.lock().await.definitions;
             let uri = Url::from_file_path(&reference.def_path).unwrap();
-            let def = if let Some(range) = definitions.get(&reference) {
-                Location { uri, range: *range }
-            } else {
-                Location {
-                    uri: Url::from_file_path("").unwrap(),
-                    range: Default::default(),
-                }
-            };
-            locations.retain(|loc| loc != &def);
+            if let Some(range) = definitions.get(&reference) {
+                let def = Location { uri, range: *range };
+                locations.retain(|loc| loc != &def);
+            }
         }
 
-        Ok(Some(locations))
+        let locations = if locations.is_empty() {
+            None
+        } else {
+            Some(locations)
+        };
+
+        Ok(locations)
     }
 }
 
