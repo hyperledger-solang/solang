@@ -1256,10 +1256,10 @@ fn try_catch_different_errors() {
             B b = new B();
             try b.b(div) returns (uint) {
                 return 3;
-            } catch Error(string) {
+            } catch Error(string reason) {
                 assert(reason == "foo");
                 return 1;
-            } catch Panic(uint) {
+            } catch Panic(uint reason) {
                 assert(reason == 0x12);
                 return 0;
             } catch (bytes raw) {
