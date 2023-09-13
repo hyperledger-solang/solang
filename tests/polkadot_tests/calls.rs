@@ -1257,8 +1257,10 @@ fn try_catch_different_errors() {
             try b.b(div) returns (uint) {
                 return 3;
             } catch Error(string) {
+                assert(reason == "foo");
                 return 1;
             } catch Panic(uint) {
+                assert(reason == 0x12);
                 return 0;
             } catch (bytes raw) {
                 assert(raw == hex"bfb4ebcf"); // Error selector of 'Foo()'

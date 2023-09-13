@@ -50,17 +50,10 @@ pub enum SolidityError {
 impl SolidityError {
     /// Return the selector expression of the error.
     pub fn selector_expression(&self, ns: &Namespace) -> Expression {
-        let selector = match self {
-            Self::Empty => unreachable!("empty return data has no selector"),
-            Self::String(_) => self.selector(ns),
-            Self::Panic(_) => self.selector(ns),
-            Self::Custom { .. } => self.selector(ns),
-        };
-
         Expression::NumberLiteral {
             loc: Codegen,
             ty: Type::Bytes(4),
-            value: BigInt::from_bytes_be(Sign::Plus, &selector),
+            value: BigInt::from_bytes_be(Sign::Plus, &self.selector(ns)),
         }
     }
 
@@ -479,18 +472,9 @@ mod tests {
             ErrorDecl {
                 name: "ERC20InsufficientBalance".to_string(),
                 fields: vec![
-                    Parameter {
-                        ty: Type::Address(false),
-                        ..Default::default()
-                    },
-                    Parameter {
-                        ty: Type::Uint(256),
-                        ..Default::default()
-                    },
-                    Parameter {
-                        ty: Type::Uint(256),
-                        ..Default::default()
-                    },
+                    Parameter::new_default(Type::Address(false)),
+                    Parameter::new_default(Type::Uint(256)),
+                    Parameter::new_default(Type::Uint(256)),
                 ],
                 ..Default::default()
             },

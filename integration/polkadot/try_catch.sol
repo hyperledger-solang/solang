@@ -6,9 +6,11 @@ contract TryCatchCaller {
 
         try instance.test(div) returns (uint128) {
             return 4;
-        } catch Error(string) {
+        } catch Error(string reason) {
+            assert(reason == "foo");
             return 1;
-        } catch Panic(uint) {
+        } catch Panic(uint reason) {
+            assert(reason == 0x12);
             return 0;
         } catch (bytes raw) {
             if (raw.length == 0) {

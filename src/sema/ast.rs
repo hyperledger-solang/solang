@@ -24,7 +24,6 @@ use std::{
 };
 use tiny_keccak::{Hasher, Keccak};
 
-#[cfg_attr(test, derive(Default))]
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub enum Type {
     Address(bool),
@@ -62,7 +61,6 @@ pub enum Type {
     /// There is no way to declare value in Solidity (should there be?)
     Value,
     Void,
-    #[cfg_attr(test, default)]
     Unreachable,
     /// DynamicBytes and String are lowered to a vector.
     Slice(Box<Type>),
@@ -239,7 +237,6 @@ impl fmt::Display for EnumDecl {
     }
 }
 
-#[cfg_attr(test, derive(Default))]
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Parameter {
     pub loc: pt::Loc,
@@ -268,6 +265,21 @@ pub struct ParameterAnnotation {
 }
 
 impl Parameter {
+    /// Create a new instance of the given `Type`, with all other values set to their default.
+    pub fn new_default(ty: Type) -> Self {
+        Self {
+            ty,
+            loc: Default::default(),
+            id: Default::default(),
+            ty_loc: Default::default(),
+            indexed: Default::default(),
+            readonly: Default::default(),
+            infinite_size: Default::default(),
+            recursive: Default::default(),
+            annotation: Default::default(),
+        }
+    }
+
     pub fn name_as_str(&self) -> &str {
         if let Some(name) = &self.id {
             name.name.as_str()
