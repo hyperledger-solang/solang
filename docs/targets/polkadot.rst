@@ -77,7 +77,7 @@ up back to the caller.
 
 .. note::
 
-    Solidity knows about ``Error``, ``Panic`` and custom errors. Please also refer to the
+    Solidity knows about ``Error``, ``Panic`` and custom errors. Please, also refer to the
     `Ethereum Solidity documentation <https://docs.soliditylang.org/en/latest/abi-spec.html#errors>`_,
     for more information.
 
