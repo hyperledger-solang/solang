@@ -94,8 +94,9 @@ pub(crate) fn using_decl(
 
             for using_function in functions {
                 let function_name = &using_function.path;
-                if let Ok(list) = ns.resolve_free_function_with_namespace(
+                if let Ok(list) = ns.resolve_function_with_namespace(
                     file_no,
+                    contract_no,
                     &using_function.path,
                     &mut diagnostics,
                 ) {
@@ -119,6 +120,18 @@ pub(crate) fn using_decl(
                     let (loc, func_no) = list[0];
 
                     let func = &ns.functions[func_no];
+
+                    if let Some(contract_no) = func.contract_no {
+                        if !ns.contracts[contract_no].is_library() {
+                            diagnostics.push(Diagnostic::error_with_note(
+                                function_name.loc,
+                                format!("'{function_name}' is not a library function"),
+                                func.loc,
+                                format!("definition of {}", using_function.path),
+                            ));
+                            continue;
+                        }
+                    }
 
                     if func.params.is_empty() {
                         diagnostics.push(Diagnostic::error_with_note(

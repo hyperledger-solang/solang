@@ -63,8 +63,6 @@ impl ast::Contract {
 
 /// Resolve the following contract
 pub fn resolve(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::Namespace) {
-    resolve_using(contracts, file_no, ns);
-
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
     let mut delayed: ResolveLater = Default::default();
@@ -72,6 +70,9 @@ pub fn resolve(contracts: &[ContractDefinition], file_no: usize, ns: &mut ast::N
     for def in contracts {
         resolve_declarations(def, file_no, ns, &mut delayed);
     }
+
+    // using may use functions declared in contracts
+    resolve_using(contracts, file_no, ns);
 
     // Resolve base contract constructor arguments on contract definition (not constructor definitions)
     resolve_base_args(contracts, file_no, ns);

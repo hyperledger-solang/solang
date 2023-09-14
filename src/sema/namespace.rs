@@ -364,9 +364,10 @@ impl Namespace {
     }
 
     /// Resolve a free function name with namespace
-    pub(super) fn resolve_free_function_with_namespace(
+    pub(super) fn resolve_function_with_namespace(
         &mut self,
         file_no: usize,
+        contract_no: Option<usize>,
         name: &pt::IdentifierPath,
         diagnostics: &mut Diagnostics,
     ) -> Result<Vec<(pt::Loc, usize)>, ()> {
@@ -376,7 +377,7 @@ impl Namespace {
             .map(|(id, namespace)| (id, namespace.iter().collect()))
             .unwrap();
 
-        let s = self.resolve_namespace(namespace, file_no, None, id, diagnostics)?;
+        let s = self.resolve_namespace(namespace, file_no, contract_no, id, diagnostics)?;
 
         if let Some(Symbol::Function(list)) = s {
             Ok(list.clone())
@@ -1335,6 +1336,7 @@ impl Namespace {
                         ));
                         return Err(());
                     };
+                    namespace.clear();
                     Some(*n)
                 }
                 Some(Symbol::Function(_)) => {
@@ -1388,6 +1390,10 @@ impl Namespace {
                 }
                 Some(Symbol::Import(..)) => unreachable!(),
             };
+        }
+
+        if !namespace.is_empty() {
+            return Ok(None);
         }
 
         let mut s = self
