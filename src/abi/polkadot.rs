@@ -21,7 +21,7 @@ use semver::Version;
 use solang_parser::pt;
 
 use crate::{
-    codegen::revert::{ERROR_SELECTOR, PANIC_SELECTOR},
+    codegen::revert::{SolidityError, ERROR_SELECTOR, PANIC_SELECTOR},
     sema::{
         ast::{self, ArrayLength, EventDecl, Function},
         tags::render,
@@ -91,7 +91,7 @@ fn int_to_ty(ty: &ast::Type, registry: &mut PortableRegistryBuilder) -> u32 {
 fn lang_error(
     ns: &ast::Namespace,
     reg: &mut PortableRegistryBuilder,
-    errors: &[(&str, u32, Vec<ast::Type>)],
+    errors: Vec<(String, [u8; 4], Vec<ast::Type>)>,
 ) -> TypeSpec<PortableForm> {
     let variants = errors.iter().enumerate().map(|(n, (name, selector, ty))| {
         let struct_fields = ty
@@ -99,12 +99,9 @@ fn lang_error(
             .map(|ty| resolve_ast(ty, ns, reg).into())
             .map(|field| Field::new(None, field, None, Default::default()))
             .collect::<Vec<_>>();
-        let ty = Type::new(
-            path!(format!("0x{}", hex::encode(selector.to_be_bytes()))),
-            vec![],
-            TypeDef::Composite(TypeDefComposite::new(struct_fields)),
-            Default::default(),
-        );
+        let path = path!(format!("0x{}", hex::encode(selector)));
+        let type_def = TypeDef::Composite(TypeDefComposite::new(struct_fields));
+        let ty = Type::new(path, vec![], type_def, Default::default());
         Variant {
             name: name.to_string(),
             fields: vec![Field::new(None, reg.register_type(ty).into(), None, vec![])],
@@ -112,8 +109,8 @@ fn lang_error(
             docs: Default::default(),
         }
     });
-    let type_def = TypeDefVariant::new(variants);
     let path = path!("SolidityError");
+    let type_def = TypeDefVariant::new(variants);
     let id = reg.register_type(Type::new(path.clone(), vec![], type_def, vec![]));
     TypeSpec::new(id.into(), path)
 }
@@ -504,10 +501,17 @@ pub fn gen_project(contract_no: usize, ns: &ast::Namespace) -> InkProject {
         ))
         .done();
 
-    let error_definitions = &[
-        ("Error", ERROR_SELECTOR, vec![ast::Type::String]),
-        ("Panic", PANIC_SELECTOR, vec![ast::Type::Uint(256)]),
+    let mut error_definitions = vec![
+        ("Error".into(), ERROR_SELECTOR, vec![ast::Type::String]),
+        ("Panic".into(), PANIC_SELECTOR, vec![ast::Type::Uint(256)]),
     ];
+    for (error_no, err) in ns.errors.iter().enumerate() {
+        let name = err.name.clone();
+        let exprs = Vec::new();
+        let selector = SolidityError::Custom { error_no, exprs }.selector(ns);
+        let types = err.fields.iter().map(|f| f.ty.clone()).collect();
+        error_definitions.push((name, selector, types));
+    }
 
     let spec = ContractSpec::new()
         .constructors(constructors)

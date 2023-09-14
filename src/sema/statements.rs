@@ -991,7 +991,7 @@ fn revert_pos_arg(
             ));
         }
 
-        if ns.target != Target::EVM {
+        if ns.target == Target::Solana {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("revert with custom errors not supported on {}", ns.target),
@@ -1164,7 +1164,7 @@ fn revert_named_arg(
             }
         }
 
-        if ns.target != Target::EVM {
+        if ns.target == Target::Solana {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("revert with custom errors not supported on {}", ns.target),
@@ -2520,30 +2520,17 @@ fn try_catch(
                 Ok(())
             }
             CatchClause::Named(_, id, param, stmt) => {
-                match ns.target {
-                    Target::Polkadot { .. } if id.name != "Error" => {
-                        ns.diagnostics.push(Diagnostic::error(
-                            id.loc,
-                            format!("only catch 'Error' is supported, not '{}'", id.name),
-                        ));
-                        return Err(());
-                    }
-                    Target::EVM if id.name != "Error" && id.name != "Panic" => {
-                        ns.diagnostics.push(Diagnostic::error(
-                            id.loc,
-                            format!(
-                                "only catch 'Error' or 'Panic' is supported, not '{}'",
-                                id.name
-                            ),
-                        ));
-                        return Err(());
-                    }
-                    _ => {
-                        if let Some(annotation) = &param.annotation {
-                            ns.diagnostics
-                                .push(unexpected_parameter_annotation(annotation.loc))
-                        }
-                    }
+                if id.name != "Error" && id.name != "Panic" {
+                    let message = format!(
+                        "only catch 'Error' and 'Panic' are supported, not '{}'",
+                        id.name
+                    );
+                    ns.diagnostics.push(Diagnostic::error(id.loc, message));
+                    return Err(());
+                }
+                if let Some(annotation) = &param.annotation {
+                    ns.diagnostics
+                        .push(unexpected_parameter_annotation(annotation.loc))
                 }
 
                 let (error_ty, ty_loc) =
@@ -2574,7 +2561,7 @@ fn try_catch(
                 let mut error_stmt_resolved = Vec::new();
                 let mut error_param = Parameter {
                     loc: id.loc,
-                    ty: Type::String,
+                    ty: error_ty.clone(),
                     ty_loc: Some(ty_loc),
                     id: None,
                     indexed: false,
@@ -2587,7 +2574,7 @@ fn try_catch(
                 if let Some(name) = &param.name {
                     if let Some(pos) = symtable.add(
                         name,
-                        Type::String,
+                        error_ty,
                         ns,
                         VariableInitializer::Solidity(None),
                         VariableUsage::TryCatchErrorString,
