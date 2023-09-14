@@ -2917,6 +2917,7 @@ fn preprocess_contract_call<T>(
         let constructor_nos = ns.contracts[external_contract_no].constructors(ns);
         if !constructor_nos.is_empty() {
             // Solana contracts shall have only a single constructor
+            assert_eq!(constructor_nos.len(), 1);
             name_matches.push(constructor_nos[0]);
         } else if !args.is_empty() {
             // Default constructor must not receive arguments

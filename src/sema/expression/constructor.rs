@@ -643,7 +643,7 @@ pub(super) fn solana_constructor_check(
     } else {
         diagnostics.push(Diagnostic::error(
             *loc,
-            "constructors not allowed in standalone functions".to_string(),
+            "constructors not allowed in free standing functions".to_string(),
         ));
     }
 

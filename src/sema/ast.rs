@@ -808,7 +808,7 @@ impl Contract {
     }
 
     /// Does the contract have a constructor defined?
-    /// Returns the constructor function number if it exists
+    /// Returns all the constructor function numbers if any
     pub fn constructors(&self, ns: &Namespace) -> Vec<usize> {
         self.functions
             .iter()

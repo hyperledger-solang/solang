@@ -31,9 +31,11 @@ Instantiation using new
 _______________________
 
 Contracts can be created using the ``new`` keyword. The contract that is being created might have
-constructor arguments, which need to be provided. On Solana, the syntax ``new Contract()`` is not idiomatic because
-a constructor does not return anything. Its purpose is only to initialize the contract's data account. Instead, a
-function ``new`` is made available to call its constructor.
+constructor arguments, which need to be provided. While on Polkadot and Ethereum constructors return the address
+of the instantiated contract, on Solana, the address is either passed to the call using the ``{program_id: ...}`` call
+argument or is declared above a contract with the ``@program_id`` annotation. As the constructor does not return
+anything and its purpose is only to initialize the data account, the syntax ``new Contract()``is not idiomatic on Solana.
+Instead, a function ``new`` is made available to call the constructor.
 
 .. tabs::
 

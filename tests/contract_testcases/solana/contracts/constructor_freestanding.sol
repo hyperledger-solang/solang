@@ -26,4 +26,4 @@ contract hatchling {
 }
 
 // ---- Expect: diagnostics ----
-// error: 8:5-56: constructors not allowed in standalone functions
+// error: 8:5-56: constructors not allowed in free standing functions

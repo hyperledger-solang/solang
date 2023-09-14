@@ -315,7 +315,7 @@ contract calle_contract {
 
     assert_eq!(
         vm.logs,
-        "runtime_error: unspecified revert encountered in test.sol:58:9-17,\n"
+        "runtime_error: unspecified revert encountered in test.sol:55:9-17,\n"
     );
 
     vm.logs.clear();
