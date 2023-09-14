@@ -26,7 +26,7 @@ pub fn resolve_tags(
 
         match c.tag.as_str() {
             "notice" | "author" | "title" | "dev" => {
-                fold_tag(loc, &mut res, c);
+                add_tag(loc, &mut res, c);
             }
             "param" if params.is_some() => {
                 let v: Vec<&str> = c.value.splitn(2, char::is_whitespace).collect();
@@ -166,7 +166,7 @@ pub fn resolve_tags(
                             format!("custom tag '@{}' is missing a name", c.tag),
                         ));
                     } else {
-                        fold_tag(loc, &mut res, c);
+                        add_tag(loc, &mut res, c);
                     }
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
@@ -181,8 +181,8 @@ pub fn resolve_tags(
     res
 }
 
-fn fold_tag(loc: pt::Loc, res: &mut Vec<Tag>, doc_comment: &DocCommentTag) {
-    // fold fields with the same name
+/// Add a new doc comment as a tag, or append to existing one
+fn add_tag(loc: pt::Loc, res: &mut Vec<Tag>, doc_comment: &DocCommentTag) {
     if let Some(prev) = res.iter_mut().find(|e| e.tag == doc_comment.tag) {
         prev.value.push(' ');
         prev.value.push_str(&doc_comment.value);
