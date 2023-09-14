@@ -19,25 +19,30 @@ use tokio::sync::Mutex;
 use tower_lsp::{
     jsonrpc::{Error, ErrorCode, Result},
     lsp_types::{
+        request::{
+            GotoImplementationParams, GotoImplementationResponse, GotoTypeDefinitionParams,
+            GotoTypeDefinitionResponse,
+        },
         CompletionOptions, CompletionParams, CompletionResponse, Diagnostic,
         DiagnosticRelatedInformation, DiagnosticSeverity, DidChangeConfigurationParams,
         DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidChangeWorkspaceFoldersParams,
         DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
         ExecuteCommandOptions, ExecuteCommandParams, GotoDefinitionParams, GotoDefinitionResponse,
-        Hover, HoverContents, HoverParams, HoverProviderCapability, InitializeParams,
-        InitializeResult, InitializedParams, Location, MarkedString, MessageType, OneOf, Position,
-        Range, ServerCapabilities, SignatureHelpOptions, TextDocumentContentChangeEvent,
-        TextDocumentSyncCapability, TextDocumentSyncKind, Url, WorkspaceFoldersServerCapabilities,
-        WorkspaceServerCapabilities,
+        Hover, HoverContents, HoverParams, HoverProviderCapability,
+        ImplementationProviderCapability, InitializeParams, InitializeResult, InitializedParams,
+        Location, MarkedString, MessageType, OneOf, Position, Range, ReferenceParams,
+        ServerCapabilities, SignatureHelpOptions, TextDocumentContentChangeEvent,
+        TextDocumentSyncCapability, TextDocumentSyncKind, TypeDefinitionProviderCapability, Url,
+        WorkspaceFoldersServerCapabilities, WorkspaceServerCapabilities,
     },
     Client, LanguageServer, LspService, Server,
 };
 
 use crate::cli::{target_arg, LanguageServerCommand};
 
-// Represents the type of the object that a reference points to
-// Here "object" refers to contracts, functions, structs, enums etc., that are defined and used within a namespace.
-// It is used along with the path of the file where the object is defined to uniquely identify an object
+/// Represents the type of the code object that a reference points to
+/// Here "code object" refers to contracts, functions, structs, enums etc., that are defined and used within a namespace.
+/// It is used along with the path of the file where the code object is defined to uniquely identify an code object.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum DefinitionType {
     // function index in Namespace::functions
@@ -61,10 +66,30 @@ enum DefinitionType {
     UserType(usize),
 }
 
+/// Uniquely identifies a code object.
+///
+/// `def_type` alone does not guarantee uniqueness, i.e, there can be two or more code objects with identical `def_type`.
+/// This is possible as two files can be compiled as part of different `Namespace`s and the code objects can end up having identical `def_type`.
+/// For example, two structs defined in the two files can be assigned the same `def_type` - `Struct(0)` as they are both `structs` and numbers are reused across `Namespace` boundaries.
+/// As it is currently possible for code objects created as part of two different `Namespace`s to be stored simultaneously in the same `SolangServer` instance,
+/// in the scenario described above, code objects cannot be uniquely identified solely through `def_type`.
+///
+/// But `def_path` paired with `def_type` sufficiently proves uniqueness as no two code objects defined in the same file can have identical `def_type`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct DefinitionIndex {
+    /// stores the path of the file where the code object is mentioned in source code
     def_path: PathBuf,
+    /// provides information about the type of the code object in question
     def_type: DefinitionType,
+}
+
+impl From<DefinitionType> for DefinitionIndex {
+    fn from(value: DefinitionType) -> Self {
+        Self {
+            def_path: Default::default(),
+            def_type: value,
+        }
+    }
 }
 
 /// Stores locations of definitions of functions, contracts, structs etc.
@@ -73,17 +98,39 @@ type Definitions = HashMap<DefinitionIndex, Range>;
 type HoverEntry = Interval<usize, String>;
 /// Stores locations of function calls, uses of structs, contracts etc.
 type ReferenceEntry = Interval<usize, DefinitionIndex>;
+/// Stores the list of methods implemented by a contract
+type Implementations = HashMap<DefinitionIndex, Vec<DefinitionIndex>>;
+/// Stores types of code objects
+type Types = HashMap<DefinitionIndex, DefinitionIndex>;
 
+/// Stores information used by language server for every opened file
+struct Files {
+    caches: HashMap<PathBuf, FileCache>,
+    text_buffers: HashMap<PathBuf, String>,
+}
+
+#[derive(Debug)]
 struct FileCache {
     file: ast::File,
     hovers: Lapper<usize, String>,
     references: Lapper<usize, DefinitionIndex>,
 }
 
-/// Stores information used by language server for every opened file
-struct Files {
-    caches: HashMap<PathBuf, FileCache>,
-    text_buffers: HashMap<PathBuf, String>,
+/// Stores information used by the language server to service requests (eg: `Go to Definitions`) received from the client.
+///
+/// Information stored in `GlobalCache` is extracted from the `Namespace` when the `SolangServer::build` function is run.
+///
+/// `GlobalCache` is global in the sense that, unlike `FileCache`, we don't have a separate instance for every file processed.
+/// We have just one `GlobalCache` instance per `SolangServer` instance.
+///
+/// Each field stores *some information* about a code object. The code object is uniquely identified by its `DefinitionIndex`.
+/// * `definitions` maps `DefinitionIndex` of a code object to its source code location where it is defined.
+/// * `types` maps the `DefinitionIndex` of a code object to that of its type.
+/// * `implementations` maps the `DefinitionIndex` of a `Contract` to the `DefinitionIndex`s of methods defined as part of the `Contract`.
+struct GlobalCache {
+    definitions: Definitions,
+    types: Types,
+    implementations: Implementations,
 }
 
 // The language server currently stores some of the data grouped by the file to which the data belongs (Files struct).
@@ -106,14 +153,13 @@ struct Files {
 // 2. Need a way to safely remove stored Definitions that are no longer used by any of the References
 //
 // More information can be found here: https://github.com/hyperledger/solang/pull/1411
-
 pub struct SolangServer {
     client: Client,
     target: Target,
     importpaths: Vec<PathBuf>,
     importmaps: Vec<(String, PathBuf)>,
     files: Mutex<Files>,
-    definitions: Mutex<Definitions>,
+    global_cache: Mutex<GlobalCache>,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -147,7 +193,11 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
             caches: HashMap::new(),
             text_buffers: HashMap::new(),
         }),
-        definitions: Mutex::new(HashMap::new()),
+        global_cache: Mutex::new(GlobalCache {
+            definitions: HashMap::new(),
+            types: HashMap::new(),
+            implementations: HashMap::new(),
+        }),
     });
 
     Server::new(stdin, stdout, socket).serve(service).await;
@@ -230,7 +280,7 @@ impl SolangServer {
 
             let res = self.client.publish_diagnostics(uri, diags, None);
 
-            let (caches, definitions) = Builder::build(&ns);
+            let (caches, definitions, types, implementations) = Builder::build(&ns);
 
             let mut files = self.files.lock().await;
             for (f, c) in ns.files.iter().zip(caches.into_iter()) {
@@ -239,19 +289,56 @@ impl SolangServer {
                 }
             }
 
-            self.definitions.lock().await.extend(definitions);
+            let mut gc = self.global_cache.lock().await;
+            gc.definitions.extend(definitions);
+            gc.types.extend(types);
+            gc.implementations.extend(implementations);
 
             res.await;
         }
+    }
+
+    /// Common code for goto_{definitions, implementations, declarations, type_definitions}
+    async fn get_reference_from_params(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<DefinitionIndex>> {
+        let uri = params.text_document_position_params.text_document.uri;
+        let path = uri.to_file_path().map_err(|_| Error {
+            code: ErrorCode::InvalidRequest,
+            message: format!("Received invalid URI: {uri}").into(),
+            data: None,
+        })?;
+
+        let files = self.files.lock().await;
+        if let Some(cache) = files.caches.get(&path) {
+            let f = &cache.file;
+            let offset = f.get_offset(
+                params.text_document_position_params.position.line as _,
+                params.text_document_position_params.position.character as _,
+            );
+            if let Some(reference) = cache
+                .references
+                .find(offset, offset + 1)
+                .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
+            {
+                return Ok(Some(reference.val.clone()));
+            }
+        }
+        Ok(None)
     }
 }
 
 struct Builder<'a> {
     // `usize` is the file number the hover entry belongs to
     hovers: Vec<(usize, HoverEntry)>,
-    definitions: Definitions,
     // `usize` is the file number the reference belongs to
     references: Vec<(usize, ReferenceEntry)>,
+
+    definitions: Definitions,
+    implementations: Implementations,
+    types: Types,
+
     ns: &'a ast::Namespace,
 }
 
@@ -309,13 +396,15 @@ impl<'a> Builder<'a> {
                 if let Some(id) = &param.id {
                     let file_no = id.loc.file_no();
                     let file = &self.ns.files[file_no];
-                    self.definitions.insert(
-                        DefinitionIndex {
-                            def_path: file.path.clone(),
-                            def_type: DefinitionType::Variable(*var_no),
-                        },
-                        loc_to_range(&id.loc, file),
-                    );
+                    let di = DefinitionIndex {
+                        def_path: file.path.clone(),
+                        def_type: DefinitionType::Variable(*var_no),
+                    };
+                    self.definitions
+                        .insert(di.clone(), loc_to_range(&id.loc, file));
+                    if let Some(dt) = get_type_definition(&param.ty) {
+                        self.types.insert(di, dt.into());
+                    }
                 }
 
                 if let Some(loc) = param.ty_loc {
@@ -325,10 +414,7 @@ impl<'a> Builder<'a> {
                             ReferenceEntry {
                                 start: loc.start(),
                                 stop: loc.exclusive_end(),
-                                val: DefinitionIndex {
-                                    def_path: Default::default(),
-                                    def_type: dt,
-                                },
+                                val: dt.into(),
                             },
                         ));
                     }
@@ -400,13 +486,15 @@ impl<'a> Builder<'a> {
                             if let Some(id) = &param.id {
                                 let file_no = id.loc.file_no();
                                 let file = &self.ns.files[file_no];
-                                self.definitions.insert(
-                                    DefinitionIndex {
-                                        def_path: file.path.clone(),
-                                        def_type: DefinitionType::Variable(*var_no),
-                                    },
-                                    loc_to_range(&id.loc, file),
-                                );
+                                let di = DefinitionIndex {
+                                    def_path: file.path.clone(),
+                                    def_type: DefinitionType::Variable(*var_no),
+                                };
+                                self.definitions
+                                    .insert(di.clone(), loc_to_range(&id.loc, file));
+                                if let Some(dt) = get_type_definition(&param.ty) {
+                                    self.types.insert(di, dt.into());
+                                }
                             }
                         }
                         ast::DestructureField::None => (),
@@ -913,10 +1001,7 @@ impl<'a> Builder<'a> {
                         ReferenceEntry {
                             start: loc.start(),
                             stop: loc.exclusive_end(),
-                            val: DefinitionIndex {
-                                def_path: Default::default(),
-                                def_type: dt,
-                            },
+                            val: dt.into(),
                         },
                     ));
                 }
@@ -1175,13 +1260,15 @@ impl<'a> Builder<'a> {
             },
         ));
 
-        self.definitions.insert(
-            DefinitionIndex {
-                def_path: file.path.clone(),
-                def_type: DefinitionType::NonLocalVariable(contract_no, var_no),
-            },
-            loc_to_range(&variable.loc, file),
-        );
+        let di = DefinitionIndex {
+            def_path: file.path.clone(),
+            def_type: DefinitionType::NonLocalVariable(contract_no, var_no),
+        };
+        self.definitions
+            .insert(di.clone(), loc_to_range(&variable.loc, file));
+        if let Some(dt) = get_type_definition(&variable.ty) {
+            self.types.insert(di, dt.into());
+        }
     }
 
     // Constructs struct fields and stores it in the lookup table.
@@ -1193,10 +1280,7 @@ impl<'a> Builder<'a> {
                     ReferenceEntry {
                         start: loc.start(),
                         stop: loc.exclusive_end(),
-                        val: DefinitionIndex {
-                            def_path: Default::default(),
-                            def_type: dt,
-                        },
+                        val: dt.into(),
                     },
                 ));
             }
@@ -1217,25 +1301,31 @@ impl<'a> Builder<'a> {
             },
         ));
 
-        self.definitions.insert(
-            DefinitionIndex {
-                def_path: file.path.clone(),
-                def_type: DefinitionType::Field(
-                    Type::Struct(ast::StructType::UserDefined(id)),
-                    field_id,
-                ),
-            },
-            loc_to_range(&field.loc, file),
-        );
+        let di = DefinitionIndex {
+            def_path: file.path.clone(),
+            def_type: DefinitionType::Field(
+                Type::Struct(ast::StructType::UserDefined(id)),
+                field_id,
+            ),
+        };
+        self.definitions
+            .insert(di.clone(), loc_to_range(&field.loc, file));
+        if let Some(dt) = get_type_definition(&field.ty) {
+            self.types.insert(di, dt.into());
+        }
     }
 
-    // Traverses namespace to extract information used later by the language server
-    // This includes hover messages, locations where code objects are declared and used
-    fn build(ns: &ast::Namespace) -> (Vec<FileCache>, Definitions) {
+    /// Traverses namespace to extract information used later by the language server
+    /// This includes hover messages, locations where code objects are declared and used
+    fn build(ns: &ast::Namespace) -> (Vec<FileCache>, Definitions, Types, Implementations) {
         let mut builder = Builder {
             hovers: Vec::new(),
-            definitions: HashMap::new(),
             references: Vec::new(),
+
+            definitions: HashMap::new(),
+            implementations: HashMap::new(),
+            types: HashMap::new(),
+
             ns,
         };
 
@@ -1254,13 +1344,17 @@ impl<'a> Builder<'a> {
                         )),
                     },
                 ));
-                builder.definitions.insert(
-                    DefinitionIndex {
-                        def_path: file.path.clone(),
-                        def_type: DefinitionType::Variant(ei, discriminant),
-                    },
-                    loc_to_range(loc, file),
-                );
+
+                let di = DefinitionIndex {
+                    def_path: file.path.clone(),
+                    def_type: DefinitionType::Variant(ei, discriminant),
+                };
+                builder
+                    .definitions
+                    .insert(di.clone(), loc_to_range(loc, file));
+
+                let dt = DefinitionType::Enum(ei);
+                builder.types.insert(di, dt.into());
             }
 
             let file_no = enum_decl.loc.file_no();
@@ -1348,13 +1442,16 @@ impl<'a> Builder<'a> {
                     if let Some(id) = &param.id {
                         let file_no = id.loc.file_no();
                         let file = &builder.ns.files[file_no];
-                        builder.definitions.insert(
-                            DefinitionIndex {
-                                def_path: file.path.clone(),
-                                def_type: DefinitionType::Variable(*var_no),
-                            },
-                            loc_to_range(&id.loc, file),
-                        );
+                        let di = DefinitionIndex {
+                            def_path: file.path.clone(),
+                            def_type: DefinitionType::Variable(*var_no),
+                        };
+                        builder
+                            .definitions
+                            .insert(di.clone(), loc_to_range(&id.loc, file));
+                        if let Some(dt) = get_type_definition(&param.ty) {
+                            builder.types.insert(di, dt.into());
+                        }
                     }
                 }
                 if let Some(loc) = param.ty_loc {
@@ -1364,10 +1461,7 @@ impl<'a> Builder<'a> {
                             ReferenceEntry {
                                 start: loc.start(),
                                 stop: loc.exclusive_end(),
-                                val: DefinitionIndex {
-                                    def_path: Default::default(),
-                                    def_type: dt,
-                                },
+                                val: dt.into(),
                             },
                         ));
                     }
@@ -1388,13 +1482,16 @@ impl<'a> Builder<'a> {
                     if let Some(var_no) = func.symtable.returns.get(i) {
                         let file_no = id.loc.file_no();
                         let file = &ns.files[file_no];
-                        builder.definitions.insert(
-                            DefinitionIndex {
-                                def_path: file.path.clone(),
-                                def_type: DefinitionType::Variable(*var_no),
-                            },
-                            loc_to_range(&id.loc, file),
-                        );
+                        let di = DefinitionIndex {
+                            def_path: file.path.clone(),
+                            def_type: DefinitionType::Variable(*var_no),
+                        };
+                        builder
+                            .definitions
+                            .insert(di.clone(), loc_to_range(&id.loc, file));
+                        if let Some(dt) = get_type_definition(&ret.ty) {
+                            builder.types.insert(di, dt.into());
+                        }
                     }
                 }
 
@@ -1405,10 +1502,7 @@ impl<'a> Builder<'a> {
                             ReferenceEntry {
                                 start: loc.start(),
                                 stop: loc.exclusive_end(),
-                                val: DefinitionIndex {
-                                    def_path: Default::default(),
-                                    def_type: dt,
-                                },
+                                val: dt.into(),
                             },
                         ));
                     }
@@ -1478,13 +1572,23 @@ impl<'a> Builder<'a> {
                 },
             ));
 
-            builder.definitions.insert(
-                DefinitionIndex {
-                    def_path: file.path.clone(),
-                    def_type: DefinitionType::Contract(ci),
-                },
-                loc_to_range(&contract.loc, file),
-            );
+            let cdi = DefinitionIndex {
+                def_path: file.path.clone(),
+                def_type: DefinitionType::Contract(ci),
+            };
+            builder
+                .definitions
+                .insert(cdi.clone(), loc_to_range(&contract.loc, file));
+
+            let impls = contract
+                .functions
+                .iter()
+                .map(|f| DefinitionIndex {
+                    def_path: file.path.clone(), // all the implementations for a contract are present in the same file in solidity
+                    def_type: DefinitionType::Function(*f),
+                })
+                .collect();
+            builder.implementations.insert(cdi, impls);
         }
 
         for (ei, event) in builder.ns.events.iter().enumerate() {
@@ -1522,9 +1626,35 @@ impl<'a> Builder<'a> {
             }
         }
 
-        let mut defs_to_files: HashMap<DefinitionType, PathBuf> = HashMap::new();
-        for key in builder.definitions.keys() {
-            defs_to_files.insert(key.def_type.clone(), key.def_path.clone());
+        let defs_to_files = builder
+            .definitions
+            .keys()
+            .map(|key| (key.def_type.clone(), key.def_path.clone()))
+            .collect::<HashMap<DefinitionType, PathBuf>>();
+
+        let defs_to_file_nos = ns
+            .files
+            .iter()
+            .enumerate()
+            .map(|(i, f)| (f.path.clone(), i))
+            .collect::<HashMap<PathBuf, usize>>();
+
+        for val in builder.types.values_mut() {
+            val.def_path = defs_to_files[&val.def_type].clone();
+        }
+
+        for (di, range) in &builder.definitions {
+            let file_no = defs_to_file_nos[&di.def_path];
+            let file = &ns.files[file_no];
+            builder.references.push((
+                file_no,
+                ReferenceEntry {
+                    start: file
+                        .get_offset(range.start.line as usize, range.start.character as usize),
+                    stop: file.get_offset(range.end.line as usize, range.end.character as usize),
+                    val: di.clone(),
+                },
+            ));
         }
 
         let caches = ns
@@ -1555,7 +1685,13 @@ impl<'a> Builder<'a> {
                 ),
             })
             .collect();
-        (caches, builder.definitions)
+
+        (
+            caches,
+            builder.definitions,
+            builder.types,
+            builder.implementations,
+        )
     }
 
     /// Render the type with struct/enum fields expanded
@@ -1637,6 +1773,9 @@ impl LanguageServer for SolangServer {
                     file_operations: None,
                 }),
                 definition_provider: Some(OneOf::Left(true)),
+                type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
+                implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
+                references_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -1789,49 +1928,222 @@ impl LanguageServer for SolangServer {
         Ok(None)
     }
 
+    /// Called when "Go to Definition" is called by the user on the client side.
+    ///
+    /// Expected to return the location in source code where the given code object is defined.
+    ///
+    /// ### Arguments
+    /// * `GotoDefinitionParams` provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)` when the code object is not defined in user's source code. For example, built-in functions.
     async fn goto_definition(
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
-        let uri = params.text_document_position_params.text_document.uri;
+        // fetch the `DefinitionIndex` of the code object
+        let Some(reference) = self.get_reference_from_params(params).await? else {
+            return Ok(None);
+        };
 
-        let path = uri.to_file_path().map_err(|_| Error {
-            code: ErrorCode::InvalidRequest,
-            message: format!("Received invalid URI: {uri}").into(),
-            data: None,
-        })?;
-        let files = self.files.lock().await;
-        if let Some(cache) = files.caches.get(&path) {
-            let f = &cache.file;
-            let offset = f.get_offset(
-                params.text_document_position_params.position.line as _,
-                params.text_document_position_params.position.character as _,
-            );
-            if let Some(reference) = cache
-                .references
-                .find(offset, offset + 1)
-                .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
-            {
-                let di = &reference.val;
-                if let Some(range) = self.definitions.lock().await.get(di) {
-                    let uri = Url::from_file_path(&di.def_path).unwrap();
-                    let ret = Ok(Some(GotoDefinitionResponse::Scalar(Location {
-                        uri,
-                        range: *range,
-                    })));
-                    return ret;
+        // get the location of the definition of the code object in source code
+        let definitions = &self.global_cache.lock().await.definitions;
+        let location = definitions
+            .get(&reference)
+            .map(|range| {
+                let uri = Url::from_file_path(&reference.def_path).unwrap();
+                Location { uri, range: *range }
+            })
+            .map(GotoTypeDefinitionResponse::Scalar);
+
+        Ok(location)
+    }
+
+    /// Called when "Go to Type Definition" is called by the user on the client side.
+    ///
+    /// Expected to return the type of the given code object (variable, struct field etc).
+    ///
+    /// ### Arguments
+    /// * `GotoTypeDefinitionParams` provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)`
+    ///     * when the code object is not defined in user's source code. For example, built-in types.
+    ///     * if the code object is itself a type.
+    async fn goto_type_definition(
+        &self,
+        params: GotoTypeDefinitionParams,
+    ) -> Result<Option<GotoTypeDefinitionResponse>> {
+        // fetch the `DefinitionIndex` of the code object in question
+        let Some(reference) = self.get_reference_from_params(params).await? else {
+            return Ok(None);
+        };
+
+        let gc = self.global_cache.lock().await;
+
+        // get the `DefinitionIndex` of the type of the given code object
+        let di = match &reference.def_type {
+            DefinitionType::Variable(_)
+            | DefinitionType::NonLocalVariable(_, _)
+            | DefinitionType::Field(_, _)
+            | DefinitionType::Variant(_, _) => {
+                if let Some(def) = gc.types.get(&reference) {
+                    def
+                } else {
+                    return Ok(None);
                 }
             }
+            // return `Ok(None)` if the code object is itself a type
+            DefinitionType::Struct(_)
+            | DefinitionType::Enum(_)
+            | DefinitionType::Contract(_)
+            | DefinitionType::Event(_)
+            | DefinitionType::UserType(_) => &reference,
+            _ => return Ok(None),
+        };
+
+        // get the location of the definition of the type in source code
+        let location = gc
+            .definitions
+            .get(di)
+            .map(|range| {
+                let uri = Url::from_file_path(&di.def_path).unwrap();
+                Location { uri, range: *range }
+            })
+            .map(GotoTypeDefinitionResponse::Scalar);
+
+        Ok(location)
+    }
+
+    /// Called when "Go to Implementations" is called by the user on the client side.
+    ///
+    /// Expected to return a list (possibly empty) of methods defined for the given contract.
+    ///
+    /// ### Arguments
+    /// * `GotoImplementationParams` provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)` when the location passed in the arguments doesn't belong to a contract defined in user code.
+    async fn goto_implementation(
+        &self,
+        params: GotoImplementationParams,
+    ) -> Result<Option<GotoImplementationResponse>> {
+        // fetch the `DefinitionIndex` of the code object in question
+        let Some(reference) = self.get_reference_from_params(params).await? else {
+            return Ok(None);
+        };
+
+        let gc = self.global_cache.lock().await;
+
+        // get the list of `DefinitionIndex` of all the methods defined in the given contract
+        // `None` if the passed code-object is not of type `Contract`
+        let impls = match &reference.def_type {
+            DefinitionType::Variable(_)
+            | DefinitionType::NonLocalVariable(_, _)
+            | DefinitionType::Field(_, _) => gc.types.get(&reference).and_then(|ty| {
+                if matches!(ty.def_type, DefinitionType::Contract(_)) {
+                    gc.implementations.get(ty)
+                } else {
+                    None
+                }
+            }),
+            DefinitionType::Contract(_) => gc.implementations.get(&reference),
+            _ => None,
+        };
+
+        // get the locations of the definition of methods in source code
+        let impls = impls
+            .map(|impls| {
+                impls
+                    .iter()
+                    .filter_map(|di| {
+                        let path = &di.def_path;
+                        gc.definitions.get(di).map(|range| {
+                            let uri = Url::from_file_path(path).unwrap();
+                            Location { uri, range: *range }
+                        })
+                    })
+                    .collect()
+            })
+            .map(GotoImplementationResponse::Array);
+
+        Ok(impls)
+    }
+
+    /// Called when "Go to References" is called by the user on the client side.
+    ///
+    /// Expected to return a list of locations in the source code where the given code-object is used.
+    ///
+    /// ### Arguments
+    /// * `ReferenceParams`
+    ///     * provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///     * says if the definition location is to be included in the list of source code locations returned or not.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)` when no valid references are found.
+    async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        // fetch the `DefinitionIndex` of the code object in question
+        let def_params: GotoDefinitionParams = GotoDefinitionParams {
+            text_document_position_params: params.text_document_position,
+            work_done_progress_params: params.work_done_progress_params,
+            partial_result_params: params.partial_result_params,
+        };
+        let Some(reference) = self.get_reference_from_params(def_params).await? else {
+            return Ok(None);
+        };
+
+        // fetch all the locations in source code where the code object is referenced
+        // this includes the definition location of the code object
+        let caches = &self.files.lock().await.caches;
+        let mut locations: Vec<_> = caches
+            .iter()
+            .flat_map(|(p, cache)| {
+                let uri = Url::from_file_path(p).unwrap();
+                cache
+                    .references
+                    .iter()
+                    .filter(|r| r.val == reference)
+                    .map(move |r| Location {
+                        uri: uri.clone(),
+                        range: get_range(r.start, r.stop, &cache.file),
+                    })
+            })
+            .collect();
+
+        // remove the definition location if `include_declaration` is `false`
+        if !params.context.include_declaration {
+            let definitions = &self.global_cache.lock().await.definitions;
+            let uri = Url::from_file_path(&reference.def_path).unwrap();
+            if let Some(range) = definitions.get(&reference) {
+                let def = Location { uri, range: *range };
+                locations.retain(|loc| loc != &def);
+            }
         }
-        Ok(None)
+
+        // return `None` if the list of locations is empty
+        let locations = if locations.is_empty() {
+            None
+        } else {
+            Some(locations)
+        };
+
+        Ok(locations)
     }
 }
 
 /// Calculate the line and column from the Loc offset received from the parser
 fn loc_to_range(loc: &pt::Loc, file: &ast::File) -> Range {
-    let (line, column) = file.offset_to_line_column(loc.start());
+    get_range(loc.start(), loc.end(), file)
+}
+
+fn get_range(start: usize, end: usize, file: &ast::File) -> Range {
+    let (line, column) = file.offset_to_line_column(start);
     let start = Position::new(line as u32, column as u32);
-    let (line, column) = file.offset_to_line_column(loc.end());
+    let (line, column) = file.offset_to_line_column(end);
     let end = Position::new(line as u32, column as u32);
 
     Range::new(start, end)
