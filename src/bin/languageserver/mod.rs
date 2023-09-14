@@ -40,9 +40,9 @@ use tower_lsp::{
 
 use crate::cli::{target_arg, LanguageServerCommand};
 
-// Represents the type of the object that a reference points to
-// Here "object" refers to contracts, functions, structs, enums etc., that are defined and used within a namespace.
-// It is used along with the path of the file where the object is defined to uniquely identify an object
+/// Represents the type of the code object that a reference points to
+/// Here "code object" refers to contracts, functions, structs, enums etc., that are defined and used within a namespace.
+/// It is used along with the path of the file where the code object is defined to uniquely identify an code object.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum DefinitionType {
     // function index in Namespace::functions
@@ -66,9 +66,20 @@ enum DefinitionType {
     UserType(usize),
 }
 
+/// Uniquely identifies a code object.
+///
+/// `def_type` alone does not guarantee uniqueness, i.e, there can be two or more code objects with identical `def_type`.
+/// This is possible as two files can be compiled as part of different `Namespace`s and the code objects can end up having identical `def_type`.
+/// For example, two structs defined in the two files can be assigned the same `def_type` - `Struct(0)` as they are both `structs` and numbers are reused across `Namespace` boundaries.
+/// As it is currently possible for code objects created as part of two different `Namespace`s to be stored simultaneously in the same `SolangServer` instance,
+/// in the scenario described above, code objects cannot be uniquely identified solely through `def_type`.
+///
+/// But `def_path` paired with `def_type` sufficiently proves uniqueness as no two code objects defined in the same file can have identical `def_type`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct DefinitionIndex {
+    /// stores the path of the file where the code object is mentioned in source code
     def_path: PathBuf,
+    /// provides information about the type of the code object in question
     def_type: DefinitionType,
 }
 
@@ -105,7 +116,17 @@ struct FileCache {
     references: Lapper<usize, DefinitionIndex>,
 }
 
-/// Stores information used by language server that is not file-specific
+/// Stores information used by the language server to service requests (eg: `Go to Definitions`) received from the client.
+///
+/// Information stored in `GlobalCache` is extracted from the `Namespace` when the `SolangServer::build` function is run.
+///
+/// `GlobalCache` is global in the sense that, unlike `FileCache`, we don't have a separate instance for every file processed.
+/// We have just one `GlobalCache` instance per `SolangServer` instance.
+///
+/// Each field stores *some information* about a code object. The code object is uniquely identified by its `DefinitionIndex`.
+/// * `definitions` maps `DefinitionIndex` of a code object to its source code location where it is defined.
+/// * `types` maps the `DefinitionIndex` of a code object to that of its type.
+/// * `implementations` maps the `DefinitionIndex` of a `Contract` to the `DefinitionIndex`s of methods defined as part of the `Contract`.
 struct GlobalCache {
     definitions: Definitions,
     types: Types,
@@ -1907,13 +1928,26 @@ impl LanguageServer for SolangServer {
         Ok(None)
     }
 
+    /// Called when "Go to Definition" is called by the user on the client side.
+    ///
+    /// Expected to return the location in source code where the given code object is defined.
+    ///
+    /// ### Arguments
+    /// * `GotoDefinitionParams` provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)` when the code object is not defined in user's source code. For example, built-in functions.
     async fn goto_definition(
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
+        // fetch the `DefinitionIndex` of the code object
         let Some(reference) = self.get_reference_from_params(params).await? else {
             return Ok(None);
         };
+
+        // get the location of the definition of the code object in source code
         let definitions = &self.global_cache.lock().await.definitions;
         let location = definitions
             .get(&reference)
@@ -1922,19 +1956,34 @@ impl LanguageServer for SolangServer {
                 Location { uri, range: *range }
             })
             .map(GotoTypeDefinitionResponse::Scalar);
+
         Ok(location)
     }
 
-    /// Returns the type of the given code-object (variable, struct field etc).
+    /// Called when "Go to Type Definition" is called by the user on the client side.
+    ///
+    /// Expected to return the type of the given code object (variable, struct field etc).
+    ///
+    /// ### Arguments
+    /// * `GotoTypeDefinitionParams` provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)`
+    ///     * when the code object is not defined in user's source code. For example, built-in types.
+    ///     * if the code object is itself a type.
     async fn goto_type_definition(
         &self,
         params: GotoTypeDefinitionParams,
     ) -> Result<Option<GotoTypeDefinitionResponse>> {
+        // fetch the `DefinitionIndex` of the code object in question
         let Some(reference) = self.get_reference_from_params(params).await? else {
             return Ok(None);
         };
+
         let gc = self.global_cache.lock().await;
 
+        // get the `DefinitionIndex` of the type of the given code object
         let di = match &reference.def_type {
             DefinitionType::Variable(_)
             | DefinitionType::NonLocalVariable(_, _)
@@ -1946,6 +1995,7 @@ impl LanguageServer for SolangServer {
                     return Ok(None);
                 }
             }
+            // return `Ok(None)` if the code object is itself a type
             DefinitionType::Struct(_)
             | DefinitionType::Enum(_)
             | DefinitionType::Contract(_)
@@ -1954,6 +2004,7 @@ impl LanguageServer for SolangServer {
             _ => return Ok(None),
         };
 
+        // get the location of the definition of the type in source code
         let location = gc
             .definitions
             .get(di)
@@ -1966,17 +2017,29 @@ impl LanguageServer for SolangServer {
         Ok(location)
     }
 
-    /// Returns a list of methods defined in the given contract.
+    /// Called when "Go to Implementations" is called by the user on the client side.
+    ///
+    /// Expected to return a list (possibly empty) of methods defined for the given contract.
+    ///
+    /// ### Arguments
+    /// * `GotoImplementationParams` provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)` when the location passed in the arguments doesn't belong to a contract defined in user code.
     async fn goto_implementation(
         &self,
         params: GotoImplementationParams,
     ) -> Result<Option<GotoImplementationResponse>> {
+        // fetch the `DefinitionIndex` of the code object in question
         let Some(reference) = self.get_reference_from_params(params).await? else {
             return Ok(None);
         };
 
         let gc = self.global_cache.lock().await;
 
+        // get the list of `DefinitionIndex` of all the methods defined in the given contract
+        // `None` if the passed code-object is not of type `Contract`
         let impls = match &reference.def_type {
             DefinitionType::Variable(_)
             | DefinitionType::NonLocalVariable(_, _)
@@ -1991,6 +2054,7 @@ impl LanguageServer for SolangServer {
             _ => None,
         };
 
+        // get the locations of the definition of methods in source code
         let impls = impls
             .map(|impls| {
                 impls
@@ -2009,8 +2073,20 @@ impl LanguageServer for SolangServer {
         Ok(impls)
     }
 
-    /// Returns a list of places where the given code-object (variable, struct field etc) is used.
+    /// Called when "Go to References" is called by the user on the client side.
+    ///
+    /// Expected to return a list of locations in the source code where the given code-object is used.
+    ///
+    /// ### Arguments
+    /// * `ReferenceParams`
+    ///     * provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///     * says if the definition location is to be included in the list of source code locations returned or not.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)` when no valid references are found.
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        // fetch the `DefinitionIndex` of the code object in question
         let def_params: GotoDefinitionParams = GotoDefinitionParams {
             text_document_position_params: params.text_document_position,
             work_done_progress_params: params.work_done_progress_params,
@@ -2020,6 +2096,8 @@ impl LanguageServer for SolangServer {
             return Ok(None);
         };
 
+        // fetch all the locations in source code where the code object is referenced
+        // this includes the definition location of the code object
         let caches = &self.files.lock().await.caches;
         let mut locations: Vec<_> = caches
             .iter()
@@ -2036,6 +2114,7 @@ impl LanguageServer for SolangServer {
             })
             .collect();
 
+        // remove the definition location if `include_declaration` is `false`
         if !params.context.include_declaration {
             let definitions = &self.global_cache.lock().await.definitions;
             let uri = Url::from_file_path(&reference.def_path).unwrap();
@@ -2045,6 +2124,7 @@ impl LanguageServer for SolangServer {
             }
         }
 
+        // return `None` if the list of locations is empty
         let locations = if locations.is_empty() {
             None
         } else {
