@@ -12,6 +12,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct InlineAssembly {
     pub loc: pt::Loc,
+    pub memory_safe: bool,
     pub body: Vec<YulStatement>,
     // (begin, end) offset for Namespace::yul_functions
     pub functions: std::ops::Range<usize>,

@@ -128,6 +128,7 @@ fn test_statement_reachable() {
             Statement::Assembly(
                 InlineAssembly {
                     loc,
+                    memory_safe: false,
                     body: vec![],
                     functions: std::ops::Range { start: 0, end: 0 },
                 },

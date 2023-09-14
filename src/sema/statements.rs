@@ -888,17 +888,38 @@ fn statement(
                 return Err(());
             }
 
+            let mut memory_safe = None;
+
             if let Some(flags) = flags {
                 for flag in flags {
-                    ns.diagnostics.push(Diagnostic::error(
-                        flag.loc,
-                        format!("flag '{}' not supported", flag.string),
-                    ));
+                    if flag.string == "memory-safe" && ns.target == Target::EVM {
+                        if let Some(prev) = &memory_safe {
+                            ns.diagnostics.push(Diagnostic::error_with_note(
+                                flag.loc,
+                                format!("flag '{}' already specified", flag.string),
+                                *prev,
+                                "previous location".into(),
+                            ));
+                        } else {
+                            memory_safe = Some(flag.loc);
+                        }
+                    } else {
+                        ns.diagnostics.push(Diagnostic::error(
+                            flag.loc,
+                            format!("flag '{}' not supported", flag.string),
+                        ));
+                    }
                 }
             }
 
-            let resolved_asm =
-                resolve_inline_assembly(loc, &block.statements, context, symtable, ns);
+            let resolved_asm = resolve_inline_assembly(
+                loc,
+                memory_safe.is_some(),
+                &block.statements,
+                context,
+                symtable,
+                ns,
+            );
             res.push(Statement::Assembly(resolved_asm.0, resolved_asm.1));
             Ok(resolved_asm.1)
         }
