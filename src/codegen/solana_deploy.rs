@@ -4,13 +4,15 @@ use super::{
     cfg::ReturnCode, expression, Builtin, ControlFlowGraph, Expression, Instr, Options, Type,
     Vartable,
 };
+use crate::codegen::revert::string_to_expr;
 use crate::codegen::solana_accounts::account_management::{
     account_meta_literal, retrieve_key_from_account_info,
 };
 use crate::sema::ast::{
-    self, ArrayLength, CallTy, ConstructorAnnotation, Function, FunctionAttributes, Namespace,
-    StructType,
+    self, ArrayLength, CallTy, Function, FunctionAttributes, Namespace, StructType,
 };
+use crate::sema::diagnostics::Diagnostics;
+use crate::sema::eval::eval_const_number;
 use crate::sema::solana_accounts::BuiltinAccounts;
 use base58::ToBase58;
 use num_bigint::{BigInt, Sign};
@@ -78,20 +80,12 @@ pub(super) fn solana_deploy(
 
         cfg.set_basic_block(id_fail);
 
-        let message = format!("program_id should be {}", program_id.to_base58()).into_bytes();
-
-        let expr = Expression::AllocDynamicBytes {
-            loc: Loc::Codegen,
-            ty: Type::String,
-            size: Box::new(Expression::NumberLiteral {
-                loc: Loc::Codegen,
-                ty: Type::Uint(32),
-                value: BigInt::from(message.len()),
-            }),
-            initializer: Some(message),
-        };
-
-        cfg.add(vartab, Instr::Print { expr });
+        cfg.add(
+            vartab,
+            Instr::Print {
+                expr: string_to_expr(format!("program_id should be {}", program_id.to_base58())),
+            },
+        );
 
         cfg.add(
             vartab,
@@ -249,11 +243,7 @@ pub(super) fn solana_deploy(
         }
     }
 
-    if let Some(ConstructorAnnotation::Payer(_, name)) = func
-        .annotations
-        .iter()
-        .find(|tag| matches!(tag, ConstructorAnnotation::Payer(..)))
-    {
+    if let Some((_, name)) = &func.annotations.payer {
         let metas_ty = Type::Array(
             Box::new(Type::Struct(StructType::AccountMeta)),
             vec![ArrayLength::Fixed(BigInt::from(2))],
@@ -314,13 +304,57 @@ pub(super) fn solana_deploy(
         );
 
         // Calculate minimum balance for rent-exempt
-        let (space, lamports) = if let Some(ConstructorAnnotation::Space(space_expr)) = func
-            .annotations
-            .iter()
-            .find(|tag| matches!(tag, ConstructorAnnotation::Space(..)))
-        {
-            let space_var = vartab.temp_name("space", &Type::Uint(64));
+        let (space, lamports) = if let Some((_, space_expr)) = &func.annotations.space {
             let expr = expression(space_expr, cfg, contract_no, None, ns, vartab, opt);
+            // If the space is not a literal or a constant expression,
+            // we must verify if we are allocating enough space during runtime.
+            if eval_const_number(space_expr, ns, &mut Diagnostics::default()).is_err() {
+                let cond = Expression::MoreEqual {
+                    loc: Loc::Codegen,
+                    signed: false,
+                    left: Box::new(expr.clone()),
+                    right: Box::new(Expression::NumberLiteral {
+                        loc: Loc::Codegen,
+                        ty: Type::Uint(64),
+                        value: contract.fixed_layout_size.clone(),
+                    }),
+                };
+
+                let enough = cfg.new_basic_block("enough_space".to_string());
+                let not_enough = cfg.new_basic_block("not_enough_space".to_string());
+
+                cfg.add(
+                    vartab,
+                    Instr::BranchCond {
+                        cond,
+                        true_block: enough,
+                        false_block: not_enough,
+                    },
+                );
+
+                cfg.set_basic_block(not_enough);
+                cfg.add(
+                    vartab,
+                    Instr::Print {
+                        expr: string_to_expr(format!(
+                            "value passed for space is \
+                        insufficient. Contract requires at least {} bytes",
+                            contract.fixed_layout_size
+                        )),
+                    },
+                );
+
+                cfg.add(
+                    vartab,
+                    Instr::ReturnCode {
+                        code: ReturnCode::AccountDataTooSmall,
+                    },
+                );
+
+                cfg.set_basic_block(enough);
+            }
+
+            let space_var = vartab.temp_name("space", &Type::Uint(64));
 
             cfg.add(
                 vartab,
@@ -494,34 +528,26 @@ pub(super) fn solana_deploy(
         );
 
         // seeds
-        let mut seeds = Vec::new();
-        let mut declared_bump = None;
+        let mut seeds = func
+            .annotations
+            .seeds
+            .iter()
+            .map(|seed| expression(&seed.1, cfg, contract_no, None, ns, vartab, opt))
+            .collect::<Vec<Expression>>();
 
-        for note in &func.annotations {
-            match note {
-                ConstructorAnnotation::Seed(seed) => {
-                    seeds.push(expression(seed, cfg, contract_no, None, ns, vartab, opt));
+        if let Some((_, bump)) = &func.annotations.bump {
+            let expr = ast::Expression::Cast {
+                loc: Loc::Codegen,
+                to: Type::Slice(Type::Bytes(1).into()),
+                expr: ast::Expression::BytesCast {
+                    loc: Loc::Codegen,
+                    to: Type::DynamicBytes,
+                    from: Type::Bytes(1),
+                    expr: bump.clone().into(),
                 }
-                ConstructorAnnotation::Bump(bump) => {
-                    let expr = ast::Expression::Cast {
-                        loc: Loc::Codegen,
-                        to: Type::Slice(Type::Bytes(1).into()),
-                        expr: ast::Expression::BytesCast {
-                            loc: Loc::Codegen,
-                            to: Type::DynamicBytes,
-                            from: Type::Bytes(1),
-                            expr: bump.clone().into(),
-                        }
-                        .into(),
-                    };
-                    declared_bump = Some(expr);
-                }
-                _ => (),
-            }
-        }
-
-        if let Some(bump) = declared_bump {
-            seeds.push(expression(&bump, cfg, contract_no, None, ns, vartab, opt));
+                .into(),
+            };
+            seeds.push(expression(&expr, cfg, contract_no, None, ns, vartab, opt));
         }
 
         let seeds = if !seeds.is_empty() {

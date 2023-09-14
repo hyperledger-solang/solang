@@ -75,7 +75,7 @@ contract OldAnnotationSyntax {
 // error: 39:12-29: 'SysvarInstruction' is a reserved account name
 // error: 47:12-18: account 'solang' already defined
 // 	note 46:5-19: previous definition
-// error: 58:11-18: '@seed' annotation on top of a constructor only accepts literals
-// error: 59:12-20: '@space' annotation on top of a constructor only accepts literals
-// error: 60:11-18: '@bump' annotation on top of a constructor only accepts literals
+// error: 58:11-18: '@seed' annotation on a constructor only accepts constant values
+// error: 59:12-20: '@space' annotation on a constructor only accepts constant values
+// error: 60:11-18: '@bump' annotation on a constructor only accepts constant values
 // error: 63:22-29: parameter annotations are only allowed in constructors

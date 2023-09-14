@@ -1409,25 +1409,27 @@ impl<'a> Builder<'a> {
                 continue;
             }
 
-            for note in &func.annotations {
-                match note {
-                    ast::ConstructorAnnotation::Bump(expr)
-                    | ast::ConstructorAnnotation::Seed(expr)
-                    | ast::ConstructorAnnotation::Space(expr) => {
-                        builder.expression(expr, &func.symtable)
-                    }
+            if let Some(bump) = &func.annotations.bump {
+                builder.expression(&bump.1, &func.symtable);
+            }
 
-                    ast::ConstructorAnnotation::Payer(loc, name) => {
-                        builder.hovers.push((
-                            loc.file_no(),
-                            HoverEntry {
-                                start: loc.start(),
-                                stop: loc.exclusive_end(),
-                                val: format!("payer account: {name}"),
-                            },
-                        ));
-                    }
-                }
+            for seed in &func.annotations.seeds {
+                builder.expression(&seed.1, &func.symtable);
+            }
+
+            if let Some(space) = &func.annotations.space {
+                builder.expression(&space.1, &func.symtable);
+            }
+
+            if let Some((loc, name)) = &func.annotations.payer {
+                builder.hovers.push((
+                    loc.file_no(),
+                    HoverEntry {
+                        start: loc.start(),
+                        stop: loc.exclusive_end(),
+                        val: format!("payer account: {name}"),
+                    },
+                ));
             }
 
             for (i, param) in func.params.iter().enumerate() {
