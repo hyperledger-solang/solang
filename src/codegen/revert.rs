@@ -18,13 +18,15 @@ use crate::sema::{
     file::PathDisplay,
 };
 use crate::Target;
+use num_bigint::{BigInt, Sign};
 use parse_display::Display;
 use solang_parser::pt::{CodeLocation, Loc, Loc::Codegen};
+use tiny_keccak::{Hasher, Keccak};
 
 /// Signature of `Keccak256('Error(string)')[:4]`
-pub(crate) const ERROR_SELECTOR: u32 = 0x08c379a0u32;
+pub(crate) const ERROR_SELECTOR: [u8; 4] = [0x08, 0xc3, 0x79, 0xa0];
 /// Signature of `Keccak256('Panic(uint256)')[:4]`
-pub(crate) const PANIC_SELECTOR: u32 = 0x4e487b71u32;
+pub(crate) const PANIC_SELECTOR: [u8; 4] = [0x4e, 0x48, 0x7b, 0x71];
 
 /// Corresponds to the error types from the Solidity language.
 ///
@@ -38,30 +40,38 @@ pub enum SolidityError {
     String(Expression),
     /// The `Panic(uint256)` selector
     Panic(PanicCode),
+    /// User defined errors
+    Custom {
+        error_no: usize,
+        exprs: Vec<Expression>,
+    },
 }
 
 impl SolidityError {
     /// Return the selector expression of the error.
-    pub fn selector_expression(&self) -> Expression {
-        let selector = match self {
-            Self::Empty => unreachable!("empty return data has no selector"),
-            Self::String(_) => self.selector().into(),
-            Self::Panic(_) => self.selector().into(),
-        };
-
+    pub fn selector_expression(&self, ns: &Namespace) -> Expression {
         Expression::NumberLiteral {
             loc: Codegen,
             ty: Type::Bytes(4),
-            value: selector,
+            value: BigInt::from_bytes_be(Sign::Plus, &self.selector(ns)),
         }
     }
 
     /// Return the selector of the error.
-    pub fn selector(&self) -> u32 {
+    pub fn selector(&self, ns: &Namespace) -> [u8; 4] {
         match self {
             Self::Empty => unreachable!("empty return data has no selector"),
             Self::String(_) => ERROR_SELECTOR,
             Self::Panic(_) => PANIC_SELECTOR,
+            Self::Custom { error_no, .. } => {
+                let mut buf = [0u8; 32];
+                let mut hasher = Keccak::v256();
+                let signature =
+                    ns.signature(&ns.errors[*error_no].name, &ns.errors[*error_no].fields);
+                hasher.update(signature.as_bytes());
+                hasher.finalize(&mut buf);
+                [buf[0], buf[1], buf[2], buf[3]]
+            }
         }
     }
 
@@ -77,8 +87,28 @@ impl SolidityError {
     ) -> Option<Expression> {
         match self {
             Self::Empty => None,
-            Self::String(data) => {
-                let args = vec![self.selector_expression(), data.clone()];
+            Self::String(expr) => {
+                let args = vec![self.selector_expression(ns), expr.clone()];
+                create_encoder(ns, false)
+                    .const_encode(&args)
+                    .map(|bytes| {
+                        let size = Expression::NumberLiteral {
+                            loc: Codegen,
+                            ty: Type::Uint(32),
+                            value: bytes.len().into(),
+                        };
+                        Expression::AllocDynamicBytes {
+                            loc: Codegen,
+                            ty: Type::Slice(Type::Bytes(1).into()),
+                            size: size.into(),
+                            initializer: bytes.into(),
+                        }
+                    })
+                    .or_else(|| abi_encode(loc, args, ns, vartab, cfg, false).0.into())
+            }
+            Self::Custom { exprs, .. } => {
+                let mut args = exprs.to_owned();
+                args.insert(0, self.selector_expression(ns));
                 create_encoder(ns, false)
                     .const_encode(&args)
                     .map(|bytes| {
@@ -103,7 +133,7 @@ impl SolidityError {
                     value: (*code as u8).into(),
                 };
                 create_encoder(ns, false)
-                    .const_encode(&[self.selector_expression(), code])
+                    .const_encode(&[self.selector_expression(ns), code])
                     .map(|bytes| {
                         let size = Expression::NumberLiteral {
                             loc: Codegen,
@@ -281,6 +311,7 @@ pub(super) fn require(
 
 pub(super) fn revert(
     args: &[ast::Expression],
+    error_no: &Option<usize>,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     func: Option<&Function>,
@@ -289,55 +320,63 @@ pub(super) fn revert(
     opt: &Options,
     loc: &Loc,
 ) {
-    let expr = args
-        .get(0)
-        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt));
+    let exprs = args
+        .iter()
+        .map(|s| expression(s, cfg, contract_no, func, ns, vartab, opt))
+        .collect::<Vec<_>>();
 
     if opt.log_runtime_errors {
-        if expr.is_some() {
-            let prefix = b"runtime_error: ";
-            let error_string = format!(
-                " revert encountered in {},\n",
-                ns.loc_to_string(PathDisplay::Filename, loc)
-            );
-            let print_expr = Expression::FormatString {
-                loc: Codegen,
-                args: vec![
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Codegen,
-                            ty: Type::Bytes(prefix.len() as u8),
-                            value: prefix.to_vec(),
-                        },
-                    ),
-                    (FormatArg::Default, expr.clone().unwrap()),
-                    (
-                        FormatArg::StringLiteral,
-                        Expression::BytesLiteral {
-                            loc: Codegen,
-                            ty: Type::Bytes(error_string.as_bytes().len() as u8),
-                            value: error_string.as_bytes().to_vec(),
-                        },
-                    ),
-                ],
-            };
-            cfg.add(vartab, Instr::Print { expr: print_expr });
-        } else {
-            log_runtime_error(
-                opt.log_runtime_errors,
-                "revert encountered",
-                *loc,
-                cfg,
-                vartab,
-                ns,
-            )
+        match (error_no, exprs.get(0)) {
+            // In the case of Error(string), we can print the reason
+            (None, Some(expr)) => {
+                let prefix = b"runtime_error: ";
+                let error_string = format!(
+                    " revert encountered in {},\n",
+                    ns.loc_to_string(PathDisplay::Filename, loc)
+                );
+                let print_expr = Expression::FormatString {
+                    loc: Codegen,
+                    args: vec![
+                        (
+                            FormatArg::StringLiteral,
+                            Expression::BytesLiteral {
+                                loc: Codegen,
+                                ty: Type::Bytes(prefix.len() as u8),
+                                value: prefix.to_vec(),
+                            },
+                        ),
+                        (FormatArg::Default, expr.clone()),
+                        (
+                            FormatArg::StringLiteral,
+                            Expression::BytesLiteral {
+                                loc: Codegen,
+                                ty: Type::Bytes(error_string.as_bytes().len() as u8),
+                                value: error_string.as_bytes().to_vec(),
+                            },
+                        ),
+                    ],
+                };
+                cfg.add(vartab, Instr::Print { expr: print_expr });
+            }
+            // Else: Not all fields might be formattable, just print the error type
+            _ => {
+                let error_ty = error_no
+                    .map(|n| ns.errors[n].name.as_str())
+                    .unwrap_or("unspecified");
+                let reason = format!("{} revert encountered", error_ty);
+                log_runtime_error(opt.log_runtime_errors, &reason, *loc, cfg, vartab, ns);
+            }
         }
     }
 
-    let error = expr
-        .map(SolidityError::String)
-        .unwrap_or(SolidityError::Empty);
+    let error = match (*error_no, exprs.get(0)) {
+        // Having an error number requires a custom error
+        (Some(error_no), _) => SolidityError::Custom { error_no, exprs },
+        // No error number but an expression requires Error(String)
+        (None, Some(expr)) => SolidityError::String(expr.clone()),
+        // No error number and no data means just "revert();" without any reason
+        (None, None) => SolidityError::Empty,
+    };
     assert_failure(&Codegen, error, ns, cfg, vartab);
 }
 
@@ -382,9 +421,13 @@ fn string_to_expr(string: String) -> Expression {
 
 #[cfg(test)]
 mod tests {
-    use crate::codegen::{
-        revert::{PanicCode, SolidityError, ERROR_SELECTOR, PANIC_SELECTOR},
-        Expression,
+    use crate::{
+        codegen::{
+            revert::{PanicCode, SolidityError, ERROR_SELECTOR, PANIC_SELECTOR},
+            Expression,
+        },
+        sema::ast::{ErrorDecl, Namespace, Parameter, Type},
+        Target,
     };
 
     #[test]
@@ -402,14 +445,47 @@ mod tests {
     }
 
     #[test]
-    fn function_selector_expression() {
+    fn default_error_selector_expression() {
+        let ns = Namespace::new(Target::default_polkadot());
         assert_eq!(
             ERROR_SELECTOR,
-            SolidityError::String(Expression::Poison).selector(),
+            SolidityError::String(Expression::Poison).selector(&ns),
         );
         assert_eq!(
             PANIC_SELECTOR,
-            SolidityError::Panic(PanicCode::Generic).selector(),
+            SolidityError::Panic(PanicCode::Generic).selector(&ns),
         );
+    }
+
+    /// Error selector calculation uses the same signature algorithm used for message selectors.
+    /// Tests the error selector calculation to be correct against two examples:
+    /// - `error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);`
+    /// - `error Unauthorized();`
+    #[test]
+    fn custom_error_selector_expression() {
+        let mut ns = Namespace::new(Target::default_polkadot());
+        ns.errors = vec![
+            ErrorDecl {
+                name: "Unauthorized".to_string(),
+                ..Default::default()
+            },
+            ErrorDecl {
+                name: "ERC20InsufficientBalance".to_string(),
+                fields: vec![
+                    Parameter::new_default(Type::Address(false)),
+                    Parameter::new_default(Type::Uint(256)),
+                    Parameter::new_default(Type::Uint(256)),
+                ],
+                ..Default::default()
+            },
+        ];
+
+        let exprs = vec![Expression::Poison];
+        let expected_selector = SolidityError::Custom { error_no: 0, exprs }.selector(&ns);
+        assert_eq!([0x82, 0xb4, 0x29, 0x00], expected_selector);
+
+        let exprs = vec![Expression::Poison];
+        let expected_selector = SolidityError::Custom { error_no: 1, exprs }.selector(&ns);
+        assert_eq!([0xe4, 0x50, 0xd3, 0x8c], expected_selector);
     }
 }

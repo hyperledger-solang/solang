@@ -1102,7 +1102,7 @@ impl<'a> Binary<'a> {
             value: (code as u8).into(),
         };
         let bytes = create_encoder(ns, false)
-            .const_encode(&[SolidityError::Panic(code).selector_expression(), expr])
+            .const_encode(&[SolidityError::Panic(code).selector_expression(ns), expr])
             .unwrap();
         (
             self.emit_global_string(&code.to_string(), &bytes, true),

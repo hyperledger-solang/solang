@@ -186,7 +186,7 @@ impl EventDecl {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(Default, PartialEq, Eq, Clone, Debug)]
 pub struct ErrorDecl {
     pub tags: Vec<Tag>,
     pub name: String,
@@ -265,6 +265,21 @@ pub struct ParameterAnnotation {
 }
 
 impl Parameter {
+    /// Create a new instance of the given `Type`, with all other values set to their default.
+    pub fn new_default(ty: Type) -> Self {
+        Self {
+            ty,
+            loc: Default::default(),
+            id: Default::default(),
+            ty_loc: Default::default(),
+            indexed: Default::default(),
+            readonly: Default::default(),
+            infinite_size: Default::default(),
+            recursive: Default::default(),
+            annotation: Default::default(),
+        }
+    }
+
     pub fn name_as_str(&self) -> &str {
         if let Some(name) = &self.id {
             name.name.as_str()
