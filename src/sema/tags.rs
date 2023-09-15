@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::ast::{Diagnostic, Namespace, Parameter, Tag};
-use solang_parser::{doccomment::DocComment, pt};
+use solang_parser::{
+    doccomment::{DocComment, DocCommentTag},
+    pt,
+};
 use std::fmt::Write;
 
 /// Resolve the tags for a type from parsed doccomment
@@ -23,18 +26,7 @@ pub fn resolve_tags(
 
         match c.tag.as_str() {
             "notice" | "author" | "title" | "dev" => {
-                // fold fields with the same name
-                if let Some(prev) = res.iter_mut().find(|e| e.tag == c.tag) {
-                    prev.value.push(' ');
-                    prev.value.push_str(&c.value);
-                } else {
-                    res.push(Tag {
-                        loc,
-                        tag: c.tag.to_owned(),
-                        value: c.value.to_owned(),
-                        no: 0,
-                    })
-                }
+                add_tag(loc, &mut res, c);
             }
             "param" if params.is_some() => {
                 let v: Vec<&str> = c.value.splitn(2, char::is_whitespace).collect();
@@ -167,15 +159,41 @@ pub fn resolve_tags(
                 }
             }
             _ => {
-                ns.diagnostics.push(Diagnostic::error(
-                    tag_loc,
-                    format!("tag '@{}' is not valid for {}", c.tag, ty),
-                ));
+                if let Some(custom) = c.tag.strip_prefix("custom:") {
+                    if custom.is_empty() {
+                        ns.diagnostics.push(Diagnostic::error(
+                            tag_loc,
+                            format!("custom tag '@{}' is missing a name", c.tag),
+                        ));
+                    } else {
+                        add_tag(loc, &mut res, c);
+                    }
+                } else {
+                    ns.diagnostics.push(Diagnostic::error(
+                        tag_loc,
+                        format!("tag '@{}' is not valid for {}", c.tag, ty),
+                    ));
+                }
             }
         }
     }
 
     res
+}
+
+/// Add a new doc comment as a tag, or append to existing one
+fn add_tag(loc: pt::Loc, res: &mut Vec<Tag>, doc_comment: &DocCommentTag) {
+    if let Some(prev) = res.iter_mut().find(|e| e.tag == doc_comment.tag) {
+        prev.value.push(' ');
+        prev.value.push_str(&doc_comment.value);
+    } else {
+        res.push(Tag {
+            loc,
+            tag: doc_comment.tag.to_owned(),
+            value: doc_comment.value.to_owned(),
+            no: 0,
+        })
+    }
 }
 
 /// Render tags as plain text string

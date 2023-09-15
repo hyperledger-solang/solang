@@ -15,6 +15,9 @@ fn contract() {
         /// @author Mr Foo
         /// @dev this is
         ///  a contract
+        /// @custom:meh words for
+        /// @custom:meh custom tag
+        /// @custom: custom tag
         @program_id("Seed23VDZ9HFCfKvFwmemB6dpi25n5XjZdP52B2RUmh")
         contract test {
             /// @dev construct this
@@ -22,6 +25,11 @@ fn contract() {
             constructor() {}
         }"#,
         Target::Solana,
+    );
+
+    assert_eq!(
+        ns.diagnostics.first_error(),
+        "custom tag '@custom:' is missing a name"
     );
 
     assert_eq!(ns.contracts[0].tags[0].tag, "notice");
@@ -35,6 +43,9 @@ fn contract() {
 
     assert_eq!(ns.contracts[0].tags[3].tag, "dev");
     assert_eq!(ns.contracts[0].tags[3].value, "this is\na contract");
+
+    assert_eq!(ns.contracts[0].tags[4].tag, "custom:meh");
+    assert_eq!(ns.contracts[0].tags[4].value, "words for custom tag");
 
     let constructor = ns
         .functions
