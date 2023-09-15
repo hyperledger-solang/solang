@@ -2136,7 +2136,20 @@ impl LanguageServer for SolangServer {
         Ok(locations)
     }
 
+    /// Called when "Rename Symbol" is called by the user on the client side.
+    ///
+    /// Expected to return a list of changes to be made in user code so that every occurrence of the code object is renamed.
+    ///
+    /// ### Arguments
+    /// * `RenameParams`
+    ///     * provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///     * the new symbol that the code object should go by.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)` when the definition of code object is not found is user code.
     async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+        // fetch the `DefinitionIndex` of the code object in question
         let def_params: GotoDefinitionParams = GotoDefinitionParams {
             text_document_position_params: params.text_document_position,
             work_done_progress_params: params.work_done_progress_params,
@@ -2146,9 +2159,13 @@ impl LanguageServer for SolangServer {
             return Ok(None);
         };
 
+        // the new name of the code object
         let new_text = params.new_name;
+
+        // create `TextEdit` instances that represent the changes to be made for every occurrence of the old symbol
+        // these `TextEdit` objects are then grouped into separate list per source file to which they bolong
         let caches = &self.files.lock().await.caches;
-        let ws: HashMap<_, _> = caches
+        let ws = caches
             .iter()
             .map(|(p, cache)| {
                 let uri = Url::from_file_path(p).unwrap();
@@ -2163,7 +2180,7 @@ impl LanguageServer for SolangServer {
                     .collect();
                 (uri, text_edits)
             })
-            .collect();
+            .collect::<HashMap<_, _>>();
 
         Ok(Some(WorkspaceEdit::new(ws)))
     }
