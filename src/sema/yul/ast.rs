@@ -12,6 +12,9 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct InlineAssembly {
     pub loc: pt::Loc,
+    /// is the assembly ("memory-safe") { .. } flag specified
+    /// This flag is only permitted on EVM. It is not used by solang itself, however external
+    /// tools that wish to use our AST can use it.
     pub memory_safe: bool,
     pub body: Vec<YulStatement>,
     // (begin, end) offset for Namespace::yul_functions
