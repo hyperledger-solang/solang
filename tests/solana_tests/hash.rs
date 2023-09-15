@@ -21,10 +21,7 @@ fn constants_hash_tests() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     let mut runtime = build_solidity(
         r#"
@@ -42,10 +39,7 @@ fn constants_hash_tests() {
         .function("new")
         .accounts(vec![("dataAccount", data_account)])
         .call();
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 
     let mut runtime = build_solidity(
         r#"
@@ -63,10 +57,7 @@ fn constants_hash_tests() {
         .function("new")
         .accounts(vec![("dataAccount", data_account)])
         .call();
-    runtime
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    runtime.function("test").call();
 }
 
 #[test]
@@ -90,10 +81,7 @@ fn hash_tests() {
     let hash = runtime
         .function("test")
         .arguments(&[BorshToken::Bytes(b"Hello, World!".to_vec())])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("systemProgram", [0; 32]),
-        ])
+        .accounts(vec![("systemProgram", [0; 32])])
         .call()
         .unwrap();
 
@@ -123,10 +111,7 @@ fn hash_tests() {
     let hash = runtime
         .function("test")
         .arguments(&[BorshToken::Bytes(b"Hello, World!".to_vec())])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("systemProgram", [0; 32]),
-        ])
+        .accounts(vec![("systemProgram", [0; 32])])
         .call()
         .unwrap();
 
@@ -157,10 +142,7 @@ fn hash_tests() {
     let hash = runtime
         .function("test")
         .arguments(&[BorshToken::Bytes(b"Hello, World!".to_vec())])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("systemProgram", [0; 32]),
-        ])
+        .accounts(vec![("systemProgram", [0; 32])])
         .call()
         .unwrap();
 

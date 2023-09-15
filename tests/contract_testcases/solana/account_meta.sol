@@ -18,5 +18,5 @@ contract spl {
 }
 
 // ---- Expect: diagnostics ----
-// warning: 4:2-47: function can be declared 'pure'
+// warning: 4:2-47: function can be declared 'view'
 // warning: 9:2-56: function can be declared 'pure'

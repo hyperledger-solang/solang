@@ -1054,7 +1054,6 @@ impl SolanaTarget {
     fn build_external_call<'b>(
         &self,
         binary: &Binary,
-        address: PointerValue<'b>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         contract_args: ContractArgs<'b>,
@@ -1077,16 +1076,16 @@ impl SolanaTarget {
                     seeds,
                     binary.builder.build_int_cast(
                         len,
-                        external_call.get_type().get_param_types()[5].into_int_type(),
+                        external_call.get_type().get_param_types()[4].into_int_type(),
                         "len",
                     ),
                 )
             })
             .unwrap_or((
-                external_call.get_type().get_param_types()[4]
+                external_call.get_type().get_param_types()[3]
                     .ptr_type(AddressSpace::default())
                     .const_null(),
-                external_call.get_type().get_param_types()[5]
+                external_call.get_type().get_param_types()[4]
                     .into_int_type()
                     .const_zero(),
             ));
@@ -1096,7 +1095,6 @@ impl SolanaTarget {
             &[
                 payload.into(),
                 payload_len.into(),
-                address.into(),
                 program_id.into(),
                 seeds.into(),
                 seeds_len.into(),

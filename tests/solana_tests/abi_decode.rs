@@ -125,14 +125,13 @@ fn decode_address() {
         .call();
 
     let input = Data {
-        address: data_account,
-        this: data_account,
+        address: vm.stack[0].id,
+        this: vm.stack[0].id,
     };
     let encoded = input.try_to_vec().unwrap();
     let _ = vm
         .function("testAddress")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -169,7 +168,6 @@ fn string_and_bytes() {
     let _ = vm
         .function("testStringAndBytes")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -633,7 +631,6 @@ fn arrays() {
     let _ = vm
         .function("decodeComplex")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 
     let input = Input2 {
@@ -643,7 +640,6 @@ fn arrays() {
     let _ = vm
         .function("dynamicArray")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 
     let input = Input3 {
@@ -653,7 +649,6 @@ fn arrays() {
     let _ = vm
         .function("decodeMultiDim")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -920,7 +915,6 @@ fn external_function() {
     let returns = vm
         .function("testExternalFunction")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -969,7 +963,6 @@ fn bytes_arrays() {
     let _ = vm
         .function("testByteArrays")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -1008,7 +1001,6 @@ fn different_types() {
     let _ = vm
         .function("testByteArrays")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -1042,7 +1034,6 @@ fn more_elements() {
     let _ = vm
         .function("wrongNumber")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -1149,7 +1140,6 @@ fn longer_buffer() {
     let _ = vm
         .function("testLongerBuffer")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -1188,7 +1178,6 @@ fn longer_buffer_array() {
     let _ = vm
         .function("testLongerBuffer")
         .arguments(&[BorshToken::Bytes(encoded)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 

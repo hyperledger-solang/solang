@@ -22,15 +22,13 @@ describe('ChildContract', function () {
         let child_program = new PublicKey("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT");
         let child = Keypair.generate();
 
-        const signature = await program.methods.createChild(child.publicKey)
+        const signature = await program.methods.createChild()
             .accounts({
                 dataAccount: storage.publicKey,
+                Child_programId: child_program,
                 payer: payer.publicKey,
+                Child_dataAccount: child.publicKey,
             })
-            .remainingAccounts([
-                { pubkey: child_program, isSigner: false, isWritable: false },
-                { pubkey: child.publicKey, isSigner: true, isWritable: true },
-            ])
             .signers([payer, child])
             .rpc({ commitment: 'confirmed' });
 
@@ -51,15 +49,12 @@ describe('ChildContract', function () {
         let [address, bump] = await PublicKey.findProgramAddress([seed], seed_program);
 
         const signature = await program.methods.createSeed1(
-            address, seed, Buffer.from([bump]), new BN(711))
+            seed, Buffer.from([bump]), new BN(711))
             .accounts({
-                dataAccount: storage.publicKey,
+                Seed1_programId: seed_program,
                 payer: payer.publicKey,
+                Seed1_dataAccount: address,
             })
-            .remainingAccounts([
-                { pubkey: seed_program, isSigner: false, isWritable: false },
-                { pubkey: address, isSigner: false, isWritable: true },
-            ])
             .signers([payer])
             .rpc({ commitment: 'confirmed' });
 
@@ -84,15 +79,12 @@ describe('ChildContract', function () {
         let seed = Buffer.concat([bare_seed, Buffer.from([bump])]);
 
         const signature = await program.methods.createSeed2(
-            address, seed, new BN(9889))
+            seed, new BN(9889))
             .accounts({
-                dataAccount: storage.publicKey,
-                payer: payer.publicKey
+                Seed2_programId: seed_program,
+                payer: payer.publicKey,
+                Seed2_dataAccount: address,
             })
-            .remainingAccounts([
-                { pubkey: seed_program, isSigner: false, isWritable: false },
-                { pubkey: address, isSigner: false, isWritable: true },
-            ])
             .signers([payer])
             .rpc({ commitment: 'confirmed' });
 
@@ -122,9 +114,11 @@ describe('ChildContract', function () {
         let child_program = new PublicKey("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT");
 
         const signature = await program.methods.createChildWithMetas(child.publicKey, payer.publicKey)
-            .accounts({ dataAccount: storage.publicKey })
+            .accounts({
+                dataAccount: storage.publicKey,
+                Child_programId: child_program,
+            })
             .remainingAccounts([
-                { pubkey: child_program, isSigner: false, isWritable: false },
                 { pubkey: child.publicKey, isSigner: true, isWritable: true },
                 { pubkey: payer.publicKey, isSigner: true, isWritable: true },
             ])
@@ -146,14 +140,11 @@ describe('ChildContract', function () {
         const child_program = new PublicKey("8gTkAidfM82u3DGbKcZpHwL5p47KQA16MDb4WmrHdmF6");
 
         await create_account(child, child_program, 8192);
-        const signature = await program.methods.createWithoutAnnotation(child.publicKey)
-            .accounts({ dataAccount: storage.publicKey })
-            .remainingAccounts(
-                [
-                    { pubkey: child_program, isSigner: false, isWritable: false },
-                    { pubkey: child.publicKey, isSigner: true, isWritable: true }
-                ]
-            ).signers([child])
+        const signature = await program.methods.createWithoutAnnotation()
+            .accounts({
+                MyCreature_dataAccount: child.publicKey,
+                MyCreature_programId: child_program,
+            })
             .rpc({ commitment: 'confirmed' });
 
         const tx = await provider.connection.getTransaction(signature, {

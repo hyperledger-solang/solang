@@ -31,7 +31,6 @@ describe('Signature Check', function () {
         const result = await program.methods.verify(payer.publicKey, message, Buffer.from(signature))
             .preInstructions([instr1])
             .accounts({
-                dataAccount: storage.publicKey,
                 SysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY
             })
             .view();
@@ -57,7 +56,6 @@ describe('Signature Check', function () {
         const result = await program.methods.verify(payer.publicKey, message, Buffer.from(broken_signature))
             .preInstructions([instr1])
             .accounts({
-                dataAccount: storage.publicKey,
                 SysvarInstruction: SYSVAR_INSTRUCTIONS_PUBKEY
             })
             .view();

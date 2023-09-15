@@ -25,7 +25,7 @@ fn builtins() {
                 return msg.sig;
             }
             function prog() public returns (address) {
-                return tx.program_id;
+                return address(this);
             }
         }"#,
     );
@@ -43,10 +43,7 @@ fn builtins() {
     .unwrap();
     let returns = vm
         .function("mr_now")
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("clock", clock_account),
-        ])
+        .accounts(vec![("clock", clock_account)])
         .call()
         .unwrap();
 
@@ -60,10 +57,7 @@ fn builtins() {
 
     let returns = vm
         .function("mr_slot")
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("clock", clock_account),
-        ])
+        .accounts(vec![("clock", clock_account)])
         .call()
         .unwrap();
 
@@ -77,10 +71,7 @@ fn builtins() {
 
     let returns = vm
         .function("mr_blocknumber")
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("clock", clock_account),
-        ])
+        .accounts(vec![("clock", clock_account)])
         .call()
         .unwrap();
 
@@ -98,7 +89,6 @@ fn builtins() {
             width: 32,
             value: BigInt::from(0xdeadcafeu32),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -111,11 +101,7 @@ fn builtins() {
         BorshToken::Bytes(hex::decode("a73fcaa3b216e85afecaadde").unwrap())
     );
 
-    let returns = vm
-        .function("sig")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("sig").call().unwrap();
 
     if let Some(v) = returns.clone().into_fixed_bytes() {
         println!("{}", hex::encode(v));
@@ -126,11 +112,7 @@ fn builtins() {
         BorshToken::uint8_fixed_array(hex::decode("4b22101a3c98d6cb").unwrap())
     );
 
-    let returns = vm
-        .function("prog")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("prog").call().unwrap();
 
     assert_eq!(returns, BorshToken::Address(vm.stack[0].id));
 }
@@ -179,10 +161,7 @@ fn pda() {
     let returns = vm
         .function("create_pda")
         .arguments(&[BorshToken::Bool(true)])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("systemProgram", [0; 32]),
-        ])
+        .accounts(vec![("systemProgram", [0; 32])])
         .call()
         .unwrap();
 
@@ -198,10 +177,7 @@ fn pda() {
     let returns = vm
         .function("create_pda")
         .arguments(&[BorshToken::Bool(false)])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("systemProgram", [0; 32]),
-        ])
+        .accounts(vec![("systemProgram", [0; 32])])
         .call()
         .unwrap();
 
@@ -220,10 +196,7 @@ fn pda() {
             BorshToken::Bytes(b"Talking".to_vec()),
             BorshToken::Bytes(b"Squirrels".to_vec()),
         ])
-        .accounts(vec![
-            ("dataAccount", data_account),
-            ("systemProgram", [0; 32]),
-        ])
+        .accounts(vec![("systemProgram", [0; 32])])
         .call()
         .unwrap();
 
@@ -239,7 +212,6 @@ fn pda() {
     let returns = vm
         .function("create_pda2_bump")
         .arguments(&[BorshToken::Bool(true)])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();
@@ -258,7 +230,6 @@ fn pda() {
     let returns = vm
         .function("create_pda2_bump")
         .arguments(&[BorshToken::Bool(false)])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap()
         .unwrap_tuple();

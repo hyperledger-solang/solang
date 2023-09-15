@@ -29,7 +29,6 @@ describe('Testing builtins', function () {
         expect(res['return1']).toEqual([0xfe]);
 
         res = await program.methods.mrNow()
-            .accounts({ dataAccount: storage.publicKey })
             .view();
 
         let now = Math.floor(+new Date() / 1000);
@@ -40,7 +39,6 @@ describe('Testing builtins', function () {
         expect(ts).toBeGreaterThan(now - 120);
 
         res = await program.methods.mrSlot()
-            .accounts({ dataAccount: storage.publicKey })
             .view();
 
         let sol_slot = Number(res);

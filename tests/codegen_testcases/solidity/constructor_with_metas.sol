@@ -10,8 +10,8 @@ contract creator {
             AccountMeta({pubkey: child, is_signer: false, is_writable: false}),
             AccountMeta({pubkey: payer, is_signer: true, is_writable: true})
         ];
-        // CHECK: constructor(no: 4) salt: value: gas:uint64 0 address: seeds: Child encoded buffer: %abi_encoded.temp.17 accounts: %metas
-        c = new Child{accounts: metas}(payer);
+        // CHECK: constructor(no: 4) salt: value: gas:uint64 0 address:address 0xadde28d6c5697771bb24a668136224c7aac8e8ba974c2881484973b2e762fb74 seeds: Child encoded buffer: %abi_encoded.temp.15 accounts: %metas
+        c = new Child{accounts: metas}();
 
         c.say_hello();
     }
@@ -21,7 +21,7 @@ contract creator {
 contract Child {
     @payer(payer)
     @space(511 + 7)
-    constructor(address payer) {
+    constructor() {
         print("In child constructor");
     }
 
