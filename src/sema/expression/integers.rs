@@ -4,10 +4,9 @@ use crate::sema::ast::{Expression, Namespace, Type};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::expression::ResolveTo;
 use num_bigint::{BigInt, Sign};
-use num_traits::{One, Zero};
+use num_traits::Zero;
 use solang_parser::diagnostics::Diagnostic;
 use solang_parser::pt;
-use std::ops::Add;
 
 pub(super) fn coerce(
     l: &Type,
@@ -210,7 +209,7 @@ pub fn bigint_to_expression(
     // BigInt bits() returns the bits used without the sign. Negative value is allowed to be one
     // larger than positive value, e.g int8 has inclusive range -128 to 127.
     let bits = if n.sign() == Sign::Minus {
-        n.add(BigInt::one()).bits()
+        (n + 1u32).bits()
     } else {
         n.bits()
     };
