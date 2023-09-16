@@ -17,7 +17,7 @@ describe("Anchor", () => {
 
     const program = anchor.workspace.Anchor as Program<Anchor>;
 
-    const [myAccount, bump] = await anchor.web3.PublicKey.findProgramAddress([seed], program.programId);
+    const [myAccount, bump] = anchor.web3.PublicKey.findProgramAddressSync([seed], program.programId);
 
 
     const { SystemProgram } = anchor.web3;

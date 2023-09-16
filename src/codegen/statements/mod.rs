@@ -577,12 +577,20 @@ pub(crate) fn statement(
         }
         Statement::Revert {
             loc,
-            error_no,
             args,
+            error_no,
         } => {
-            assert!(error_no.is_none());
-
-            revert(args, cfg, contract_no, Some(func), ns, vartab, opt, loc);
+            revert(
+                args,
+                error_no,
+                cfg,
+                contract_no,
+                Some(func),
+                ns,
+                vartab,
+                opt,
+                loc,
+            );
         }
         Statement::Underscore(_) => {
             // ensure we get phi nodes for the return values

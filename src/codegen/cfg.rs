@@ -132,6 +132,7 @@ pub enum Instr {
     /// Call external functions. If the call fails, set the success failure
     /// or abort if this is None
     ExternalCall {
+        loc: Loc,
         success: Option<usize>,
         address: Option<Expression>,
         accounts: Option<Expression>,
@@ -417,6 +418,8 @@ pub struct ControlFlowGraph {
     current: usize,
     // A mapping between the res of an array and the res of the temp var holding its length.
     pub array_lengths_temps: ArrayLengthVars,
+    /// Is this a modifier dispatch for which function number?
+    pub modifier: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -488,6 +491,7 @@ impl ControlFlowGraph {
             selector: Vec::new(),
             current: 0,
             array_lengths_temps: IndexMap::new(),
+            modifier: None,
         };
 
         cfg.new_basic_block("entry".to_string());
@@ -510,6 +514,7 @@ impl ControlFlowGraph {
             selector: Vec::new(),
             current: 0,
             array_lengths_temps: IndexMap::new(),
+            modifier: None,
         }
     }
 
@@ -1181,7 +1186,7 @@ impl ControlFlowGraph {
                 gas,
                 callty,
                 contract_function_no,
-                flags
+                flags, ..
             } => {
                 format!(
                     "{} = external call::{} address:{} payload:{} value:{} gas:{} accounts:{} seeds:{} contract|function:{} flags:{}",
@@ -1513,6 +1518,7 @@ pub fn generate_cfg(
             cfg.public = public;
             cfg.nonpayable = nonpayable;
             cfg.selector = ns.functions[func_no].selector(ns, &contract_no);
+            cfg.modifier = Some(func_no);
         }
     }
 

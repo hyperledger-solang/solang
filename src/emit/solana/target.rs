@@ -10,8 +10,7 @@ use crate::emit::{ContractArgs, TargetRuntime, Variable};
 use crate::sema::ast::{self, Namespace};
 use inkwell::types::{BasicType, BasicTypeEnum, IntType};
 use inkwell::values::{
-    ArrayValue, BasicMetadataValueEnum, BasicValue, BasicValueEnum, FunctionValue, IntValue,
-    PointerValue,
+    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
 use inkwell::{AddressSpace, IntPredicate};
 use num_traits::ToPrimitive;
@@ -1350,11 +1349,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     ) {
         let address = address.unwrap();
 
+        contract_args.program_id = Some(address);
         if contract_args.accounts.is_some() {
-            contract_args.program_id = Some(address);
             self.build_invoke_signed_c(binary, function, payload, payload_len, contract_args);
         } else {
-            self.build_external_call(binary, address, payload, payload_len, contract_args, ns);
+            self.build_external_call(binary, payload, payload_len, contract_args, ns);
         }
     }
 
@@ -1662,64 +1661,23 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
 
                 let parameters = self.sol_parameters(binary);
 
-                let key = unsafe {
-                    binary.builder.build_gep(
-                        binary
-                            .module
-                            .get_struct_type("struct.SolParameters")
-                            .unwrap(),
-                        parameters,
-                        &[
-                            binary.context.i32_type().const_int(0, false), // first SolParameters
-                            binary.context.i32_type().const_int(0, false), // first field of SolParameters
-                            binary.context.i32_type().const_int(0, false), // first element of ka[]
-                            binary.context.i32_type().const_int(0, false), // first field of SolAccountInfo (key)
-                        ],
-                        "key",
-                    )
-                };
-
-                let key_pointer = binary.builder.build_load(
-                    binary.address_type(ns).ptr_type(AddressSpace::default()),
-                    key,
-                    "key_pointer",
-                );
-
-                key_pointer.as_basic_value_enum()
-            }
-            codegen::Expression::Builtin {
-                kind: codegen::Builtin::ProgramId,
-                args,
-                ..
-            } => {
-                assert_eq!(args.len(), 0);
-
-                let parameters = self.sol_parameters(binary);
-
                 let sol_pubkey_type = binary.module.get_struct_type("struct.SolPubkey").unwrap();
-                let account_id = binary
-                    .builder
-                    .build_load(
-                        sol_pubkey_type.ptr_type(AddressSpace::default()),
-                        binary
-                            .builder
-                            .build_struct_gep(
-                                binary
-                                    .module
-                                    .get_struct_type("struct.SolParameters")
-                                    .unwrap(),
-                                parameters,
-                                4,
-                                "program_id",
-                            )
-                            .unwrap(),
-                        "program_id",
-                    )
-                    .into_pointer_value();
-
-                binary
-                    .builder
-                    .build_load(binary.address_type(ns), account_id, "program_id")
+                binary.builder.build_load(
+                    sol_pubkey_type.ptr_type(AddressSpace::default()),
+                    binary
+                        .builder
+                        .build_struct_gep(
+                            binary
+                                .module
+                                .get_struct_type("struct.SolParameters")
+                                .unwrap(),
+                            parameters,
+                            4,
+                            "program_id",
+                        )
+                        .unwrap(),
+                    "program_id",
+                )
             }
             codegen::Expression::Builtin {
                 kind: codegen::Builtin::Calldata,

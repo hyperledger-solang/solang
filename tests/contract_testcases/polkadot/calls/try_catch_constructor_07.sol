@@ -9,4 +9,3 @@ contract A {
 }
 
 // ---- Expect: diagnostics ----
-// error: 3:30-35: only catch 'Error' is supported, not 'Panic'

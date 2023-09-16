@@ -8,6 +8,11 @@ use super::{
     yul::ast::{YulExpression, YulStatement},
     Recurse,
 };
+use crate::sema::ast::SolanaAccount;
+use crate::sema::solana_accounts::BuiltinAccounts;
+use crate::sema::yul::builtin::YulBuiltInFunction;
+use bitflags::bitflags;
+use solang_parser::pt::Loc;
 use solang_parser::{helpers::CodeLocation, pt};
 
 #[derive(PartialEq, PartialOrd)]
@@ -16,6 +21,15 @@ enum Access {
     Read,
     Write,
     Value,
+}
+
+bitflags! {
+    #[derive(PartialEq, Eq, Copy, Clone, Debug)]
+    struct DataAccountUsage: u8 {
+        const NONE = 0;
+        const READ = 1;
+        const WRITE = 2;
+    }
 }
 
 impl Access {
@@ -49,6 +63,7 @@ struct StateCheck<'a> {
     func: &'a Function,
     modifier: Option<pt::Loc>,
     ns: &'a Namespace,
+    data_account: DataAccountUsage,
 }
 
 impl<'a> StateCheck<'a> {
@@ -148,6 +163,7 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
         func,
         modifier: None,
         ns,
+        data_account: DataAccountUsage::NONE,
     };
 
     for arg in &func.modifiers {
@@ -222,6 +238,38 @@ fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
         }
     }
 
+    if state.data_account != DataAccountUsage::NONE {
+        func.solana_accounts.borrow_mut().insert(
+            BuiltinAccounts::DataAccount.to_string(),
+            SolanaAccount {
+                loc: Loc::Codegen,
+                is_signer: false,
+                is_writer: (state.data_account & DataAccountUsage::WRITE)
+                    == DataAccountUsage::WRITE,
+                generated: true,
+            },
+        );
+    }
+
+    if func.is_constructor() {
+        func.solana_accounts.borrow_mut().insert(
+            BuiltinAccounts::DataAccount.to_string(),
+            SolanaAccount {
+                loc: Loc::Codegen,
+                is_writer: true,
+                /// With a @payer annotation, the account is created on-chain and needs a signer. The client
+                /// provides an address that does not exist yet, so SystemProgram.CreateAccount is called
+                /// on-chain.
+                ///
+                /// However, if a @seed is also provided, the program can sign for the account
+                /// with the seed using program derived address (pda) when SystemProgram.CreateAccount is called,
+                /// so no signer is required from the client.
+                is_signer: func.has_payer_annotation() && !func.has_seed_annotation(),
+                generated: true,
+            },
+        );
+    }
+
     state.diagnostics
 }
 
@@ -263,7 +311,10 @@ fn recurse_statements(stmts: &[Statement], ns: &Namespace, state: &mut StateChec
             Statement::Expression(_, _, expr) => {
                 expr.recurse(state, read_expression);
             }
-            Statement::Delete(loc, _, _) => state.write(loc),
+            Statement::Delete(loc, _, _) => {
+                state.data_account |= DataAccountUsage::WRITE;
+                state.write(loc)
+            }
             Statement::Destructure(_, fields, expr) => {
                 // This is either a list or internal/external function call
                 expr.recurse(state, read_expression);
@@ -312,17 +363,31 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::PostIncrement { expr, .. }
         | Expression::PostDecrement { expr, .. } => {
             expr.recurse(state, write_expression);
+            return false;
         }
         Expression::Assign { left, right, .. } => {
             right.recurse(state, read_expression);
             left.recurse(state, write_expression);
+            return false;
         }
-        Expression::StorageVariable { loc, .. } => state.read(loc),
         Expression::StorageArrayLength { loc, .. } | Expression::StorageLoad { loc, .. } => {
-            state.read(loc)
+            state.data_account |= DataAccountUsage::READ;
+            state.read(loc);
+            return false;
         }
         Expression::Subscript { loc, array_ty, .. } if array_ty.is_contract_storage() => {
-            state.read(loc)
+            state.data_account |= DataAccountUsage::READ;
+            state.read(loc);
+            return false;
+        }
+        Expression::Variable { ty, .. } => {
+            if ty.is_contract_storage() {
+                state.data_account |= DataAccountUsage::READ;
+            }
+        }
+        Expression::StorageVariable { loc, .. } => {
+            state.data_account |= DataAccountUsage::READ;
+            state.read(loc);
         }
         Expression::Builtin {
             kind: Builtin::FunctionSelector,
@@ -343,7 +408,6 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
                 | Builtin::BlockNumber
                 | Builtin::Slot
                 | Builtin::Timestamp
-                | Builtin::ProgramId
                 | Builtin::BlockCoinbase
                 | Builtin::BlockDifficulty
                 | Builtin::BlockHash
@@ -357,6 +421,7 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
                 | Builtin::Accounts,
             ..
         } => state.read(loc),
+
         Expression::Builtin {
             loc,
             kind: Builtin::PayableSend | Builtin::PayableTransfer | Builtin::SelfDestruct,
@@ -380,7 +445,10 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             kind: Builtin::ArrayPush | Builtin::ArrayPop,
             args,
             ..
-        } if args[0].ty().is_contract_storage() => state.write(loc),
+        } if args[0].ty().is_contract_storage() => {
+            state.data_account |= DataAccountUsage::WRITE;
+            state.write(loc)
+        }
 
         Expression::Constructor { loc, .. } => {
             state.write(loc);
@@ -401,11 +469,12 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             CallTy::Static => state.read(loc),
             CallTy::Delegate | CallTy::Regular => state.write(loc),
         },
-        _ => {
-            return true;
+        Expression::NamedMember { name, .. } if name == BuiltinAccounts::DataAccount => {
+            state.data_account |= DataAccountUsage::READ;
         }
+        _ => (),
     }
-    false
+    true
 }
 
 fn write_expression(expr: &Expression, state: &mut StateCheck) -> bool {
@@ -415,19 +484,32 @@ fn write_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         }
         | Expression::Subscript { loc, array, .. } => {
             if array.ty().is_contract_storage() {
+                state.data_account |= DataAccountUsage::WRITE;
                 state.write(loc);
                 return false;
             }
         }
         Expression::Variable { loc, ty, var_no: _ } => {
             if ty.is_contract_storage() && !expr.ty().is_contract_storage() {
+                state.data_account |= DataAccountUsage::WRITE;
                 state.write(loc);
                 return false;
             }
         }
         Expression::StorageVariable { loc, .. } => {
+            state.data_account |= DataAccountUsage::WRITE;
             state.write(loc);
             return false;
+        }
+        Expression::Builtin {
+            loc,
+            kind: Builtin::Accounts,
+            ..
+        } => {
+            state.write(loc);
+        }
+        Expression::NamedMember { name, .. } if name == BuiltinAccounts::DataAccount => {
+            state.data_account |= DataAccountUsage::WRITE;
         }
         _ => (),
     }
@@ -507,6 +589,17 @@ fn check_expression_mutability_yul(expr: &YulExpression, state: &mut StateCheck)
             } else if builtin_ty.modify_state() {
                 state.write(loc);
             }
+
+            match builtin_ty {
+                YulBuiltInFunction::SStore => {
+                    state.data_account |= DataAccountUsage::WRITE;
+                }
+                YulBuiltInFunction::SLoad => {
+                    state.data_account |= DataAccountUsage::READ;
+                }
+                _ => (),
+            }
+
             true
         }
         YulExpression::FunctionCall(..) => true,

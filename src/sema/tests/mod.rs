@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![cfg(test)]
+
+mod data_account;
+
 use crate::sema::ast::{Expression, Parameter, Statement, TryCatch, Type};
 use crate::sema::yul::ast::InlineAssembly;
 use crate::{parse_and_resolve, sema::ast, FileResolver, Target};
@@ -452,8 +455,8 @@ contract aborting {
 }
 
 contract runner {
-    function test(address a) external pure {
-        aborting abort = new aborting{address: a}();
+    function test() external pure {
+        aborting abort = new aborting();
 
         try abort.abort() returns (int32 a, bool b) {
             // call succeeded; return values are in a and b
@@ -606,7 +609,7 @@ contract Child {
     assert_eq!(errors.len(), 1);
     assert_eq!(
         errors[0].message,
-        "either 'address' or 'accounts' call argument is required on Solana"
+        "accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external"
     );
 }
 

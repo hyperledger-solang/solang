@@ -1667,7 +1667,7 @@ impl<'a, 'b> VmFunction<'a, 'b> {
                             accounts
                                 .get(account.name.as_str())
                                 .cloned()
-                                .expect("an account is missing"),
+                                .unwrap_or_else(|| panic!("account '{}' is missing", account.name)),
                         ),
                         is_writable: account.is_mut,
                         is_signer: account.is_signer,
@@ -1676,6 +1676,12 @@ impl<'a, 'b> VmFunction<'a, 'b> {
                 IdlAccountItem::IdlAccounts(_) => unimplemented!("Solang does not use IdlAccounts"),
             }
         }
+
+        assert_eq!(
+            accounts.len(),
+            metas.len(),
+            "Number of accounts does not match IDL"
+        );
 
         self.accounts = metas;
         self

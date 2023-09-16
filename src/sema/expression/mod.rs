@@ -66,6 +66,26 @@ pub struct ExprContext {
     pub lvalue: bool,
     /// Are we resolving a yul function (it cannot have external dependencies)
     pub yul_function: bool,
+    /// How many loops are we in? (i.e how many nested loops de we have?)
+    pub loop_nesting_level: usize,
+}
+
+impl ExprContext {
+    pub fn enter_loop(&mut self) {
+        self.loop_nesting_level += 1;
+    }
+
+    pub fn exit_loop(&mut self) {
+        self.loop_nesting_level -= 1;
+    }
+
+    pub fn in_a_loop(&self) -> bool {
+        self.loop_nesting_level > 0
+    }
+
+    pub fn drop(&self) {
+        assert_eq!(self.loop_nesting_level, 0);
+    }
 }
 
 impl Expression {

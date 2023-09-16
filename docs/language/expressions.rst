@@ -124,8 +124,8 @@ this only works with public functions.
 
 .. note::
 
-    On Solana, this gives the account of contract data. If you want the account with the program code,
-    use ``tx.program_id``.
+    On Solana, ``this`` returns the program account. If you are looking for the data account, please
+    use ``tx.accounts.dataAccount.key``.
 
 type(..) operators
 __________________

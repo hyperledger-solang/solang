@@ -97,6 +97,12 @@ suite('Extension Test Suite', function () {
     await testrefs(refsdoc1);
   });
 
+  // Tests for rename
+  this.timeout(20000);
+  const renamedoc1 = getDocUri('rename.sol');
+  test('Testing for Rename', async () => {
+    await testrename(renamedoc1);
+  });
 });
 
 function toRange(lineno1: number, charno1: number, lineno2: number, charno2: number) {
@@ -354,6 +360,48 @@ async function testrefs(docUri: vscode.Uri) {
   assert.strictEqual(loc15.range.end.line, 38);
   assert.strictEqual(loc15.range.end.character, 18);
   assert.strictEqual(loc15.uri.path, docUri.path);
+}
+
+async function testrename(docUri: vscode.Uri) {
+  await activate(docUri);
+
+  const pos0 = new vscode.Position(9, 8);
+  const newname0 = "changed";
+  const rename0 = (await vscode.commands.executeCommand(
+    'vscode.executeDocumentRenameProvider',
+    docUri,
+    pos0,
+    newname0,
+  )) as vscode.WorkspaceEdit;
+
+  assert(rename0.has(docUri));
+
+  const loc0 = rename0.get(docUri);
+
+  const loc00 = loc0[0] as vscode.TextEdit;
+  assert.strictEqual(loc00.range.start.line, 0);
+  assert.strictEqual(loc00.range.start.character, 41);
+  assert.strictEqual(loc00.range.end.line, 0);
+  assert.strictEqual(loc00.range.end.character, 42);
+  assert.strictEqual(loc00.newText, newname0);
+  const loc01 = loc0[1] as vscode.TextEdit;
+  assert.strictEqual(loc01.range.start.line, 1);
+  assert.strictEqual(loc01.range.start.character, 4);
+  assert.strictEqual(loc01.range.end.line, 1);
+  assert.strictEqual(loc01.range.end.character, 6);
+  assert.strictEqual(loc01.newText, newname0);
+  const loc02 = loc0[2] as vscode.TextEdit;
+  assert.strictEqual(loc02.range.start.line, 9);
+  assert.strictEqual(loc02.range.start.character, 8);
+  assert.strictEqual(loc02.range.end.line, 9);
+  assert.strictEqual(loc02.range.end.character, 10);
+  assert.strictEqual(loc02.newText, newname0);
+  const loc03 = loc0[3] as vscode.TextEdit;
+  assert.strictEqual(loc03.range.start.line, 9);
+  assert.strictEqual(loc03.range.start.character, 12);
+  assert.strictEqual(loc03.range.end.line, 9);
+  assert.strictEqual(loc03.range.end.character, 14);
+  assert.strictEqual(loc03.newText, newname0);
 }
 
 async function testhover(docUri: vscode.Uri) {

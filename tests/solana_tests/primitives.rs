@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{build_solidity, BorshToken};
+use crate::{build_solidity, Account, BorshToken};
+use base58::FromBase58;
 use num_bigint::{BigInt, BigUint, RandBigInt, ToBigInt};
 use num_traits::{One, Pow, ToPrimitive, Zero};
 use rand::seq::SliceRandom;
@@ -54,9 +55,7 @@ fn assert_true() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    vm.function("assert_fails")
-        .accounts(vec![("dataAccount", data_account)])
-        .call();
+    vm.function("assert_fails").call();
 }
 
 #[test]
@@ -91,29 +90,19 @@ fn boolean() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("return_true")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("return_true").call().unwrap();
 
     assert_eq!(returns, BorshToken::Bool(true));
 
-    let returns = vm
-        .function("return_false")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("return_false").call().unwrap();
 
     assert_eq!(returns, BorshToken::Bool(false));
 
     vm.function("true_arg")
         .arguments(&[BorshToken::Bool(true)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
     vm.function("false_arg")
         .arguments(&[BorshToken::Bool(false)])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -142,11 +131,7 @@ fn address() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("return_address")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("return_address").call().unwrap();
 
     assert_eq!(
         returns,
@@ -161,7 +146,6 @@ fn address() {
             75, 161, 209, 89, 47, 84, 50, 13, 23, 127, 94, 21, 50, 249, 250, 185, 117, 49, 186,
             134, 82, 130, 112, 97, 218, 24, 157, 198, 40, 105, 118, 27,
         ])])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -191,11 +175,7 @@ fn test_enum() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("return_enum")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("return_enum").call().unwrap();
 
     assert_eq!(
         returns,
@@ -210,7 +190,6 @@ fn test_enum() {
             width: 8,
             value: BigInt::from(6u8),
         }])
-        .accounts(vec![("dataAccount", data_account)])
         .call();
 }
 
@@ -259,11 +238,7 @@ fn bytes() {
             .accounts(vec![("dataAccount", data_account)])
             .call();
 
-        let returns = vm
-            .function("return_literal")
-            .accounts(vec![("dataAccount", data_account)])
-            .call()
-            .unwrap();
+        let returns = vm.function("return_literal").call().unwrap();
 
         assert_eq!(
             returns,
@@ -273,7 +248,6 @@ fn bytes() {
         let returns = vm
             .function("return_arg")
             .arguments(&[BorshToken::FixedBytes(vec![1, 2, 3, 4, 5, 6, 7])])
-            .accounts(vec![("dataAccount", data_account)])
             .call()
             .unwrap();
 
@@ -298,7 +272,6 @@ fn bytes() {
                     BorshToken::FixedBytes(a.to_vec()),
                     BorshToken::FixedBytes(b.to_vec()),
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -319,7 +292,6 @@ fn bytes() {
                     BorshToken::FixedBytes(a.to_vec()),
                     BorshToken::FixedBytes(b.to_vec()),
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -333,7 +305,6 @@ fn bytes() {
                     BorshToken::FixedBytes(a.to_vec()),
                     BorshToken::FixedBytes(b.to_vec()),
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -354,7 +325,6 @@ fn bytes() {
                         value: BigInt::from(r),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -379,7 +349,6 @@ fn bytes() {
                         value: BigInt::from(r),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -487,7 +456,6 @@ fn uint() {
                     width,
                     value: a.to_bigint().unwrap(),
                 }])
-                .accounts(vec![("dataAccount", data_account)])
                 .call();
 
             println!("{a:x} = {res:?} o");
@@ -504,7 +472,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -533,7 +500,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -560,7 +526,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -589,7 +554,6 @@ fn uint() {
                             value: BigInt::from(n),
                         },
                     ])
-                    .accounts(vec![("dataAccount", data_account)])
                     .call()
                     .unwrap();
 
@@ -619,7 +583,6 @@ fn uint() {
                             value: b.to_bigint().unwrap(),
                         },
                     ])
-                    .accounts(vec![("dataAccount", data_account)])
                     .call()
                     .unwrap();
 
@@ -647,7 +610,6 @@ fn uint() {
                             value: b.to_bigint().unwrap(),
                         },
                     ])
-                    .accounts(vec![("dataAccount", data_account)])
                     .call()
                     .unwrap();
 
@@ -676,7 +638,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -703,7 +664,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -730,7 +690,6 @@ fn uint() {
                         value: b.to_bigint().unwrap(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -759,7 +718,6 @@ fn uint() {
                         value: BigInt::from(r),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -787,7 +745,6 @@ fn uint() {
                         value: BigInt::from(r),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -850,7 +807,6 @@ fn test_power_overflow_boundaries() {
                     value: BigInt::from(width - 1),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .call()
             .unwrap();
 
@@ -876,7 +832,6 @@ fn test_power_overflow_boundaries() {
                     value: BigInt::from(width + 1),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
         assert_ne!(sesa.unwrap(), 0);
@@ -923,7 +878,6 @@ fn test_overflow_boundaries() {
                     value: second_op.clone(),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .call()
             .unwrap();
         assert_eq!(
@@ -946,7 +900,6 @@ fn test_overflow_boundaries() {
                     value: second_op.clone(),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .call()
             .unwrap();
         assert_eq!(
@@ -980,7 +933,6 @@ fn test_overflow_boundaries() {
                     value: BigInt::from(2u8),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
         contract
@@ -995,7 +947,6 @@ fn test_overflow_boundaries() {
                     value: BigInt::from(2),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
         contract
@@ -1010,7 +961,6 @@ fn test_overflow_boundaries() {
                     value: upper_boundary.clone(),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
         contract
@@ -1025,7 +975,6 @@ fn test_overflow_boundaries() {
                     value: lower_boundary.clone(),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
         contract
@@ -1040,7 +989,6 @@ fn test_overflow_boundaries() {
                     value: lower_boundary.clone(),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .must_fail();
     }
 }
@@ -1089,7 +1037,6 @@ fn test_mul_within_range_signed() {
                     value: second_op.clone(),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .call()
             .unwrap();
 
@@ -1146,7 +1093,6 @@ fn test_mul_within_range() {
                         value: second_operand_rand.to_bigint().unwrap(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
             let res = first_operand_rand * second_operand_rand;
@@ -1208,7 +1154,6 @@ fn test_overflow_detect_signed() {
                     value: second_operand_rand.clone(),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
         // The range of values that can be held in signed N bits is [-2^(N-1), 2^(N-1)-1] .
@@ -1232,7 +1177,6 @@ fn test_overflow_detect_signed() {
                     value: second_operand_rand.clone(),
                 },
             ])
-            .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
         // neg fails when value -(2^N)
@@ -1245,7 +1189,6 @@ fn test_overflow_detect_signed() {
                 width: width as u16,
                 value: lower_limit.clone(),
             }])
-            .accounts(vec![("dataAccount", data_account)])
             .must_fail();
 
         lower_limit.add_assign(1usize);
@@ -1258,7 +1201,6 @@ fn test_overflow_detect_signed() {
                 width: width as u16,
                 value: first_operand_rand,
             }])
-            .accounts(vec![("dataAccount", data_account)])
             .call();
     }
 }
@@ -1306,7 +1248,6 @@ fn test_overflow_detect_unsigned() {
                         value: second_operand_rand.to_bigint().unwrap(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .must_fail();
         }
     }
@@ -1394,7 +1335,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -1421,7 +1361,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -1448,7 +1387,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -1476,7 +1414,6 @@ fn int() {
                             value: b.clone(),
                         },
                     ])
-                    .accounts(vec![("dataAccount", data_account)])
                     .call()
                     .unwrap();
 
@@ -1503,7 +1440,6 @@ fn int() {
                             value: b.clone(),
                         },
                     ])
-                    .accounts(vec![("dataAccount", data_account)])
                     .call()
                     .unwrap();
 
@@ -1531,7 +1467,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -1558,7 +1493,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -1585,7 +1519,6 @@ fn int() {
                         value: b.clone(),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -1614,7 +1547,6 @@ fn int() {
                         value: BigInt::from(r),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -1642,7 +1574,6 @@ fn int() {
                         value: BigInt::from(r),
                     },
                 ])
-                .accounts(vec![("dataAccount", data_account)])
                 .call()
                 .unwrap();
 
@@ -1695,7 +1626,6 @@ fn bytes_cast() {
     let returns = vm
         .function("to_bytes")
         .arguments(&[BorshToken::FixedBytes(b"abcd".to_vec())])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -1704,7 +1634,6 @@ fn bytes_cast() {
     let returns = vm
         .function("to_bytes5")
         .arguments(&[BorshToken::Bytes(b"abcde".to_vec())])
-        .accounts(vec![("dataAccount", data_account)])
         .call()
         .unwrap();
 
@@ -1761,4 +1690,35 @@ fn shift_after_load() {
             value: BigInt::one(),
         }
     );
+}
+
+#[test]
+fn constant_program_id() {
+    let mut vm = build_solidity(
+        r#"
+        @program_id("5kQ3iJ43gHNDjqmSAtE1vDu18CiSAfNbRe4v5uoobh3U")
+contract hatchling {
+    constructor() {}
+
+    function getId() public view returns (address) {
+        return address(this);
+    }
+}
+        "#,
+    );
+
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let res = vm.function("getId").call().unwrap();
+
+    let program_id: Account = "5kQ3iJ43gHNDjqmSAtE1vDu18CiSAfNbRe4v5uoobh3U"
+        .from_base58()
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    assert_eq!(res, BorshToken::Address(program_id));
 }

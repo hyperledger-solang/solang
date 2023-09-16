@@ -24,11 +24,7 @@ fn test_slice_in_phi() {
     vm.function("new")
         .accounts(vec![("dataAccount", data_account)])
         .call();
-    let returns = vm
-        .function("test")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("test").call().unwrap();
 
     assert_eq!(returns, BorshToken::String(String::from("Hello!")));
 }

@@ -20,7 +20,7 @@ contract D {
 }
 
 // ---- Expect: diagnostics ----
-// error: 4:9-28: either 'address' or 'accounts' call argument is required on Solana
+// error: 4:9-28: accounts are required for calling a contract. You can either provide the accounts with the {accounts: ...} call argument or change this function's visibility to external
 // error: 4:16-24: Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer
 // error: 10:10-18: Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer
 // error: 11:12-20: Solana Cross Program Invocation (CPI) cannot transfer native value. See https://solang.readthedocs.io/en/latest/language/functions.html#value_transfer

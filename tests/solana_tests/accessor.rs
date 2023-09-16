@@ -183,11 +183,7 @@ fn constant() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("z")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("z").call().unwrap();
 
     assert_eq!(
         returns,
@@ -209,11 +205,7 @@ fn constant() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("z")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("z").call().unwrap();
 
     assert_eq!(
         returns,
@@ -235,11 +227,7 @@ fn constant() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
-    let returns = vm
-        .function("z")
-        .accounts(vec![("dataAccount", data_account)])
-        .call()
-        .unwrap();
+    let returns = vm.function("z").call().unwrap();
 
     assert_eq!(
         returns,
@@ -254,6 +242,7 @@ fn constant() {
 fn struct_accessor() {
     let mut vm = build_solidity(
         r#"
+        import 'solana';
         contract C {
             struct E {
                 bytes4 b4;
@@ -274,13 +263,16 @@ fn struct_accessor() {
             }
 
             function f() public view {
-                (int64 a1, bool b, E memory c) = this.a();
+                AccountMeta[1] meta = [
+                    AccountMeta({pubkey: tx.accounts.dataAccount.key, is_writable: false, is_signer: false})
+                ];
+                (int64 a1, bool b, E memory c) = this.a{accounts: meta}();
                 require(a1 == -63 && !b && c.b4 == "nuff", "a");
-                (a1, b, c) = this.s(99);
+                (a1, b, c) = this.s{accounts: meta}(99);
                 require(a1 == 65535 && b && c.b4 == "naff", "b");
-                (a1, b, c) = this.m(1023413412);
+                (a1, b, c) = this.m{accounts: meta}(1023413412);
                 require(a1 == 414243 && b && c.b4 == "niff", "c");
-                c.b4 = this.e();
+                c.b4 = this.e{accounts: meta}();
                 require(a1 == 414243 && b && c.b4 == "cons", "E");
             }
         }"#,

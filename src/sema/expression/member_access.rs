@@ -10,8 +10,10 @@ use crate::sema::expression::function_call::function_type;
 use crate::sema::expression::integers::bigint_to_expression;
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
+use crate::sema::solana_accounts::BuiltinAccounts;
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::{assigned_variable, used_variable};
+use crate::Target;
 use num_bigint::{BigInt, Sign};
 use num_traits::{FromPrimitive, One, Zero};
 use solang_parser::diagnostics::Diagnostic;
@@ -246,11 +248,13 @@ pub(super) fn member_access(
                 };
             } else if matches!(*elem_ty, Type::Struct(StructType::AccountInfo))
                 && context.function_no.is_some()
+                && ns.target == Target::Solana
             {
                 return if ns.functions[context.function_no.unwrap()]
                     .solana_accounts
                     .borrow()
                     .contains_key(&id.name)
+                    || id.name == BuiltinAccounts::DataAccount
                 {
                     Ok(Expression::NamedMember {
                         loc: *loc,

@@ -3,10 +3,10 @@ import 'solana';
 @program_id("SoLDxXQ9GMoa15i4NavZc61XGkas2aom4aNiWT6KUER")
 contract Builder {
     BeingBuilt other;
-    function build_this(address addr) external {
-        // When calling a constructor from an external function, the only call argument needed
-        // is the data account. The compiler automatically passes the necessary accounts to the call.
-        other = new BeingBuilt{address: addr}("my_seed");
+    function build_this() external {
+        // When calling a constructor from an external function, the data account for the contract
+        // 'BeingBuilt' should be passed as the 'BeingBuilt_dataAccount' in the client code.
+        other = new BeingBuilt("my_seed");
     }
 
     function build_that(address data_account, address payer_account) public {

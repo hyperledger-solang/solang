@@ -3,12 +3,13 @@
 use crate::codegen::cfg::{ASTFunction, ControlFlowGraph, Instr, InternalCallTy};
 use crate::codegen::solana_accounts::account_from_number;
 use crate::codegen::{Builtin, Expression};
-use crate::sema::ast::{Contract, Function, Mutability, Namespace, SolanaAccount};
+use crate::sema::ast::{Contract, Function, Namespace, SolanaAccount};
 use crate::sema::diagnostics::Diagnostics;
 use crate::sema::solana_accounts::BuiltinAccounts;
 use crate::sema::Recurse;
 use indexmap::IndexSet;
 use solang_parser::diagnostics::Diagnostic;
+use solang_parser::pt;
 use solang_parser::pt::{FunctionTy, Loc};
 use std::collections::{HashSet, VecDeque};
 
@@ -33,7 +34,7 @@ struct RecurseData<'a> {
 
 impl RecurseData<'_> {
     /// Add an account to the function's indexmap
-    fn add_account(&mut self, account_name: String, account: SolanaAccount) {
+    fn add_account(&mut self, account_name: String, account: &SolanaAccount) {
         let (is_signer, is_writer) = self.functions[self.ast_no]
             .solana_accounts
             .borrow()
@@ -63,7 +64,7 @@ impl RecurseData<'_> {
     fn add_system_account(&mut self) {
         self.add_account(
             BuiltinAccounts::SystemAccount.to_string(),
-            SolanaAccount {
+            &SolanaAccount {
                 loc: Loc::Codegen,
                 is_writer: false,
                 is_signer: false,
@@ -86,41 +87,17 @@ pub(crate) fn collect_accounts_from_contract(contract_no: usize, ns: &Namespace)
             )
         {
             let func = &ns.functions[*func_no];
-            match &func.mutability {
-                Mutability::Pure(_) => (),
-                Mutability::View(_) => {
-                    let (idx, _) = func.solana_accounts.borrow_mut().insert_full(
-                        BuiltinAccounts::DataAccount.to_string(),
-                        SolanaAccount {
-                            loc: Loc::Codegen,
-                            is_writer: false,
-                            is_signer: false,
-                            generated: true,
-                        },
-                    );
-                    func.solana_accounts.borrow_mut().move_index(idx, 0);
-                }
-                _ => {
-                    let (idx, _) = func.solana_accounts.borrow_mut().insert_full(
-                        BuiltinAccounts::DataAccount.to_string(),
-                        SolanaAccount {
-                            loc: Loc::Codegen,
-                            is_writer: true,
-                            /// With a @payer annotation, the account is created on-chain and needs a signer. The client
-                            /// provides an address that does not exist yet, so SystemProgram.CreateAccount is called
-                            /// on-chain.
-                            ///
-                            /// However, if a @seed is also provided, the program can sign for the account
-                            /// with the seed using program derived address (pda) when SystemProgram.CreateAccount is called,
-                            /// so no signer is required from the client.
-                            is_signer: func.has_payer_annotation() && !func.has_seed_annotation(),
-                            generated: true,
-                        },
-                    );
-
-                    func.solana_accounts.borrow_mut().move_index(idx, 0);
-                }
+            let index = func
+                .solana_accounts
+                .borrow()
+                .get_index_of(BuiltinAccounts::DataAccount.as_str());
+            if let Some(data_account_index) = index {
+                // Enforce the data account to be the first
+                func.solana_accounts
+                    .borrow_mut()
+                    .move_index(data_account_index, 0);
             }
+
             if func.is_constructor() && func.has_payer_annotation() {
                 func.solana_accounts.borrow_mut().insert(
                     BuiltinAccounts::SystemAccount.to_string(),
@@ -234,7 +211,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                         let accounts_to_add =
                             data.functions[*ast_no].solana_accounts.borrow().clone();
                         for (account_name, account) in accounts_to_add {
-                            data.add_account(account_name, account);
+                            data.add_account(account_name, &account);
                         }
                     }
                     _ => (),
@@ -324,6 +301,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
             value.recurse(data, check_expression);
         }
         Instr::Constructor {
+            loc,
             encoded_args,
             value,
             gas,
@@ -332,6 +310,7 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
             seeds,
             accounts,
             constructor_no,
+            contract_no,
             ..
         } => {
             encoded_args.recurse(data, check_expression);
@@ -354,43 +333,14 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                 // If the one passes the AccountMeta vector to the constructor call, there is no
                 // need to collect accounts for the IDL.
                 if let Some(constructor_no) = constructor_no {
-                    let accounts_to_add = data.functions[*constructor_no]
-                        .solana_accounts
-                        .borrow()
-                        .clone();
-                    for (name, account) in accounts_to_add {
-                        if name == BuiltinAccounts::DataAccount {
-                            continue;
-                        }
-
-                        if let Some(other_account) = data.functions[data.ast_no]
-                            .solana_accounts
-                            .borrow()
-                            .get(&name)
-                        {
-                            // If the compiler did not generate this account entry, we have a name
-                            // collision.
-                            if !other_account.generated {
-                                data.diagnostics.push(
-                                    Diagnostic::error_with_note(
-                                        other_account.loc,
-                                        "account name collision encountered. Calling a function that \
-                                requires an account whose name is also defined in the current function \
-                                will create duplicate names in the IDL. Please, rename one of the accounts".to_string(),
-                                        account.loc,
-                                        "other declaration".to_string()
-                                    )
-                                );
-                            }
-                        }
-                        data.add_account(name, account);
-                    }
+                    transfer_accounts(loc, *contract_no, *constructor_no, data, false);
                 }
             }
 
             data.add_system_account();
         }
         Instr::ExternalCall {
+            loc,
             address,
             accounts,
             seeds,
@@ -400,6 +350,14 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
             contract_function_no,
             ..
         } => {
+            // When we generate an external call in codegen, we have already taken care of the
+            // accounts we need (the payer for deploying creating the data accounts and the system
+            // program).
+            if *loc == Loc::Codegen {
+                return;
+            }
+
+            let mut program_id_populated = false;
             if let Some(address) = address {
                 address.recurse(data, check_expression);
                 if let Expression::NumberLiteral { value, .. } = address {
@@ -407,18 +365,16 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
                     if let Some(account) = account_from_number(value) {
                         data.add_account(
                             account,
-                            SolanaAccount {
+                            &SolanaAccount {
                                 loc: Loc::Codegen,
                                 is_signer: false,
                                 is_writer: false,
                                 generated: true,
                             },
                         );
+                        program_id_populated = true;
                     }
                 }
-            }
-            if let Some(accounts) = accounts {
-                accounts.recurse(data, check_expression);
             }
             if let Some(seeds) = seeds {
                 seeds.recurse(data, check_expression);
@@ -428,17 +384,11 @@ fn check_instruction(instr: &Instr, data: &mut RecurseData) {
             gas.recurse(data, check_expression);
             // External calls always need the system account
             data.add_system_account();
-            if let Some((contract_no, function_no)) = contract_function_no {
-                let cfg_no = data.contracts[*contract_no].all_functions[function_no];
-                let accounts_to_add = data.functions[*function_no]
-                    .solana_accounts
-                    .borrow()
-                    .clone();
-                for (account_name, account) in accounts_to_add {
-                    data.add_account(account_name, account);
-                }
-                data.next_queue.insert((*contract_no, cfg_no));
-                data.next_queue.insert((data.contract_no, data.cfg_func_no));
+
+            if let Some(accounts) = accounts {
+                accounts.recurse(data, check_expression);
+            } else if let Some((contract_no, function_no)) = contract_function_no {
+                transfer_accounts(loc, *contract_no, *function_no, data, program_id_populated);
             }
         }
         Instr::EmitEvent {
@@ -471,7 +421,7 @@ fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
         } => {
             data.add_account(
                 BuiltinAccounts::ClockAccount.to_string(),
-                SolanaAccount {
+                &SolanaAccount {
                     loc: Loc::Codegen,
                     is_signer: false,
                     is_writer: false,
@@ -485,7 +435,7 @@ fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
         } => {
             data.add_account(
                 BuiltinAccounts::InstructionAccount.to_string(),
-                SolanaAccount {
+                &SolanaAccount {
                     loc: Loc::Codegen,
                     is_writer: false,
                     is_signer: false,
@@ -504,4 +454,83 @@ fn check_expression(expr: &Expression, data: &mut RecurseData) -> bool {
     }
 
     true
+}
+
+/// When we make an external call from function A to function B, function A must know all the
+/// accounts function B needs. The 'transfer_accounts' function takes care to transfer the accounts
+/// from B's IDL to A's IDL.
+fn transfer_accounts(
+    loc: &pt::Loc,
+    contract_no: usize,
+    function_no: usize,
+    data: &mut RecurseData,
+    program_id_present: bool,
+) {
+    let accounts_to_add = data.functions[function_no].solana_accounts.borrow().clone();
+
+    for (name, mut account) in accounts_to_add {
+        if name == BuiltinAccounts::DataAccount {
+            let idl_name = format!("{}_dataAccount", data.contracts[contract_no].name);
+            if let Some(acc) = data.functions[data.ast_no]
+                .solana_accounts
+                .borrow()
+                .get(&idl_name)
+            {
+                if acc.loc != *loc {
+                    data.diagnostics.push(
+                        Diagnostic::error_with_note(
+                            *loc,
+                            format!("contract '{}' is called more than once in this function, so automatic account collection cannot happen. \
+                                         Please, provide the necessary accounts using the {{accounts:..}} call argument", data.contracts[contract_no].name),
+                            acc.loc,
+                            "other call".to_string(),
+                        )
+                    );
+                }
+                continue;
+            }
+            account.loc = *loc;
+            data.add_account(idl_name, &account);
+            continue;
+        }
+
+        if let Some(other_account) = data.functions[data.ast_no]
+            .solana_accounts
+            .borrow()
+            .get(&name)
+        {
+            if !other_account.generated {
+                data.diagnostics.push(
+                    Diagnostic::error_with_note(
+                        other_account.loc,
+                        "account name collision encountered. Calling a function that \
+                                requires an account whose name is also defined in the current function \
+                                will create duplicate names in the IDL. Please, rename one of the accounts".to_string(),
+                        account.loc,
+                        "other declaration".to_string(),
+                    )
+                );
+            }
+        }
+        data.add_account(name, &account);
+    }
+
+    if !program_id_present {
+        data.functions[data.ast_no]
+            .solana_accounts
+            .borrow_mut()
+            .insert(
+                format!("{}_programId", data.contracts[contract_no].name),
+                SolanaAccount {
+                    is_signer: false,
+                    is_writer: false,
+                    generated: true,
+                    loc: *loc,
+                },
+            );
+    }
+
+    let cfg_no = data.contracts[contract_no].all_functions[&function_no];
+    data.next_queue.insert((contract_no, cfg_no));
+    data.next_queue.insert((data.contract_no, data.cfg_func_no));
 }
