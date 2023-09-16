@@ -211,6 +211,40 @@ fn functions() {
     assert_eq!(func.tags[2].tag, "inheritdoc");
     assert_eq!(func.tags[2].value, "b");
     assert_eq!(func.tags[2].no, 0);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract c is b {
+            /// @return x sadad
+            /// @param k is a boolean
+            /// @custom:smtchecker abstract-function-nondet
+            function foo(int x) public pure returns (int a, bool k) {}
+        }
+
+        contract b {}"#,
+        Target::Solana,
+    );
+
+    assert_eq!(ns.diagnostics.len(), 4);
+
+    assert_eq!(
+        ns.diagnostics.first_error(),
+        "tag '@return' no matching return value 'x'"
+    );
+
+    assert_eq!(
+        ns.diagnostics.first_warning().message,
+        "'@param' used in stead of '@return' for 'k'"
+    );
+
+    let func = ns.functions.iter().find(|func| func.name == "foo").unwrap();
+
+    assert_eq!(func.tags[0].tag, "return");
+    assert_eq!(func.tags[0].value, "is a boolean");
+    assert_eq!(func.tags[0].no, 1);
+    assert_eq!(func.tags[1].tag, "custom:smtchecker");
+    assert_eq!(func.tags[1].value, "abstract-function-nondet");
+    assert_eq!(func.tags[1].no, 0);
 }
 
 #[test]

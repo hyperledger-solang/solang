@@ -57,6 +57,30 @@ pub fn resolve_tags(
                             value,
                         });
                     }
+                } else if let Some(Some(no)) =
+                    returns.map(|params| params.iter().position(|p| p.name_as_str() == name))
+                {
+                    if let Some(other) = res.iter().find(|e| e.tag == "return" && e.no == no) {
+                        // Note: solc does not detect this problem
+                        ns.diagnostics.push(Diagnostic::warning_with_note(
+                            loc,
+                            format!("duplicate tag '@param' for '{name}'"),
+                            other.loc,
+                            format!("previous tag '@param' for '{name}'"),
+                        ));
+                    } else {
+                        ns.diagnostics.push(Diagnostic::warning(
+                            loc,
+                            format!("'@param' used in stead of '@return' for '{name}'"),
+                        ));
+
+                        res.push(Tag {
+                            loc,
+                            tag: String::from("return"),
+                            no,
+                            value,
+                        });
+                    }
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
                         value_loc,
@@ -128,7 +152,7 @@ pub fn resolve_tags(
                     } else {
                         ns.diagnostics.push(Diagnostic::error(
                             pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
-                            format!("tag '@return' no matching return value '{}'", c.value),
+                            format!("tag '@return' no matching return value '{name}'"),
                         ));
                     }
                 }
