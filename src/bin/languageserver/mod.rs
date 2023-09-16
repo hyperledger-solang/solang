@@ -16,6 +16,7 @@ use solang::{
 use solang_parser::pt;
 use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 use tokio::sync::Mutex;
+use tower_lsp::lsp_types::{DocumentFormattingParams, TextEdit};
 use tower_lsp::{
     jsonrpc::{Error, ErrorCode, Result},
     lsp_types::{
@@ -37,6 +38,8 @@ use tower_lsp::{
     },
     Client, LanguageServer, LspService, Server,
 };
+
+use forge_fmt::{format, parse, FormatterConfig};
 
 use crate::cli::{target_arg, LanguageServerCommand};
 
@@ -1776,6 +1779,7 @@ impl LanguageServer for SolangServer {
                 type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
                 implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
                 references_provider: Some(OneOf::Left(true)),
+                document_formatting_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -2132,6 +2136,36 @@ impl LanguageServer for SolangServer {
         };
 
         Ok(locations)
+    }
+
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        let source_path = params.text_document.uri.to_file_path().unwrap();
+        let source = std::fs::read_to_string(source_path).unwrap();
+        let source_parsed = parse(&source).unwrap();
+
+        let config = FormatterConfig {
+            line_length: 80,
+            ..Default::default()
+        };
+
+        let mut source_formatted = String::new();
+        format(&mut source_formatted, source_parsed, config).unwrap();
+
+        let text_edit = TextEdit {
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: u32::max_value(),
+                    character: u32::max_value(),
+                },
+            },
+            new_text: source_formatted,
+        };
+
+        Ok(Some(vec![text_edit]))
     }
 }
 
