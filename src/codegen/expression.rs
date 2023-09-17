@@ -2186,6 +2186,66 @@ fn expr_builtin(
                 expr: Box::new(codegen_expr),
             }
         }
+        ast::Builtin::ECRecover => {
+            // TODO:
+            // EVM: call precompile 1 (code below is untested)
+            // let args = args
+            //     .iter()
+            //     .map(|v| expression(v, cfg, contract_no, func, ns, vartab, opt))
+            //     .collect::<Vec<Expression>>();
+            //
+            // let payload = abi_encode(loc, args, ns, vartab, cfg, false).0;
+            //
+            // let instr = Instr::ExternalCall {
+            //     loc: *loc,
+            //     contract_function_no: None,
+            //     address: Some(Expression::NumberLiteral {
+            //         loc: *loc,
+            //         ty: Type::Address(false),
+            //         value: BigInt::one(),
+            //     }),
+            //     accounts: None,
+            //     seeds: None,
+            //     payload,
+            //     value: Expression::NumberLiteral {
+            //         loc: *loc,
+            //         ty: ns.value_type(),
+            //         value: 0.into(),
+            //     },
+            //     success: None,
+            //     gas: Expression::NumberLiteral {
+            //         loc: *loc,
+            //         ty: ns.value_type(),
+            //         value: 0.into(),
+            //     },
+            //     callty: CallTy::Regular,
+            //     flags: None,
+            // };
+            //
+            // cfg.add(vartab, instr);
+            //
+            // let mut res = abi_decode(
+            //     loc,
+            //     &Expression::ReturnData { loc: *loc },
+            //     &[Type::Address(false)],
+            //     ns,
+            //     vartab,
+            //     cfg,
+            //     None,
+            // );
+            //
+            // res.remove(0)
+
+            // Polkadot: call ecdsa_recover(): https://docs.rs/pallet-contracts/latest/pallet_contracts/api_doc/trait.Version0.html#tymethod.ecdsa_recover
+            // Solana: see how neon implements this
+            cfg.add(vartab, Instr::Unimplemented { reachable: true });
+
+            Expression::NumberLiteral {
+                loc: *loc,
+                ty: Type::Bool,
+                value: 0.into(),
+            }
+        }
         _ => {
             let arguments: Vec<Expression> = args
                 .iter()
