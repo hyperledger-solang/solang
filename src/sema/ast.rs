@@ -787,13 +787,6 @@ pub struct Contract {
 }
 
 impl Contract {
-    pub fn _virtual_functions(&self, key: &String) -> usize {
-        let a = &self.virtual_functions[key];
-        a[a.len() - 1]
-    }
-}
-
-impl Contract {
     // Is this a concrete contract, which can be instantiated
     pub fn is_concrete(&self) -> bool {
         matches!(self.ty, pt::ContractTy::Contract(_))

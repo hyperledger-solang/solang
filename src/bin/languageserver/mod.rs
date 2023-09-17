@@ -124,7 +124,6 @@ struct FileCache {
     file: ast::File,
     hovers: Lapper<usize, String>,
     references: Lapper<usize, DefinitionIndex>,
-    declarations: Declarations,
 }
 
 /// Stores information used by the language server to service requests (eg: `Go to Definitions`) received from the client.
@@ -137,10 +136,12 @@ struct FileCache {
 /// Each field stores *some information* about a code object. The code object is uniquely identified by its `DefinitionIndex`.
 /// * `definitions` maps `DefinitionIndex` of a code object to its source code location where it is defined.
 /// * `types` maps the `DefinitionIndex` of a code object to that of its type.
+/// * `declarations` maps the `DefinitionIndex` of a `Contract` method to a list of methods that it overrides. The overridden methods belong to the parent `Contract`s
 /// * `implementations` maps the `DefinitionIndex` of a `Contract` to the `DefinitionIndex`s of methods defined as part of the `Contract`.
 struct GlobalCache {
     definitions: Definitions,
     types: Types,
+    declarations: Declarations,
     implementations: Implementations,
 }
 
@@ -207,6 +208,7 @@ pub async fn start_server(language_args: &LanguageServerCommand) -> ! {
         global_cache: Mutex::new(GlobalCache {
             definitions: HashMap::new(),
             types: HashMap::new(),
+            declarations: HashMap::new(),
             implementations: HashMap::new(),
         }),
     });
@@ -291,7 +293,7 @@ impl SolangServer {
 
             let res = self.client.publish_diagnostics(uri, diags, None);
 
-            let (caches, definitions, types, implementations) = Builder::build(&ns);
+            let (caches, definitions, types, declarations, implementations) = Builder::build(&ns);
 
             let mut files = self.files.lock().await;
             for (f, c) in ns.files.iter().zip(caches.into_iter()) {
@@ -303,6 +305,7 @@ impl SolangServer {
             let mut gc = self.global_cache.lock().await;
             gc.definitions.extend(definitions);
             gc.types.extend(types);
+            gc.declarations.extend(declarations);
             gc.implementations.extend(implementations);
 
             res.await;
@@ -345,11 +348,11 @@ struct Builder<'a> {
     hovers: Vec<(usize, HoverEntry)>,
     // `usize` is the file number the reference belongs to
     references: Vec<(usize, ReferenceEntry)>,
-    declarations: Vec<Declarations>,
 
     definitions: Definitions,
-    implementations: Implementations,
     types: Types,
+    declarations: Declarations,
+    implementations: Implementations,
 
     ns: &'a ast::Namespace,
 }
@@ -1329,15 +1332,23 @@ impl<'a> Builder<'a> {
 
     /// Traverses namespace to extract information used later by the language server
     /// This includes hover messages, locations where code objects are declared and used
-    fn build(ns: &ast::Namespace) -> (Vec<FileCache>, Definitions, Types, Implementations) {
+    fn build(
+        ns: &ast::Namespace,
+    ) -> (
+        Vec<FileCache>,
+        Definitions,
+        Types,
+        Declarations,
+        Implementations,
+    ) {
         let mut builder = Builder {
             hovers: Vec::new(),
             references: Vec::new(),
-            declarations: vec![HashMap::new(); ns.files.len()],
 
             definitions: HashMap::new(),
-            implementations: HashMap::new(),
             types: HashMap::new(),
+            declarations: HashMap::new(),
+            implementations: HashMap::new(),
 
             ns,
         };
@@ -1589,6 +1600,7 @@ impl<'a> Builder<'a> {
                 def_path: file.path.clone(),
                 def_type: DefinitionType::Contract(ci),
             };
+
             builder
                 .definitions
                 .insert(cdi.clone(), loc_to_range(&contract.loc, file));
@@ -1608,12 +1620,21 @@ impl<'a> Builder<'a> {
                 .virtual_functions
                 .iter()
                 .filter_map(|(_, indices)| {
+                    // due to the way the `indices` vector is populated during namespace creation,
+                    // the last element in the vector contains the overriding function that belongs to the current contract.
                     let func = DefinitionIndex {
                         def_path: file.path.clone(),
+                        // `unwrap` is alright here as the `indices` vector is guaranteed to have at least 1 element
+                        // the vector is always initialised with one initial element
+                        // and the elements in the vector are never removed during namespace construction
                         def_type: DefinitionType::Function(indices.last().copied().unwrap()),
                     };
 
+                    // get all the functions overridden by the current function
                     let all_decls: HashSet<usize> = HashSet::from_iter(indices.iter().copied());
+
+                    // choose the overridden functions that belong to the parent contracts
+                    // due to multiple inheritance, a contract can have multiple parents
                     let parent_decls = contract
                         .bases
                         .iter()
@@ -1626,6 +1647,7 @@ impl<'a> Builder<'a> {
                         })
                         .reduce(|acc, e| acc.union(&e).copied().collect());
 
+                    // get the `DefinitionIndex`s of the overridden funcions
                     parent_decls.map(|parent_decls| {
                         let decls = parent_decls
                             .iter()
@@ -1641,7 +1663,8 @@ impl<'a> Builder<'a> {
                         (func, decls)
                     })
                 });
-            builder.declarations[file_no].extend(decls);
+
+            builder.declarations.extend(decls);
         }
 
         for (ei, event) in builder.ns.events.iter().enumerate() {
@@ -1679,6 +1702,10 @@ impl<'a> Builder<'a> {
             }
         }
 
+        // `defs_to_files` and `defs_to_file_nos` are used to insert the correct filepath where a code object is defined.
+        // previously, a dummy path was filled.
+        // In a single namespace, there can't be two (or more) code objects with a given `DefinitionType`.
+        // So, there exists a one-to-one mapping between `DefinitionIndex` and `DefinitionType` when we are dealing with just one namespace.
         let defs_to_files = builder
             .definitions
             .keys()
@@ -1716,6 +1743,7 @@ impl<'a> Builder<'a> {
             .enumerate()
             .map(|(i, f)| FileCache {
                 file: f.clone(),
+                // get `hovers` that belong to the current file
                 hovers: Lapper::new(
                     builder
                         .hovers
@@ -1724,6 +1752,7 @@ impl<'a> Builder<'a> {
                         .map(|(_, i)| i.clone())
                         .collect(),
                 ),
+                // get `references` that belong to the current file
                 references: Lapper::new(
                     builder
                         .references
@@ -1736,7 +1765,6 @@ impl<'a> Builder<'a> {
                         })
                         .collect(),
                 ),
-                declarations: builder.declarations[i].clone(),
             })
             .collect();
 
@@ -1744,6 +1772,7 @@ impl<'a> Builder<'a> {
             caches,
             builder.definitions,
             builder.types,
+            builder.declarations,
             builder.implementations,
         )
     }
@@ -2129,21 +2158,33 @@ impl LanguageServer for SolangServer {
         Ok(impls)
     }
 
+    /// Called when "Go to Declaration" is called by the user on the client side.
+    ///
+    /// Expected to return a list (possibly empty) of methods that the given method overrides.
+    /// Only the methods belonging to the immediate parent contracts (due to multiple inheritance, there can be more than one parent) are to be returned.
+    ///
+    /// ### Arguments
+    /// * `GotoDeclarationParams` provides the source code location (filename, line number, column number) of the code object for which the request was made.
+    ///
+    /// ### Edge cases
+    /// * Returns `Err` when an invalid file path is received.
+    /// * Returns `Ok(None)` when the location passed in the arguments doesn't belong to a contract method defined in user code.
     async fn goto_declaration(
         &self,
         params: GotoDeclarationParams,
     ) -> Result<Option<GotoDeclarationResponse>> {
+        // fetch the `DefinitionIndex` of the code object in question
         let Some(reference) = self.get_reference_from_params(params).await? else {
             return Ok(None);
         };
 
-        let caches = &self.files.lock().await.caches;
-        let decls = caches
-            .get(&reference.def_path)
-            .and_then(|cache| cache.declarations.get(&reference));
-
         let gc = self.global_cache.lock().await;
-        let decls = decls
+
+        // get a list of `DefinitionIndex`s of overridden functions from parent contracts
+        let decls = gc.declarations.get(&reference);
+
+        // get a list of locations in source code where the overridden functions are present
+        let locations = decls
             .map(|decls| {
                 decls
                     .iter()
@@ -2158,7 +2199,7 @@ impl LanguageServer for SolangServer {
             })
             .map(GotoImplementationResponse::Array);
 
-        Ok(decls)
+        Ok(locations)
     }
 
     /// Called when "Go to References" is called by the user on the client side.
