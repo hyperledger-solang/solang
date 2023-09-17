@@ -66,9 +66,7 @@ contract-build = { version = "3.0.1", optional = true }
 primitive-types = { version = "0.12", features = ["codec"] }
 normalize-path = "0.2.1"
 bitflags = "2.3.3"
-
 forge-fmt = {path = "forge-fmt"}
-foundry-config = {path = "foundry-config"}
 
 [dev-dependencies]
 num-derive = "0.4"
@@ -101,4 +99,4 @@ llvm = ["inkwell", "libc"]
 wasm_opt = ["llvm", "wasm-opt", "contract-build"]
 
 [workspace]
-members = ["solang-parser", "tests/wasm_host_attr", "forge-fmt", "foundry-config"]
+members = ["solang-parser", "tests/wasm_host_attr", "forge-fmt"]

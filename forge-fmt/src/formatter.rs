@@ -6,6 +6,7 @@ use crate::{
     comments::{
         CommentPosition, CommentState, CommentStringExt, CommentType, CommentWithMetadata, Comments,
     },
+    config::{MultilineFuncHeaderStyle, SingleLineBlockStyle},
     helpers::import_path_string,
     macros::*,
     solang_ext::{pt::*, *},
@@ -14,7 +15,6 @@ use crate::{
     FormatterConfig, InlineConfig, IntTypes, NumberUnderscore,
 };
 use ethers_core::{types::H160, utils::to_checksum};
-use foundry_config::fmt::{MultilineFuncHeaderStyle, SingleLineBlockStyle};
 use itertools::{Either, Itertools};
 use solang_parser::pt::ImportPath;
 use std::{fmt::Write, str::FromStr};
