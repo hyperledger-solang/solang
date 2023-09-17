@@ -299,6 +299,9 @@ jobs:
     - name: Deploy and test contracts
       run: npm run test
       working-directory: ./integration/solana
+    - name: Test Solana CLI
+      run: ./cli_test.sh
+      working-directory: ./integration/solana
 
   polkadot:
     name: Polkadot Integration test

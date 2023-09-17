@@ -244,6 +244,34 @@ for an example of how to use this.
 
   There is only supported on Solana.
 
+Submitting extrinsics to Solana on-chain
+________________________________________
+
+  solang solana [SUBCOMMAND] [OPTIONS]... <PROGRAM_LOCATION>
+
+This means that the command line is ``solang solana`` followed by a subcommand 
+followed by any of the options described below and then the program location.
+
+General Options (for all subcommands):
+
+\-\-output-json
+  Specifies whether to export the call output in JSON format.
+
+\-\-help, -h
+  This displays a short description of all the options.
+
+Subcommands:
+
+  solang solana deploy [OPTIONS]... <PROGRAM_LOCATION>
+
+Deploys a program to Solana.
+
+Options specific to the ``deploy`` subcommand:
+
+\-\-verbose, -v
+  Specifies whether to display verbose program deployment information
+  (Conflicts with ``--output-json``).
+
 Running Solang using a container
 ________________________________
 

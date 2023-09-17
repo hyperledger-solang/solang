@@ -25,7 +25,7 @@ use std::{
 
 use crate::cli::{
     imports_arg, options_arg, target_arg, Cli, Commands, Compile, CompilerOutput, Doc, New,
-    ShellComplete,
+    ShellComplete, SolanaAction,
 };
 
 mod cli;
@@ -62,6 +62,9 @@ fn main() {
         Commands::LanguageServer(server_args) => languageserver::start_server(&server_args),
         Commands::Idl(idl_args) => idl::idl(&idl_args),
         Commands::New(new_arg) => new_command(new_arg),
+        Commands::Solana { action } => match action {
+            SolanaAction::Deploy(deploy_args) => deploy_args.handle(),
+        },
     }
 }
 

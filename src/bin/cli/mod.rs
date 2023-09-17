@@ -11,13 +11,16 @@ use contract_build::OptimizationPasses;
 use itertools::Itertools;
 use semver::Version;
 use serde::Deserialize;
+use solana::SolanaDeploy;
 use solang::{
     codegen::{OptimizationLevel, Options},
     file_resolver::FileResolver,
     Target,
 };
+use std::fs::File;
+use std::io::Read;
 use std::{ffi::OsString, path::PathBuf, process::exit};
-
+mod solana;
 mod test;
 #[derive(Parser)]
 #[command(author = env!("CARGO_PKG_AUTHORS"), version = concat!("version ", env!("SOLANG_VERSION")), about = env!("CARGO_PKG_DESCRIPTION"), subcommand_required = true)]
@@ -31,7 +34,7 @@ pub enum Commands {
     #[command(about = "Compile Solidity source files")]
     Compile(Compile),
 
-    #[command(about = "Generate documention for contracts using doc comments")]
+    #[command(about = "Generate documentation for contracts using doc comments")]
     Doc(Doc),
 
     #[command(about = "Print shell completion for various shells to STDOUT")]
@@ -45,6 +48,18 @@ pub enum Commands {
 
     #[command(about = "Create a new Solang project")]
     New(New),
+
+    #[command(about = "Interact with Solana contracts on chain")]
+    Solana {
+        #[clap(subcommand)]
+        action: SolanaAction,
+    },
+}
+
+/// Available subcommands for the `solana` command.
+#[derive(Debug, Subcommand)]
+pub enum SolanaAction {
+    Deploy(SolanaDeploy),
 }
 
 #[derive(Args)]
@@ -681,4 +696,84 @@ fn explicit_args(matches: &ArgMatches) -> Vec<&Id> {
             )
         })
         .collect()
+}
+
+/// A helper function to check if the target name provided by the user matches the target name in solang.toml
+/// Returns false if the target names do not match
+/// Returns true if the target names match or if solang.toml does not exist in the current directory
+fn check_target_match(target_name: &str) -> bool {
+    // Get the manifest path from the current directory
+    let manifest_path = PathBuf::from("solang.toml");
+
+    // Check if the manifest file exists
+    // If it doesn't, then we don't need to check the target name
+    if !manifest_path.exists() {
+        return true;
+    }
+
+    // Read the contents of the solang.toml file
+    let mut file = File::open(&manifest_path).expect("Failed to open the manifest");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("Failed to read solang.toml");
+
+    // Parse the TOML contents and extract the target name
+    let parsed_toml: toml::Value = toml::from_str(&contents).expect("Failed to parse solang.toml");
+    let config_target = parsed_toml["target"]["name"]
+        .as_str()
+        .expect("target name is not a string")
+        .to_string();
+
+    // Compare the target name with the provided argument
+    if config_target != target_name {
+        eprintln!(
+            "Error: The specified target '{}' does not match the target '{}' in solang.toml",
+            target_name, config_target
+        );
+        return false;
+    }
+
+    true
+}
+
+#[test]
+fn test_check_target_match_fail() {
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    // Create a temporary solang.toml file with a different target name
+    let mut tmpfile = NamedTempFile::new().expect("Failed to create temporary file");
+    writeln!(
+        tmpfile,
+        r#"
+        [package]
+        authors = ["sesa"]
+        version = "0.1.0"
+        input_files = ["flipper.sol"]
+        contracts = ["flipper"]
+
+        [target]
+        name = "polkadot"
+        address_length = 32
+        value_length = 16
+    "#
+    )
+    .expect("Failed to write to temporary file");
+    tmpfile.flush().expect("Failed to flush temporary file");
+
+    // Get the path to the temporary file
+    let tmpfile_path = tmpfile.into_temp_path();
+    let tmpfile_path_str = tmpfile_path.to_str().unwrap();
+
+    // Rename the temporary file to "solang.toml"
+    std::fs::rename(tmpfile_path_str, "solang.toml").expect("Failed to rename temporary file");
+
+    // Check if the target name matches
+    let status = check_target_match("solana");
+
+    // Clean up the renamed file
+    std::fs::remove_file("solang.toml").expect("Failed to remove renamed file");
+
+    // Check if the status is false
+    assert!(!status);
 }
