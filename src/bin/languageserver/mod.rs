@@ -2290,7 +2290,7 @@ impl LanguageServer for SolangServer {
         let new_text = params.new_name;
 
         // create `TextEdit` instances that represent the changes to be made for every occurrence of the old symbol
-        // these `TextEdit` objects are then grouped into separate list per source file to which they bolong
+        // these `TextEdit` objects are then grouped into separate list per source file to which they belong
         let caches = &self.files.lock().await.caches;
         let ws = caches
             .iter()

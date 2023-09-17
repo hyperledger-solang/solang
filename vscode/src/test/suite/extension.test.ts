@@ -83,6 +83,13 @@ suite('Extension Test Suite', function () {
     await testtypedefs(typedefdoc1);
   });
 
+  // Tests for goto-declaration
+  this.timeout(20000);
+  const declsdoc1 = getDocUri('impls.sol');
+  test('Testing for GoToDeclaration', async () => {
+    await testdecls(declsdoc1);
+  });
+
   // Tests for goto-impls
   this.timeout(20000);
   const implsdoc1 = getDocUri('impls.sol');
@@ -119,8 +126,8 @@ async function testdefs(docUri: vscode.Uri) {
     'vscode.executeDefinitionProvider',
     docUri,
     pos1
-  )) as vscode.Definition[];
-  const loc1 = actualdef1[0] as vscode.Location;
+  )) as vscode.Location[];
+  const loc1 = actualdef1[0];
   assert.strictEqual(loc1.range.start.line, 27);
   assert.strictEqual(loc1.range.start.character, 24);
   assert.strictEqual(loc1.range.end.line, 27);
@@ -132,8 +139,8 @@ async function testdefs(docUri: vscode.Uri) {
     'vscode.executeDefinitionProvider',
     docUri,
     pos2
-  )) as vscode.Definition[];
-  const loc2 = actualdef2[0] as vscode.Location;
+  )) as vscode.Location[];
+  const loc2 = actualdef2[0];
   assert.strictEqual(loc2.range.start.line, 27);
   assert.strictEqual(loc2.range.start.character, 50);
   assert.strictEqual(loc2.range.end.line, 27);
@@ -145,8 +152,8 @@ async function testdefs(docUri: vscode.Uri) {
     'vscode.executeDefinitionProvider',
     docUri,
     pos3
-  )) as vscode.Definition[];
-  const loc3 = actualdef3[0] as vscode.Location;
+  )) as vscode.Location[];
+  const loc3 = actualdef3[0];
   assert.strictEqual(loc3.range.start.line, 19);
   assert.strictEqual(loc3.range.start.character, 8);
   assert.strictEqual(loc3.range.end.line, 19);
@@ -158,8 +165,8 @@ async function testdefs(docUri: vscode.Uri) {
     'vscode.executeDefinitionProvider',
     docUri,
     pos4
-  )) as vscode.Definition[];
-  const loc4 = actualdef4[0] as vscode.Location;
+  )) as vscode.Location[];
+  const loc4 = actualdef4[0];
   assert.strictEqual(loc4.range.start.line, 23);
   assert.strictEqual(loc4.range.start.character, 8);
   assert.strictEqual(loc4.range.end.line, 23);
@@ -171,8 +178,8 @@ async function testdefs(docUri: vscode.Uri) {
     'vscode.executeDefinitionProvider',
     docUri,
     pos5
-  )) as vscode.Definition[];
-  const loc5 = actualdef5[0] as vscode.Location;
+  )) as vscode.Location[];
+  const loc5 = actualdef5[0];
   assert.strictEqual(loc5.range.start.line, 24);
   assert.strictEqual(loc5.range.start.character, 8);
   assert.strictEqual(loc5.range.end.line, 24);
@@ -188,8 +195,8 @@ async function testtypedefs(docUri: vscode.Uri) {
     'vscode.executeTypeDefinitionProvider',
     docUri,
     pos0,
-  )) as vscode.Definition[];
-  const loc0 = actualtypedef0[0] as vscode.Location;
+  )) as vscode.Location[];
+  const loc0 = actualtypedef0[0];
   assert.strictEqual(loc0.range.start.line, 22);
   assert.strictEqual(loc0.range.start.character, 11);
   assert.strictEqual(loc0.range.end.line, 22);
@@ -201,14 +208,67 @@ async function testtypedefs(docUri: vscode.Uri) {
     'vscode.executeTypeDefinitionProvider',
     docUri,
     pos1,
-  )) as vscode.Definition[];
-  const loc1 = actualtypedef1[0] as vscode.Location;
+  )) as vscode.Location[];
+  const loc1 = actualtypedef1[0];
   assert.strictEqual(loc1.range.start.line, 7);
   assert.strictEqual(loc1.range.start.character, 4);
   assert.strictEqual(loc1.range.end.line, 21);
   assert.strictEqual(loc1.range.end.character, 5);
   assert.strictEqual(loc1.uri.path, docUri.path);
 }
+
+async function testdecls(docUri: vscode.Uri) {
+  await activate(docUri);
+
+  const pos0 = new vscode.Position(6, 14);
+  const actualdecl0 = (await vscode.commands.executeCommand(
+    'vscode.executeDeclarationProvider',
+    docUri,
+    pos0,
+  )) as vscode.Location[];
+  assert.strictEqual(actualdecl0.length, 2);
+  const loc00 = actualdecl0[0];
+  assert.strictEqual(loc00.range.start.line, 12);
+  assert.strictEqual(loc00.range.start.character, 4);
+  assert.strictEqual(loc00.range.end.line, 12);
+  assert.strictEqual(loc00.range.end.character, 61);
+  assert.strictEqual(loc00.uri.path, docUri.path);
+  const loc01 = actualdecl0[1];
+  assert.strictEqual(loc01.range.start.line, 22);
+  assert.strictEqual(loc01.range.start.character, 4);
+  assert.strictEqual(loc01.range.end.line, 22);
+  assert.strictEqual(loc01.range.end.character, 61);
+  assert.strictEqual(loc01.uri.path, docUri.path);
+
+  const pos1 = new vscode.Position(12, 14);
+  const actualdecl1 = (await vscode.commands.executeCommand(
+    'vscode.executeDeclarationProvider',
+    docUri,
+    pos1,
+  )) as vscode.Location[];
+  assert.strictEqual(actualdecl1.length, 1);
+  const loc10 = actualdecl1[0];
+  assert.strictEqual(loc10.range.start.line, 32);
+  assert.strictEqual(loc10.range.start.character, 4);
+  assert.strictEqual(loc10.range.end.line, 32);
+  assert.strictEqual(loc10.range.end.character, 52);
+  assert.strictEqual(loc10.uri.path, docUri.path);
+
+  const pos2 = new vscode.Position(22, 14);
+  const actualdecl2 = (await vscode.commands.executeCommand(
+    'vscode.executeDeclarationProvider',
+    docUri,
+    pos2,
+  )) as vscode.Location[];
+  assert.strictEqual(actualdecl2.length, 1);
+  const loc20 = actualdecl2[0];
+  assert.strictEqual(loc20.range.start.line, 32);
+  assert.strictEqual(loc20.range.start.character, 4);
+  assert.strictEqual(loc20.range.end.line, 32);
+  assert.strictEqual(loc20.range.end.character, 52);
+  assert.strictEqual(loc20.uri.path, docUri.path);
+}
+
 
 async function testimpls(docUri: vscode.Uri) {
   await activate(docUri);
@@ -218,19 +278,19 @@ async function testimpls(docUri: vscode.Uri) {
     'vscode.executeImplementationProvider',
     docUri,
     pos0,
-  )) as vscode.Definition[];
+  )) as vscode.Location[];
   assert.strictEqual(actualimpl0.length, 2);
-  const loc00 = actualimpl0[0] as vscode.Location;
+  const loc00 = actualimpl0[0];
   assert.strictEqual(loc00.range.start.line, 1);
   assert.strictEqual(loc00.range.start.character, 4);
   assert.strictEqual(loc00.range.end.line, 1);
   assert.strictEqual(loc00.range.end.character, 42);
   assert.strictEqual(loc00.uri.path, docUri.path);
-  const loc01 = actualimpl0[1] as vscode.Location;
+  const loc01 = actualimpl0[1];
   assert.strictEqual(loc01.range.start.line, 6);
   assert.strictEqual(loc01.range.start.character, 4);
   assert.strictEqual(loc01.range.end.line, 6);
-  assert.strictEqual(loc01.range.end.character, 61);
+  assert.strictEqual(loc01.range.end.character, 65);
   assert.strictEqual(loc01.uri.path, docUri.path);
 
 
@@ -239,15 +299,15 @@ async function testimpls(docUri: vscode.Uri) {
     'vscode.executeImplementationProvider',
     docUri,
     pos1,
-  )) as vscode.Definition[];
+  )) as vscode.Location[];
   assert.strictEqual(actualimpl1.length, 2);
-  const loc10 = actualimpl1[0] as vscode.Location;
+  const loc10 = actualimpl1[0];
   assert.strictEqual(loc10.range.start.line, 12);
   assert.strictEqual(loc10.range.start.character, 4);
   assert.strictEqual(loc10.range.end.line, 12);
-  assert.strictEqual(loc10.range.end.character, 52);
+  assert.strictEqual(loc10.range.end.character, 61);
   assert.strictEqual(loc10.uri.path, docUri.path);
-  const loc11 = actualimpl1[1] as vscode.Location;
+  const loc11 = actualimpl1[1];
   assert.strictEqual(loc11.range.start.line, 16);
   assert.strictEqual(loc11.range.start.character, 4);
   assert.strictEqual(loc11.range.end.line, 16);
@@ -260,15 +320,15 @@ async function testimpls(docUri: vscode.Uri) {
     'vscode.executeImplementationProvider',
     docUri,
     pos2,
-  )) as vscode.Definition[];
+  )) as vscode.Location[];
   assert.strictEqual(actualimpl2.length, 2);
-  const loc20 = actualimpl2[0] as vscode.Location;
+  const loc20 = actualimpl2[0];
   assert.strictEqual(loc20.range.start.line, 22);
   assert.strictEqual(loc20.range.start.character, 4);
   assert.strictEqual(loc20.range.end.line, 22);
-  assert.strictEqual(loc20.range.end.character, 52);
+  assert.strictEqual(loc20.range.end.character, 61);
   assert.strictEqual(loc20.uri.path, docUri.path);
-  const loc21 = actualimpl2[1] as vscode.Location;
+  const loc21 = actualimpl2[1];
   assert.strictEqual(loc21.range.start.line, 26);
   assert.strictEqual(loc21.range.start.character, 4);
   assert.strictEqual(loc21.range.end.line, 26);
@@ -284,33 +344,33 @@ async function testrefs(docUri: vscode.Uri) {
     'vscode.executeReferenceProvider',
     docUri,
     pos0,
-  )) as vscode.Definition[];
+  )) as vscode.Location[];
   assert.strictEqual(actualref0.length, 5);
-  const loc00 = actualref0[0] as vscode.Location;
+  const loc00 = actualref0[0];
   assert.strictEqual(loc00.range.start.line, 27);
   assert.strictEqual(loc00.range.start.character, 50);
   assert.strictEqual(loc00.range.end.line, 27);
   assert.strictEqual(loc00.range.end.character, 55);
   assert.strictEqual(loc00.uri.path, docUri.path);
-  const loc01 = actualref0[1] as vscode.Location;
+  const loc01 = actualref0[1];
   assert.strictEqual(loc01.range.start.line, 30);
   assert.strictEqual(loc01.range.start.character, 16);
   assert.strictEqual(loc01.range.end.line, 30);
   assert.strictEqual(loc01.range.end.character, 22);
   assert.strictEqual(loc01.uri.path, docUri.path);
-  const loc02 = actualref0[2] as vscode.Location;
+  const loc02 = actualref0[2];
   assert.strictEqual(loc02.range.start.line, 33);
   assert.strictEqual(loc02.range.start.character, 16);
   assert.strictEqual(loc02.range.end.line, 33);
   assert.strictEqual(loc02.range.end.character, 22);
   assert.strictEqual(loc02.uri.path, docUri.path);
-  const loc03 = actualref0[3] as vscode.Location;
+  const loc03 = actualref0[3];
   assert.strictEqual(loc03.range.start.line, 36);
   assert.strictEqual(loc03.range.start.character, 16);
   assert.strictEqual(loc03.range.end.line, 36);
   assert.strictEqual(loc03.range.end.character, 22);
   assert.strictEqual(loc03.uri.path, docUri.path);
-  const loc04 = actualref0[4] as vscode.Location;
+  const loc04 = actualref0[4];
   assert.strictEqual(loc04.range.start.line, 39);
   assert.strictEqual(loc04.range.start.character, 16);
   assert.strictEqual(loc04.range.end.line, 39);
@@ -322,39 +382,39 @@ async function testrefs(docUri: vscode.Uri) {
     'vscode.executeReferenceProvider',
     docUri,
     pos1,
-  )) as vscode.Definition[];
+  )) as vscode.Location[];
   assert.strictEqual(actualref1.length, 6);
-  const loc10 = actualref1[0] as vscode.Location;
+  const loc10 = actualref1[0];
   assert.strictEqual(loc10.range.start.line, 27);
   assert.strictEqual(loc10.range.start.character, 24);
   assert.strictEqual(loc10.range.end.line, 27);
   assert.strictEqual(loc10.range.end.character, 25);
   assert.strictEqual(loc10.uri.path, docUri.path);
-  const loc11 = actualref1[1] as vscode.Location;
+  const loc11 = actualref1[1];
   assert.strictEqual(loc11.range.start.line, 28);
   assert.strictEqual(loc11.range.start.character, 12);
   assert.strictEqual(loc11.range.end.line, 28);
   assert.strictEqual(loc11.range.end.character, 14);
   assert.strictEqual(loc11.uri.path, docUri.path);
-  const loc12 = actualref1[2] as vscode.Location;
+  const loc12 = actualref1[2];
   assert.strictEqual(loc12.range.start.line, 29);
   assert.strictEqual(loc12.range.start.character, 16);
   assert.strictEqual(loc12.range.end.line, 29);
   assert.strictEqual(loc12.range.end.character, 18);
   assert.strictEqual(loc12.uri.path, docUri.path);
-  const loc13 = actualref1[3] as vscode.Location;
+  const loc13 = actualref1[3];
   assert.strictEqual(loc13.range.start.line, 32);
   assert.strictEqual(loc13.range.start.character, 16);
   assert.strictEqual(loc13.range.end.line, 32);
   assert.strictEqual(loc13.range.end.character, 18);
   assert.strictEqual(loc13.uri.path, docUri.path);
-  const loc14 = actualref1[4] as vscode.Location;
+  const loc14 = actualref1[4];
   assert.strictEqual(loc14.range.start.line, 35);
   assert.strictEqual(loc14.range.start.character, 16);
   assert.strictEqual(loc14.range.end.line, 35);
   assert.strictEqual(loc14.range.end.character, 18);
   assert.strictEqual(loc14.uri.path, docUri.path);
-  const loc15 = actualref1[5] as vscode.Location;
+  const loc15 = actualref1[5];
   assert.strictEqual(loc15.range.start.line, 38);
   assert.strictEqual(loc15.range.start.character, 16);
   assert.strictEqual(loc15.range.end.line, 38);
@@ -376,27 +436,27 @@ async function testrename(docUri: vscode.Uri) {
 
   assert(rename0.has(docUri));
 
-  const loc0 = rename0.get(docUri);
+  const loc0 = rename0.get(docUri) as vscode.TextEdit[];
 
-  const loc00 = loc0[0] as vscode.TextEdit;
+  const loc00 = loc0[0];
   assert.strictEqual(loc00.range.start.line, 0);
   assert.strictEqual(loc00.range.start.character, 41);
   assert.strictEqual(loc00.range.end.line, 0);
   assert.strictEqual(loc00.range.end.character, 42);
   assert.strictEqual(loc00.newText, newname0);
-  const loc01 = loc0[1] as vscode.TextEdit;
+  const loc01 = loc0[1];
   assert.strictEqual(loc01.range.start.line, 1);
   assert.strictEqual(loc01.range.start.character, 4);
   assert.strictEqual(loc01.range.end.line, 1);
   assert.strictEqual(loc01.range.end.character, 6);
   assert.strictEqual(loc01.newText, newname0);
-  const loc02 = loc0[2] as vscode.TextEdit;
+  const loc02 = loc0[2];
   assert.strictEqual(loc02.range.start.line, 9);
   assert.strictEqual(loc02.range.start.character, 8);
   assert.strictEqual(loc02.range.end.line, 9);
   assert.strictEqual(loc02.range.end.character, 10);
   assert.strictEqual(loc02.newText, newname0);
-  const loc03 = loc0[3] as vscode.TextEdit;
+  const loc03 = loc0[3];
   assert.strictEqual(loc03.range.start.line, 9);
   assert.strictEqual(loc03.range.start.character, 12);
   assert.strictEqual(loc03.range.end.line, 9);
