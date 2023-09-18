@@ -2,8 +2,7 @@
 
 use crate::{build_solidity, Account, AccountState, BorshToken};
 use base58::FromBase58;
-use ed25519_dalek::{Signature, Signer, SigningKey};
-use rand::rngs::OsRng;
+use ed25519_dalek::{Keypair, Signature, Signer};
 use serde_derive::Serialize;
 use std::convert::TryInto;
 use std::mem::size_of;
@@ -57,8 +56,8 @@ fn verify() {
     vm.account_data
         .insert(instructions_account, AccountState::default());
 
-    let mut csprng = OsRng;
-    let keypair: SigningKey = SigningKey::generate(&mut csprng);
+    let mut csprng = rand_07::thread_rng();
+    let keypair: Keypair = Keypair::generate(&mut csprng);
 
     let message: &[u8] =
         b"This is a test of the ed25519 sig check for the ed25519 signature check program";
@@ -67,21 +66,20 @@ fn verify() {
 
     let signature_bs = signature.to_bytes().to_vec();
 
-    println!(
-        "T: PUB: {}",
-        hex::encode(keypair.verifying_key().to_bytes())
-    );
+    println!("T: PUB: {}", hex::encode(keypair.public.to_bytes()));
     println!("T: SIG: {}", hex::encode(&signature_bs));
     println!("T: MES: {}", hex::encode(message));
 
     let returns = vm
         .function("verify")
         .arguments(&[
-            BorshToken::Address(keypair.verifying_key().to_bytes()),
+            BorshToken::Address(keypair.public.to_bytes()),
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs.clone()),
         ])
-        .accounts(vec![("SysvarInstruction", instructions_account)])
+        .accounts(vec![
+            ("SysvarInstruction", instructions_account),
+        ])
         .call()
         .unwrap();
 
@@ -92,8 +90,7 @@ fn verify() {
         .unwrap()
         .try_into()
         .unwrap();
-    let instructions =
-        encode_instructions(&keypair.verifying_key().to_bytes(), &signature_bs, message);
+    let instructions = encode_instructions(&keypair.public.to_bytes(), &signature_bs, message);
 
     vm.account_data.insert(
         instructions_account,
@@ -109,11 +106,13 @@ fn verify() {
     let returns = vm
         .function("verify")
         .arguments(&[
-            BorshToken::Address(keypair.verifying_key().to_bytes()),
+            BorshToken::Address(keypair.public.to_bytes()),
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs.clone()),
         ])
-        .accounts(vec![("SysvarInstruction", instructions_account)])
+        .accounts(vec![
+            ("SysvarInstruction", instructions_account),
+        ])
         .call()
         .unwrap();
 
@@ -125,11 +124,7 @@ fn verify() {
     let mut signature_copy = signature_bs.clone();
     signature_copy[2] ^= 0x80;
 
-    let instructions = encode_instructions(
-        &keypair.verifying_key().to_bytes(),
-        &signature_copy,
-        message,
-    );
+    let instructions = encode_instructions(&keypair.public.to_bytes(), &signature_copy, message);
 
     vm.account_data.insert(
         instructions_account,
@@ -143,11 +138,13 @@ fn verify() {
     let returns = vm
         .function("verify")
         .arguments(&[
-            BorshToken::Address(keypair.verifying_key().to_bytes()),
+            BorshToken::Address(keypair.public.to_bytes()),
             BorshToken::Bytes(message.to_vec()),
             BorshToken::Bytes(signature_bs),
         ])
-        .accounts(vec![("SysvarInstruction", instructions_account)])
+        .accounts(vec![
+            ("SysvarInstruction", instructions_account),
+        ])
         .call()
         .unwrap();
 
