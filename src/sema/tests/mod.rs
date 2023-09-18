@@ -457,9 +457,8 @@ contract aborting {
 
 contract runner {
     function test() external pure {
-        aborting abort = new aborting();
 
-        try abort.abort() returns (int32 a, bool b) {
+        try aborting.abort() returns (int32 a, bool b) {
             // call succeeded; return values are in a and b
         }
         catch Error(string x) {
@@ -535,16 +534,15 @@ fn dynamic_account_metas() {
     import 'solana';
 
 contract creator {
-    Child public c;
     function create_child_with_meta(address child, address payer) public {
         AccountMeta[] metas = new AccountMeta[](2);
 
         metas[0] = AccountMeta({pubkey: child, is_signer: false, is_writable: false});
         metas[1] = AccountMeta({pubkey: payer, is_signer: true, is_writable: true});
 
-        c = new Child{accounts: metas}(payer);
+        Child.new{accounts: metas}(payer);
 
-        c.say_hello();
+        Child.say_hello();
     }
 }
 
@@ -580,19 +578,17 @@ fn no_address_and_no_metas() {
     import 'solana';
 
 contract creator {
-    Child public c;
-    function create_child_with_meta(address child, address payer) public {
-
-        c = new Child(payer);
-
-        c.say_hello();
+    function create_child_with_meta(address child) public {
+        Child.new();
+        Child.say_hello();
     }
 }
 
+@program_id("Chi1d5XD6nTAp2EyaNGqMxZzUjh6NvhXRxbGHP3D1RaT")
 contract Child {
     @payer(payer)
     @space(511 + 7)
-    constructor(address payer) {
+    constructor() {
         print("In child constructor");
     }
 

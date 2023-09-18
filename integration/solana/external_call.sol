@@ -1,21 +1,21 @@
 
 contract caller {
-    function do_call(callee e, int64 v) public {
-        e.set_x(v);
+    function do_call(address e, int64 v) public {
+        callee.set_x{program_id: e}(v);
     }
 
-    function do_call2(callee e, int64 v) view public returns (int64) {
-        return v + e.get_x();
-    }
-
-    // call two different functions
-    function do_call3(callee e, callee2 e2, int64[4] memory x, string memory y) pure public returns (int64, string memory) {
-        return (e2.do_stuff(x), e.get_name());
+    function do_call2(address e, int64 v) view public returns (int64) {
+        return v + callee.get_x{program_id: e}();
     }
 
     // call two different functions
-    function do_call4(callee e, callee2 e2, int64[4] memory x, string memory y) pure public returns (int64, string memory) {
-        return (e2.do_stuff(x), e.call2(e2, y));
+    function do_call3(address e, address e2, int64[4] memory x, string memory y) pure public returns (int64, string memory) {
+        return (callee2.do_stuff{program_id: e2}(x), callee.get_name{program_id: e}());
+    }
+
+    // call two different functions
+    function do_call4(address e, address e2, int64[4] memory x, string memory y) pure public returns (int64, string memory) {
+        return (callee2.do_stuff{program_id: e2}(x), callee.call2{program_id: e}(e2, y));
     }
 
     function who_am_i() public view returns (address) {
@@ -34,8 +34,8 @@ contract callee {
         return x;
     }
 
-    function call2(callee2 e2, string s) public pure returns (string) {
-        return e2.do_stuff2(s);
+    function call2(address e2, string s) public pure returns (string) {
+        return callee2.do_stuff2{program_id: e2}(s);
     }
 
     function get_name() public pure returns (string) {

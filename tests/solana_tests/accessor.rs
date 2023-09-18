@@ -262,17 +262,17 @@ fn struct_accessor() {
                 m[1023413412] = S({f1: 414243, f2: true, f3: E("niff")});
             }
 
-            function f() public view {
+            function f(address pid) public view {
                 AccountMeta[1] meta = [
                     AccountMeta({pubkey: tx.accounts.dataAccount.key, is_writable: false, is_signer: false})
                 ];
-                (int64 a1, bool b, E memory c) = this.a{accounts: meta}();
+                (int64 a1, bool b, E memory c) = this.a{accounts: meta, program_id: pid}();
                 require(a1 == -63 && !b && c.b4 == "nuff", "a");
-                (a1, b, c) = this.s{accounts: meta}(99);
+                (a1, b, c) = this.s{accounts: meta, program_id: pid}(99);
                 require(a1 == 65535 && b && c.b4 == "naff", "b");
-                (a1, b, c) = this.m{accounts: meta}(1023413412);
+                (a1, b, c) = this.m{accounts: meta, program_id: pid}(1023413412);
                 require(a1 == 414243 && b && c.b4 == "niff", "c");
-                c.b4 = this.e{accounts: meta}();
+                c.b4 = this.e{accounts: meta, program_id: pid}();
                 require(a1 == 414243 && b && c.b4 == "cons", "E");
             }
         }"#,
@@ -283,10 +283,13 @@ fn struct_accessor() {
         .accounts(vec![("dataAccount", data_account)])
         .call();
 
+    let program_id = vm.stack[0].id;
     vm.function("f")
+        .arguments(&[BorshToken::Address(program_id)])
         .accounts(vec![
             ("dataAccount", data_account),
             ("systemProgram", [0; 32]),
+            ("C_programId", program_id),
         ])
         .call();
 }

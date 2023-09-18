@@ -63,14 +63,6 @@ fn idl_file(file: &OsStr, output: &Option<PathBuf>) {
 }
 
 fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
-    if let Some(program_id) = program_id(idl) {
-        writeln!(
-            f,
-            "anchor_{} constant {} = anchor_{}(address'{}');\n",
-            idl.name, idl.name, idl.name, program_id
-        )?;
-    }
-
     let mut ty_names = idl
         .types
         .iter()
@@ -212,7 +204,10 @@ fn write_solidity(idl: &Idl, mut f: File) -> Result<(), std::io::Error> {
 
     docs(&mut f, 0, &idl.docs)?;
 
-    writeln!(f, "interface anchor_{} {{", idl.name)?;
+    if let Some(program_id) = program_id(idl) {
+        writeln!(f, "@program_id(\"{}\")", program_id)?;
+    }
+    writeln!(f, "interface {} {{", idl.name)?;
 
     let mut instruction_names = idl
         .instructions

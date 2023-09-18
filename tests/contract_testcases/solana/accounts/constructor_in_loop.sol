@@ -1,16 +1,14 @@
 contract foo {
-    X a;
-    Y ay;
 
     function contruct() external {
-        a = new X({varia: 2, varb: 5});
+        X.new({varia: 2, varb: 5});
     }
 
 	function test1() external returns (uint) {
         // This is allowed
-        uint j = a.vara(1, 2);
+        uint j = X.vara(1, 2);
 		for (uint i = 0; i < 64; i++) {
-			j += a.vara(i, j);
+			j += X.vara(i, j);
 		}
         return j;
 	}
@@ -18,7 +16,7 @@ contract foo {
     function test2() external returns (uint) {
         uint j = 3;
 		for (uint i = 0; i < 64; i++) {
-			a = new X(i, j);
+			X.new(i, j);
 		}
         return j;
 	}
@@ -29,19 +27,19 @@ contract foo {
 		for (uint i = 0; i < 64; i++) {
 			n += i;
 		}
-        a = new X(n, j);
+        X.new(n, j);
         return j;
 	}
 
     function test4(uint v1, string v2) external {
-        ay = new Y({b: v2, a: v1});
+        Y.new({b: v2, a: v1});
     }
 
     function test5() external returns (uint) {
         uint j = 3;
         uint i=0;
 		while (i < 64) {
-			a = new X(i, j);
+			X.new(i, j);
             i++;
 		}
         return j;
@@ -53,7 +51,7 @@ contract foo {
 		while (i < 64) {
             i++;
 		}
-        a = new X(i, j);
+        X.new(i, j);
         return j;
 	}
 
@@ -61,7 +59,7 @@ contract foo {
         uint j = 3;
         uint i=0;
 		do {
-			a = new X(i, j);
+			X.new(i, j);
             i++;
 		} while (i < 64);
         return j;
@@ -73,7 +71,7 @@ contract foo {
 		do {
             i++;
 		} while (i < 64);
-        a = new X(i, j);
+        X.new(i, j);
         return j;
     }
 
@@ -85,7 +83,7 @@ contract foo {
             for(uint i=0; i<80; i++) {
                 n +=i;
             }
-            a = new X(j, n);
+            X.new(j, n);
         }
 
         return j;
@@ -116,8 +114,8 @@ contract Y {
 }
 
 // ---- Expect: diagnostics ----
-// error: 21:8-19: the {accounts: ..} call argument is needed since the constructor may be called multiple times
-// error: 37:14-35: in order to instantiate contract 'Y', a @program_id is required on contract 'Y'
-// error: 44:8-19: the {accounts: ..} call argument is needed since the constructor may be called multiple times
-// error: 64:8-19: the {accounts: ..} call argument is needed since the constructor may be called multiple times
-// error: 88:17-28: the {accounts: ..} call argument is needed since the constructor may be called multiple times
+// error: 19:4-15: the {accounts: ..} call argument is needed since the constructor may be called multiple times
+// error: 35:9-30: a contract needs a program id to be called. Either a '@program_id' must be declared above a contract or the {program_id: ...} call argument must be present
+// error: 42:4-15: the {accounts: ..} call argument is needed since the constructor may be called multiple times
+// error: 62:4-15: the {accounts: ..} call argument is needed since the constructor may be called multiple times
+// error: 86:13-24: the {accounts: ..} call argument is needed since the constructor may be called multiple times

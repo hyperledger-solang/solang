@@ -25,6 +25,14 @@ use solang_parser::{
 };
 use std::collections::HashMap;
 
+/// Provides context information for the `resolve_type` function.
+#[derive(PartialEq, Eq)]
+pub(super) enum ResolveTypeContext {
+    None,
+    Casting,
+    FunctionType,
+}
+
 impl Namespace {
     /// Create a namespace and populate with the parameters for the target
     pub fn new(target: Target) -> Self {
@@ -892,7 +900,7 @@ impl Namespace {
         &mut self,
         file_no: usize,
         contract_no: Option<usize>,
-        casting: bool,
+        resolve_context: ResolveTypeContext,
         id: &pt::Expression,
         diagnostics: &mut Diagnostics,
     ) -> Result<Type, ()> {
@@ -946,10 +954,20 @@ impl Namespace {
                     value_name,
                     ..
                 } => {
-                    let key_ty =
-                        self.resolve_type(file_no, contract_no, false, key, diagnostics)?;
-                    let value_ty =
-                        self.resolve_type(file_no, contract_no, false, value, diagnostics)?;
+                    let key_ty = self.resolve_type(
+                        file_no,
+                        contract_no,
+                        ResolveTypeContext::None,
+                        key,
+                        diagnostics,
+                    )?;
+                    let value_ty = self.resolve_type(
+                        file_no,
+                        contract_no,
+                        ResolveTypeContext::None,
+                        value,
+                        diagnostics,
+                    )?;
 
                     match key_ty {
                         Type::Mapping(..) => {
@@ -1162,7 +1180,7 @@ impl Namespace {
                     }
                 }
                 pt::Type::Payable => {
-                    if !casting {
+                    if resolve_context != ResolveTypeContext::Casting {
                         diagnostics.push(Diagnostic::decl_error(
                             id.loc(),
                             "'payable' cannot be used for type declarations, only casting. use 'address payable'"
@@ -1211,11 +1229,25 @@ impl Namespace {
                 Box::new(Type::Struct(*str_ty)),
                 resolve_dimensions(&dimensions, diagnostics)?,
             )),
-            Some(Symbol::Contract(_, n)) if dimensions.is_empty() => Ok(Type::Contract(*n)),
-            Some(Symbol::Contract(_, n)) => Ok(Type::Array(
-                Box::new(Type::Contract(*n)),
-                resolve_dimensions(&dimensions, diagnostics)?,
-            )),
+            Some(Symbol::Contract(_, n)) => {
+                if self.target == Target::Solana
+                    && resolve_context != ResolveTypeContext::FunctionType
+                {
+                    diagnostics.push(Diagnostic::error(
+                        id.loc,
+                        "contracts are not allowed as types on Solana".to_string(),
+                    ));
+                    return Err(());
+                }
+                if dimensions.is_empty() {
+                    Ok(Type::Contract(*n))
+                } else {
+                    Ok(Type::Array(
+                        Box::new(Type::Contract(*n)),
+                        resolve_dimensions(&dimensions, diagnostics)?,
+                    ))
+                }
+            }
             Some(Symbol::Event(_)) => {
                 diagnostics.push(Diagnostic::decl_error(
                     id.loc,

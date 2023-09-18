@@ -10,6 +10,7 @@ use super::{
     diagnostics::Diagnostics,
     ContractDefinition, SOLANA_SPARSE_ARRAY_SIZE,
 };
+use crate::sema::namespace::ResolveTypeContext;
 use crate::Target;
 use base58::{FromBase58, FromBase58Error};
 use indexmap::IndexMap;
@@ -214,7 +215,13 @@ fn type_decl(
 ) {
     let mut diagnostics = Diagnostics::default();
 
-    let mut ty = match ns.resolve_type(file_no, contract_no, false, &def.ty, &mut diagnostics) {
+    let mut ty = match ns.resolve_type(
+        file_no,
+        contract_no,
+        ResolveTypeContext::None,
+        &def.ty,
+        &mut diagnostics,
+    ) {
         Ok(ty) => ty,
         Err(_) => {
             ns.diagnostics.extend(diagnostics);
@@ -700,7 +707,13 @@ pub fn struct_decl(
     for field in &def.fields {
         let mut diagnostics = Diagnostics::default();
 
-        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics) {
+        let ty = match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            &field.ty,
+            &mut diagnostics,
+        ) {
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);
@@ -795,8 +808,13 @@ fn event_decl(
     for field in &def.fields {
         let mut diagnostics = Diagnostics::default();
 
-        let mut ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics)
-        {
+        let mut ty = match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            &field.ty,
+            &mut diagnostics,
+        ) {
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);
@@ -913,8 +931,13 @@ fn error_decl(
     for field in &def.fields {
         let mut diagnostics = Diagnostics::default();
 
-        let mut ty = match ns.resolve_type(file_no, contract_no, false, &field.ty, &mut diagnostics)
-        {
+        let mut ty = match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            &field.ty,
+            &mut diagnostics,
+        ) {
             Ok(s) => s,
             Err(()) => {
                 ns.diagnostics.extend(diagnostics);

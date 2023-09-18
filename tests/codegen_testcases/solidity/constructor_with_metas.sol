@@ -3,17 +3,16 @@
 import 'solana';
 
 contract creator {
-    Child public c;
     // BEGIN-CHECK: creator::creator::function::create_child_with_meta__address_address
     function create_child_with_meta(address child, address payer) external {
         AccountMeta[2] metas = [
             AccountMeta({pubkey: child, is_signer: false, is_writable: false}),
             AccountMeta({pubkey: payer, is_signer: true, is_writable: true})
         ];
-        // CHECK: constructor(no: 4) salt: value: gas:uint64 0 address:address 0xadde28d6c5697771bb24a668136224c7aac8e8ba974c2881484973b2e762fb74 seeds: Child encoded buffer: %abi_encoded.temp.15 accounts: %metas
-        c = new Child{accounts: metas}();
+        // CHECK: external call::regular address:address 0xadde28d6c5697771bb24a668136224c7aac8e8ba974c2881484973b2e762fb74 payload:%abi_encoded.temp.13 value:uint64 0 gas:uint64 0 accounts:%metas seeds: contract|function:(1, 3) flags:
+        Child.new{accounts: metas}();
 
-        c.say_hello();
+        Child.say_hello();
     }
 }
 

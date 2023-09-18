@@ -1,27 +1,25 @@
 import 'solana';
 
 contract creator {
-    Child public c;
-    Child public c_metas;
 
     function create_child() external {
         print("Going to create child");
-        c = new Child();
+        Child.new();
 
-        c.say_hello();
+        Child.say_hello();
     }
 
     function create_seed1(bytes seed, bytes1 bump, uint64 space) external {
         print("Going to create Seed1");
-        Seed1 s = new Seed1(seed, bump, space);
+        Seed1.new(seed, bump, space);
 
-        s.say_hello();
+        Seed1.say_hello();
     }
 
     function create_seed2(bytes seed, uint32 space) external {
         print("Going to create Seed2");
 
-        new Seed2(seed, space);
+        Seed2.new(seed, space);
     }
 
     function create_child_with_metas(address child, address payer) public {
@@ -32,13 +30,13 @@ contract creator {
             AccountMeta({pubkey: address"11111111111111111111111111111111", is_writable: false, is_signer: false})
         ];
 
-        c_metas = new Child{accounts: metas}();        
-        c_metas.use_metas();
+        Child.new{accounts: metas}();        
+        Child.use_metas();
     }
 
     function create_without_annotation() external {
-        MyCreature cc = new MyCreature();
-        cc.say_my_name();
+        MyCreature.new();
+        MyCreature.say_my_name();
     }
 }
 

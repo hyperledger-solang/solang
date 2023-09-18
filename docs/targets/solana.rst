@@ -46,9 +46,11 @@ Runtime
 - The Solana target requires `Solana <https://www.solana.com/>`_ v1.8.1.
 - Function selectors are eight bytes wide and known as *discriminators*.
 - Solana provides different builtins, e.g. ``block.slot`` and ``tx.accounts``.
-- When calling an external function or instantiating a contract using ``new``, one
+- When calling an external function or invoking a contract's constructor, one
   :ref:`needs to provide <solana_constructor>` the necessary accounts for the transaction.
 - The keyword ``this`` returns the contract's program account, also know as program id.
+- Contracts :ref:`cannot be types <contracts_not_types>` on Solana and :ref:`calls to contracts <solana_contract_call>`
+  follow a different syntax.
 
 
 Compute budget
@@ -127,8 +129,8 @@ _____________________________________
 
 When developing contracts for Solana, programs are usually deployed to a well
 known account. The account can be specified in the source code using an annotation
-``@program_id``. If you want to instantiate a contract using the
-``new ContractName()`` syntax, then the contract must have a program_id annotation.
+``@program_id`` if it is known beforehand. If you want to call a contract via an external call,
+either the contract must have a ``@program_id`` annotation or the ``{program_id: ..}`` call argument must be present.
 
 .. include:: ../examples/solana/program_id.sol
   :code: solidity
