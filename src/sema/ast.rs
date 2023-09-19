@@ -768,6 +768,9 @@ pub struct Contract {
     pub fixed_layout_size: BigInt,
     pub functions: Vec<usize>,
     pub all_functions: BTreeMap<usize, usize>,
+    // maps the name of virtual functions to a vector of overriden functions.
+    // Each time a virtual function is overriden, there will be an entry pushed to the vector. The last
+    // element represents the current overriding function - there will be at least one entry in this vector.
     pub virtual_functions: HashMap<String, Vec<usize>>,
     pub yul_functions: Vec<usize>,
     pub variables: Vec<Variable>,
