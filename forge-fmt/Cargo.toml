@@ -2,14 +2,14 @@
 name = "forge-fmt"
 version = "0.2.0"
 edition = "2021"
-rust-version = "1.72"
+rust-version = "1.70"
 authors = ["Foundry Contributors"]
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/foundry-rs/foundry"
 repository = "https://github.com/foundry-rs/foundry"
 
 [dependencies]
-ethers-core = { git = "https://github.com/gakonst/ethers-rs", default-features = false }
+ethers-core = "2.0.10"
 solang-parser = { path = "../solang-parser" }
 itertools = "0.11"
 thiserror = "1"
