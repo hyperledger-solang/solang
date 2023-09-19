@@ -1324,7 +1324,6 @@ pub(super) fn method_call_pos_args(
         resolve_to,
     )? {
         return Ok(resolved_call);
-    } else {
     }
 
     if let Some(resolved_call) = try_user_type(

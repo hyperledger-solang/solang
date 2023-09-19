@@ -264,7 +264,22 @@ pub(crate) fn using_decl(
                         Some(oper)
                     } else {
                         if let Some(ty) = &ty {
-                            if *ty != func.params[0].ty {
+                            let dummy = Expression::Variable {
+                                loc,
+                                ty: ty.clone(),
+                                var_no: 0,
+                            };
+
+                            if dummy
+                                .cast(
+                                    &loc,
+                                    &func.params[0].ty,
+                                    true,
+                                    ns,
+                                    &mut Diagnostics::default(),
+                                )
+                                .is_err()
+                            {
                                 diagnostics.push(Diagnostic::error_with_note(
                                     function_name.loc,
                                     format!("function cannot be used since first argument is '{}' rather than the required '{}'", func.params[0].ty.to_string(ns), ty.to_string(ns)),
