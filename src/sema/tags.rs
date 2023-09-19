@@ -84,7 +84,7 @@ pub fn resolve_tags(
                 } else {
                     ns.diagnostics.push(Diagnostic::error(
                         value_loc,
-                        format!("tag '@param' no field '{name}'"),
+                        format!("function parameter named '{name}' not found"),
                     ));
                 }
             }
@@ -152,7 +152,7 @@ pub fn resolve_tags(
                     } else {
                         ns.diagnostics.push(Diagnostic::error(
                             pt::Loc::File(file_no, c.value_offset, c.value_offset + c.value.len()),
-                            format!("tag '@return' no matching return value '{name}'"),
+                            format!("function return value named '{name}' not found"),
                         ));
                     }
                 }

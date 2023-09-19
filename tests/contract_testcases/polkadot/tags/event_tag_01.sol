@@ -4,4 +4,4 @@
             uint32 f
         );
 // ---- Expect: diagnostics ----
-// error: 2:20-21: tag '@param' no field 'g'
+// error: 2:20-21: function parameter named 'g' not found

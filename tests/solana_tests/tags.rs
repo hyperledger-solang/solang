@@ -229,7 +229,7 @@ fn functions() {
 
     assert_eq!(
         ns.diagnostics.first_error(),
-        "tag '@return' no matching return value 'x'"
+        "function return value named 'x' not found"
     );
 
     assert_eq!(
