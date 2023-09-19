@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     inline_config::{InlineConfig, InvalidInlineConfigItem},
     Comments, Formatter, FormatterConfig, FormatterError, Visitable,

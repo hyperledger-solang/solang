@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use forge_fmt::{format, parse, solang_ext::AstEq, FormatterConfig};
 use itertools::Itertools;
 use std::{fs, path::PathBuf};

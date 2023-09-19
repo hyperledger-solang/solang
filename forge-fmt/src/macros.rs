@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 macro_rules! write_chunk {
     ($self:expr, $format_str:literal) => {{
         write_chunk!($self, $format_str,)

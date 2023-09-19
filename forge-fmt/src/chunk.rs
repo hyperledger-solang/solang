@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::comments::CommentWithMetadata;
 
 /// Holds information about a non-whitespace-splittable string, and the surrounding comments

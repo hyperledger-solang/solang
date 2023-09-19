@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! Visitor helpers to traverse the [solang Solidity Parse Tree](solang_parser::pt).
 
 use crate::solang_ext::pt::*;

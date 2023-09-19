@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! Helpfers for dealing with quoted strings
 
 /// The state of a character in a string with quotable components

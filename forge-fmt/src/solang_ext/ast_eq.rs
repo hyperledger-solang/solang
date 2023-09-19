@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use ethers_core::types::{H160, I256, U256};
 use solang_parser::pt::*;
 use std::str::FromStr;

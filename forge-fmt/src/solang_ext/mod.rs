@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! Extension traits and modules to the [`solang_parser`] crate.
 
 /// Same as [`solang_parser::pt`], but with the patched `CodeLocation`.

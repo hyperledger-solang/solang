@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::comments::{CommentState, CommentStringExt};
 use itertools::Itertools;
 use solang_parser::pt::Loc;

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use solang_parser::pt;
 
 /// Trait implemented to unwrap optional parse tree items initially introduced in
