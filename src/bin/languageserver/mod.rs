@@ -1652,7 +1652,10 @@ impl<'a> Builder<'a> {
                 ReferenceEntry {
                     start: file
                         .get_offset(range.start.line as usize, range.start.character as usize),
-                    stop: file.get_offset(range.end.line as usize, range.end.character as usize),
+                    // 1 is added to account for the fact that `Lapper` expects half open ranges of the type:  [`start`, `stop`)
+                    // i.e, `start` included but `stop` excluded.
+                    stop: file.get_offset(range.end.line as usize, range.end.character as usize)
+                        + 1,
                     val: di.clone(),
                 },
             ));
@@ -1914,8 +1917,7 @@ impl LanguageServer for SolangServer {
                     .find(offset, offset + 1)
                     .min_by(|a, b| (a.stop - a.start).cmp(&(b.stop - b.start)))
                 {
-                    let loc = pt::Loc::File(0, hover.start, hover.stop);
-                    let range = loc_to_range(&loc, &cache.file);
+                    let range = get_range_exclusive(hover.start, hover.stop, &cache.file);
 
                     return Ok(Some(Hover {
                         contents: HoverContents::Scalar(MarkedString::from_markdown(
@@ -2111,7 +2113,7 @@ impl LanguageServer for SolangServer {
                     .filter(|r| r.val == reference)
                     .map(move |r| Location {
                         uri: uri.clone(),
-                        range: get_range(r.start, r.stop, &cache.file),
+                        range: get_range_exclusive(r.start, r.stop, &cache.file),
                     })
             })
             .collect();
@@ -2174,7 +2176,7 @@ impl LanguageServer for SolangServer {
                     .iter()
                     .filter(|r| r.val == reference)
                     .map(|r| TextEdit {
-                        range: get_range(r.start, r.stop, &cache.file),
+                        range: get_range_exclusive(r.start, r.stop, &cache.file),
                         new_text: new_text.clone(),
                     })
                     .collect();
@@ -2198,6 +2200,12 @@ fn get_range(start: usize, end: usize, file: &ast::File) -> Range {
     let end = Position::new(line as u32, column as u32);
 
     Range::new(start, end)
+}
+
+// Get `Range` when the parameters passed represent a half open range of type [start, stop)
+// Used when `Range` is to be extracted from `Interval` from the `rust_lapper` crate.
+fn get_range_exclusive(start: usize, end: usize, file: &ast::File) -> Range {
+    get_range(start, end - 1, file)
 }
 
 fn get_type_definition(ty: &Type) -> Option<DefinitionType> {
