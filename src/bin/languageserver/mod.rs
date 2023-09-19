@@ -2149,7 +2149,7 @@ impl LanguageServer for SolangServer {
     ///
     /// ### Edge cases
     /// * Returns `Err` when an invalid file path is received.
-    /// * Returns `Ok(None)` when the definition of code object is not found is user code.
+    /// * Returns `Ok(None)` when the definition of code object is not found in user code.
     async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
         // fetch the `DefinitionIndex` of the code object in question
         let def_params: GotoDefinitionParams = GotoDefinitionParams {
