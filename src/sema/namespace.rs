@@ -377,12 +377,12 @@ impl Namespace {
             .map(|(id, namespace)| (id, namespace.iter().collect()))
             .unwrap();
 
-        let s = self.resolve_namespace(namespace, file_no, contract_no, id, diagnostics)?;
+        let symbol = self.resolve_namespace(namespace, file_no, contract_no, id, diagnostics)?;
 
-        if let Some(Symbol::Function(list)) = s {
+        if let Some(Symbol::Function(list)) = symbol {
             Ok(list.clone())
         } else {
-            let error = Namespace::wrong_symbol(s, id);
+            let error = Namespace::wrong_symbol(symbol, id);
 
             diagnostics.push(error);
 
