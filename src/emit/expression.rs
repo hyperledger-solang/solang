@@ -2123,6 +2123,7 @@ fn runtime_cast<'a>(
     }
 }
 
+/// Emit expression into a slice
 pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
     target: &T,
     bin: &Binary<'a>,
@@ -2205,6 +2206,8 @@ pub(super) fn expression_to_slice<'a, T: TargetRuntime<'a> + ?Sized>(
     basic_value_to_slice(bin, val, &from, to, function, ns)
 }
 
+/// Convert basic enum value to a slice. This function calls itself recursively
+/// for arrays (become slices of slices).
 fn basic_value_to_slice<'a>(
     bin: &Binary<'a>,
     val: BasicValueEnum<'a>,
@@ -2227,10 +2230,7 @@ fn basic_value_to_slice<'a>(
 
             bin.builder.build_store(address, val);
 
-            let len = bin
-                .context
-                .i64_type()
-                .const_int(ns.address_length as u64, false);
+            let len = i64_const!(ns.address_length as u64);
 
             (address, len)
         }
@@ -2246,23 +2246,15 @@ fn basic_value_to_slice<'a>(
                 "dest",
             );
 
+            let bytes_length: u64 = (*bytes_length).into();
+
             bin.builder.build_call(
                 bin.module.get_function("__leNtobeN").unwrap(),
-                &[
-                    src.into(),
-                    dest.into(),
-                    bin.context
-                        .i32_type()
-                        .const_int((*bytes_length).into(), false)
-                        .into(),
-                ],
+                &[src.into(), dest.into(), i32_const!(bytes_length).into()],
                 "",
             );
 
-            let len = bin
-                .context
-                .i64_type()
-                .const_int((*bytes_length).into(), false);
+            let len = i64_const!(bytes_length);
 
             (dest, len)
         }
@@ -2318,23 +2310,15 @@ fn basic_value_to_slice<'a>(
                 basic_value_to_slice(bin, input_elem, &from_elem, &to_elem, function, ns);
 
             let output_data = unsafe {
-                bin.builder.build_gep(
-                    to,
-                    output,
-                    &[index, bin.context.i32_type().const_int(0, false)],
-                    "output_data",
-                )
+                bin.builder
+                    .build_gep(to, output, &[index, i32_zero!()], "output_data")
             };
 
             bin.builder.build_store(output_data, data);
 
             let output_len = unsafe {
-                bin.builder.build_gep(
-                    to,
-                    output,
-                    &[index, bin.context.i32_type().const_int(1, false)],
-                    "output_len",
-                )
+                bin.builder
+                    .build_gep(to, output, &[index, i32_const!(1)], "output_len")
             };
 
             bin.builder.build_store(output_len, len);
