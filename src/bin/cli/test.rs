@@ -113,7 +113,7 @@ mod tests {
         strength-reduce = false
         vector-to-slice = false
         common-subexpression-elimination = true
-        llvm-IR-optimization-level = "aggressive"  # Set llvm optimizer level. Valid options are "none", "less", "default", "aggressive"
+        llvm-IR-optimization-level = "aggressive"
         wasm-opt = "Zero""#;
 
         let opt: cli::Optimizations = toml::from_str(opt_toml).unwrap();

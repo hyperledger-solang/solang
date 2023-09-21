@@ -41,7 +41,6 @@ vector-to-slice = true
 common-subexpression-elimination = true
 
 
-# Valid wasm-opt passes are: 0, 1, 2, 3, 4, s (focusing on code size) or z (super-focusing on code size)
 # Valid wasm-opt passes are: Zero, One, Two, Three, Four, S, (focusing on code size) or Z (super-focusing on code size)
 wasm-opt = "Z"
 
