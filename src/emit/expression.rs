@@ -2226,7 +2226,11 @@ fn basic_value_to_slice<'a>(
             (data, len)
         }
         Type::Address(_) => {
-            let address = bin.build_alloca(function, bin.llvm_type(from, ns), "address");
+            let address = call!("__malloc", &[i32_const!(ns.address_length as u64).into()])
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_pointer_value();
 
             bin.builder.build_store(address, val);
 
@@ -2240,13 +2244,13 @@ fn basic_value_to_slice<'a>(
 
             bin.builder.build_store(src, val.into_int_value());
 
-            let dest = bin.build_alloca(
-                function,
-                bin.context.i8_type().array_type((*bytes_length).into()),
-                "dest",
-            );
-
             let bytes_length: u64 = (*bytes_length).into();
+
+            let dest = call!("__malloc", &[i32_const!(bytes_length).into()])
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_pointer_value();
 
             bin.builder.build_call(
                 bin.module.get_function("__leNtobeN").unwrap(),
@@ -2299,12 +2303,9 @@ fn basic_value_to_slice<'a>(
 
             let from_elem = from.array_elem();
 
-            let input_elem = bin.builder.build_load(
-                bin.llvm_type(&from_elem, ns)
-                    .ptr_type(AddressSpace::default()),
-                input_elem,
-                "elem",
-            );
+            let input_elem =
+                bin.builder
+                    .build_load(bin.llvm_field_ty(&from_elem, ns), input_elem, "elem");
 
             let (data, len) =
                 basic_value_to_slice(bin, input_elem, &from_elem, &to_elem, function, ns);

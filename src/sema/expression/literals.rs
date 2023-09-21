@@ -757,7 +757,7 @@ pub(super) fn array_literal(
     )?;
 
     let ty = if let ResolveTo::Type(ty) = resolve_to {
-        let ty = ty.strip_slices();
+        let ty = slices_array_elem(ty);
 
         first = first.cast(&first.loc(), ty, true, ns, diagnostics)?;
 
@@ -803,6 +803,18 @@ pub(super) fn array_literal(
             values: exprs,
         })
     }
+}
+
+/// When converting an array literal to slice of slices, what is the slice element of
+/// the array? (or array of array, or array of array of array etc).
+fn slices_array_elem(ty: &Type) -> &Type {
+    if let Type::Slice(ty) = ty {
+        if matches!(ty.as_ref(), Type::Slice(_)) {
+            return slices_array_elem(ty);
+        }
+    }
+
+    ty
 }
 
 /// Traverse the literal looking for sub arrays. Ensure that all the sub

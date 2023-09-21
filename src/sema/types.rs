@@ -1672,7 +1672,8 @@ impl Type {
         }
     }
 
-    /// Is this a slice of bytes
+    /// For a slice of slices, return the contained type and depth
+    /// slices
     pub fn slice_depth(&self) -> (usize, &Type) {
         if let Type::Slice(ty) = self {
             let (depth, ty) = ty.slice_depth();
@@ -1681,20 +1682,6 @@ impl Type {
         } else {
             (0, self)
         }
-    }
-
-    pub fn slice_types(&self) -> bool {
-        matches!(self, Type::Address(_) | Type::Bytes(_) | Type::DynamicBytes)
-    }
-
-    pub fn strip_slices(&self) -> &Type {
-        if let Type::Slice(ty) = self {
-            if matches!(ty.as_ref(), Type::Slice(_)) {
-                return ty.strip_slices();
-            }
-        }
-
-        self
     }
 
     pub fn is_signed_int(&self, ns: &Namespace) -> bool {

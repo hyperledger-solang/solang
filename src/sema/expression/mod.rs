@@ -1211,7 +1211,7 @@ impl Expression {
                 Ok(self.clone())
             }
             // bytes/address/bytesN -> slice bytes1
-            (_, Type::Slice(ty)) if from.slice_types() && ty.as_ref() == &Type::Bytes(1) => {
+            (_, Type::Slice(ty)) if can_cast_to_slice(from) && ty.as_ref() == &Type::Bytes(1) => {
                 Ok(Expression::Cast {
                     loc: *loc,
                     to: to.clone(),
@@ -1222,14 +1222,15 @@ impl Expression {
             (Type::Array(from, dims), Type::Slice(to))
                 if dims.len() == 1
                     && (from == to
-                        || (from.slice_types() && to.slice_depth() == (1, &Type::Bytes(1)))) =>
+                        || (can_cast_to_slice(from)
+                            && to.slice_depth() == (1, &Type::Bytes(1)))) =>
             {
                 Ok(self.clone())
             }
             // bytes[][] -> slice slice slice bytes1
             (Type::Array(from, dims), Type::Slice(to))
                 if dims.len() == 2
-                    && (from.slice_types() && to.slice_depth() == (2, &Type::Bytes(1))) =>
+                    && (can_cast_to_slice(from) && to.slice_depth() == (2, &Type::Bytes(1))) =>
             {
                 Ok(self.clone())
             }
@@ -1292,6 +1293,11 @@ impl Expression {
             }
         }
     }
+}
+
+/// Can this type be cast to a slice
+fn can_cast_to_slice(ty: &Type) -> bool {
+    matches!(ty, Type::Address(_) | Type::Bytes(_) | Type::DynamicBytes)
 }
 
 /// Resolve operator with the given arguments to an expression, if possible
