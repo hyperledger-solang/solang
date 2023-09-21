@@ -1324,7 +1324,6 @@ pub(super) fn method_call_pos_args(
         resolve_to,
     )? {
         return Ok(resolved_call);
-    } else {
     }
 
     if let Some(resolved_call) = try_user_type(
@@ -1352,8 +1351,9 @@ pub(super) fn method_call_pos_args(
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
         path.identifiers.push(func.clone());
 
-        if let Ok(list) = ns.resolve_free_function_with_namespace(
+        if let Ok(list) = ns.resolve_function_with_namespace(
             context.file_no,
+            None,
             &path,
             &mut Diagnostics::default(),
         ) {
@@ -1640,8 +1640,9 @@ pub(super) fn method_call_named_args(
     if let Some(mut path) = ns.expr_to_identifier_path(var) {
         path.identifiers.push(func_name.clone());
 
-        if let Ok(list) = ns.resolve_free_function_with_namespace(
+        if let Ok(list) = ns.resolve_function_with_namespace(
             context.file_no,
+            None,
             &path,
             &mut Diagnostics::default(),
         ) {
