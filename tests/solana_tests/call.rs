@@ -840,6 +840,18 @@ fn pda_array_of_array() {
                     tokenProgramId.call{seeds: seeds, accounts: metas}(instr);
                 }
 
+                function test_string(string[][] seeds) public {
+                    bytes instr = new bytes(1);
+
+                    instr[0] = 0x95;
+
+                    AccountMeta[1] metas = [
+                        AccountMeta({pubkey: SYSVAR_RENT_PUBKEY, is_writable: false, is_signer: false})
+                    ];
+
+                    tokenProgramId.call{seeds: seeds, accounts: metas}(instr);
+                }
+
                 function test_bytes4(bytes4[][] seeds) public {
                     bytes instr = new bytes(1);
 
@@ -909,6 +921,31 @@ fn pda_array_of_array() {
                 BorshToken::Bytes(b"extemporaneousness".to_vec()),
                 BorshToken::Bytes(b"automysophobia".to_vec()),
             ]),
+        ])])
+        .call();
+
+    // test string
+    let test_args = |vm: &VirtualMachine, _instr: &Instruction, signers: &[Pubkey]| {
+        assert_eq!(
+            signers[0],
+            create_program_address(&vm.stack[0].id, &[b"Finifugal", b"Falsiloquence"])
+        );
+        assert_eq!(
+            signers[1],
+            create_program_address(&vm.stack[0].id, &[b"Obrotund"])
+        );
+    };
+
+    vm.call_params_check.insert(token.clone(), test_args);
+
+    vm.function("test_string")
+        .accounts(vec![("tokenProgram", token.0), ("systemProgram", [0; 32])])
+        .arguments(&[BorshToken::Array(vec![
+            BorshToken::Array(vec![
+                BorshToken::Bytes(b"Finifugal".to_vec()),
+                BorshToken::Bytes(b"Falsiloquence".to_vec()),
+            ]),
+            BorshToken::Array(vec![BorshToken::Bytes(b"Obrotund".to_vec())]),
         ])])
         .call();
 

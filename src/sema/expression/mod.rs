@@ -1295,9 +1295,12 @@ impl Expression {
     }
 }
 
-/// Can this type be cast to a slice
+/// Can this type be cast to a bytes slice
 fn can_cast_to_slice(ty: &Type) -> bool {
-    matches!(ty, Type::Address(_) | Type::Bytes(_) | Type::DynamicBytes)
+    matches!(
+        ty,
+        Type::Address(_) | Type::Bytes(_) | Type::DynamicBytes | Type::String
+    )
 }
 
 /// Resolve operator with the given arguments to an expression, if possible

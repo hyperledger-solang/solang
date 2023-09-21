@@ -48,7 +48,6 @@ contract c4 {
 // ---- Expect: diagnostics ----
 // error: 1:14: address literal @#$! invalid character '@'
 // error: 7:15-16: 'a' not found
-// error: 8:31-36: conversion from string to bytes not possible
 // error: 11:15: address literal 102 invalid character '0'
 // error: 16:2-61: invalid parameter for annotation
 // error: 19:9-10: duplicate @space annotation for constructor
