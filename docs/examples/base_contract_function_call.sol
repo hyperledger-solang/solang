@@ -22,6 +22,8 @@ abstract contract a {
 
     function bar2() internal returns (uint64) {
         // this explicitly says "call foo of base contract a", and dispatch is not virtual
+        // however, if the call is written as a.foo{program_id: id_var}(), this represents
+        // an external call to contract 'a' on Solana.
         return a.foo();
     }
 }

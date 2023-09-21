@@ -460,6 +460,14 @@ The expression ``this`` evaluates to the current contract, which can be cast to 
 .. include:: ../examples/contract_type_cast_address.sol
   :code: solidity
 
+.. _contracts_not_types:
+
+.. note::
+    On Solana, contracts cannot exist as types, so contracts cannot be function parameters, function returns
+    or variables. Contracts on Solana are deployed to a defined address, which is often known during compile time,
+    so there is no need to hold that address as a variable underneath a contract type.
+
+
 Function Types
 ______________
 
@@ -485,8 +493,19 @@ the contract, and the function selector. An internal function type only stores t
 assigning a value to an external function selector, the contract and function must be specified, by using
 a function on particular contract instance.
 
-.. include:: ../examples/function_type_callback.sol
-  :code: solidity
+.. tabs::
+
+    .. group-tab:: Polkadot
+
+        .. include:: ../examples/polkadot/function_type_callback.sol
+            :code: solidity
+
+
+    .. group-tab:: Solana
+
+        .. include:: ../examples/solana/function_type_callback.sol
+            :code: solidity
+
 
 Storage References
 __________________

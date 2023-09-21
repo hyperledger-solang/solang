@@ -10,6 +10,7 @@ use super::{
 };
 use crate::sema::expression::function_call::{function_returns, function_type};
 use crate::sema::expression::resolve_expression::expression;
+use crate::sema::namespace::ResolveTypeContext;
 use solang_parser::pt::CodeLocation;
 use solang_parser::pt::{self};
 use std::collections::HashSet;
@@ -34,7 +35,13 @@ pub(crate) fn using_decl(
     }
 
     let ty = if let Some(expr) = &using.ty {
-        match ns.resolve_type(file_no, contract_no, false, expr, &mut diagnostics) {
+        match ns.resolve_type(
+            file_no,
+            contract_no,
+            ResolveTypeContext::None,
+            expr,
+            &mut diagnostics,
+        ) {
             Ok(Type::Contract(contract_no)) if ns.contracts[contract_no].is_library() => {
                 ns.diagnostics.push(Diagnostic::error(
                     expr.loc(),
@@ -87,8 +94,9 @@ pub(crate) fn using_decl(
 
             for using_function in functions {
                 let function_name = &using_function.path;
-                if let Ok(list) = ns.resolve_free_function_with_namespace(
+                if let Ok(list) = ns.resolve_function_with_namespace(
                     file_no,
+                    contract_no,
                     &using_function.path,
                     &mut diagnostics,
                 ) {
@@ -112,6 +120,18 @@ pub(crate) fn using_decl(
                     let (loc, func_no) = list[0];
 
                     let func = &ns.functions[func_no];
+
+                    if let Some(contract_no) = func.contract_no {
+                        if !ns.contracts[contract_no].is_library() {
+                            diagnostics.push(Diagnostic::error_with_note(
+                                function_name.loc,
+                                format!("'{function_name}' is not a library function"),
+                                func.loc,
+                                format!("definition of {}", using_function.path),
+                            ));
+                            continue;
+                        }
+                    }
 
                     if func.params.is_empty() {
                         diagnostics.push(Diagnostic::error_with_note(
@@ -244,7 +264,22 @@ pub(crate) fn using_decl(
                         Some(oper)
                     } else {
                         if let Some(ty) = &ty {
-                            if *ty != func.params[0].ty {
+                            let dummy = Expression::Variable {
+                                loc,
+                                ty: ty.clone(),
+                                var_no: 0,
+                            };
+
+                            if dummy
+                                .cast(
+                                    &loc,
+                                    &func.params[0].ty,
+                                    true,
+                                    ns,
+                                    &mut Diagnostics::default(),
+                                )
+                                .is_err()
+                            {
                                 diagnostics.push(Diagnostic::error_with_note(
                                     function_name.loc,
                                     format!("function cannot be used since first argument is '{}' rather than the required '{}'", func.params[0].ty.to_string(ns), ty.to_string(ns)),

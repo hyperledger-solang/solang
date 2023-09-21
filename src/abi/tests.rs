@@ -1697,30 +1697,25 @@ fn other_collected_public_keys() {
     let src = r#"
     import 'solana';
 
-anchor_anchor constant anchor = anchor_anchor(address'SysvarRent111111111111111111111111111111111');
-
-interface anchor_anchor {
+@program_id("SysvarRent111111111111111111111111111111111")
+interface anchor {
 	@selector([0xaf,0xaf,0x6d,0x1f,0x0d,0x98,0x9b,0xed])
 	function initialize(bool data1) view external;
 }
 
-associated constant ass = associated(address'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-
+@program_id("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
 interface associated {
 	@selector([0xaf,0xaf,0x6d,0x1f,0x0d,0x98,0x9b,0xed])
 	function initialize(bool data1) view external;
 }
 
-
-clock_interface constant my_clock = clock_interface(address'SysvarC1ock11111111111111111111111111111111');
-
+@program_id("SysvarC1ock11111111111111111111111111111111")
 interface clock_interface {
 	@selector([0xaf,0xaf,0x6d,0x1f,0x0d,0x98,0x9b,0xed])
 	function initialize(bool data1) view external;
 }
 
-other_interface constant other_inter = other_interface(address'z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq');
-
+@program_id("z7FbDfQDfucxJz5o8jrGLgvSbdoeSqX5VrxBb5TVjHq")
 interface other_interface {
 	@selector([0xaf,0xaf,0x6d,0x1f,0x0d,0x98,0x9b,0xed])
 	function initialize(bool data1) view external;
@@ -1732,15 +1727,15 @@ contract Test {
     }
 
     function call_2() public {
-        ass.initialize(false);
+        associated.initialize(false);
     }
 
     function call_3() public {
-        my_clock.initialize(true);
+        clock_interface.initialize(true);
     }
 
     function call_4() public {
-        other_inter.initialize(false);
+        other_interface.initialize(false);
     }
 }
     "#;
@@ -1798,13 +1793,10 @@ fn multiple_contracts() {
     import 'solana';
 
 contract creator {
-    Child public c;
-
     function create_child() external returns (uint64) {
         print("Going to create child");
-        c = new Child();
-
-        return c.say_hello();
+        Child.new();
+        return Child.say_hello();
     }
 }
 
@@ -1828,17 +1820,15 @@ contract Child {
     let idl = generate_anchor_idl(0, &ns, "0.1.0");
 
     assert_eq!(idl.instructions[0].name, "new");
-    assert_eq!(idl.instructions[1].name, "c");
-    assert_eq!(idl.instructions[2].name, "create_child");
+    assert_eq!(idl.instructions[1].name, "create_child");
 
     assert_eq!(
-        idl.instructions[2].accounts,
+        idl.instructions[1].accounts,
         vec![
-            idl_account("dataAccount", true, false),
+            idl_account("systemProgram", false, false),
+            idl_account("Child_programId", false, false),
             idl_account("payer", true, true),
             idl_account("Child_dataAccount", true, true),
-            idl_account("Child_programId", false, false),
-            idl_account("systemProgram", false, false),
             idl_account("clock", false, false),
         ]
     );
@@ -1851,11 +1841,9 @@ fn constructor_double_payer() {
 
 @program_id("SoLDxXQ9GMoa15i4NavZc61XGkas2aom4aNiWT6KUER")
 contract Builder {
-    BeingBuilt other;
-
     @payer(payer_account)
     constructor() {
-        other = new BeingBuilt("abc");
+       BeingBuilt.new("abc");
     }
 }
 
@@ -1883,9 +1871,9 @@ contract BeingBuilt {
             idl_account("dataAccount", true, true),
             idl_account("payer_account", true, true),
             idl_account("systemProgram", false, false),
+            idl_account("BeingBuilt_programId", false, false),
             idl_account("other_account", true, true),
             idl_account("BeingBuilt_dataAccount", true, false),
-            idl_account("BeingBuilt_programId", false, false),
         ]
     );
 }
@@ -1956,19 +1944,17 @@ contract starter {
 fn account_transfer_recursive() {
     let src = r#"
 contract CT3 {
-    CT2 ct2;
     @payer(three_payer)
     constructor() {
-        ct2 = new CT2();
+        CT2.new();
     }
 }
 
 @program_id("Ha2EGxARbSYpqNZkkvZUUGEyx3pu7Mg9pvMsuEJuWNjH")
 contract CT2 {
-    CT1 ct1;
     @payer(two_payer)
     constructor() {
-        ct1 = new CT1(block.timestamp);
+        CT1.new(block.timestamp);
     }
 }
 
@@ -2005,10 +1991,10 @@ contract CT1 {
             idl_account("dataAccount", true, true),
             idl_account("two_payer", true, true),
             idl_account("clock", false, false),
+            idl_account("systemProgram", false, false),
+            idl_account("CT1_programId", false, false),
             idl_account("one_payer", true, true),
             idl_account("CT1_dataAccount", true, true),
-            idl_account("CT1_programId", false, false),
-            idl_account("systemProgram", false, false),
         ]
     );
 
@@ -2019,13 +2005,45 @@ contract CT1 {
             idl_account("dataAccount", true, true),
             idl_account("three_payer", true, true),
             idl_account("systemProgram", false, false),
+            idl_account("CT2_programId", false, false),
             idl_account("two_payer", true, true),
             idl_account("CT2_dataAccount", true, true),
-            idl_account("CT2_programId", false, false),
             idl_account("clock", false, false),
+            idl_account("CT1_programId", false, false),
             idl_account("one_payer", true, true),
             idl_account("CT1_dataAccount", true, true),
-            idl_account("CT1_programId", false, false),
+        ]
+    );
+}
+
+#[test]
+fn default_constructor() {
+    let src = r#"
+contract Foo {
+    uint b;
+    function get_b() public returns (uint) {
+        return b;
+    }
+}
+
+contract Other {
+    function call_foo(address id) external {
+        Foo.new{program_id: id}();
+    }
+}
+    "#;
+
+    let mut ns = generate_namespace(src);
+    codegen(&mut ns, &Options::default());
+    let idl = generate_anchor_idl(1, &ns, "0.0.1");
+
+    assert_eq!(idl.instructions[1].name, "call_foo");
+    assert_eq!(
+        idl.instructions[1].accounts,
+        vec![
+            idl_account("Foo_dataAccount", true, false),
+            idl_account("Foo_programId", false, false),
+            idl_account("systemProgram", false, false)
         ]
     );
 }

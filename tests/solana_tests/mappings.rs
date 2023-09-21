@@ -292,20 +292,18 @@ fn string_mapping() {
 fn contract_mapping() {
     let mut vm = build_solidity(
         r#"
-        interface I {}
+          contract foo {
+            mapping (address => string) public map;
 
-        contract foo {
-            mapping (I => string) public map;
-
-            function set(I index, string s) public {
+            function set(address index, string s) public {
                 map[index] = s;
             }
 
-            function get(I index) public returns (string) {
+            function get(address index) public returns (string) {
                 return map[index];
             }
 
-            function rm(I index) public {
+            function rm(address index) public {
                 delete map[index];
             }
         }"#,

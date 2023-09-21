@@ -2,11 +2,10 @@ import 'solana';
 
 @program_id("SoLDxXQ9GMoa15i4NavZc61XGkas2aom4aNiWT6KUER")
 contract Builder {
-    BeingBuilt other;
     function build_this() external {
         // When calling a constructor from an external function, the data account for the contract
         // 'BeingBuilt' should be passed as the 'BeingBuilt_dataAccount' in the client code.
-        other = new BeingBuilt("my_seed");
+        BeingBuilt.new("my_seed");
     }
 
     function build_that(address data_account, address payer_account) public {
@@ -30,7 +29,7 @@ contract Builder {
                 is_signer: false
                 })
         ];
-        other = new BeingBuilt{accounts: metas}("my_seed");
+        BeingBuilt.new{accounts: metas}("my_seed");
     }
 }
 

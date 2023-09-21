@@ -152,6 +152,31 @@ fn process_instruction(
             };
             *accounts = Some(metas_vector);
         }
+        Instr::Constructor {
+            contract_no,
+            constructor_no: None,
+            accounts,
+            ..
+        } => {
+            let name_to_index = format!("{}_dataAccount", contracts[*contract_no].name);
+            let account_index = functions[ast_no]
+                .solana_accounts
+                .borrow()
+                .get_index_of(&name_to_index)
+                .unwrap();
+            let ptr_to_address = accounts_vector_key_at_index(account_index);
+            let account_metas = vec![account_meta_literal(ptr_to_address, false, true)];
+            let metas_vector = Expression::ArrayLiteral {
+                loc: Loc::Codegen,
+                ty: Type::Array(
+                    Box::new(Type::Struct(StructType::AccountMeta)),
+                    vec![ArrayLength::Fixed(BigInt::from(account_metas.len()))],
+                ),
+                dimensions: vec![1],
+                values: account_metas,
+            };
+            *accounts = Some(metas_vector);
+        }
         Instr::AccountAccess { loc, name, var_no } => {
             // This could have been an Expression::AccountAccess if we had a three-address form.
             // The amount of code necessary to traverse all Instructions and all expressions recursively

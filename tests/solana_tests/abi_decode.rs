@@ -110,10 +110,10 @@ fn decode_address() {
         r#"
     contract Testing {
         function testAddress(bytes memory buffer) public view {
-            (address a, Testing b) = abi.decode(buffer, (address, Testing));
+            (address a, address b) = abi.decode(buffer, (address, address));
 
             assert(a == address(this));
-            assert(b == this);
+            assert(b == address(this));
         }
     }
         "#,

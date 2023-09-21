@@ -10,6 +10,7 @@ use crate::sema::expression::function_call::function_type;
 use crate::sema::expression::integers::bigint_to_expression;
 use crate::sema::expression::resolve_expression::expression;
 use crate::sema::expression::{ExprContext, ResolveTo};
+use crate::sema::namespace::ResolveTypeContext;
 use crate::sema::solana_accounts::BuiltinAccounts;
 use crate::sema::symtable::Symtable;
 use crate::sema::unused_variable::{assigned_variable, used_variable};
@@ -648,7 +649,7 @@ fn type_name_expr(
     let ty = ns.resolve_type(
         context.file_no,
         context.contract_no,
-        false,
+        ResolveTypeContext::FunctionType,
         &args[0],
         diagnostics,
     )?;

@@ -112,15 +112,35 @@ ____
 The keyword ``this`` evaluates to the current contract. The type of this is the type of the
 current contract. It can be cast to ``address`` or ``address payable`` using a cast.
 
-.. include:: ../examples/expression_this.sol
-  :code: solidity
+.. tabs::
+
+    .. group-tab:: Polkadot
+
+        .. include:: ../examples/polkadot/expression_this.sol
+            :code: solidity
+
+
+    .. group-tab:: Solana
+
+        .. include:: ../examples/solana/expression_this.sol
+            :code: solidity
 
 Function calls made via this are function calls through the external call mechanism; i.e. they
 have to serialize and deserialise the arguments and have the external call overhead. In addition,
 this only works with public functions.
 
-.. include:: ../examples/expression_this_external_call.sol
-  :code: solidity
+.. tabs::
+
+    .. group-tab:: Polkadot
+
+        .. include:: ../examples/polkadot/expression_this_external_call.sol
+            :code: solidity
+
+
+    .. group-tab:: Solana
+
+        .. include:: ../examples/solana/expression_this_external_call.sol
+            :code: solidity
 
 .. note::
 
