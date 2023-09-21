@@ -732,7 +732,10 @@ fn pda() {
     vm.function("test")
         .accounts(vec![("tokenProgram", token.0), ("systemProgram", [0; 32])])
         .call();
+}
 
+#[test]
+fn pda_array() {
     // now more dynamic
     let mut vm = build_solidity(
         r#"
@@ -742,7 +745,7 @@ fn pda() {
                 address constant tokenProgramId = address"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
                 address constant SYSVAR_RENT_PUBKEY = address"SysvarRent111111111111111111111111111111111";
 
-                function test(bytes[] seeds) public {
+                function test(bytes[] dyn, address[] addr, bytes5[] b5) public {
                     bytes instr = new bytes(1);
 
                     instr[0] = 0x95;
@@ -753,7 +756,7 @@ fn pda() {
 
                     bytes3 foo = "foo";
 
-                    tokenProgramId.call{seeds: [ [ foo ], seeds ], accounts: metas}(instr);
+                    tokenProgramId.call{seeds: [ dyn, addr, b5 ], accounts: metas}(instr);
                 }
             }"#,
     );
@@ -766,11 +769,21 @@ fn pda() {
     let test_args = |vm: &VirtualMachine, _instr: &Instruction, signers: &[Pubkey]| {
         assert_eq!(
             signers[0],
-            create_program_address(&vm.stack[0].id, &[b"foo"])
+            create_program_address(&vm.stack[0].id, &[b"foobar"])
         );
         assert_eq!(
             signers[1],
-            create_program_address(&vm.stack[0].id, &[b"foobar"])
+            create_program_address(
+                &vm.stack[0].id,
+                &[
+                    b"quinquagintaquadringentilliardth",
+                    b"quinquagintaquadringentillionths"
+                ]
+            )
+        );
+        assert_eq!(
+            signers[2],
+            create_program_address(&vm.stack[0].id, &[b"tares", b"enoki"])
         );
     };
 
@@ -787,12 +800,25 @@ fn pda() {
 
     vm.function("test")
         .accounts(vec![("tokenProgram", token.0), ("systemProgram", [0; 32])])
-        .arguments(&[BorshToken::Array(vec![
-            BorshToken::Bytes(b"foo".to_vec()),
-            BorshToken::Bytes(b"bar".to_vec()),
-        ])])
+        .arguments(&[
+            BorshToken::Array(vec![
+                BorshToken::Bytes(b"foo".to_vec()),
+                BorshToken::Bytes(b"bar".to_vec()),
+            ]),
+            BorshToken::Array(vec![
+                BorshToken::Address(*b"quinquagintaquadringentilliardth"),
+                BorshToken::Address(*b"quinquagintaquadringentillionths"),
+            ]),
+            BorshToken::Array(vec![
+                BorshToken::FixedBytes(b"tares".to_vec()),
+                BorshToken::FixedBytes(b"enoki".to_vec()),
+            ]),
+        ])
         .call();
+}
 
+#[test]
+fn pda_array_of_array() {
     // now more dynamic
     let mut vm = build_solidity(
         r#"
