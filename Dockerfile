@@ -1,10 +1,6 @@
 FROM ghcr.io/hyperledger/solang-llvm:ci-5 as builder
 
 COPY . src
-
-# Required for including the template examples during build
-COPY . examples
-
 WORKDIR /src/stdlib/
 RUN make
 
