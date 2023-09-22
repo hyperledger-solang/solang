@@ -112,7 +112,7 @@ mod tests {
         strength-reduce = false
         vector-to-slice = false
         common-subexpression-elimination = true
-        llvm-IR-optimization-level = "aggressive"  # Set llvm optimizer level. Valid options are "none", "less", "default", "aggressive""#;
+        llvm-IR-optimization-level = "aggressive""#;
 
         let opt: cli::Optimizations = toml::from_str(opt_toml).unwrap();
 
@@ -122,6 +122,15 @@ mod tests {
         assert!(!opt.strength_reduce);
         assert!(!opt.vector_to_slice);
         assert_eq!(opt.opt_level.unwrap(), "aggressive");
+    }
+
+    #[cfg(feature = "wasm_opt")]
+    #[test]
+    fn wasm_opt_option() {
+        use contract_build::OptimizationPasses;
+
+        let opt: cli::Optimizations = toml::from_str(r#"wasm-opt = "Zero""#).unwrap();
+        assert_eq!(opt.wasm_opt_passes, Some(OptimizationPasses::Zero));
     }
 
     #[test]
@@ -204,7 +213,7 @@ mod tests {
                     strength_reduce: true,
                     vector_to_slice: true,
                     common_subexpression_elimination: true,
-                    opt_level: Some("default".to_owned()),
+                    opt_level: Some("aggressive".to_owned()),
                     #[cfg(feature = "wasm_opt")]
                     wasm_opt_passes: None
                 }
