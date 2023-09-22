@@ -33,7 +33,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
+static BUILTIN_FUNCTIONS: Lazy<[Prototype; 25]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -305,6 +305,22 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 24]> = Lazy::new(|| {
             target: vec![],
             doc: "unwrap user defined type",
             constant: true,
+        },
+        Prototype {
+            builtin: Builtin::ECRecover,
+            namespace: None,
+            method: vec![],
+            name: "ecrecover",
+            params: vec![
+                Type::Bytes(32),
+                Type::Uint(8),
+                Type::Bytes(32),
+                Type::Bytes(32),
+            ],
+            ret: vec![Type::Address(false)],
+            target: vec![Target::EVM],
+            doc: "Recover the address associated with the public key from elliptic curve signature",
+            constant: false,
         },
     ]
 });

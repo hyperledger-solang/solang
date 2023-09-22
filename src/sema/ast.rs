@@ -1662,6 +1662,7 @@ pub enum Builtin {
     Accounts,
     UserTypeWrap,
     UserTypeUnwrap,
+    ECRecover,
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
