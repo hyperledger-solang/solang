@@ -93,8 +93,8 @@ fn new_command(args: New) {
     }
 
     let flipper = match target {
-        "solana" => include_str!("./solang_new_examples/solana/flipper.sol"),
-        "polkadot" => include_str!("./solang_new_examples/polkadot/flipper.sol"),
+        "solana" => include_str!("../../examples/solana/flipper.sol"),
+        "polkadot" => include_str!("../../examples/polkadot/flipper.sol"),
         "evm" => {
             eprintln!("EVM target is not supported yet!");
             exit(1);
@@ -110,8 +110,8 @@ fn new_command(args: New) {
     let mut toml_file = create_file(&Path::new(&dir_path).join("solang.toml"));
 
     let toml_content = match target {
-        "solana" => include_str!("./solang_new_examples/solana/solana_config.toml"),
-        "polkadot" => include_str!("./solang_new_examples/polkadot/polkadot_config.toml"),
+        "solana" => include_str!("../../examples/solana/solana_config.toml"),
+        "polkadot" => include_str!("../../examples/polkadot/polkadot_config.toml"),
         _ => unreachable!(),
     };
     toml_file
