@@ -255,3 +255,130 @@ contract C {
 
     assert_eq!(res, BorshToken::Bool(true));
 }
+
+#[test]
+fn using_function_for_struct() {
+    let mut vm = build_solidity(
+        r#"
+struct Pet {
+    string name;
+    uint8 age;
+}
+
+library Info {
+    function isCat(Pet memory myPet) public pure returns (bool) {
+        return myPet.name == "cat";
+    }
+
+    function setAge(Pet memory myPet, uint8 age) pure public {
+        myPet.age = age;
+    }
+}
+
+contract C {
+    using {Info.isCat, Info.setAge} for Pet;
+
+    function testPet(string memory name, uint8 age) pure public returns (bool) {
+        Pet memory my_pet = Pet(name, age);
+        return my_pet.isCat();
+    }
+
+    function changeAge(Pet memory myPet) public pure returns (Pet memory) {
+        myPet.setAge(5);
+        return myPet;
+    }
+
+}
+        "#,
+    );
+
+    let data_account = vm.initialize_data_account();
+
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let res = vm
+        .function("testPet")
+        .arguments(&[
+            BorshToken::String("cat".to_string()),
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(2u8),
+            },
+        ])
+        .call()
+        .unwrap();
+
+    assert_eq!(res, BorshToken::Bool(true));
+
+    let res = vm
+        .function("changeAge")
+        .arguments(&[BorshToken::Tuple(vec![
+            BorshToken::String("cat".to_string()),
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(2u8),
+            },
+        ])])
+        .call()
+        .unwrap();
+
+    assert_eq!(
+        res,
+        BorshToken::Tuple(vec![
+            BorshToken::String("cat".to_string()),
+            BorshToken::Uint {
+                width: 8,
+                value: BigInt::from(5u8),
+            }
+        ])
+    );
+}
+
+#[test]
+fn using_function_overload() {
+    let mut vm = build_solidity(
+        r#"
+        library LibInLib {
+            function get0(bytes x) public pure returns (bytes1) {
+                return x[0];
+            }
+
+            function get1(bytes x) public pure returns (bytes1) {
+                return x[1];
+            }
+        }
+
+        library MyBytes {
+            using {LibInLib.get0, LibInLib.get1} for bytes;
+
+            function push(bytes memory b, uint8[] memory a) pure public returns (bool) {
+                return b.get0() == a[0] && b.get1()== a[1];
+            }
+        }
+
+        contract C {
+            using {MyBytes.push} for bytes;
+
+            function check() public pure returns (bool) {
+                bytes memory b;
+                b.push(1);
+                b.push(2);
+                uint8[] memory vec = new uint8[](2);
+                vec[0] = 1;
+                vec[1] = 2;
+                return b.push(vec);
+            }
+        }"#,
+    );
+
+    let data_account = vm.initialize_data_account();
+    vm.function("new")
+        .accounts(vec![("dataAccount", data_account)])
+        .call();
+
+    let res = vm.function("check").call().unwrap();
+
+    assert_eq!(res, BorshToken::Bool(true));
+}
