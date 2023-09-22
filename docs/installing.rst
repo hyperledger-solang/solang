@@ -167,7 +167,7 @@ Building LLVM from source
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The LLVM project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which
-you may need to consult. You might need to `install Ninja <https://ninja-build.org>`_. First of all clone our LLVM repository:
+you may need to consult. `Ninja <https://ninja-build.org>`_ is necessary for building LLVM from source. First of all, clone our LLVM repository:
 
 .. code-block:: bash
 
